@@ -738,38 +738,49 @@ class TaskProcessor {
      *
      */
     @CompileStatic
-    final protected boolean checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache ) {
+    final protected void checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache ) {
 
         int tries = task.failCount +1
         while( true ) {
             hash = CacheHelper.defaultHasher().newHasher().putBytes(hash.asBytes()).putInt(tries).hash()
 
-            boolean exists
-            final folder = task.getWorkDirFor(hash)
-            final lock = lockManager.acquire(hash)
+            Path resumeDir = null
+            boolean exists = false
             try {
-                exists = folder.exists()
-                if( !exists && !folder.mkdirs() )
-                    throw new IOException("Unable to create folder=$folder -- check file system permission")
+                def entry = session.cache.getTaskEntry(hash, this)
+                resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
+                if( resumeDir )
+                    exists = resumeDir.exists()
 
+                log.trace "[${task.name}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
+                def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), resumeDir, hash, entry)
+                if( cached )
+                    break
             }
-            finally {
-                lock.release()
+            catch (Throwable t) {
+                log.warn1("[$task.name] Unable to resume cached task -- See log file for details", causedBy: t)
             }
-
-            log.trace "[${task.name}] Cacheable folder=$folder -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache"
-            def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), folder, hash)
-            if( cached )
-                return false
 
             if( exists ) {
                 tries++
                 continue
             }
 
+            final lock = lockManager.acquire(hash)
+            final workDir = task.getWorkDirFor(hash)
+            try {
+                if( resumeDir != workDir )
+                    exists = workDir.exists()
+                if( !exists && !workDir.mkdirs() )
+                    throw new IOException("Unable to create folder=$workDir -- check file system permission")
+            }
+            finally {
+                lock.release()
+            }
+
             // submit task for execution
-            submitTask( task, hash, folder )
-            return true
+            submitTask( task, hash, workDir )
+            break
         }
 
     }
@@ -842,7 +853,7 @@ class TaskProcessor {
      * @param folder The folder where the outputs are stored (eventually)
      * @return {@code true} when all outputs are available, {@code false} otherwise
      */
-    final boolean checkCachedOutput(TaskRun task, Path folder, HashCode hash) {
+    final boolean checkCachedOutput(TaskRun task, Path folder, HashCode hash, TaskEntry entry) {
 
         // check if exists the task exit code file
         def exitCode = null
@@ -867,22 +878,13 @@ class TaskProcessor {
         /*
          * verify cached context map
          */
-        TaskEntry entry
-        try {
-            entry = session.cache.getTaskEntry(hash, task.processor)
-            if( !entry ) {
-                log.trace "[$task.name] Missing cache entry -- return false"
-                return false
-            }
-
-            if( task.hasCacheableValues() && !entry.context ) {
-                log.trace "[$task.name] Missing cache context -- return false"
-                return false
-            }
-
+        if( !entry ) {
+            log.trace "[$task.name] Missing cache entry -- return false"
+            return false
         }
-        catch( Throwable e ) {
-            log.warn1("[$task.name] Unable to resume cached task -- See log file for details", causedBy: e)
+
+        if( task.hasCacheableValues() && !entry.context ) {
+            log.trace "[$task.name] Missing cache context -- return false"
             return false
         }
 
@@ -927,7 +929,6 @@ class TaskProcessor {
             task.workDir = null
             return false
         }
-
     }
 
     /**
