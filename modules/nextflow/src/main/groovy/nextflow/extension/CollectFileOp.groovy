@@ -96,7 +96,7 @@ class CollectFileOp {
         // caching params
         collector.resumable = Global.session.resumeMode
         collector.cacheable = Global.session.cacheable && ( params?.cache?.toString() != 'false' )
-        collector.hashMode = HashMode.of(params?.cache) ?: HashMode.of(Global.session.config?.process?.cache) ?: HashMode.STANDARD
+        collector.hashMode = HashMode.of(params?.cache) ?: HashMode.of(Global.session.config?.process?.cache) ?: HashMode.DEFAULT()
         collector.hashKeys = [
                 Global.session.uniqueId,
                 params?.storeDir,

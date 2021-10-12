@@ -653,7 +653,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     }
 
     HashMode getHashMode() {
-        HashMode.of(configProperties.cache) ?: HashMode.STANDARD
+        HashMode.of(configProperties.cache) ?: HashMode.DEFAULT()
     }
 
     protected boolean isValidLabel(String lbl) {
