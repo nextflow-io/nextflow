@@ -62,6 +62,17 @@ public class CacheHelper {
 
         STANDARD, DEEP, LENIENT, SHA256;
 
+        private static HashMode defaultValue;
+
+        static {
+            if( System.getenv().containsKey("NXF_CACHE_MODE") )
+                defaultValue = valueOf(System.getenv().get("NXF_CACHE_MODE"));
+        }
+
+        public static HashMode DEFAULT() {
+            return defaultValue != null ? defaultValue : STANDARD;
+        }
+
         public static HashMode of( Object obj ) {
             if( obj==null || obj instanceof Boolean )
                 return null;
