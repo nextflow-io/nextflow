@@ -24,8 +24,10 @@ release: build
 	docker push nextflow/nextflow:${version}
 	docker push nextflow/nextflow:latest
 	#
-	docker tag nextflow:${version} public.ecr.aws/seqera-labs/nextflow:${version}
+	docker tag nextflow/nextflow:${version} public.ecr.aws/seqera-labs/nextflow:${version}
+	docker tag nextflow/nextflow:${version} public.ecr.aws/seqera-labs/nextflow:latest
 	docker push public.ecr.aws/seqera-labs/nextflow:${version}
+	docker push public.ecr.aws/seqera-labs/nextflow:latest
 
 #Static builds can now be found at:
 #
