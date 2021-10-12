@@ -159,6 +159,18 @@ class SingularityCache {
         return result
     }
 
+    /**
+     * Defines the Singularity *library* path. The library directory is checked by Nextflow
+     * before the cache directory to retrieve a image files. This can be useful to provide
+     * a read-only catalog of images, and still have the ability to download and cache missing
+     * images into a separate (caching) path.
+     *
+     * The library directory defined using the setting below in the following order:
+     * 1) {@code singularity.libraryDir} setting in the nextflow config file;
+     * 2) the {@code NXF_SINGULARITY_LIBRARYDIR} environment variable
+     *
+     * @return The library directory or {@code null} if not defined
+     */
     @PackageScope
     Path getLibraryDir() {
         def str = config.libraryDir as String ?: env.get('NXF_SINGULARITY_LIBRARYDIR')
