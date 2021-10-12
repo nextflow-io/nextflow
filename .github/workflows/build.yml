@@ -104,6 +104,10 @@ jobs:
         AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
         AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
+    - name: Tar integration tests
+      if: failure()
+      run: tar -cvf integration-tests.tar tests/checks
+
     - name: Publish tests report
       if: failure()
       uses: actions/upload-artifact@v2
@@ -111,4 +115,4 @@ jobs:
         name: test-reports-jdk-${{ matrix.java_version }}
         path: |
           **/build/reports/tests/test
-          tests/checks/**
+          integration-tests.tar
