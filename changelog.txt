@@ -1,5 +1,37 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.09.0-edge - 12 Oct 2021 
+- Add secrets manager (preview) [da2a5ff1a] [2d66f83ca]
+- Add Built-in support for Azure File Shares #2285 [a4c3e0ad5]
+- Add Azure pool node SKU selection #2360 [9afcac756]
+- Add support for protocol option to fromSRA #2087 [371f858ab]
+- Add retry on AWS Job definition not-found error [452cae5d8]
+- Add ability to define templates library at module level #2332 [7e7d52573]
+- Add missing information for pulling images from private registry in Azure Batch #2355 [040e190bd]
+- Add $NXF_CLI_OPTS env variable [7d57acca5]
+- Add NXF_CACHE_MODE env variable [1c345c497]
+- Fix asset directory consistent hashing via sha256 checksum [4c5c0ef41]
+- Fix issue invoking extension method with GString params [570e5299c]
+- Fix Prevent pipeline stopping when K8s pod is evicted [f9db9cc77]
+- Fix clean command for Google storage [dc9625eb9]
+- Fix plugins detection in local repo [6441a3882]
+- Fix S3 canned ACL documentation #2334 [69216e292]
+- Fix docker image build with recent docker [2aad36897] [1e485b32b]
+- Fix amazon plugin is not used when using bucketDir option [6a8c50ad4]
+- Fix Plugin dependency requirement overrides core plugin #2303 [4d1762fb3]
+- Fix Make K8s ImagePullBackOff and ErrImagePull recoverable #2302 [766ffde40]
+- Improve cache resume strategy [0b0eae225]
+- Improve GH action build compressing integration tests [ab9d747d4]
+- Prevent NPE if session is not set [83bb46d94]
+- Remove deprecated attribute [50d63b6fb]
+- Find newest matching plugin #2303 [e6cf79ff3]
+- Documents noproxy variable #2325 [bc769b1b4]
+- Bump Groovy 3.0.9 [dee2d6c99]
+- Bump nf-sqldb@0.2.0
+- Bump nf-amazon@1.2.1
+- Bump nf-azure@0.11.0
+- Bump nf-google@1.1.1
+
 21.08.0-edge - 30 Aug 2021
 - Fix plugin updater version logging [d162eb8b4]
 - Fix Nextflow launcher breaks when java path contains blanks #2265 [8097a2a90]
