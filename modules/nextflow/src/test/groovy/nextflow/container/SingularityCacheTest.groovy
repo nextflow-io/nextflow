@@ -52,6 +52,34 @@ class SingularityCacheTest extends Specification {
 
     }
 
+    def 'should return the library dir from the config file' () {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+
+        when:
+        def cache = new SingularityCache([libraryDir: "$dir"] as ContainerConfig)
+        then:
+        cache.getLibraryDir() == dir
+
+        cleanup:
+        dir.deleteDir()
+    }
+
+    def 'should return the library dir from the environment' () {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+
+        when:
+        def cache = new SingularityCache(GroovyMock(ContainerConfig), [NXF_SINGULARITY_LIBRARYDIR: "$dir"])
+        then:
+        cache.getLibraryDir() == dir
+
+        cleanup:
+        dir.deleteDir()
+    }
+
     def 'should return the cache dir from the config file' () {
 
         given:
@@ -91,12 +119,13 @@ class SingularityCacheTest extends Specification {
         def TEMP_FILE = dir.resolve('foo-latest.pulling'); TEMP_FILE.text = 'foo'
         ContainerConfig config = [noHttps: true]
         and:
-        def cache = Spy(SingularityCache, constructorArgs: [ config ])
+        def cache = Spy(new SingularityCache(config))
 
         when:
         def result = cache.downloadSingularityImage(IMAGE)
         then:
-        1 * cache.localImagePath(IMAGE) >> TARGET_FILE
+        1 * cache.localLibraryPath(IMAGE) >> null
+        1 * cache.localCachePath(IMAGE) >> TARGET_FILE
         1 * cache.getTempImagePath(TARGET_FILE) >> TEMP_FILE
         and:
         1 * cache.runCommand("singularity pull --nohttps --name ${TEMP_FILE.name} $IMAGE > /dev/null", dir) >> 0
@@ -125,7 +154,32 @@ class SingularityCacheTest extends Specification {
         when:
         def result = cache.downloadSingularityImage(IMAGE)
         then:
-        1 * cache.localImagePath(IMAGE) >> container
+        1 * cache.localLibraryPath(IMAGE) >> null
+        1 * cache.localCachePath(IMAGE) >> container
+        0 * cache.runCommand(_) >> 0
+        and:
+        result == dir.resolve(LOCAL)
+
+        cleanup:
+        dir.deleteDir()
+    }
+
+    def 'should return library image'() {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+        def IMAGE = 'docker://pditommaso/foo:latest'
+        def LOCAL = 'foo-latest.img'
+        def container = dir.resolve(LOCAL)
+        container.text = 'dummy'
+        and:
+        def cache = Spy(SingularityCache)
+
+        when:
+        def result = cache.downloadSingularityImage(IMAGE)
+        then:
+        1 * cache.localLibraryPath(IMAGE) >> container
+        0 * cache.localCachePath(IMAGE) >> null
         0 * cache.runCommand(_) >> 0
         and:
         result == dir.resolve(LOCAL)
