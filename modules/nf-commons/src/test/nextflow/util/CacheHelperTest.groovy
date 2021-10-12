@@ -17,19 +17,16 @@
 
 package nextflow.util
 
+import java.nio.file.Files
 import java.nio.file.Paths
+import java.nio.file.attribute.FileTime
 
+import com.google.common.hash.Hashing
 import nextflow.Global
 import nextflow.Session
 import org.apache.commons.codec.digest.DigestUtils
 import spock.lang.Specification
-
-import java.nio.file.Files
-import java.nio.file.attribute.FileTime
-
-import com.google.common.hash.Hashing
 import test.TestHelper
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -281,5 +278,33 @@ class CacheHelperTest extends Specification {
         // this is not expecting to return the sha-256 of the file content BUT
         // the murmur hashing of the sha-256 string obtained by hashing the file
         CacheHelper.hasher(file, CacheHelper.HashMode.SHA256).hash().toString() == 'd29e7ba0fbcc617ab8e1e44e81381aed'
+    }
+
+    def 'should hash dir content with sha256'() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        folder.resolve('dir1').mkdir()
+        folder.resolve('dir2').mkdir()
+        and:
+        folder.resolve('dir1/foo').text = "I'm foo"
+        folder.resolve('dir1/bar').text = "I'm bar"
+        folder.resolve('dir1/xxx/yyy').mkdirs()
+        folder.resolve('dir1/xxx/foo1').text = "I'm foo within xxx"
+        folder.resolve('dir1/xxx/yyy/bar1').text = "I'm bar within yyy"
+        and:
+        folder.resolve('dir2/foo').text = "I'm foo"
+        folder.resolve('dir2/bar').text = "I'm bar"
+        folder.resolve('dir2/xxx/yyy').mkdirs()
+        folder.resolve('dir2/xxx/foo1').text = "I'm foo within xxx"
+        folder.resolve('dir2/xxx/yyy/bar1').text = "I'm bar within yyy"
+
+        when:
+        def hash1 = CacheHelper.hashDirSha256(CacheHelper.defaultHasher().newHasher(), folder.resolve('dir1'), folder.resolve('dir1'))
+        and:
+        def hash2 = CacheHelper.hashDirSha256(CacheHelper.defaultHasher().newHasher(), folder.resolve('dir2'), folder.resolve('dir2'))
+
+        then:
+        hash1.hash() == hash2.hash()
+
     }
 }
