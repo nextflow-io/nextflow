@@ -72,7 +72,7 @@ class SingularityCacheTest extends Specification {
         def dir = Files.createTempDirectory('test')
 
         when:
-        def cache = new SingularityCache(GroovyMock(ContainerConfig), [NXF_SINGULARITY_LIBRARY: "$dir"])
+        def cache = new SingularityCache(GroovyMock(ContainerConfig), [NXF_SINGULARITY_LIBRARYDIR: "$dir"])
         then:
         cache.getLibraryDir() == dir
 

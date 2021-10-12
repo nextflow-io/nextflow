@@ -161,7 +161,7 @@ class SingularityCache {
 
     @PackageScope
     Path getLibraryDir() {
-        def str = config.libraryDir as String ?: env.get('NXF_SINGULARITY_LIBRARY')
+        def str = config.libraryDir as String ?: env.get('NXF_SINGULARITY_LIBRARYDIR')
         if( str )
             return existsDir(str)
 
