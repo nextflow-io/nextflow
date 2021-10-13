@@ -93,6 +93,7 @@ The available factory methods are:
 * `fromPath`_
 * `fromFilePairs`_
 * `fromSRA`_
+* `of`_
 * `value`_
 * `watchPath`_
 
