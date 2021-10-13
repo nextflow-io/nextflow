@@ -1,6 +1,6 @@
 NF-SQLDB CHANGE-LOG
 ===================
-0.2.0 - x Oct 2021
+0.2.0 - 10 Oct 2021
 - Add support for batch inserts
 - Add support for insert operation setup statement to create missing table(s)
 - Add support fot SQLite

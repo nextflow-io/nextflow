@@ -122,6 +122,7 @@ subprojects {
         owner = github_organization
         userName = github_username
         authToken = github_access_token
+        skipExisting = true
     }
 
     jar {
