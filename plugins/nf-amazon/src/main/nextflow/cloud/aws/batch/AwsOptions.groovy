@@ -61,6 +61,8 @@ class AwsOptions implements CloudTransferOptions {
 
     String retryMode
 
+    Boolean privileged
+
     volatile Boolean fetchInstanceType
 
     /**
@@ -93,6 +95,7 @@ class AwsOptions implements CloudTransferOptions {
         maxParallelTransfers = session.config.navigate('aws.batch.maxParallelTransfers', MAX_TRANSFER) as int
         maxTransferAttempts = session.config.navigate('aws.batch.maxTransferAttempts', defaultMaxTransferAttempts()) as int
         delayBetweenAttempts = session.config.navigate('aws.batch.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
+        privileged = session.config.navigate('aws.batch.privileged', false)
         region = session.config.navigate('aws.region') as String
         volumes = makeVols(session.config.navigate('aws.batch.volumes'))
         jobRole = session.config.navigate('aws.batch.jobRole')

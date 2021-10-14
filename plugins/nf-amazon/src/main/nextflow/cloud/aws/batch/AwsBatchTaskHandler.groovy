@@ -451,6 +451,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 .withImage(image)
         // note the actual command, memory and cpus are overridden when the job is executed
                 .withCommand('true')
+                .withPrivileged(opts.getPrivileged())
                 .withMemory(1024)
                 .withVcpus(1)
 
