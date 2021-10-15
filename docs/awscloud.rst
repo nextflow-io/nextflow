@@ -22,10 +22,6 @@ overridden via the environmental variable ``AWS_PROFILE`` (or ``AWS_DEFAULT_PROF
 
 Alternatively AWS credentials can be specified in the Nextflow configuration file.
 
-Also, make sure the ``AmazonS3FullAccess`` and ``AmazonAWSBatchFullAccess`` policies are attached to the user connected
-to the credentials. This way Nextflow will be able to to access to `S3 storage <https://aws.amazon.com/s3/>`_ and
-interact with AWS Batch.
-
 See :ref:`AWS configuration<config-aws>` for more details.
 
 .. note:: Credentials can also be provided by using an IAM Instance Role. The benefit of this approach is that
@@ -33,6 +29,101 @@ See :ref:`AWS configuration<config-aws>` for more details.
   Read the `IAM Roles <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html>`_ documentation
   and `this blog post <https://aws.amazon.com/blogs/security/granting-permission-to-launch-ec2-instances-with-iam-roles-passrole-permission/>`_ for more details.
 
+AWS IAM policies
+=================
+
+`AIM policies <https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html>`_ are the mechanism used by AWS to
+defines permissions for IAM identities. In order to access certain AWS services, the proper policies must be
+attached to the identity associated to the AWS credentials.
+
+Minimal permissions policies to be attached to the AWS account used by Nextflow are:
+
+- To interface AWS Batch::
+
+  "batch:DescribeJobQueues"
+  "batch:CancelJob"
+  "batch:SubmitJob"
+  "batch:ListJobs"
+  "batch:DescribeComputeEnvironments"
+  "batch:TerminateJob"
+  "batch:DescribeJobs"
+  "batch:RegisterJobDefinition"
+  "batch:DescribeJobDefinitions"
+
+- To be able to see the `EC2 <https://aws.amazon.com/ec2/>`_ instances::
+
+  "ecs:DescribeTasks"
+  "ec2:DescribeInstances"
+  "ec2:DescribeInstanceTypes"
+  "ec2:DescribeInstanceAttribute"
+  "ecs:DescribeContainerInstances"
+  "ec2:DescribeInstanceStatus"
+
+- To pull container images stored in the `ECR <https://aws.amazon.com/ecr/>`_ repositories::
+
+  "ecr:GetAuthorizationToken"
+  "ecr:BatchCheckLayerAvailability"
+  "ecr:GetDownloadUrlForLayer"
+  "ecr:GetRepositoryPolicy"
+  "ecr:DescribeRepositories"
+  "ecr:ListImages"
+  "ecr:DescribeImages"
+  "ecr:BatchGetImage"
+  "ecr:GetLifecyclePolicy"
+  "ecr:GetLifecyclePolicyPreview"
+  "ecr:ListTagsForResource"
+  "ecr:DescribeImageScanFindings"
+
+S3 policies
+------------
+Nextflow requires policies also to access `S3 buckets <https://aws.amazon.com/s3/>`_ in order to::
+- use the workdir
+- pull input data
+- publish results
+
+Depending on the pipeline configuration, the above actions can be done all in a single bucket but, more likely, spread across multiple
+buckets. Once the list of buckets used by the pipeline is identified, there are two alternative ways to give Nextflow access to these buckets:
+
+1. grant access to all buckets by attaching the policy "s3:*" to the AIM identity. This works only if buckets do not set their own access policies (see point 2);
+2. for a more fine grained control, assign to each bucket the following policy (replace the placeholders with the actual values)::
+
+	{
+    "Version": "2012-10-17",
+    "Id": "<my policy id>",
+    "Statement": [
+        {
+            "Sid": "<my statement id>",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "<ARN of the nextflow identity>"
+            },
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject"
+            ],
+            "Resource": "arn:aws:s3:::<bucket name>/*"
+        },
+        {
+            "Sid": "AllowSSLRequestsOnly",
+            "Effect": "Deny",
+            "Principal": "*",
+            "Action": "s3:*",
+            "Resource": [
+                "arn:aws:s3:::<bucket name>",
+                "arn:aws:s3:::<bucket name>/*"
+            ],
+            "Condition": {
+                "Bool": {
+                    "aws:SecureTransport": "false"
+                }
+            }
+        }
+    ]
+	}
+
+See the `bucket policy documentation <https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-policy.html>`_
+for additional details.
 
 .. _awscloud-batch:
 
