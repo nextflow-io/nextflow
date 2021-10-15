@@ -312,13 +312,18 @@ Azure Repos credentials
 
 Nextflow has a builtin support for `Azure Repos <https://azure.microsoft.com/en-us/services/devops/repos/>`_, a Git source
 code management service hosted in the Azure cloud. To access your Azure Repos with Nextflow provide the repository credentials
-using the configuration snippet shown below:
+using the configuration snippet shown below::
 
     providers {
 
         azurerepos {
-            user = 'your-user-name'
-            password = 'your-personal-access-token'
+            server = 'https://dev.azure.com'
+            endpoint = 'https://dev.azure.com'
+            platform = 'gitea'
+            user = 'your-user'
+            password = 'your-password'
+            token = 'your-api-token'
+
         }
 
     }
