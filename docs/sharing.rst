@@ -319,7 +319,7 @@ using the configuration snippet shown below::
         azurerepos {
             server = 'https://dev.azure.com'
             endpoint = 'https://dev.azure.com'
-            platform = 'gitea'
+            platform = 'azurerepos'
             user = 'your-user'
             password = 'your-password'
             token = 'your-api-token'
