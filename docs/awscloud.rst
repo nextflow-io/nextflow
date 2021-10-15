@@ -36,12 +36,94 @@ AWS IAM policies
 defines permissions for IAM identities. In order to access certain AWS services, the proper policies must be
 attached to the identity associated to the AWS credentials.
 
-Common policies to attach to the identity used by Nextflow are:
+Minimal permissions policies to be attached to the AWS account used by Nextflow are:
 
-- ``AmazonAWSBatchFullAccess`` to interface with AWS Batch
-- ``AmazonS3FullAccess`` to access `S3 storage <https://aws.amazon.com/s3/>`_
-- ``AmazonEC2ContainerRegistryFullAccess`` to let the tasks pull container images stored in `Amazon ECR <https://aws.amazon.com/ecr/>`_
-- ``AmazonEC2FullAccess`` to be able to see all the `EC2 <https://aws.amazon.com/ec2/>`_ instances and launch new instances as needed
+- To interface AWS Batch::
+
+  "batch:DescribeJobQueues"
+  "batch:CancelJob"
+  "batch:SubmitJob"
+  "batch:ListJobs"
+  "batch:DescribeComputeEnvironments"
+  "batch:TerminateJob"
+  "batch:DescribeJobs"
+  "batch:RegisterJobDefinition"
+  "batch:DescribeJobDefinitions"
+
+- To be able to see the `EC2 <https://aws.amazon.com/ec2/>`_ instances::
+
+  "ecs:DescribeTasks"
+  "ec2:DescribeInstances"
+  "ec2:DescribeInstanceTypes"
+  "ec2:DescribeInstanceAttribute"
+  "ecs:DescribeContainerInstances"
+  "ec2:DescribeInstanceStatus"
+
+- To pull container images stored in the `ECR <https://aws.amazon.com/ecr/>`_ repositories::
+
+  "ecr:GetAuthorizationToken"
+  "ecr:BatchCheckLayerAvailability"
+  "ecr:GetDownloadUrlForLayer"
+  "ecr:GetRepositoryPolicy"
+  "ecr:DescribeRepositories"
+  "ecr:ListImages"
+  "ecr:DescribeImages"
+  "ecr:BatchGetImage"
+  "ecr:GetLifecyclePolicy"
+  "ecr:GetLifecyclePolicyPreview"
+  "ecr:ListTagsForResource"
+  "ecr:DescribeImageScanFindings"
+
+S3 policies
+------------
+Nextflow requires policies also to access `S3 buckets <https://aws.amazon.com/s3/>`_ in order to::
+- use the workdir
+- pull input data
+- publish results
+
+Depending on the pipeline configuration, the above actions can be done all in a single bucket but, more likely, spread across multiple
+buckets. Once the list of buckets used by the pipeline is identified, there are two alternative ways to give Nextflow access to these buckets:
+
+1. grant access to all buckets by attaching the policy "s3:*" to the AIM identity. This works only if buckets do not set their own access policies (see point 2);
+2. for a more fine grained control, assign to each bucket the following policy (replace the placeholders with the actual values)::
+
+	{
+    "Version": "2012-10-17",
+    "Id": "<my policy id>",
+    "Statement": [
+        {
+            "Sid": "<my statement id>",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "<ARN of the nextflow identity>"
+            },
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject"
+            ],
+            "Resource": "arn:aws:s3:::<bucket name>/*"
+        },
+        {
+            "Sid": "AllowSSLRequestsOnly",
+            "Effect": "Deny",
+            "Principal": "*",
+            "Action": "s3:*",
+            "Resource": [
+                "arn:aws:s3:::<bucket name>",
+                "arn:aws:s3:::<bucket name>/*"
+            ],
+            "Condition": {
+                "Bool": {
+                    "aws:SecureTransport": "false"
+                }
+            }
+        }
+    ]
+	}
+
+See the `bucket policy documentation <https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-policy.html>`_
+for additional details.
 
 .. _awscloud-batch:
 
