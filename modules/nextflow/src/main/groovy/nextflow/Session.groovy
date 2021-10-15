@@ -444,6 +444,7 @@ class Session implements ISession {
     }
 
     void fireDataflowNetwork() {
+        checkConfig()
         notifyFlowBegin()
 
         if( !NextflowMeta.instance.isDsl2() )
@@ -785,7 +786,6 @@ class Session implements ISession {
      * Check preconditions before run the main script
      */
     protected void validate() {
-        checkConfig()
         checkVersion()
     }
 
