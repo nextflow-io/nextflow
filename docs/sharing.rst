@@ -318,11 +318,11 @@ using the configuration snippet shown below::
 
         azurerepos {
             server = 'https://dev.azure.com'
-            endpoint = 'https://dev.azure.com'
+            endpoint = 'https://dev.azure.com' // Can be omitted when it has the same value as the server field.
             platform = 'azurerepos'
             user = 'your-user'
             password = 'your-password'
-            token = 'your-api-token'
+            token = 'your-api-token' // When token is used, password is not necessary.
 
         }
 
