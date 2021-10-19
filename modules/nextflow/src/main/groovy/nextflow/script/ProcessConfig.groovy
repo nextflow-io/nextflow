@@ -83,6 +83,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'val',
             'each',
             'env',
+            'secret',
             'stdin',
             'stdout',
             'stageInMode',
@@ -652,7 +653,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     }
 
     HashMode getHashMode() {
-        HashMode.of(configProperties.cache) ?: HashMode.STANDARD
+        HashMode.of(configProperties.cache) ?: HashMode.DEFAULT()
     }
 
     protected boolean isValidLabel(String lbl) {
@@ -696,7 +697,28 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     }
 
     List<String> getLabels() {
-        (List<String>) configProperties.get('label') ?: Collections.emptyList()
+        (List<String>) configProperties.get('label') ?: Collections.<String>emptyList()
+    }
+
+    ProcessConfig secret(String name) {
+        if( !name )
+            return this
+
+        // -- get the current label, it must be a list
+        def allSecrets = (List)configProperties.get('secret')
+        if( !allSecrets ) {
+            allSecrets = new ConfigList()
+            configProperties.put('secret', allSecrets)
+        }
+
+        // -- avoid duplicates
+        if( !allSecrets.contains(name) )
+            allSecrets.add(name)
+        return this
+    }
+
+    List<String> getSecret() {
+        (List<String>) configProperties.get('secret') ?: Collections.<String>emptyList()
     }
 
     /**

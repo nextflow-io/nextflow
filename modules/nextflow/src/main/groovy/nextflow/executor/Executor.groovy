@@ -162,6 +162,13 @@ abstract class Executor {
     }
 
     /**
+     * @return {@code true} whenever the secrets handling is managed by the executing platform itself
+     */
+    boolean isSecretNative() {
+        return false
+    }
+
+    /**
      * Allow graceful termination of executor resources
      */
     void shutdown() { }

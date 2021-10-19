@@ -64,6 +64,7 @@ class SqlDataSource {
             case 'mysql': return 'com.mysql.cj.jdbc.Driver'
             case 'mariadb': return 'org.mariadb.jdbc.Driver'
             case 'postgresql': return 'org.postgresql.Driver'
+            case 'duckdb': return 'org.duckdb.DuckDBDriver'
         }
         return null
     }

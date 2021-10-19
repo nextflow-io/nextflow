@@ -127,6 +127,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
 
     @Override
     ProcessDef cloneWithName(String name) {
+        ScriptMeta.addResolvedName(name)
         def result = clone()
         result.@processName = name
         result.@simpleName = stripScope(name)

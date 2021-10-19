@@ -45,6 +45,8 @@ class ScriptMeta {
 
     static private Map<BaseScript,ScriptMeta> REGISTRY = new HashMap<>(10)
 
+    static private Set<String> resolvedProcessNames = new HashSet<>(20)
+
     static ScriptMeta get(BaseScript script) {
         if( !script ) throw new IllegalStateException("Missing current script context")
         return REGISTRY.get(script)
@@ -54,7 +56,13 @@ class ScriptMeta {
         def result = new HashSet()
         for( ScriptMeta entry : REGISTRY.values() )
             result.addAll( entry.getProcessNames() )
+        // add all resolved names
+        result.addAll(resolvedProcessNames)
         return result
+    }
+
+    static void addResolvedName(String name) {
+        resolvedProcessNames.add(name)
     }
 
     static Map<String,Path> allScriptNames() {

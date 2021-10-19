@@ -22,7 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 
 /**
- * Model am execution rate limit measure unit
+ * Model an execution rate limit measure unit
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
