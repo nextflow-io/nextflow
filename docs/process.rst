@@ -889,7 +889,7 @@ the ``c`` element is discarded. It prints::
     2 and b
 
 
-.. warning:: A different semantic is a applied when using *Value channel* a.k.a. *Singleton channel*.
+.. warning:: A different semantic is applied when using *Value channel* a.k.a. *Singleton channel*.
 
 This kind of channel is created by the :ref:`Channel.value <channel-value>` factory method or implicitly
 when a process input specifies a simple value in the ``from`` clause.

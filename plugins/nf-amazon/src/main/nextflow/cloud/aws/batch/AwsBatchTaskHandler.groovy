@@ -587,9 +587,14 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         result.setJobQueue(getJobQueue(task))
         result.setJobDefinition(getJobDefinition(task))
 
-        // NF uses `maxRetries` *only* if `retry` error strategy is specified
-        // otherwise delegates the the retry to AWS Batch
-        if( task.config.getMaxRetries() && task.config.getErrorStrategy() != ErrorStrategy.RETRY ) {
+        // -- NF uses `maxRetries` *only* if `retry` error strategy is specified
+        //    otherwise delegates the the retry to AWS Batch
+        // -- NOTE: make sure the `errorStrategy` is a static value before invoking `getMaxRetries` and `getErrorStrategy`
+        //   when the errorStrategy is closure (ie. dynamic evaluated) value, the `task.config.getMaxRetries() && task.config.getErrorStrategy()`
+        //   condition should not be evaluated because otherwise the closure value is cached using the wrong task.attempt and task.exitStatus values.
+        final strategy = task.config.getTarget().get('errorStrategy')
+        final canCheck = strategy == null || strategy instanceof CharSequence
+        if( canCheck && task.config.getMaxRetries() && task.config.getErrorStrategy() != ErrorStrategy.RETRY ) {
             def retry = new RetryStrategy().withAttempts( task.config.getMaxRetries()+1 )
             result.setRetryStrategy(retry)
         }

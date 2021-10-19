@@ -19,9 +19,11 @@ package nextflow.util;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.ProviderMismatchException;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 import java.util.HashMap;
@@ -59,6 +61,17 @@ public class CacheHelper {
     public enum HashMode {
 
         STANDARD, DEEP, LENIENT, SHA256;
+
+        private static HashMode defaultValue;
+
+        static {
+            if( System.getenv().containsKey("NXF_CACHE_MODE") )
+                defaultValue = valueOf(System.getenv().get("NXF_CACHE_MODE"));
+        }
+
+        public static HashMode DEFAULT() {
+            return defaultValue != null ? defaultValue : STANDARD;
+        }
 
         public static HashMode of( Object obj ) {
             if( obj==null || obj instanceof Boolean )
@@ -249,21 +262,30 @@ public class CacheHelper {
             log.warn("Unable to get file attributes file: {} -- Cause: {}", FilesEx.toUriString(path), e.toString());
         }
 
-        if( mode==HashMode.STANDARD && isAssetFile(path) ) {
-            return attrs==null || attrs.isDirectory()
-                    // when file attributes are not avail or it's a directory
-                    // hash the file using the file name path and the repository
-                    ? hashFileAsset(hasher, path)
-                    // when it's not a directory, hash the content being an asset file
-                    // (i.e. included in the project repository) it's expected to small file
-                    // which makes the content hashing doable
-                    : hashFileSha256(hasher, path);
+        if( (mode==HashMode.STANDARD || mode==HashMode.LENIENT) && isAssetFile(path) ) {
+            if( attrs==null ) {
+                // when file attributes are not avail or it's a directory
+                // hash the file using the file name path and the repository
+                log.warn("Unable to fetch attribute for file: {} - Hash is inferred from Git repository commit Id", FilesEx.toUriString(path));
+                return hashFileAsset(hasher, path);
+            }
+            final Path base = Global.getSession().getBaseDir();
+            if( attrs.isDirectory() ) {
+                // hash all the directory content
+                return hashDirSha256(hasher, path, base);
+            }
+            else {
+                // hash the content being an asset file
+                // (i.e. included in the project repository) it's expected to small file
+                // which makes the content hashing doable
+                return hashFileSha256(hasher, path, base);
+            }
         }
 
         if( mode==HashMode.DEEP && attrs!=null && attrs.isRegularFile() )
             return hashFileContent(hasher, path);
         if( mode==HashMode.SHA256 && attrs!=null && attrs.isRegularFile() )
-            return hashFileSha256(hasher, path);
+            return hashFileSha256(hasher, path, null);
         // default
         return hashFileMetadata(hasher, path, attrs, mode);
     }
@@ -279,8 +301,12 @@ public class CacheHelper {
                 }
             });
 
-    static private Hasher hashFileSha256( Hasher hasher, Path path ) {
+    static protected Hasher hashFileSha256( Hasher hasher, Path path, Path base ) {
         try {
+            log.trace("Hash sha-256 file content path={} - base={}", path, base);
+            // the file relative base
+            if( base!=null )
+                hasher.putUnencodedChars(base.relativize(path).toString());
             // file content hash
             String sha256 = sha256Cache.get(path);
             hasher.putUnencodedChars(sha256);
@@ -289,6 +315,43 @@ public class CacheHelper {
             Throwable err = t.getCause()!=null ? t.getCause() : t;
             String msg = err.getMessage()!=null ? err.getMessage() : err.toString();
             log.warn("Unable to compute sha-256 hashing for file: {} - Cause: {}", FilesEx.toUriString(path), msg);
+        }
+        return hasher;
+    }
+
+    static protected Hasher hashDirSha256( Hasher hasher, Path dir, Path base ) {
+        try {
+            Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+                public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
+                    log.trace("Hash sha-256 dir content [FILE] path={} - base={}", path, base);
+                    try {
+                        // the file relative base
+                        if( base!=null )
+                            hasher.putUnencodedChars(base.relativize(path).toString());
+                        // the file content sha-256 checksum
+                        String sha256 = sha256Cache.get(path);
+                        hasher.putUnencodedChars(sha256);
+                        return FileVisitResult.CONTINUE;
+                    }
+                    catch (ExecutionException t) {
+                        throw new IOException(t);
+                    }
+                }
+
+                public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) {
+                    log.trace("Hash sha-256 dir content [DIR] path={} - base={}", path, base);
+                    // the file relative base
+                    if( base!=null )
+                        hasher.putUnencodedChars(base.relativize(path).toString());
+                    hasher.putUnencodedChars(base.relativize(path).toString());
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        }
+        catch (IOException t) {
+            Throwable err = t.getCause()!=null ? t.getCause() : t;
+            String msg = err.getMessage()!=null ? err.getMessage() : err.toString();
+            log.warn("Unable to compute sha-256 hashing for directory: {} - Cause: {}", FilesEx.toUriString(dir), msg);
         }
         return hasher;
     }

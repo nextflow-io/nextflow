@@ -42,6 +42,7 @@ dependencies {
     api 'org.mariadb.jdbc:mariadb-java-client:2.7.0'
     api 'org.postgresql:postgresql:42.2.23'
     api 'org.xerial:sqlite-jdbc:3.36.0.3'
+    api 'org.duckdb:duckdb_jdbc:0.3.0'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')

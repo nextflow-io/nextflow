@@ -304,6 +304,23 @@ class ProcessConfigTest extends Specification {
                 .stripIndent().trim()
     }
 
+    def 'should set process secret'() {
+        when:
+        def config = new ProcessConfig([:])
+        then:
+        config.getSecret() == []
+
+        when:
+        config.secret('foo')
+        then:
+        config.getSecret() == ['foo']
+
+        when:
+        config.secret('bar')
+        then:
+        config.secret == ['foo', 'bar']
+        config.getSecret() == ['foo', 'bar']
+    }
 
     def 'should set process labels'() {
         when:

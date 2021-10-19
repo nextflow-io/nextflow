@@ -33,4 +33,33 @@ class AzStorageOptsTest extends Specification {
         opts3.accountKey == 'env-key'
     }
 
+    def 'should get azure files name, root path & options'() {
+
+        given:
+        def filesOpts = new LinkedHashMap<String,Map>()
+        def storageOpts
+
+        when:
+        filesOpts.clear()
+        filesOpts['file1'] = [mountOptions: 'mountOptions1', mountPath: 'mountPath1']
+        filesOpts['file2'] = [mountOptions: 'mountOptions2', mountPath: 'mountPath2']
+        storageOpts = new AzStorageOpts(['fileShares':filesOpts], [:])
+
+        then:
+        storageOpts.fileShares.size() == 2
+        storageOpts.fileShares.get('file1').getMountPath() == 'mountPath1'
+        storageOpts.fileShares.get('file1').getMountOptions() == 'mountOptions1'
+        storageOpts.fileShares.get('file2').getMountPath() == 'mountPath2'
+        storageOpts.fileShares.get('file2').getMountOptions() == 'mountOptions2'
+
+        when:
+        filesOpts.clear()
+        filesOpts['file1'] = [mountPath: 'mountPath1']
+        storageOpts = new AzStorageOpts(['fileShares':filesOpts], [:])
+
+        then:
+        storageOpts.fileShares.size() == 1
+        storageOpts.fileShares.get('file1').getMountPath() == 'mountPath1'
+        storageOpts.fileShares.get('file1').getMountOptions() == AzFileShareOpts.DEFAULT_MOUNT_OPTIONS
+    }
 }

@@ -38,3 +38,4 @@ Contents:
    metadata
    mail
    plugins
+   secrets

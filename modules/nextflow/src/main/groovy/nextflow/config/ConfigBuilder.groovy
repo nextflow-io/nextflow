@@ -32,6 +32,9 @@ import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
+import nextflow.secret.SecretHolder
+import nextflow.secret.SecretsContext
+import nextflow.secret.SecretsLoader
 import nextflow.trace.GraphObserver
 import nextflow.trace.ReportObserver
 import nextflow.trace.TimelineObserver
@@ -322,6 +325,8 @@ class ConfigBuilder {
         binding.put('baseDir', baseDir)
         binding.put('projectDir', baseDir)
         binding.put('launchDir', Paths.get('.').toRealPath())
+        if( SecretsLoader.isEnabled() )
+            binding.put('secrets', new SecretsContext())
         return binding
     }
 
@@ -738,8 +743,39 @@ class ConfigBuilder {
     /**
      * @return A the application options hold in a {@code ConfigObject} instance
      */
-    Map build() {
-        buildConfigObject().toMap()
+    ConfigMap build() {
+        toConfigMap(buildConfigObject())
+    }
+
+    protected static ConfigMap toConfigMap(ConfigObject config) {
+        assert config != null
+        (ConfigMap)normalize0((Map)config)
+    }
+
+    static private normalize0( config ) {
+
+        if( config instanceof Map ) {
+            ConfigMap result = new ConfigMap(config.size())
+            for( String name : config.keySet() ) {
+                def value = (config as Map).get(name)
+                result.put(name, normalize0(value))
+            }
+            return result
+        }
+        else if( config instanceof Collection ) {
+            List result = new ArrayList(config.size())
+            for( entry in config ) {
+                result << normalize0(entry)
+            }
+            return result
+        }
+        else if( config instanceof GString ) {
+            final holdSecrets = config.values.any { it instanceof SecretHolder }
+            return holdSecrets ? config : config.toString()
+        }
+        else {
+            return config
+        }
     }
 
     /**

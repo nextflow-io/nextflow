@@ -34,6 +34,8 @@ class AzStorageOpts {
     String accountName
     String sasToken
     Duration tokenDuration
+    Map<String,AzFileShareOpts> fileShares
+
 
     AzStorageOpts(Map config, Map<String,String> env=null) {
         assert config!=null
@@ -42,6 +44,9 @@ class AzStorageOpts {
         this.accountName = config.accountName ?: sysEnv.get('AZURE_STORAGE_ACCOUNT_NAME')
         this.sasToken = config.sasToken
         this.tokenDuration = (config.tokenDuration as Duration) ?: Duration.of('12h')
+        this.fileShares = parseFileShares(config.fileShares instanceof Map ? config.fileShares as Map<String,Map>
+                : Collections.<String,Map>emptyMap())
+
     }
 
     Map<String,Object> getEnv() {
@@ -52,4 +57,11 @@ class AzStorageOpts {
         return props
     }
 
+    static Map<String,AzFileShareOpts> parseFileShares(Map<String,Map> shares) {
+        final result = new LinkedHashMap<String,AzFileShareOpts>()
+        shares.each { Map.Entry<String, Map> entry ->
+            result[entry.key] = new AzFileShareOpts(entry.value)
+        }
+        return result
+    }
 }

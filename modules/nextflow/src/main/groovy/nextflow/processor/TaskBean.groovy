@@ -93,12 +93,13 @@ class TaskBean implements Serializable, Cloneable {
 
     String stageOutMode
 
-    @Deprecated
-    Path sharedDir
-
     Path binDir
 
     def cleanup
+
+    boolean secretNative
+
+    List<String> secretNames
 
     @PackageScope
     TaskBean() {
@@ -136,6 +137,9 @@ class TaskBean implements Serializable, Cloneable {
         this.containerNative = task.isContainerNative()
         this.containerEnabled = task.isContainerEnabled()
         this.containerOptions = task.config.getContainerOptions()
+        // secret management
+        this.secretNative = task.isSecretNative()
+        this.secretNames = task.config.getSecret()
 
         // stats
         this.outputEnvNames = task.getOutputEnvNames()
@@ -143,7 +147,6 @@ class TaskBean implements Serializable, Cloneable {
 
         this.inputFiles = task.getInputFilesMap()
         this.outputFiles = task.getOutputFilesNames()
-        this.sharedDir = task.getProcessor().getSession().getWorkDir()
         this.binDir = task.getProcessor().getExecutor().getBinDir()
         this.stageInMode = task.config.stageInMode
         this.stageOutMode = task.config.stageOutMode

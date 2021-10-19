@@ -1,18 +1,20 @@
 name: Nextflow CI
-# This workflow is triggered on pushes to the repository.
+# read more here
+# https://help.github.com/en/articles/workflow-syntax-for-github-actions#on
 on:
   push:
     branches:
       - '*'
+      - '!refs/tags/.*'
     tags-ignore:
-      - '*'  
+      - '*'
   pull_request:
     branches:
       - '*'
 jobs:
   build:
     name: Build Nextflow
-    if: "!contains(github.event.head_commit.message, '[ci skip]')"
+    if: "!contains(github.event.head_commit.message, '[ci skip]') && (github.event == 'push' || github.repository != github.event.pull_request.head.repo.full_name)"
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
@@ -55,7 +57,7 @@ jobs:
         NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
         NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
         NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
-        AZURE_STORAGE_ACCOUNT_NAME: nfbucket 
+        AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
         AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
         AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
@@ -74,7 +76,7 @@ jobs:
         NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
         TOWER_ACCESS_TOKEN: ${{ secrets.TOWER_ACCESS_TOKEN }}
         GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
-        AZURE_STORAGE_ACCOUNT_NAME: nfbucket
+        AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
         AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
         AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
@@ -98,13 +100,19 @@ jobs:
         NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
         NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
         NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
-        AZURE_STORAGE_ACCOUNT_NAME: nfbucket
+        AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
         AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
         AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
+
+    - name: Tar integration tests
+      if: failure()
+      run: tar -cvf integration-tests.tar tests/checks
 
     - name: Publish tests report
       if: failure()
       uses: actions/upload-artifact@v2
       with:
         name: test-reports-jdk-${{ matrix.java_version }}
-        path: "**/build/reports/tests/test"
+        path: |
+          **/build/reports/tests/test
+          integration-tests.tar

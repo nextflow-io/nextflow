@@ -277,6 +277,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalStateException("Not a valid `module` value: $value")
     }
 
+    List<String> getSecret() {
+        return (List<String>) get('secret')
+    }
+
     List<String> getShell() {
         final value = get('shell')
         if( !value )

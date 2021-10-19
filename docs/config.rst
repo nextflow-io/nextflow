@@ -115,6 +115,10 @@ Simply prefix your variable names with the ``env`` scope or surround them by cur
         GAMMA = "/my/path:$PATH"
    }
 
+.. tip:: In the above example, variables like `$HOME` and `$PATH` are evaluated when the workflow is launched. If
+  you want these variables to be evaluated during task execution, escape them with `\$`. This difference is important
+  for variables like `$PATH`, which may be very different in the workflow environment versus the task environment.
+
 
 Scope `params`
 --------------
@@ -822,6 +826,24 @@ enabled             If ``true`` it will send HTTP POST requests to a given url.
 url                The url where to send HTTP POST requests (default: ``http:localhost``).
 ================== ================
 
+.. _config-miscellaneous:
+
+Miscellaneous
+-------------
+
+There are additional variables that can be defined within a configuration file that do not have a dedicated scope.
+
+These are defined alongside other scopes, but the option is assigned as typically variable.
+
+================== ================
+Name                Description
+================== ================
+cleanup             If ``true``, on a successful completion of a run all files in *work* directory are automatically deleted.
+================== ================
+
+.. warning:: 
+    The use of the above ``cleanup`` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. 
+    Also, be aware that deleting all scratch files can take a lot of time especially when using shared file system or remote cloud storage.
 
 .. _config-profiles:
 
@@ -911,6 +933,7 @@ NXF_DEBUG                   Defines scripts debugging level: ``1`` dump task env
 NXF_EXECUTOR                Defines the default process executor e.g. `sge`
 NXF_CONDA_CACHEDIR          Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all computing nodes.
 NXF_SINGULARITY_CACHEDIR    Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
+NXF_SINGULARITY_LIBRARYDIR  Directory where remote Singularity images are retrieved. It should be a directory accessible to all computing nodes (requires: ``21.09.0-edge`` or later).
 NXF_CHARLIECLOUD_CACHEDIR   Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
 NXF_JAVA_HOME               Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the ``JAVA_HOME`` variable if defined.
 NXF_OFFLINE                 When ``true`` disables the project automatic download and update from remote repositories (default: ``false``).

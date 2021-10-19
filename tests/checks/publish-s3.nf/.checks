@@ -3,6 +3,11 @@ function count_hello() {
   aws s3 cp --only-show-errors s3://nextflow-ci/work/ci-test/publish-s3/HELLO.tsv hello && < hello grep 'Hello, world' -c
 }
 
+# Skip test if AWS keys are missing
+if [ -z "$AWS_ACCESS_KEY_ID" ]; then 
+  echo "Missing AWS credentials -- Skipping test"
+  exit 0
+fi
 
 #
 # run normal mode 

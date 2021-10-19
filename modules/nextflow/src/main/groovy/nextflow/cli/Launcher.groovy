@@ -35,6 +35,7 @@ import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
 import nextflow.exception.ScriptCompilationException
 import nextflow.exception.ScriptRuntimeException
+import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.LoggerHelper
 import nextflow.util.ProxyConfig
@@ -105,6 +106,9 @@ class Launcher {
                 new CmdSelfUpdate(),
                 new CmdPlugins()
         ]
+
+        if(SecretsLoader.isEnabled())
+            allCommands.add(new CmdSecret())
 
         // legacy command
         final cmdCloud = SpuriousDeps.cmdCloud()

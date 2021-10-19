@@ -1,6 +1,5 @@
 package nextflow.extension
 
-import java.lang.reflect.Method
 
 import groovy.runtime.metaclass.ChannelFactory
 import groovy.transform.Canonical
@@ -52,8 +51,11 @@ class ChannelFactoryInstance implements ChannelFactory {
         final meta = target.metaClass.getMetaMethod(methodName, args)
         if( meta && meta.isPublic() ) {
             target.checkInit((Session)Global.session)
-            final Method method = target.getClass().getMethod(methodName, meta.getNativeParameterTypes())
-            // or -- owner.metaClass.invokeMethod(target, methodName, args)
+            final method = target.getClass().getMethod(methodName, meta.getNativeParameterTypes())
+            // fix issue casting issue when argument is a GString but target method expects a String
+            for( int i=0; i<args.length; i++ )
+                if( args[i] instanceof GString && method.getParameterTypes()[i].isAssignableFrom(String) ) args[i] = args[i].toString()
+            // finally invoke it
             return method.invoke(target, args)
         }
         throw new MissingFactoryMethodException(this.scope, methodName, args)
