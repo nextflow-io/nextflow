@@ -110,8 +110,11 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
         def result = new HashSet<String>(30)
         def methods = clazz.getDeclaredMethods()
         for( def handle : methods ) {
+            // skip non-public methods
             if( !Modifier.isPublic(handle.getModifiers()) ) continue
+            // skip static methods
             if( Modifier.isStatic(handle.getModifiers()) ) continue
+            // operator extension method must have a dataflow read channel type as first argument
             def params=handle.getParameterTypes()
             if( params.length>0 && isReadChannel(params[0]) )
                 result.add(handle.name)
