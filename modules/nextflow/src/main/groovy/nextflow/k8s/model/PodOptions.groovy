@@ -73,6 +73,9 @@ class PodOptions {
         if( entry.env && entry.value ) {
             envVars << PodEnv.value(entry.env, entry.value)
         }
+        else if( entry.env && entry.fieldPath ) {
+            envVars << PodEnv.fieldPath(entry.env, entry.fieldPath)
+        }
         else if( entry.env && entry.secret ) {
             envVars << PodEnv.secret(entry.env, entry.secret)
         }
