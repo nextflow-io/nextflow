@@ -41,6 +41,10 @@ class PodEnv {
         new PodEnv([name:env, value:value])
     }
 
+    static PodEnv fieldPath(String env, String fieldPath) {
+        new PodEnv([ name: env, valueFrom: [fieldRef:[fieldPath: fieldPath]]])
+    }
+
     static PodEnv config(String env, String config) {
         final tokens = config.tokenize('/')
         if( tokens.size() > 2 )
