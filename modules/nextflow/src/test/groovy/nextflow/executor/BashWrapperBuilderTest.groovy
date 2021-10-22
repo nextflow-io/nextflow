@@ -751,20 +751,20 @@ class BashWrapperBuilderTest extends Specification {
         when:
         def binding = newBashWrapperBuilder(
                 containerEnabled: true,
-                containerImage: 'docker:ubuntu:latest',
+                containerImage: 'docker://ubuntu:latest',
                 environment: [PATH: '/path/to/bin:$PATH', FOO: 'xxx'],
                 containerConfig: [enabled: true, engine: 'shifter'] as ContainerConfig ).makeBinding()
 
         then:
         binding.launch_cmd == '''\
-        shifterimg pull docker:ubuntu:latest
-        shifterimg lookup docker:ubuntu:latest
-        while ! shifterimg lookup docker:ubuntu:latest; do
+        shifterimg pull docker://ubuntu:latest
+        shifterimg lookup docker://ubuntu:latest
+        while ! shifterimg lookup docker://ubuntu:latest; do
             sleep 5
-            STATUS=$(shifterimg -v pull docker:ubuntu:latest | tail -n2 | head -n1 | awk \'{print $6}\')
-            [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image \'docker:ubuntu:latest\'" >&2  && exit 1
+            STATUS=$(shifterimg -v pull docker://ubuntu:latest | tail -n2 | head -n1 | awk \'{print $6}\')
+            [[ $STATUS == "FAILURE" || -z $STATUS ]] && echo "Shifter failed to pull image \'docker://ubuntu:latest\'" >&2  && exit 1
         done
-        shifter --image docker:ubuntu:latest /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
+        shifter --image docker://ubuntu:latest /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
@@ -775,12 +775,12 @@ class BashWrapperBuilderTest extends Specification {
         when:
         def binding = newBashWrapperBuilder(
                 containerEnabled: true,
-                containerImage: 'docker:ubuntu:latest',
+                containerImage: 'docker://ubuntu:latest',
                 environment: [PATH: '/path/to/bin:$PATH', FOO: 'xxx'],
                 containerConfig: [enabled: true, engine: 'singularity'] as ContainerConfig ).makeBinding()
 
         then:
-        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec docker:ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
 
