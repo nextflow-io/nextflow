@@ -754,7 +754,7 @@ class FileHelper {
         }
 
         if( !matcher ) {
-            log.debug "Path matcher not defined by '${fileSystem.class.simpleName}' file system -- using default default strategy"
+            Bolts.debug1(log, "Path matcher not defined by '${fileSystem.class.simpleName}' file system -- using default default strategy")
             matcher = getDefaultPathMatcher(syntaxAndPattern)
         }
 
