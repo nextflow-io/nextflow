@@ -209,7 +209,7 @@ class K8sClient {
                 // this may happen when K8s node is shutdown and the pod is evicted
                 // therefore process exception is thrown so that the failure
                 // can be managed by the nextflow as re-triable execution
-                throw new ProcessFailedException("Unable to find pod $name - The pod may be evicted by a node shutdown event")
+                throw new NodeTerminationException("Unable to find pod $name - The pod may be evicted by a node shutdown event")
             }
             throw err
         }

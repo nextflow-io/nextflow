@@ -20,7 +20,6 @@ package nextflow.k8s.client
 import javax.net.ssl.HttpsURLConnection
 
 import nextflow.exception.NodeTerminationException
-import nextflow.exception.ProcessFailedException
 import spock.lang.Specification
 /**
  *
@@ -499,7 +498,7 @@ class K8sClientTest extends Specification {
         1 * client.podStatus(POD_NAME) >> { throw new K8sResponseException("Request GET /api/v1/namespaces/xyz/pods/nf-xyz/status returned an error code=404", new ByteArrayInputStream(JSON.bytes)) }
 
         and:
-        thrown(ProcessFailedException)
+        thrown(NodeTerminationException)
     }
 
     def 'should fail to get pod state' () {
