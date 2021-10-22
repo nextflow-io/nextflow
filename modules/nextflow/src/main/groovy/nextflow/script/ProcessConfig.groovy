@@ -42,7 +42,7 @@ import nextflow.script.params.*
 @Slf4j
 class ProcessConfig implements Map<String,Object>, Cloneable {
 
-    static final public transient LABEL_REGEXP = ~/[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9]+)?/
+    static final public transient LABEL_REGEXP = ~/[a-zA-Z0-9]([a-zA-Z0-9_]*[a-zA-Z0-9]+)?/
 
     static final public List<String> DIRECTIVES = [
             'accelerator',
