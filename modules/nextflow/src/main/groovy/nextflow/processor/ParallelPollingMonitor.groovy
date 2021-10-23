@@ -53,7 +53,7 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
 
     protected RateLimiter createSubmitRateLimit() {
         // disable the rate limiter managed by the super-class
-        // it has be managed by the throttling executor
+        // it has to be managed by the throttling executor
         return null
     }
 
