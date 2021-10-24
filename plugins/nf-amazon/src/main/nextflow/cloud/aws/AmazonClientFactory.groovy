@@ -27,6 +27,8 @@ import com.amazonaws.services.batch.AWSBatchClient
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ecs.AmazonECS
 import com.amazonaws.services.ecs.AmazonECSClientBuilder
+import com.amazonaws.services.logs.AWSLogs
+import com.amazonaws.services.logs.AWSLogsAsyncClientBuilder
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -254,6 +256,20 @@ class AmazonClientFactory {
             clientBuilder.withCredentials(credentials)
 
         clientBuilder.build()
+    }
+
+    @Memoized
+    AWSLogs getLogsClient() {
+
+        final clientBuilder = AWSLogsAsyncClientBuilder.standard()
+        if( region )
+            clientBuilder.withRegion(region)
+
+        final credentials = getCredentialsProvider0()
+        if( credentials )
+            clientBuilder.withCredentials(credentials)
+
+        return clientBuilder.build()
     }
 
     protected AWSCredentials getCredentials0() {
