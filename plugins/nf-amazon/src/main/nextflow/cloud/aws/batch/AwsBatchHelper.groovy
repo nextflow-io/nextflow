@@ -20,15 +20,20 @@ package nextflow.cloud.aws.batch
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.DescribeComputeEnvironmentsRequest
 import com.amazonaws.services.batch.model.DescribeJobQueuesRequest
+import com.amazonaws.services.batch.model.DescribeJobsRequest
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest
 import com.amazonaws.services.ec2.model.Instance
 import com.amazonaws.services.ecs.AmazonECS
 import com.amazonaws.services.ecs.model.DescribeContainerInstancesRequest
 import com.amazonaws.services.ecs.model.DescribeTasksRequest
+import com.amazonaws.services.logs.AWSLogs
+import com.amazonaws.services.logs.model.GetLogEventsRequest
+import com.amazonaws.services.logs.model.OutputLogEvent
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.cloud.aws.AmazonClientFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 /**
@@ -40,9 +45,28 @@ import nextflow.cloud.types.PriceModel
 @CompileStatic
 class AwsBatchHelper {
 
-    AWSBatch batchClient
-    AmazonECS ecsClient
-    AmazonEC2 ec2Client
+    private AmazonClientFactory factory
+    private AWSBatch batchClient
+
+    AwsBatchHelper(AWSBatch batchClient, AmazonClientFactory factory) {
+        this.batchClient = batchClient
+        this.factory = factory
+    }
+
+    @Memoized
+    private AmazonECS getEcsClient() {
+        return factory.getEcsClient()
+    }
+
+    @Memoized
+    private AmazonEC2 getEc2Client() {
+        return factory.getEc2Client()
+    }
+
+    @Memoized
+    private AWSLogs getLogsClient() {
+        return factory.getLogsClient()
+    }
 
     @Memoized(maxCacheSize = 100)
     private List<String> getClusterArnByBatchQueue(String queueName) {
@@ -144,6 +168,48 @@ class AwsBatchHelper {
 
         log.debug "Unable to find cloud info for queue=$queue and taskArn=$taskArn"
         return null
+    }
+
+    protected String getLogStreamId(String jobId) {
+        final request = new DescribeJobsRequest() .withJobs(jobId)
+        final response = batchClient.describeJobs(request)
+        if( response.jobs ) {
+            final detail = response.jobs[0]
+            return detail.container.logStreamName
+        }
+        else {
+            log.debug "Unable to find info for batch job id=$jobId"
+            return null
+        }
+    }
+
+    /**
+     * Retrieve the cloudwatch logs for the specified AWS Batch Job ID
+     *
+     * @param jobId
+     *      The Batch Job ID for which retrieve the job
+     * @return
+     *      The Batch jobs as a string value or {@code null} if no logs is available. Note, if the log
+     *      is made of multiple *page* this method returns only the first one
+     */
+    String getTaskLogStream(String jobId) {
+        final streamId = getLogStreamId(jobId)
+        if( !streamId ) {
+            log.debug "Unable to find cloudwatch log stream for batch job id=$jobId"
+            return null
+        }
+
+        final logRequest = new GetLogEventsRequest()
+                .withLogGroupName("/aws/batch/job")
+                .withLogStreamName(streamId)
+
+        final result = new StringBuilder()
+        final resp = logsClient .getLogEvents(logRequest)
+        for( OutputLogEvent it : resp.events ) {
+            result.append(it.getMessage()).append('\n')
+        }
+        
+        return result.toString()
     }
 
 }

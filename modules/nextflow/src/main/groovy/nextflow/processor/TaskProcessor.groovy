@@ -19,6 +19,7 @@ package nextflow.processor
 import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
+import java.nio.file.FileSystems
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -1140,16 +1141,16 @@ class TaskProcessor {
             if( lines.size() == 0 ) {
                 message << "  (empty)"
             }
-            lines.each {
-                message << "  ${task.workDir ? it.replace(task.workDir.toString()+'/','') : it }"
+            for( String it : lines ) {
+                message << "  ${stripWorkDir(it, task.workDir)}"
             }
 
             // - the tail of the process stderr
             lines = task.dumpStderr(max)
             if( lines ) {
                 message << "\nCommand error:"
-                lines.each {
-                    message << "  ${task.workDir ? it.replace(task.workDir.toString()+'/','') : it }"
+                for( String it : lines ) {
+                    message << "  ${stripWorkDir(it, task.workDir)}"
                 }
             }
             // - this is likely a task wrapper issue
@@ -1157,8 +1158,8 @@ class TaskProcessor {
                 lines = task.dumpLogFile(max)
                 if( lines ) {
                     message << "\nCommand wrapper:"
-                    lines.each {
-                        message << "  ${task.workDir ? it.replace(task.workDir.toString()+'/','') : it }"
+                    for( String it : lines ) {
+                        message << "  ${stripWorkDir(it, task.workDir)}"
                     }
                 }
             }
@@ -1180,6 +1181,12 @@ class TaskProcessor {
         message << "\nTip: ${getRndTip()}"
 
         return message
+    }
+
+    private static String stripWorkDir(String line, Path workDir) {
+        if( workDir==null ) return line
+        if( workDir.fileSystem != FileSystems.default ) return line
+        return workDir ? line.replace(workDir.toString()+'/','') : line
     }
 
     static List tips = [
