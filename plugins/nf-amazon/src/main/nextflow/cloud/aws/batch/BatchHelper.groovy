@@ -30,6 +30,7 @@ import com.amazonaws.services.ecs.model.DescribeTasksRequest
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 /**
+ * Implement helper method for AWS Batch
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
