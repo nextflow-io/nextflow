@@ -17,6 +17,8 @@
 
 package nextflow.scm
 
+import static nextflow.Const.*
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -43,14 +45,8 @@ import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.lib.Repository
-import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
-import org.eclipse.jgit.merge.MergeStrategy
 import org.eclipse.jgit.lib.SubmoduleConfig.FetchRecurseSubmodulesMode
-import static nextflow.Const.DEFAULT_HUB
-import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
-import static nextflow.Const.DEFAULT_ORGANIZATION
-import static nextflow.Const.DEFAULT_ROOT
-import static nextflow.Const.MANIFEST_FILE_NAME
+import org.eclipse.jgit.merge.MergeStrategy
 /**
  * Handles operation on remote and local installed pipelines
  *
@@ -321,7 +317,7 @@ class AssetManager {
                 }
                 else {
                     // find the provider config for this server
-                    def config = providerConfigs.find { it.domain == url.domain }
+                    def config = providerConfigs.find { it.domain == url.domain || url.domain.matches(it.domain) }
                     this.hub = config?.name
                     result = resolveProjectName0(url.path, config?.server)
                 }
@@ -605,7 +601,7 @@ class AssetManager {
             // clone it
             def clone = Git.cloneRepository()
             if( provider.hasCredentials() )
-                clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
+                clone.setCredentialsProvider( provider.getGitCredentials() )
 
             if( revision ) {
                 clone.setBranch(revision)
@@ -658,7 +654,7 @@ class AssetManager {
         }
 
         if( provider.hasCredentials() )
-            pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password))
+            pull.setCredentialsProvider( provider.getGitCredentials() )
 
         if( manifest.recurseSubmodules ) {
             pull.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
@@ -690,7 +686,7 @@ class AssetManager {
         clone.setDirectory(directory)
         clone.setCloneSubmodules(manifest.recurseSubmodules)
         if( provider.hasCredentials() )
-            clone.setCredentialsProvider(new UsernamePasswordCredentialsProvider(provider.user, provider.password))
+            clone.setCredentialsProvider( provider.getGitCredentials() )
 
         if( revision )
             clone.setBranch(revision)
@@ -947,7 +943,7 @@ class AssetManager {
         try {
             def fetch = git.fetch()
             if(provider.hasCredentials()) {
-                fetch.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
+                fetch.setCredentialsProvider( provider.getGitCredentials() )
             }
             if( manifest.recurseSubmodules ) {
                 fetch.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
@@ -1000,7 +996,7 @@ class AssetManager {
         init.call()
         // call submodule update
         if( provider.hasCredentials() )
-            update.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
+            update.setCredentialsProvider( provider.getGitCredentials() )
         def updatedList = update.call()
         log.debug "Update submodules $updatedList"
     }
@@ -1009,7 +1005,7 @@ class AssetManager {
         final tag = rev.type == RevisionInfo.Type.TAG
         final cmd = git.lsRemote().setTags(tag)
         if( provider.hasCredentials() )
-            cmd.setCredentialsProvider(new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
+            cmd.setCredentialsProvider( provider.getGitCredentials() )
         final list = cmd.call()
         final ref = list.find { Repository.shortenRefName(it.name) == rev.name }
         if( !ref ) {
@@ -1097,6 +1093,10 @@ class AssetManager {
             throw new AbortOperationException(message)
         }
 
+        if ( domain && domain.matches("git-codecommit\\..*?\\.amazonaws\\.com") ) {
+            return "codecommit"
+        }
+
         final result = providerConfigs.find { it -> it.domain == domain }
         if( !result && failFast ) {
             def message = "Can't find any configured provider for git server `$domain` -- Make sure to have specified it in your `scm` file. For details check https://www.nextflow.io/docs/latest/sharing.html#scm-configuration-file"
@@ -1147,7 +1147,7 @@ class AssetManager {
                 return "${commitId.substring(0,10)} [${name}]"
             }
 
-            commitId
+            return commitId
         }
     }
 }

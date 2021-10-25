@@ -137,7 +137,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         /*
          * retrieve config and credentials and create AWS client
          */
-        final driver = new AmazonClientFactory(session.config)
+        final driver = AmazonClientFactory.instance(session)
 
         /*
          * create a proxy for the aws batch client that manages the request throttling
