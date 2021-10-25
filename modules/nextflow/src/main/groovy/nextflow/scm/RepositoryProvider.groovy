@@ -26,6 +26,9 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.exception.RateLimitExceededException
+import nextflow.plugin.Plugins
+import org.eclipse.jgit.transport.CredentialsProvider
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 
 /**
  *
@@ -118,6 +121,14 @@ abstract class RepositoryProvider {
     List<BranchInfo> getBranches() { throw new UnsupportedOperationException("Get branches operation not support by ${this.getClass().getSimpleName()} provider") }
 
     List<TagInfo> getTags() { throw new UnsupportedOperationException("Get tags operation not support by ${this.getClass().getSimpleName()} provider") }
+
+    /**
+     * @return a org.eclipse.jgit.transport.CredentialsProvider object for authenticating git operations
+     * like clone, fetch, pull, and update
+     **/
+    CredentialsProvider getGitCredentials() {
+        return new UsernamePasswordCredentialsProvider(getUser(), getPassword())
+    }
 
     /**
      * Invoke the API request specified
@@ -287,6 +298,10 @@ abstract class RepositoryProvider {
             case 'azurerepos':
                 return new AzureRepositoryProvider(project, config)
 
+            case 'codecommit':
+                Plugins.startIfMissing('nf-amazon')
+                return loadCodeCommitProvider(project, config)
+
             case 'file':
                 // remove the 'local' prefix for the file provider
                 def localName = project.tokenize('/').last()
@@ -294,6 +309,16 @@ abstract class RepositoryProvider {
         }
 
         throw new AbortOperationException("Unknown project repository platform: ${config.platform}")
+    }
+
+    static private RepositoryProvider loadCodeCommitProvider(String project, ProviderConfig config) {
+        try {
+            final clazz = Class.forName('nextflow.cloud.aws.codecommit.AwsCodeCommitRepositoryProvider')
+            (RepositoryProvider) clazz.newInstance(project, config)
+        }
+        catch (ClassNotFoundException e) {
+            throw new IllegalArgumentException("Unable to load AWS CodeCommit provider - Make sure nf-amazon plugins was included")
+        }
     }
 
 }
