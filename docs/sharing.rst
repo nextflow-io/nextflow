@@ -282,6 +282,8 @@ that can be found in your GitLab `account page <https://gitlab.com/profile/accou
 
     }
 
+.. tip:: The ``token`` field is optional and the token value could also be specified in the ``password`` field.
+
 
 Gitea credentials
 -----------------

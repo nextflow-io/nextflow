@@ -44,6 +44,8 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         if( config.token ) {
             // set the token in the request header
             connection.setRequestProperty("PRIVATE-TOKEN", config.token)
+        } else {
+            connection.setRequestProperty("PRIVATE-TOKEN", config.password)
         }
     }
 
