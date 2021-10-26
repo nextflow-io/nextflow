@@ -13,6 +13,7 @@ package io.seqera.tower.plugin
 
 import nextflow.Session
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -23,22 +24,22 @@ class TowerFactoryTest extends Specification {
     def 'should create an tower observer' () {
 
         given:
-        def session = Mock(Session)
+        def session = Mock(Session) { getConfig() >> [:] }
         def factory = new TowerFactory()
-        
+
         when:
-        def result = factory.create(session)[0] as TowerClient
+        def client = factory.create(session)[0] as TowerClient
         then:
         session.getConfig() >> [tower: [enabled: true]]
         then:
-        result.endpoint == TowerClient.DEF_ENDPOINT_URL
+        client.endpoint == TowerClient.DEF_ENDPOINT_URL
 
         when:
-        result = factory.create(session)[0] as TowerClient
+        client = factory.create(session)[0] as TowerClient
         then:
         session.getConfig() >> [tower: [enabled: true, endpoint:'http://foo.com/api']]
         then:
-        result.endpoint == 'http://foo.com/api'
+        client.endpoint == 'http://foo.com/api'
 
     }
 
@@ -76,6 +77,33 @@ class TowerFactoryTest extends Specification {
         session.getConfig() >> [tower: [enabled: true, workspaceId: '200']]
         and:
         client.getWorkspaceId() == '200'
+    }
+
+    @Unroll
+    def 'should create tower http auth provider' () {
+
+        given:
+        def factory = new TowerFactory()
+        and:
+        def provider = factory.provider('https://tower.nf', 'xyz123')
+        and:
+        def conn = Spy(HttpURLConnection) {
+            getURL() >> new URL(URL_STR)
+        }
+
+        expect:
+        provider.authorize(conn) == EXPECTED
+        and:
+        conn.getRequestProperty('Authorization') == AUTH
+
+        where:
+        URL_STR                         | EXPECTED      | AUTH
+        'http://foo.com'                | false         | null
+        'https://tower.nf/'             | true          | 'Bearer xyz123'
+        'https://tower.nf/this/that'    | true          | 'Bearer xyz123'
+        'HTTPS://TOWER.NF/THIS/THAT'    | true          | 'Bearer xyz123'
+
+
     }
 
 }

@@ -131,7 +131,8 @@ class TowerClient implements TraceObserver {
      * a basic HTTP client.
      * @param endpoint The target address for sending messages to
      */
-    TowerClient(String endpoint) {
+    TowerClient(Session session, String endpoint) {
+        this.session = session
         this.endpoint = checkUrl(endpoint)
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
@@ -348,7 +349,7 @@ class TowerClient implements TraceObserver {
         log.info(LoggerHelper.STICKY, msg)
     }
 
-    protected String getAccessToken() {
+    String getAccessToken() {
         // access token
         def token = session.config.navigate('tower.accessToken')
         if( !token )

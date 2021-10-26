@@ -376,7 +376,7 @@ class TowerClientTest extends Specification {
             getWorkflowMetadata() >> meta
         }
 
-        TowerClient client = Spy(TowerClient, constructorArgs: ['https://tower.nf'])
+        TowerClient client = Spy(TowerClient, constructorArgs: [session, 'https://tower.nf'])
 
         when:
         client.onFlowCreate(session)
@@ -395,7 +395,7 @@ class TowerClientTest extends Specification {
 
     def 'should get trace endpoint' () {
         given:
-        def tower = new TowerClient('https://tower.nf')
+        def tower = new TowerClient(Mock(Session), 'https://tower.nf')
         tower.workflowId = '12345'
 
         expect:
@@ -408,7 +408,7 @@ class TowerClientTest extends Specification {
 
     def 'should get trace endpoint with workspace' () {
         given:
-        def tower = new TowerClient('https://tower.nf')
+        def tower = new TowerClient(Mock(Session),'https://tower.nf')
         tower.workflowId = '12345'
         tower.workspaceId = '300'
 
@@ -423,7 +423,8 @@ class TowerClientTest extends Specification {
     def 'should set the auth token' () {
         given:
         def http = Mock(SimpleHttpClient)
-        TowerClient client = Spy(TowerClient, constructorArgs: ['https://tower.nf'])
+        def session = Mock(Session)
+        TowerClient client = Spy(TowerClient, constructorArgs: [session, 'https://tower.nf'])
         and:
         def SIMPLE = '4ffbf1009ebabea77db3d72efefa836dfbb71271'
         def BEARER = 'eyJ0aWQiOiA1fS5jZmM1YjVhOThjZjM2MTk1NjBjZWU1YmMwODUxYzA1ZjkzMDdmN2Iz'
