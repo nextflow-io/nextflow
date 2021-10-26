@@ -21,8 +21,6 @@ import static nextflow.extension.DataflowHelper.*
 import static nextflow.splitter.SplitterFactory.*
 import static nextflow.util.CheckHelper.*
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
@@ -289,21 +287,7 @@ class OperatorEx  {
     }
 
     DataflowWriteChannel until(DataflowReadChannel source, final Closure<Boolean> closure) {
-        def target = CH.createBy(source)
-        newOperator(source, target, {
-            final result = DefaultTypeTransformation.castToBoolean(closure.call(it))
-            final proc = ((DataflowProcessor) getDelegate())
-
-            if( result ) {
-                proc.bindOutput(Channel.STOP)
-                proc.terminate()
-            }
-            else {
-                proc.bindOutput(it)
-            }
-        })
-
-        return target
+        return new UntilOp(source,closure).apply()
     }
 
 
@@ -465,37 +449,7 @@ class OperatorEx  {
         if( source instanceof DataflowExpression )
             throw new IllegalArgumentException("Operator `take` cannot be applied to a value channel")
 
-        def count = 0
-        final target = CH.create()
-
-        if( n==0 ) {
-            target.bind(Channel.STOP)
-            return target
-        }
-
-        final listener = new DataflowEventAdapter() {
-            @Override
-            void afterRun(final DataflowProcessor processor, final List<Object> messages) {
-                if( ++count >= n ) {
-                    processor.bindOutput( Channel.STOP )
-                    processor.terminate()
-                }
-            }
-
-            boolean onException(final DataflowProcessor processor, final Throwable e) {
-                OperatorEx.log.error("@unknown", e)
-                session.abort(e)
-                return true;
-            }
-        }
-
-        newOperator(
-                inputs: [source],
-                outputs: [target],
-                listeners: (n > 0 ? [listener] : []),
-                new ChainWithClosure(new CopyChannelsClosure()))
-
-        return target
+        return new TakeOp(source,n).apply()
     }
 
     /**
@@ -1064,22 +1018,7 @@ class OperatorEx  {
         if( others.size()==0 )
             throw new IllegalArgumentException("Operator 'mix' should have at least one right operand")
 
-        def target = CH.create()
-        def count = new AtomicInteger( others.size()+1 )
-        def handlers = [
-                onNext: { target << it },
-                onComplete: { if(count.decrementAndGet()==0) { target << Channel.STOP } }
-        ]
-
-        subscribeImpl(source, handlers)
-        for( def it : others ) {
-            subscribeImpl(it, handlers)
-        }
-
-        def allSources = [source]
-        allSources.addAll(others)
-
-        return target
+        return new MixOp(source,others).apply()
     }
 
     DataflowWriteChannel join( DataflowReadChannel left, right ) {

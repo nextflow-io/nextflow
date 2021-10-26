@@ -37,7 +37,7 @@ import nextflow.script.params.OutputsList
  */
 @Slf4j
 @CompileStatic
-class ProcessDef extends BindableDef implements ChainableDef {
+class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
     private Session session = Global.session as Session
 
@@ -180,14 +180,17 @@ class ProcessDef extends BindableDef implements ChainableDef {
         // note: the result object must be an array instead of a List to allow process
         // composition ie. to use the process output as the input in another process invocation
         if( declaredOutputs.size() ) {
-            List result = new ArrayList<>(declaredOutputs.size())
             final allScalarValues = declaredInputs.allScalarInputs()
             final hasEachParams = declaredInputs.any { it instanceof EachInParam }
             final singleton = allScalarValues && !hasEachParams
 
+            // check for feedback channels
+            final feedbackChannels = getFeedbackChannels()
+            if( feedbackChannels && feedbackChannels.size() != declaredOutputs.size() )
+                throw new ScriptRuntimeException("Process `$processName` inputs and outputs cardinality does not match - Feedback loop is not supported"  )
+
             for(int i=0; i<declaredOutputs.size(); i++ ) {
-                final ch = CH.create(singleton)
-                result[i] = ch 
+                final ch = feedbackChannels ? feedbackChannels[i] : CH.create(singleton)
                 (declaredOutputs[i] as BaseOutParam).setInto(ch)
             }
         }
