@@ -169,6 +169,9 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         if( url.userInfo ) {
             conn.setRequestProperty("Authorization", auth(url.userInfo));
         }
+        else {
+            XAuthRegistry.instance.authorize(conn)
+        }
         return conn
     }
 

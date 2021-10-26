@@ -10,14 +10,16 @@
  */
 
 package io.seqera.tower.plugin
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.file.http.XAuthProvider
+import nextflow.file.http.XAuthRegistry
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
 import nextflow.util.Duration
 import nextflow.util.SimpleHttpClient
-
 /**
  * Create and register the Tower observer instance
  *
@@ -47,7 +49,7 @@ class TowerFactory implements TraceObserverFactory {
         if ( !endpoint || endpoint=='-' )
             endpoint = env.get('TOWER_API_ENDPOINT') ?: TowerClient.DEF_ENDPOINT_URL
 
-        final tower = new TowerClient(endpoint)
+        final tower = new TowerClient(session, endpoint)
         if( aliveInterval )
             tower.aliveInterval = aliveInterval
         if( requestInterval )
@@ -59,8 +61,27 @@ class TowerFactory implements TraceObserverFactory {
         tower.workspaceId = config.navigate('tower.workspaceId', env.get('TOWER_WORKSPACE_ID'))
         final result = new ArrayList(1)
         result.add(tower)
+        // register auth provider
+        // note: this is needed to authorize access to resources via XFileSystemProvider used by NF
+        // it's not needed by the tower client logic
+        XAuthRegistry.instance.register(provider(tower.endpoint, tower.accessToken))
         return result
     }
 
-
+    protected XAuthProvider provider(String endpoint, String accessToken) {
+        assert !endpoint.endsWith('/'), "Tower endpoint URL should end with a `/` character"
+        final pattern = ~/(?i)^$endpoint\/.*$/
+        new XAuthProvider() {
+            @Override
+            boolean authorize(URLConnection conn) {
+                final req = conn.getURL().toString()
+                if( pattern.matcher(req).matches() && !conn.getRequestProperty('Authorization') ) {
+                    log.trace "Authorizing request connection to: $req"
+                    conn.setRequestProperty('Authorization', "Bearer $accessToken")
+                    return true
+                }
+                return false
+            }
+        }
+    }
 }
