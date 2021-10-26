@@ -116,7 +116,7 @@ nxf_main() {
     nxf_stage
 
     set +e
-    local ctmp=$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp $TMPDIR)
+    ctmp=$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp $TMPDIR)
     local cout=$ctmp/.command.out; mkfifo $cout
     local cerr=$ctmp/.command.err; mkfifo $cerr
     tee .command.out < $cout &
