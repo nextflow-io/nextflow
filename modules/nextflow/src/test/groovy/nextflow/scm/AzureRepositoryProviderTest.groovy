@@ -50,6 +50,16 @@ class AzureRepositoryProviderTest extends Specification {
         new AzureRepositoryProvider('t-neumann/hello', obj).getEndpointUrl() == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello'
     }
 
+    def 'should return repo url with subrepo' () {
+
+        given:
+        def config = new ConfigSlurper().parse(CONFIG)
+        def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
+
+        expect:
+        new AzureRepositoryProvider('t-neumann/hello/subrepo', obj).getEndpointUrl() == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/subrepo'
+    }
+
     def 'should return project URL' () {
 
         given:
@@ -57,7 +67,18 @@ class AzureRepositoryProviderTest extends Specification {
         def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
 
         expect:
-        new AzureRepositoryProvider('t-neumann/hello', obj).getRepositoryUrl() == 'https://dev.azure.com/t-neumann/hello'
+        new AzureRepositoryProvider('t-neumann/hello', obj).getRepositoryUrl() == 'https://dev.azure.com/t-neumann/hello/_git/hello'
+
+    }
+
+    def 'should return project URL with subrepo' () {
+
+        given:
+        def config = new ConfigSlurper().parse(CONFIG)
+        def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
+
+        expect:
+        new AzureRepositoryProvider('t-neumann/hello/subrepo', obj).getRepositoryUrl() == 'https://dev.azure.com/t-neumann/hello/_git/subrepo'
 
     }
 
