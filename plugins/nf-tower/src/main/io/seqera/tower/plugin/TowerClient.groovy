@@ -138,6 +138,11 @@ class TowerClient implements TraceObserver {
         this.generator = TowerJsonGenerator.create(schema)
     }
 
+    TowerClient withEnvironment(Map env) {
+        this.env = env
+        return this
+    }
+
     /**
      * only for testing purpose -- do not use
      */
