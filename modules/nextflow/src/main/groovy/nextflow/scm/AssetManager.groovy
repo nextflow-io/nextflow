@@ -128,9 +128,9 @@ class AssetManager {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
+        this.hub = checkHubProvider(cliOpts)
         this.project = resolveName(pipelineName)
         this.localPath = checkProjectDir(project)
-        this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
         setupCredentials(cliOpts)
         validateProjectDir()
@@ -250,6 +250,10 @@ class AssetManager {
     String resolveName( String name ) {
         assert name
 
+        Integer max_parts = 2
+        if (this.hub == 'azurerepos') {
+            max_parts = 3
+        }
         def project = resolveNameFromGitUrl(name)
         if( project )
             return project
@@ -265,12 +269,12 @@ class AssetManager {
                 parts = [ parts.first() ]
             }
             else {
-                mainScript = parts[2..-1].join('/')
-                parts = parts[0..1]
+                mainScript = parts[max_parts..-1].join('/')
+                parts = parts[0..max_parts-1]
             }
         }
 
-        if( parts.size() == 2 ) {
+        if( parts.size() == max_parts ) {
             return parts.join('/')
         }
         else if( parts.size()>2 ) {
@@ -482,7 +486,7 @@ class AssetManager {
             }
             catch (Exception e) {
                 provider.validateRepo()
-                log.debug "Cannot retried remote config file -- likely does not exist"
+                log.debug "Cannot read remote config file -- likely does not exist"
                 return null
             }
         }
