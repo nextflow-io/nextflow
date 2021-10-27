@@ -2207,6 +2207,29 @@ $YOUR_VAR   Creates a scratch folder in the directory defined by the ``$YOUR_VAR
 ram-disk    Creates a scratch folder in the RAM disk ``/dev/shm/`` (experimental).
 =========== ==================
 
+.. _process-cleanup:
+
+cleanup
+-------
+
+The ``cleanup`` directive allows you to control the removal the temporary folder that is local to the execution node
+once the task is completed. This is useful when you are debugging failed tasks or would like to regain space on the task node.
+
+In its basic form simply specify ``true`` at the directive value, as shown below::
+
+  process myTask {
+
+    cleanup true
+
+
+    '''
+    <task script>
+    '''
+  }
+
+.. tip::
+   Also see the :ref:`process-scratch` directive.
+
 .. _process-storeDir:
 
 storeDir
