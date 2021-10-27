@@ -37,9 +37,10 @@ class TowerFactoryTest extends Specification {
         when:
         client = factory.create(session)[0] as TowerClient
         then:
-        session.getConfig() >> [tower: [enabled: true, endpoint:'http://foo.com/api']]
+        session.getConfig() >> [tower: [enabled: true, endpoint:'http://foo.com/api', accessToken: 'xyz']]
         then:
         client.endpoint == 'http://foo.com/api'
+        client.accessToken == 'xyz'
 
     }
 
@@ -66,7 +67,7 @@ class TowerFactoryTest extends Specification {
         when:
         def client = (TowerClient) factory.create(session)[0]
         then:
-        session.getConfig() >> [tower: [enabled: true]]
+        session.getConfig() >> [tower: [enabled: true, accessToken: 'xyz']]
         and:
         client.getWorkspaceId() == '100'
 
