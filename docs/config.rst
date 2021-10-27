@@ -617,7 +617,7 @@ volumes                     One or more container mounts. Mounts can be specifie
 delayBetweenAttempts        Delay between download attempts from S3 (default `10 sec`).
 maxParallelTransfers        Max parallel upload/download transfer operations *per job* (default: ``4``).
 maxTransferAttempts         Max number of downloads attempts from S3 (default: `1`).
-privileged                  When this parameter is true, the container is given elevated permissions on the host container instance (similar to the root user). It should be false for jobs running on Fargate resources (default: `false`).
+privileged                  When this parameter is true, the container is given elevated permissions on the host container instance (similar to the root user). It should be false for jobs running on Fargate resources (default: `false`,, requires nf-amazon@1.2.1)).
 =========================== ================
 
 .. _config-cloud:
