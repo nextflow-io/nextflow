@@ -30,6 +30,14 @@ import spock.lang.Specification
         PodEnv.value('ALPHA', 'aaa').toSpec() == [name:'ALPHA', value:'aaa']
     }
 
+    def 'should create env fieldPath spec' () {
+        expect:
+        PodEnv.fieldPath('ALPHA', 'aaa').toSpec() == [
+                name:'ALPHA',
+                valueFrom: [fieldRef:[fieldPath: 'aaa']]
+        ]
+    }
+
     def 'should create env secret spec' () {
         expect:
         PodEnv.secret('ALPHA', 'data/key-1').toSpec() == [

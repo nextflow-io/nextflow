@@ -138,11 +138,12 @@ nxf_main() {
     {{conda_activate}}
     set -u
     {{task_env}}
+    {{secrets_env}}
     [[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH
     {{stage_cmd}}
 
     set +e
-    local ctmp=$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp $TMPDIR)
+    ctmp=$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp $TMPDIR)
     local cout=$ctmp/.command.out; mkfifo $cout
     local cerr=$ctmp/.command.err; mkfifo $cerr
     tee {{stdout_file}} < $cout &

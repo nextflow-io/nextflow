@@ -134,7 +134,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
          * create a proxy for the aws batch client that manages the request throttling
          */
         client = new AwsBatchProxy(driver.getBatchClient(), submitter)
-        helper = createHelper(client, driver)
+        helper = new AwsBatchHelper(client, driver)
         // create the options object
         awsOptions = new AwsOptions(this)
         log.debug "[AWS BATCH] Executor options=$awsOptions"
@@ -150,19 +150,6 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         validatePathDir()
         uploadBinDir()
         createAwsClient()
-    }
-
-    private AwsBatchHelper createHelper(AWSBatch batchClient, AmazonClientFactory factory) {
-        try {
-            return new AwsBatchHelper(
-                    batchClient: batchClient,
-                    ec2Client: factory.getEc2Client(),
-                    ecsClient: factory.getEcsClient() )
-        }
-        catch (Exception e) {
-            log.warn "Unable to create AWS Batch helper class | ${e.message}", e
-            return null
-        }
     }
 
     @PackageScope
@@ -267,6 +254,16 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         }
         catch( Exception e ) {
             log.warn "Unable to retrieve AWS batch instance type for queue=$queue; task=$taskArn | ${e.message}", e
+            return null
+        }
+    }
+
+    String getJobOutputStream(String jobId) {
+        try {
+            return helper.getTaskLogStream(jobId)
+        }
+        catch (Exception e) {
+            log.debug "Unable to retrieve AWS Cloudwatch logs for Batch Job id=$jobId | ${e.message}", e
             return null
         }
     }

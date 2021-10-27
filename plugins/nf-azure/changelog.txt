@@ -1,0 +1,7 @@
+nf-amazon changelog
+===================
+0.11.0 - 12 Oct 2021
+- Add Azure pool node SKU selection #2360 [9afcac756]
+- Add Built-in support for Azure File Shares #2285 [a4c3e0ad5]
+- Add missing information for pulling images from private registry in Azure Batch #2355 [040e190bd]
+

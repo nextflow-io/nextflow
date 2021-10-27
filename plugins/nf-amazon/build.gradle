@@ -44,6 +44,7 @@ dependencies {
     api ('com.amazonaws:aws-java-sdk-batch:1.11.1034')
     api ('com.amazonaws:aws-java-sdk-iam:1.11.1034')
     api ('com.amazonaws:aws-java-sdk-ecs:1.11.1034')
+    api ('com.amazonaws:aws-java-sdk-logs:1.11.1034')
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
