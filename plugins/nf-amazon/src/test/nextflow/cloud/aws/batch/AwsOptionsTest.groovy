@@ -168,13 +168,15 @@ class AwsOptionsTest extends Specification {
         opts.getCliPath() == null
         opts.getStorageClass() == null
         opts.getStorageEncryption() == null
+        opts.getPrivileged() == false
 
         when:
-        opts = new AwsOptions(cliPath: '/foo/bin/aws', storageClass: 'STANDARD', storageEncryption: 'AES256')
+        opts = new AwsOptions(cliPath: '/foo/bin/aws', storageClass: 'STANDARD', storageEncryption: 'AES256', privileged: true)
         then:
         opts.getCliPath() == '/foo/bin/aws'
         opts.getStorageClass() == 'STANDARD'
         opts.getStorageEncryption() == 'AES256'
+        opts.getPrivileged() == true
 
         when:
         opts = new AwsOptions(storageClass: 'foo')

@@ -61,7 +61,7 @@ class AwsOptions implements CloudTransferOptions {
 
     String retryMode
 
-    Boolean privileged
+    Boolean privileged = false
 
     volatile Boolean fetchInstanceType
 
