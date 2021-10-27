@@ -89,17 +89,18 @@ class GitlabRepositoryProviderTest extends Specification {
     @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})
     def 'should return content URL' () {
         given:
-        String CONFIG = '''
+        def (user, pwd, token) = System.getenv('NXF_GITLAB_ACCESS_TOKEN').tokenize(':')
+        String CONFIG = """
         providers {
             mygitlab {
                 server = 'https://gitlab.com'
                 endpoint = 'https://gitlab.com'
                 platform = 'gitlab'
-                user = 'myname'
-                password = 'mypassword'
+                user = '$user'
+                password = '$token' // NOTE: Gitlab token can be used in place of the password
             }
         }
-        '''
+        """
 
         def config = new ConfigSlurper().parse(CONFIG)
         def obj = new ProviderConfig('github', config.providers.mygitlab as ConfigObject)
