@@ -282,7 +282,9 @@ that can be found in your GitLab `account page <https://gitlab.com/profile/accou
 
     }
 
-.. tip:: The ``token`` field is optional and the token value could also be specified in the ``password`` field.
+.. tip::
+    The GitLab *token* string can be used as the ``password`` value in the above setting.
+    When doing that the ``token`` field can be omitted.
 
 
 Gitea credentials
