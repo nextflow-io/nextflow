@@ -25,7 +25,7 @@ class TowerFactoryTest extends Specification {
 
         given:
         def session = Mock(Session) { getConfig() >> [:] }
-        def factory = new TowerFactory()
+        def factory = new TowerFactory(env: [TOWER_ACCESS_TOKEN: '123'])
 
         when:
         def client = factory.create(session)[0] as TowerClient
@@ -75,7 +75,7 @@ class TowerFactoryTest extends Specification {
         when:
         client = (TowerClient) factory.create(session)[0]
         then:
-        session.getConfig() >> [tower: [enabled: true, workspaceId: '200']]
+        session.getConfig() >> [tower: [enabled: true, workspaceId: '200', accessToken: 'xyz']]
         and:
         client.getWorkspaceId() == '200'
     }
