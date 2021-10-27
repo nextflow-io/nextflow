@@ -184,7 +184,7 @@ class AssetManager {
     File checkProjectDir(String projectName) {
 
         if( !isValidProjectName(projectName)) {
-            throw new IllegalArgumentException("Not a valid project name: $projectName")
+            throw new IllegalArgumentException("Not a valid project name, illegal argument: $projectName")
         }
 
         new File(root, project)
@@ -262,7 +262,7 @@ class AssetManager {
         def last = parts[-1]
         if( last.endsWith('.nf') || last.endsWith('.nxf') ) {
             if( parts.size()==1 )
-                throw new AbortOperationException("Not a valid project name: $name")
+                throw new AbortOperationException("Not a valid project name, requires branch when using script: $name")
 
             if( parts.size()==2 ) {
                 mainScript = last
@@ -277,8 +277,8 @@ class AssetManager {
         if( parts.size() == max_parts ) {
             return parts.join('/')
         }
-        else if( parts.size()>2 ) {
-            throw new AbortOperationException("Not a valid project name: $name")
+        else if( parts.size()>max_parts ) {
+            throw new AbortOperationException("Not a valid project name, branch too deep: $name, $parts, $mainScript")
         }
         else {
             name = parts[0]
@@ -495,7 +495,7 @@ class AssetManager {
 
     String getBaseName() {
         def result = project.tokenize('/')
-        if( result.size() > 2 ) throw new IllegalArgumentException("Not a valid project name: $project")
+        if( result.size() > 2 ) throw new IllegalArgumentException("Not a valid project name, no more than 2 parts allowed: $project")
         return result.size()==1 ? result[0] : result[1]
     }
 
