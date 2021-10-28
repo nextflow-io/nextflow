@@ -1,5 +1,11 @@
 nf-amazon changelog
 ===================
+1.3.0 - 28 Oct 2021
+- Improve failed task error reporting fetching logs from CloudWatch
+
+1.2.2 - 19 Oct 2021
+- Fix issue evaluating dynamic errorStrategy [8c6a5a6] [ce4d491]
+
 1.2.1 - 12 Oct 2021
 - Add retry on AWS Job definition not-found error [452cae5d8]
 
