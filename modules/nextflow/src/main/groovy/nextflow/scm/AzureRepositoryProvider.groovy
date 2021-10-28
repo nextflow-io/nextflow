@@ -34,6 +34,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     private String user
     private String project
     private String repo
+    private String urlBase
     private String continuationToken
 
     AzureRepositoryProvider(String project, ProviderConfig config=null) {
@@ -42,6 +43,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
         this.project = parts[1]
         this.repo = parts.last()  // toplevel repo usually has the same name as project, so org/hello and org/hello/hello are identical
         this.config = config ?: new ProviderConfig('azurerepos')
+        this.urlBase = "${config.endpoint}/${this.user}/${this.project}"
         this.continuationToken = null
     }
 
@@ -52,8 +54,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getEndpointUrl() {
-        String endpointUrl = "${config.endpoint}/${this.user}/${this.project}/_apis/git/repositories/${this.repo}"
-        return endpointUrl
+        return "${this.urlBase}/_apis/git/repositories/${this.repo}"
     }
 
     /** {@inheritDoc} */
@@ -135,8 +136,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getCloneUrl() {
-        //https://SHS-CID-Global@dev.azure.com/SHS-CID-Global/CID-Genomics-Pipeline/_git/Prototypes
-        String cloneUrl = "${config.server}/${this.user}/${project}/_git/${repo}"
+        String cloneUrl = "${this.urlBase}/_git/${repo}"
 
         return "${cloneUrl}"
     }
@@ -144,7 +144,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getRepositoryUrl() {
-        return "${config.server}/${this.user}/${project}/_git/${repo}"
+        return "${this.urlBase}/_git/${repo}"
     }
 
     /** {@inheritDoc} */
