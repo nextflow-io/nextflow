@@ -1,5 +1,8 @@
-nf-amazon changelog
+nf-google changelog
 ===================
+1.1.2 - 28 Oct 2021
+- Fix task temporary files cleanup
+
 1.1.1 - 12 Oct 2021
 - Fix NPE exception on configuration failure
 
