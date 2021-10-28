@@ -78,10 +78,12 @@ class VersionNumberTest extends Specification {
         new VersionNumber('1.1') > null
         new VersionNumber('1.1') < '1.2'
         new VersionNumber('20.10.0') >= '20.10.0'
+        new VersionNumber('20.10.0-edge') > '20.10.0'
         new VersionNumber('20.10.0-edge') >= '20.10.0'
         new VersionNumber('20.10.0-edge') >= '20.10.0-edge'
         new VersionNumber('20.10.0-SNAPSHOT') > '20.10.0'
         new VersionNumber('20.10.0-SNAPSHOT') >= '20.10.0'
+        new VersionNumber('20.09.1-edge') < '20.10.0'
     }
 
     @Unroll
