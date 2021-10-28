@@ -57,7 +57,7 @@ class BodyDef implements Cloneable {
         setType(section)
     }
 
-    BodyDef(Closure closure, String source, String section, TokenValRef... values ) {
+    BodyDef(Closure closure, String source, String section, List<TokenValRef> values ) {
         this(closure, source, section)
         this.valRefs = values != null ? values as Set : Collections.<TokenValRef>emptySet()
     }
