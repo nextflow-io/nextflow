@@ -1,5 +1,23 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.09.1-edge - 28 Oct 2021
+- Fix issue with config selectors and DSL2 [4d7d3e972]
+- Fix issue evaluating dynamic errorStrategy with AWS Batch [8c6a5a6e2] [ce4d491b1]
+- Fix verbose logging [92b113134]
+- Fix docker image url [ed24a475d]
+- Fix Temporary directories not deleted in on_exit #2406 [181bdf528] <Lukas Jelonek>
+- Fix implict authentication for resources served by Tower [e30310b4f]
+- Fix No more of 255 channels can be defined into a workflow context #2417 [7f91ecb39]
+- Add tip about escaping variables in env scope #2366 <Ben Shealy>
+- Add K8s env fieldPath option to pod directive #2363 <Ben Shealy>
+- Improve AWS Batch error report fetching CloudWatch logs [b9f9578f1] [e229700ef]
+- Improve docs about IAM policies for AWS Batch #2391 <Manuele Simi>
+- Accommodate token in password field for Gitlab #2389 [ee32b7726] <Abhinav Sharma>
+- Report a warning when main workflow is not defined [83aec6e8b]
+- Bump nf-amazon 1.3.0
+- Bump nf-tower@1.3.0
+- Bump nf-google@1.1.2
+
 21.09.0-edge - 12 Oct 2021 
 - Add secrets manager (preview) [da2a5ff1a] [2d66f83ca]
 - Add Built-in support for Azure File Shares #2285 [a4c3e0ad5]
