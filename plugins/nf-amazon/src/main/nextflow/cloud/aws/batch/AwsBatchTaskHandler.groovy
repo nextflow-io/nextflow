@@ -236,10 +236,14 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( done ) {
             // finalize the task
             task.exitStatus = readExitFile()
-            if (job?.status == 'FAILED')
-                task.error = new ProcessUnrecoverableException(job?.getStatusReason())
             task.stdout = outputFile
-            task.stderr = executor.getJobOutputStream(jobId) ?: errorFile
+            if( job?.status == 'FAILED' ) {
+                task.error = new ProcessUnrecoverableException(job?.getStatusReason())
+                task.stderr = executor.getJobOutputStream(jobId) ?: errorFile
+            }
+            else {
+                task.stderr = errorFile
+            }
             status = TaskStatus.COMPLETED
             return true
         }
