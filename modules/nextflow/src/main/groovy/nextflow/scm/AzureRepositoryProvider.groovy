@@ -53,8 +53,6 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     @Override
     String getEndpointUrl() {
         String endpointUrl = "${config.endpoint}/${this.user}/${this.project}/_apis/git/repositories/${this.repo}"
-        println("Configuring endpointUrl with ${config.endpoint}, ${this.user}, ${this.project}, and ${this.repo}")
-        println("${endpointUrl}")
         return endpointUrl
     }
 
