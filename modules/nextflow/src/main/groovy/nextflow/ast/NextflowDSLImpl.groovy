@@ -794,13 +794,16 @@ class NextflowDSLImpl implements ASTTransformation {
             newArgs << ( new ConstantExpression(source.toString()) )
             newArgs << ( new ConstantExpression(section) )
 
+            // collect all variable tokens and pass them as single list argument
             final variables = fetchVariables(closure,unit)
+            final listArg = new ArrayList(variables.size())
             for( TokenValRef var: variables ) {
                 def pName = new ConstantExpression(var.name)
                 def pLine = new ConstantExpression(var.lineNum)
                 def pCol = new ConstantExpression(var.colNum)
-                newArgs << createX( TokenValRef, pName, pLine, pCol )
+                listArg << createX( TokenValRef, pName, pLine, pCol )
             }
+            newArgs << ( new ListExpression(listArg) )
 
             // invokes the BodyDef constructor
             createX( BodyDef, newArgs )
