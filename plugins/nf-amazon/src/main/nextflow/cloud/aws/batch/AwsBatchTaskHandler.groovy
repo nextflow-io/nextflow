@@ -39,6 +39,7 @@ import com.amazonaws.services.batch.model.MountPoint
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
 import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
 import com.amazonaws.services.batch.model.ResourceRequirement
+import com.amazonaws.services.batch.model.ResourceType
 import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
@@ -451,12 +452,13 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         result.setType(JobDefinitionType.Container)
 
         // container definition
+        final _1_cpus = new ResourceRequirement().withType(ResourceType.VCPU).withValue('1')
+        final _1_gb = new ResourceRequirement().withType(ResourceType.MEMORY).withValue('1024')
         final container = new ContainerProperties()
                 .withImage(image)
-        // note the actual command, memory and cpus are overridden when the job is executed
                 .withCommand('true')
-                .withMemory(1024)
-                .withVcpus(1)
+                // note the actual command, memory and cpus are overridden when the job is executed
+                .withResourceRequirements( _1_cpus, _1_gb )
 
         final jobRole = opts.getJobRole()
         if( jobRole )
@@ -614,23 +616,26 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
 
         // set the actual command
+        final resources = new ArrayList<ResourceRequirement>(5)
         def container = new ContainerOverrides()
         container.command = getSubmitCommand()
         // set the task memory
         if( task.config.getMemory() ) {
             final mega = (int)task.config.getMemory().toMega()
             if( mega >= 4 )
-                container.memory = mega
+                resources << new ResourceRequirement().withType(ResourceType.MEMORY).withValue(mega.toString())
             else
                 log.warn "Ignoring task $bean.name memory directive: ${task.config.getMemory()} -- AWS Batch job memory request cannot be lower than 4 MB"
         }
         // set the task cpus
         if( task.config.getCpus() > 1 )
-            container.vcpus = task.config.getCpus()
+            resources << new ResourceRequirement().withType(ResourceType.VCPU).withValue(task.config.getCpus().toString())
 
-        if( task.config.getAccelerator() ) {
-            container.setResourceRequirements(createResList(task.config.getAccelerator()))
-        }
+        if( task.config.getAccelerator() )
+            resources << createGpuResource(task.config.getAccelerator())
+
+        if( resources )
+            container.withResourceRequirements(resources)
 
         // set the environment
         def vars = getEnvironmentVars()
@@ -642,15 +647,13 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return result
     }
 
-    protected List<ResourceRequirement> createResList(AcceleratorResource acc) {
+    protected ResourceRequirement createGpuResource(AcceleratorResource acc) {
         final res = new ResourceRequirement()
         final type = acc.type ?: 'GPU'
         final count = acc.request?.toString() ?: '1'
         res.setType(type.toUpperCase())
         res.setValue(count)
-        final result = new ArrayList(1)
-        result.add(res)
-        return result
+        return res
     }
 
     /**

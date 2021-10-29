@@ -94,8 +94,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getVcpus() == 4
-        req.getContainerOverrides().getMemory() == 8192
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
         req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws s3 cp --only-show-errors .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()]
         req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
@@ -113,8 +113,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getVcpus() == 4
-        req.getContainerOverrides().getMemory() == 8192
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
         req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws --region eu-west-1 s3 cp --only-show-errors .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws --region eu-west-1 s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()]
         req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
@@ -138,9 +138,11 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getJobDefinition(task) >> 'job-def:1'
 
         def res = req.getContainerOverrides().getResourceRequirements()
-        res.size()==1
-        res[0].getValue() == '2'
-        res[0].getType() == 'GPU'
+        res.size()==3
+        and:
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='GPU'}.getValue() == '2'
     }
 
 
