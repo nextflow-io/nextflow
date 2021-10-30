@@ -127,6 +127,8 @@ class TaskProcessor {
 
     final private static Pattern QUESTION_MARK = ~/(\?+)/
 
+    final private boolean invalidateCacheOnTaskDirectiveChange = System.getenv("NXF_ENABLE_CACHE_INVALIDATION_ON_TASK_DIRECTIVE_CHANGE")=='true'
+
     /**
      * Keeps track of the task instance executed by the current thread
      */
@@ -2063,9 +2065,26 @@ class TaskProcessor {
     }
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
-        task.getGlobalVars(ownerScript.binding)
+        final result = task.getGlobalVars(ownerScript.binding)
+        if( invalidateCacheOnTaskDirectiveChange ) {
+            final directives = getTaskDirectiveVars(task)
+            result.putAll(directives)
+        }
+        return result
     }
 
+    protected Map<String,Object> getTaskDirectiveVars(TaskRun task) {
+        final variableNames = task.getVariableNames()
+        final result = new HashMap(variableNames.size())
+        final taskConfig = task.config
+        for( String key : variableNames ) {
+            if( !key.startsWith('task.') ) continue
+            final value = taskConfig.eval(key.substring(5))
+            result.put(key, value)
+        }
+
+        return result
+    }
 
     /**
      * Execute the specified task shell script
