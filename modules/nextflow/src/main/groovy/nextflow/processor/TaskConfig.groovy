@@ -86,6 +86,40 @@ class TaskConfig extends LazyMap implements Cloneable {
         return this
     }
 
+    /**
+     * Evaluate a task config attribute. The main difference of this method
+     * is that does not cache the result value.
+     *
+     * @param path
+     *      The task config to be evaluated e.g. `cpus`. Note it allows
+     *      traversing nested object separating keys with a dot e.g. `ext.args`
+     * @return
+     *      The value associate with the config key. Dynamic value i.e. closure are
+     *      automatically resolved to target value.
+     */
+    Object eval(String path) {
+        return eval0(this, path.tokenize('.'), path)
+    }
+
+    private Object eval0(Object object, List<String> path, String key ) {
+        assert path, "Missing task attribute name"
+        def result = null
+        if( object instanceof LazyMap ) {
+            result = ((LazyMap)object).getValue(path.first())
+        }
+        else if( Object instanceof Map ) {
+            result = ((Map)object).get(path.first())
+        }
+        else if( path.size()>1 ) {
+            throw new IllegalArgumentException()
+        }
+
+        if( path.size()==1 || result==null )
+            return result
+
+        return eval0( result, path.subList(1,path.size()), key )
+    }
+
     def getProperty(String name) {
 
         def meta = metaClass.getMetaProperty(name)
@@ -136,7 +170,7 @@ class TaskConfig extends LazyMap implements Cloneable {
         }
     }
 
-    protected boolean isDynamic() {
+    boolean isDynamic() {
         if( super.isDynamic() )
             return true
 
@@ -145,7 +179,6 @@ class TaskConfig extends LazyMap implements Cloneable {
 
         return false
     }
-
 
     boolean getEcho() {
         def value = get('echo')
@@ -486,8 +519,10 @@ class LazyMap implements Map<String,Object> {
 
         /*
          * resolve the values in a map object
+         * note: 'ext' property is meant for extension attributes
+         * as it should be preserved as LazyMap
          */
-        else if( value instanceof Map ) {
+        else if( value instanceof Map && name!='ext' ) {
             return resolveParams(name, value)
         }
 
@@ -557,8 +592,12 @@ class LazyMap implements Map<String,Object> {
      * @return The associated value
      */
     Object get( key ) {
-        def value = target.get(key)
-        resolve(key as String, value)
+        return getValue(key)
+    }
+
+    Object getValue(Object key) {
+        final value = target.get(key)
+        return resolve(key as String, value)
     }
 
     Object put( String key, Object value ) {
@@ -570,7 +609,7 @@ class LazyMap implements Map<String,Object> {
                 if (value.values[i] instanceof Closure)
                     dynamic |= true
         }
-        target.put(key, value)
+        return target.put(key, value)
     }
 
     @Override
@@ -585,6 +624,7 @@ class LazyMap implements Map<String,Object> {
         for( String key : allKeys ) { result << "$key: ${getProperty(key)}".toString() }
         result.join('; ')
     }
+
 }
 
 @CompileStatic
