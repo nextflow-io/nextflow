@@ -1,0 +1,6 @@
+Manifest-Version: 1.0
+Plugin-Class: nextflow.sraql.SraqlPlugin
+Plugin-Id: nf-sraql
+Plugin-Provider: Seqera Labs
+Plugin-Version: 0.0.1
+Plugin-Requires: >=21.09.1-edge
