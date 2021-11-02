@@ -60,39 +60,4 @@ class ChannelSraqlExtensionTest extends Specification {
         result.val == ['hello', 30]
         result.val == Channel.STOP
     }
-
-
-    def 'should insert data into table' () {
-        given:
-        def JDBC_URL = 'jdbc:h2:mem:test_' + Random.newInstance().nextInt(1_000)
-        def sql = Sql.newInstance(JDBC_URL, 'sa', null)
-        and:
-        sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
-        and:
-        def session = Mock(Session) {
-            getConfig() >> [sql: [db: [test: [url: JDBC_URL]]]]
-        }
-        def sqlExtension = new ChannelSraqlExtension(); sqlExtension.init(session)
-        and:
-        def ch = new DataflowQueue()
-        ch.bind( [1, 'x1'] )
-        ch.bind( [2, 'y2'] )
-        ch.bind( [3, 'z3'] )
-        ch.bind( Channel.STOP )
-
-        when:
-        def ret = sqlExtension.sqlInsert(ch, [db: 'test', into:'FOO', columns: 'id, alpha'])
-        then:
-        ret.val == [1, 'x1']
-        ret.val == [2, 'y2']
-        ret.val == [3, 'z3']
-        ret.val == Channel.STOP
-        and:
-        def rows = sql.rows("select id, alpha from FOO")
-        and:
-        rows.size() == 3
-        rows.id == [1,2,3]
-        rows.alpha == ['x1','y2','z3']
-    }
-
 }

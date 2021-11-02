@@ -23,7 +23,7 @@ import nextflow.util.CheckHelper
  */
 @Slf4j
 @CompileStatic
-@Scoped('sql')
+@Scoped('sraql')
 class ChannelSraqlExtension extends ChannelExtensionPoint {
 
     private static final Map QUERY_PARAMS = [db: CharSequence]

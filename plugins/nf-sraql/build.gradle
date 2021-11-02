@@ -38,6 +38,9 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.4.1'
     api("org.codehaus.groovy:groovy-sql:3.0.9") { transitive = false }
 
+    implementation platform("com.google.cloud:libraries-bom:20.6.0")
+    implementation "com.google.cloud:google-cloud-bigquerystorage"
+    implementation 'com.google.cloud:google-cloud-bigquery'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
