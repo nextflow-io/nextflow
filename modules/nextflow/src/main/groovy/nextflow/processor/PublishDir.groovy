@@ -110,8 +110,12 @@ class PublishDir {
         this.path = obj.complete()
     }
 
+    void setMode( Closure obj ) {
+        setMode( obj.call() as String )
+    }
+
     void setMode( String str ) {
-        this.mode = str == 'copyNoFollow' ? Mode.COPY_NO_FOLLOW : str.toUpperCase() as Mode
+        this.mode = str.toUpperCase == 'COPYNOFOLLOW' ? Mode.COPY_NO_FOLLOW : str.toUpperCase() as Mode
     }
 
     void setMode( Mode mode )  {
