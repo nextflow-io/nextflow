@@ -1,7 +1,8 @@
 package nextflow.sraql
 
 
-import com.google.cloud.bigquery.BigQueryOptions;
+import com.google.cloud.bigquery.BigQueryOptions
+import com.google.cloud.bigquery.FieldValue;
 import com.google.cloud.bigquery.JobId;
 import com.google.cloud.bigquery.JobInfo;
 import com.google.cloud.bigquery.QueryJobConfiguration;
@@ -37,17 +38,15 @@ class Scratch extends Specification {
 
         then:
 
-        println("-----------------\n\n----------------------")
-
-        println(result.getValues())
-
-        println("-----------------\n\n----------------------")
         for (row in result.iterateAll()) {
-            println(row)
-            def iter = row.iterator();
-            iter.forEachRemaining(System.out::println);
+            for (col in row) {
+                if( col.attribute == FieldValue.Attribute.PRIMITIVE ) {
+                    //NOTE: For the initial prototype of SRAQL, we could possibly leave the flattening etc at query level.
+                    println(col.value)
+                }
+            }
+
         }
 
     }
-
 }
