@@ -22,9 +22,9 @@ import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 
 /**
- * Model SQL dataSources configuration
+ * Model SRAQL dataSources configuration
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Abhinav Sharma <abhi18av@outlook.com>
  */
 @ToString(includePackage = false, includeNames = true)
 @EqualsAndHashCode(includeFields = true)
@@ -57,8 +57,6 @@ class SraqlConfig {
         for (Map.Entry<String, Map> entry : config) {
             if( entry.key == 'default' ) {
                 result.put(entry.key, defSource)
-            } else {
-                result.put(entry.key, new SraqlDataSource(entry.value, defSource))
             }
         }
 

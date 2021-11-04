@@ -30,7 +30,7 @@ import test.MockScriptRunner
 
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Abhinav Sharma <abhi18av@outlook.com>
  */
 @Timeout(10)
 class SraqlDslTest extends BaseSpec {
@@ -64,37 +64,6 @@ class SraqlDslTest extends BaseSpec {
         result.val == [2, 'ciao', 20]
         result.val == [3, 'hello', 30]
         result.val == Channel.STOP
-    }
-
-
-    def 'should insert channel data into a channel' () {
-        given:
-        def JDBC_URL = 'jdbc:h2:mem:test_' + Random.newInstance().nextInt(1_000)
-        def sql = Sql.newInstance(JDBC_URL, 'sa', null)
-        and:
-        sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
-        and:
-        def config = [sql: [db: [ds1: [url: JDBC_URL]]]]
-
-        when:
-        def SCRIPT = '''
-            channel
-              .of(100,200,300)
-              .sqlInsert(into:"FOO", columns:'id', db:"ds1")
-            '''
-        and:
-        def result = new MockScriptRunner(config).setScript(SCRIPT).execute()
-        then:
-        result.val == 100
-        result.val == 200
-        result.val == 300
-        result.val == Channel.STOP
-        and:
-        def rows =  sql.rows("select id from FOO;")
-        and:
-        rows.size() == 3
-        rows.id == [100, 200, 300]
-
     }
 
 }

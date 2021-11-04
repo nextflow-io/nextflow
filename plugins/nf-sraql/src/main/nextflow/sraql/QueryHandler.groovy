@@ -32,9 +32,9 @@ import nextflow.Session
 import nextflow.sraql.config.SraqlDataSource
 
 /**
- * Implement the logic for query a DB in async manner
+ * Implement the logic for query an SRAQL datasource in async manner
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Abhinav Sharma <abhi18av@outlook.com>
  */
 @Slf4j
 @CompileStatic
@@ -96,7 +96,7 @@ class QueryHandler implements QueryOp {
     }
 
     protected Connection connect(SraqlDataSource ds) {
-        log.debug "Creating SQL connection: ${ds}"
+        log.debug "Creating SRAQL connection: ${ds}"
         Sql.newInstance(ds.toMap()).getConnection()
     }
 

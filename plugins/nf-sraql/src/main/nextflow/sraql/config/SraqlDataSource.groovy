@@ -19,71 +19,36 @@ package nextflow.sraql.config
 
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
-import nextflow.extension.Bolts
 
 /**
- * Model a dataSource configuration
+ * Model a SRAQL dataSource configuration
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Abhinav Sharma <abhi18av@outlook.com>
  */
 @ToString(includePackage = false, includeNames = true)
 @EqualsAndHashCode
 class SraqlDataSource {
-    public static String DEFAULT_URL = 'jdbc:h2:mem:'
-    public static String DEFAULT_DRIVER = 'org.h2.Driver'
-    public static String DEFAULT_USER = 'sa'
+    public static String DEFAULT_SOURCE = 'google-bigquery'
 
     static SraqlDataSource DEFAULT = new SraqlDataSource(Collections.emptyMap())
 
-    String driver
-    String url
-    String user
-    String password
+    String source
 
     SraqlDataSource(Map opts) {
-        this.url = opts.url ?: DEFAULT_URL
-        this.driver = opts.driver ?: urlToDriver(url) ?: DEFAULT_DRIVER
-        this.user = opts.user ?: DEFAULT_USER
-        this.password = opts.password
-    }
-
-    SraqlDataSource(Map opts, SraqlDataSource fallback) {
-        this.url = opts.url ?: fallback.url ?: DEFAULT_URL
-        this.driver = opts.driver ?: urlToDriver(url) ?: fallback.driver ?: DEFAULT_DRIVER
-        this.user = opts.user ?: fallback.user ?: DEFAULT_USER
-        this.password = opts.password ?: fallback.password
-    }
-
-
-    protected String urlToDriver(String url) {
-        if( !url ) return null
-        if( !url.startsWith('jdbc:') ) throw new IllegalArgumentException("Invalid database JDBC connection url: $url")
-        switch (url.tokenize(':')[1]) {
-            case 'h2': return 'org.h2.Driver'
-            case 'sqlite': return 'org.sqlite.JDBC'
-            case 'mysql': return 'com.mysql.cj.jdbc.Driver'
-            case 'mariadb': return 'org.mariadb.jdbc.Driver'
-            case 'postgresql': return 'org.postgresql.Driver'
-            case 'duckdb': return 'org.duckdb.DuckDBDriver'
-        }
-        return null
+        this.source = opts.source ?: DEFAULT_SOURCE
     }
 
     Map toMap() {
         final result = new HashMap(10)
-        if( url )
-            result.url = url
-        if( driver )
-            result.driver = driver
-        if( user || password ) {
-            result.user = user
-            result.password = password
-        }
+
+        if( source )
+            result.source = source
+
         return result
     }
 
     @Override
     String toString() {
-        return "SraqlDataSource[url=$url; driver=$driver; user=$user; password=${Bolts.redact(password)}]"
+        return "SraqlDataSource[source=$source]"
     }
 }

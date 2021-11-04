@@ -1,14 +1,10 @@
 package nextflow.sraql
 
 
-import com.google.cloud.bigquery.BigQuery;
 import com.google.cloud.bigquery.BigQueryOptions;
-import com.google.cloud.bigquery.FieldValueList;
-import com.google.cloud.bigquery.Job;
 import com.google.cloud.bigquery.JobId;
 import com.google.cloud.bigquery.JobInfo;
 import com.google.cloud.bigquery.QueryJobConfiguration;
-import com.google.cloud.bigquery.TableResult
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Channel
 import nextflow.sraql.config.SraqlDataSource
@@ -25,7 +21,7 @@ class Scratch extends Specification {
                         + " FROM `nih-sra-datastore.sra.metadata` as s "
                         + " WHERE organism = 'Mycobacterium tuberculosis'"
                         + " AND consent='public' "
-                        + " LIMIT 10"
+                        + " LIMIT 3"
         )
                 .setUseLegacySql(false)
                 .build();
@@ -40,8 +36,16 @@ class Scratch extends Specification {
         def result = queryJob.getQueryResults();
 
         then:
+
+        println("-----------------\n\n----------------------")
+
+        println(result.getValues())
+
+        println("-----------------\n\n----------------------")
         for (row in result.iterateAll()) {
             println(row)
+            def iter = row.iterator();
+            iter.forEachRemaining(System.out::println);
         }
 
     }

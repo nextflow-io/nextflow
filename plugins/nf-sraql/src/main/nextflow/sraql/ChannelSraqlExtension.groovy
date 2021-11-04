@@ -3,30 +3,26 @@ package nextflow.sraql
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
-import nextflow.Channel
 import nextflow.NF
 import nextflow.Session
 import nextflow.extension.CH
 import nextflow.extension.ChannelExtensionPoint
-import nextflow.extension.DataflowHelper
 import nextflow.plugin.Scoped
 import nextflow.sraql.config.SraqlConfig
 import nextflow.sraql.config.SraqlDataSource
 import nextflow.util.CheckHelper
 /**
- * Provide a channel factory extension that allows the execution of Sql queries
+ * Provide a channel factory extension that allows the execution of SRAQL queries
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Abhinav Sharma <abhi18av@outlook.com>
  */
 @Slf4j
 @CompileStatic
 @Scoped('sraql')
 class ChannelSraqlExtension extends ChannelExtensionPoint {
 
-    private static final Map QUERY_PARAMS = [db: CharSequence]
+    private static final Map QUERY_PARAMS = [source: CharSequence]
 
     private static final Map INSERT_PARAMS = [
             db: CharSequence,
@@ -42,7 +38,7 @@ class ChannelSraqlExtension extends ChannelExtensionPoint {
 
     protected void init(Session session) {
         this.session = session
-        this.config = new SraqlConfig((Map) session.config.navigate('sql.db'))
+        this.config = new SraqlConfig((Map) session.config.navigate('sraql.source'))
     }
 
     DataflowWriteChannel fromQuery(String query) {
@@ -68,10 +64,10 @@ class ChannelSraqlExtension extends ChannelExtensionPoint {
     }
 
     protected SraqlDataSource dataSourceFromOpts(Map opts) {
-        final dsName = (opts?.db ?: 'default') as String
+        final dsName = (opts?.source ?: 'default') as String
         final dataSource = config.getDataSource(dsName)
         if( dataSource==null ) {
-            def msg = "Unknown db name: $dsName"
+            def msg = "Unknown dataSource name: $dsName"
             def choices = config.getDataSourceNames().closest(dsName) ?: config.getDataSourceNames()
             if( choices?.size() == 1 )
                 msg += " - Did you mean: ${choices.get(0)}?"
