@@ -845,4 +845,121 @@ class K8sClientTest extends Specification {
         e.message == 'K8s pod configuration failed -- secrets "my-env" not found'
 
     }
+
+    def 'client should throw process exception when initContainer fails' () {
+        // Addresses bug 2428, which is when an initContainer exists and fails
+        // leaving the containerStatuses in "PodInitializing", but the pod
+        // phase is "Failed".
+        def JSON = '''
+            {
+                "apiVersion": "v1",
+                "kind": "Pod",
+                "metadata": {
+                    "creationTimestamp": "2021-11-03T21:37:45Z",
+                    "labels": {
+                        "app": "nextflow",
+                        "magic-version": "v7.5.3",
+                        "processName": "some_special_magic",
+                        "runName": "lonely_tuckerman",
+                        "sessionId": "uuid-41ef6f42-bab5-438f-83e4-85e91a6386ea",
+                        "taskName": "some_special_magic_1"
+                    },
+                    "name": "nf-45d62fd8462ba390bacfa20ad9065bfe",
+                    "namespace": "default",
+                    "resourceVersion": "90692",
+                    "uid": "280bf29c-4c14-4451-a300-080760ff7a0e"
+                },
+                "status": {
+                    "conditions": [
+                        {
+                            "lastProbeTime": null,
+                            "lastTransitionTime": "2021-11-03T21:37:45Z",
+                            "message": "containers with incomplete status: [magic-init]",
+                            "reason": "ContainersNotInitialized",
+                            "status": "False",
+                            "type": "Initialized"
+                        },
+                        {
+                            "lastProbeTime": null,
+                            "lastTransitionTime": "2021-11-03T21:37:45Z",
+                            "message": "containers with unready status: [nf-45d62fd8462ba390bacfa20ad9065bfe]",
+                            "reason": "ContainersNotReady",
+                            "status": "False",
+                            "type": "Ready"
+                        },
+                        {
+                            "lastProbeTime": null,
+                            "lastTransitionTime": "2021-11-03T21:37:45Z",
+                            "message": "containers with unready status: [nf-45d62fd8462ba390bacfa20ad9065bfe]",
+                            "reason": "ContainersNotReady",
+                            "status": "False",
+                            "type": "ContainersReady"
+                        },
+                        {
+                            "lastProbeTime": null,
+                            "lastTransitionTime": "2021-11-03T21:37:45Z",
+                            "status": "True",
+                            "type": "PodScheduled"
+                        }
+                    ],
+                    "containerStatuses": [
+                        {
+                            "image": "docker/asdf/magictest:7.5.3",
+                            "imageID": "",
+                            "lastState": {},
+                            "name": "nf-45d62fd8462ba390bacfa20ad9065bfe",
+                            "ready": false,
+                            "restartCount": 0,
+                            "started": false,
+                            "state": {
+                                "waiting": {
+                                    "reason": "PodInitializing"
+                                }
+                            }
+                        }
+                    ],
+                    "hostIP": "10.12.205.49",
+                    "initContainerStatuses": [
+                        {
+                            "containerID": "containerd://8ac143e547ef8c417f3655da31a81018e9d14db08c218e56ee3d181c70e0b755",
+                            "image": "docker/asdf/magic-special-handling:0.4.0",
+                            "imageID": "sha256:587f96e98fd0a2b17772e9a505522e4c0e1cf5194a4f08924c339848df42100c",
+                            "lastState": {},
+                            "name": "magic-init",
+                            "ready": false,
+                            "restartCount": 0,
+                            "state": {
+                                "terminated": {
+                                    "containerID": "containerd://8ac143e547ef8c417f3655da31a81018e9d14db08c218e56ee3d181c70e0b755",
+                                    "exitCode": 1,
+                                    "finishedAt": "2021-11-03T21:37:51Z",
+                                    "reason": "Error",
+                                    "startedAt": "2021-11-03T21:37:46Z"
+                                }
+                            }
+                        }
+                    ],
+                    "phase": "Failed",
+                    "podIP": "10.42.0.67",
+                    "podIPs": [
+                        {
+                            "ip": "10.42.0.67"
+                        }
+                    ],
+                    "qosClass": "Burstable",
+                    "startTime": "2021-11-03T21:37:45Z"
+                }
+            }
+'''
+        def client = Spy(K8sClient)
+        final POD_NAME = 'nf-45d62fd8462ba390bacfa20ad9065bfe'
+
+        when:
+        client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+        and:
+        def e = thrown(PodUnschedulableException)
+        e.message == "K8s pod in Failed state"
+    }
 }

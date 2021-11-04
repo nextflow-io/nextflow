@@ -316,6 +316,12 @@ class K8sClient {
             final cause = new K8sResponseException(resp)
             throw new PodUnschedulableException(message, cause)
         }
+        final status = resp.status as Map
+        if( status?.phase == 'Failed' ) {
+            def message = "K8s pod in Failed state"
+            final cause = new K8sResponseException(resp)
+            throw new PodUnschedulableException(message, cause)
+        }
     }
 
     /*
