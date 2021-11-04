@@ -115,11 +115,35 @@ class PublishDir {
     }
 
     void setMode( String str ) {
-        this.mode = str.toUpperCase == 'COPYNOFOLLOW' ? Mode.COPY_NO_FOLLOW : str.toUpperCase() as Mode
+        this.mode = str.toUpperCase() == 'COPYNOFOLLOW' ? Mode.COPY_NO_FOLLOW : str.toUpperCase() as Mode
     }
 
     void setMode( Mode mode )  {
         this.mode = mode
+    }
+
+    void setOverwrite( Closure obj ) {
+        setOverwrite( obj.call() as String )
+    }
+
+    void setOverwrite( String str ) {
+        setOverwrite( Boolean.parseBoolean( str ) )
+    }    
+
+    void setOverwrite( Boolean bl ) {
+        this.overwrite = bl
+    }
+    
+    void setEnabled( Closure obj ) {
+        setEnabled( obj.call() as String )
+    }
+
+    void setEnabled( String str ) {
+        setEnabled( Boolean.parseBoolean( str ) )
+    }
+
+    void setEnabled( Boolean bl ) {
+        this.enabled = bl
     }
 
     @PackageScope boolean checkNull(String str) {
@@ -151,13 +175,13 @@ class PublishDir {
             result.pattern = params.pattern
 
         if( params.overwrite != null )
-            result.overwrite = Boolean.parseBoolean(params.overwrite.toString())
+            result.overwrite = params.overwrite
 
         if( params.saveAs )
             result.saveAs = params.saveAs
 
         if( params.enabled != null )
-            result.enabled = Boolean.parseBoolean(params.enabled.toString())
+            result.enabled = params.enabled
 
         return result
     }
