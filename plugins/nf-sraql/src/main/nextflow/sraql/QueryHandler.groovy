@@ -17,6 +17,13 @@
 
 package nextflow.sraql
 
+import com.google.cloud.bigquery.BigQuery
+import com.google.cloud.bigquery.BigQueryOptions
+import com.google.cloud.bigquery.JobId
+import com.google.cloud.bigquery.JobInfo
+import com.google.cloud.bigquery.QueryJobConfiguration
+import com.google.cloud.bigquery.TableResult
+
 import java.sql.Connection
 import java.sql.ResultSet
 import java.sql.Statement
@@ -95,9 +102,9 @@ class QueryHandler implements QueryOp {
             query0(conn)
     }
 
-    protected Connection connect(SraqlDataSource ds) {
+    protected BigQuery connect(SraqlDataSource ds) {
         log.debug "Creating SRAQL connection: ${ds}"
-        Sql.newInstance(ds.toMap()).getConnection()
+        BigQueryOptions.getDefaultInstance().getService();
     }
 
     protected String normalize(String q) {
@@ -109,7 +116,7 @@ class QueryHandler implements QueryOp {
         return result
     }
 
-    protected queryAsync(Connection conn) {
+    protected queryAsync(BigQuery conn) {
         def future = CompletableFuture.runAsync({ query0(conn) })
         future.exceptionally(this.&handlerException)
     }
@@ -121,20 +128,24 @@ class QueryHandler implements QueryOp {
         session?.abort(error)
     }
 
-    protected void query0(Connection conn) {
-        try {
-            try (Statement stm = conn.createStatement()) {
-                try (def rs = stm.executeQuery(normalize(statement))) {
-                    emitRows0(rs)
-                }
-            }
-        }
-        finally {
-            conn.close()
-        }
+    protected void query0(BigQuery conn) {
+
+        def jobId = JobId.of(UUID.randomUUID().toString());
+
+        def queryJobConfig = QueryJobConfiguration.newBuilder(
+                normalize(statement)
+        )
+                .setUseLegacySql(false)
+                .build();
+
+        def queryJob = conn
+                .create(JobInfo.newBuilder(queryJobConfig).setJobId(jobId).build())
+                .waitFor()
+
+        emitRows0(queryJob.getQueryResults())
     }
 
-    protected emitRows0(ResultSet rs) {
+    protected emitRows0(TableResult rs) {
         try {
             final meta = rs.getMetaData()
             final cols = meta.getColumnCount()
