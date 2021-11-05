@@ -10,7 +10,7 @@ import spock.lang.Specification
 
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Abhinav Sharma <abhi18av@outlook.com>
  */
 class QueryHandlerTest extends Specification {
 
@@ -19,48 +19,26 @@ class QueryHandlerTest extends Specification {
         def ext = new QueryHandler()
 
         expect:
-        ext.normalize('select * from x; ') == 'select * from x;'
-        ext.normalize('select * from x ') == 'select * from x;'
+
+        ext.normalize("SELECT *  FROM `nih-sra-datastore.sra.metadata` WHERE organism = 'Mycobacterium tuberculosis';") == "SELECT *  FROM `nih-sra-datastore.sra.metadata` WHERE organism = 'Mycobacterium tuberculosis';"
+        ext.normalize("SELECT *  FROM `nih-sra-datastore.sra.metadata` WHERE organism = 'Mycobacterium tuberculosis'") == "SELECT *  FROM `nih-sra-datastore.sra.metadata` WHERE organism = 'Mycobacterium tuberculosis';"
     }
 
 
-    def 'should connect db'() {
-        given:
-        def ext = new QueryHandler()
-        when:
-        def conn = ext.connect(new SraqlDataSource([:]))
-        then:
-        conn != null
-        cleanup:
-        conn.close()
-    }
-
-    def 'should perform query'() {
-        given:
-        def folder = Files.createTempDirectory('test')
-        and:
-        folder.resolve('test.csv').text = '''\
-        FOO,BAR
-        1,hello
-        2,ciao
-        3,hola
-        4,bonjour
-        '''.stripIndent()
-
+    def 'should perform the query'() {
         when:
         def result = new DataflowQueue()
-        def query = "SELECT * FROM CSVREAD('${folder.resolve('test.csv')}') where FOO > 2;"
+        def query = "SELECT *  FROM `nih-sra-datastore.sra.metadata` WHERE organism = 'Mycobacterium tuberculosis' LIMIT 3;"
         new QueryHandler()
                 .withTarget(result)
                 .withStatement(query)
                 .perform()
 
         then:
-        result.val == ['3', 'hola']
-        result.val == ['4', 'bonjour']
+        result.val[0] == 'ERR3287691'
+        result.val[0] == 'ERR3287738'
+        result.val[0] == 'SRR12395057'
         result.val == Channel.STOP
 
-        cleanup:
-        folder.deleteDir()
     }
 }
