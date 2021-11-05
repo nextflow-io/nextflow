@@ -607,7 +607,7 @@ For example::
         }
     }
 
-.. tip:: To use an AWS China region, please specify the appropriate region code in ``endpoint``. For example ``aws.client.endpoint = "s3.cn-north-1.amazonaws.com.cn"``
+.. tip:: To use an AWS China region, please specify the appropriate region code in ``endpoint``. For example ``aws.client.endpoint = "https://s3.cn-north-1.amazonaws.com.cn"``
 
 .. _config-aws-batch:
 
