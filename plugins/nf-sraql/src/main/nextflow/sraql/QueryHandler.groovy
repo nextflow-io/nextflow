@@ -19,6 +19,7 @@ package nextflow.sraql
 
 import com.google.cloud.bigquery.BigQuery
 import com.google.cloud.bigquery.BigQueryOptions
+import com.google.cloud.bigquery.FieldValue
 import com.google.cloud.bigquery.JobId
 import com.google.cloud.bigquery.JobInfo
 import com.google.cloud.bigquery.QueryJobConfiguration
@@ -145,23 +146,26 @@ class QueryHandler implements QueryOp {
         emitRows0(queryJob.getQueryResults())
     }
 
-    protected emitRows0(TableResult rs) {
+    protected emitRows0(TableResult result) {
         try {
-            final meta = rs.getMetaData()
-            final cols = meta.getColumnCount()
 
-            while (rs.next()) {
-                def item = new ArrayList(cols)
-                for (int i = 0; i < cols; i++) {
-                    item[i] = rs.getObject(i + 1)
+            for (row in result.iterateAll()) {
+                def item = new ArrayList()
+
+                for (field in result.schema.fields) {
+                    def fieldName = field.name
+                    def fieldContent = row.get(fieldName)
+
+                    if( fieldContent.attribute == FieldValue.Attribute.PRIMITIVE ) {
+                        item <<  fieldContent.value
+                    }
                 }
-                // emit the value
                 target.bind(item)
             }
-        }
-        finally {
-            // close the channel
-            target.bind(Channel.STOP)
+            }
+            finally {
+                // close the channel
+                target.bind(Channel.STOP)
+            }
         }
     }
-}
