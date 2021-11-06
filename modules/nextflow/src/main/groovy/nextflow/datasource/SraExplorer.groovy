@@ -63,7 +63,7 @@ class SraExplorer {
     private XmlParser xmlParser = new XmlParser()
     private int emitCount
     private int maxResults = Integer.MAX_VALUE
-    private int entriesPerChunk = 1000
+    private int entriesPerChunk = 500
     private List<String> missing = new ArrayList<>()
     private Path cacheFolder
     private String protocol = 'ftp'
@@ -163,6 +163,8 @@ class SraExplorer {
         while( index < result.count && emitCount<maxResults ) {
             url = getFetchUrl(result.querykey, result.webenv, index, entriesPerChunk)
             def data = makeDataRequest(url)
+            if( data.error )
+                throw new IllegalArgumentException("Invalid request: $url -- Error: $data.error")
             parseDataResponse(data)
             index += entriesPerChunk
         }
