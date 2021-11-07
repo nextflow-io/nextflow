@@ -342,7 +342,7 @@ class BashWrapperBuilder {
         catch (FileSystemException e) {
             // throw a ProcessStageException so that the error can be recovered
             // via nextflow re-try mechanism
-            new ProcessException("Unable to create file ${path.toUriString()}", e)
+            throw new ProcessException("Unable to create file ${path.toUriString()}", e)
         }
     }
 
