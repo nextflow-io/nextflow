@@ -870,38 +870,6 @@ class K8sClientTest extends Specification {
                     "uid": "280bf29c-4c14-4451-a300-080760ff7a0e"
                 },
                 "status": {
-                    "conditions": [
-                        {
-                            "lastProbeTime": null,
-                            "lastTransitionTime": "2021-11-03T21:37:45Z",
-                            "message": "containers with incomplete status: [magic-init]",
-                            "reason": "ContainersNotInitialized",
-                            "status": "False",
-                            "type": "Initialized"
-                        },
-                        {
-                            "lastProbeTime": null,
-                            "lastTransitionTime": "2021-11-03T21:37:45Z",
-                            "message": "containers with unready status: [nf-45d62fd8462ba390bacfa20ad9065bfe]",
-                            "reason": "ContainersNotReady",
-                            "status": "False",
-                            "type": "Ready"
-                        },
-                        {
-                            "lastProbeTime": null,
-                            "lastTransitionTime": "2021-11-03T21:37:45Z",
-                            "message": "containers with unready status: [nf-45d62fd8462ba390bacfa20ad9065bfe]",
-                            "reason": "ContainersNotReady",
-                            "status": "False",
-                            "type": "ContainersReady"
-                        },
-                        {
-                            "lastProbeTime": null,
-                            "lastTransitionTime": "2021-11-03T21:37:45Z",
-                            "status": "True",
-                            "type": "PodScheduled"
-                        }
-                    ],
                     "containerStatuses": [
                         {
                             "image": "docker/asdf/magictest:7.5.3",
