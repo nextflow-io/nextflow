@@ -40,7 +40,6 @@ import org.pf4j.PluginStateListener
 @CompileStatic
 class PluginsFacade implements PluginStateListener {
 
-    private Path PLUGINS_LOCAL_ROOT = Paths.get('.nextflow/plr')
     private static final String DEV_MODE = 'dev'
     private static final String PROD_MODE = 'prod'
     private Map<String,String> env = new HashMap<>(System.getenv())
@@ -134,17 +133,8 @@ class PluginsFacade implements PluginStateListener {
         this.updater = createUpdater(root, manager)
     }
 
-    protected Path localRoot(List<PluginSpec> specs) {
-        final unique = specs ? CacheHelper.hasher(specs).hash().toString() : 'empty'
-        final localRoot = PLUGINS_LOCAL_ROOT.resolve(unique)
-        log.debug "Plugins local root: $localRoot"
-        FilesEx.mkdirs(localRoot)
-        return localRoot
-    }
-
     protected CustomPluginManager createManager(Path root, List<PluginSpec> specs) {
-        final localRoot = localRoot(specs)
-        final result = mode!=DEV_MODE ? new LocalPluginManager(localRoot, root, specs) : new DevPluginManager(root)
+        final result = mode!=DEV_MODE ? new LocalPluginManager(root, specs) : new DevPluginManager(root)
         result.addPluginStateListener(this)
         return result
     }
