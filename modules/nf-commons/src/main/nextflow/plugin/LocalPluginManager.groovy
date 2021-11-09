@@ -20,9 +20,11 @@ package nextflow.plugin
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.extension.FilesEx
 import org.pf4j.DefaultPluginLoader
 import org.pf4j.DefaultPluginManager
 import org.pf4j.ManifestPluginDescriptorFinder
@@ -40,15 +42,24 @@ import org.pf4j.PluginWrapper
 @CompileStatic
 class LocalPluginManager extends CustomPluginManager {
 
+    static private Path PLUGINS_LOCAL_ROOT = Paths.get('.nextflow/plr')
     private Path repository
     List<PluginSpec> specs
 
-    LocalPluginManager(Path localRoot, Path repository, List<PluginSpec> specs) {
-        super(localRoot)
+    LocalPluginManager(Path repository, List<PluginSpec> specs) {
+        super(makeLocalRoot())
         if( !localRoot ) throw new IllegalArgumentException("Missing Local plugins root directory")
         if( !repository ) throw new IllegalArgumentException("Missing plugins repository directory")
         this.repository = repository
         this.specs = specs
+    }
+
+    static protected Path makeLocalRoot() {
+        final result = PLUGINS_LOCAL_ROOT.resolve(UUID.randomUUID().toString())
+        if( !FilesEx.mkdirs(result) )
+            throw new IOException("Unable to create plugins local directory: $result -- Make sure you have write permissions in this directory path")
+        Runtime.addShutdownHook { FilesEx.deleteDir(result) }
+        return result
     }
 
     protected Path getLocalRoot() { getPluginsRoot() }
@@ -66,43 +77,6 @@ class LocalPluginManager extends CustomPluginManager {
     @Override
     protected PluginRepository createPluginRepository() {
         return new LocalPluginRepository(localRoot)
-    }
-
-    @Override
-    void loadPlugins() {
-        // sync local plugins
-        for( PluginSpec it : specs ) { linkPlugin(it) }
-        // proceed with loading
-        super.loadPlugins()
-    }
-
-    protected void linkPlugin(PluginSpec spec) {
-        if( spec.version ) {
-            // given a plugin fully qualified, create a symlink from the repository to the local repo
-            final name = "${spec.id}-${spec.version}"
-            if( Files.exists(repository.resolve(name)) && !Files.exists(localRoot.resolve(name)) ) {
-                final link = createLinkFromPath(repository.resolve(name))
-                log.debug "Plugin $spec resolved to $link"
-            }
-        }
-        else {
-            final List<Path> avail = findPlugins(spec.id, repository)
-            final List<Path> exist = findPlugins(spec.id, localRoot)
-            if( avail && !exist ) {
-                final link = createLinkFromPath(avail[0])
-                log.debug "Plugin $spec resolved to $link"
-            }
-        }
-    }
-
-    protected List<Path> findPlugins(String name, Path repo) {
-        final result = new ArrayList<Path>()
-        repo.eachDir {
-            if( it.fileName.toString().startsWith(name) ) {
-                result.add(it)
-            }
-        }
-        return result.sort()
     }
 
     /**

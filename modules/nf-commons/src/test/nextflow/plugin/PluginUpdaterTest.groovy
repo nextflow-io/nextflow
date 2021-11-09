@@ -48,10 +48,8 @@ class PluginUpdaterTest extends Specification {
         and:
         // the central cache where downloaded unzipped plugins are kept
         def cacheDir = Files.createDirectory(folder.resolve('cache'))
-        // the app local dir
-        def localDir =  Files.createDirectory(folder.resolve('local'))
         and:
-        def manager = new LocalPluginManager(localDir, cacheDir, [])
+        def manager = new LocalPluginManager(cacheDir, [])
         def updater = new PluginUpdater(manager, cacheDir, new URL("file:${repoDir.resolve('plugins.json')}"))
 
         when:
@@ -66,9 +64,9 @@ class PluginUpdaterTest extends Specification {
         cacheDir.resolve(PLUGIN).isDirectory()
         cacheDir.resolve(PLUGIN).resolve('MANIFEST.MF').isFile()
         and:
-        localDir.resolve(PLUGIN).exists()
-        localDir.resolve(PLUGIN).isLink()
-        localDir.resolve(PLUGIN).resolve('MANIFEST.MF').text == cacheDir.resolve(PLUGIN).resolve('MANIFEST.MF').text
+        manager.localRoot.resolve(PLUGIN).exists()
+        manager.localRoot.resolve(PLUGIN).isLink()
+        manager.localRoot.resolve(PLUGIN).resolve('MANIFEST.MF').text == cacheDir.resolve(PLUGIN).resolve('MANIFEST.MF').text
 
         cleanup:
         folder?.deleteDir()
@@ -93,10 +91,7 @@ class PluginUpdaterTest extends Specification {
         // the central cache where downloaded unzipped plugins are kept
         def cacheDir = Files.createDirectory(folder.resolve('cache'))
         and:
-        // the app local dir
-        def localDir =  Files.createDirectory(folder.resolve('local'))
-        and:
-        def manager = new LocalPluginManager(localDir, cacheDir, [])
+        def manager = new LocalPluginManager(cacheDir, [])
         def updater = new PluginUpdater(manager, cacheDir, new URL("file:${repoDir.resolve('plugins.json')}"))
 
         when:
@@ -112,8 +107,8 @@ class PluginUpdaterTest extends Specification {
         when:
         updater.updatePlugin( 'my-plugin', '2.0.0' )
         then:
-        localDir.resolve('my-plugin-2.0.0').exists()
-        !localDir.resolve('my-plugin-1.0.0').exists()
+        manager.localRoot.resolve('my-plugin-2.0.0').exists()
+        !manager.localRoot.resolve('my-plugin-1.0.0').exists()
         and:
         cacheDir.resolve('my-plugin-1.0.0').exists()
         cacheDir.resolve('my-plugin-2.0.0').exists()
@@ -140,10 +135,7 @@ class PluginUpdaterTest extends Specification {
         def plugin1 = createPlugin(cacheDir,'my-plugin', '1.0.0', FooPlugin.class)
         def plugin2 = createPlugin(cacheDir,'my-plugin', '2.0.0', FooPlugin.class)
         and:
-        // the app local dir
-        def localDir =  Files.createDirectory(folder.resolve('local'))
-        and:
-        def manager = new LocalPluginManager(localDir, cacheDir, [])
+        def manager = new LocalPluginManager(cacheDir, [])
         def updater = new PluginUpdater(manager, cacheDir, new URL("file:${repoDir.resolve('plugins.json')}"))
 
         when:
@@ -156,14 +148,14 @@ class PluginUpdaterTest extends Specification {
         cacheDir.resolve('my-plugin-1.0.0').exists()
         cacheDir.resolve('my-plugin-1.0.0').isDirectory()
         and:
-        localDir.resolve('my-plugin-1.0.0').exists()
-        localDir.resolve('my-plugin-1.0.0').isLink()
+        manager.localRoot.resolve('my-plugin-1.0.0').exists()
+        manager.localRoot.resolve('my-plugin-1.0.0').isLink()
 
         when:
         updater.updatePlugin( 'my-plugin', '2.0.0' )
         then:
-        localDir.resolve('my-plugin-2.0.0').exists()
-        !localDir.resolve('my-plugin-1.0.0').exists()
+        manager.localRoot.resolve('my-plugin-2.0.0').exists()
+        !manager.localRoot.resolve('my-plugin-1.0.0').exists()
         and:
         cacheDir.resolve('my-plugin-1.0.0').exists()
         cacheDir.resolve('my-plugin-2.0.0').exists()
