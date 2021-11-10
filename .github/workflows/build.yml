@@ -39,10 +39,12 @@ jobs:
            echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
 
     - name: Setup Java ${{ matrix.java_version }}
-      uses: actions/setup-java@v1
+      uses: actions/setup-java@v2
       with:
         java-version: ${{matrix.java_version}}
+        distribution: 'adopt'
         architecture: x64
+        cache: gradle
 
     - name: Compile
       run: make assemble
@@ -82,10 +84,12 @@ jobs:
 
     - name: Setup Java 8
       if: "matrix.java_version != 8 && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/testing') && !contains(github.event.head_commit.message, '[ci fast]')"
-      uses: actions/setup-java@v1
+      uses: actions/setup-java@v2
       with:
         java-version: 8
+        distribution: 'adopt'
         architecture: x64
+        cache: gradle
 
     - name: Integration vs Java 8
       if: "matrix.java_version != 8 && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/testing') && !contains(github.event.head_commit.message, '[ci fast]')"
