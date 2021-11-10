@@ -49,10 +49,10 @@ class SraqlConfig {
     }
 
     protected Map parseDataSources(Map<String, Map> config) {
-        // create the `default`datasource as fallback for missing values
+        // create the `default` datasource as fallback for missing values
         this.defSource = new SraqlDataSource(config?.'default' as Map ?: Collections.emptyMap())
 
-        // setup other db by name
+        // setup other datasource by name
         final result = new LinkedHashMap<String, SraqlDataSource>()
         for (Map.Entry<String, Map> entry : config) {
             if( entry.key == 'default' ) {

@@ -21,7 +21,7 @@ import spock.lang.Specification
 
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Abhinav Sharma <abhi18av@outlook.com>
  */
 class SraqlConfigTest extends Specification {
 
@@ -29,71 +29,46 @@ class SraqlConfigTest extends Specification {
         when:
         def config = new SraqlConfig(null)
         then:
-        config.getDataSource('default') == SraqlDataSource.DEFAULT
-    }
-
-    def 'should create custom config' () {
-        given:
-        def map = [myDatabase: [
-                    url: 'X1',
-                    driver: 'X2',
-                    user: 'X3',
-                    password: 'X4'
-                ]]
-        when:
-        def config = new SraqlConfig(map)
-        then:
-        with(config.getDataSource('myDatabase')) {
-            url == 'X1'
-            driver == 'X2'
-            user == 'X3'
-            password == 'X4'
-        }
+        println(config)
     }
 
     def 'should create config from default' () {
         given:
-        def map = [myDatabase: [
-                url: 'jdbc:postgresql:host.name',
+        def map = [google: [
+                source: 'google-bigquery',
         ]]
+
         when:
         def config = new SraqlConfig(map)
+
         then:
-        with(config.getDataSource('myDatabase')) {
-            url == 'jdbc:postgresql:host.name'
-            driver == 'org.postgresql.Driver'
-            user == SqlDataSource.DEFAULT_USER
-            password == null
-        }
-        and:
-        with(config.getDataSource('default')) {
-            url == SqlDataSource.DEFAULT_URL
-            driver == SqlDataSource.DEFAULT_DRIVER
-            user == SqlDataSource.DEFAULT_USER
-            password == null
-        }
+        println("---\n${config}\n---")
+//        with(config.getDataSource('google')) {
+//            source == 'google-bigquery'
+//        }
+//
+//        and:
+//        with(config.getDataSource('default')) {
+//            source == 'google-bigquery'
+//        }
     }
 
     def 'should override default config' () {
         given:
         def map = [
-                'default': [url:'jdbc:foo:mem', driver: 'org.foo.Driver', user: 'user-x', password: 'pass-y'],
-                myDatabase: [:]]
+                'default': [source:'google-bigquery'],
+                google: [:]]
         when:
         def config = new SraqlConfig(map)
+
         then:
         with(config.getDataSource('myDatabase')) {
-            url == 'jdbc:foo:mem'
-            driver == 'org.foo.Driver'
-            user == 'user-x'
-            password == 'pass-y'
+            source == 'google-bigquery'
         }
+
         and:
         with(config.getDataSource('default')) {
-            url == 'jdbc:foo:mem'
-            driver == 'org.foo.Driver'
-            user == 'user-x'
-            password == 'pass-y'
+            source == 'google-bigquery'
         }
     }
 
@@ -111,7 +86,6 @@ class SraqlConfigTest extends Specification {
             user == 'user-x'
             password == 'pass-y'
         }
-        and:
         and:
         with(config.getDataSource('default')) {
             url == 'jdbc:foo:mem'

@@ -21,114 +21,23 @@ package nextflow.sraql.config
 import spock.lang.Specification
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Abhinav Sharma <abhi18av@outlook.com>
  */
 class SraqlDataSourceTest extends Specification {
-
-    def 'should configure datasource'  () {
-
-        given:
-        def CONFIG = '''
-            dataSources {
-                'default' {
-                    url = 'jdbc:h2:mem:' 
-                    driver = 'org.h2.Driver'
-                    user = 'sa'
-                }
-                
-                myDb1 {
-                    url = 'jdbc:h2:mem:' 
-                    driver = 'org.h2.Driver'
-                    user = 'sa'
-                    password = null
-                }
-            
-                myDb2 {
-                    url = 'jdbc:postgresql://host:port/database'
-                    driver = 'org.postgresql.Driver'
-                    user = 'xyz'
-                    password = 'foo'                    
-                }
-                
-            }
-        '''
-
-    }
-
-    def 'should map url to driver' () {
-        given:
-        def helper = new SraqlDataSource([:])
-
-        expect:
-        helper.urlToDriver(JBDC_URL) == DRIVER
-        where:
-        JBDC_URL                        | DRIVER
-        'jdbc:postgresql:database'      | 'org.postgresql.Driver'
-        'jdbc:sqlite:database'          | 'org.sqlite.JDBC'
-        'jdbc:h2:mem:'                  | 'org.h2.Driver'
-        'jdbc:mysql:some-host'          | 'com.mysql.cj.jdbc.Driver'
-        'jdbc:mariadb:other-host'       | 'org.mariadb.jdbc.Driver'
-        'jdbc:duckdb:'                  | 'org.duckdb.DuckDBDriver'
-    }
 
     def 'should get default config' () {
         given:
         def ds = new SraqlDataSource([:])
         expect:
-        ds.url == SqlDataSource.DEFAULT_URL
-        ds.driver == SqlDataSource.DEFAULT_DRIVER
-        ds.user == SqlDataSource.DEFAULT_USER
-        ds.password == null
+        ds.source == SraqlDataSource.DEFAULT_SOURCE
     }
 
-
-    def 'should get postgresql config' () {
-        given:
-        def ds = new SraqlDataSource([url:'jdbc:postgresql:some-host'])
-        expect:
-        ds.url == 'jdbc:postgresql:some-host'
-        ds.driver == 'org.postgresql.Driver'
-        ds.user == SqlDataSource.DEFAULT_USER
-        ds.password == null
-    }
-
-    def 'should get custom config' () {
-        given:
-        def config = [
-                url:'jdbc:xyz:host-name',
-                driver:'this.that.Driver',
-                user: 'foo',
-                password: 'secret']
-        and:
-        def ds = new SraqlDataSource(config)
-
-        expect:
-        ds.url == 'jdbc:xyz:host-name'
-        ds.driver == 'this.that.Driver'
-        ds.user == 'foo'
-        ds.password == 'secret'
-    }
 
     def 'should convert to map' () {
         when:
-        def ds = new SraqlDataSource(url:'x', driver: 'y', user: 'w', password: 'z')
+        def ds = new SraqlDataSource(source:'google-bigquery')
         then:
-        ds.toMap().url == 'x'
-        ds.toMap().driver == 'y'
-        ds.toMap().user == 'w'
-        ds.toMap().password == 'z'
+        ds.toMap().source == 'google-bigquery'
     }
 
-    def 'should validate equals & hashcode' () {
-        given:
-        def ds1 = new SraqlDataSource(url:'x', driver: 'y', user: 'w', password: 'z')
-        def ds2 = new SraqlDataSource(url:'x', driver: 'y', user: 'w', password: 'z')
-        def ds3 = new SraqlDataSource(url:'p', driver: 'q', user: 'r', password: 'v')
-        expect:
-        ds1 == ds2
-        ds1 != ds3
-        and:
-        ds1.hashCode() == ds2.hashCode()
-        ds1.hashCode() != ds3.hashCode()
-    }
 }
