@@ -35,9 +35,9 @@ class QueryHandlerTest extends Specification {
                 .perform()
 
         then:
-        result.val[0] == 'ERR3287691'
-        result.val[0] == 'ERR3287738'
-        result.val[0] == 'SRR12395057'
+        result.val[0] == ['acc', 'ERR3287691']
+        result.val[0] == ['acc', 'ERR3287738']
+        result.val[0] == ['acc', 'SRR12395057']
         result.val == Channel.STOP
 
     }

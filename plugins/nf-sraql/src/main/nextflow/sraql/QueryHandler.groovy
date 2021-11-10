@@ -50,28 +50,6 @@ class QueryHandler implements QueryOp {
 
     private static Map<String, Class<?>> type_mapping = [:]
 
-    static {
-        type_mapping.CHAR = String
-        type_mapping.VARCHAR = String
-        type_mapping.LONGVARCHAR = String
-        type_mapping.NUMERIC = BigDecimal
-        type_mapping.DECIMAL = BigDecimal
-        type_mapping.BIT = Boolean
-        type_mapping.TINYINT = Byte
-        type_mapping.SMALLINT = Short
-        type_mapping.INTEGER = Integer
-        type_mapping.BIGINT = Long
-        type_mapping.REAL = Float
-        type_mapping.FLOAT = Double
-        type_mapping.DOUBLE = Double
-        type_mapping.BINARY = byte[]
-        type_mapping.VARBINARY = byte[]
-        type_mapping.LONGVARBINARY = byte[]
-        type_mapping.DATE = java.sql.Date
-        type_mapping.TIME = java.sql.Time
-        type_mapping.TIMESTAMP = java.sql.Timestamp
-    }
-
     private DataflowWriteChannel target
     private String statement
     private SraqlDataSource dataSource
@@ -150,22 +128,22 @@ class QueryHandler implements QueryOp {
         try {
 
             for (row in result.iterateAll()) {
-                def item = new ArrayList()
+                def fieldValues = new ArrayList()
 
                 for (field in result.schema.fields) {
                     def fieldName = field.name
                     def fieldContent = row.get(fieldName)
 
                     if( fieldContent.attribute == FieldValue.Attribute.PRIMITIVE ) {
-                        item <<  fieldContent.value
+                        fieldValues << [fieldName, fieldContent.value]
                     }
                 }
-                target.bind(item)
-            }
-            }
-            finally {
-                // close the channel
-                target.bind(Channel.STOP)
+                target.bind(fieldValues)
             }
         }
+        finally {
+            // close the channel
+            target.bind(Channel.STOP)
+        }
     }
+}

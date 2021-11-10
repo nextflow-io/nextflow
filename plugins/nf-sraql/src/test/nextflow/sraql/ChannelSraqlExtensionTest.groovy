@@ -26,7 +26,7 @@ import spock.lang.Timeout
 
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Abhinav Sharma <abhi18av@outlook.com>
  */
 @Timeout(10)
 class ChannelSraqlExtensionTest extends Specification {

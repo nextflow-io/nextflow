@@ -19,6 +19,7 @@ package nextflow.sraql.config
 
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import nextflow.exception.IllegalInvocationException
 
 /**
  * Model a SRAQL dataSource configuration
