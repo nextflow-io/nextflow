@@ -421,7 +421,7 @@ The above snippet prints::
 
 
 .. note::
-  The module inherits the parameters define *before* the ``include`` statement, therefore any further
+  The module inherits the parameters defined *before* the ``include`` statement, therefore any further
   parameter set later is ignored.
 
 .. tip::
