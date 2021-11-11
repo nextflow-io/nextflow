@@ -1,5 +1,19 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.10.0 11 Nov 2021
+- Add support for Java 17 [cb207cd64]
+- Allow override Bash wrapper template files [e6e25ed7c]
+- Fix issue with plugins local root sync [1d974a4eb]
+- Fix Nextflow does not recognised Failed pod  (#2430) [9c80cdea0] (3 days ago) <Mike Smoot>
+- Fix Error reporting on Bash launcher creation failure [63e01c324]
+- Fix Channel.fromSRA error one some project ids #2156 [dbcbac139]
+- Fix Task completion percentage #2440
+- Display no workflow warn if no main is defined [0f1295694]
+- Invalidate task cache on directive change (EXPERIMENTAL) [62ded3421]
+- Upgrade XmlParser used by SraExplorer [543b582b5]
+- Use AWS Batch resources requirement for CPUs and memory [1cf2c379c]
+- Bump Gradle 7.3 stable + GHA cache [4eaa4f25f]
+
 21.09.1-edge - 28 Oct 2021
 - Fix issue with config selectors and DSL2 [4d7d3e972]
 - Fix issue evaluating dynamic errorStrategy with AWS Batch [8c6a5a6e2] [ce4d491b1]
