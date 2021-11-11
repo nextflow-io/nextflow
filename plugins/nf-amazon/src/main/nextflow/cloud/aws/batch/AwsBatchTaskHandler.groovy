@@ -663,6 +663,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         def vars = []
         if( this.environment?.containsKey('NXF_DEBUG') )
             vars << new KeyValuePair().withName('NXF_DEBUG').withValue(this.environment['NXF_DEBUG'])
+        if( this.getAwsOptions().retryMode )
+            vars << new KeyValuePair().withName('AWS_RETRY_MODE').withValue(this.getAwsOptions().retryMode)
+        if( this.getAwsOptions().maxTransferAttempts )
+            vars << new KeyValuePair().withName('AWS_MAX_ATTEMPTS').withValue(this.getAwsOptions().maxTransferAttempts)
+            vars << new KeyValuePair().withName('AWS_METADATA_SERVICE_NUM_ATTEMPTS').withValue(this.getAwsOptions().maxTransferAttempts)
         return vars
     }
 

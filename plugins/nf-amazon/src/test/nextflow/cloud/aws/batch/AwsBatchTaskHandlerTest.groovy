@@ -206,8 +206,9 @@ class AwsBatchTaskHandlerTest extends Specification {
     def 'should create an aws submit request with retry'() {
 
         given:
-        def VAR_FOO = new KeyValuePair().withName('FOO').withValue('1')
-        def VAR_BAR = new KeyValuePair().withName('BAR').withValue('2')
+        def VAR_RETRY_MODE = new KeyValuePair().withName('AWS_RETRY_MODE').withValue('adaptive')
+        def VAR_MAX_ATTEMPTS = new KeyValuePair().withName('AWS_MAX_ATTEMPTS').withValue('10')
+        def VAR_METADATA_ATTEMPTS = new KeyValuePair().withName('AWS_METADATA_SERVICE_NUM_ATTEMPTS').withValue('10')
         def task = Mock(TaskRun)
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4, maxRetries: 2)
@@ -217,10 +218,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def req = handler.newSubmitRequest(task)
         then:
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', retryMode: 'adaptive', maxTransferAttempts: 10) }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
-        1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
         1 * handler.wrapperFile >> Paths.get('/bucket/test/.command.run')
         1 * handler.getLogFile() >> Paths.get('/bucket/test/.command.log')
 
@@ -229,6 +229,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobDefinition() == 'job-def:1'
         // no error `retry` error strategy is defined by NF, use `maxRetries` to se Batch attempts
         req.getRetryStrategy() == new RetryStrategy().withAttempts(3)
+        req.getContainerOverrides().getEnvironment() == [VAR_RETRY_MODE, VAR_MAX_ATTEMPTS, VAR_METADATA_ATTEMPTS]
     }
 
     def 'should return job queue'() {
