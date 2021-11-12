@@ -39,7 +39,6 @@ import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
 import nextflow.processor.BatchContext
-import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -273,27 +272,28 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     }
 
+    protected KeyValuePair kv(String K, String V) {
+        new KeyValuePair().withName(K).withValue(V)
+    }
+
     def 'should return job envs'() {
         given:
-        def VAR_FOO = new KeyValuePair().withName('FOO').withValue('hello')
-        def VAR_BAR = new KeyValuePair().withName('BAR').withValue('world')
-        def VAR_NXF = new KeyValuePair().withName('NXF_DEBUG').withValue('2')
 
-        def bean = new TaskBean()
-        bean.environment = [FOO:'hello', BAR: 'world']
-        def handler = [:] as AwsBatchTaskHandler
-        handler.bean = bean
+        def handler = Spy(new AwsBatchTaskHandler(environment: ENV)) {
+            getAwsOptions() >> Mock(AwsOptions) {
+                getRetryMode() >> RETRY_MODE
+                getMaxTransferAttempts() >> MAX_ATTEMPTS
+            }
+        }
 
-        when:
-        def vars = handler.getEnvironmentVars()
-        then:
-        vars.size() == 0
+        expect:
+        handler.getEnvironmentVars() == EXPECTED
 
-        when:
-        handler.environment = [NXF_DEBUG: '2', NXF_FOO: 'ignore']
-        vars = handler.getEnvironmentVars()
-        then:
-        vars == [ VAR_NXF ]
+        where:
+        RETRY_MODE  | MAX_ATTEMPTS  |  ENV                                  | EXPECTED
+        null        | null          | [FOO:'hello', BAR: 'world']           | []
+        null        | null          | [NXF_DEBUG: '2', NXF_FOO: 'ignore']   | [kv('NXF_DEBUG','2')]
+        'standard'  | 5             | [NXF_DEBUG: '1']                      | [kv('NXF_DEBUG','1'), kv('AWS_RETRY_MODE','standard'), kv('AWS_MAX_ATTEMPTS','5'), kv('AWS_METADATA_SERVICE_NUM_ATTEMPTS','5')]
     }
 
     def 'should strip invalid chars for job definition name' () {
