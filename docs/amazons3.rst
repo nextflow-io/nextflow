@@ -79,6 +79,16 @@ without any further configuration.
 Learn more about `Using IAM Roles to Delegate Permissions to Applications that Run on Amazon EC2 <http://docs.aws.amazon.com/IAM/latest/UserGuide/roles-usingrole-ec2instance.html>`_ on Amazon
 documentation.
 
+China regions
+-------------
+
+To use an AWS China region, please make sure to specify the corresponding AWS API S3 endpoint in the Nextflow configuration
+file as shown below::
+
+    aws.client.endpoint = "https://s3.cn-north-1.amazonaws.com.cn"
+
+Read more about AWS API endpoints in the `AWS documentation <https://docs.aws.amazon.com/general/latest/gr/s3.html>`_
+
 Advanced configuration
 -----------------------
 
