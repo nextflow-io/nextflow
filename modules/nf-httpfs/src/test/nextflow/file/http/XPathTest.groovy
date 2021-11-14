@@ -51,8 +51,14 @@ class XPathTest extends Specification {
     def 'should convert to a string' () {
         expect:
         XPath.get('http://www.nextflow.io/abc/d.txt').toString()== '/abc/d.txt'
+        and:
         XPath.get('http://www.nextflow.io/abc/d.txt').toUri() == new URI('http://www.nextflow.io/abc/d.txt')
-        XPath.get('http://www.nextflow.io/abc/d.txt').toUri().toString()== 'http://www.nextflow.io/abc/d.txt'
+        XPath.get('http://www.nextflow.io/abc/d.txt').toUri().toString() == 'http://www.nextflow.io/abc/d.txt'
+        and:
+        XPath.get('http://www.nextflow.io/abc/d.txt?q=1').toUri() == new URI('http://www.nextflow.io/abc/d.txt?q=1')
+        XPath.get('http://www.nextflow.io/abc/d.txt?q=1').toUri().toString() == 'http://www.nextflow.io/abc/d.txt?q=1'
+        and:
+        XPath.get('http://www.nextflow.io/abc/d.txt?').toUri().toString() == 'http://www.nextflow.io/abc/d.txt'
     }
 
     def "should return url root"() {
@@ -69,19 +75,20 @@ class XPathTest extends Specification {
         'http://www.google.com'             | 'http://www.google.com/'  | '/'       | 'http://www.google.com/'
     }
 
-
+    @Unroll
     def 'should return file name from url' () {
 
         expect:
-        XPath.get(origin)?.getFileName() == XPath.get(fileName)
-        XPath.get(origin)?.getFileName()?.toString() == fileName
+        XPath.get(ORIGIN)?.getFileName() == XPath.get(FILE_NAME)
+        XPath.get(ORIGIN)?.getFileName()?.toString() == FILE_NAME
 
         where:
-        origin                          | fileName
+        ORIGIN                          | FILE_NAME
         'http://nextflow.io/a/b/c.txt'  | 'c.txt'
         'http://nextflow.io/alpha'      | 'alpha'
         'http://nextflow.io/'           | null
         'http://nextflow.io'            | null
+        'http://nextflow.io/a/b/file.txt?q=1'| 'file.txt'
     }
 
 
@@ -169,6 +176,9 @@ class XPathTest extends Specification {
         '/alpha'                    | 'beta.txt'            | '/alpha/beta.txt'
         'http://nextflow.io/abc/'   | '/z.txt'              | 'http://nextflow.io/z.txt'
         'http://nextflow.io/abc/'   | 'http://x.com/z.txt'  | 'http://x.com/z.txt'
+        and:
+        'http://nextflow.io/abc/'   | 'http://x.com/z.txt?q=1'  | 'http://x.com/z.txt?q=1'
+        'http://nextflow.io/abc/'   | 'z.txt?q=1'               | 'http://nextflow.io/abc/z.txt?q=1'
 
     }
 
@@ -217,5 +227,34 @@ class XPathTest extends Specification {
         itr.next() == null
     }
 
+    @Unroll
+    def 'should fetch query' () {
+        expect:
+        XPath.query(PATH) == EXPECTED
+
+        where:
+        PATH            | EXPECTED
+        null            | null
+        'foo.txt'       | null
+        'foo?x=1'       | 'x=1'
+        'foo?x=1&y=2'   | 'x=1&y=2'
+        'foo?'          | null
+        '?x'            | 'x'
+    }
+
+    @Unroll
+    def 'should strip query' () {
+        expect:
+        XPath.stripQuery(PATH) == EXPECTED
+
+        where:
+        PATH            | EXPECTED
+        null            | null
+        'foo.txt'       | 'foo.txt'
+        'foo?x=1'       | 'foo'
+        'foo?x=1&y=2'   | 'foo'
+        'foo?'          | 'foo'
+        '?x'            | null
+    }
 }
 
