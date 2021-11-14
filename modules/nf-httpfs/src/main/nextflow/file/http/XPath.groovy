@@ -42,18 +42,22 @@ class XPath implements Path {
 
     private Path path
 
+    private String query
+
     XPath(XFileSystem fs, String path) {
         this(fs, path, EMPTY)
     }
 
     XPath(XFileSystem fs, String path, String[] more) {
         this.fs = fs
-        this.path = Paths.get(path ?:'/', more)
+        this.query = query(path)
+        this.path = Paths.get(stripQuery(path) ?:'/', more)
     }
 
-    private XPath(XFileSystem fs, Path path) {
+    private XPath(XFileSystem fs, Path path, String query=null) {
         this.fs = fs
         this.path = path
+        this.query = query
     }
 
     private URI getBaseUri() {
@@ -147,7 +151,7 @@ class XPath implements Path {
 
         else if( that.path ) {
             def newPath = this.path.resolve(that.path)
-            return new XPath(fs, newPath)
+            return new XPath(fs, newPath, that.query)
         }
         else {
             return this
@@ -171,7 +175,7 @@ class XPath implements Path {
             return other
 
         if( that.path ) {
-            def newPath = this.path.resolveSibling(that.path)
+            final Path newPath = this.path.resolveSibling(that.path)
             return newPath.isAbsolute() ? new XPath(fs, newPath) : new XPath(null, newPath)
         }
         else {
@@ -192,7 +196,8 @@ class XPath implements Path {
 
     @Override
     URI toUri() {
-        baseUri ? new URI("$baseUri$path") : new URI("$path")
+        final String concat = query!=null ? "$path?$query" : path.toString()
+        return baseUri ? new URI("$baseUri$concat") : new URI(concat)
     }
 
     @Override
@@ -262,7 +267,7 @@ class XPath implements Path {
             return false
         }
         final that = (XPath)other
-        return this.fs == that.fs && this.path == that.path
+        return this.fs == that.fs && this.path == that.path && this.query == that.query
     }
 
     /**
@@ -270,7 +275,7 @@ class XPath implements Path {
      */
     @Override
     int hashCode() {
-        return Objects.hash(fs,path)
+        return Objects.hash(fs,path,query)
     }
 
     /**
@@ -294,5 +299,19 @@ class XPath implements Path {
             throw new ProviderMismatchException()
 
         uri.authority ? (XPath)Paths.get(uri) : new XPath(null, str)
+    }
+
+    static String stripQuery(String uri) {
+        if(!uri)
+            return null
+        final p = uri.indexOf('?')
+        return p>0 ? uri.substring(0,p) : (p==0 ? null : uri)
+    }
+
+    static String query(String uri) {
+        if(!uri)
+            return null
+        final p = uri.indexOf('?')
+        return p!=-1 && p<uri.size()-1 ? uri.substring(p+1) : null
     }
 }

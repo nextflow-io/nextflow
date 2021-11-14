@@ -17,6 +17,7 @@
 
 package nextflow.file.http
 
+import java.nio.file.Path
 
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -34,6 +35,26 @@ class XFileSystemProviderTest extends Specification {
         then:
         stream.text.startsWith("<!doctype html>")
     }
+
+    def "should return input stream from path"() {
+        given:
+        def fsp = Spy(new HttpFileSystemProvider())
+        def path = fsp.getPath(new URI('http://host.com/index.html?query=123'))
+        def connection = Mock(URLConnection)
+        when:
+        def stream = fsp.newInputStream(path)
+        then:
+        fsp.toConnection(path) >> { Path it ->
+            assert it instanceof XPath
+            assert it.toUri() == new URI('http://host.com/index.html?query=123')
+            return connection
+        }
+        and:
+        connection.getInputStream() >> new ByteArrayInputStream('Hello world'.bytes)
+        and:
+        stream.text == 'Hello world'
+    }
+
 
     def "should read file attributes from map"() {
         given:
@@ -114,6 +135,7 @@ class XFileSystemProviderTest extends Specification {
         'http://MrXYZ@foo.com/this/that'    | 'http://MrXYZ@foo.com/this/that'
         'http://MrXYZ@FOO.com/this/that'    | 'http://MrXYZ@foo.com/this/that'
         'http://@FOO.com/this/that'         | 'http://@foo.com/this/that'
+        'http://foo.com/this/that?foo=1'    | 'http://foo.com/this/that?foo=1'
     }
 
     @Unroll
