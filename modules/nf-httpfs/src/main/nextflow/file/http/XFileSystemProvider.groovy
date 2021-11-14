@@ -147,7 +147,10 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     @Override
     Path getPath(URI uri) {
-        return getFileSystem(uri,true).getPath(uri.path)
+        def path = uri.path
+        if( !path.contains('?') && uri.query )
+            path += '?' + uri.query
+        return getFileSystem(uri,true).getPath(path)
     }
 
     protected String auth(String userInfo) {
@@ -162,7 +165,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         }
     }
 
-    private URLConnection toConnection(Path path) {
+    protected URLConnection toConnection(Path path) {
         final url = path.toUri().toURL()
         final conn = url.openConnection()
         conn.setRequestProperty("User-Agent", 'Nextflow/httpfs')
