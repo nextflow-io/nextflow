@@ -26,19 +26,24 @@ import groovy.transform.Memoized
  * See https://azure.microsoft.com/en-us/services/devops/repos/
  *
  * @author Tobias Neumann <tobias.neumann.at@gmail.com>
+ * @author Steffen Fehrmann <steffen.fehrmann@siemens-healthineers.com>
  */
 @CompileStatic
 final class AzureRepositoryProvider extends RepositoryProvider {
 
     private String user
+    private String project
     private String repo
+    private String urlBase
     private String continuationToken
 
     AzureRepositoryProvider(String project, ProviderConfig config=null) {
-        this.project = project
-        this.user = this.project.tokenize('/').first()
-        this.repo = this.project.tokenize('/').last()
+        final parts = project.tokenize('/')
+        this.user = parts.first()  // user stands synonymous for organisation which corresponds better to MS documentation
+        this.project = parts[1]
+        this.repo = parts.last()  // toplevel repo usually has the same name as project, so org/hello and org/hello/hello are identical
         this.config = config ?: new ProviderConfig('azurerepos')
+        this.urlBase = "${config.endpoint}/${this.user}/${this.project}"
         this.continuationToken = null
     }
 
@@ -49,7 +54,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getEndpointUrl() {
-        "${config.endpoint}/${project}/_apis/git/repositories/${repo}"
+        return "${this.urlBase}/_apis/git/repositories/${this.repo}"
     }
 
     /** {@inheritDoc} */
@@ -58,14 +63,14 @@ final class AzureRepositoryProvider extends RepositoryProvider {
         // see
         // https://docs.microsoft.com/en-us/rest/api/azure/devops/git/items/get?view=azure-devops-rest-6.0
         //
-        return "${config.endpoint}/${project}/_apis/git/repositories/${repo}/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=$path"
+        return "${this.endpointUrl}/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=${path}"
     }
 
     @Override
     @CompileDynamic
     List<BranchInfo> getBranches() {
         // https://docs.microsoft.com/en-us/rest/api/azure/devops/git/refs/list?view=azure-devops-rest-6.0#refs-heads
-        final url = "${config.endpoint}/${project}/_apis/git/repositories/${repo}/refs?filter=heads&api-version=6.0"
+        final url = "${this.endpointUrl}/refs?filter=heads&api-version=6.0"
         this.<BranchInfo>invokeAndResponseWithPaging(url, { Map branch ->
             new BranchInfo(strip(branch.name), branch.objectId as String)
         })
@@ -76,13 +81,13 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     @Memoized
     List<TagInfo> getTags() {
         // https://docs.microsoft.com/en-us/rest/api/azure/devops/git/refs/list?view=azure-devops-rest-6.0#refs-tags
-        final url = "${config.endpoint}/${project}/_apis/git/repositories/${repo}/refs?filter=tags&api-version=6.0"
+        final url = "${this.endpointUrl}/refs?filter=tags&api-version=6.0"
         this.<TagInfo>invokeAndResponseWithPaging(url, { Map tag ->
             new TagInfo(strip(tag.name), tag.objectId as String)
         })
     }
 
-    private String strip(value) {
+    private static String strip(value) {
         if( !value )
             return value
         return value
@@ -120,7 +125,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     protected checkResponse( HttpURLConnection connection ) {
 
         if (connection.getHeaderFields().containsKey("x-ms-continuationtoken")) {
-            this.continuationToken = connection.getHeaderField("x-ms-continuationtoken");
+            this.continuationToken = connection.getHeaderField("x-ms-continuationtoken")
         } else {
             this.continuationToken = null
         }
@@ -131,13 +136,15 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getCloneUrl() {
-        return "https://dev.azure.com/${project}/_git/${repo}"
+        String cloneUrl = "${this.urlBase}/_git/${repo}"
+
+        return "${cloneUrl}"
     }
 
     /** {@inheritDoc} */
     @Override
     String getRepositoryUrl() {
-        "${config.server}/$project"
+        return "${this.urlBase}/_git/${repo}"
     }
 
     /** {@inheritDoc} */

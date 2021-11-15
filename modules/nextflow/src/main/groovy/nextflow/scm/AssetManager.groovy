@@ -128,9 +128,9 @@ class AssetManager {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
+        this.hub = checkHubProvider(cliOpts)
         this.project = resolveName(pipelineName)
         this.localPath = checkProjectDir(project)
-        this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
         setupCredentials(cliOpts)
         validateProjectDir()
@@ -184,7 +184,7 @@ class AssetManager {
     File checkProjectDir(String projectName) {
 
         if( !isValidProjectName(projectName)) {
-            throw new IllegalArgumentException("Not a valid project name: $projectName")
+            throw new IllegalArgumentException("Not a valid project name, illegal argument: $projectName")
         }
 
         new File(root, project)
@@ -250,6 +250,10 @@ class AssetManager {
     String resolveName( String name ) {
         assert name
 
+        Integer max_parts = 2
+        if (this.hub == 'azurerepos') {
+            max_parts = 3
+        }
         def project = resolveNameFromGitUrl(name)
         if( project )
             return project
@@ -258,23 +262,23 @@ class AssetManager {
         def last = parts[-1]
         if( last.endsWith('.nf') || last.endsWith('.nxf') ) {
             if( parts.size()==1 )
-                throw new AbortOperationException("Not a valid project name: $name")
+                throw new AbortOperationException("Not a valid project name, requires branch when using script: $name")
 
             if( parts.size()==2 ) {
                 mainScript = last
                 parts = [ parts.first() ]
             }
             else {
-                mainScript = parts[2..-1].join('/')
-                parts = parts[0..1]
+                mainScript = parts[max_parts..-1].join('/')
+                parts = parts[0..max_parts-1]
             }
         }
 
-        if( parts.size() == 2 ) {
+        if( parts.size() == max_parts ) {
             return parts.join('/')
         }
-        else if( parts.size()>2 ) {
-            throw new AbortOperationException("Not a valid project name: $name")
+        else if( parts.size()>max_parts ) {
+            throw new AbortOperationException("Not a valid project name, branch too deep: $name, $parts, $mainScript")
         }
         else {
             name = parts[0]
@@ -482,7 +486,7 @@ class AssetManager {
             }
             catch (Exception e) {
                 provider.validateRepo()
-                log.debug "Cannot retried remote config file -- likely does not exist"
+                log.debug "Cannot read remote config file -- likely does not exist"
                 return null
             }
         }
@@ -491,7 +495,7 @@ class AssetManager {
 
     String getBaseName() {
         def result = project.tokenize('/')
-        if( result.size() > 2 ) throw new IllegalArgumentException("Not a valid project name: $project")
+        if( result.size() > 2 ) throw new IllegalArgumentException("Not a valid project name, no more than 2 parts allowed: $project")
         return result.size()==1 ? result[0] : result[1]
     }
 
