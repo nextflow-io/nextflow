@@ -1325,7 +1325,7 @@ emitted by the target channel (on the right) having the same key.
 
 There are two important caveats when using the ``cross`` operator:
 
-	#. The operator is not `reflexive`, i.e. the result of ``a.cross(b)`` is different from ``b.cross(a)`` 
+	#. The operator is not `commutative`, i.e. the result of ``a.cross(b)`` is different from ``b.cross(a)`` 
 	#. The source channel should emits items for which there's no key repetition i.e. the emitted 
 	   items have an unique key identifier. 
 
