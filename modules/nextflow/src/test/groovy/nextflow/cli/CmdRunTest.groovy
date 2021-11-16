@@ -70,50 +70,6 @@ class CmdRunTest extends Specification {
         [:]             | /x.y\.z/  | 'Hola'    | ['x': ['y.z': 'Hola']]
     }
 
-    def 'should return parsed config' () {
-        given:
-        def cmd = new CmdRun(profile: 'first', withTower: 'http://foo.com', launcher: new Launcher())
-        def base = Files.createTempDirectory('test')
-        base.resolve('nextflow.config').text = '''
-        profiles {
-            first {
-                params {
-                  foo = 'Hello world'
-                  awsKey = 'xyz'
-                }
-                process {
-                    executor = { 'local' }
-                }
-            }
-            second {
-                params.none = 'Blah'
-            }
-        }
-        '''
-        when:
-        def txt = cmd.resolveConfig(base)
-        then:
-        txt == '''\
-            params {
-               foo = 'Hello world'
-               awsKey = '[secret]'
-            }
-            
-            process {
-               executor = { 'local' }
-            }
-
-            workDir = 'work'
-            
-            tower {
-               enabled = true
-               endpoint = 'http://foo.com'
-            }
-            '''.stripIndent()
-
-        cleanup:
-        base?.deleteDir()
-    }
 
     @Unroll
     def 'should check run name #STR' () {

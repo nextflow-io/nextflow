@@ -40,11 +40,9 @@ import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
 import nextflow.secret.SecretsLoader
-import nextflow.util.ConfigHelper
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
-import nextflow.util.SecretHelper
 import org.yaml.snakeyaml.Yaml
 /**
  * CLI sub-command RUN
@@ -288,7 +286,8 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
-        runner.session.resolvedConfig = resolveConfig(scriptFile.parent)
+        if( withTower || log.isTraceEnabled() )
+            runner.session.resolvedConfig = ConfigBuilder.resolveConfig(scriptFile.parent, this)
         // note config files are collected during the build process
         // this line should be after `ConfigBuilder#build`
         runner.session.configFiles = builder.parsedConfigFiles
@@ -539,24 +538,5 @@ class CmdRun extends CmdBase implements HubOptions {
             throw new AbortOperationException("Cannot parse params file: $file", e)
         }
     }
-
-    protected String resolveConfig(Path baseDir) {
-
-        if( !withTower )
-            return null
-
-        final config = new ConfigBuilder()
-                .setShowClosures(true)
-                .setOptions(launcher.options)
-                .setCmdRun(this)
-                .setBaseDir(baseDir)
-                .buildConfigObject()
-
-        // strip secret
-        SecretHelper.hideSecrets(config)
-
-        ConfigHelper.toCanonicalString(config, false)
-    }
-
 
 }
