@@ -20,12 +20,15 @@ package nextflow.cloud.google
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.transform.ToString
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 /**
+ * Model Google config options
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@ToString(includeNames = true, includePackage = false)
 @CompileStatic
 class GoogleOpts {
 
