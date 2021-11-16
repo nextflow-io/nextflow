@@ -24,13 +24,13 @@ import nextflow.cli.CliOptions
 import nextflow.cli.CmdConfig
 import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
+import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.trace.WebLogObserver
 import nextflow.util.ConfigHelper
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -1971,5 +1971,50 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+
+    def 'should return parsed config' () {
+        given:
+        def cmd = new CmdRun(profile: 'first', withTower: 'http://foo.com', launcher: new Launcher())
+        def base = Files.createTempDirectory('test')
+        base.resolve('nextflow.config').text = '''
+        profiles {
+            first {
+                params {
+                  foo = 'Hello world'
+                  awsKey = 'xyz'
+                }
+                process {
+                    executor = { 'local' }
+                }
+            }
+            second {
+                params.none = 'Blah'
+            }
+        }
+        '''
+        when:
+        def txt = ConfigBuilder.resolveConfig(base, cmd)
+        then:
+        txt == '''\
+            params {
+               foo = 'Hello world'
+               awsKey = '[secret]'
+            }
+            
+            process {
+               executor = { 'local' }
+            }
+
+            workDir = 'work'
+            
+            tower {
+               enabled = true
+               endpoint = 'http://foo.com'
+            }
+            '''.stripIndent()
+
+        cleanup:
+        base?.deleteDir()
+    }
 }
 
