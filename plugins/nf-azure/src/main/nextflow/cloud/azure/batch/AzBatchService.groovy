@@ -333,7 +333,12 @@ class AzBatchService implements Closeable {
         if( !container )
             throw new IllegalArgumentException("Missing container image for process: $task.name")
         final taskId = "nf-${task.hash.toString()}"
-        final mountPath = allPools.get(poolId).opts.getFileShareRootPath()
+        // get the pool config
+        final pool = allPools.get(poolId)
+        if( !pool )
+            throw new IllegalStateException("Missing Azure Batch pool spec with id: $poolId")
+        // get the file share root
+        final mountPath = pool.opts.getFileShareRootPath()
 	    if ( !mountPath )
 		    throw new IllegalArgumentException("Missing FileShareRootPath for pool: $poolId")
         def volumes = ''
@@ -344,9 +349,6 @@ class AzBatchService implements Closeable {
                 .withImageName(container)
                 // mount host certificates otherwise `azcopy fails
                 .withContainerRunOptions("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro ${volumes} ")
-        final pool = allPools.get(poolId)
-        if( !pool )
-            throw new IllegalStateException("Missing Azure Batch pool spec with id: $poolId")
 
         final slots = computeSlots(task, pool)
         log.debug "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
