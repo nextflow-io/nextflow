@@ -61,6 +61,7 @@ jobs:
         NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
         AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
         AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+        AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
         AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
     - name: Integration
@@ -80,6 +81,7 @@ jobs:
         GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
         AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
         AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+        AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
         AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
     - name: Setup Java 8
@@ -106,6 +108,7 @@ jobs:
         NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
         AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
         AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+        AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
         AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
     - name: Tar integration tests
