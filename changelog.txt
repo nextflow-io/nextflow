@@ -1,6 +1,18 @@
 NEXTFLOW CHANGE-LOG
 ===================
-21.10.0 11 Nov 2021
+21.10.1 - 18 Nov 2021 
+eb1e6fbd2 - (HEAD -> STABLE-21.10.x) Bump nf-azure@0.11.1 (4 seconds ago) <Paolo Di Tommaso>
+ae9e885a8 - Bump nf-amazon@1.3.2 - bump nxf-s3fs@1.1.2 (16 seconds ago) <Paolo Di Tommaso>
+01bfdcf92 - Update Az batch integration tests (31 minutes ago) <Paolo Di Tommaso>
+84b2983f4 - Fix Azure batch NPE when missing pool spec (31 minutes ago) <Paolo Di Tommaso>
+2580fb108 - Dump resolved config when log trace is enabled [ci fast] (31 minutes ago) <Paolo Di Tommaso>
+e4c7f3d98 - Correct description of cross (#2446) [ci skip] (31 minutes ago) <cjw85>
+d30da377a - Fix Docker bin in image PATH (#2445) [ci fast] (32 minutes ago) <Josh Chorlton>
+f2d01888d - Fix failing test with Java 16 [ci fast] (32 minutes ago) <Paolo Di Tommaso>
+e96c56d1e - Add docs for AWS endpoints for China region [ci skip] (33 minutes ago) <Paolo Di Tommaso>
+f1a58600d - Fix AWS_RETRY_MODE var definition in Batch job (33 minutes ago) <Paolo Di Tommaso>
+
+21.10.0 - 11 Nov 2021
 - Add support for Java 17 [cb207cd64]
 - Allow override Bash wrapper template files [e6e25ed7c]
 - Fix issue with plugins local root sync [1d974a4eb]
