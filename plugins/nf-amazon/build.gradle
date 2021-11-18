@@ -38,7 +38,7 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:1.7.10'
     compileOnly 'org.pf4j:pf4j:3.4.1'
 
-    api ('io.nextflow:nxf-s3fs:1.1.1') { transitive = false }
+    api ('io.nextflow:nxf-s3fs:1.1.2') { transitive = false }
     api ('com.amazonaws:aws-java-sdk-s3:1.11.1034')
     api ('com.amazonaws:aws-java-sdk-ec2:1.11.1034')
     api ('com.amazonaws:aws-java-sdk-batch:1.11.1034')
