@@ -67,7 +67,7 @@ fi
 JAVA_VER=$(echo "$JAVA_VER" | awk '/version/ {gsub(/"/, "", $3); print $3}')
 major=${BASH_REMATCH[1]}
 minor=${BASH_REMATCH[2]}
-version_check="^(1.8|9|10|11|12|13|14|15)"
+version_check="^(1.8|9|10|11|12|13|14|15|16|17)"
 if [[ ! $JAVA_VER =~ $version_check ]]; then
     echo "Error: cannot find Java or it's a wrong version -- please make sure that Java 8 or higher is installed"
     exit 1
