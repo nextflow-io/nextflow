@@ -17,10 +17,13 @@
 
 package nextflow.file
 
+import java.nio.file.FileAlreadyExistsException
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import spock.lang.Ignore
 import spock.lang.Specification
 
 import nextflow.Global
@@ -80,5 +83,19 @@ class FileHelperGsTest extends Specification {
         FileHelper.relativize0(nxFolder,nxNested).toString() == 'bar'
         FileHelper.relativize0(gsFolder,gsNested).toString() == 'bar'
 
+    }
+
+    @Ignore
+    def 'should throw FileAlreadyExistsException'() {
+        given:
+        def foo = CloudStorageFileSystem.forBucket('nf-bucket').getPath('foo.txt')
+        def bar = CloudStorageFileSystem.forBucket('nf-bucket').getPath('bar.txt')
+        and:
+        if( !Files.exists(foo) ) Files.createFile(foo)
+        if( !Files.exists(bar) ) Files.createFile(bar)
+        when:
+        Files.copy(foo, bar)
+        then:
+        thrown(FileAlreadyExistsException)
     }
 }
