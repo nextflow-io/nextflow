@@ -289,7 +289,7 @@ class PublishDir {
             processFile(source, target)
         }
         catch( Throwable e ) {
-            log.warn "Failed to publish file: $source; to: $target [${mode.toString().toLowerCase()}] -- See log file for details", e
+            log.warn "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details", e
         }
     }
 
