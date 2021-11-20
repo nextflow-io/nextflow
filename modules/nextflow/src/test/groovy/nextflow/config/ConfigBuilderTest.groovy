@@ -416,6 +416,7 @@ class ConfigBuilderTest extends Specification {
             beta: "World" 
             omega: "Last"
             theta: "${baseDir}/something"
+            sigma: "${workDir}/work"
             '''.stripIndent()
         and:
         def file = Files.createTempFile('test',null)
@@ -425,6 +426,7 @@ class ConfigBuilderTest extends Specification {
         }
         params.beta = 'y'
         params.delta = 'Foo'
+        params.sigma = './work'
         params.gamma = params.alpha
         params {
             omega = 'Bar'
@@ -436,7 +438,7 @@ class ConfigBuilderTest extends Specification {
         '''
         when:
         def opt = new CliOptions()
-        def run = new CmdRun(paramsFile: params)
+        def run = new CmdRun(paramsFile: params, workDir: "scheme://work_path")
         def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).setBaseDir(baseDir).buildGivenFiles(file)
 
         then:
@@ -446,6 +448,7 @@ class ConfigBuilderTest extends Specification {
         result.params.omega == 'Last'
         result.params.delta == 'Foo'
         result.params.theta == "$baseDir/something"
+        result.params.sigma == "scheme://work_path/work"
         result.process.publishDir == [path: 'Hello']
 
         cleanup:

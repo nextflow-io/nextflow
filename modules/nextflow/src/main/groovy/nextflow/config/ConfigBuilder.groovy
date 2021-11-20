@@ -325,6 +325,7 @@ class ConfigBuilder {
         final binding = new HashMap(10)
         binding.put('baseDir', baseDir)
         binding.put('projectDir', baseDir)
+        binding.put('workDir', workDir)
         binding.put('launchDir', Paths.get('.').toRealPath())
         if( SecretsLoader.isEnabled() )
             binding.put('secrets', new SecretsContext())
@@ -530,11 +531,7 @@ class ConfigBuilder {
             config.stubRun = cmdRun.stubRun
 
         // -- sets the working directory
-        if( cmdRun.workDir )
-            config.workDir = cmdRun.workDir
-
-        else if( !config.workDir )
-            config.workDir = env.get('NXF_WORK') ?: 'work'
+        config.workDir = workDir
 
         if( cmdRun.bucketDir )
             config.bucketDir = cmdRun.bucketDir
@@ -823,6 +820,13 @@ class ConfigBuilder {
         else {
             return config.get(key)
         }
+    }
+
+    private String getWorkDir() {
+        if( cmdRun.workDir )
+            return cmdRun.workDir
+
+        return env.get('NXF_WORK') ?: 'work'
     }
 
     static String resolveConfig(Path baseDir, CmdRun cmdRun) {

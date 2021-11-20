@@ -157,17 +157,19 @@ class CmdRunTest extends Specification {
         json.text = '''\
             {
                 "alpha": "This is alpha",
+                 "beta": "${workDir}/work",
                 "delta": "${launchDir}/more",
                 "gamma": "$should_not_replace",
-                "omega": "${baseDir}/end"
+                "omega": "${baseDir}/end"             
             }
             '''.stripIndent()
         when:
         def cmd = new CmdRun(paramsFile: json.toString())
         and:
-        def result = cmd.parsedParams( [baseDir: '/BASE/DIR', launchDir: '/WORK/DIR'] )
+        def result = cmd.parsedParams( [baseDir: '/BASE/DIR', launchDir: '/WORK/DIR', workDir: 'scheme://work_path'] )
         then:
         result.alpha == 'This is alpha'
+        result.beta  == 'scheme://work_path/work'
         result.delta == '/WORK/DIR/more'
         result.gamma == '$should_not_replace'
         result.omega == '/BASE/DIR/end'
@@ -187,16 +189,18 @@ class CmdRunTest extends Specification {
                 beta: "${launchDir}/more"
                 gamma: "$should_not_replace"
                 omega: "${baseDir}/end"
+                theta: "${workDir}/work"
             '''.stripIndent()
         when:
         def cmd = new CmdRun(paramsFile: json.toString())
         and:
-        def result = cmd.parsedParams( [baseDir: '/BASE/DIR', launchDir: '/WORK/DIR'] )
+        def result = cmd.parsedParams( [baseDir: '/BASE/DIR', launchDir: '/WORK/DIR', workDir: 'scheme://work_path'] )
         then:
         result.alpha == 'This is alpha'
         result.delta.beta == '/WORK/DIR/more'
         result.delta.gamma == '$should_not_replace'
         result.delta.omega == '/BASE/DIR/end'
+        result.delta.theta == 'scheme://work_path/work'
 
         cleanup:
         folder.deleteDir()
@@ -226,13 +230,15 @@ class CmdRunTest extends Specification {
             delta: "${launchDir}/world"
             gamma: "${012345}"
             omega: "${unknown}"
+            theta: "${workDir}/work"
             '''.stripIndent()
         
-        new CmdRun().replaceVars0(text, [baseDir:'/HOME', launchDir: '/WORK' ] ) == '''\
+        new CmdRun().replaceVars0(text, [baseDir:'/HOME', launchDir: '/WORK', workDir: "scheme://work_path" ] ) == '''\
             alpha: "/HOME/hello"
             delta: "/WORK/world"
             gamma: "${012345}"
             omega: "${unknown}"
+            theta: "scheme://work_path/work"
             '''.stripIndent()
     }
 }
