@@ -17,7 +17,6 @@
 
 package nextflow.processor
 
-import spock.lang.Specification
 
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -25,6 +24,7 @@ import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
 import nextflow.Session
+import spock.lang.Specification
 import test.TestHelper
 /**
  *
@@ -108,7 +108,7 @@ class PublishDirTest extends Specification {
 
         def workDir = folder.resolve('work-dir')
         def publishDir = folder.resolve('pub-dir')
-        def task = new TaskRun(workDir: workDir, config: new TaskConfig())
+        def task = new TaskRun(workDir: workDir, config: new TaskConfig(), name: 'foo')
 
         when:
         def outputs =  [
@@ -169,7 +169,7 @@ class PublishDirTest extends Specification {
 
         def workDir = folder.resolve('work-dir')
         def publishDir = folder.resolve('pub-dir')
-        def task = new TaskRun(workDir: workDir, config: new TaskConfig())
+        def task = new TaskRun(workDir: workDir, config: new TaskConfig(), name: 'foo')
 
         when:
         def outputs = [
@@ -221,7 +221,7 @@ class PublishDirTest extends Specification {
         def workDir = folder.resolve('work-dir')
         def target1 = folder.resolve('pub-dir1')
         def target2 = folder.resolve('pub-dir2')
-        def task = new TaskRun(workDir: workDir, config: new TaskConfig())
+        def task = new TaskRun(workDir: workDir, config: new TaskConfig(), name: 'foo')
 
         when:
         def outputs = [
@@ -344,8 +344,8 @@ class PublishDirTest extends Specification {
         def publisher = new PublishDir(sourceDir: workDir)
 
         when:
-        def foo = pubDir.resolve('foo'); foo.text = 'This is foo'
-        def bar = workDir.resolve('bar'); bar.text = 'This is bar'
+        def foo = pubDir.resolve('foo.txt'); foo.text = 'This is foo'
+        def bar = workDir.resolve('bar.txt'); bar.text = 'This is bar'
         then:
         !publisher.checkSourcePathConflicts(foo)
         publisher.checkSourcePathConflicts(bar)
@@ -359,6 +359,29 @@ class PublishDirTest extends Specification {
         def linkNotOK = Files.createSymbolicLink(pubDir.resolve("link2.txt"), bar)
         then:
         publisher.checkSourcePathConflicts(linkNotOK)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should check same path' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def pubDir = folder.resolve('pub-dir'); pubDir.mkdir()
+        def workDir = folder.resolve('work-dir'); workDir.mkdir()
+        and:
+        def foo = workDir.resolve('foo.txt'); foo.text = 'This is bar'
+        def bar = workDir.resolve('bar.txt'); bar.text = 'This is bar'
+        and:
+        def linkToFoo = Files.createSymbolicLink(pubDir.resolve("link-to-foo"), foo)
+        def linkToBar = Files.createSymbolicLink(pubDir.resolve("link-to-bar"), bar)
+        and:
+        def publisher = new PublishDir()
+
+        expect:
+        publisher.checkIsSameRealPath(bar, linkToBar)
+        !publisher.checkIsSameRealPath(bar, foo)
 
         cleanup:
         folder?.deleteDir()
