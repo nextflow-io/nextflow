@@ -72,7 +72,9 @@ class BashWrapperBuilderWithS3Test extends Specification {
             nxf_s3_upload() {
                 local name=$1
                 local s3path=$2
-                if [[ -d "$name" ]]; then
+                if [[ "$name" == - ]]; then
+                  aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                elif [[ -d "$name" ]]; then
                   aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
                 else
                   aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
@@ -188,7 +190,9 @@ class BashWrapperBuilderWithS3Test extends Specification {
             nxf_s3_upload() {
                 local name=$1
                 local s3path=$2
-                if [[ -d "$name" ]]; then
+                if [[ "$name" == - ]]; then
+                  aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                elif [[ -d "$name" ]]; then
                   aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
                 else
                   aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
