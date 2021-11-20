@@ -33,9 +33,9 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         def RUN = Paths.get('/some/data/.command.run')
         def copy = new AwsBatchFileCopyStrategy(Mock(TaskBean), new AwsOptions())
         expect:
-        copy.touchFile(RUN) == "echo start | aws s3 cp --only-show-errors - s3://some/data/.command.run"
+        copy.touchFile(RUN) == "echo start | nxf_s3_upload - s3://some/data/.command.run"
         copy.copyFile("nobel_prize_results.gz",Paths.get("/some/data/nobel_prize_results.gz")) == "nxf_s3_upload nobel_prize_results.gz s3://some/data"
-        copy.exitFile(EXIT) == "| aws s3 cp --only-show-errors - s3://some/path/.exitcode || true"
+        copy.exitFile(EXIT) == "| nxf_s3_upload - s3://some/path/.exitcode || true"
         copy.stageInputFile(FILE, 'foo.txt') == """
                                     downloads+=("nxf_s3_download s3://some/data/nobel_prize_results.gz foo.txt")
                                     """
@@ -188,7 +188,9 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     nxf_s3_upload() {
                         local name=$1
                         local s3path=$2
-                        if [[ -d "$name" ]]; then
+                        if [[ "$name" == - ]]; then
+                          aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                        elif [[ -d "$name" ]]; then
                           aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
                         else
                           aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
@@ -275,7 +277,9 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                 nxf_s3_upload() {
                     local name=$1
                     local s3path=$2
-                    if [[ -d "$name" ]]; then
+                    if [[ "$name" == - ]]; then
+                      /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class STANDARD_IA - "$s3path"
+                    elif [[ -d "$name" ]]; then
                       /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
                     else
                       /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"

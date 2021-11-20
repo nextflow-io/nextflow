@@ -28,7 +28,7 @@ import nextflow.executor.BashFunLib
 class S3BashLib extends BashFunLib<S3BashLib> {
 
     private String storageClass = 'STANDARD'
-    private String encryptionEncryption = ''
+    private String storageEncryption = ''
     private String debug = ''
     private String cli = 'aws'
     private String retryMode
@@ -58,7 +58,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
 
     S3BashLib withStorageEncryption(String value) {
         if( value )
-            this.encryptionEncryption = value ? "--sse $value " : ''
+            this.storageEncryption = value ? "--sse $value " : ''
         return this
     }
 
@@ -78,10 +78,12 @@ class S3BashLib extends BashFunLib<S3BashLib> {
         nxf_s3_upload() {
             local name=\$1
             local s3path=\$2
-            if [[ -d "\$name" ]]; then
-              $cli s3 cp --only-show-errors --recursive $debug$encryptionEncryption--storage-class $storageClass "\$name" "\$s3path/\$name"
+            if [[ "\$name" == - ]]; then
+              $cli s3 cp --only-show-errors $debug$storageEncryption--storage-class $storageClass - "\$s3path"
+            elif [[ -d "\$name" ]]; then
+              $cli s3 cp --only-show-errors --recursive $debug$storageEncryption--storage-class $storageClass "\$name" "\$s3path/\$name"
             else
-              $cli s3 cp --only-show-errors $debug$encryptionEncryption--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli s3 cp --only-show-errors $debug$storageEncryption--storage-class $storageClass "\$name" "\$s3path/\$name"
             fi
         }
         
