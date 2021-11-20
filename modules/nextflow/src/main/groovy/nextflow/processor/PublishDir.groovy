@@ -94,6 +94,8 @@ class PublishDir {
 
     private boolean nullPathWarn
 
+    private String taskName
+
     @Lazy
     private ExecutorService threadPool = (Global.session as Session).getFileTransferThreadPool()
 
@@ -235,6 +237,7 @@ class PublishDir {
         this.sourceDir = task.targetDir
         this.sourceFileSystem = sourceDir.fileSystem
         this.stageInMode = task.config.stageInMode
+        this.taskName = task.name
 
         apply0(files)
     }
@@ -303,6 +306,8 @@ class PublishDir {
             processFileImpl(source, destination)
         }
         catch( FileAlreadyExistsException e ) {
+            if( checkIsSameRealPath(source, destination) )
+                return 
             // make sure destination and source does not overlap
             // see https://github.com/nextflow-io/nextflow/issues/2177
             if( checkSourcePathConflicts(destination))
@@ -332,14 +337,27 @@ class PublishDir {
         }
     }
 
+    protected boolean checkIsSameRealPath(Path source, Path target) {
+        if( !isSymlinkMode() || source.fileSystem!=target.fileSystem )
+            return false
+
+        final t1 = real0(target)
+        final s1 = real0(source)
+        final result = s1 == t1
+        log.trace "Skipping publishDir since source and target real paths are the same - target=$target; real=$t1"
+        return result
+    }
+
     protected boolean checkSourcePathConflicts(Path target) {
-        if( sourceDir.fileSystem!=target.fileSystem )
+        if( !isSymlinkMode() || sourceDir.fileSystem!=target.fileSystem )
             return false
 
         final t1 = real0(target)
         final s1 = real0(sourceDir)
         if( t1.startsWith(s1) ) {
-            def msg = "Refuse to publish file since destination path conflicts with task work directory!"
+            def msg = "Refuse to publish file since destination path conflicts with the task work directory!"
+            if( taskName )
+                msg += "\n- offending task  : $taskName"
             msg += "\n- offending file  : $target"
             if( t1 != target.toString() )
                 msg += "\n- real destination: $t1"
@@ -348,6 +366,10 @@ class PublishDir {
             return true
         }
         return false
+    }
+
+    protected boolean isSymlinkMode() {
+        return !mode || mode == Mode.SYMLINK || mode == Mode.RELLINK
     }
 
     @CompileStatic
