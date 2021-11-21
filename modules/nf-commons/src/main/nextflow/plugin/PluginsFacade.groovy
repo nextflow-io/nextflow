@@ -25,7 +25,6 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
-import nextflow.util.CacheHelper
 import org.pf4j.DefaultPluginManager
 import org.pf4j.PluginManager
 import org.pf4j.PluginState
@@ -55,7 +54,7 @@ class PluginsFacade implements PluginStateListener {
         mode = getPluginsMode()
         root = getPluginsDir()
         if( mode=='dev' && root.toString()=='plugins' )
-            root = detectDevPluginsRoot()
+            root = detectPluginsDevRoot()
         System.setProperty('pf4j.mode', mode)
         defaultPlugins = new DefaultPlugins()
     }
@@ -83,11 +82,26 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
-    protected Path detectDevPluginsRoot() {
+    private boolean isNextflowDevRoot(File file) {
+        file.name=='nextflow' && file.isDirectory() && new File(file, 'settings.gradle').isFile()
+    }
+
+    private Path pluginsDevRoot(File path) {
+        // main project root
+        if( isNextflowDevRoot(path) )
+            return path.toPath().resolve('plugins')
+        // when nextflow is included into another build, check the sibling directory
+        if( new File(path,'settings.gradle').exists() && isNextflowDevRoot(path=new File(path,'../nextflow')) )
+            return path.toPath().resolve('plugins')
+        else
+            return null
+    }
+
+    protected Path detectPluginsDevRoot() {
         def file = new File('.').absoluteFile
         do {
-            if( file.name=='nextflow' && file.isDirectory() && new File(file, 'settings.gradle').isFile() ) {
-                final root = file.toPath().resolve('plugins')
+            final root = pluginsDevRoot(file)
+            if( root ) {
                 log.debug "Detected dev plugins root: $root"
                 return root
             }
