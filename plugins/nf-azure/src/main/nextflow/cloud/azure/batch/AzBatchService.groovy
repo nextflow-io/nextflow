@@ -351,7 +351,7 @@ class AzBatchService implements Closeable {
                 .withContainerRunOptions("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro ${volumes} ")
 
         final slots = computeSlots(task, pool)
-        log.debug "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
+        log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
 
         final taskToAdd = new TaskAddParameter()
                 .withId(taskId)
