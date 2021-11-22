@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java_version: [8, 11, 16]
+        java_version: [8, 11, 17]
 
     steps:
     - name: Environment
