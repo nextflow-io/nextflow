@@ -19,8 +19,9 @@ class Scratch extends Specification {
     def queryConfig = QueryJobConfiguration.newBuilder(
             "SELECT * "
                     + " FROM `nih-sra-datastore.sra.metadata` as s "
-                    + " WHERE organism = 'Mycobacterium tuberculosis'"
-                    + " AND consent='public' "
+                    + " WHERE s.organism = 'Mycobacterium tuberculosis'"
+                    + " AND s.consent='public' "
+                    + " AND s.sra_study='ERP124850' "
                     + " LIMIT 3"
     )
             .setUseLegacySql(false)

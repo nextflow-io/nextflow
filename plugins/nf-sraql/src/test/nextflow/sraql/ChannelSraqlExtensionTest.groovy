@@ -36,22 +36,8 @@ class ChannelSraqlExtensionTest extends Specification {
 
     def 'should read the config for data source, execute query and create channel from query'() {
         given:
-        def bigquery = BigQueryOptions.getDefaultInstance().getService()
-        def queryConfig = QueryJobConfiguration.newBuilder(
-                "SELECT * "
-                        + " FROM `nih-sra-datastore.sra.metadata` as s "
-                        + " WHERE s.organism = 'Mycobacterium tuberculosis'"
-                        + " AND s.consent='public' "
-                        + " AND s.sra_study='ERP124850' "
-                        + " LIMIT 3"
-        )
-                .setUseLegacySql(false)
-                .build()
 
-        def jobId = JobId.of(UUID.randomUUID().toString());
-        def queryJob = bigquery
-                .create(JobInfo.newBuilder(queryConfig).setJobId(jobId).build())
-                .waitFor()
+        def queryString = "SELECT * FROM `nih-sra-datastore.sra.metadata` as s WHERE s.organism = 'Mycobacterium tuberculosis' AND s.consent='public' AND s.sra_study='ERP124850' LIMIT 3"
 
         and:
         def session = Mock(Session) {
@@ -60,12 +46,7 @@ class ChannelSraqlExtensionTest extends Specification {
         def sraqlExtension = new ChannelSraqlExtension(); sraqlExtension.init(session)
 
         when:
-        def result = new DataflowQueue()
-        def query = "SELECT *  FROM `nih-sra-datastore.sra.metadata` WHERE organism = 'Mycobacterium tuberculosis' LIMIT 3;"
-        new QueryHandler()
-                .withTarget(result)
-                .withStatement(query)
-                .perform()
+        def result = sraqlExtension.fromQuery(queryString)
 
         then:
         result.val[0] == ['acc', 'ERR4796597']

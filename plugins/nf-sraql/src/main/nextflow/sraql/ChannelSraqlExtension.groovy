@@ -43,7 +43,11 @@ class ChannelSraqlExtension extends ChannelExtensionPoint {
     protected DataflowWriteChannel queryToChannel(String query, Map opts) {
         final channel = CH.create()
         final dataSource = dataSourceFromOpts(opts)
-        final handler = new QueryHandler().withDataSource(dataSource).withStatement(query).withTarget(channel)
+        final handler = new QueryHandler()
+                .withDataSource(dataSource)
+                .withStatement(query)
+                .withTarget(channel)
+
         if(NF.dsl2) {
             session.addIgniter {-> handler.perform(true) }
         }
@@ -54,7 +58,7 @@ class ChannelSraqlExtension extends ChannelExtensionPoint {
     }
 
     protected SraqlDataSource dataSourceFromOpts(Map opts) {
-        final dsName = (opts?.source ?: 'default') as String
+        final dsName = opts.source  as String
         final dataSource = config.getDataSource(dsName)
         return dataSource
     }

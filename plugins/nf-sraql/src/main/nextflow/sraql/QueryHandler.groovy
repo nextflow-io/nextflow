@@ -48,8 +48,6 @@ import nextflow.sraql.config.SraqlDataSource
 @CompileStatic
 class QueryHandler implements QueryOp {
 
-    private static Map<String, Class<?>> type_mapping = [:]
-
     private DataflowWriteChannel target
     private String statement
     private SraqlDataSource dataSource
@@ -74,8 +72,6 @@ class QueryHandler implements QueryOp {
 
     @Override
     void perform(boolean async = false) {
-        //FIXME
-        println("queryHandler perform ${dataSource}")
         final conn = connect(dataSource)
         if( async )
             queryAsync(conn)
