@@ -1,12 +1,15 @@
 package nextflow.sraql
 
+//FIXME @abhi18av
+// Remove this file
 
 import com.google.cloud.bigquery.BigQueryOptions
 import com.google.cloud.bigquery.Field
 import com.google.cloud.bigquery.FieldValue;
 import com.google.cloud.bigquery.JobId;
 import com.google.cloud.bigquery.JobInfo;
-import com.google.cloud.bigquery.QueryJobConfiguration;
+import com.google.cloud.bigquery.QueryJobConfiguration
+import groovy.json.JsonSlurper;
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Channel
 import nextflow.sraql.config.SraqlDataSource
@@ -22,9 +25,8 @@ class Scratch extends Specification {
                     + " WHERE s.organism = 'Mycobacterium tuberculosis'"
                     + " AND s.consent='public' "
                     + " AND s.sra_study='ERP124850' "
-                    + " LIMIT 3"
+                    + " LIMIT 1"
     )
-            .setUseLegacySql(false)
             .build()
 
     def jobId = JobId.of(UUID.randomUUID().toString());
@@ -40,18 +42,25 @@ class Scratch extends Specification {
         then:
 
         for (row in result.iterateAll()) {
-            def item = new ArrayList()
+            def resultMap = [:]
 
             for (field in result.schema.fields) {
                 def fieldName = field.name
                 def fieldContent = row.get(fieldName)
 
-                if( fieldContent.attribute == FieldValue.Attribute.PRIMITIVE ) {
-//                        println("${fieldName}: ${fieldContent.value}")
-                    item <<  fieldContent.value
+                if( fieldName == 'jattr' ) {
+                    def jsonSlurper = new JsonSlurper()
+                    resultMap[field.name] = jsonSlurper.parseText(fieldContent.value as String)
+                } else if( fieldName != 'attributes' ) {
+                    if( fieldContent.attribute == FieldValue.Attribute.PRIMITIVE ) {
+                        resultMap[field.name] = fieldContent.value
+                    } else if( fieldContent.attribute == FieldValue.Attribute.REPEATED ) {
+                        //FIXME process this value further
+                        resultMap[field.name] = fieldContent.value
+                    }
                 }
             }
-            println(item)
+            println(resultMap)
         }
     }
 }

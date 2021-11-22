@@ -101,7 +101,6 @@ class QueryHandler implements QueryOp {
         def queryJobConfig = QueryJobConfiguration.newBuilder(
                 normalize(statement)
         )
-                .setUseLegacySql(false)
                 .build();
 
         def queryJob = conn
