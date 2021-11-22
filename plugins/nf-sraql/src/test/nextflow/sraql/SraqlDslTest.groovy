@@ -19,13 +19,9 @@ package nextflow.sraql
 
 import groovy.sql.Sql
 import nextflow.Channel
-import nextflow.Session
 import nextflow.extension.ChannelExtensionDelegate
-import nextflow.plugin.Plugins
-import spock.lang.Stepwise
 import spock.lang.Timeout
 import test.BaseSpec
-import test.Dsl2Spec
 import test.MockScriptRunner
 
 /**
@@ -35,7 +31,7 @@ import test.MockScriptRunner
 @Timeout(10)
 class SraqlDslTest extends BaseSpec {
 
-    def setup () {
+    def setup() {
         ChannelExtensionDelegate.reloadExtensionPoints()
     }
 

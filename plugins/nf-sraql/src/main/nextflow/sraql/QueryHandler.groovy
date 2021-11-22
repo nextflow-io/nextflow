@@ -17,20 +17,7 @@
 
 package nextflow.sraql
 
-import com.google.cloud.bigquery.BigQuery
-import com.google.cloud.bigquery.BigQueryOptions
-import com.google.cloud.bigquery.FieldValue
-import com.google.cloud.bigquery.JobId
-import com.google.cloud.bigquery.JobInfo
-import com.google.cloud.bigquery.QueryJobConfiguration
-import com.google.cloud.bigquery.TableResult
-
-import java.sql.Connection
-import java.sql.ResultSet
-import java.sql.Statement
-import java.util.concurrent.CompletableFuture
-
-import groovy.sql.Sql
+import com.google.cloud.bigquery.*
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
@@ -38,6 +25,8 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 import nextflow.sraql.config.SraqlDataSource
+
+import java.util.concurrent.CompletableFuture
 
 /**
  * Implement the logic for query an SRAQL datasource in async manner

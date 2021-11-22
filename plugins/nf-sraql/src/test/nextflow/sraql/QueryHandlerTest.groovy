@@ -1,13 +1,9 @@
 package nextflow.sraql
 
-
-import java.nio.file.Files
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Channel
-import nextflow.sraql.config.SraqlDataSource
 import nextflow.sraql.QueryHandler
 import spock.lang.Specification
-
 /**
  *
  * @author Abhinav Sharma <abhi18av@outlook.com>

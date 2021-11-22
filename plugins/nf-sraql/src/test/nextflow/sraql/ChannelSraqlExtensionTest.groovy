@@ -17,16 +17,11 @@
 
 package nextflow.sraql
 
-import com.google.cloud.bigquery.BigQueryOptions
-import com.google.cloud.bigquery.JobId
-import com.google.cloud.bigquery.JobInfo
-import com.google.cloud.bigquery.QueryJobConfiguration
-import groovyx.gpars.dataflow.DataflowQueue
+
 import nextflow.Channel
 import nextflow.Session
 import spock.lang.Specification
 import spock.lang.Timeout
-
 /**
  *
  * @author Abhinav Sharma <abhi18av@outlook.com>
