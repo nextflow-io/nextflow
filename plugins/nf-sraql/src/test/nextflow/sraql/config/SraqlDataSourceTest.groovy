@@ -32,12 +32,18 @@ class SraqlDataSourceTest extends Specification {
         ds.source == SraqlDataSource.DEFAULT_SOURCE
     }
 
+    def 'should get the custom (non-default) config' () {
+        given:
+        def ds = new SraqlDataSource(['source': 'aws-athena'])
+        expect:
+        ds.source == 'aws-athena'
+    }
 
     def 'should convert to map' () {
         when:
-        def ds = new SraqlDataSource(source:'google-bigquery')
+        def ds = new SraqlDataSource(source:'aws-athena')
         then:
-        ds.toMap().source == 'google-bigquery'
+        ds.toMap().source == 'aws-athena'
     }
 
 }
