@@ -29,14 +29,24 @@ import nextflow.exception.IllegalInvocationException
 @ToString(includePackage = false, includeNames = true)
 @EqualsAndHashCode
 class SraqlDataSource {
-    public static String DEFAULT_SOURCE = 'google-bigquery'
 
-    static SraqlDataSource DEFAULT = new SraqlDataSource(Collections.emptyMap())
+    def SRAQL_SOURCES = [
+            GOOGLE: 'google-bigquery',
+            AWS   : 'aws-athena'
+    ]
 
     String source
 
     SraqlDataSource(Map opts) {
-        this.source = opts.source ?: DEFAULT_SOURCE
+        if( opts.source == SRAQL_SOURCES.GOOGLE )
+            this.source = SRAQL_SOURCES.GOOGLE
+        else if( opts.source == SRAQL_SOURCES.AWS )
+            this.source = SRAQL_SOURCES.AWS
+        else {
+            def msg = "Unknown dataSource name: $opts.source"
+            throw new IllegalArgumentException(msg)
+        }
+
     }
 
     Map toMap() {

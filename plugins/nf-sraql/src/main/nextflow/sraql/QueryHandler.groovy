@@ -74,7 +74,7 @@ class QueryHandler implements QueryOp {
 
     @Override
     void perform(boolean async = false) {
-        final conn = connect(dataSource ?: SraqlDataSource.DEFAULT)
+        final conn = connect(dataSource)
         if( async )
             queryAsync(conn)
         else

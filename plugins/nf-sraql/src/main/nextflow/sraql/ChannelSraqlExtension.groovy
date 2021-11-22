@@ -23,22 +23,12 @@ import nextflow.util.CheckHelper
 class ChannelSraqlExtension extends ChannelExtensionPoint {
 
     private static final Map QUERY_PARAMS = [source: CharSequence]
-
-    private static final Map INSERT_PARAMS = [
-            db: CharSequence,
-            into: CharSequence,
-            columns: [CharSequence, List],
-            statement: CharSequence,
-            batch: Integer,
-            setup: CharSequence
-    ]
-
     private Session session
     private SraqlConfig config
 
     protected void init(Session session) {
         this.session = session
-        this.config = new SraqlConfig((Map) session.config.navigate('sraql.source'))
+        this.config = new SraqlConfig((String) session.config.navigate('sraql.source'))
     }
 
     DataflowWriteChannel fromQuery(String query) {
