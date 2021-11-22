@@ -18,6 +18,7 @@
 package nextflow.sraql
 
 import com.google.cloud.bigquery.*
+import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
@@ -114,17 +115,24 @@ class QueryHandler implements QueryOp {
         try {
 
             for (row in result.iterateAll()) {
-                def fieldValues = [:]
+                def resultMap = [:]
 
                 for (field in result.schema.fields) {
                     def fieldName = field.name
                     def fieldContent = row.get(fieldName)
 
-                    if( fieldContent.attribute == FieldValue.Attribute.PRIMITIVE ) {
-                        fieldValues[field.name] = fieldContent.value
+                    if( fieldName == 'jattr' ) {
+                        def jsonSlurper = new JsonSlurper()
+                        resultMap[field.name] = jsonSlurper.parseText(fieldContent.value as String)
+                    } else if( fieldName != 'attributes' ) {
+                        if( fieldContent.attribute == FieldValue.Attribute.PRIMITIVE ) {
+                            resultMap[field.name] = fieldContent.value
+                        } else if( fieldContent.attribute == FieldValue.Attribute.REPEATED ) {
+                            resultMap[field.name] = (fieldContent.value as List<FieldValue>).collect { it -> it.value }
+                        }
                     }
                 }
-                target.bind(fieldValues)
+                target.bind(resultMap)
             }
         }
         finally {

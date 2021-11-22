@@ -55,8 +55,7 @@ class Scratch extends Specification {
                     if( fieldContent.attribute == FieldValue.Attribute.PRIMITIVE ) {
                         resultMap[field.name] = fieldContent.value
                     } else if( fieldContent.attribute == FieldValue.Attribute.REPEATED ) {
-                        //FIXME process this value further
-                        resultMap[field.name] = fieldContent.value
+                        resultMap[field.name] = (fieldContent.value as List).collect { it -> it.value}
                     }
                 }
             }

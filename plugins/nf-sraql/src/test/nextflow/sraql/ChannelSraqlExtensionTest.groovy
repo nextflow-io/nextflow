@@ -38,16 +38,15 @@ class ChannelSraqlExtensionTest extends Specification {
 
 
         and:
-        def queryString = "SELECT * FROM `nih-sra-datastore.sra.metadata` as s WHERE s.organism = 'Mycobacterium tuberculosis' AND s.consent='public' AND s.sra_study='ERP124850' LIMIT 3"
+        def queryString = "SELECT *  FROM `nih-sra-datastore.sra.metadata` WHERE  bioproject='PRJNA494931';"
 
         when:
         def result = sraqlExtension.fromQuery(queryString)
 
         then:
-        result.val.acc == 'ERR4796597'
-        result.val.acc == 'ERR4797168'
-        result.val.acc == 'ERR4797173'
+        result.val.acc == 'SRR7974377'
+        result.val.acc == 'SRR7974375'
+        result.val.acc == 'SRR7974376'
         result.val == Channel.STOP
-
     }
 }
