@@ -17,7 +17,6 @@
 
 package nextflow.sraql
 
-import groovy.sql.Sql
 import nextflow.Channel
 import nextflow.extension.ChannelExtensionDelegate
 import spock.lang.Timeout
