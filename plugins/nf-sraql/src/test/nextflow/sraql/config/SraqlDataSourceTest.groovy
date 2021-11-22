@@ -25,25 +25,18 @@ import spock.lang.Specification
  */
 class SraqlDataSourceTest extends Specification {
 
-    def 'should get default config' () {
-        given:
-        def ds = new SraqlDataSource([:])
-        expect:
-        ds.source == SraqlDataSource.DEFAULT_SOURCE
-    }
-
-    def 'should get the custom (non-default) config' () {
+    def 'should get data source for aws-athena' () {
         given:
         def ds = new SraqlDataSource(['source': 'aws-athena'])
         expect:
         ds.source == 'aws-athena'
     }
 
-    def 'should convert to map' () {
+    def 'should get data source for google-bigquery' () {
         when:
-        def ds = new SraqlDataSource(source:'aws-athena')
+        def ds = new SraqlDataSource(source:'google-bigquery')
         then:
-        ds.toMap().source == 'aws-athena'
+        ds.toMap().source == 'google-bigquery'
     }
 
 }
