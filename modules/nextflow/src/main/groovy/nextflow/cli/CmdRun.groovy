@@ -233,7 +233,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Override
     String getName() { NAME }
 
-    String getParamsFile() { paramsFile ?: env.get('NXF_PARAMS_FILE') }
+    String getParamsFile() { paramsFile ?: envResolved.get('NXF_PARAMS_FILE') }
 
     boolean hasParams() { params || getParamsFile() }
 
@@ -493,7 +493,7 @@ class CmdRun extends CmdBase implements HubOptions {
         return result
     }
 
-    static private Pattern PARAMS_VAR = ~/(?m)\$\{(\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*)}/
+    static private Pattern PARAMS_VAR = ~/(?m)\$\{(\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*|env\.[a-zA-Z_][a-zA-Z0-9_]*)}/
 
     protected String replaceVars0(String content, Map binding) {
         content.replaceAll(PARAMS_VAR) { List<String> matcher ->
@@ -504,6 +504,19 @@ class CmdRun extends CmdBase implements HubOptions {
             // parameter is a string instead of a list of the call fail
             final placeholder = matcher.get(0)
             final key = matcher.get(1)
+
+            if( key.startsWith("env.") ) {
+                final envVar = key.replace("env.", "")
+                if (!envResolved.containsKey(envVar)) {
+                    final msg = "Missing environment variable: $envVar"
+                    if (NF.strictMode)
+                        throw new AbortOperationException(msg)
+                    log.warn msg
+                    return placeholder
+                }
+
+                return envResolved.get(envVar)
+            }
 
             if( !binding.containsKey(key) ) {
                 final msg = "Missing params file variable: $placeholder"
@@ -537,6 +550,20 @@ class CmdRun extends CmdBase implements HubOptions {
         catch( Exception e ) {
             throw new AbortOperationException("Cannot parse params file: $file", e)
         }
+    }
+
+    @Memoized
+    Map getEnvResolved() {
+        Map unionEnv = [:]
+        if( exportSysEnv ) {
+            log.debug "Adding current system environment to session environment"
+            unionEnv.putAll(System.getenv())
+        }
+        if( env ) {
+            log.debug "Adding following variables to session environment: $env"
+            unionEnv.putAll(env)
+        }
+        return unionEnv
     }
 
 }

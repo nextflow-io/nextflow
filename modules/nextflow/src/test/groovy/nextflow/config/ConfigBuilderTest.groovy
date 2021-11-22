@@ -416,7 +416,6 @@ class ConfigBuilderTest extends Specification {
             beta: "World" 
             omega: "Last"
             theta: "${baseDir}/something"
-            sigma: "${workDir}/work"
             '''.stripIndent()
         and:
         def file = Files.createTempFile('test',null)
@@ -426,7 +425,6 @@ class ConfigBuilderTest extends Specification {
         }
         params.beta = 'y'
         params.delta = 'Foo'
-        params.sigma = './work'
         params.gamma = params.alpha
         params {
             omega = 'Bar'
@@ -438,7 +436,7 @@ class ConfigBuilderTest extends Specification {
         '''
         when:
         def opt = new CliOptions()
-        def run = new CmdRun(paramsFile: params, workDir: "scheme://work_path")
+        def run = new CmdRun(paramsFile: params)
         def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).setBaseDir(baseDir).buildGivenFiles(file)
 
         then:
@@ -448,7 +446,6 @@ class ConfigBuilderTest extends Specification {
         result.params.omega == 'Last'
         result.params.delta == 'Foo'
         result.params.theta == "$baseDir/something"
-        result.params.sigma == "scheme://work_path/work"
         result.process.publishDir == [path: 'Hello']
 
         cleanup:
@@ -1121,6 +1118,13 @@ class ConfigBuilderTest extends Specification {
         config = new ConfigObject()
         config.workDir = 'hello/there'
         builder.configRunOptions(config, [:], new CmdRun(workDir: 'my/work/dir'))
+        then:
+        config.workDir == 'my/work/dir'
+
+        when: "config.workDir has precedence over NXF_WORK environment variable"
+        config = new ConfigObject()
+        config.workDir = 'my/work/dir'
+        builder.configRunOptions(config, [NXF_WORK: '/foo/bar'], new CmdRun())
         then:
         config.workDir == 'my/work/dir'
     }
