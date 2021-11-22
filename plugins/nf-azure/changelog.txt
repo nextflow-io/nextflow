@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+0.11.2 - 22 Nov 2021
+- Fix Azure executor fail to cleanup jobs on completion [533448be4]
+- Make Azure executor logging less verbose [e0b2117ad]
+
 0.11.1 - 18 Nov 2021
 - Fix NPE when pool is not configured and auto pool mode is not specified
 
