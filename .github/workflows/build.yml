@@ -27,7 +27,7 @@ jobs:
       run: env | sort 
 
     - name: Checkout
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
       with:
         fetch-depth: 1
         submodules: true
@@ -39,10 +39,12 @@ jobs:
            echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
 
     - name: Setup Java ${{ matrix.java_version }}
-      uses: actions/setup-java@v1
+      uses: actions/setup-java@v2
       with:
         java-version: ${{matrix.java_version}}
+        distribution: 'adopt'
         architecture: x64
+        cache: gradle
 
     - name: Compile
       run: make assemble
@@ -59,6 +61,7 @@ jobs:
         NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
         AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
         AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+        AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
         AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
     - name: Integration
@@ -78,14 +81,17 @@ jobs:
         GOOGLE_SECRET: ${{ secrets.GOOGLE_SECRET }}
         AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
         AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+        AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
         AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
     - name: Setup Java 8
       if: "matrix.java_version != 8 && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/testing') && !contains(github.event.head_commit.message, '[ci fast]')"
-      uses: actions/setup-java@v1
+      uses: actions/setup-java@v2
       with:
         java-version: 8
+        distribution: 'adopt'
         architecture: x64
+        cache: gradle
 
     - name: Integration vs Java 8
       if: "matrix.java_version != 8 && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/testing') && !contains(github.event.head_commit.message, '[ci fast]')"
@@ -102,6 +108,7 @@ jobs:
         NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
         AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
         AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+        AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
         AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
     - name: Tar integration tests

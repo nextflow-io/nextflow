@@ -134,8 +134,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String touchFile( Path file ) {
-        final aws = opts.getAwsCli()
-        "echo start | $aws s3 cp --only-show-errors - s3:/${Escape.path(file)}"
+        "echo start | nxf_s3_upload - s3:/${Escape.path(file)}"
     }
 
     /**
@@ -162,8 +161,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      * {@inheritDoc}
      */
     String exitFile( Path path ) {
-        final aws = opts.getAwsCli()
-        "| $aws s3 cp --only-show-errors - s3:/${Escape.path(path)} || true"
+        "| nxf_s3_upload - s3:/${Escape.path(path)} || true"
     }
 
     /**

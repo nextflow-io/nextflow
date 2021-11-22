@@ -151,20 +151,23 @@ class BashWrapperBuilderTest extends Specification {
     def 'should create launcher with input' () {
         given:
         def folder = Files.createTempDirectory('test')
-
         /*
          * simple bash run
          */
-        when:
-        newBashWrapperBuilder(
-                workDir: folder,
-                input: 'foo bar' ) .build()
+        and:
+        def builder = newBashWrapperBuilder( workDir: folder, input: 'foo bar' )
 
+        when:
+        builder.build()
         then:
+        builder.targetInputFile() == folder.resolve('.command.in')
+        builder.targetScriptFile() == folder.resolve('.command.sh')
+        builder.targetWrapperFile() == folder.resolve('.command.run')
+        and:
         Files.exists(folder.resolve('.command.sh'))
         Files.exists(folder.resolve('.command.run'))
         Files.exists(folder.resolve('.command.in'))
-
+        and:
         folder.resolve('.command.in').text == 'foo bar'
         folder.resolve('.command.sh').text.contains('echo Hello world!')
         folder.resolve('.command.run').text.contains('nxf_main')
