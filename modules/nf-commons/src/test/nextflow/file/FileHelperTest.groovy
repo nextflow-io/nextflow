@@ -17,7 +17,7 @@
 
 package nextflow.file
 
-import spock.lang.Unroll
+import static java.nio.file.LinkOption.*
 
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
@@ -34,8 +34,7 @@ import com.google.common.jimfs.Jimfs
 import nextflow.Global
 import nextflow.ISession
 import spock.lang.Specification
-
-import static java.nio.file.LinkOption.NOFOLLOW_LINKS
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -64,6 +63,15 @@ class FileHelperTest extends Specification {
         then:
         thrown(IllegalArgumentException)
 
+    }
+
+    def 'should strip query params from http files' () {
+        when:
+        def path = FileHelper.asPath('http://host.com/some/path/file.txt?x=1')
+        then:
+        path.toString() == '/some/path/file.txt'
+        path.getFileName().toString() == 'file.txt'
+        path.toUri() == new URI('http://host.com/some/path/file.txt?x=1')
     }
 
     def 'should create a valid uri' () {

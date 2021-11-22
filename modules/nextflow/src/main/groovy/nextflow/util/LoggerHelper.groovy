@@ -460,6 +460,9 @@ class LoggerHelper {
         else if( fail instanceof ClassNotFoundException ) {
             buffer.append("Class not found: ${normalize(fail.message)}")
         }
+        else if( fail instanceof NoClassDefFoundError) {
+            buffer.append("Class definition not found: ${normalize(fail.message)}")
+        }
         else if( fail instanceof DirectoryNotEmptyException ) {
             buffer.append("Unable to delete not empty directory: $fail.message")
         }

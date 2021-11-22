@@ -333,7 +333,12 @@ class AzBatchService implements Closeable {
         if( !container )
             throw new IllegalArgumentException("Missing container image for process: $task.name")
         final taskId = "nf-${task.hash.toString()}"
-        final mountPath = allPools.get(poolId).opts.getFileShareRootPath()
+        // get the pool config
+        final pool = allPools.get(poolId)
+        if( !pool )
+            throw new IllegalStateException("Missing Azure Batch pool spec with id: $poolId")
+        // get the file share root
+        final mountPath = pool.opts.getFileShareRootPath()
 	    if ( !mountPath )
 		    throw new IllegalArgumentException("Missing FileShareRootPath for pool: $poolId")
         def volumes = ''
@@ -344,12 +349,9 @@ class AzBatchService implements Closeable {
                 .withImageName(container)
                 // mount host certificates otherwise `azcopy fails
                 .withContainerRunOptions("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro ${volumes} ")
-        final pool = allPools.get(poolId)
-        if( !pool )
-            throw new IllegalStateException("Missing Azure Batch pool spec with id: $poolId")
 
         final slots = computeSlots(task, pool)
-        log.debug "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
+        log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
 
         final taskToAdd = new TaskAddParameter()
                 .withId(taskId)
@@ -690,10 +692,31 @@ class AzBatchService implements Closeable {
 
             try {
                 log.trace "Deleting Azure job ${jobId}"
-                client.jobOperations().deleteJob(jobId)
+                deleteJob(jobId)
             }
             catch (Exception e) {
                 log.warn "Unable to delete Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
+            }
+        }
+    }
+
+    protected void deleteJob(String jobId) {
+        final int DEFAULT_BACK_OFF_BASE = 3
+        final int DEFAULT_BACK_OFF_DELAY = 250
+        final int MAX_ATTEMPTS = 5
+        int attempt=0
+        while( true ) {
+            try {
+                client.jobOperations().deleteJob(jobId)
+                break
+            }
+            catch (BatchErrorException e) {
+                if( e.body().code() != 'TooManyRequests' || attempt++ > MAX_ATTEMPTS)
+                    throw e
+
+                final delay = (Math.pow(DEFAULT_BACK_OFF_BASE, attempt) as long) * DEFAULT_BACK_OFF_DELAY
+                log.debug "Got Azure Client exception while deleting job: $jobId - message=$e.message; waiting for ${delay}ms (attempt=$attempt)"
+                Thread.sleep(delay)
             }
         }
     }

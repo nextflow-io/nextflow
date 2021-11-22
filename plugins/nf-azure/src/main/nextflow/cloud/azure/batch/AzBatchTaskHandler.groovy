@@ -160,7 +160,7 @@ class AzBatchTaskHandler extends TaskHandler {
         final delta =  now - timestamp;
         if( !taskState || delta >= 1_000) {
             def newState = batchService.getTask(key).state()
-            log.debug "[AZURE BATCH] Task: $key state=$newState"
+            log.trace "[AZURE BATCH] Task: $key state=$newState"
             if( newState ) {
                 taskState = newState
                 timestamp = now
