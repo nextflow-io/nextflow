@@ -58,7 +58,7 @@ class ChannelSraqlExtension extends ChannelExtensionPoint {
     }
 
     protected SraqlDataSource dataSourceFromOpts(Map opts) {
-        final dsName = opts.source  as String
+        final dsName = opts.source as String
         final dataSource = config.getDataSource(dsName)
         return dataSource
     }

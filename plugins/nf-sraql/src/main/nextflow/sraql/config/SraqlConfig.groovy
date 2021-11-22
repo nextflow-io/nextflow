@@ -38,7 +38,7 @@ class SraqlConfig {
     }
 
     SraqlDataSource getDataSource(String name) {
-        return new SraqlDataSource([source: name])
+        return dataSource
     }
 
 }

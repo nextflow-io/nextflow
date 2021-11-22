@@ -80,7 +80,7 @@ class QueryHandler implements QueryOp {
     }
 
     protected BigQuery connect(SraqlDataSource ds) {
-        log.debug "Creating SRAQL connection: ${ds}"
+        log.debug "Creating SRAQL connection: ${ds.source}"
         BigQueryOptions.getDefaultInstance().getService();
     }
 

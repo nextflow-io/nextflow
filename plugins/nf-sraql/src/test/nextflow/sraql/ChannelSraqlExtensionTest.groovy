@@ -36,14 +36,14 @@ class ChannelSraqlExtensionTest extends Specification {
 
     def 'should read the config for data source, execute query and create channel from query'() {
         given:
-
-        def queryString = "SELECT * FROM `nih-sra-datastore.sra.metadata` as s WHERE s.organism = 'Mycobacterium tuberculosis' AND s.consent='public' AND s.sra_study='ERP124850' LIMIT 3"
-
-        and:
         def session = Mock(Session) {
             getConfig() >> [sraql: [source: 'google-bigquery']]
         }
         def sraqlExtension = new ChannelSraqlExtension(); sraqlExtension.init(session)
+
+
+        and:
+        def queryString = "SELECT * FROM `nih-sra-datastore.sra.metadata` as s WHERE s.organism = 'Mycobacterium tuberculosis' AND s.consent='public' AND s.sra_study='ERP124850' LIMIT 3"
 
         when:
         def result = sraqlExtension.fromQuery(queryString)
