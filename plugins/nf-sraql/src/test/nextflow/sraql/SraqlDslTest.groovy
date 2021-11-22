@@ -28,7 +28,7 @@ import test.MockScriptRunner
  *
  * @author Abhinav Sharma <abhi18av@outlook.com>
  */
-@Timeout(10)
+@Timeout(20)
 class SraqlDslTest extends BaseSpec {
 
     def setup() {
@@ -36,29 +36,21 @@ class SraqlDslTest extends BaseSpec {
     }
 
     def 'should perform a query and create a channel' () {
-        given:
-        def JDBC_URL = 'jdbc:h2:mem:test_' + Random.newInstance().nextInt(1_000)
-        def sql = Sql.newInstance(JDBC_URL, 'sa', null)
-        and:
-        sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
-        sql.execute("insert into FOO (id, alpha, omega) values (1, 'hola', 10) ")
-        sql.execute("insert into FOO (id, alpha, omega) values (2, 'ciao', 20) ")
-        sql.execute("insert into FOO (id, alpha, omega) values (3, 'hello', 30) ")
-        and:
-        def config = [sql: [db: [test: [url: JDBC_URL]]]]
+        def config = [sraql: [source: 'google-bigquery']]
 
         when:
         def SCRIPT = '''
-            def table = 'FOO'
-            def sql = "select * from $table"
-            channel.sql.fromQuery(sql, db: "test") 
+            def bioProjectId = 'PRJNA494931'
+            def sraql = "SELECT *  FROM `nih-sra-datastore.sra.metadata` WHERE  bioproject='$bioProjectId';"
+            channel.sraql.fromQuery(sraql)
             '''
         and:
         def result = new MockScriptRunner(config).setScript(SCRIPT).execute()
+
         then:
-        result.val == [1, 'hola', 10]
-        result.val == [2, 'ciao', 20]
-        result.val == [3, 'hello', 30]
+        result.val.acc == 'SRR7974377'
+        result.val.acc == 'SRR7974375'
+        result.val.acc == 'SRR7974376'
         result.val == Channel.STOP
     }
 
