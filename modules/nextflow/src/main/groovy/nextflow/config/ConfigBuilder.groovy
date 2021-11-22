@@ -263,7 +263,7 @@ class ConfigBuilder {
     @PackageScope
     ConfigObject buildGivenFiles(List<Path> files) {
 
-        final Map<String,String> vars = cmdRun?.env
+        final env = cmdRun?.envResolved ?: [:]
         final boolean exportSysEnv = cmdRun?.exportSysEnv
 
         def items = []
@@ -275,16 +275,6 @@ class ConfigBuilder {
             else {
                 items << file
             }
-        }
-
-        Map env = [:]
-        if( exportSysEnv ) {
-            log.debug "Adding current system environment to session environment"
-            env.putAll(System.getenv())
-        }
-        if( vars ) {
-            log.debug "Adding following variables to session environment: $vars"
-            env.putAll(vars)
         }
 
         // set the cluster options for the node command
