@@ -44,9 +44,9 @@ class ChannelSraqlExtensionTest extends Specification {
         def result = sraqlExtension.fromQuery(queryString)
 
         then:
-        result.val[0] == ['acc', 'ERR4796597']
-        result.val[0] == ['acc', 'ERR4797168']
-        result.val[0] == ['acc', 'ERR4797173']
+        result.val.acc == 'ERR4796597'
+        result.val.acc == 'ERR4797168'
+        result.val.acc == 'ERR4797173'
         result.val == Channel.STOP
 
     }

@@ -115,14 +115,14 @@ class QueryHandler implements QueryOp {
         try {
 
             for (row in result.iterateAll()) {
-                def fieldValues = new ArrayList()
+                def fieldValues = [:]
 
                 for (field in result.schema.fields) {
                     def fieldName = field.name
                     def fieldContent = row.get(fieldName)
 
                     if( fieldContent.attribute == FieldValue.Attribute.PRIMITIVE ) {
-                        fieldValues << [fieldName, fieldContent.value]
+                        fieldValues[field.name] = fieldContent.value
                     }
                 }
                 target.bind(fieldValues)
