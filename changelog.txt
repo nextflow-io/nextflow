@@ -1,5 +1,15 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.10.2 - 22 Nov 2021 
+- Fix Azure executor fail to cleanup jobs on completion [4d5b71370]
+- Fix Missing AWS SSE encryption for begin and exit task files #2452 [841e6101b]
+- Fix Azure integration test [a8051bc01]
+- Fix false positive detection of publishDir conflict [292b439ad]
+- Make Azure executor logging less verbose [7452e386d]
+- Change Azure test pool vmType [85682be7d]
+- Downgrade Google NIO library to version 0.121.2 [66ae98820]
+- Add java 16 and 17 to the launch.sh for debugging #2457 [3ff0a248e] <mmatthews06>
+
 21.10.1 - 18 Nov 2021 
 - Fix Azure batch NPE when missing pool spec [84b2983f4]
 - Fix Docker bin in image PATH #2445 [d30da377a] <Josh Chorlton>
