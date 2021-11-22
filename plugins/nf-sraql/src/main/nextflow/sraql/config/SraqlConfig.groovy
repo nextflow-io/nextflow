@@ -31,36 +31,14 @@ import groovy.transform.ToString
 @CompileStatic
 class SraqlConfig {
 
-    private Map<String, SraqlDataSource> dataSources
-    private SraqlDataSource defSource
+    private SraqlDataSource dataSource
 
-    SraqlConfig(Map config) {
-        dataSources = parseDataSources(config)
+    SraqlConfig(String name) {
+        dataSource = new SraqlDataSource([source: name])
     }
 
     SraqlDataSource getDataSource(String name) {
-        return name == 'default'
-                ? defSource
-                : dataSources.get(name)
-    }
-
-    List<String> getDataSourceNames() {
-        return new ArrayList<String>(dataSources.keySet())
-    }
-
-    protected Map parseDataSources(Map<String, Map> config) {
-        // create the `default` datasource as fallback for missing values
-        this.defSource = new SraqlDataSource(config?.'default' as Map ?: Collections.emptyMap())
-
-        // setup other datasource by name
-        final result = new LinkedHashMap<String, SraqlDataSource>()
-        for (Map.Entry<String, Map> entry : config) {
-            if( entry.key == 'default' ) {
-                result.put(entry.key, defSource)
-            }
-        }
-
-        return result
+        return new SraqlDataSource([source: name])
     }
 
 }

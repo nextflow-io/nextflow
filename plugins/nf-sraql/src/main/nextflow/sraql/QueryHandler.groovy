@@ -74,6 +74,8 @@ class QueryHandler implements QueryOp {
 
     @Override
     void perform(boolean async = false) {
+        //FIXME
+        println("queryHandler perform ${dataSource}")
         final conn = connect(dataSource)
         if( async )
             queryAsync(conn)

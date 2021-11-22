@@ -56,15 +56,6 @@ class ChannelSraqlExtension extends ChannelExtensionPoint {
     protected SraqlDataSource dataSourceFromOpts(Map opts) {
         final dsName = (opts?.source ?: 'default') as String
         final dataSource = config.getDataSource(dsName)
-        if( dataSource==null ) {
-            def msg = "Unknown dataSource name: $dsName"
-            def choices = config.getDataSourceNames().closest(dsName) ?: config.getDataSourceNames()
-            if( choices?.size() == 1 )
-                msg += " - Did you mean: ${choices.get(0)}?"
-            else if( choices )
-                msg += " - Did you mean any of these?\n" + choices.collect { "  $it"}.join('\n') + '\n'
-            throw new IllegalArgumentException(msg)
-        }
         return dataSource
     }
 }

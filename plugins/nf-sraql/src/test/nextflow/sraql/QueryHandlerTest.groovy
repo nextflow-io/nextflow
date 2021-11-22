@@ -28,16 +28,16 @@ class QueryHandlerTest extends Specification {
     def 'should perform the query'() {
         when:
         def result = new DataflowQueue()
-        def query = "SELECT *  FROM `nih-sra-datastore.sra.metadata` WHERE organism = 'Mycobacterium tuberculosis' LIMIT 3;"
+        def query = "SELECT *  FROM `nih-sra-datastore.sra.metadata` WHERE organism = 'Mycobacterium tuberculosis'  AND sra_study='ERP124850' LIMIT 3;"
         new QueryHandler()
                 .withTarget(result)
                 .withStatement(query)
                 .perform()
 
         then:
-        result.val[0] == ['acc', 'ERR3287691']
-        result.val[0] == ['acc', 'ERR3287738']
-        result.val[0] == ['acc', 'SRR12395057']
+        result.val[0] == ['acc', 'ERR4796597']
+        result.val[0] == ['acc', 'ERR4797168']
+        result.val[0] == ['acc', 'ERR4797173']
         result.val == Channel.STOP
 
     }

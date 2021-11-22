@@ -17,7 +17,10 @@
 
 package nextflow.sraql
 
-import groovy.sql.Sql
+import com.google.cloud.bigquery.BigQueryOptions
+import com.google.cloud.bigquery.JobId
+import com.google.cloud.bigquery.JobInfo
+import com.google.cloud.bigquery.QueryJobConfiguration
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Channel
 import nextflow.Session
@@ -28,36 +31,47 @@ import spock.lang.Timeout
  *
  * @author Abhinav Sharma <abhi18av@outlook.com>
  */
-@Timeout(10)
+@Timeout(20)
 class ChannelSraqlExtensionTest extends Specification {
 
-    def 'should create channel from query' () {
+    def 'should read the config for data source, execute query and create channel from query'() {
         given:
-        def JDBC_URL = 'jdbc:h2:mem:test_' + Random.newInstance().nextInt(1_000)
-        def sql = Sql.newInstance(JDBC_URL, 'sa', null)
-        and:
-        sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
-        sql.execute("insert into FOO (id, alpha, omega) values (1, 'hola', 10) ")
-        sql.execute("insert into FOO (id, alpha, omega) values (2, 'ciao', 20) ")
-        sql.execute("insert into FOO (id, alpha, omega) values (3, 'hello', 30) ")
+        def bigquery = BigQueryOptions.getDefaultInstance().getService()
+        def queryConfig = QueryJobConfiguration.newBuilder(
+                "SELECT * "
+                        + " FROM `nih-sra-datastore.sra.metadata` as s "
+                        + " WHERE s.organism = 'Mycobacterium tuberculosis'"
+                        + " AND s.consent='public' "
+                        + " AND s.sra_study='ERP124850' "
+                        + " LIMIT 3"
+        )
+                .setUseLegacySql(false)
+                .build()
+
+        def jobId = JobId.of(UUID.randomUUID().toString());
+        def queryJob = bigquery
+                .create(JobInfo.newBuilder(queryConfig).setJobId(jobId).build())
+                .waitFor()
+
         and:
         def session = Mock(Session) {
-            getConfig() >> [sql: [db: [test: [url: JDBC_URL]]]]
+            getConfig() >> [sraql: [source: 'google-bigquery']]
         }
-        def sqlExtension = new ChannelSraqlExtension(); sqlExtension.init(session)
+        def sraqlExtension = new ChannelSraqlExtension(); sraqlExtension.init(session)
 
         when:
-        def result = sqlExtension.fromQuery('select * from FOO', db: 'test')
+        def result = new DataflowQueue()
+        def query = "SELECT *  FROM `nih-sra-datastore.sra.metadata` WHERE organism = 'Mycobacterium tuberculosis' LIMIT 3;"
+        new QueryHandler()
+                .withTarget(result)
+                .withStatement(query)
+                .perform()
+
         then:
-        result.val == [1, 'hola', 10]
-        result.val == [2, 'ciao', 20]
-        result.val == [3, 'hello', 30]
+        result.val[0] == ['acc', 'ERR4796597']
+        result.val[0] == ['acc', 'ERR4797168']
+        result.val[0] == ['acc', 'ERR4797173']
         result.val == Channel.STOP
 
-        when:
-        result = sqlExtension.fromQuery('select alpha, omega from FOO where id=3', db: 'test')
-        then:
-        result.val == ['hello', 30]
-        result.val == Channel.STOP
     }
 }
