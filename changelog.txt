@@ -1,5 +1,8 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.10.3 - 23 Nov 2021
+- Fix execution hang when reading empty error file [414240a1a]
+
 21.10.2 - 22 Nov 2021 
 - Fix Azure executor fail to cleanup jobs on completion [4d5b71370]
 - Fix Missing AWS SSE encryption for begin and exit task files #2452 [841e6101b]
