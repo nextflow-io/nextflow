@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+1.3.4 - 29 Nov 2021
+- Bump s3fs version 1.1.3
+- Fix S3 file exists check on provider not supporting Get object ACL
+
 1.3.3 - 22 Nov 2021
 - Fix Missing AWS SSE encryption for begin and exit task files #2452
 
