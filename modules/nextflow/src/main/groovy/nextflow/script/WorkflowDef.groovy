@@ -196,7 +196,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
  */
 @Slf4j
 @CompileStatic
-class WorkflowParamsResolver implements GroovyInterceptable {
+class WorkflowParamsResolver {
 
     static final private String TAKE_PREFIX = '_take_'
     static final private String EMIT_PREFIX = '_emit_'
