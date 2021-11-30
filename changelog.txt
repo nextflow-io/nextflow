@@ -1,5 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.10.4 - 30 Nov 2021
+- Fix include no longer works for custom functions #2469 [e17f6155d]
+- Bump nf-amazon@1.3.4 - bump nxf-s3fs@1.1.3 [be893dcb1]
+
 21.10.3 - 23 Nov 2021
 - Fix execution hang when reading empty error file [414240a1a]
 
