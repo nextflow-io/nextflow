@@ -459,7 +459,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 .withCommand('true')
                 // note the actual command, memory and cpus are overridden when the job is executed
                 .withResourceRequirements( _1_cpus, _1_gb )
-
+        def mapper = new AWSContainerOptionsMapper(task.getConfig().getContainerOptions())
+        mapper.addProperties(container)
         final jobRole = opts.getJobRole()
         if( jobRole )
             container.setJobRoleArn(jobRole)
