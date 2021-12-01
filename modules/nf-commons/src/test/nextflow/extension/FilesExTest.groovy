@@ -521,6 +521,12 @@ class FilesExTest extends Specification {
 
     }
 
+    def testTailWithEmptyFile() {
+        expect:
+        new StringReader('').tail(1).toString() == ''
+        new StringReader('').tail(10).toString() == ''
+    }
+
 
     def testFileHead() {
 

@@ -801,6 +801,7 @@ class FilesEx {
      * @return The 'n' lines as {@code CharSequence} object
      */
     static CharSequence tail( Reader reader, int n ) {
+        assert n>0, "tail argument must be greater than zero"
         String line
         String[] buffer = new String[n]
         int index = 0
@@ -810,7 +811,7 @@ class FilesEx {
 
         StringBuilder result = new StringBuilder()
         int count = Math.min(n, index)
-        while( true ) {
+        while( count>0 ) {
             result.insert( 0, buffer[ (--index) % n ] )
             if( --count )
                 result.insert( 0, System.lineSeparator())
@@ -818,7 +819,7 @@ class FilesEx {
                 break
         }
 
-        result
+        return result
     }
 
 
