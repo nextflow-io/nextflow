@@ -9,9 +9,8 @@ import com.amazonaws.services.batch.model.Ulimit
 /**
  * Maps task container options to AWS container properties
  *
- * @see https://docs.docker.com/engine/reference/commandline/run/
- * @see https://docs.aws.amazon.com/batch/latest/APIReference/API_ContainerProperties.html
- *
+ * @see <a href="https://docs.docker.com/engine/reference/commandline/run/">Docker run</a>
+ * @see <a href="https://docs.aws.amazon.com/batch/latest/APIReference/API_ContainerProperties.html">API Container Properties</a>
  * @author Manuele Simi <manuele.simi@gmail.com>
  */
 class AWSContainerOptionsMapper {
@@ -23,7 +22,7 @@ class AWSContainerOptionsMapper {
     }
 
     protected ContainerProperties addProperties(ContainerProperties containerProperties) {
-        if (options.size() > 0) {
+        if ( options.size() > 0 ) {
             checkPrivileged(containerProperties)
             checkEnvVars(containerProperties)
             checkUser(containerProperties)
@@ -44,7 +43,7 @@ class AWSContainerOptionsMapper {
         def values = findOptionWithMultipleValues('--env')
         values.addAll(findOptionWithMultipleValues('-e'))
         values.each { value ->
-            final tokens = value.split('=')
+            final tokens = value.tokenize('=')
             keyValuePairs << new KeyValuePair().withName(tokens[0]).withValue(tokens.size() == 2 ? tokens[1] : null)
         }
         if ( keyValuePairs.size() > 0 )
@@ -69,13 +68,13 @@ class AWSContainerOptionsMapper {
         findOptionWithMultipleValues('--ulimit').each { value ->
             final tokens = value.tokenize('=')
             final limits = tokens[1].tokenize(':')
-            if (limits.size() > 1)
+            if ( limits.size() > 1 )
                 ulimits << new Ulimit().withName(tokens[0])
                         .withSoftLimit(limits[0] as Integer).withHardLimit(limits[1] as Integer)
             else
                 ulimits << new Ulimit().withName(tokens[0]).withSoftLimit(limits[0] as Integer)
         }
-        if (ulimits.size() > 0)
+        if ( ulimits.size() > 0 )
             containerProperties.setUlimits(ulimits)
     }
 
@@ -84,7 +83,7 @@ class AWSContainerOptionsMapper {
 
         // shared Memory Size
         def value = findOptionWithSingleValue('--shm-size')
-        if (value)
+        if ( value )
             params.setSharedMemorySize(value as Integer)
 
         // tmpfs mounts
@@ -120,7 +119,7 @@ class AWSContainerOptionsMapper {
      */
     protected def findOptionWithSingleValue(def name) {
         def index = options.findIndexOf({ it == name })
-        if (index != -1) {
+        if ( index != -1 ) {
             if ( !isValidValue(options[index + 1] as String) )
                 throw new IllegalArgumentException("Found a malformed option '${name}' for the job container")
             return options[index + 1] as String
@@ -135,7 +134,7 @@ class AWSContainerOptionsMapper {
      */
     protected def findOptionWithMultipleValues(String name) {
         final values = new ArrayList<String>()
-        options.findIndexValues{ it == name}.collect { it as Integer }
+        options.findIndexValues{ it == name }.collect { it as Integer }
                 .each { index ->
                     if ( !isValidValue(options[index + 1]) )
                         throw new IllegalArgumentException("Found a malformed option ${name} for the job container")
