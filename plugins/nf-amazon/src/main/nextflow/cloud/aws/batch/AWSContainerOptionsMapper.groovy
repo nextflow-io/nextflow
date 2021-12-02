@@ -86,10 +86,17 @@ class AWSContainerOptionsMapper {
         if ( value )
             params.setSharedMemorySize(value as Integer)
 
-        // tmpfs mounts
+        // tmpfs mounts, e.g --tmpfs /run:rw,noexec,nosuid,size=64
         final tmpfs = new ArrayList<Tmpfs>()
-        findOptionWithMultipleValues('--tmpfs').each { path ->
-            tmpfs << new Tmpfs().withContainerPath(path)
+        findOptionWithMultipleValues('--tmpfs').each { ovalue ->
+            def matcher = ovalue =~ /^(?<path>.*):(?<options>.*?),size=(?<sizeMiB>.*)$/
+            if (matcher.matches()) {
+                tmpfs << new Tmpfs().withContainerPath(matcher.group('path'))
+                        .withSize(matcher.group('sizeMiB') as Integer)
+                        .withMountOptions(matcher.group('options').tokenize(','))
+            } else {
+                throw new IllegalArgumentException("Found a malformed value '${ovalue}' for --tmpfs option")
+            }
         }
         if ( tmpfs.size() > 0 )
             params.setTmpfs(tmpfs)

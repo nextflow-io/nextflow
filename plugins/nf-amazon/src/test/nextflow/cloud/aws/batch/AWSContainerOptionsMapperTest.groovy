@@ -74,7 +74,7 @@ class AWSContainerOptionsMapperTest extends Specification {
         given:
         def task = Mock(TaskRun)
         task.getName() >> 'batch-task'
-        task.getConfig() >> new TaskConfig(containerOptions: '--tmpfs /run --tmpfs /tmp ')
+        task.getConfig() >> new TaskConfig(containerOptions: '--tmpfs /run:rw,noexec,nosuid,size=64 --tmpfs /app:ro,size=128')
         def handler = Spy(AwsBatchTaskHandler)
         handler.task >> task
 
@@ -85,8 +85,8 @@ class AWSContainerOptionsMapperTest extends Specification {
 
         def params = job.getContainerProperties().getLinuxParameters()
         params.getTmpfs().size() == 2
-        params.getTmpfs().get(0).getContainerPath() == '/run'
-        params.getTmpfs().get(1).getContainerPath() == '/tmp'
+        params.getTmpfs().get(0).toString() == '{ContainerPath: /run,Size: 64,MountOptions: [rw, noexec, nosuid]}'
+        params.getTmpfs().get(1).toString() == '{ContainerPath: /app,Size: 128,MountOptions: [ro]}'
     }
 
     def 'should set memory linux params'() {
