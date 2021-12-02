@@ -414,7 +414,13 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     Map getContainerOptionsMap() {
         def opts = get('containerOptions')
-        return opts instanceof Map ? opts : Collections.emptyMap()
+        if( opts instanceof Map )
+            return opts
+        if( opts instanceof CharSequence )
+            return CmdLineHelper.parseGnuArgs(opts.toString())
+        if( opts!=null )
+            throw new IllegalArgumentException("Invalid `containerOptions` directive value: $opts [${opts.getClass().getName()}]")
+        return Collections.emptyMap()
     }
 
     /**

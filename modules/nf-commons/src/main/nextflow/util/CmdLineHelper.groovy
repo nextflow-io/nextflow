@@ -16,23 +16,29 @@
  */
 
 package nextflow.util
+
+import java.util.regex.Pattern
+
 /**
- *
+ * Implement command line parsing helpers
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CmdLineHelper {
 
-    def List<String> args
+    static private Pattern CLI_OPT = ~/--(\w+)(?:\W.*)?$|-([a-zA-Z])(?:\W.*)?$/
+
+    private List<String> args
 
     CmdLineHelper( String cmdLineToBeParsed ) {
         args = splitter(cmdLineToBeParsed ?: '')
     }
 
-    def boolean contains(String argument) {
+    private boolean contains(String argument) {
         return args.indexOf(argument) != -1
     }
 
-    def getArg( String argument ) {
+    private getArg( String argument ) {
         def pos = args.indexOf(argument)
         if( pos == -1 ) return null
 
@@ -55,7 +61,7 @@ class CmdLineHelper {
         }
     }
 
-    def asList( String argument, String splitter=',' ) {
+    private asList( String argument, String splitter=',' ) {
         def val = getArg(argument)
         if( !val ) return val
 
@@ -112,4 +118,54 @@ class CmdLineHelper {
         return result.join(' ')
     }
 
+    /**
+     * Parse command line and returns the options formatted using GNU tyle as a map object.
+     *
+     * @param cmdline
+     *      The command line as single string
+     * @return
+     *      A map object holding the option key-value pairs
+     */
+    static Map<String,String> parseGnuArgs(String cmdline) {
+        final BLANK = ' ' as char
+        final EQUALS = '=' as char
+        final result = new LinkedHashMap<String,String>()
+
+        if( !cmdline )
+            return result
+
+        final tokenizer = new QuoteStringTokenizer(cmdline, BLANK, EQUALS);
+        String opt = null
+        String last = null
+        while( tokenizer.hasNext() ) {
+            final String token = tokenizer.next()
+            if( !token || token=='--')
+                continue
+            final matcher = CLI_OPT.matcher(token)
+            if(  matcher.matches() ) {
+                if( opt ) {
+                    result.put(opt, 'true')
+                }
+                opt = matcher.group(1) ?: matcher.group(2)
+            }
+            else {
+                if( !opt ) {
+                    if( !last ) continue
+                    // append the value to the previous option
+                    def x = result[last] ? result[last] + ' ' + token : token
+                    result[last] = x
+                }
+                else {
+                    result[opt] = token
+                    last = opt
+                    opt = null
+                }
+            }
+        }
+
+        if( opt )
+            result[opt] = 'true'
+
+        return result
+    }
 }
