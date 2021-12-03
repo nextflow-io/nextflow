@@ -5,6 +5,7 @@ import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.LinuxParameters
 import com.amazonaws.services.batch.model.Tmpfs
 import com.amazonaws.services.batch.model.Ulimit
+import nextflow.util.CmdLineOptionMap
 
 /**
  * Maps task container options to AWS container properties
@@ -13,16 +14,16 @@ import com.amazonaws.services.batch.model.Ulimit
  * @see <a href="https://docs.aws.amazon.com/batch/latest/APIReference/API_ContainerProperties.html">API Container Properties</a>
  * @author Manuele Simi <manuele.simi@gmail.com>
  */
-class AWSContainerOptionsMapper {
+class AwsContainerOptionsMapper {
 
-    def options
+    final CmdLineOptionMap options
 
-    protected AWSContainerOptionsMapper(String containerOptions) {
-        options = containerOptions.trim().split("\\s+")
+    protected AwsContainerOptionsMapper(CmdLineOptionMap containerOptions) {
+        options = containerOptions
     }
 
     protected ContainerProperties addProperties(ContainerProperties containerProperties) {
-        if ( options.size() > 0 ) {
+        if ( options.hasOptions() ) {
             checkPrivileged(containerProperties)
             checkEnvVars(containerProperties)
             checkUser(containerProperties)
@@ -34,14 +35,14 @@ class AWSContainerOptionsMapper {
     }
 
     protected void checkPrivileged(ContainerProperties containerProperties) {
-        if ( findOptionWithBooleanValue('--privileged') )
+        if ( findOptionWithBooleanValue('privileged') )
             containerProperties.setPrivileged(true);
     }
 
     protected void checkEnvVars(ContainerProperties containerProperties) {
         final keyValuePairs = new ArrayList<KeyValuePair>()
-        def values = findOptionWithMultipleValues('--env')
-        values.addAll(findOptionWithMultipleValues('-e'))
+        def values = findOptionWithMultipleValues('env')
+        values.addAll(findOptionWithMultipleValues('e'))
         values.each { value ->
             final tokens = value.tokenize('=')
             keyValuePairs << new KeyValuePair().withName(tokens[0]).withValue(tokens.size() == 2 ? tokens[1] : null)
@@ -51,21 +52,21 @@ class AWSContainerOptionsMapper {
     }
 
     protected void checkUser(ContainerProperties containerProperties) {
-        def user = findOptionWithSingleValue('-u')
+        def user = findOptionWithSingleValue('u')
         if ( !user )
-            user = findOptionWithSingleValue('--user')
+            user = findOptionWithSingleValue('user')
         if ( user )
             containerProperties.setUser(user)
     }
 
     protected void checkReadOnly(ContainerProperties containerProperties) {
-        if ( findOptionWithBooleanValue('--read-only') )
+        if ( findOptionWithBooleanValue('read-only') )
             containerProperties.setReadonlyRootFilesystem(true);
     }
 
     protected void checkUlimit(ContainerProperties containerProperties) {
         final ulimits = new ArrayList<Ulimit>()
-        findOptionWithMultipleValues('--ulimit').each { value ->
+        findOptionWithMultipleValues('ulimit').each { value ->
             final tokens = value.tokenize('=')
             final limits = tokens[1].tokenize(':')
             if ( limits.size() > 1 )
@@ -82,13 +83,13 @@ class AWSContainerOptionsMapper {
         final params = new LinuxParameters()
 
         // shared Memory Size
-        def value = findOptionWithSingleValue('--shm-size')
+        def value = findOptionWithSingleValue('shm-size')
         if ( value )
             params.setSharedMemorySize(value as Integer)
 
         // tmpfs mounts, e.g --tmpfs /run:rw,noexec,nosuid,size=64
         final tmpfs = new ArrayList<Tmpfs>()
-        findOptionWithMultipleValues('--tmpfs').each { ovalue ->
+        findOptionWithMultipleValues('tmpfs').each { ovalue ->
             def matcher = ovalue =~ /^(?<path>.*):(?<options>.*?),size=(?<sizeMiB>.*)$/
             if (matcher.matches()) {
                 tmpfs << new Tmpfs().withContainerPath(matcher.group('path'))
@@ -102,17 +103,17 @@ class AWSContainerOptionsMapper {
             params.setTmpfs(tmpfs)
 
         // swap limit equal to memory plus swap
-        value = findOptionWithSingleValue('--memory-swap')
+        value = findOptionWithSingleValue('memory-swap')
         if ( value )
             params.setMaxSwap(value as Integer)
 
         // run an init inside the container
-        value = findOptionWithBooleanValue('--init')
+        value = findOptionWithBooleanValue('init')
         if ( value )
             params.setInitProcessEnabled(value)
 
         // tune container memory swappiness
-        value = findOptionWithSingleValue('--memory-swappiness')
+        value = findOptionWithSingleValue('memory-swappiness')
         if ( value )
             params.setSwappiness(value as Integer)
 
@@ -125,13 +126,7 @@ class AWSContainerOptionsMapper {
      * @return the value, if any, or empty
      */
     protected def findOptionWithSingleValue(def name) {
-        def index = options.findIndexOf({ it == name })
-        if ( index != -1 ) {
-            if ( !isValidValue(options[index + 1] as String) )
-                throw new IllegalArgumentException("Found a malformed option '${name}' for the job container")
-            return options[index + 1] as String
-        }
-        return ''
+        return options.getFirstValueOrDefault(name,'')
     }
 
     /**
@@ -140,14 +135,7 @@ class AWSContainerOptionsMapper {
      * @return the list of values
      */
     protected def findOptionWithMultipleValues(String name) {
-        final values = new ArrayList<String>()
-        options.findIndexValues{ it == name }.collect { it as Integer }
-                .each { index ->
-                    if ( !isValidValue(options[index + 1]) )
-                        throw new IllegalArgumentException("Found a malformed option ${name} for the job container")
-                    values << options[index + 1]
-                }
-        return  values
+        options.getValues(name)
     }
 
     /**
@@ -156,15 +144,6 @@ class AWSContainerOptionsMapper {
      * @return true if it exists, false otherwise
      */
     protected def findOptionWithBooleanValue(def name) {
-        options.find { it == name }
-    }
-
-    /**
-     * Checks if the value of an option is valid
-     * @param value the value to check
-     * @return true if the value is valid, false otherwise
-     */
-    protected boolean isValidValue(String value) {
-        !value.startsWith('--') && !value.startsWith('-')
+        options.getFirstValueOrDefault(name, 'false') == 'true'
     }
 }

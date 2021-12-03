@@ -7,7 +7,7 @@ import spock.lang.Specification
 /**
  * @author Manuele Simi <manuele.simi@gmail.com>
  */
-class AWSContainerOptionsMapperTest extends Specification {
+class AwsContainerOptionsMapperTest extends Specification {
 
     def 'should set env vars'() {
 
