@@ -20,6 +20,7 @@ package nextflow.script
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.transform.TupleConstructor
 import nextflow.Global
 import nextflow.Session
 
@@ -32,6 +33,15 @@ import nextflow.Session
 class ExecutionStack {
 
     static private List<ExecutionContext> stack = new ArrayList<>()
+
+    protected static List<ComponentDef> fullCallStack = new ArrayList<ComponentDef>()
+
+    @TupleConstructor
+    private static class TraceElement {
+        int depth
+        ComponentDef called
+    }
+    private static LinkedList<TraceElement> callTrace = new LinkedList<TraceElement>()
 
     static ExecutionContext current() {
         stack ? stack.get(0) : null
@@ -66,17 +76,46 @@ class ExecutionStack {
         throw new IllegalStateException("Not a valid scope object: [${c.getClass().getName()}] $this")
     }
 
+    static List<WorkflowDef> workflowStack() {
+        return (List<WorkflowDef>)(Object)stack.findAll {it instanceof WorkflowDef}
+    }
+
     static WorkflowDef workflow() {
         final ctx = current()
         ctx instanceof WorkflowDef ? ctx : null
     }
 
+    static void pushFull(ComponentDef called) {
+        callTrace.addLast(new TraceElement(fullCallStack.size(), called))
+        fullCallStack.add(called)
+    }
+
+    static void popFull() {
+        fullCallStack.pop()
+    }
+
+    static List<ComponentDef> registeredStack
+    static Throwable registeredException
+
+    static registerStackException(Throwable e) {
+        if (e !== registeredException) {
+            registeredException = e
+            e.addSuppressed(new NEXTFLOW_PIPELINE_STACK())
+            registeredStack = (List<ComponentDef>)fullCallStack.clone()
+        }
+    }
+
     static void push(ExecutionContext script) {
+        if (script instanceof ComponentDef)
+            pushFull(script)
         stack.push(script)
     }
 
     static ExecutionContext pop() {
-        stack.pop()
+        def res = stack.pop()
+        if (res instanceof ComponentDef)
+            fullCallStack.pop()
+        res
     }
 
     static int size() {
@@ -88,4 +127,20 @@ class ExecutionStack {
         stack = new ArrayList<>()
     }
 
+}
+
+@CompileStatic
+class NEXTFLOW_PIPELINE_STACK extends Throwable {
+
+    NEXTFLOW_PIPELINE_STACK() {
+        this.setStackTrace(new StackTraceElement[0])
+    }
+    @Override
+    String getMessage() {
+        String res = "\n"
+        ExecutionStack.fullCallStack.eachWithIndex {called, idx ->
+            res += "${"\t"*idx}${called.name}(${called.getClass().toString().replace("Def","")})\n"
+        }
+        res
+    }
 }

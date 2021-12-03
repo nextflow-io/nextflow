@@ -20,6 +20,8 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.runtime.InvokerHelper
 
+import static nextflow.script.ChannelOut.spreadToArray
+
 /**
  * Models an abstract module component i.e. functions, processes
  * or (sub)workflow
@@ -38,7 +40,15 @@ abstract class ComponentDef implements Cloneable {
     abstract Object invoke_a(Object[] args)
 
     Object invoke_o(Object args) {
-        invoke_a(InvokerHelper.asArray(args))
+        ExecutionStack.pushFull(this)
+        try {
+            invoke_a(InvokerHelper.asArray(args))
+        } catch(Throwable e) {
+            ExecutionStack.registerStackException(e)
+            throw e
+        } finally {
+            ExecutionStack.popFull()
+        }
     }
 
     String toString() {

@@ -17,6 +17,8 @@
 
 package nextflow
 
+import nextflow.config.ConfigRunPlan
+
 import static nextflow.Const.*
 
 import java.nio.file.Files
@@ -64,7 +66,6 @@ import nextflow.script.WorkflowMetadata
 import nextflow.trace.AnsiLogObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
-import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.Barrier
 import nextflow.util.BlockingThreadExecutorFactory
@@ -120,6 +121,16 @@ class Session implements ISession {
      * The folder where tasks temporary files are stored
      */
     Path workDir
+
+    /**
+     * Previous workdir folder to compare content outputs with
+     */
+    Path refWorkDir
+
+    /**
+     * The folder where tasks temporary files are stored
+     */
+    Map<String, ConfigRunPlan.RunPlan> runPlan
 
     /**
      * Bucket work directory for cloud based executors
@@ -337,6 +348,8 @@ class Session implements ISession {
 
         // -- init work dir
         this.workDir = ((config.workDir ?: 'work') as Path).complete()
+        this.refWorkDir = config.refWorkDir ? (config.refWorkDir as Path).complete() : null
+        this.runPlan = config.runPlan ? nextflow.config.ConfigRunPlan.parse(config.runPlan as String) : null
         this.setLibDir( config.libDir as String )
 
         // -- file porter config
@@ -1082,7 +1095,7 @@ class Session implements ISession {
         try {
             log.trace "Cleaning-up workdir"
             db = new CacheDB(uniqueId, runName).openForRead()
-            db.eachRecord { HashCode hash, TraceRecord record ->
+            db.eachRecord { HashCode hash, nextflow.trace.TraceRecord record ->
                 def deleted = db.removeTaskEntry(hash)
                 if( deleted ) {
                     // delete folder

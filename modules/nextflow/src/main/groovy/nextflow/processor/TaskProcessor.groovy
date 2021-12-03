@@ -2191,7 +2191,7 @@ class TaskProcessor {
         state.update { StateObj it -> it.incCompleted() }
     }
 
-    protected void terminateProcess() {
+    void terminateProcess() {
         log.trace "<${name}> Sending poison pills and terminating process"
         sendPoisonPill()
         session.notifyProcessTerminate(this)
