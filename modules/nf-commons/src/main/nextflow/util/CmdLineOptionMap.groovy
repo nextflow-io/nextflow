@@ -1,7 +1,7 @@
 package nextflow.util
 
 /**
- * Holder for parsed command line options
+ * Holder for parsed command line options.
  *
  * @author Manuele Simi <manuele.simi@gmail.com>
  */
@@ -55,11 +55,9 @@ class CmdLineOptionMap {
     @Override
     String toString() {
         def serialized = []
-
         options.each {
             serialized << "option{${it.key}: ${it.value.each {it}}}"
         }
-
         return "[${serialized.join(', ')}]"
     }
 }
