@@ -245,9 +245,25 @@ nxf_fs_copy() {
 nxf_fs_move() {
   local source=$1
   local target=$2
-  local basedir=$(dirname $1)
-  mkdir -p $target/$basedir
-  mv -f $source $target/$basedir
+  local basedir=$(dirname -- $source)
+  local filename=$(basename -- $source)
+  mkdir -p "$target/$basedir"
+  if [[ -L "$source" ]]
+  then
+    local realPath=$(readlink -f $source)
+    if [[ $realPath == $PWD* ]]
+    then
+        #local symlink
+        other=${realPath:((${#PWD}+1))}
+        nxf_fs_move "$other" "$target"
+    else
+        #external symlink
+        ln -s "$realPath" "$target/$basedir/$filename"
+        rm "$source"
+        return
+    fi
+  fi
+  mv -f "$source" "$target/$basedir"
 }
 
 nxf_fs_rsync() {
