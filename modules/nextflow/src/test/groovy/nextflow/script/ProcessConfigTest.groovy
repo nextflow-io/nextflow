@@ -395,6 +395,7 @@ class ProcessConfigTest extends Specification {
                 'withLabel:foo'    : [ cpus: 2 ],
                 'withLabel:foo|bar': [ disk: '100GB' ],
                 'withLabel:gpu.+'  : [ cpus: 4 ],
+                'withLabel:forMagnus'  : [ cluster: 'magnus' ],
         ]
 
         when:
@@ -438,6 +439,12 @@ class ProcessConfigTest extends Specification {
         process.cpus == 4
         process.queue == 'cn-long'
         process.size() == 2
+
+        when:
+        process = new ProcessConfig([:])
+        process.applyConfigSelectorWithLabels(settings, ['forMagnus'])
+        then:
+        process.cluster == 'magnus'
 
     }
 

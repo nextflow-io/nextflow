@@ -32,7 +32,8 @@ import nextflow.processor.TaskRun
 @Slf4j
 class SlurmExecutor extends AbstractGridExecutor {
 
-    static private Pattern SUBMIT_REGEX = ~/Submitted batch job (\d+)/
+    static private Pattern SUBMIT_REGEX = ~/Submitted batch job (\d+)\s*$/
+    static private Pattern SUBMIT_REGEX_WITH_CLUSTER = ~/Submitted batch job (\d+) on cluster (\S+)\s*$/
 
     private boolean hasSignalOpt(Map config) {
         def opts = config.clusterOptions?.toString()
@@ -82,6 +83,11 @@ class SlurmExecutor extends AbstractGridExecutor {
             result << '-p' << (task.config.queue.toString())
         }
 
+        // the requested cluster name
+        if( task.config.cluster ) {
+            result << '-M' << (task.config.cluster.toString())
+        }
+
         // -- at the end append the command script wrapped file name
         if( task.config.clusterOptions ) {
             result << task.config.clusterOptions.toString() << ''
@@ -117,8 +123,12 @@ class SlurmExecutor extends AbstractGridExecutor {
 
         for( String line : text.readLines() ) {
             def m = SUBMIT_REGEX.matcher(line)
+            def m2 = SUBMIT_REGEX_WITH_CLUSTER.matcher(line)
             if( m.find() ) {
                 return m.group(1).toString()
+            }
+            if( m2.find() ) {
+                return new JobIdOnCluster(jobId: m2.group(1).toString(), cluster: m2.group(2).toString())
             }
         }
 
@@ -126,8 +136,52 @@ class SlurmExecutor extends AbstractGridExecutor {
         def id = text.trim()
         if( id.isLong() )
             return id
-
+        def idc = id.split(/;/) // This is returned when passing --parsable to sbatch
+        if(idc.size() == 2 && idc[0].isLong())
+            return new JobIdOnCluster(jobId: idc[0], cluster: idc[1])
         throw new IllegalStateException("Invalid SLURM submit response:\n$text\n\n")
+    }
+
+    def killCommandForCluster(Optional<String> cluster, List<Object> jobId) {
+        final result = getKillCommand()
+        if(cluster.isPresent()) {
+            result.add('-M')
+            result.add(cluster.get())
+        }
+        result.addAll(jobId.collect { it.toString()})
+        return result
+    }
+
+    def execAndGetReturnValue(List<String> cmd) {
+        def proc = new ProcessBuilder(cmd).redirectErrorStream(true).start()
+        proc.waitForOrKill(10_000)
+        return proc
+    }
+
+    @Override
+    void killTask(Object jobId) {
+        List<List<String>> execList = getExecListForKill(jobId)
+        execList.collect {cmd ->
+            [cmd: cmd, proc: execAndGetReturnValue(cmd)]
+        }.findAll {
+            it.get('proc').exitValue() != 0
+        }.each {it ->
+            reportFailure(cmd: it.get('cmd'), proc: it.get('proc'))
+        }
+    }
+
+    protected List<List<String>> getExecListForKill(jobId) {
+        def jobIds = jobId instanceof Collection ? jobId : [jobId]
+        def richJobIds = jobIds.findAll { it instanceof JobIdOnCluster }
+        def byCluster = richJobIds.inject([:]) {
+            m, it -> m << [(it.cluster):  m.getOrCreate(it.cluster, []) << it.jobId]
+        }
+        def execList = byCluster.collect {
+            c, jids -> killCommandForCluster(Optional.of(c), jids)
+        }
+        def simpleJobIds = jobIds.findAll { !(it instanceof JobIdOnCluster) }
+        if(simpleJobIds) execList.add(killCommandForCluster(Optional.empty(), simpleJobIds))
+        execList
     }
 
     @Override
@@ -135,11 +189,17 @@ class SlurmExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
+        final clusterSuffix = queue && queue instanceof QueueOnCluster ? ";${queue.cluster}".toString() : ''
 
-        final result = ['squeue','--noheader','-o','%i %t', '-t', 'all']
+        final result = ['squeue','--noheader','-o',"%i${clusterSuffix} %t".toString(), '-t', 'all']
 
         if( queue )
-            result << '-p' << queue.toString()
+            if (queue instanceof QueueOnCluster) {
+                result << '-p' << queue.queueName
+                result << '-M' << queue.cluster
+            }
+            else
+                result << '-p' << queue.toString()
 
         final user = System.getProperty('user.name')
         if( user )
@@ -178,7 +238,14 @@ class SlurmExecutor extends AbstractGridExecutor {
         text.eachLine { String line ->
             def cols = line.split(/\s+/)
             if( cols.size() == 2 ) {
-                result.put( cols[0], STATUS_MAP.get(cols[1]) )
+                def jobId = cols[0].split(/;/)
+                if (jobId.size() == 2) {
+                    def jidc = new JobIdOnCluster(jobId: jobId[0], cluster: jobId[1])
+                    result.put(jidc.toString(), STATUS_MAP.get(cols[1]) )
+                }
+                else {
+                    result.put( cols[0], STATUS_MAP.get(cols[1]) )
+                }
             }
             else {
                 log.debug "[SLURM] invalid status line: `$line`"
@@ -186,5 +253,54 @@ class SlurmExecutor extends AbstractGridExecutor {
         }
 
         return result
+    }
+
+    void reportFailure(List<String> cmd, Process proc) {
+        def ret = proc.exitValue()
+        def m = """\
+                Unable to kill pending jobs
+                - cmd executed: ${cmd.join(' ')}
+                - exit status : $ret
+                - output      :
+                """
+                .stripIndent()
+        m += proc.text.indent('  ')
+        log.debug(m)
+    }
+}
+
+/**
+ * Specialises queue with cluster
+ */
+@Slf4j
+class QueueOnCluster {
+    String queueName
+    String cluster
+    @Override
+    String toString() {"${queueName}:${cluster}"}
+}
+
+/**
+ * Specialises JobId with cluster
+ */
+@Slf4j
+class JobIdOnCluster {
+    Object jobId
+    String cluster
+
+    @Override
+    String toString() {"${jobId};${cluster}"}
+
+    @Override
+    boolean equals(Object other) {
+        if(other instanceof JobIdOnCluster) {
+            return other.jobId == jobId && other.cluster == cluster
+        }
+        return false
+    }
+
+    @Override
+    int hashCode() {
+        return toString().hashCode()
     }
 }

@@ -39,7 +39,11 @@ class SlurmExecutorTest extends Specification {
         exec.parseJobId('30') == '30'
         exec.parseJobId('40\n') == '40'
         exec.parseJobId('\n50') == '50'
-        exec.parseJobId('Submitted batch job 630114 on cluster mpp2') == '630114'
+        exec.parseJobId('30;mpp2') == new JobIdOnCluster(jobId: '30', cluster: 'mpp2')
+        exec.parseJobId('40;mpp2\n') == new JobIdOnCluster(jobId: '40', cluster: 'mpp2')
+        exec.parseJobId('\n50;mpp2') == new JobIdOnCluster(jobId: '50', cluster: 'mpp2')
+        exec.parseJobId('Submitted batch job 630114 on cluster mpp2') ==
+                new JobIdOnCluster(jobId: '630114', cluster: 'mpp2')
 
         when:
         exec.parseJobId('Something else 10')
@@ -48,13 +52,28 @@ class SlurmExecutorTest extends Specification {
 
     }
 
+    def testGetExecListForKill () {
+
+        given:
+        def exec = [:] as SlurmExecutor
+
+        expect:
+        exec.getExecListForKill(123) == [['scancel','123']]
+        exec.getExecListForKill(new JobIdOnCluster(jobId: 123, cluster: 'magnus')) ==
+                [['scancel','-M', 'magnus', '123']]
+        exec.getExecListForKill([123,
+                                 new JobIdOnCluster(jobId: 123, cluster: 'magnus'),
+                                 new JobIdOnCluster(jobId: 124, cluster: 'magnus'),
+                                 new JobIdOnCluster(jobId: 123, cluster: 'zeus')]) ==
+                [['scancel','-M', 'magnus', '123', '124'], ['scancel','-M', 'zeus', '123'], ['scancel','123']]
+    }
+
     def testKill() {
 
         given:
         def exec = [:] as SlurmExecutor
         expect:
         exec.killTaskCommand(123) == ['scancel','123']
-
     }
 
     def testGetCommandLine() {
@@ -63,6 +82,42 @@ class SlurmExecutorTest extends Specification {
         def exec = [:] as SlurmExecutor
         then:
         exec.getSubmitCommandLine(Mock(TaskRun), Paths.get('/some/path/job.sh')) == ['sbatch', 'job.sh']
+    }
+
+    def getGetDirectives() {
+        setup:
+        // LSF executor
+        def executor = [:] as SlurmExecutor
+
+        // mock process
+        def proc = Mock(TaskProcessor)
+
+        // task object
+        def task = new TaskRun()
+        task.processor = proc
+        task.workDir = Paths.get('/work/path')
+        task.name = 'the task name'
+
+        when:
+        def result = []
+
+        task.config = new TaskConfig()
+        task.config.cluster = 'magnus'
+        executor.getDirectives(task, result)
+
+        then:
+        result == ['-D',
+                   '/work/path',
+                   '-J',
+                   'nf-the_task_name',
+                   '-o',
+                   '/work/path/.command.log',
+                   '--no-requeue',
+                   '',
+                   '--signal',
+                   'B:USR2@30',
+                   '-M',
+                   'magnus']
     }
 
     def testGetHeaders() {
@@ -180,6 +235,21 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -x 3
                 '''
                 .stripIndent().leftTrim()
+
+
+        when:
+        task.config = new TaskConfig()
+        task.config.cluster = 'magnus'
+        then:
+        executor.getHeaders(task) == '''
+                #SBATCH -D /work/path
+                #SBATCH -J nf-the_task_name
+                #SBATCH -o /work/path/.command.log
+                #SBATCH --no-requeue
+                #SBATCH --signal B:USR2@30
+                #SBATCH -M magnus
+                '''
+                .stripIndent().leftTrim()
     }
 
     def testWorkDirWithBlanks() {
@@ -226,13 +296,14 @@ class SlurmExecutorTest extends Specification {
                 15 F
                 4 R
                 22 S
+                21;magnus R
                 """.stripIndent().trim()
 
 
         when:
         def result = executor.parseQueueStatus(text)
         then:
-        result.size() == 7
+        result.size() == 8
         result['4'] == AbstractGridExecutor.QueueStatus.RUNNING
         result['5'] == AbstractGridExecutor.QueueStatus.PENDING
         result['6'] == AbstractGridExecutor.QueueStatus.PENDING
@@ -240,6 +311,7 @@ class SlurmExecutorTest extends Specification {
         result['14'] == AbstractGridExecutor.QueueStatus.ERROR
         result['15'] == AbstractGridExecutor.QueueStatus.ERROR
         result['22'] == AbstractGridExecutor.QueueStatus.HOLD
+        result[(new JobIdOnCluster(jobId: '21', cluster: 'magnus')).toString()] == AbstractGridExecutor.QueueStatus.RUNNING
 
     }
 
@@ -251,6 +323,8 @@ class SlurmExecutorTest extends Specification {
         usr
         exec.queueStatusCommand(null) == ['squeue','--noheader','-o','%i %t','-t','all','-u', usr]
         exec.queueStatusCommand('xxx') == ['squeue','--noheader','-o','%i %t','-t','all','-p','xxx','-u', usr]
+        exec.queueStatusCommand(new QueueOnCluster(queueName: 'xxx', cluster: 'magnus')) == [
+                'squeue','--noheader','-o','%i;magnus %t','-t','all','-p','xxx','-M','magnus','-u', usr]
 
     }
 }

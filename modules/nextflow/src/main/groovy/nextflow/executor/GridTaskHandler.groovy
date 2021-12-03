@@ -86,7 +86,8 @@ class GridTaskHandler extends TaskHandler {
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         final duration = executor.session?.getExitReadTimeout(executor.name, READ_TIMEOUT) ?: READ_TIMEOUT
         this.exitStatusReadTimeoutMillis = duration.toMillis()
-        this.queue = task.config?.queue
+        this.queue = task.config?.cluster ?
+                new QueueOnCluster(queueName: task.config?.queue, cluster: task.config?.cluster) : task.config?.queue
         this.sanityCheckInterval = duration
     }
 
@@ -395,7 +396,4 @@ class GridTaskHandler extends TaskHandler {
         trace.put('native_id', jobId)
         return trace
     }
-
-
-
 }
