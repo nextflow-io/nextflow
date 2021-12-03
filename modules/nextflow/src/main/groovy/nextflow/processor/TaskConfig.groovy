@@ -17,6 +17,8 @@
 
 package nextflow.processor
 
+import nextflow.util.CmdLineOptionMap
+
 import static nextflow.processor.TaskProcessor.*
 
 import java.nio.file.Path
@@ -412,15 +414,15 @@ class TaskConfig extends LazyMap implements Cloneable {
         return opts instanceof CharSequence ? opts.toString() : null
     }
 
-    Map getContainerOptionsMap() {
+    CmdLineOptionMap getContainerOptionsMap() {
         def opts = get('containerOptions')
         if( opts instanceof Map )
-            return opts
+            return CmdLineOptionMap.fromMap(opts)
         if( opts instanceof CharSequence )
             return CmdLineHelper.parseGnuArgs(opts.toString())
         if( opts!=null )
             throw new IllegalArgumentException("Invalid `containerOptions` directive value: $opts [${opts.getClass().getName()}]")
-        return Collections.emptyMap()
+        return CmdLineOptionMap.emptyOption()
     }
 
     /**

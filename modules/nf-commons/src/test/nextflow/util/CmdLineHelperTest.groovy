@@ -40,27 +40,27 @@ class CmdLineHelperTest extends Specification{
     @Unroll
     def 'should parse args' () {
         expect:
-        CmdLineHelper.parseGnuArgs(SOURCE)  == EXPECTED
+        CmdLineHelper.parseGnuArgs(SOURCE).toString()  == EXPECTED
 
         where:
         SOURCE              | EXPECTED
-        'a b c'             | [:]
-        'a -b c'            | [b:'c']
-        'a -b -1'           | [b:'-1']
-        '-a b -1'           | [a:'b -1']
-        "-a 'b -1'"         | [a:'b -1']
-        "-a='b -1'"         | [a:'b -1']
-        '-a "b c"'          | [a:'b c']
-        '-a="b c"'          | [a:'b c']
+        'a b c'             | '[]'
+        'a -b c'            | '[option{b: [c]}]'
+        'a -b -1'           | '[option{b: [-1]}]'
+        '-a b -1'           | '[option{a: [b, -1]}]'
+        "-a 'b -1'"         | '[option{a: [b -1]}]'
+        "-a='b -1'"         | '[option{a: [b -1]}]'
+        '-a "b c"'          | '[option{a: [b c]}]'
+        '-a="b c"'          | '[option{a: [b c]}]'
         and:
-        '--foo 1'               | [foo: '1']
-        '--foo 1 --bar 2'       | [foo: '1', bar: '2']
-        '--foo 1 2 3 --bar 4'   | [foo: '1 2 3', bar: '4']
-        '--foo 1 2 3 --bar'     | [foo: '1 2 3', bar: 'true']
-        '--foo --bar'           | [foo: 'true', bar: 'true']
+        '--foo 1'               | '[option{foo: [1]}]'
+        '--foo 1 --bar 2'       | '[option{foo: [1]}, option{bar: [2]}]'
+        '--foo 1 2 3 --bar 4'   | '[option{foo: [1, 2, 3]}, option{bar: [4]}]'
+        '--foo 1 2 3 --bar'     | '[option{foo: [1, 2, 3]}, option{bar: [true]}]'
+        '--foo --bar'           | '[option{foo: [true]}, option{bar: [true]}]'
         and:
         // single non-gnu is not capture
-        '--foo 1 -bar 2'        | [foo: '1 -bar 2']
+        '--foo 1 -bar 2'        | '[option{foo: [1, -bar, 2]}]'
     }
 
 }

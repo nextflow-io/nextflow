@@ -126,15 +126,15 @@ class CmdLineHelper {
      * @return
      *      A map object holding the option key-value pairs
      */
-    static Map<String,String> parseGnuArgs(String cmdline) {
+    static CmdLineOptionMap parseGnuArgs(String cmdline) {
         final BLANK = ' ' as char
-        final EQUALS = '=' as char
-        final result = new LinkedHashMap<String,String>()
+        //final EQUALS = '=' as char
+        final result = new CmdLineOptionMap()
 
         if( !cmdline )
             return result
 
-        final tokenizer = new QuoteStringTokenizer(cmdline, BLANK, EQUALS);
+        final tokenizer = new QuoteStringTokenizer(cmdline, BLANK);
         String opt = null
         String last = null
         while( tokenizer.hasNext() ) {
@@ -144,7 +144,7 @@ class CmdLineHelper {
             final matcher = CLI_OPT.matcher(token)
             if(  matcher.matches() ) {
                 if( opt ) {
-                    result.put(opt, 'true')
+                    result.addOption(opt,'true')
                 }
                 opt = matcher.group(1) ?: matcher.group(2)
             }
@@ -152,11 +152,11 @@ class CmdLineHelper {
                 if( !opt ) {
                     if( !last ) continue
                     // append the value to the previous option
-                    def x = result[last] ? result[last] + ' ' + token : token
-                    result[last] = x
+                    //def x = result.exists(last) result[last] ? result[last] + ' ' + token : token
+                    result.addOption(last, token)
                 }
                 else {
-                    result[opt] = token
+                    result.addOption(opt, token)
                     last = opt
                     opt = null
                 }
@@ -164,7 +164,7 @@ class CmdLineHelper {
         }
 
         if( opt )
-            result[opt] = 'true'
+            result.addOption(opt, 'true')
 
         return result
     }
