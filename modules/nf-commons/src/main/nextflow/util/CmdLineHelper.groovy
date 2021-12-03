@@ -26,7 +26,7 @@ import java.util.regex.Pattern
  */
 class CmdLineHelper {
 
-    static private Pattern CLI_OPT = ~/--(\w+)(?:\W.*)?$|-([a-zA-Z])(?:\W.*)?$/
+    static private Pattern CLI_OPT = ~/--([a-zA-Z_-]+)(?:\W.*)?$|-([a-zA-Z])(?:\W.*)?$/
 
     private List<String> args
 

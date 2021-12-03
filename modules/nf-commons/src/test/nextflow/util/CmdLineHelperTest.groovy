@@ -61,6 +61,8 @@ class CmdLineHelperTest extends Specification{
         and:
         // single non-gnu is not capture
         '--foo 1 -bar 2'        | '[option{foo: [1, -bar, 2]}]'
+        and:
+        '--foo-name 1 --bar-opt 2' | '[option{foo-name: [1]}, option{bar-opt: [2]}]'
     }
 
 }
