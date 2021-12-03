@@ -25,6 +25,7 @@ import java.nio.file.Paths
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessStageException
+import spock.lang.Ignore
 import spock.lang.Specification
 import test.TestHelper
 /**
@@ -83,6 +84,49 @@ class FilePorterTest extends Specification {
         file2.name == 'ciao.txt'
         file2.text == 'ciao mondo!'
         file2.fileSystem == FileSystems.default
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    @Ignore
+    def 'should not hang' () {
+        given:
+        def RANGE = (0..19)
+        System.setProperty('filePorter.debugDelay', '5000')
+        def folder = Files.createTempDirectory('test')
+        def session = new Session(workDir: folder, threadPool: [FileTransfer: [maxThreads: 2]])
+
+        List<Path> foreign1 = RANGE.collect { TestHelper.createInMemTempFile("hola-${it}.txt", "hola mundo ${it}") }
+        List<Path> foreign2 = RANGE.collect { TestHelper.createInMemTempFile("ciao-${it}.txt", "ciao mondo ${it}") }
+        List<Path> foreign3 = RANGE.collect { TestHelper.createInMemTempFile("helo-${it}.txt", "helo mondo ${it}") }
+
+        and:
+        def porter = new FilePorter(session)
+        def batch1 = porter.newBatch(folder)
+        foreign1.each { batch1.addToForeign(it) }
+
+        and:
+        def batch2 = porter.newBatch(folder)
+        foreign2.each { batch2.addToForeign(it) }
+
+        and:
+        def batch3 = porter.newBatch(folder)
+        foreign3.each { batch3.addToForeign(it) }
+
+        when:
+        def t1= Thread.start { porter.transfer(batch1) }
+        and: sleep(2000)
+        def t2= Thread.start { porter.transfer(batch2) }
+        and: sleep(2000)
+        def t3= Thread.start { porter.transfer(batch3) }
+
+        then:
+        noExceptionThrown()
+        and:
+        t1.join()
+        t2.join()
+        t3.join()
 
         cleanup:
         folder?.deleteDir()

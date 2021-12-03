@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -90,24 +91,20 @@ class FilePorter {
             FileTransfer transfer = stagingTransfers.get(source)
             if( transfer == null ) {
                 transfer = createFileTransfer(source, stageDir)
-                transfer.refCount = 1
                 transfer.result = submitForExecution(transfer)
                 stagingTransfers.put(source, transfer)
             }
-            else
-                transfer.refCount ++
+            // increment the ref count
+            transfer.refCount.incrementAndGet()
 
             return transfer
         }
     }
 
     protected void decOrRemove(FileTransfer action) {
-        synchronized (stagingTransfers) {
-            final key = action.source
-            assert stagingTransfers.containsKey(key)
-            if( --action.refCount == 0 ) {
-                stagingTransfers.remove(key)
-            }
+        //assert stagingTransfers.containsKey(key)
+        if( action.refCount.decrementAndGet() == 0 ) {
+            stagingTransfers.remove(action.source)
         }
     }
 
@@ -227,15 +224,18 @@ class FilePorter {
          */
         final int maxRetries
 
-        volatile int refCount
+        final AtomicInteger refCount
         volatile Future result
         private String message
+        private int debugDelay
 
         FileTransfer(Path foreignPath, Path stagePath, int maxRetries=0) {
             this.source = foreignPath
             this.target = stagePath
             this.maxRetries = maxRetries
             this.message = "Staging foreign file: ${source.toUriString()}"
+            this.refCount = new AtomicInteger(0)
+            this.debugDelay = System.getProperty('filePorter.debugDelay') as Integer ?: 0
         }
 
         @Override
@@ -285,6 +285,8 @@ class FilePorter {
                 return target
             }
             log.debug "Copying foreign file ${source.toUriString()} to work dir: ${target.toUriString()}"
+            if( debugDelay )
+                sleep ( new Random().nextInt(debugDelay) )
             return FileHelper.copyPath(source, target)
         }
 
