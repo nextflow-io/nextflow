@@ -119,16 +119,15 @@ class CmdLineHelper {
     }
 
     /**
-     * Parse command line and returns the options formatted using GNU tyle as a map object.
+     * Parse command line and returns the options and their values as a map object.
      *
      * @param cmdline
      *      The command line as single string
      * @return
-     *      A map object holding the option key-value pairs
+     *      A map object holding the option key-value(s) associations
      */
     static CmdLineOptionMap parseGnuArgs(String cmdline) {
         final BLANK = ' ' as char
-        //final EQUALS = '=' as char
         final result = new CmdLineOptionMap()
 
         if( !cmdline )
@@ -151,8 +150,6 @@ class CmdLineHelper {
             else {
                 if( !opt ) {
                     if( !last ) continue
-                    // append the value to the previous option
-                    //def x = result.exists(last) result[last] ? result[last] + ' ' + token : token
                     result.addOption(last, token)
                 }
                 else {
