@@ -17,6 +17,8 @@
 
 package nextflow.util
 
+import groovy.transform.CompileStatic
+
 import java.util.regex.Pattern
 
 /**
@@ -24,6 +26,7 @@ import java.util.regex.Pattern
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class CmdLineHelper {
 
     static private Pattern CLI_OPT = ~/--([a-zA-Z_-]+)(?:\W.*)?$|-([a-zA-Z])(?:\W.*)?$/
@@ -39,10 +42,10 @@ class CmdLineHelper {
     }
 
     private getArg( String argument ) {
-        def pos = args.indexOf(argument)
+        int pos = args.indexOf(argument)
         if( pos == -1 ) return null
 
-        def result = []
+        List<String> result = []
         for( int i=pos+1; i<args.size(); i++ ) {
             if( args[i].startsWith('-') ) {
                 break
@@ -72,12 +75,12 @@ class CmdLineHelper {
         if( val instanceof String ) {
             val = [val]
         }
-
-        for( int i=0; i<val.size(); i++ ) {
-            val[i] = val[i] ?. split(splitter)
+        List<String> vals = val as List<String>
+        for( int i=0; i<vals.size(); i++ ) {
+            vals[i] = vals[i] ?. split(splitter) as String
         }
 
-        return val.flatten()
+        return vals.flatten()
     }
 
 

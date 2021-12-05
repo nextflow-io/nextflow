@@ -1,14 +1,17 @@
 package nextflow.util
 
+import groovy.transform.CompileStatic
+
 /**
  * Holder for parsed command line options.
  *
  * @author Manuele Simi <manuele.simi@gmail.com>
  */
+@CompileStatic
 class CmdLineOptionMap {
 
-    final options = new LinkedHashMap<String, List<String>>()
-    final static instance = new CmdLineOptionMap()
+    final Map<String, List<String>> options = new LinkedHashMap<String, List<String>>()
+    final static CmdLineOptionMap instance = new CmdLineOptionMap()
 
     protected addOption(String key, String value) {
         if ( !options.containsKey(key) )
@@ -24,8 +27,8 @@ class CmdLineOptionMap {
         options.size()
     }
 
-    def getValues(String key) {
-        options.containsKey(key) ? options[key] : Collections.emptyList()
+    List<String> getValues(String key) {
+        return options.containsKey(key) ? options[key] : Collections.emptyList() as List<String>
     }
 
     def getFirstValue(String key) {

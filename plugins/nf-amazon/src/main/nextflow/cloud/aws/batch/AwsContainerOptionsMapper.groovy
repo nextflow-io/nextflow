@@ -5,6 +5,7 @@ import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.LinuxParameters
 import com.amazonaws.services.batch.model.Tmpfs
 import com.amazonaws.services.batch.model.Ulimit
+import groovy.transform.CompileStatic
 import nextflow.util.CmdLineOptionMap
 
 /**
@@ -14,6 +15,7 @@ import nextflow.util.CmdLineOptionMap
  * @see <a href="https://docs.aws.amazon.com/batch/latest/APIReference/API_ContainerProperties.html">API Container Properties</a>
  * @author Manuele Simi <manuele.simi@gmail.com>
  */
+@CompileStatic
 class AwsContainerOptionsMapper {
 
     final CmdLineOptionMap options
@@ -41,9 +43,9 @@ class AwsContainerOptionsMapper {
 
     protected void checkEnvVars(ContainerProperties containerProperties) {
         final keyValuePairs = new ArrayList<KeyValuePair>()
-        def values = findOptionWithMultipleValues('env')
+        def List<String> values = findOptionWithMultipleValues('env')
         values.addAll(findOptionWithMultipleValues('e'))
-        values.each { value ->
+        values.each { String value ->
             final tokens = value.tokenize('=')
             keyValuePairs << new KeyValuePair().withName(tokens[0]).withValue(tokens.size() == 2 ? tokens[1] : null)
         }
@@ -52,7 +54,7 @@ class AwsContainerOptionsMapper {
     }
 
     protected void checkUser(ContainerProperties containerProperties) {
-        def user = findOptionWithSingleValue('u')
+        String user = findOptionWithSingleValue('u')
         if ( !user )
             user = findOptionWithSingleValue('user')
         if ( user )
@@ -125,8 +127,8 @@ class AwsContainerOptionsMapper {
      * @param name the name of the option
      * @return the value, if any, or empty
      */
-    protected def findOptionWithSingleValue(def name) {
-        return options.getFirstValueOrDefault(name,'')
+    protected String findOptionWithSingleValue(String name) {
+        options.getFirstValueOrDefault(name,'') as String
     }
 
     /**
@@ -134,7 +136,7 @@ class AwsContainerOptionsMapper {
      * @param name the name of the option
      * @return the list of values
      */
-    protected def findOptionWithMultipleValues(String name) {
+    protected List<String> findOptionWithMultipleValues(String name) {
         options.getValues(name)
     }
 
@@ -143,7 +145,7 @@ class AwsContainerOptionsMapper {
      * @param name the name of the flag
      * @return true if it exists, false otherwise
      */
-    protected def findOptionWithBooleanValue(def name) {
-        options.getFirstValueOrDefault(name, 'false') == 'true'
+    protected boolean findOptionWithBooleanValue(String name) {
+        options.getFirstValueOrDefault(name, 'false') as Boolean
     }
 }
