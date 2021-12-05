@@ -32,7 +32,7 @@ import nextflow.extension.CH
  */
 @Slf4j
 @CompileStatic
-class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext {
+class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, ExecutionContext {
 
     private String name
 
@@ -135,33 +135,48 @@ class WorkflowDef extends BindableDef implements ChainableDef, ExecutionContext 
     }
 
     protected ChannelOut collectOutputs(List<String> emissions) {
+        // make sure feedback channel cardinality matches
+        if( feedbackChannels && feedbackChannels.size() != emissions.size() )
+            throw new ScriptRuntimeException("Workflow `$name` inputs and outputs cardinality does not match - Feedback loop is not supported"  )
+
         final channels = new LinkedHashMap<String, DataflowWriteChannel>(emissions.size())
-        for( String name : emissions ) {
-            if( !binding.hasVariable(name) )
-                throw new MissingValueException("Missing workflow output parameter: $name")
-            final obj = binding.getVariable(name)
+        for( int i=0; i<emissions.size(); i++ ) {
+            final targetName = emissions[i]
+            if( !binding.hasVariable(targetName) )
+                throw new MissingValueException("Missing workflow output parameter: $targetName")
+            final obj = binding.getVariable(targetName)
 
             if( CH.isChannel(obj) ) {
-                channels.put(name, (DataflowWriteChannel)obj)
+                channels.put(targetName, target(i, obj))
             }
 
             else if( obj instanceof ChannelOut ) {
                 if( obj.size()>1 )
-                    throw new IllegalArgumentException("Cannot emit a multi-channel output: $name")
+                    throw new IllegalArgumentException("Cannot emit a multi-channel output: $targetName")
                 if( obj.size()==0 )
-                    throw new MissingValueException("Cannot emit empty output: $name")
-                channels.put(name, obj.get(0))
+                    throw new MissingValueException("Cannot emit empty output: $targetName")
+                channels.put(targetName, target(i, obj.get(0)))
             }
 
             else {
+                if( feedbackChannels!=null )
+                    throw new ScriptRuntimeException("Workflow `$name` static outout is not allowed when using recursion - Check output: $targetName")
                 final value = CH.create(true)
                 value.bind(obj)
-                channels.put(name, value)
+                channels.put(targetName, value)
             }
         }
         return new ChannelOut(channels)
     }
-    
+
+    protected DataflowWriteChannel target(int index, Object output) {
+        if( feedbackChannels==null )
+            return (DataflowWriteChannel)output
+        // otherwise the output should be forwarded into the feedback channel
+        final feedback = feedbackChannels[index]
+        CH.getReadChannel(output).into( feedback )
+        return feedback
+    }
 
     Object run(Object[] args) {
         binding = new WorkflowBinding(owner)
