@@ -39,8 +39,8 @@ class CmdLineOptionMap {
         options.containsKey(key)
     }
 
-    def getFirstValueOrDefault(String key, String alternative) {
-        options.containsKey(key) ? options[key].get(0) : alternative
+    def getFirstValueOrDefault(String key, String alternative) throws IllegalArgumentException {
+        options.containsKey(key) && options[key].get(0) ? options[key].get(0) : alternative
     }
 
     static CmdLineOptionMap fromMap(final Map map) {
