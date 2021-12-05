@@ -68,4 +68,8 @@ class NF {
     static boolean isStrictMode() {
         NextflowMeta.instance.isStrictModeEnabled()
     }
+
+    static boolean isRecurseEnabled() {
+        NextflowMeta.instance.preview.recursion
+    }
 }
