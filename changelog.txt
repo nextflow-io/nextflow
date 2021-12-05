@@ -1,5 +1,20 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.11.0-edge - 5 Dec 2021
+- Add process and workflow recursion (PREVIEW) [9f51155e9]
+- Fix include no longer works for custom methods [6adfce099]
+- Fix Azure executor fail to cleanup jobs on completion [533448be4]
+- Fix Missing AWS SSE encryption for begin and exit task files #2452 [2c6665ef9]
+- Fix false positive detection of publishDir conflict [6ea54eaea]
+- Fix execution hang when reading empty error file [414240a1a]
+- Test with java-17 LTS [c2141e826] <Abhinav Sharma>
+- Improve plugins dev root detection [b095bee15]
+- Change Azure test pool vmType [ad5ad97ab]
+- Downgrade Google NIO library to version 0.121.2 [896ec3abd]
+- Bump nf-amazon@1.3.4 - bump nxf-s3fs@1.1.3 (6 days ago)
+- Bump nf-amazon@1.3.3 nf-google@1.1.3 nf-azure@0.11.2 [92f94bfeb]
+- Bump gradle 7.3.1 [2c34a3a27]
+
 21.10.4 - 30 Nov 2021
 - Fix include no longer works for custom functions #2469 [e17f6155d]
 - Bump nf-amazon@1.3.4 - bump nxf-s3fs@1.1.3 [be893dcb1]
