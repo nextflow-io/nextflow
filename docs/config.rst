@@ -102,7 +102,7 @@ following example::
 Scope `env`
 -----------
 
-The ``env`` scope allows the definition one or more variable that will be exported in the environment where the
+The ``env`` scope allows the definition of one or more variable that will be exported in the environment where the
 workflow tasks will be executed.
 
 Simply prefix your variable names with the ``env`` scope or surround them by curly brackets, as shown below::
