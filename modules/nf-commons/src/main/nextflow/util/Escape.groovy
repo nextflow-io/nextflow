@@ -95,4 +95,13 @@ class Escape {
             loc = loc.substring(0,loc.length()-1)
         return prefix + path(loc)
     }
+
+    static String blanks(String str) {
+        str
+                .replaceAll('\n',/\\n/)
+                .replaceAll('\t',/\\t/)
+                .replaceAll('\r',/\\r/)
+                .replaceAll('\f',/\\f/)
+
+    }
 }
