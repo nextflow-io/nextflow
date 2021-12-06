@@ -254,12 +254,17 @@ class FileHelper {
             return Paths.get(str)
         }
 
-        while(true) {
-            final result = FileSystemPathFactory.parse(str)
+        def result = FileSystemPathFactory.parse(str)
+        if( result )
+            return result
+        // note: enclose the plugin start in a sync section to
+        // prevent race conditions with the plugin status that can
+        // arise with parallel tasks requesting to access the same  file system
+        synchronized (FileHelper.class) {
+            autoStartMissingPlugin(str)
+            result = FileSystemPathFactory.parse(str)
             if( result )
                 return result
-            if( !autoStartMissingPlugin(str) )
-                break
         }
 
         asPath(toPathURI(str))
@@ -274,21 +279,19 @@ class FileHelper {
         if( SCHEME_CHECKED[scheme] )
             return false
         // find out the default plugin for the given scheme and try to load it
-        synchronized (SCHEME_CHECKED) {
-            final pluginId = PLUGINS_MAP.get(scheme)
-            if( pluginId ) try {
-                if( Plugins.startIfMissing(pluginId) ) {
-                    log.debug "Started plugin '$pluginId' required to handle file: $str"
-                    // return true to signal a new plugin was laoded
-                    return true
-                }
+        final pluginId = PLUGINS_MAP.get(scheme)
+        if( pluginId ) try {
+            if( Plugins.startIfMissing(pluginId) ) {
+                log.debug "Started plugin '$pluginId' required to handle file: $str"
+                // return true to signal a new plugin was loaded
+                return true
             }
-            catch (Exception e) {
-                log.warn ("Unable to start plugin '$pluginId' required by $str", e)
-            }
-            finally {
-                SCHEME_CHECKED[scheme] = true
-            }
+        }
+        catch (Exception e) {
+            log.warn ("Unable to start plugin '$pluginId' required by $str", e)
+        }
+        finally {
+            SCHEME_CHECKED[scheme] = true
         }
         // no change in the plugin loaded, therefore return false
         return false
@@ -308,6 +311,9 @@ class FileHelper {
         }
         else if( uri.scheme == 'http' || uri.scheme == 'https' || uri.scheme == 'ftp' ) {
             Paths.get(uri)
+        }
+        else if( uri.scheme in PLUGINS_MAP.keySet() ) {
+            throw new IllegalStateException("Missing plugin '${PLUGINS_MAP[uri.scheme]}' required to read file: $uri")
         }
         else {
             getOrCreateFileSystemFor(uri).provider().getPath(uri)
