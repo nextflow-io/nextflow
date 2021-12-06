@@ -249,6 +249,10 @@ class FileHelper {
     static Path asPath( String str ) {
         if( !str )
             throw new IllegalArgumentException("Path string cannot be empty")
+        if( str != Bolts.leftTrim(str) )
+            throw new IllegalArgumentException("Path string cannot start with blank or a special characters -- Offending path: '${Escape.blanks(str)}'")
+        if( str != Bolts.rightTrim(str) )
+            throw new IllegalArgumentException("Path string cannot ends with blank or a special characters -- Offending path: '${Escape.blanks(str)}'")
 
         if( !str.contains(':/') ) {
             return Paths.get(str)
@@ -267,7 +271,7 @@ class FileHelper {
                 return result
         }
 
-        asPath(toPathURI(str))
+        return asPath(toPathURI(str))
     }
 
     static private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
