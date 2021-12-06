@@ -546,7 +546,7 @@ class LoggerHelper {
             if( hasLeftTarget ) msg += " on $left"
             def tips = type.getMethods().collect { it.name }.closest(name)
             if( tips )
-                msg += " -- Did you mean?\n" + tips.collect { "  $it"}.join('\n')
+                msg += " -- Did you mean?\n" + tips.sort().collect { "  $it"}.join('\n')
         }
 
         return msg
