@@ -240,8 +240,8 @@ Not all the container options are supported by AWS Batch. These are the options 
         Mount a tmpfs directory (format: <path>:<options>,size=<int>), size is in MiB
     -u, --user string
         Username or UID (format: <name|uid>[:<group|gid>])
-    --ulimit ulimit
-        Ulimit options
+    --ulimit string
+        Ulimit options (format: <type>=<soft limit>[:<hard limit>])
 
 Container options must be passed in their long from for "--option value" or short form "-o value", if available.
 
