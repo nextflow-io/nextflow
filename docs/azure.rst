@@ -182,8 +182,9 @@ Pool specific settings, e.g. VM type and count, should be provided in the ``auto
    Make sure your Batch account has enough resources to satisfy the pipeline's requirements and the pool configuration.
 
 .. warning::
-   When using ``deletePoolsOnCompletion=true``, make sure the pool is completely removed by Azure Batch before re-running the pipeline.
-   The following message is returned when the pool is still shutting down ::
+   Nextflow uses the same pool Id across pipeline executions, if the pool features have not changed.
+   Therefore, when using ``deletePoolsOnCompletion=true``, make sure the pool is completely removed from the Azure Batch account
+   before re-running the pipeline. The following message is returned when the pool is still shutting down ::
 
 
     Error executing process > '<process name> (1)'
