@@ -219,11 +219,11 @@ Container Options
 =======================
 Container options are mapped into AWS job container properties.
 
-Not all the container options are accepted by AWS Batch. These are the supported container options ::
+Not all the container options are supported by AWS Batch. These are the options accepted ::
 
 
     -e, --env string
-        Set environment variables (format: name or name=value)
+        Set environment variables (format: <name> or <name>=<value>)
     --init
         Run an init inside the container that forwards signals and reaps processes
     --memory-swap int
@@ -247,11 +247,11 @@ Container options must be passed in their long from for "--option value" or shor
 
 Few examples ::
 
-  containerOptions '--tmpfs /run:rw,noexec,nosuid,size=128 --tmpfs /app:ro,size=64 --memory-swap 3240000 "
+  containerOptions '--tmpfs /run:rw,noexec,nosuid,size=128 --tmpfs /app:ro,size=64'
 
-  containerOptions '-e MYVAR55 --env MYVAR2=foo2 --env MYVAR3=foo3 --memory-swappiness 20 --shm-size 16000000
+  containerOptions '-e MYVAR1 --env MYVAR2=foo2 --env MYVAR3=foo3 --memory-swap 3240000 --memory-swappiness 20 --shm-size 16000000'
 
-  containerOptions ' --ulimit nofile=1280:2560 --ulimit nproc=16:32 --privileged'
+  containerOptions '--ulimit nofile=1280:2560 --ulimit nproc=16:32 --privileged'
 
 
 Check the `AWS doc <https://docs.aws.amazon.com/batch/latest/APIReference/API_ContainerProperties.html>`_ for further details.
