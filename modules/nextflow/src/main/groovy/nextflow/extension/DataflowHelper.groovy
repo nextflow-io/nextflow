@@ -94,7 +94,7 @@ class DataflowHelper {
         @Override
         boolean onException(final DataflowProcessor processor, final Throwable e) {
             OperatorEx.log.error("@unknown", e)
-            session.abort(e)
+            session?.abort(e)
             return true;
         }
     }
