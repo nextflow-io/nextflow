@@ -40,14 +40,14 @@ abstract class ComponentDef implements Cloneable {
     abstract Object invoke_a(Object[] args)
 
     Object invoke_o(Object args) {
-        ExecutionStack.pushFull(this)
+        int idx = ExecutionStack.pushCallTrace(this)
         try {
             invoke_a(InvokerHelper.asArray(args))
         } catch(Throwable e) {
             ExecutionStack.registerStackException(e)
             throw e
         } finally {
-            ExecutionStack.popFull()
+            ExecutionStack.popCallTrace(idx, this)
         }
     }
 

@@ -40,7 +40,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     private TaskProcessor taskProcessor
 
-    private ScriptMeta meta
+    protected ScriptMeta meta
 
     private WorkflowDef entryFlow
 

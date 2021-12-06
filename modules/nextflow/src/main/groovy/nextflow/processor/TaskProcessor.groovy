@@ -16,6 +16,8 @@
  */
 package nextflow.processor
 
+import nextflow.script.ScriptMeta
+
 import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
@@ -1264,7 +1266,10 @@ class TaskProcessor {
             return result
         }
 
-        return fail.message ?: fail.toString()
+        def cause = fail
+        while (cause.getCause() != null)
+            cause = cause.getCause()
+        return (cause.message ?: '') + '\n' + (fail.message ?: fail.toString())
     }
 
     /**

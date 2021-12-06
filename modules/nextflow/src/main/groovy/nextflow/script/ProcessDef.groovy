@@ -116,11 +116,11 @@ class ProcessDef extends BindableDef implements ChainableDef {
         this.baseName = name
         this.pendingDependencies = new ArrayList<ProcessDef>()
         this.isPending = true
+    }
 
-        void getRunPlan(action) {
-            ConfigRunPlan plan = session.runPlan.get(name)
-            plan
-        }
+    ConfigRunPlan.RunPlan getRunPlan(action) {
+        ConfigRunPlan.RunPlan plan = session.runPlan.get(name)
+        plan
     }
 
     static String stripScope(String str) {
@@ -267,7 +267,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
                 .newProcessFactory(owner)
                 .newTaskProcessor(processName, executor, processConfig, taskBody)
 
-        if (false)
+        if (true)
             requireRun()
 
         // the result channels

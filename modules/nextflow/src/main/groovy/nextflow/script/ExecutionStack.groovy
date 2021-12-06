@@ -24,6 +24,8 @@ import groovy.transform.TupleConstructor
 import nextflow.Global
 import nextflow.Session
 
+import java.nio.file.Path
+
 /**
  * Holds the current execution context
  *
@@ -34,14 +36,15 @@ class ExecutionStack {
 
     static private List<ExecutionContext> stack = new ArrayList<>()
 
-    protected static List<ComponentDef> fullCallStack = new ArrayList<ComponentDef>()
-
     @TupleConstructor
     private static class TraceElement {
-        int depth
+        int idx
         ComponentDef called
     }
-    private static LinkedList<TraceElement> callTrace = new LinkedList<TraceElement>()
+
+    protected static final int CALL_TRACE_LIMIT = 40
+    protected static int currentCallIdx = 1
+    protected static LinkedList<TraceElement> callTrace = new LinkedList<TraceElement>()
 
     static ExecutionContext current() {
         stack ? stack.get(0) : null
@@ -85,37 +88,37 @@ class ExecutionStack {
         ctx instanceof WorkflowDef ? ctx : null
     }
 
-    static void pushFull(ComponentDef called) {
-        callTrace.addLast(new TraceElement(fullCallStack.size(), called))
-        fullCallStack.add(called)
+    static int pushCallTrace(ComponentDef called) {
+        callTrace.addLast(new TraceElement(currentCallIdx, called))
+        if (callTrace.size() > CALL_TRACE_LIMIT)
+            callTrace.removeFirst()
+        return currentCallIdx++
     }
 
-    static void popFull() {
-        fullCallStack.pop()
+    static void popCallTrace(int idx, ComponentDef called) {
+        callTrace.addLast(new TraceElement(-idx, called))
+        if (callTrace.size() > CALL_TRACE_LIMIT)
+            callTrace.removeFirst()
     }
 
-    static List<ComponentDef> registeredStack
     static Throwable registeredException
 
     static registerStackException(Throwable e) {
         if (e !== registeredException) {
             registeredException = e
-            e.addSuppressed(new NEXTFLOW_PIPELINE_STACK())
-            registeredStack = (List<ComponentDef>)fullCallStack.clone()
+            def last_cause = e
+            while (last_cause.getCause() != null)
+                last_cause = last_cause.getCause()
+            last_cause.initCause(new ERROR_IN_NEXTFLOW_PIPELINE(e))
         }
     }
 
     static void push(ExecutionContext script) {
-        if (script instanceof ComponentDef)
-            pushFull(script)
         stack.push(script)
     }
 
     static ExecutionContext pop() {
-        def res = stack.pop()
-        if (res instanceof ComponentDef)
-            fullCallStack.pop()
-        res
+        stack.pop()
     }
 
     static int size() {
@@ -130,17 +133,45 @@ class ExecutionStack {
 }
 
 @CompileStatic
-class NEXTFLOW_PIPELINE_STACK extends Throwable {
+class ERROR_IN_NEXTFLOW_PIPELINE extends Throwable {
 
-    NEXTFLOW_PIPELINE_STACK() {
+    Throwable source;
+
+    ERROR_IN_NEXTFLOW_PIPELINE(Throwable source) {
+        this.source = source
         this.setStackTrace(new StackTraceElement[0])
     }
+
+    static formatCalled(ComponentDef called) {
+        "${called.name}(${called.getClass().getSimpleName().replace("Def","")})"
+    }
+
+    static recFindUserStack(Map<String,Path> scriptPaths, List builtStack, Throwable e) {
+        if (e.getCause())
+            recFindUserStack(scriptPaths, builtStack, e.getCause())
+        e.getStackTrace().each {
+            def m = scriptPaths[it.className.replaceFirst(/\$.*$/,'')]
+            if (m) {
+                builtStack.push("${it.getMethodName()}"
+                        + "(${Global.session.baseDir.toAbsolutePath().relativize(m.toAbsolutePath())}"
+                        + ":line ${it.getLineNumber()})")
+            }
+        }
+    }
+
     @Override
     String getMessage() {
-        String res = "\n"
-        ExecutionStack.fullCallStack.eachWithIndex {called, idx ->
-            res += "${"\t"*idx}${called.name}(${called.getClass().toString().replace("Def","")})\n"
+        String res = "\n\nCALL STACK:\n"
+        def stack = []
+        recFindUserStack(ScriptMeta.allScriptNames(), stack, source)
+        def last = stack.size()-1
+        stack.eachWithIndex{ def line, int i ->
+            res += '\t' + ('  ' * i) + "at ${line}" + (i == last ? '  <- HERE\n' : '\n')
         }
-        res
+        res += "\n\nCALL HISTORY:\n" + (ExecutionStack.currentCallIdx > ExecutionStack.CALL_TRACE_LIMIT ? "...\n" : "")
+        ExecutionStack.callTrace.each {
+            res += "\t[${it.idx > 0 ? '> ' : '< '}${Math.abs(it.idx)}]  ${formatCalled(it.called)}\n"
+        }
+        res += "\n"
     }
 }
