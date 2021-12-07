@@ -617,6 +617,32 @@ class ConfigParserTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should not overwrite param values with nested values of with the same name' () {
+        given:
+        def CONFIG = '''
+            params {
+              foo {
+                bar = 'bar1'
+              }
+              baz = 'baz1'
+              nested {
+                baz = 'baz2'
+                foo {
+                  bar = 'bar2'
+                }
+              }
+            }
+        '''
+
+        when:
+        def config = new ConfigParser().parse(CONFIG)
+
+        then:
+        config.params.foo.bar == 'bar1'
+        config.params.baz == 'baz1'
+        config.params.nested.baz == 'baz2'
+        config.params.nested.foo.bar == 'bar2'
+    }
 
     static class ConfigFileHandler implements HttpHandler {
 
