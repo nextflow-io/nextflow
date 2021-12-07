@@ -143,7 +143,7 @@ class ERROR_IN_NEXTFLOW_PIPELINE extends Throwable {
     }
 
     static formatCalled(ComponentDef called) {
-        "${called.name}(${called.getClass().getSimpleName().replace("Def","")})"
+        "${called.name}(${called.getClass().getSimpleName()})"
     }
 
     static recFindUserStack(Map<String,Path> scriptPaths, List builtStack, Throwable e) {
@@ -152,26 +152,35 @@ class ERROR_IN_NEXTFLOW_PIPELINE extends Throwable {
         e.getStackTrace().each {
             def m = scriptPaths[it.className.replaceFirst(/\$.*$/,'')]
             if (m) {
+                def lineNb = it.getLineNumber()
                 builtStack.push("${it.getMethodName()}"
                         + "(${Global.session.baseDir.toAbsolutePath().relativize(m.toAbsolutePath())}"
-                        + ":line ${it.getLineNumber()})")
+                        + ":line ${lineNb > 0 ? lineNb : '?'})")
             }
         }
     }
 
     @Override
     String getMessage() {
-        String res = "\n\nCALL STACK:\n"
+        String res = "\n\nCALL HISTORY:\n" +
+                (ExecutionStack.currentCallIdx > ExecutionStack.CALL_TRACE_LIMIT ? "\t..." : "")
+        int last_idx = -1
+        ExecutionStack.callTrace.each {
+            if (it.idx < 0) {
+                res += it.called == null ? "\n\t!${-it.idx} interrupted"
+                        : it.idx == -last_idx ? '}' : "\n\t}${-it.idx}"
+            } else {
+                res += "\n\t#${it.idx}  ${formatCalled(it.called)} {"
+            }
+            last_idx = it.idx
+        }
+        res += "\n\nCALL STACK:\n"
         def stack = []
         recFindUserStack(ScriptMeta.allScriptNames(), stack, source)
         def last = stack.size()-1
         stack.eachWithIndex{ def line, int i ->
             res += '\t' + ('  ' * i) + "at ${line}" + (i == last ? '  <- HERE\n' : '\n')
         }
-        res += "\n\nCALL HISTORY:\n" + (ExecutionStack.currentCallIdx > ExecutionStack.CALL_TRACE_LIMIT ? "...\n" : "")
-        ExecutionStack.callTrace.each {
-            res += "\t[${it.idx > 0 ? '> ' : '< '}${Math.abs(it.idx)}]  ${formatCalled(it.called)}\n"
-        }
-        res += "\n"
+        res += "\n\n"
     }
 }

@@ -16,6 +16,7 @@
  */
 package nextflow.processor
 
+import nextflow.script.ERROR_IN_NEXTFLOW_PIPELINE
 import nextflow.script.ScriptMeta
 
 import static nextflow.processor.ErrorStrategy.*
@@ -1235,7 +1236,9 @@ class TaskProcessor {
     private String formatErrorCause( Throwable error ) {
 
         def result = new StringBuilder()
-        result << '\nCaused by:\n'
+        result << '\nError context:'
+        result << new ERROR_IN_NEXTFLOW_PIPELINE(error).getMessage()
+        result << 'Caused by:\n'
 
         def message
         if( error instanceof ShowOnlyExceptionMessage || !error.cause )
@@ -1246,7 +1249,6 @@ class TaskProcessor {
         result
             .append('  ')
             .append(message)
-            .append('\n')
             .toString()
     }
 
@@ -1266,10 +1268,7 @@ class TaskProcessor {
             return result
         }
 
-        def cause = fail
-        while (cause.getCause() != null)
-            cause = cause.getCause()
-        return (cause.message ?: '') + '\n' + (fail.message ?: fail.toString())
+        return fail.message ?: fail.toString()
     }
 
     /**

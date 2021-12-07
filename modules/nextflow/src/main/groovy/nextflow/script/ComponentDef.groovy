@@ -43,11 +43,11 @@ abstract class ComponentDef implements Cloneable {
         int idx = ExecutionStack.pushCallTrace(this)
         try {
             invoke_a(InvokerHelper.asArray(args))
+            ExecutionStack.popCallTrace(idx, this)
         } catch(Throwable e) {
             ExecutionStack.registerStackException(e)
+            ExecutionStack.popCallTrace(idx, null)
             throw e
-        } finally {
-            ExecutionStack.popCallTrace(idx, this)
         }
     }
 
