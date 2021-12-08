@@ -102,8 +102,8 @@ while [ "$*" != "" ]; do
   if [[ "$1" == '-debug' || "$1" == '-trace' ]]; then
     args+=("$1")
 
-  elif [ "$1" == --with-yourkit ]; then 
-    JVM_ARGS+=" -agentpath:/Applications/YourKit_Java_Profiler_2014_build_14104.app/bin/mac/libyjpagent.jnilib=onexit=snapshot,tracing,dir=$PWD/snapshot "
+  elif [ "$1" == --yourkit ]; then
+    JVM_ARGS+=" -agentpath:$YOURKIT_AGENT "
   elif [ "$1" == '--with-jrebel' ]; then
     if [ "$JREBEL_HOME" ]; then
     JVM_ARGS+=" -javaagent:$JREBEL_HOME/jrebel.jar -Drebel.log.file=./jrebel-client.log"
