@@ -22,10 +22,8 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.Global
 import nextflow.Session
-import nextflow.config.ConfigRunPlan
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
-import nextflow.processor.TaskProcessor
 import nextflow.script.params.BaseInParam
 import nextflow.script.params.BaseOutParam
 import nextflow.script.params.EachInParam
@@ -83,30 +81,7 @@ class ProcessDef extends BindableDef implements ChainableDef {
     /**
      * The result of the process execution
      */
-
-    private transient ProcessChannelOut output
-
-    /**
-     * Wrapper for output to keep a reference to its process
-     */
-    class ProcessChannelOut extends ChannelOut {
-        ProcessChannelOut(OutputsList o) {
-            super(o)
-        }
-        ProcessDef getProcess() {
-            return ProcessDef.this
-        }
-    }
-    /**
-     * is the process pending? (not running)
-     */
-    private transient boolean isPending
-    /**
-     * process whose output is used by the current one but are not running
-     */
-    private transient List<ProcessDef> pendingDependencies
-
-    private transient TaskProcessor pendingTask
+    private transient ChannelOut output
 
     ProcessDef(BaseScript owner, Closure<BodyDef> body, String name ) {
         this.owner = owner
@@ -114,13 +89,6 @@ class ProcessDef extends BindableDef implements ChainableDef {
         this.simpleName = name
         this.processName = name
         this.baseName = name
-        this.pendingDependencies = new ArrayList<ProcessDef>()
-        this.isPending = true
-    }
-
-    ConfigRunPlan.RunPlan getRunPlan(action) {
-        ConfigRunPlan.RunPlan plan = session.runPlan.get(name)
-        plan
     }
 
     static String stripScope(String str) {
@@ -192,34 +160,6 @@ class ProcessDef extends BindableDef implements ChainableDef {
         return "Process `$name` declares ${expected} input ${ch} but ${actual} were specified"
     }
 
-    void requireRun() {
-        if (isPending) {
-            isPending = false
-            pendingDependencies.each { it.requireRun() }
-            pendingTask.run()
-        }
-    }
-
-    void cancelProcess() {
-        pendingTask.terminateProcess()
-    }
-
-
-    static registerPendingDependencies(Object[] args) {
-        final result = new ArrayList(args.size()*2)
-        for( int i=0; i<args.size(); i++ ) {
-            if( args[i] instanceof ChannelOut ) {
-                final list = (List)args[i]
-                for( def el : list ) {
-                    result.add(el)
-                }
-            }
-            else {
-                result.add(args[i])
-            }
-        }
-    }
-
     @Override
     Object run(Object[] args) {
         // initialise process config
@@ -255,24 +195,20 @@ class ProcessDef extends BindableDef implements ChainableDef {
         // make a copy of the output list because execution can change it
         final copyOuts = declaredOutputs.clone()
 
-        session.resumeMode
-
         // create the executor
         final executor = session
                 .executorFactory
                 .getExecutor(processName, processConfig, taskBody, session)
 
         // create processor class
-        pendingTask = session
+        session
                 .newProcessFactory(owner)
                 .newTaskProcessor(processName, executor, processConfig, taskBody)
-
-        if (true)
-            requireRun()
+                .run()
 
         // the result channels
         assert declaredOutputs.size()>0, "Process output should contains at least one channel"
-        return output = new ProcessChannelOut(copyOuts)
+        return output = new ChannelOut(copyOuts)
     }
 
 }

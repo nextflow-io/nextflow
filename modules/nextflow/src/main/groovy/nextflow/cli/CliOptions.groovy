@@ -46,8 +46,6 @@ class CliOptions {
     @Parameter(names=['-C'], description = 'Use the specified configuration file(s) overriding any defaults')
     List<String> config
 
-    @Parameter(names = ['-ref'], description = 'Compare outputs with reference workdir outputs' )
-    String refworkdir
     /**
      * the packages to trace
      */
