@@ -176,7 +176,7 @@ class FunctionalTests extends Specification {
                     alpha = "aaa"
                     delta = "ddd"
                 }
-                $foo {
+                withName: foo {
                     ext {
                         beta = "BBB"
                         delta = "DDD"
