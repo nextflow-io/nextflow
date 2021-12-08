@@ -43,7 +43,7 @@ class AwsContainerOptionsMapper {
 
     protected void checkEnvVars(ContainerProperties containerProperties) {
         final keyValuePairs = new ArrayList<KeyValuePair>()
-        def List<String> values = findOptionWithMultipleValues('env')
+        List<String> values = findOptionWithMultipleValues('env')
         values.addAll(findOptionWithMultipleValues('e'))
         values.each { String value ->
             final tokens = value.tokenize('=')
@@ -55,9 +55,9 @@ class AwsContainerOptionsMapper {
 
     protected void checkUser(ContainerProperties containerProperties) {
         String user = findOptionWithSingleValue('u')
-        if ( !user )
+        if ( !user || user.length() == 0 )
             user = findOptionWithSingleValue('user')
-        if ( user )
+        if ( user && user.length() > 0 )
             containerProperties.setUser(user)
     }
 
@@ -86,7 +86,7 @@ class AwsContainerOptionsMapper {
 
         // shared Memory Size
         def value = findOptionWithSingleValue('shm-size')
-        if ( value )
+        if ( value && value.length() > 0 )
             params.setSharedMemorySize(value as Integer)
 
         // tmpfs mounts, e.g --tmpfs /run:rw,noexec,nosuid,size=64
@@ -106,7 +106,7 @@ class AwsContainerOptionsMapper {
 
         // swap limit equal to memory plus swap
         value = findOptionWithSingleValue('memory-swap')
-        if ( value )
+        if ( value && value.length() > 0)
             params.setMaxSwap(value as Integer)
 
         // run an init inside the container
@@ -116,7 +116,7 @@ class AwsContainerOptionsMapper {
 
         // tune container memory swappiness
         value = findOptionWithSingleValue('memory-swappiness')
-        if ( value )
+        if ( value && value.length() > 0 )
             params.setSwappiness(value as Integer)
 
         containerProperties.setLinuxParameters(params)
