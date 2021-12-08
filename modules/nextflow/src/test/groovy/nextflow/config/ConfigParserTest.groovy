@@ -642,7 +642,26 @@ class ConfigParserTest extends Specification {
         config.params.baz == 'baz1'
         config.params.nested.baz == 'baz2'
         config.params.nested.foo.bar == 'bar2'
+
+        when:
+        CONFIG = '''
+            params {
+              foo.bar = 'bar1'
+              baz = 'baz1'
+              nested.baz = 'baz2'
+              nested.foo.bar = 'bar2'
+            }
+        '''
+        and:
+        config = new ConfigParser().parse(CONFIG)
+
+        then:
+        config.params.foo.bar == 'bar1'
+        config.params.baz == 'baz1'
+        config.params.nested.baz == 'baz2'
+        config.params.nested.foo.bar == 'bar2'
     }
+
 
     static class ConfigFileHandler implements HttpHandler {
 
