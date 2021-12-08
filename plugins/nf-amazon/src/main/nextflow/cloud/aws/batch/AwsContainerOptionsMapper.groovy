@@ -83,11 +83,14 @@ class AwsContainerOptionsMapper {
 
     protected void checkLinuxParameters(ContainerProperties containerProperties) {
         final params = new LinuxParameters()
+        boolean atLeastOneSet = false
 
         // shared Memory Size
         def value = findOptionWithSingleValue('shm-size')
-        if ( value && value.length() > 0 )
+        if ( value && value.length() > 0 ) {
             params.setSharedMemorySize(value as Integer)
+            atLeastOneSet = true
+        }
 
         // tmpfs mounts, e.g --tmpfs /run:rw,noexec,nosuid,size=64
         final tmpfs = new ArrayList<Tmpfs>()
@@ -101,25 +104,33 @@ class AwsContainerOptionsMapper {
                 throw new IllegalArgumentException("Found a malformed value '${ovalue}' for --tmpfs option")
             }
         }
-        if ( tmpfs.size() > 0 )
+        if ( tmpfs.size() > 0 ) {
             params.setTmpfs(tmpfs)
+            atLeastOneSet = true
+        }
 
         // swap limit equal to memory plus swap
         value = findOptionWithSingleValue('memory-swap')
-        if ( value && value.length() > 0)
+        if ( value && value.length() > 0) {
             params.setMaxSwap(value as Integer)
+            atLeastOneSet = true
+        }
 
         // run an init inside the container
-        value = findOptionWithBooleanValue('init')
-        if ( value )
-            params.setInitProcessEnabled(value)
+        if ( findOptionWithBooleanValue('init') ) {
+            params.setInitProcessEnabled(true)
+            atLeastOneSet = true
+        }
 
         // tune container memory swappiness
         value = findOptionWithSingleValue('memory-swappiness')
-        if ( value && value.length() > 0 )
+        if ( value && value.length() > 0 ) {
             params.setSwappiness(value as Integer)
+            atLeastOneSet = true
+        }
 
-        containerProperties.setLinuxParameters(params)
+        if ( atLeastOneSet )
+            containerProperties.setLinuxParameters(params)
     }
 
     /**
@@ -146,6 +157,6 @@ class AwsContainerOptionsMapper {
      * @return true if it exists, false otherwise
      */
     protected boolean findOptionWithBooleanValue(String name) {
-        options.getFirstValueOrDefault(name, 'false') as Boolean
+        options.exists(name) ? options.getFirstValue(name) as Boolean : false
     }
 }

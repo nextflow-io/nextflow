@@ -109,4 +109,50 @@ class AwsContainerOptionsMapperTest extends Specification {
         params.getSwappiness() == 90
 
     }
+
+    def 'should set exactly one param'() {
+
+        given:
+        def task = Mock(TaskRun)
+        task.getName() >> 'batch-task'
+        task.getConfig() >> new TaskConfig(containerOptions: '--privileged')
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.task >> task
+
+        when:
+        def job = handler.makeJobDefRequest('repo/any_image:latest')
+        then:
+        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+
+        def properties = job.getContainerProperties()
+        properties.getLinuxParameters() == null
+        properties.getUlimits() == null
+        properties.getPrivileged() == true
+        properties.getReadonlyRootFilesystem() == null
+        properties.getUser() == null
+
+    }
+
+    def 'should set no params'() {
+
+        given:
+        def task = Mock(TaskRun)
+        task.getName() >> 'batch-task'
+        task.getConfig() >> new TaskConfig(containerOptions: '')
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.task >> task
+
+        when:
+        def job = handler.makeJobDefRequest('repo/any_image:latest')
+        then:
+        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+
+        def properties = job.getContainerProperties()
+        properties.getLinuxParameters() == null
+        properties.getUlimits() == null
+        properties.getPrivileged() == null
+        properties.getReadonlyRootFilesystem() == null
+        properties.getUser() == null
+    }
 }
+
