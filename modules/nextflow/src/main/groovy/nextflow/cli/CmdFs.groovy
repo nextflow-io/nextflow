@@ -25,6 +25,8 @@ import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
+import nextflow.plugin.Plugins
+
 /**
  * Implements `fs` command
  *
@@ -164,6 +166,16 @@ class CmdFs extends CmdBase implements UsageAware {
             return
         }
 
+        Plugins.setup()
+        try {
+            run0()
+        }
+        finally {
+            Plugins.stop()
+        }
+    }
+
+    private void run0() {
         final cmd = findCmd(args[0])
         if( !cmd ) {
             throw new AbortOperationException("Unknow file system command: `$cmd`")
