@@ -123,6 +123,7 @@ subprojects {
         userName = github_username
         authToken = github_access_token
         skipExisting = true
+        ignore = true
     }
 
     jar {

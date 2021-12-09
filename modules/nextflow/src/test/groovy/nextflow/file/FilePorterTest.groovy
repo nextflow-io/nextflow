@@ -194,4 +194,101 @@ class FilePorterTest extends Specification {
         cleanup:
         STAGE?.deleteDir()
     }
+
+    def 'should stage a file' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def local1 = folder.resolve('hola.text')
+        def foreign1 = TestHelper.createInMemTempFile('hola.txt', 'hola mundo!')
+        and:
+        def porter = new FilePorter.FileTransfer(foreign1, local1)
+
+        when:
+        porter.stageForeignFile(foreign1, local1)
+        then:
+        local1.text == foreign1.text
+
+        when:
+        def ts = Files.getLastModifiedTime(local1)
+        and:
+        sleep 1100
+        porter.stageForeignFile(foreign1, local1)
+        then:
+        // file was not touched, since it was in the cache
+        ts == Files.getLastModifiedTime(local1)
+
+        when:
+        // breaking the local, should force a new copy
+        sleep 1100
+        local1.text = 'foo'
+        and:
+        porter.stageForeignFile(foreign1, local1)
+        then:
+        // file was not touched, since it was in the cache
+        ts != Files.getLastModifiedTime(local1)
+        local1.text == foreign1.text
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should check valid files' () {
+        given:
+        def CONTENT = 'hola mundo!'
+        def foreign1 = TestHelper.createInMemTempFile('hola.txt', CONTENT)
+        and:
+        def folder = Files.createTempDirectory('test')
+        def local1 = folder.resolve('hola.text'); local1.text = CONTENT
+        and:
+        def porter = new FilePorter.FileTransfer(foreign1, local1)
+
+        when:
+        def equals = porter.checkPathIntegrity(foreign1, local1)
+        then:
+        equals
+
+        when:
+        local1.text = 'foo'
+        and:
+        equals = porter.checkPathIntegrity(foreign1, local1)
+        then:
+        !equals
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should check valid dirs' () {
+        given:
+        def foreign1 = TestHelper.createInMemTempDir(); foreign1.resolve('sub').mkdir()
+        def f1 = foreign1.resolve('file.1'); f1.text = 'file.1'
+        def f2 = foreign1.resolve('file.22'); f2.text = 'file.22'
+        def f3 = foreign1.resolve('sub/file.333'); f3.text = 'file.333'
+        and:
+        def local1 = Files.createTempDirectory('test'); local1.resolve('sub').mkdir()
+        def l1 = local1.resolve('file.1'); l1.text = 'file.1'
+        def l2 = local1.resolve('file.22'); l2.text = 'file.22'
+        def l3 = local1.resolve('sub/file.333'); l3.text = 'file.333'
+        and:
+        def porter = new FilePorter.FileTransfer(foreign1, local1)
+
+        when:
+        def equals = porter.checkPathIntegrity(foreign1, local1)
+        then:
+        equals
+        and:
+        local1.exists()
+
+        when:
+        l3.text = 'foo' // <-- change tthe file size
+        and:
+        equals = porter.checkPathIntegrity(foreign1, local1)
+        then:
+        !equals
+        and:
+        !local1.exists()
+
+        cleanup:
+        local1?.deleteDir()
+    }
 }
