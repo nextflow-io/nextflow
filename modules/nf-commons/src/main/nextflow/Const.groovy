@@ -53,17 +53,17 @@ class Const {
     /**
      * The application version
      */
-    static public final String APP_VER = "21.11.0-edge"
+    static public final String APP_VER = "21.12.0-SNAPSHOT"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static public final long APP_TIMESTAMP = 1638727064822
+    static public final long APP_TIMESTAMP = 1638988539931
 
     /**
      * The app build number
      */
-    static public final int APP_BUILDNUM = 5649
+    static public final int APP_BUILDNUM = 5661
 
     /**
      * The app build time string relative to UTC timezone
@@ -127,7 +127,7 @@ class Const {
       http://nextflow.io
 """
 
-    static public final String S3_UPLOADER_CLASS = 'com.upplication.s3fs.S3OutputStream'
+    static public final String S3_UPLOADER_CLASS = 'com.upplication.s3fs'
 
     static public final String ROLE_WORKER = 'worker'
 
