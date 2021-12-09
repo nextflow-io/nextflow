@@ -17,26 +17,21 @@ import java.nio.file.attribute.BasicFileAttributes
 import com.amazonaws.services.s3.AmazonS3
 import groovy.util.logging.Slf4j
 import spock.lang.Ignore
-import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Specification
-import spock.lang.Timeout
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@Timeout(30)
-@Requires({System.getenv('AWS_S3FS_ACCESS_KEY')})
 class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     @Shared
     AmazonS3 s3Client
 
     def setupSpec() {
-        def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY')
-        def secretKey = System.getenv('AWS_S3FS_SECRET_KEY')
+        def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY') ?: System.getenv('AWS_ACCESS_KEY_ID')
+        def secretKey = System.getenv('AWS_S3FS_SECRET_KEY') ?: System.getenv('AWS_SECRET_ACCESS_KEY')
 //        def region = System.getenv('AWS_REGION') ?: 'eu-west-1'
 //        log.debug "Creating AWS S3 client: region=$region; accessKey=${accessKey?.substring(0,5)}.. - secretKey=${secretKey?.substring(0,5)}.. -  "
 //        final creds = new AWSCredentials() {
