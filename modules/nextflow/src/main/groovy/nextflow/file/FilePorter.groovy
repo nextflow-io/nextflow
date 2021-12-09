@@ -17,8 +17,12 @@
 
 package nextflow.file
 
+import java.nio.file.FileVisitResult
+import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
@@ -280,12 +284,69 @@ class FilePorter {
         }
 
         private Path stageForeignFile0(Path source, Path target) {
-            if( target.exists() ) {
+            if( target.exists() && checkPathIntegrity(source,target) ) {
                 log.debug "Local cache found for foreign file ${source.toUriString()} at ${target.toUriString()}"
                 return target
             }
             log.debug "Copying foreign file ${source.toUriString()} to work dir: ${target.toUriString()}"
             return FileHelper.copyPath(source, target)
+        }
+
+        private boolean checkPathIntegrity(Path source, Path target) {
+            boolean same
+            try {
+                // the file must have the same size. this is needed
+                // to prevent re-using broken files left by a previous interrupted download
+                final attrs = Files.readAttributes(source, BasicFileAttributes)
+                same = attrs.isDirectory()
+                    ? checkDirIntegrity0(source, target)
+                    : attrs.size() == Files.size(target)
+            }
+            catch (Exception e) {
+                log.debug "Unable to determine stage file integrity: source=$source; target=$target", e
+                same = false
+            }
+            finally {
+                // if the files sizes don't match, delete it
+                if( !same ) {
+                    log.debug "Invalid cahed stage path - deleting: $target"
+                    safeDelete(target)
+                }
+                return same
+            }
+        }
+
+        private boolean checkDirIntegrity0(Path sourceDir, Path targetDir) {
+
+            // traverse the sourceDir directory and for each file check exists
+            // a corresponding file in the target directory having the same size
+            boolean same = true
+            Files.walkFileTree(sourceDir, new SimpleFileVisitor<Path>() {
+                FileVisitResult visitFile(Path sourceFile, BasicFileAttributes attrs) {
+                    final rel = sourceDir.relativize(sourceFile).toString()
+
+                    if( attrs.size() != Files.size(targetDir.resolve(rel)) ) {
+                        same = false
+                        return FileVisitResult.TERMINATE
+                    }
+                    else {
+                        same = true
+                        return FileVisitResult.CONTINUE
+                    }
+                }} )
+            return same
+        }
+        
+        private void safeDelete(Path target) {
+            try {
+                if( Files.isDirectory(target) )
+                    FilesEx.deleteDir(target)
+                else
+                    Files.delete(target)
+            }
+            catch (Exception e) {
+                log.warn "Unable to delete staged file: $target", e
+            }
         }
 
         synchronized String getMessageAndClear() {
