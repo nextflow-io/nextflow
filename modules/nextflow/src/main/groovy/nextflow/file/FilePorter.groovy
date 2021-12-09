@@ -17,7 +17,10 @@
 
 package nextflow.file
 
+<<<<<<< HEAD
 import java.nio.file.FileVisitResult
+=======
+>>>>>>> 3622d5fe7 (Fix Interrupted download of staged files cause execution to fail)
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -311,7 +314,7 @@ class FilePorter {
             finally {
                 // if the files sizes don't match, delete it
                 if( !same ) {
-                    log.debug "Invalid cahed stage path - deleting: $target"
+                    log.debug "Invalid cached stage path - deleting: $target"
                     safeDelete(target)
                 }
                 return same

@@ -324,7 +324,7 @@ class FilePorterTest extends Specification {
         local1.exists()
 
         when:
-        l3.text = 'foo' // <-- change tthe file size
+        l3.text = 'foo' // <-- change the file size
         and:
         equals = porter.checkPathIntegrity(foreign1, local1)
         then:
