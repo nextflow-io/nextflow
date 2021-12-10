@@ -64,25 +64,6 @@ class CmdLineHelper {
         }
     }
 
-    private asList( String argument, String splitter=',' ) {
-        def val = getArg(argument)
-        if( !val ) return val
-
-        if( val instanceof Boolean ) {
-            return []
-        }
-
-        if( val instanceof String ) {
-            val = [val]
-        }
-        List<String> vals = val as List<String>
-        for( int i=0; i<vals.size(); i++ ) {
-            vals[i] = vals[i] ?. split(splitter) as String
-        }
-
-        return vals.flatten()
-    }
-
 
     /**
      * Given a string the splitter method separate it by blank returning a list of string.
