@@ -242,6 +242,41 @@ nxf_fs_copy() {
   cp -fRL $source $target/$basedir
 }
 
+function normalize_rel_path(){
+  #Only call for relative paths -> doesn't work with absolute paths
+  local path=$1
+  result=""
+  IFS='/' read -r -a array <<< "$path"
+  i=0
+  for (( idx=${#array[@]}-1 ; idx>=0 ; idx-- )) ; do
+    c="${array[idx]}"
+    if [ -z "$c" ] || [[ "$c" == "." ]];
+    then
+      continue
+    fi
+    if [[ "$c" == ".." ]]
+    then
+      i=$((i+1))
+    elif [ "$i" -gt "0" ];
+    then
+      i=$((i-1))
+    else
+      if [ -z "$result" ];
+      then
+        result=$c
+      else
+        result=$c/$result
+      fi
+    fi
+  done
+  while [ "$i" -gt "0" ]; do
+    i=$((i-1))
+    result="../"$result
+  done
+  unset IFS
+  echo $result
+}
+
 nxf_fs_move() {
   local source=$1
   local target=$2
@@ -250,20 +285,58 @@ nxf_fs_move() {
   mkdir -p "$target/$basedir"
   if [[ -L "$source" ]]
   then
-    local realPath=$(readlink -f $source)
-    if [[ $realPath == $PWD* ]]
+    local link=$(readlink $source)
+    if [[ "${link:0:1}" == / || "${link:0:2}" == ~[/] ]]
     then
-        #local symlink
-        other=${realPath:((${#PWD}+1))}
-        nxf_fs_move "$other" "$target"
-    else
-        #external symlink
-        ln -s "$realPath" "$target/$basedir/$filename"
-        rm "$source"
+      #Absolute Path
+      if [[ ${link:0:${#PWD}} == $PWD ]]
+      then
+        #in the same directory
+        other=${link:((${#PWD}+1))}
+        local basedirDest=$(dirname -- $other)
+        local filenameDest=$(basename -- $other)
+        ln -s "$target/$basedirDest/$filenameDest" "$target/$basedir/$filename"
+        rm $source
+        nxf_fs_move "$other" "$target" || true
         return
+      fi
+    else
+      #RelativePath
+      local normal_current_pos=`normalize_rel_path $basedir/$link`
+      if [[ "${normal_current_pos:0:3}" == "../" ]]
+      then
+        #relative path to file out of scratch dir
+        if [[ -e "$normal_current_pos" ]]; then
+          relPath=`realpath -s --relative-to="$target/$basedir/" "$normal_current_pos"`
+          rm $source
+          ln -s $relPath "$target/$basedir/$filename"
+        else
+          #We cannot fix broken links
+          continue
+        fi
+        return
+      else
+        #relative path to file in scratch dir
+        if [ ! -z "$normal_current_pos" ];
+        then
+          nxf_fs_move "$normal_current_pos" "$target" || true
+        fi
+      fi
     fi
+    mv -f "$source" "$target/$basedir"
+    return
   fi
-  mv -f "$source" "$target/$basedir"
+  if [[ -f "$source" ]]
+  then
+    mv -f "$source" "$target/$basedir"
+  else
+    for f in "$source"/*; do
+      if [[ -e "$f" ]]; then
+        nxf_fs_move "$f" "$target" || true
+      fi
+    done
+    rm -r $source
+  fi
 }
 
 nxf_fs_rsync() {
