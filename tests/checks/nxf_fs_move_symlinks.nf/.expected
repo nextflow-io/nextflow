@@ -1,7 +1,7 @@
 absoluteExternalPath TRUE
 absoluteInternalPathInDir TRUE
 absoluteInternalPath TRUE
-linkInFolder TRUEa
+linkInFolder TRUE
 relativeExternalPath TRUE
 relativeInternalPathBothInDir TRUE
 relativeInternalPathFileBothInDirButMoved TRUE
