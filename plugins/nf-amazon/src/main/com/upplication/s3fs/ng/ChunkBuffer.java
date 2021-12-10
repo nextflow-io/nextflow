@@ -34,7 +34,6 @@ public class ChunkBuffer {
     static final private Logger log = LoggerFactory.getLogger(ChunkBuffer.class);
 
     private ByteBuffer target;
-    private TransferRateMeter meter = new TransferRateMeter();
 
     private ChunkBuffer(ByteBuffer buffer) {
         this.target = buffer;
@@ -60,7 +59,6 @@ public class ChunkBuffer {
         int ch;
         while ((ch = stream.read()) != -1) {
             this.writeByte(ch);
-            meter.inc(1);
         }
     }
 
