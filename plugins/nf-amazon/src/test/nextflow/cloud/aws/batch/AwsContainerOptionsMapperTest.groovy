@@ -1,7 +1,6 @@
 package nextflow.cloud.aws.batch
 
-import nextflow.processor.TaskConfig
-import nextflow.processor.TaskRun
+import nextflow.util.CmdLineHelper
 import spock.lang.Specification
 
 /**
@@ -11,19 +10,11 @@ class AwsContainerOptionsMapperTest extends Specification {
 
     def 'should set env vars'() {
 
-        given:
-        def task = Mock(TaskRun)
-        task.getName() >> 'batch-task'
-        task.getConfig() >> new TaskConfig(containerOptions: '--env VAR_FOO -e VAR_FOO2=value2 --env VAR_FOO3=value3')
-        def handler = Spy(AwsBatchTaskHandler)
-        handler.task >> task
-
         when:
-        def job = handler.makeJobDefRequest('repo/any_image:latest')
+        def map = CmdLineHelper.parseGnuArgs('--env VAR_FOO -e VAR_FOO2=value2 --env VAR_FOO3=value3')
+        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
         then:
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
-
-        def environment = job.getContainerProperties().getEnvironment()
+        def environment = properties.getEnvironment()
         environment.size() == 3
         environment.get(0).toString() == '{Name: VAR_FOO,}'
         environment.get(1).toString() == '{Name: VAR_FOO3,Value: value3}'
@@ -32,122 +23,95 @@ class AwsContainerOptionsMapperTest extends Specification {
 
     def 'should set ulimits'() {
 
-        given:
-        def task = Mock(TaskRun)
-        task.getName() >> 'batch-task'
-        task.getConfig() >> new TaskConfig(containerOptions: '--ulimit nofile=1280:2560 --ulimit nproc=16:32')
-        def handler = Spy(AwsBatchTaskHandler)
-        handler.task >> task
-
         when:
-        def job = handler.makeJobDefRequest('repo/any_image:latest')
+        def map = CmdLineHelper.parseGnuArgs('--ulimit nofile=1280:2560 --ulimit nproc=16:32')
+        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
         then:
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
-
-        def properties = job.getContainerProperties()
         properties.getUlimits().size() == 2
         properties.getUlimits().get(0).toString() == '{HardLimit: 2560,Name: nofile,SoftLimit: 1280}'
         properties.getUlimits().get(1).toString() == '{HardLimit: 32,Name: nproc,SoftLimit: 16}'
+
     }
 
-    def 'should set privileged, readonly and user'() {
-
-        given:
-        def task = Mock(TaskRun)
-        task.getName() >> 'batch-task'
-        task.getConfig() >> new TaskConfig(containerOptions: '--privileged --read-only --user nf-user')
-        def handler = Spy(AwsBatchTaskHandler)
-        handler.task >> task
+    def 'should set user'() {
 
         when:
-        def job = handler.makeJobDefRequest('repo/any_image:latest')
+        def map = CmdLineHelper.parseGnuArgs('--user nf-user')
+        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
         then:
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        properties.getUser() == 'nf-user'
+    }
 
-        job.getContainerProperties().getPrivileged() == true
-        job.getContainerProperties().getReadonlyRootFilesystem() == true
-        job.getContainerProperties().getUser() == 'nf-user'
+    def 'should set privileged'() {
+
+        when:
+        def map = CmdLineHelper.parseGnuArgs('--privileged')
+        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
+        then:
+        properties.getPrivileged()
+    }
+
+    def 'should set readonly'() {
+
+        when:
+        def map = CmdLineHelper.parseGnuArgs('--read-only')
+        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
+        then:
+        properties.getReadonlyRootFilesystem()
     }
 
     def 'should set tmpfs linux params'() {
 
-        given:
-        def task = Mock(TaskRun)
-        task.getName() >> 'batch-task'
-        task.getConfig() >> new TaskConfig(containerOptions: '--tmpfs /run:rw,noexec,nosuid,size=64 --tmpfs /app:ro,size=128')
-        def handler = Spy(AwsBatchTaskHandler)
-        handler.task >> task
-
         when:
-        def job = handler.makeJobDefRequest('repo/any_image:latest')
+        def map = CmdLineHelper.parseGnuArgs('--tmpfs /run:rw,noexec,nosuid,size=64 --tmpfs /app:ro,size=128')
+        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
         then:
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
-
-        def params = job.getContainerProperties().getLinuxParameters()
-        params.getTmpfs().size() == 2
-        params.getTmpfs().get(0).toString() == '{ContainerPath: /run,Size: 64,MountOptions: [rw, noexec, nosuid]}'
-        params.getTmpfs().get(1).toString() == '{ContainerPath: /app,Size: 128,MountOptions: [ro]}'
+        properties.getLinuxParameters().getTmpfs().get(0).toString() == '{ContainerPath: /run,Size: 64,MountOptions: [rw, noexec, nosuid]}'
+        properties.getLinuxParameters().getTmpfs().get(1).toString() == '{ContainerPath: /app,Size: 128,MountOptions: [ro]}'
     }
 
-    def 'should set memory linux params'() {
-
-        given:
-        def task = Mock(TaskRun)
-        task.getName() >> 'batch-task'
-        task.getConfig() >> new TaskConfig(containerOptions: '--memory-swappiness 90 --memory-swap 2048 --shm-size 1024 ')
-        def handler = Spy(AwsBatchTaskHandler)
-        handler.task >> task
+    def 'should set memory swap '() {
 
         when:
-        def job = handler.makeJobDefRequest('repo/any_image:latest')
+        def map = CmdLineHelper.parseGnuArgs('--memory-swap 2048')
+        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
         then:
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
-
-        def params = job.getContainerProperties().getLinuxParameters()
-        params.getSharedMemorySize() == 1024
-        params.getMaxSwap() == 2048
-        params.getSwappiness() == 90
-
+        properties.getLinuxParameters().getMaxSwap() == 2048
     }
 
-    def 'should set exactly one param'() {
-
-        given:
-        def task = Mock(TaskRun)
-        task.getName() >> 'batch-task'
-        task.getConfig() >> new TaskConfig(containerOptions: '--privileged')
-        def handler = Spy(AwsBatchTaskHandler)
-        handler.task >> task
+    def 'should set shared memory size'() {
 
         when:
-        def job = handler.makeJobDefRequest('repo/any_image:latest')
+        def map = CmdLineHelper.parseGnuArgs('--shm-size 12048024')
+        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
         then:
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        properties.getLinuxParameters().getSharedMemorySize() == 12048024
+    }
 
-        def properties = job.getContainerProperties()
-        properties.getLinuxParameters() == null
-        properties.getUlimits() == null
-        properties.getPrivileged() == true
-        properties.getReadonlyRootFilesystem() == null
-        properties.getUser() == null
+    def 'should set memory swappiness'() {
 
+        when:
+        def map = CmdLineHelper.parseGnuArgs('--memory-swappiness 12048024')
+        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
+        then:
+        properties.getLinuxParameters().getSwappiness() == 12048024
+    }
+
+    def 'should set init'() {
+
+        when:
+        def map = CmdLineHelper.parseGnuArgs('--init')
+        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
+        then:
+        properties.getLinuxParameters().getInitProcessEnabled()
     }
 
     def 'should set no params'() {
 
-        given:
-        def task = Mock(TaskRun)
-        task.getName() >> 'batch-task'
-        task.getConfig() >> new TaskConfig(containerOptions: '')
-        def handler = Spy(AwsBatchTaskHandler)
-        handler.task >> task
-
         when:
-        def job = handler.makeJobDefRequest('repo/any_image:latest')
+        def map = CmdLineHelper.parseGnuArgs('')
+        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
         then:
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
-
-        def properties = job.getContainerProperties()
         properties.getLinuxParameters() == null
         properties.getUlimits() == null
         properties.getPrivileged() == null
