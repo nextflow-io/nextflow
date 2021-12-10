@@ -62,6 +62,9 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
+
+import static AwsContainerOptionsMapper.createContainerOpts
+
 /**
  * Implements a task handler for AWS Batch jobs
  */
@@ -451,15 +454,19 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         result.setJobDefinitionName(name)
         result.setType(JobDefinitionType.Container)
 
+        // create the container opts based on task config 
+        final containerOpts = task.getConfig().getContainerOptionsMap()
+        final container = createContainerOpts(containerOpts)
+
         // container definition
         final _1_cpus = new ResourceRequirement().withType(ResourceType.VCPU).withValue('1')
         final _1_gb = new ResourceRequirement().withType(ResourceType.MEMORY).withValue('1024')
-        final container = new ContainerProperties()
+        container
                 .withImage(image)
                 .withCommand('true')
                 // note the actual command, memory and cpus are overridden when the job is executed
                 .withResourceRequirements( _1_cpus, _1_gb )
-        AwsContainerOptionsMapper.addProperties(task.getConfig().getContainerOptionsMap(), container)
+
         final jobRole = opts.getJobRole()
         if( jobRole )
             container.setJobRoleArn(jobRole)
@@ -485,7 +492,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         // add to this list all values that has to contribute to the
         // job definition unique name creation
-        hashingTokens.addAll([name, image, awscli, volumes, jobRole])
+        final tokens = [name, image, awscli, volumes, jobRole]
+        if( containerOpts )
+            tokens.add(containerOpts)
+        hashingTokens.addAll(tokens)
 
         return result
     }

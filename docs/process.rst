@@ -1533,7 +1533,7 @@ only for a specific process e.g. mount a custom path::
   }
 
 
-.. warning:: This feature is not supported by :ref:`k8s-executor` executors.
+.. warning:: This feature is not supported by :ref:`k8s-executor` and :ref:`azurebatch-executor` executors.
 
 .. _process-cpus:
 

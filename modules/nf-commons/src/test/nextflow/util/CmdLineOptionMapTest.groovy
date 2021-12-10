@@ -63,4 +63,27 @@ class CmdLineOptionMapTest extends Specification {
         !options.emptyOption().hasOptions()
 
     }
+
+    def 'should check groovy truth' () {
+        expect:
+        // empty => evaluates to false
+        !new CmdLineOptionMap()
+        and:
+        // not empty => evaluates to true
+        new CmdLineOptionMap().addOption('foo','bar')
+    }
+
+    def 'should validate equals and hashcode' () {
+        given:
+        def map1 = CmdLineOptionMap.fromMap([foo: 'hello'])
+        def map2 = CmdLineOptionMap.fromMap([foo: 'hello'])
+        def map3 = CmdLineOptionMap.fromMap([foo: 'world'])
+
+        expect:
+        map1 == map2 
+        map1 != map3
+        and:
+        map1.hashCode() == map2.hashCode()
+        map1.hashCode() != map3.hashCode()
+    }
 }

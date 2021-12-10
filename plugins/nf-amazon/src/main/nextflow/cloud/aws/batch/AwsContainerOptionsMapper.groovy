@@ -11,25 +11,27 @@ import nextflow.util.CmdLineOptionMap
 /**
  * Maps task container options to AWS container properties
  *
- * @see <a href="https://docs.docker.com/engine/reference/commandline/run/">Docker run</a>
- * @see <a href="https://docs.aws.amazon.com/batch/latest/APIReference/API_ContainerProperties.html">API Container Properties</a>
+ * @see https://docs.docker.com/engine/reference/commandline/run/
+ * @see https://docs.aws.amazon.com/batch/latest/APIReference/API_ContainerProperties.html
+ *
  * @author Manuele Simi <manuele.simi@gmail.com>
  */
 @CompileStatic
 class AwsContainerOptionsMapper {
 
-    protected static void addProperties(CmdLineOptionMap options,
-                                        ContainerProperties containerProperties) {
-        if ( options.hasOptions() ) {
+    static ContainerProperties createContainerOpts(CmdLineOptionMap options) {
+        final containerProperties = new ContainerProperties()
+        if ( options?.hasOptions() ) {
             checkPrivileged(options, containerProperties)
             checkEnvVars(options, containerProperties)
             checkUser(options, containerProperties)
             checkReadOnly(options, containerProperties)
             checkUlimit(options, containerProperties)
             LinuxParameters params = checkLinuxParameters(options)
-            if ( params != null)
+            if ( params != null )
                 containerProperties.setLinuxParameters(params)
         }
+        return containerProperties
     }
 
     protected static void checkPrivileged(CmdLineOptionMap options, ContainerProperties containerProperties) {

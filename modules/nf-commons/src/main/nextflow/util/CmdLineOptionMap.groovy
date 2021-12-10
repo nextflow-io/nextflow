@@ -1,6 +1,10 @@
 package nextflow.util
 
+
+import com.google.common.hash.Hasher
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
 
 /**
  * Holder for parsed command line options.
@@ -8,15 +12,18 @@ import groovy.transform.CompileStatic
  * @author Manuele Simi <manuele.simi@gmail.com>
  */
 @CompileStatic
-class CmdLineOptionMap {
+@ToString(includes = 'options', includeFields = true)
+@EqualsAndHashCode(includes = 'options', includeFields = true)
+class CmdLineOptionMap implements CacheFunnel {
 
-    final Map<String, List<String>> options = new LinkedHashMap<String, List<String>>()
-    final static CmdLineOptionMap instance = new CmdLineOptionMap()
+    final private Map<String, List<String>> options = new LinkedHashMap<String, List<String>>()
+    final private static CmdLineOptionMap EMPTY = new CmdLineOptionMap()
 
-    protected addOption(String key, String value) {
+    protected CmdLineOptionMap addOption(String key, String value) {
         if ( !options.containsKey(key) )
-            options[key] = new ArrayList<String>()
+            options[key] = new ArrayList<String>(10)
         options[key].add(value)
+        return this
     }
 
     boolean hasMultipleValues(String key) {
@@ -33,6 +40,10 @@ class CmdLineOptionMap {
 
     def getFirstValue(String key) {
         getFirstValueOrDefault(key, '')
+    }
+
+    boolean asBoolean() {
+        return options.size()>0
     }
 
     boolean exists(String key) {
@@ -52,7 +63,7 @@ class CmdLineOptionMap {
     }
 
     static CmdLineOptionMap emptyOption() {
-        return instance
+        return EMPTY
     }
 
     @Override
@@ -62,5 +73,10 @@ class CmdLineOptionMap {
             serialized << "option{${it.key}: ${it.value.each {it}}}"
         }
         return "[${serialized.join(', ')}]"
+    }
+
+    @Override
+    Hasher funnel(Hasher hasher, CacheHelper.HashMode mode) {
+        return CacheHelper.hasher(hasher, options, mode)
     }
 }
