@@ -249,20 +249,29 @@ class FileHelper {
     static Path asPath( String str ) {
         if( !str )
             throw new IllegalArgumentException("Path string cannot be empty")
+        if( str != Bolts.leftTrim(str) )
+            throw new IllegalArgumentException("Path string cannot start with blank or a special characters -- Offending path: '${Escape.blanks(str)}'")
+        if( str != Bolts.rightTrim(str) )
+            throw new IllegalArgumentException("Path string cannot ends with blank or a special characters -- Offending path: '${Escape.blanks(str)}'")
 
         if( !str.contains(':/') ) {
             return Paths.get(str)
         }
 
-        while(true) {
-            final result = FileSystemPathFactory.parse(str)
+        def result = FileSystemPathFactory.parse(str)
+        if( result )
+            return result
+        // note: enclose the plugin start in a sync section to
+        // prevent race conditions with the plugin status that can
+        // arise with parallel tasks requesting to access the same  file system
+        synchronized (FileHelper.class) {
+            autoStartMissingPlugin(str)
+            result = FileSystemPathFactory.parse(str)
             if( result )
                 return result
-            if( !autoStartMissingPlugin(str) )
-                break
         }
 
-        asPath(toPathURI(str))
+        return asPath(toPathURI(str))
     }
 
     static private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
@@ -274,21 +283,19 @@ class FileHelper {
         if( SCHEME_CHECKED[scheme] )
             return false
         // find out the default plugin for the given scheme and try to load it
-        synchronized (SCHEME_CHECKED) {
-            final pluginId = PLUGINS_MAP.get(scheme)
-            if( pluginId ) try {
-                if( Plugins.startIfMissing(pluginId) ) {
-                    log.debug "Started plugin '$pluginId' required to handle file: $str"
-                    // return true to signal a new plugin was laoded
-                    return true
-                }
+        final pluginId = PLUGINS_MAP.get(scheme)
+        if( pluginId ) try {
+            if( Plugins.startIfMissing(pluginId) ) {
+                log.debug "Started plugin '$pluginId' required to handle file: $str"
+                // return true to signal a new plugin was loaded
+                return true
             }
-            catch (Exception e) {
-                log.warn ("Unable to start plugin '$pluginId' required by $str", e)
-            }
-            finally {
-                SCHEME_CHECKED[scheme] = true
-            }
+        }
+        catch (Exception e) {
+            log.warn ("Unable to start plugin '$pluginId' required by $str", e)
+        }
+        finally {
+            SCHEME_CHECKED[scheme] = true
         }
         // no change in the plugin loaded, therefore return false
         return false
@@ -308,6 +315,9 @@ class FileHelper {
         }
         else if( uri.scheme == 'http' || uri.scheme == 'https' || uri.scheme == 'ftp' ) {
             Paths.get(uri)
+        }
+        else if( uri.scheme in PLUGINS_MAP.keySet() ) {
+            throw new IllegalStateException("Missing plugin '${PLUGINS_MAP[uri.scheme]}' required to read file: $uri")
         }
         else {
             getOrCreateFileSystemFor(uri).provider().getPath(uri)

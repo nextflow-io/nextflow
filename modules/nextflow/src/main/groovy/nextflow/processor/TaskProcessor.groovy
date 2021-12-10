@@ -127,7 +127,11 @@ class TaskProcessor {
 
     final private static Pattern QUESTION_MARK = ~/(\?+)/
 
-    final private boolean invalidateCacheOnTaskDirectiveChange = System.getenv("NXF_ENABLE_CACHE_INVALIDATION_ON_TASK_DIRECTIVE_CHANGE")=='true'
+    @Memoized
+    static boolean getInvalidateCacheOnTaskDirectiveChange() {
+        final value = System.getenv("NXF_ENABLE_CACHE_INVALIDATION_ON_TASK_DIRECTIVE_CHANGE")
+        return value==null || value =='true'
+    }
 
     /**
      * Keeps track of the task instance executed by the current thread

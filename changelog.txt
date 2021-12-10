@@ -1,5 +1,8 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.10.5 - 8 Dec 2021
+- Fix race condition on plugin autoload status [73a0893ce]
+
 21.11.0-edge - 5 Dec 2021
 - Add process and workflow recursion (PREVIEW) [9f51155e9]
 - Fix include no longer works for custom methods [6adfce099]

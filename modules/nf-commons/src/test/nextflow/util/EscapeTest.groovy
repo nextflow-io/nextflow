@@ -20,6 +20,7 @@ package nextflow.util
 import java.nio.file.Paths
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -82,4 +83,16 @@ class EscapeTest extends Specification {
         Escape.cli('nextflow','--foo','a[!b-c]') == "nextflow --foo 'a[!b-c]'"
     }
 
+    @Unroll
+    def 'should escape blanks' () {
+        expect:
+        Escape.blanks(STR) == EXPECT
+        where:
+        STR         | EXPECT
+        'foo '      | 'foo '
+        'foo\n'     | 'foo\\n'
+        'foo\t'     | 'foo\\t'
+        'foo\f'     | 'foo\\f'
+        'foo\r'     | 'foo\\r'
+    }
 }

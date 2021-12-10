@@ -160,12 +160,6 @@ jobs run by your pipeline. By default it only uses 1 compute node of ``Standard_
 The pool is not removed when the pipeline execution terminates, unless the configuration setting ``deletePoolsOnCompletion=true``
 is added in your pipeline configuration file.
 
-.. warning::
-    Don't forget to clean up the Batch pools to avoid in extra charges in the Batch account or use the auto scaling feature.
-
-.. warning::
-   Make sure your Batch account has enough resources to satisfy the pipeline's requirements and the pool configuration.
-
 Pool specific settings, e.g. VM type and count, should be provided in the ``auto`` pool configuration scope, e.g. ::
 
     azure {
@@ -179,6 +173,23 @@ Pool specific settings, e.g. VM type and count, should be provided in the ``auto
         }
     }
 
+
+
+.. warning::
+    Don't forget to clean up the Batch pools to avoid in extra charges in the Batch account or use the auto scaling feature.
+
+.. warning::
+   Make sure your Batch account has enough resources to satisfy the pipeline's requirements and the pool configuration.
+
+.. warning::
+   Nextflow uses the same pool Id across pipeline executions, if the pool features have not changed.
+   Therefore, when using ``deletePoolsOnCompletion=true``, make sure the pool is completely removed from the Azure Batch account
+   before re-running the pipeline. The following message is returned when the pool is still shutting down ::
+
+
+    Error executing process > '<process name> (1)'
+    Caused by:
+        Azure Batch pool '<pool name>' not in active state
 
 Named pools
 -------------
