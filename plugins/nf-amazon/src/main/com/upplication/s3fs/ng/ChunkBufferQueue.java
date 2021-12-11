@@ -15,25 +15,13 @@
  *
  */
 
-package com.upplication.s3fs.ng
+package com.upplication.s3fs.ng;
 
-import com.upplication.s3fs.experiment.TransferRateMeter
-import spock.lang.Specification
+import java.util.concurrent.PriorityBlockingQueue;
+
 /**
- *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class TransferRateMeterTest extends Specification {
+public class ChunkBufferQueue extends PriorityBlockingQueue<ChunkBuffer> {
 
-    def 'should compute rate' () {
-        given:
-        def meter = new TransferRateMeter()
-
-        when:
-        def t = Thread.start { 300.times { index -> sleep 100; meter.inc(10_000) } }
-        t.join()
-        then:
-        noExceptionThrown()
-
-    }
 }

@@ -17,7 +17,7 @@
 
 package com.upplication.s3fs.ng
 
-import com.upplication.s3fs.ng.ChunkedInputStream
+
 import spock.lang.Specification
 
 /**
@@ -36,9 +36,9 @@ class ChunkedInputStreamTest extends Specification {
         def stream = new ChunkedInputStream(len)
 
         when:
-        stream.offer(chunk1);
-        stream.offer(chunk2);
-        stream.offer(chunk3);
+        stream.add(chunk1);
+        stream.add(chunk2);
+        stream.add(chunk3);
 
         then:
         stream.text == '''\
@@ -58,9 +58,9 @@ class ChunkedInputStreamTest extends Specification {
         def stream = new ChunkedInputStream(len)
 
         when:
-        Thread.start { sleep 100; stream.offer(chunk1) }
-        Thread.start { sleep 200; stream.offer(chunk2) }
-        Thread.start { sleep 300; stream.offer(chunk3) }
+        Thread.start { sleep 100; stream.add(chunk1) }
+        Thread.start { sleep 200; stream.add(chunk2) }
+        Thread.start { sleep 300; stream.add(chunk3) }
 
         then:
         stream.text == '''\
@@ -87,7 +87,7 @@ class ChunkedInputStreamTest extends Specification {
         def stream = new ChunkedInputStream(len)
 
         when:
-        Thread.start { sleep 100; stream.offer(chunk1) }
+        Thread.start { sleep 100; stream.add(chunk1) }
         Thread.start { sleep 200; stream.throwError(new IOException("Something break")) }
         and:
         println stream.text
