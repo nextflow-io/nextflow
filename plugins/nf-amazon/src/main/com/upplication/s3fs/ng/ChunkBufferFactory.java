@@ -50,7 +50,7 @@ public class ChunkBufferFactory {
     public ChunkBuffer create(int index) throws InterruptedException {
         int it=0;
         while( true ) {
-            if( (it+1) % 10 == 0 )
+            if( (it+1) % 30 == 0 )
                 log.debug("Waiting for a download chunk buffer to become available - Consider to decrease the download workers or increase download buffer capacity");
             ChunkBuffer result = it++==0 ? pool.poll() : pool.poll(1, TimeUnit.SECONDS);
             if( result != null ) {
@@ -64,7 +64,7 @@ public class ChunkBufferFactory {
     }
 
     void giveBack(ChunkBuffer buffer) {
-        pool.offer(buffer);
+        pool.add(buffer);
     }
 
 }
