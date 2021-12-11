@@ -197,7 +197,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         then:
         task.getConfig() >> new TaskConfig(containerOptions: [entrypoint:null])
         and:
-        req.entryPoint == null
+        req.entryPoint == GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT
 
     }
 
@@ -265,7 +265,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         then:
         task.getConfig() >> new TaskConfig(containerOptions: [entrypoint:null])
         and:
-        req.entryPoint == null
+        req.entryPoint == GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT
 
     }
 
