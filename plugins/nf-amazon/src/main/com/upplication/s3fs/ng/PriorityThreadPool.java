@@ -52,16 +52,16 @@ public class PriorityThreadPool extends ThreadPoolExecutor {
     @Override
     protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
         RunnableFuture<T> task = super.newTaskFor(callable);
-        return callable instanceof PriorityCallable
-                ? new PriorityAwareFuture<T>(task, ((PriorityCallable<T>) callable).getPriority())
-                : task;
+        if( callable instanceof PriorityCallable )
+            return new PriorityAwareFuture<T>(task, ((PriorityCallable<T>) callable).getPriority());
+        throw new IllegalArgumentException("PriorityThreadPool task must subclass PriorityCallable or PriorityRunnable class - offending task: " + callable);
     }
 
     protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
         RunnableFuture<T> task = super.newTaskFor(runnable, value);
-        return task instanceof PriorityCallable
-                ? new PriorityAwareFuture<T>(task, ((PriorityRunnable) runnable).getPriority())
-                : task;
+        if( runnable instanceof PriorityRunnable )
+            return new PriorityAwareFuture<T>(task, ((PriorityRunnable) runnable).getPriority());
+        throw new IllegalArgumentException("PriorityThreadPool task must subclass PriorityCallable or PriorityRunnable class - offending task: " + runnable);
     }
 
     static ThreadPoolExecutor create(String name, int maxThreads, int maxQueue) {

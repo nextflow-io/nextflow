@@ -1342,6 +1342,10 @@ class Session implements ISession {
             final max = maxAwait.millis
             final t0 = System.currentTimeMillis()
             // start shutdown process
+            if( aborted ) {
+                pool.shutdownNow()
+                return
+            }
             pool.shutdown()
             // wait for ongoing file transfer to complete
             int count=0

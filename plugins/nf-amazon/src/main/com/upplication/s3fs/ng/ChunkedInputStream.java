@@ -33,7 +33,7 @@ public class ChunkedInputStream extends InputStream  {
     final private long length;
     private long count;
     private ChunkBuffer buffer;
-    private BlockingQueue<ChunkBuffer> chunks = new LinkedBlockingQueue<>();
+    private final BlockingQueue<ChunkBuffer> chunks = new LinkedBlockingQueue<>();
     private volatile IOException error;
     private int nextIndex;
 
