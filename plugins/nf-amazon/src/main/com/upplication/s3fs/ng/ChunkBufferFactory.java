@@ -49,7 +49,7 @@ public class ChunkBufferFactory {
 
     public ChunkBuffer create(int index) throws InterruptedException {
         int it=0;
-        while( true ) {
+        while( !Thread.currentThread().isInterrupted() ) {
             if( (it+1) % 30 == 0 )
                 log.debug("Waiting for a download chunk buffer to become available - Consider to decrease the download workers or increase download buffer capacity");
             ChunkBuffer result = it++==0 ? pool.poll() : pool.poll(1, TimeUnit.SECONDS);
@@ -61,6 +61,7 @@ public class ChunkBufferFactory {
                 return new ChunkBuffer(this,chunkSize,index);
             }
         }
+        throw new InterruptedException("Chunk download was interrupted");
     }
 
     void giveBack(ChunkBuffer buffer) {

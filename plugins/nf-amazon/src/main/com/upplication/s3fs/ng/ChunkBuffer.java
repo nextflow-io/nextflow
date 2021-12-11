@@ -64,7 +64,7 @@ public class ChunkBuffer implements Comparable<ChunkBuffer> {
 
     void fill(InputStream stream) throws IOException {
         int ch;
-        while ((ch = stream.read()) != -1) {
+        while ((ch = stream.read())!=-1 && !Thread.currentThread().isInterrupted()) {
             this.writeByte(ch);
         }
     }

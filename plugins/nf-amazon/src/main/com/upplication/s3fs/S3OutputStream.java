@@ -611,11 +611,14 @@ public final class S3OutputStream extends OutputStream {
     /**
      * Shutdown the executor and clear the singleton
      */
-    public static synchronized void shutdownExecutor() {
+    public static synchronized void shutdownExecutor(boolean hard) {
         log.trace("Uploader shutdown -- Executor: {}", executorSingleton);
 
         if( executorSingleton != null ) {
-            executorSingleton.shutdown();
+            if( hard )
+                executorSingleton.shutdownNow();
+            else
+                executorSingleton.shutdown();
             log.trace("Uploader await completion");
             awaitExecutorCompletion();
             executorSingleton = null;
@@ -628,7 +631,7 @@ public final class S3OutputStream extends OutputStream {
             executorSingleton.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
         }
         catch (InterruptedException e) {
-            log.trace("Executor await interrupted -- Cause: {}", e.getMessage());
+            Thread.currentThread().interrupt();
         }
     }
 }

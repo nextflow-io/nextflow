@@ -96,20 +96,23 @@ public class S3ParallelDownload {
         return result;
     }
 
-    private void shutdown0() {
-        executor.shutdown();
+    private void shutdown0(boolean hard) {
+        if( hard )
+            executor.shutdownNow();
+        else
+            executor.shutdown();
         try {
             executor.awaitTermination(1, TimeUnit.HOURS);
         }
         catch (InterruptedException e) {
-            log.debug("Thread pool await termination was interrupted", e);
+            Thread.currentThread().interrupt();
         }
     }
 
-    static public void shutdown() {
+    static public void shutdown(boolean hard) {
         log.debug("Shutdown S3 downloader");
         for( S3ParallelDownload it : instances )  {
-            it.shutdown0();
+            it.shutdown0(hard);
         }
         log.debug("Shutdown S3 downloader - done");
     }
@@ -165,15 +168,18 @@ public class S3ParallelDownload {
                         result.fill(stream);
                     }
                     catch (Throwable e) {
-                        log.debug("Failed to download chunk index={}; range={}..{}; path={}", chunkIndex, start, end, path);
-                        throw e;
+                        String msg = String.format("Failed to download chunk index=%s; range=%s..%s; path=%s", chunkIndex, start, end, path);
+                        throw new IOException(msg, e);
                     }
                     log.trace("Downloaded chunk index={}; range={}..{}; path={}", chunkIndex, start, end, path);
                     // return it
                     chunkedStream.add(result);
                 }
-                catch (IOException | InterruptedException e) {
-                    throw new RuntimeException(e);
+                catch (IOException e) {
+                    chunkedStream.throwError(e);
+                }
+                catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
             }
         };
