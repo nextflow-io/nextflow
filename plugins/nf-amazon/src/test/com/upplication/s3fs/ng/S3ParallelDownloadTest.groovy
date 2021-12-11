@@ -106,4 +106,19 @@ class S3ParallelDownloadTest extends Specification {
         result.size()==3
 
     }
+
+    def 'validate priority index' () {
+        expect:
+        S3ParallelDownload.priority(0,0) == 0
+        S3ParallelDownload.priority(0,1) == 1
+        S3ParallelDownload.priority(0,2) == 2
+        and:
+        S3ParallelDownload.priority(1,0) == 65536
+        S3ParallelDownload.priority(1,1) == 65537
+        S3ParallelDownload.priority(1,2) == 65538
+        and:
+        S3ParallelDownload.priority(2,0) == (65536 * 2)
+        S3ParallelDownload.priority(2,1) == (65536 * 2) +1
+        S3ParallelDownload.priority(2,2) == (65536 * 2) +2
+    }
 }
