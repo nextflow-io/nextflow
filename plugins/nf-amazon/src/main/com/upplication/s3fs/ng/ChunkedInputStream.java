@@ -35,20 +35,22 @@ public class ChunkedInputStream extends InputStream  {
     private ChunkBuffer buffer;
     private BlockingQueue<ChunkBuffer> chunks = new LinkedBlockingQueue<>();
     private volatile IOException error;
+    private int nextIndex;
 
     public ChunkedInputStream(long length) {
         this.length = length;
     }
 
-    public void offer(byte[] buffer) {
+    public void add(byte[] buffer) {
         if( buffer.length>0 ) {
             // skip empty chunks
             chunks.add(ChunkBuffer.wrap(buffer));
         }
     }
 
-    public void offer(ChunkBuffer buffer) {
-        chunks.add(buffer);
+    public void add(ChunkBuffer buffer) throws InterruptedException {
+        buffer.makeReadable();
+        chunks.put(buffer);
     }
 
     /**
@@ -63,7 +65,11 @@ public class ChunkedInputStream extends InputStream  {
             throw error;
         if( count == length )
             return -1;
-        if( buffer == null || !buffer.hasRemaining() ) {
+        if( buffer == null ) {
+            buffer = takeBuffer();
+        }
+        else if( !buffer.hasRemaining() ) {
+            buffer.release();
             buffer = takeBuffer();
         }
         count++;
@@ -72,13 +78,20 @@ public class ChunkedInputStream extends InputStream  {
 
     private ChunkBuffer takeBuffer() throws IOException {
         try {
-            ChunkBuffer result;
-            do {
-                result = chunks.poll(1, TimeUnit.SECONDS);
+            while( true ) {
                 if( error != null )
                     throw error;
-            } while( result==null );
-            return result;
+
+                ChunkBuffer buffer = chunks.poll(1, TimeUnit.SECONDS);
+                if( buffer == null )
+                    continue;
+                if( buffer.getIndex() != nextIndex ) {
+                    chunks.add(buffer);
+                    continue;
+                }
+                nextIndex++;
+                return buffer;
+            }
         }
         catch (InterruptedException e) {
             throw new RuntimeException("Chunked stream was interrupted", e);

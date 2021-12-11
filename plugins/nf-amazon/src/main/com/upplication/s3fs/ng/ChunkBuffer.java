@@ -21,30 +21,37 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * Hold a buffer for transfer a remote object chunk
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public class ChunkBuffer {
-
-    static final private Logger log = LoggerFactory.getLogger(ChunkBuffer.class);
+public class ChunkBuffer implements Comparable<ChunkBuffer> {
 
     private ByteBuffer target;
 
+    private final ChunkBufferFactory owner;
+
+    private volatile int index;
+
+    ChunkBuffer(ChunkBufferFactory owner, int capacity, int index) {
+        this.owner = owner;
+        this.target = ByteBuffer.allocateDirect(capacity);
+        this.index = index;
+    }
+
     private ChunkBuffer(ByteBuffer buffer) {
         this.target = buffer;
+        this.owner = null;
     }
 
-    public static ChunkBuffer create(int capacity) {
-        return new ChunkBuffer(ByteBuffer.allocateDirect(capacity));
+    ChunkBuffer withIndex(int index) {
+        this.index = index;
+        return this;
     }
 
-    void clear() {
-        target.clear();
+    int getIndex() {
+        return index;
     }
 
     int getByte() {
@@ -62,8 +69,12 @@ public class ChunkBuffer {
         }
     }
 
-    void flip() {
+    void makeReadable() {
         target.flip();
+    }
+
+    void clear() {
+        target.clear();
     }
 
     boolean hasRemaining() {
@@ -71,12 +82,17 @@ public class ChunkBuffer {
     }
 
     public void release() {
-        // return this buffer to teh buffer pool
-        target = null;
+        if( owner!=null )
+            owner.giveBack(this);
+
     }
 
     public static ChunkBuffer wrap(byte[] data) {
         return new ChunkBuffer(ByteBuffer.wrap(data));
     }
 
+    @Override
+    public int compareTo(ChunkBuffer other) {
+        return Integer.compare(index, other.index);
+    }
 }
