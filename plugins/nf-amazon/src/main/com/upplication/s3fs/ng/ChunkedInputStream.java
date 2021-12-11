@@ -19,6 +19,7 @@ package com.upplication.s3fs.ng;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -78,7 +79,7 @@ public class ChunkedInputStream extends InputStream  {
 
     private ChunkBuffer takeBuffer() throws IOException {
         try {
-            while( true ) {
+            while( !Thread.currentThread().isInterrupted() ) {
                 if( error != null )
                     throw error;
 
@@ -92,9 +93,10 @@ public class ChunkedInputStream extends InputStream  {
                 nextIndex++;
                 return buffer;
             }
+            throw new InterruptedIOException("Chunked stream was interrupted");
         }
         catch (InterruptedException e) {
-            throw new RuntimeException("Chunked stream was interrupted", e);
+            throw new InterruptedIOException("Chunked stream got interrupted exception");
         }
     }
 

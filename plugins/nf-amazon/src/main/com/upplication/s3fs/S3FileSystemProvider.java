@@ -956,8 +956,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
     }
 
 
-    public static void shutdown() {
-		S3OutputStream.shutdownExecutor();
-		S3ParallelDownload.shutdown();
+    public static void shutdown(boolean hard) {
+		S3OutputStream.shutdownExecutor(hard);
+		S3ParallelDownload.shutdown(hard);
 	}
 }
