@@ -48,7 +48,7 @@ public class S3ParallelDownload {
     private int chunkSize = chunkSize();
     private int workers = numWorkers();
     private MemoryUnit bufferMaxMem = bufferMaxSize();
-    private int queueSize = 10_000;
+    private int queueSize = queueSize();
     private ThreadPoolExecutor executor;
     private ChunkBufferFactory bufferFactory;
     private static List<S3ParallelDownload> instances = new ArrayList<>(10);
@@ -87,7 +87,7 @@ public class S3ParallelDownload {
         this.executor = PriorityThreadPool.create("S3-downloader", workers, queueSize);
         int poolCapacity = (int)(bufferMaxMem.toBytes() / chunkSize);
         this.bufferFactory = new ChunkBufferFactory(chunkSize, poolCapacity);
-        log.debug("Creating S3 download thread pool: workers={}; chunkSize={}; queueSize={}; max-mem={}; buffers={}", workers, chunkSize, queueSize, bufferMaxMem, poolCapacity);
+        log.debug("Creating S3 download thread pool: workers={}; chunkSize={}; queueSize={}; max-mem={}; buffers={}", workers, chunkSize, queueSize==Integer.MAX_VALUE ? '-' : queueSize, bufferMaxMem, poolCapacity);
     }
 
     static public S3ParallelDownload create(AmazonS3 client) {
@@ -140,16 +140,19 @@ public class S3ParallelDownload {
 
         int chunkIndex=0;
         for( GetObjectRequest it : chunks ) {
-            executor.submit(downloadChunk(result, chunkIndex++, it));
+            executor.submit(downloadChunk(result, chunksCount.getAndIncrement(), chunkIndex++, it));
         }
 
         return result;
     }
 
+    static int priority(int file, int chunk) {
+        return (1 << 16) * file + chunk;
+    }
 
-    private Runnable downloadChunk(ChunkedInputStream chunkedStream, final int chunkIndex, final GetObjectRequest req) {
+    private Runnable downloadChunk(ChunkedInputStream chunkedStream, final int fileIndex, final int chunkIndex, final GetObjectRequest req) {
         // note: the use of the `index` determine the priority of the task in the thread pool
-        return new PriorityThreadPool.PriorityRunnable(chunksCount.incrementAndGet()) {
+        return new PriorityThreadPool.PriorityRunnable(priority(fileIndex,chunkIndex)) {
             @Override
             public void run()  {
                 try ( S3Object chunk = s3Client.getObject(req) ) {
