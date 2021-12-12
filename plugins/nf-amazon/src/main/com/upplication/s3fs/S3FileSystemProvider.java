@@ -99,6 +99,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.upplication.s3fs.ng.DownloadOpts;
 import com.upplication.s3fs.ng.S3ParallelDownload;
 import com.upplication.s3fs.util.IOUtils;
 import com.upplication.s3fs.util.S3MultipartOptions;
@@ -197,8 +198,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
 		}
 
 		// create s3 downloader
-		if( "true".equals(System.getenv("NXF_S3_DOWNLOAD_PARALLEL")) )
-			this.downloader = S3ParallelDownload.create(result.getClient().getClient());
+		DownloadOpts opts = DownloadOpts.from(props, System.getenv());
+		if( opts.getParallel() )
+			this.downloader = S3ParallelDownload.create(result.getClient().getClient(), opts);
 
 		return result;
 	}
@@ -954,7 +956,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
     protected Path createTempDir() throws IOException {
         return Files.createTempDirectory("temp-s3-");
     }
-
 
     public static void shutdown(boolean hard) {
 		S3OutputStream.shutdownExecutor(hard);
