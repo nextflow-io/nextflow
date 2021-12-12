@@ -20,7 +20,7 @@ class CmdLineOptionMapTest extends Specification {
         options.exists('iamfalse')
         options.getFirstValue('iamtrue') == 'true'
         options.getFirstValue('iamfalse') == 'false'
-        options.getFirstValue('idontexist') == ''
+        options.getFirstValue('idontexist') == null
 
     }
 
