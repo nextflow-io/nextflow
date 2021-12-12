@@ -88,4 +88,43 @@ class TaskPollingMonitorTest extends Specification {
         new RateUnit(123.4).toString() == '123.40/sec'
     }
 
+    def 'should cancel running jobs' () {
+        given:
+        def session = Mock(Session)
+        def monitor = new TaskPollingMonitor(name:'foo', session: session, pollInterval: Duration.of('1min'))
+        def spy = Spy(monitor)
+        and:
+        def handler = Mock(TaskHandler) { getTask() >> Mock(TaskRun) }
+        and:
+        spy.submit(handler)
+
+        when:
+        spy.cleanup()
+        then:
+        1 * session.disableJobsCancellation >> false
+        and:
+        1 * handler.kill() >> null
+        1 * session.notifyTaskComplete(handler) >> null
+    }
+
+    def 'should not cancel running jobs' () {
+        given:
+        def session = Mock(Session)
+        def monitor = new TaskPollingMonitor(name:'foo', session: session, pollInterval: Duration.of('1min'))
+        def spy = Spy(monitor)
+        and:
+        def handler = Mock(TaskHandler) { getTask() >> Mock(TaskRun) }
+        and:
+        spy.submit(handler)
+
+        when:
+        spy.cleanup()
+        then:
+        1 * session.disableJobsCancellation >> true
+        and:
+        0 * handler.kill() >> null
+        0 * session.notifyTaskComplete(handler) >> null
+    }
+
+
 }

@@ -916,36 +916,37 @@ Environment variables
 The following environment variables control the configuration of the Nextflow runtime and
 the Java virtual machine used by it.
 
-=========================== ================
-Name                        Description
-=========================== ================
-NXF_HOME                    Nextflow home directory (default: ``$HOME/.nextflow``).
-NXF_VER                     Defines what version of Nextflow to use.
-NXF_ORG                     Default `organization` prefix when looking for a hosted repository (default: ``nextflow-io``).
-NXF_GRAB                    Provides extra runtime dependencies downloaded from a Maven repository service.
-NXF_OPTS                    Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of ``-Dkey[=value]`` properties.
-NXF_CLASSPATH               Allows the extension of the Java runtime classpath with extra JAR files or class folders.
-NXF_ASSETS                  Defines the directory where downloaded pipeline repositories are stored (default: ``$NXF_HOME/assets``)
-NXF_PID_FILE                Name of the file where the process PID is saved when Nextflow is launched in background.
-NXF_WORK                    Directory where working files are stored (usually your *scratch* directory)
-NXF_TEMP                    Directory where temporary files are stored
-NXF_DEBUG                   Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
-NXF_EXECUTOR                Defines the default process executor e.g. `sge`
-NXF_CONDA_CACHEDIR          Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all computing nodes.
-NXF_SINGULARITY_CACHEDIR    Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
-NXF_SINGULARITY_LIBRARYDIR  Directory where remote Singularity images are retrieved. It should be a directory accessible to all computing nodes (requires: ``21.09.0-edge`` or later).
-NXF_CHARLIECLOUD_CACHEDIR   Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
-NXF_JAVA_HOME               Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the ``JAVA_HOME`` variable if defined.
-NXF_OFFLINE                 When ``true`` disables the project automatic download and update from remote repositories (default: ``false``).
-NXF_CLOUD_DRIVER            Defines the default cloud driver to be used if not specified in the config file or as command line option, either ``aws`` or ``google``.
-NXF_ANSI_LOG                Enables/disables ANSI console output (default ``true`` when ANSI terminal is detected).
-NXF_ANSI_SUMMARY            Enables/disables ANSI completion summary: `true|false` (default: print summary if execution last more than 1 minute).
-NXF_SCM_FILE                Defines the path location of the SCM config file (requires version ``20.10.0`` or later).
-NXF_PARAMS_FILE             Defines the path location of the pipeline parameters file (requires version ``20.10.0`` or later).
-JAVA_HOME                   Defines the path location of the Java VM installation used to run Nextflow.
-JAVA_CMD                    Defines the path location of the Java binary command used to launch Nextflow.
-HTTP_PROXY                  Defines the HTTP proxy server. As of version ``21.06.0-edge``, proxy authentication is supported providing the credentials in the proxy URL e.g. ``http://user:password@proxy-host.com:port``.
-HTTPS_PROXY                 Defines the HTTPS proxy server. As of version ``21.06.0-edge``, proxy authentication is supported providing the credentials in the proxy URL e.g. ``https://user:password@proxy-host.com:port``.
-FTP_PROXY                   Defines the FTP proxy server. Proxy authentication is supported providing the credentials in the proxy URL e.g. ``ftp://user:password@proxy-host.com:port``. FTP proxy support requires version ``21.06.0-edge`` or later.
-NO_PROXY                    Defines one or more host names that should not use the proxy server. Separate multiple names using a comma character.
-=========================== ================
+=============================== ================
+Name                            Description
+=============================== ================
+NXF_HOME                        Nextflow home directory (default: ``$HOME/.nextflow``).
+NXF_VER                         Defines what version of Nextflow to use.
+NXF_ORG                         Default `organization` prefix when looking for a hosted repository (default: ``nextflow-io``).
+NXF_GRAB                        Provides extra runtime dependencies downloaded from a Maven repository service.
+NXF_OPTS                        Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of ``-Dkey[=value]`` properties.
+NXF_CLASSPATH                   Allows the extension of the Java runtime classpath with extra JAR files or class folders.
+NXF_ASSETS                      Defines the directory where downloaded pipeline repositories are stored (default: ``$NXF_HOME/assets``)
+NXF_PID_FILE                    Name of the file where the process PID is saved when Nextflow is launched in background.
+NXF_WORK                        Directory where working files are stored (usually your *scratch* directory)
+NXF_TEMP                        Directory where temporary files are stored
+NXF_DEBUG                       Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
+NXF_EXECUTOR                    Defines the default process executor e.g. `sge`
+NXF_CONDA_CACHEDIR              Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all computing nodes.
+NXF_SINGULARITY_CACHEDIR        Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
+NXF_SINGULARITY_LIBRARYDIR      Directory where remote Singularity images are retrieved. It should be a directory accessible to all computing nodes (requires: ``21.09.0-edge`` or later).
+NXF_CHARLIECLOUD_CACHEDIR       Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
+NXF_JAVA_HOME                   Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the ``JAVA_HOME`` variable if defined.
+NXF_OFFLINE                     When ``true`` disables the project automatic download and update from remote repositories (default: ``false``).
+NXF_CLOUD_DRIVER                Defines the default cloud driver to be used if not specified in the config file or as command line option, either ``aws`` or ``google``.
+NXF_ANSI_LOG                    Enables/disables ANSI console output (default ``true`` when ANSI terminal is detected).
+NXF_ANSI_SUMMARY                Enables/disables ANSI completion summary: `true|false` (default: print summary if execution last more than 1 minute).
+NXF_SCM_FILE                    Defines the path location of the SCM config file (requires version ``20.10.0`` or later).
+NXF_PARAMS_FILE                 Defines the path location of the pipeline parameters file (requires version ``20.10.0`` or later).
+NXF_DISABLE_JOBS_CANCELLATION   Disables the cancellation of child jobs on workflow execution termination (requires ``21.12.0-edge`` or later).
+JAVA_HOME                       Defines the path location of the Java VM installation used to run Nextflow.
+JAVA_CMD                        Defines the path location of the Java binary command used to launch Nextflow.
+HTTP_PROXY                      Defines the HTTP proxy server. As of version ``21.06.0-edge``, proxy authentication is supported providing the credentials in the proxy URL e.g. ``http://user:password@proxy-host.com:port``.
+HTTPS_PROXY                     Defines the HTTPS proxy server. As of version ``21.06.0-edge``, proxy authentication is supported providing the credentials in the proxy URL e.g. ``https://user:password@proxy-host.com:port``.
+FTP_PROXY                       Defines the FTP proxy server. Proxy authentication is supported providing the credentials in the proxy URL e.g. ``ftp://user:password@proxy-host.com:port``. FTP proxy support requires version ``21.06.0-edge`` or later.
+NO_PROXY                        Defines one or more host names that should not use the proxy server. Separate multiple names using a comma character.
+=============================== ================

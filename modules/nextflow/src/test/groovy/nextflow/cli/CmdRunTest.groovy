@@ -235,4 +235,21 @@ class CmdRunTest extends Specification {
             omega: "${unknown}"
             '''.stripIndent()
     }
+
+    def 'should validate dont kill jobs' () {
+        when:
+        def cmd = new CmdRun()
+        then:
+        cmd.getDisableJobsCancellation() == false
+
+        when:
+        cmd = new CmdRun(disableJobsCancellation: true)
+        then:
+        cmd.getDisableJobsCancellation() == true
+
+        when:
+        cmd = new CmdRun(env: [NXF_DISABLE_JOBS_CANCELLATION: true])
+        then:
+        cmd.getDisableJobsCancellation() == true
+    }
 }

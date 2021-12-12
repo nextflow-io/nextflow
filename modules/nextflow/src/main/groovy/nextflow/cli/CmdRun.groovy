@@ -230,6 +230,15 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-plugins'], description = 'Specify the plugins to be applied for this run e.g. nf-amazon,nf-tower')
     String plugins
 
+    @Parameter(names=['-disable-jobs-cancellation'], description = 'Prevent the cancellation of child jobs on execution termination')
+    Boolean disableJobsCancellation
+
+    Boolean getDisableJobsCancellation() {
+        return disableJobsCancellation!=null
+                ?  disableJobsCancellation
+                : env.get('NXF_DISABLE_JOBS_CANCELLATION') as boolean
+    }
+
     @Override
     String getName() { NAME }
 
@@ -286,6 +295,7 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
+        runner.session.disableJobsCancellation = getDisableJobsCancellation()
         if( withTower || log.isTraceEnabled() )
             runner.session.resolvedConfig = ConfigBuilder.resolveConfig(scriptFile.parent, this)
         // note config files are collected during the build process
