@@ -192,13 +192,6 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         and:
         req.entryPoint == '/bin/foo'
 
-        when:
-        req = handler.createPipelineRequest()
-        then:
-        task.getConfig() >> new TaskConfig(containerOptions: [entrypoint:null])
-        and:
-        req.entryPoint == GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT
-
     }
 
     def 'should create pipeline request/2' () {
@@ -259,13 +252,6 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         task.getConfig() >> new TaskConfig(containerOptions: [entrypoint:'/bin/foo'])
         and:
         req.entryPoint == '/bin/foo'
-
-        when:
-        req = handler.createPipelineRequest()
-        then:
-        task.getConfig() >> new TaskConfig(containerOptions: [entrypoint:null])
-        and:
-        req.entryPoint == GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT
 
     }
 
