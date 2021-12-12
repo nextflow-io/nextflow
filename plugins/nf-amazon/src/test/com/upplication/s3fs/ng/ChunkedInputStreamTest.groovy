@@ -28,17 +28,17 @@ class ChunkedInputStreamTest extends Specification {
 
     def 'should read the chunks' () {
         given:
-        def chunk1 = new String('Hello world\n').bytes
-        def chunk2 = new String('Hola mundo\n').bytes
-        def chunk3 = new String('Ciao mondo\n').bytes
+        def chunk0 = new String('Hello world\n').bytes
+        def chunk1 = new String('Hola mundo\n').bytes
+        def chunk2 = new String('Ciao mondo\n').bytes
         and:
-        def len = chunk1.length+chunk2.length+chunk3.length
+        def len = chunk0.length+chunk1.length+chunk2.length
         def stream = new ChunkedInputStream(len)
 
         when:
-        stream.add(chunk1);
-        stream.add(chunk2);
-        stream.add(chunk3);
+        stream.add(ChunkBuffer.wrap(chunk0).withIndex(0))
+        stream.add(ChunkBuffer.wrap(chunk1).withIndex(1))
+        stream.add(ChunkBuffer.wrap(chunk2).withIndex(2))
 
         then:
         stream.text == '''\
@@ -50,17 +50,17 @@ class ChunkedInputStreamTest extends Specification {
 
     def 'should read the chunks async' () {
         given:
-        def chunk1 = new String('Hello world\n').bytes
-        def chunk2 = new String('Hola mundo\n').bytes
-        def chunk3 = new String('Ciao mondo\n').bytes
+        def chunk0 = new String('Hello world\n').bytes
+        def chunk1 = new String('Hola mundo\n').bytes
+        def chunk2 = new String('Ciao mondo\n').bytes
         and:
-        def len = chunk1.length+chunk2.length+chunk3.length
+        def len = chunk0.length+chunk1.length+chunk2.length
         def stream = new ChunkedInputStream(len)
 
         when:
-        Thread.start { sleep 100; stream.add(chunk1) }
-        Thread.start { sleep 200; stream.add(chunk2) }
-        Thread.start { sleep 300; stream.add(chunk3) }
+        Thread.start { sleep 100; stream.add(ChunkBuffer.wrap(chunk0).withIndex(0)) }
+        Thread.start { sleep 200; stream.add(ChunkBuffer.wrap(chunk1).withIndex(1)) }
+        Thread.start { sleep 300; stream.add(ChunkBuffer.wrap(chunk2).withIndex(2)) }
 
         then:
         stream.text == '''\
@@ -79,15 +79,15 @@ class ChunkedInputStreamTest extends Specification {
 
     def 'should read throw an excpetion' () {
         given:
-        def chunk1 = new String('Hello world\n').bytes
-        def chunk2 = new String('Hola mundo\n').bytes
-        def chunk3 = new String('Ciao mondo\n').bytes
+        def chunk0 = new String('Hello world\n').bytes
+        def chunk1 = new String('Hola mundo\n').bytes
+        def chunk2 = new String('Ciao mondo\n').bytes
         and:
-        def len = chunk1.length+chunk2.length+chunk3.length
+        def len = chunk0.length+chunk1.length+chunk2.length
         def stream = new ChunkedInputStream(len)
 
         when:
-        Thread.start { sleep 100; stream.add(chunk1) }
+        Thread.start { sleep 100; stream.add(ChunkBuffer.wrap(chunk0)) }
         Thread.start { sleep 200; stream.throwError(new IOException("Something break")) }
         and:
         println stream.text

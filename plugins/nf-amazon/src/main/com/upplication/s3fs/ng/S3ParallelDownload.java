@@ -50,7 +50,11 @@ public class S3ParallelDownload {
     private static AtomicInteger chunksCount = new AtomicInteger();
     private final DownloadOpts opts;
 
-    private S3ParallelDownload(AmazonS3 client, DownloadOpts opts) {
+    S3ParallelDownload(AmazonS3 client) {
+        this(client, new DownloadOpts());
+    }
+
+    S3ParallelDownload(AmazonS3 client, DownloadOpts opts) {
         this.s3Client = client;
         this.opts = opts;
         this.executor = PriorityThreadPool.create("S3-downloader", opts.numWorkers(), opts.queueMaxSize());
@@ -135,6 +139,7 @@ public class S3ParallelDownload {
                     }
                     log.trace("Downloaded chunk index={}; range={}..{}; path={}", chunkIndex, start, end, path);
                     // return it
+                    result.makeReadable();
                     chunkedStream.add(result);
                 }
                 catch (IOException e) {

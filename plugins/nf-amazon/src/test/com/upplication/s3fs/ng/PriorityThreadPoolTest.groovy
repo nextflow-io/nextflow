@@ -36,7 +36,7 @@ class PriorityThreadPoolTest extends Specification {
     }
     def 'should order tasks executions' () {
         given:
-        def pool = PriorityThreadPool.create(1, 100)
+        def pool = PriorityThreadPool.create('foo', 1, 100)
         def sequence = Collections.synchronizedList([])
 
         when:

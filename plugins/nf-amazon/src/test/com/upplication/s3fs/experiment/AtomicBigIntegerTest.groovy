@@ -15,7 +15,7 @@
  *
  */
 
-package com.upplication.s3fs.ng
+package com.upplication.s3fs.experiment
 
 import com.upplication.s3fs.experiment.AtomicBigInteger
 import spock.lang.Specification
