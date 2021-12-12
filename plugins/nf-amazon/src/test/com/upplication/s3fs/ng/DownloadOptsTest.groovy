@@ -59,7 +59,7 @@ class DownloadOptsTest extends Specification {
         opts.queueMaxSize() == 11
         opts.bufferMaxSize() == MemoryUnit.of('222 MB')
         opts.chunkSize() == 44
-        !opts.parallel
+        !opts.parallelEnabled()
     }
 
 
@@ -76,7 +76,7 @@ class DownloadOptsTest extends Specification {
         when:
         def opts = DownloadOpts.from(new Properties(), ENV)
         then:
-        !opts.parallel
+        !opts.parallelEnabled()
         opts.queueMaxSize() == 11
         opts.numWorkers() == 22
         opts.chunkSize() == 33
