@@ -24,20 +24,25 @@ import java.nio.file.Paths
 import com.amazonaws.services.s3.AmazonS3
 import com.upplication.s3fs.S3FileSystem
 import com.upplication.s3fs.ng.S3ParallelDownload
+import spock.lang.Ignore
+import spock.lang.IgnoreIf
+import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@IgnoreIf({System.getenv('NXF_SMOKE')})
+@Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
 class S3ParallelDownloadTest extends Specification {
 
     @Shared
     AmazonS3 s3Client
 
     def setupSpec() {
-        def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY') ?: System.getenv('AWS_ACCESS_KEY_ID')
-        def secretKey = System.getenv('AWS_S3FS_SECRET_KEY') ?: System.getenv('AWS_SECRET_ACCESS_KEY')
+        def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY') 
+        def secretKey = System.getenv('AWS_S3FS_SECRET_KEY')
 //        def region = System.getenv('AWS_REGION') ?: 'eu-west-1'
 //        log.debug "Creating AWS S3 client: region=$region; accessKey=${accessKey?.substring(0,5)}.. - secretKey=${secretKey?.substring(0,5)}.. -  "
 //        final creds = new AWSCredentials() {
@@ -64,6 +69,7 @@ class S3ParallelDownloadTest extends Specification {
         stream.text == 'Hello world\n'
     }
 
+    @Ignore
     def 'should download 100 mb file'  () {
         given:
         def downloader = new S3ParallelDownload(s3Client)
@@ -79,6 +85,7 @@ class S3ParallelDownloadTest extends Specification {
         stream?.close()
     }
 
+    @Ignore
     def 'should download 10 gb file'  () {
         given:
         def downloader = new S3ParallelDownload(s3Client)
@@ -98,7 +105,7 @@ class S3ParallelDownloadTest extends Specification {
 
     def 'should create part requests' () {
         given:
-        def download = new S3ParallelDownload(Mock(AmazonS3)).withChunkSize(1_000)
+        def download = new S3ParallelDownload(Mock(AmazonS3), new DownloadOpts(download_chunk_size: '1000'))
 
         when:
         def result = download.prepareGetPartRequests('foo','bar', 3_000)

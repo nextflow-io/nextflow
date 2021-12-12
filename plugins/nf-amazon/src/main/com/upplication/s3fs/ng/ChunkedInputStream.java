@@ -42,15 +42,7 @@ public class ChunkedInputStream extends InputStream  {
         this.length = length;
     }
 
-    public void add(byte[] buffer) {
-        if( buffer.length>0 ) {
-            // skip empty chunks
-            chunks.add(ChunkBuffer.wrap(buffer));
-        }
-    }
-
     public void add(ChunkBuffer buffer) throws InterruptedException {
-        buffer.makeReadable();
         chunks.put(buffer);
     }
 

@@ -21,11 +21,16 @@ import java.math.BigInteger;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.google.common.annotations.Beta;
+
 /**
  * Implement an BitInteger with *atomic* behavior
  *
+ * DON'T USE, IT ADDS NOT NEGLIGIBLE EXECUTION OVERHEAD
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Beta
 public final class AtomicBigInteger {
 
     private final AtomicReference<BigInteger> current;

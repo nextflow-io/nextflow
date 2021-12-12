@@ -15,7 +15,7 @@
  *
  */
 
-package com.upplication.s3fs
+package com.upplication.s3fs.experiment
 
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -23,6 +23,8 @@ import java.nio.file.Paths
 
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder
+import com.upplication.s3fs.AwsS3BaseSpec
+import com.upplication.s3fs.S3FileSystem
 import spock.lang.Ignore
 import spock.lang.Shared
 import spock.lang.Specification
@@ -32,30 +34,17 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Ignore
-class AwsS3DownloadTest extends Specification implements AwsS3BaseSpec {
+class FileTransferTest extends Specification implements AwsS3BaseSpec {
 
     @Shared
     AmazonS3 s3Client
 
     def setupSpec() {
-        def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY') ?: System.getenv('AWS_ACCESS_KEY_ID')
-        def secretKey = System.getenv('AWS_S3FS_SECRET_KEY') ?: System.getenv('AWS_SECRET_ACCESS_KEY')
-//        def region = System.getenv('AWS_REGION') ?: 'eu-west-1'
-//        log.debug "Creating AWS S3 client: region=$region; accessKey=${accessKey?.substring(0,5)}.. - secretKey=${secretKey?.substring(0,5)}.. -  "
-//        final creds = new AWSCredentials() {
-//            String getAWSAccessKeyId() { accessKey }
-//            String getAWSSecretKey() { secretKey }
-//        }
-//
-//        storageClient = AmazonS3ClientBuilder
-//                .standard()
-//                .withRegion(region)
-//                .withCredentials(new AWSStaticCredentialsProvider(creds))
-//                .build()
+        def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY')
+        def secretKey = System.getenv('AWS_S3FS_SECRET_KEY')
         def fs = (S3FileSystem) FileSystems.newFileSystem(URI.create("s3:///"), [access_key: accessKey, secret_key: secretKey])
         s3Client = fs.client.getClient()
     }
-
 
     def 'should upload big file' () {
         given:

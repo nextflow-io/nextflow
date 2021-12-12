@@ -21,12 +21,18 @@ import java.math.BigInteger;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 
+import com.google.common.annotations.Beta;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * Tentative for transfer rate meter
+ *
+ * DON'T USE, IT ADDS NOT NEGLIGIBLE EXECUTION OVERHEAD
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Beta
 public class TransferRateMeter {
 
     static private final Logger log = LoggerFactory.getLogger(TransferRateMeter.class);
