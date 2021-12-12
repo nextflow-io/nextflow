@@ -16,27 +16,36 @@
  */
 
 package nextflow.util
+
+import groovy.transform.CompileStatic
+
+import java.util.regex.Pattern
+
 /**
- *
+ * Implement command line parsing helpers
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class CmdLineHelper {
 
-    def List<String> args
+    static private Pattern CLI_OPT = ~/--([a-zA-Z_-]+)(?:\W.*)?$|-([a-zA-Z])(?:\W.*)?$/
+
+    private List<String> args
 
     CmdLineHelper( String cmdLineToBeParsed ) {
         args = splitter(cmdLineToBeParsed ?: '')
     }
 
-    def boolean contains(String argument) {
+    private boolean contains(String argument) {
         return args.indexOf(argument) != -1
     }
 
-    def getArg( String argument ) {
-        def pos = args.indexOf(argument)
+    private getArg( String argument ) {
+        int pos = args.indexOf(argument)
         if( pos == -1 ) return null
 
-        def result = []
+        List<String> result = []
         for( int i=pos+1; i<args.size(); i++ ) {
             if( args[i].startsWith('-') ) {
                 break
@@ -53,25 +62,6 @@ class CmdLineHelper {
         else {
             return result
         }
-    }
-
-    def asList( String argument, String splitter=',' ) {
-        def val = getArg(argument)
-        if( !val ) return val
-
-        if( val instanceof Boolean ) {
-            return []
-        }
-
-        if( val instanceof String ) {
-            val = [val]
-        }
-
-        for( int i=0; i<val.size(); i++ ) {
-            val[i] = val[i] ?. split(splitter)
-        }
-
-        return val.flatten()
     }
 
 
@@ -112,4 +102,51 @@ class CmdLineHelper {
         return result.join(' ')
     }
 
+    /**
+     * Parse command line and returns the options and their values as a map object.
+     *
+     * @param cmdline
+     *      The command line as single string
+     * @return
+     *      A map object holding the option key-value(s) associations
+     */
+    static CmdLineOptionMap parseGnuArgs(String cmdline) {
+        final BLANK = ' ' as char
+        final result = new CmdLineOptionMap()
+
+        if( !cmdline )
+            return result
+
+        final tokenizer = new QuoteStringTokenizer(cmdline, BLANK);
+        String opt = null
+        String last = null
+        while( tokenizer.hasNext() ) {
+            final String token = tokenizer.next()
+            if( !token || token=='--')
+                continue
+            final matcher = CLI_OPT.matcher(token)
+            if(  matcher.matches() ) {
+                if( opt ) {
+                    result.addOption(opt,'true')
+                }
+                opt = matcher.group(1) ?: matcher.group(2)
+            }
+            else {
+                if( !opt ) {
+                    if( !last ) continue
+                    result.addOption(last, token)
+                }
+                else {
+                    result.addOption(opt, token)
+                    last = opt
+                    opt = null
+                }
+            }
+        }
+
+        if( opt )
+            result.addOption(opt, 'true')
+
+        return result
+    }
 }
