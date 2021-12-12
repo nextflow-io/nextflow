@@ -17,10 +17,7 @@
 
 package nextflow.file
 
-<<<<<<< HEAD
 import java.nio.file.FileVisitResult
-=======
->>>>>>> 3622d5fe7 (Fix Interrupted download of staged files cause execution to fail)
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
