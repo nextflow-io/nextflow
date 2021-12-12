@@ -216,10 +216,12 @@ An example ``nextflow.config`` file is shown below::
 Different queues bound to the same or different Compute environments can be configured according to each process' requirements.
 
 Container Options
-=======================
-Container options are mapped into AWS job container properties.
+=================
 
-Not all the container options are supported by AWS Batch. These are the options accepted ::
+As of version ``21.12.0-edge``, the use of the Nextflow :ref:`process-containerOptions` directive is supported to fine control
+the properties of the container execution associated with each Batch job.
+
+Not all the standard container options are supported by AWS Batch. These are the options accepted ::
 
 
     -e, --env string
