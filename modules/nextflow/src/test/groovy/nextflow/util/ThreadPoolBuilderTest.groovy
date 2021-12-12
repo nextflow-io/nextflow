@@ -44,7 +44,7 @@ class ThreadPoolBuilderTest extends Specification {
         pool.getThreadFactory() instanceof CustomThreadFactory
         pool.getRejectedExecutionHandler() instanceof ThreadPoolExecutor.CallerRunsPolicy
         and:
-        builder.getName().startsWith('tower-')
+        builder.getName().startsWith('nf-thread-pool-')
         builder.getWorkQueue() instanceof LinkedBlockingQueue
     }
 
