@@ -26,7 +26,7 @@ package nextflow.util
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  *
  */
-public class QuoteStringTokenizer implements Iterator<String>, Iterable<String> {
+class QuoteStringTokenizer implements Iterator<String>, Iterable<String> {
 
     private List<Character> chars = Arrays.<Character>asList(' ' as Character);
 

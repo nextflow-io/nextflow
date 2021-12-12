@@ -32,7 +32,7 @@ See :ref:`AWS configuration<config-aws>` for more details.
 AWS IAM policies
 =================
 
-`AIM policies <https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html>`_ are the mechanism used by AWS to
+`IAM policies <https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html>`_ are the mechanism used by AWS to
 defines permissions for IAM identities. In order to access certain AWS services, the proper policies must be
 attached to the identity associated to the AWS credentials.
 
@@ -76,10 +76,11 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
 
 S3 policies
 ------------
-Nextflow requires policies also to access `S3 buckets <https://aws.amazon.com/s3/>`_ in order to::
-- use the workdir
-- pull input data
-- publish results
+Nextflow requires policies also to access `S3 buckets <https://aws.amazon.com/s3/>`_ in order to:
+
+1. use the workdir
+2. pull input data
+3. publish results
 
 Depending on the pipeline configuration, the above actions can be done all in a single bucket but, more likely, spread across multiple
 buckets. Once the list of buckets used by the pipeline is identified, there are two alternative ways to give Nextflow access to these buckets:
@@ -165,10 +166,10 @@ Get started
 -------------
 
 1 - In the AWS Console, create a `Compute environment <http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html>`_ (CE) in your AWS Batch Service.
-    * if are using a custom AMI (see following sections), the AMI ID must be specified in the CE configuration
-    * make sure to select an AMI (either custom or existing) with Docker installed (see following sections)
-    * make sure the policy ``AmazonS3FullAccess`` (granting access to S3 buckets) is attached to the instance role configured for the CE
-    * if you plan to use Docker images from Amazon ECS container, make sure the ``AmazonEC2ContainerServiceforEC2Role`` policy is also attached to the instance role
+    1.1 - if are using a custom AMI (see following sections), the AMI ID must be specified in the CE configuration
+    1.2 - make sure to select an AMI (either custom or existing) with Docker installed (see following sections)
+    1.3 - make sure the policy ``AmazonS3FullAccess`` (granting access to S3 buckets) is attached to the instance role configured for the CE
+    1.4 - if you plan to use Docker images from Amazon ECS container, make sure the ``AmazonEC2ContainerServiceforEC2Role`` policy is also attached to the instance role
 
 2 - In the AWS Console, create (at least) one `Job Queue <https://docs.aws.amazon.com/batch/latest/userguide/job_queues.html>`_
 and bind it to the Compute environment
@@ -186,9 +187,10 @@ Configuration
 
 When configuring your pipeline:
 
-- import the `nf-amazon` plugin
-- specify the AWS Batch :ref:`executor<awsbatch-executor>`
-- specify one or more AWS Batch queues for the execution by using the :ref:`process-queue` directive.
+1 - import the `nf-amazon` plugin
+2 - specify the AWS Batch :ref:`executor<awsbatch-executor>`
+3 - specify one or more AWS Batch queues for the execution by using the :ref:`process-queue` directive
+4 - specify the AWS job container properties by using the :ref:`process-containerOptions` directive.
 
 An example ``nextflow.config`` file is shown below::
 
@@ -200,6 +202,7 @@ An example ``nextflow.config`` file is shown below::
         executor = 'awsbatch'
         queue = 'my-batch-queue'
         container = 'quay.io/biocontainers/salmon'
+        containerOptions = '--shm-size 16000000 --ulimit nofile=1280:2560 --ulimit nproc=16:32'
     }
 
     aws {
@@ -212,19 +215,62 @@ An example ``nextflow.config`` file is shown below::
 
 Different queues bound to the same or different Compute environments can be configured according to each process' requirements.
 
+Container Options
+=================
+
+As of version ``21.12.0-edge``, the use of the Nextflow :ref:`process-containerOptions` directive is supported to fine control
+the properties of the container execution associated with each Batch job.
+
+Not all the standard container options are supported by AWS Batch. These are the options accepted ::
+
+
+    -e, --env string
+        Set environment variables (format: <name> or <name>=<value>)
+    --init
+        Run an init inside the container that forwards signals and reaps processes
+    --memory-swap int
+        The total amount of swap memory (in MiB) the container can use: '-1' to enable unlimited swap
+    --memory-swappiness int
+        Tune container memory swappiness (0 to 100) (default -1)
+    --privileged
+        Give extended privileges to the container
+    --read-only
+        Mount the container's root filesystem as read only
+    --shm-size int
+        Size (in MiB) of /dev/shm
+    --tmpfs string
+        Mount a tmpfs directory (format: <path>:<options>,size=<int>), size is in MiB
+    -u, --user string
+        Username or UID (format: <name|uid>[:<group|gid>])
+    --ulimit string
+        Ulimit options (format: <type>=<soft limit>[:<hard limit>])
+
+Container options must be passed in their long from for "--option value" or short form "-o value", if available.
+
+Few examples ::
+
+  containerOptions '--tmpfs /run:rw,noexec,nosuid,size=128 --tmpfs /app:ro,size=64'
+
+  containerOptions '-e MYVAR1 --env MYVAR2=foo2 --env MYVAR3=foo3 --memory-swap 3240000 --memory-swappiness 20 --shm-size 16000000'
+
+  containerOptions '--ulimit nofile=1280:2560 --ulimit nproc=16:32 --privileged'
+
+
+Check the `AWS doc <https://docs.aws.amazon.com/batch/latest/APIReference/API_ContainerProperties.html>`_ for further details.
+
 Custom AMI
 ==========
 There are several reasons why you might need to create your own `AMI (Amazon Machine Image) <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html>`_
 to use in your Compute environments. Typically:
 
-- you do not want to modify your existing Docker images and prefer to install the CLI tool on the hosting environment
+1 - you do not want to modify your existing Docker images and prefer to install the CLI tool on the hosting environment
 
-- the existing AMI (selected from the marketplace) does not have Docker installed
+2 - the existing AMI (selected from the marketplace) does not have Docker installed
 
-- you need to attach a larger storage to your EC2 instance (the default ECS instance AMI has only a 30G storage
-    volume which may not be enough for most data analysis pipelines)
+3 - you need to attach a larger storage to your EC2 instance (the default ECS instance AMI has only a 30G storage
+volume which may not be enough for most data analysis pipelines)
 
-- you need to install additional software, not available in the Docker image used to execute the job
+4 - you need to install additional software, not available in the Docker image used to execute the job
 
 Create your custom AMI
 ----------------------

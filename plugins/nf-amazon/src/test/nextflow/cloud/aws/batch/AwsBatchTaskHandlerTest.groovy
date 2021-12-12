@@ -463,7 +463,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         given:
         def IMAGE = 'foo/bar:1.0'
         def JOB_NAME = 'nf-foo-bar-1-0'
-        def handler = Spy(AwsBatchTaskHandler)
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+        }
         handler.executor = Mock(AwsBatchExecutor)
 
         when:
@@ -498,7 +500,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_NAME = 'nf-foo-bar-1-0'
         def executor = Mock(AwsBatchExecutor)
         def opts = Mock(AwsOptions)
-        def handler = Spy(AwsBatchTaskHandler)
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+        }
         handler.executor = executor 
 
         when:
@@ -527,7 +531,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_NAME = 'nf-foo-bar-1-0'
         def opts = Mock(AwsOptions)
         def executor = Mock(AwsBatchExecutor)
-        def handler = Spy(AwsBatchTaskHandler)
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+        }
         handler.executor = executor
 
         when:
@@ -539,6 +545,31 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         then:
         result.getContainerProperties().getJobRoleArn() == ROLE
+    }
+
+    def 'should set container linux properties'  () {
+        given:
+        def ROLE = 'aws::foo::bar'
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def opts = Mock(AwsOptions)
+        def taskConfig = new TaskConfig(containerOptions: '--privileged --user foo')
+        def executor = Mock(AwsBatchExecutor)
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { getConfig() >> taskConfig  }
+        }
+        handler.executor = executor
+
+        when:
+        def result = handler.makeJobDefRequest(IMAGE)
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> opts
+
+        then:
+        result.getContainerProperties().getUser() == 'foo'
+        result.getContainerProperties().getPrivileged() == true
+
     }
 
     def 'should check task status' () {
