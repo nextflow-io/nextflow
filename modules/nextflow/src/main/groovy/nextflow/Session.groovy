@@ -246,6 +246,8 @@ class Session implements ISession {
 
     boolean ansiLog
 
+    boolean disableJobsCancellation
+
     AnsiLogObserver ansiLogObserver
 
     FilePorter getFilePorter() { filePorter }
