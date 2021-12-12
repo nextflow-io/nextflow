@@ -47,15 +47,15 @@ class AwsContainerOptionsMapper {
             final tokens = value.tokenize('=')
             keyValuePairs << new KeyValuePair().withName(tokens[0]).withValue(tokens.size() == 2 ? tokens[1] : null)
         }
-        if ( keyValuePairs.size() > 0 )
+        if ( keyValuePairs )
             containerProperties.setEnvironment(keyValuePairs)
     }
 
     protected static void checkUser(CmdLineOptionMap options, ContainerProperties containerProperties) {
         String user = findOptionWithSingleValue(options, 'u')
-        if ( !user || user.length() == 0 )
+        if ( !user)
             user = findOptionWithSingleValue(options, 'user')
-        if ( user && user.length() > 0 )
+        if ( user )
             containerProperties.setUser(user)
     }
 
@@ -75,7 +75,7 @@ class AwsContainerOptionsMapper {
             else
                 ulimits << new Ulimit().withName(tokens[0]).withSoftLimit(limits[0] as Integer)
         }
-        if ( ulimits.size() > 0 )
+        if ( ulimits.size() )
             containerProperties.setUlimits(ulimits)
     }
 
@@ -85,7 +85,7 @@ class AwsContainerOptionsMapper {
 
         // shared Memory Size
         def value = findOptionWithSingleValue(options, 'shm-size')
-        if ( value && value.length() > 0 ) {
+        if ( value ) {
             params.setSharedMemorySize(value as Integer)
             atLeastOneSet = true
         }
@@ -102,14 +102,14 @@ class AwsContainerOptionsMapper {
                 throw new IllegalArgumentException("Found a malformed value '${ovalue}' for --tmpfs option")
             }
         }
-        if ( tmpfs.size() > 0 ) {
+        if ( tmpfs ) {
             params.setTmpfs(tmpfs)
             atLeastOneSet = true
         }
 
         // swap limit equal to memory plus swap
         value = findOptionWithSingleValue(options, 'memory-swap')
-        if ( value && value.length() > 0) {
+        if ( value ) {
             params.setMaxSwap(value as Integer)
             atLeastOneSet = true
         }
@@ -122,7 +122,7 @@ class AwsContainerOptionsMapper {
 
         // tune container memory swappiness
         value = findOptionWithSingleValue(options, 'memory-swappiness')
-        if ( value && value.length() > 0 ) {
+        if ( value ) {
             params.setSwappiness(value as Integer)
             atLeastOneSet = true
         }
@@ -136,7 +136,7 @@ class AwsContainerOptionsMapper {
      * @return the value, if any, or empty
      */
     protected static String findOptionWithSingleValue(CmdLineOptionMap options, String name) {
-        options.getFirstValueOrDefault(name,'') as String
+        options.getFirstValueOrDefault(name,null) as String
     }
 
     /**

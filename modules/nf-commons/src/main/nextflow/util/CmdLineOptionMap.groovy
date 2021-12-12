@@ -39,7 +39,7 @@ class CmdLineOptionMap implements CacheFunnel {
     }
 
     def getFirstValue(String key) {
-        getFirstValueOrDefault(key, '')
+        getFirstValueOrDefault(key, null)
     }
 
     boolean asBoolean() {
@@ -50,7 +50,7 @@ class CmdLineOptionMap implements CacheFunnel {
         options.containsKey(key)
     }
 
-    def getFirstValueOrDefault(String key, String alternative) throws IllegalArgumentException {
+    def getFirstValueOrDefault(String key, String alternative) {
         options.containsKey(key) && options[key].get(0) ? options[key].get(0) : alternative
     }
 
