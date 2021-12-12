@@ -31,7 +31,6 @@ import java.util.stream.LongStream;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
-import nextflow.util.MemoryUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,54 +43,24 @@ public class S3ParallelDownload {
 
     static final private Logger log = LoggerFactory.getLogger(S3ParallelDownload.class);
 
-    private AmazonS3 s3Client;
-    private int chunkSize = chunkSize();
-    private int workers = numWorkers();
-    private MemoryUnit bufferMaxMem = bufferMaxSize();
-    private int queueSize = queueSize();
+    private final AmazonS3 s3Client;
     private ThreadPoolExecutor executor;
     private ChunkBufferFactory bufferFactory;
     private static List<S3ParallelDownload> instances = new ArrayList<>(10);
     private static AtomicInteger chunksCount = new AtomicInteger();
+    private final DownloadOpts opts;
 
-    private static int chunkSize() {
-        if( System.getenv("NXF_S3_DOWNLOAD_CHUNK_SIZE")!=null )
-            return Integer.parseInt(System.getenv("NXF_S3_DOWNLOAD_CHUNK_SIZE"));
-        else
-            return 10 * 1024 * 1024;
-    }
-
-    private static int numWorkers() {
-        if( System.getenv("NXF_S3_DOWNLOAD_NUM_WORKERS")!=null )
-            return Integer.parseInt(System.getenv("NXF_S3_DOWNLOAD_NUM_WORKERS"));
-        else
-            return 10;
-    }
-
-    private static MemoryUnit bufferMaxSize() {
-        if( System.getenv("NXF_S3_DOWNLOAD_BUFFER_MAX_MEM")!=null )
-            return MemoryUnit.of(System.getenv("NXF_S3_DOWNLOAD_BUFFER_MAX_MEM"));
-        else
-            return MemoryUnit.of("1 GB");
-    }
-
-    private static int queueSize() {
-        if( System.getenv("NXF_S3_DOWNLOAD_QUEUE_SIZE")!=null )
-            return Integer.parseInt(System.getenv("NXF_S3_DOWNLOAD_QUEUE_SIZE"));
-        else
-            return 10_000;
-    }
-
-    private S3ParallelDownload(AmazonS3 client) {
+    private S3ParallelDownload(AmazonS3 client, DownloadOpts opts) {
         this.s3Client = client;
-        this.executor = PriorityThreadPool.create("S3-downloader", workers, queueSize);
-        int poolCapacity = (int)(bufferMaxMem.toBytes() / chunkSize);
-        this.bufferFactory = new ChunkBufferFactory(chunkSize, poolCapacity);
-        log.debug("Creating S3 download thread pool: workers={}; chunkSize={}; queueSize={}; max-mem={}; buffers={}", workers, chunkSize, queueSize==Integer.MAX_VALUE ? '-' : queueSize, bufferMaxMem, poolCapacity);
+        this.opts = opts;
+        this.executor = PriorityThreadPool.create("S3-downloader", opts.numWorkers(), opts.queueMaxSize());
+        int poolCapacity = (int)(opts.bufferMaxSize().toBytes() / opts.chunkSize());
+        this.bufferFactory = new ChunkBufferFactory(opts.chunkSize(), poolCapacity);
+        log.debug("Creating S3 download thread pool: workers={}; chunkSize={}; queueSize={}; max-mem={}; buffers={}", opts.numWorkers(), opts.chunkSize(), opts.queueMaxSize(), opts.bufferMaxSize(), poolCapacity);
     }
 
-    static public S3ParallelDownload create(AmazonS3 client) {
-        S3ParallelDownload result = new S3ParallelDownload(client);
+    static public S3ParallelDownload create(AmazonS3 client, DownloadOpts opts) {
+        S3ParallelDownload result = new S3ParallelDownload(client, opts);
         instances.add(result);
         return result;
     }
@@ -117,18 +86,11 @@ public class S3ParallelDownload {
         log.debug("Shutdown S3 downloader - done");
     }
     
-    S3ParallelDownload withChunkSize(int chunkSize) {
-        if( chunkSize<= 0 )
-            throw new IllegalArgumentException(String.format("Download chunkSize cannot be less or equals to zero: %s", chunkSize));
-        this.chunkSize = chunkSize;
-        return this;
-    }
-
     protected List<GetObjectRequest> prepareGetPartRequests(String bucketName, String key, long size) {
-        int numberOfParts = (int)Math.ceil( (double)size / chunkSize );
+        int numberOfParts = (int)Math.ceil( (double)size / opts.chunkSize() );
         return LongStream.range(0, numberOfParts)
-                .mapToObj(index -> new AbstractMap.SimpleEntry<>(index * chunkSize,
-                        (index + 1) * chunkSize > size ? size - 1 : (index + 1) * chunkSize - 1))
+                .mapToObj(index -> new AbstractMap.SimpleEntry<>(index * opts.chunkSize(),
+                        (index + 1) * opts.chunkSize() > size ? size - 1 : (index + 1) * opts.chunkSize() - 1))
                 .map(range -> new GetObjectRequest(bucketName, key).withRange(range.getKey(), range.getValue()))
                 .collect(Collectors.toList());
     }
