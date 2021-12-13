@@ -557,7 +557,7 @@ class LoggerHelper {
     }
 
     static List<String> findErrorLine( Throwable e, Map<String, Path> allNames ) {
-        def lines = getErrorLines(e)
+        def lines = getErrorLines(e).reverse()
         List error = null
         for( String str : lines ) {
             if( (error=getErrorLine(str,allNames))) {
