@@ -32,7 +32,7 @@ import nextflow.util.CheckHelper
 @Slf4j
 class GroupTupleOp {
 
-    static private Map GROUP_TUPLE_PARAMS = [ by: [Integer, List], sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator], size: Integer, remainder: Boolean ]
+    static private Map GROUP_TUPLE_PARAMS = [ by: [Integer, List], sort: [Boolean, 'true','natural','deep','hash',Closure,Comparator], size: [Integer,Closure], remainder: Boolean ]
 
     static private List<Integer> GROUP_DEFAULT_INDEX = [0]
 
@@ -42,7 +42,7 @@ class GroupTupleOp {
      */
     private Comparator comparator
 
-    private int size
+    private def size
 
     private List indices
 
@@ -112,11 +112,17 @@ class GroupTupleOp {
             }
         }
 
-        final sz = size ?: sizeBy(key)
+        final sz = evaluateSize( key )
         if( sz>0 && sz==count ) {
             bindTuple(items, sz)
             groups.remove(key)
         }
+    }
+
+    private int evaluateSize( List key ){
+        if ( size ){
+            return size instanceof Closure ? size( key.size() == 1 ? key[0] : key ) : size
+        } else return sizeBy( key )
     }
 
 
@@ -124,7 +130,7 @@ class GroupTupleOp {
      * finalize the grouping binding the remaining values
      */
     private void finalise(nop) {
-        groups.each { keys, items -> bindTuple(items, size ?: sizeBy(keys)) }
+        groups.each { keys, items -> bindTuple(items, evaluateSize( keys ) ) }
         target.bind(Channel.STOP)
     }
 
