@@ -475,6 +475,15 @@ It prints::
     [2, [C, A]]
     [3, [B, D]]
 
+The same is printed for::
+
+   Channel
+        .from( [1,'A'], [1,'B'], [2,'C'], [3, 'B'], [1,'C'], [2, 'A'], [3, 'D'] )
+        .groupTuple( size : { it == 1 ? 3 : 2} )
+        .view()
+
+But in this case, the tuples are emitted when enough elements are processed. It does not wait until the Channel is closed, as the first example would do.
+
 By default the first entry in the tuple is used as grouping key. A different key can be chosen by using the
 ``by`` parameter and specifying the index of the entry to be used as key (the index is zero-based). For example,
 grouping by the second value in each tuple::
@@ -500,7 +509,7 @@ Field       Description
 by          The index (zero based) of the element to be used as grouping key.
             A key composed by multiple elements can be defined specifying a list of indices e.g. ``by: [0,2]``
 sort        Defines the sorting criteria for the grouped items. See below for available sorting options.
-size        The number of items the grouped list(s) has to contain. When the specified size is reached, the tuple is emitted.
+size        The number of items the grouped list(s) has to contain. When the specified size is reached, the tuple is emitted. It can also be a closure, getting the key as input and returning the size accordingly.
 remainder   When ``false`` incomplete tuples (i.e. with less than `size` grouped items)
             are discarded (default). When ``true`` incomplete tuples are emitted as the ending emission. Only valid when a ``size`` parameter
             is specified.
