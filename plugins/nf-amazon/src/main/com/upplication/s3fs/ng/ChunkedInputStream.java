@@ -21,8 +21,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implements an InputStream made of a sequence of chunks
@@ -31,19 +37,38 @@ import java.util.concurrent.TimeUnit;
  */
 public class ChunkedInputStream extends InputStream  {
 
+    static final private Logger log = LoggerFactory.getLogger(ChunkedInputStream.class);
+
     final private long length;
-    private long count;
+    private long readsCount;
     private ChunkBuffer buffer;
-    private final BlockingQueue<ChunkBuffer> chunks = new LinkedBlockingQueue<>();
+    private final BlockingQueue<ChunkBuffer> chunks = new PriorityBlockingQueue<>();
     private volatile IOException error;
     private int nextIndex;
+    private Lock monitor;
+    private Condition newChunk;
 
     public ChunkedInputStream(long length) {
         this.length = length;
+        this.monitor = new ReentrantLock();
+        this.newChunk = monitor.newCondition();
     }
 
-    public void add(ChunkBuffer buffer) throws InterruptedException {
-        chunks.put(buffer);
+    public void add(ChunkBuffer chunk) throws InterruptedException {
+        monitor.lock();
+        try {
+            chunks.put(chunk);
+            newChunk.signal();
+        }
+        finally {
+            monitor.unlock();
+        }
+    }
+
+    private void awaitNewChunk() throws InterruptedException {
+        monitor.lock();
+        try { newChunk.await(10, TimeUnit.MILLISECONDS); }
+        finally { monitor.unlock(); }
     }
 
     /**
@@ -54,19 +79,28 @@ public class ChunkedInputStream extends InputStream  {
      */
     @Override
     public int read() throws IOException {
-        if( error != null )
+        if( error != null ) {
             throw error;
-        if( count == length )
+        }
+        if( readsCount == length ) {
             return -1;
+        }
         if( buffer == null ) {
             buffer = takeBuffer();
         }
         else if( !buffer.hasRemaining() ) {
-            buffer.release();
+            freeBuffer();
             buffer = takeBuffer();
         }
-        count++;
+        readsCount++;
         return buffer.getByte();
+    }
+
+    private void freeBuffer() {
+        if( buffer!=null ) {
+            buffer.release();
+            buffer=null;
+        }
     }
 
     private ChunkBuffer takeBuffer() throws IOException {
@@ -76,10 +110,14 @@ public class ChunkedInputStream extends InputStream  {
                     throw error;
 
                 ChunkBuffer buffer = chunks.poll(1, TimeUnit.SECONDS);
-                if( buffer == null )
+                if( buffer == null ) {
+                    //log.trace("Chunks buffer queue empty - readsCount="+readsCount);
                     continue;
+                }
                 if( buffer.getIndex() != nextIndex ) {
+                    log.trace ("Got chunk with index {}, expected {}", buffer.getIndex(), nextIndex);
                     chunks.add(buffer);
+                    awaitNewChunk();
                     continue;
                 }
                 nextIndex++;
@@ -99,7 +137,6 @@ public class ChunkedInputStream extends InputStream  {
     @Override
     public void close() {
         chunks.clear();
-        if( buffer!=null )
-            buffer.release();
+        freeBuffer();
     }
 }

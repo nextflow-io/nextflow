@@ -1313,7 +1313,7 @@ class Session implements ISession {
     synchronized ExecutorService getFileTransferThreadPool() {
         final DEFAULT_MIN_THREAD = Math.min(Runtime.runtime.availableProcessors(), 4)
         final DEFAULT_MAX_THREAD = DEFAULT_MIN_THREAD
-        final DEFAULT_QUEUE = 1_000
+        final DEFAULT_QUEUE = 10_000
         final DEFAULT_KEEP_ALIVE =  Duration.of('60sec')
         final DEFAULT_MAX_AWAIT = Duration.of('12 hour')
 

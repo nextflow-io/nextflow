@@ -23,7 +23,6 @@ import java.nio.file.Paths
 
 import com.amazonaws.services.s3.AmazonS3
 import com.upplication.s3fs.S3FileSystem
-import com.upplication.s3fs.ng.S3ParallelDownload
 import spock.lang.Ignore
 import spock.lang.IgnoreIf
 import spock.lang.Requires
@@ -116,16 +115,16 @@ class S3ParallelDownloadTest extends Specification {
 
     def 'validate priority index' () {
         expect:
-        S3ParallelDownload.priority(0,0) == 0
-        S3ParallelDownload.priority(0,1) == 1
-        S3ParallelDownload.priority(0,2) == 2
+        S3ParallelDownload.seqOrder(0,0) == 0
+        S3ParallelDownload.seqOrder(0,1) == 1
+        S3ParallelDownload.seqOrder(0,2) == 2
         and:
-        S3ParallelDownload.priority(1,0) == 65536
-        S3ParallelDownload.priority(1,1) == 65537
-        S3ParallelDownload.priority(1,2) == 65538
+        S3ParallelDownload.seqOrder(1,0) == 65536
+        S3ParallelDownload.seqOrder(1,1) == 65537
+        S3ParallelDownload.seqOrder(1,2) == 65538
         and:
-        S3ParallelDownload.priority(2,0) == (65536 * 2)
-        S3ParallelDownload.priority(2,1) == (65536 * 2) +1
-        S3ParallelDownload.priority(2,2) == (65536 * 2) +2
+        S3ParallelDownload.seqOrder(2,0) == (65536 * 2)
+        S3ParallelDownload.seqOrder(2,1) == (65536 * 2) +1
+        S3ParallelDownload.seqOrder(2,2) == (65536 * 2) +2
     }
 }

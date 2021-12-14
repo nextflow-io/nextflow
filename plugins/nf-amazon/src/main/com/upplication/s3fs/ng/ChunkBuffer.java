@@ -73,6 +73,14 @@ public class ChunkBuffer implements Comparable<ChunkBuffer> {
         target.flip();
     }
 
+    void mark() {
+        target.mark();
+    }
+
+    void reset() {
+        target.reset();
+    }
+
     void clear() {
         target.clear();
     }
