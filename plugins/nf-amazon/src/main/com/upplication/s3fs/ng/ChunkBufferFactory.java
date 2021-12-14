@@ -57,7 +57,12 @@ public class ChunkBufferFactory {
                 result.clear();
                 return result.withIndex(index);
             }
-            if( count.getAndIncrement() < capacity ) {
+            // try to create a new buffer either if the tot number is less of the expected capacity
+            // - OR - allow the creation of a buffer over the expected capacity to prevent a stalling condition
+            // in which no more new buffer is allowed, but a buffer is needed to download a missing chunk required
+            // to unload the reading process in the expected sequential ordering
+            // `(it+1) % 5 == 0` represent 5 seconds, since the pool timeout is 1 sec
+            if( count.getAndIncrement() < capacity || (it+1) % 5 == 0  ) {
                 return new ChunkBuffer(this,chunkSize,index);
             }
         }
@@ -65,7 +70,10 @@ public class ChunkBufferFactory {
     }
 
     void giveBack(ChunkBuffer buffer) {
-        pool.add(buffer);
+        if( pool.size()<capacity ) {
+            pool.add(buffer);
+        }
     }
 
+    int getPoolSize() { return pool.size(); }
 }

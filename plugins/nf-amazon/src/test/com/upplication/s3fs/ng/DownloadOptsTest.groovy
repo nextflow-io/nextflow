@@ -38,6 +38,7 @@ class DownloadOptsTest extends Specification {
         opts.bufferMaxSize() == MemoryUnit.of('1 GB')
         opts.chunkSize() == 10 * 1024 * 1024
         opts.parallelEnabled()
+        opts.strategy() == DownloadOpts.Strategy.sequential
     }
 
     def 'should set options with properties' () {
@@ -48,6 +49,8 @@ class DownloadOptsTest extends Specification {
         download_buffer_max_size = 222MB
         download_num_workers = 33
         download_chunk_size = 44
+        download_strategy = interleaved
+        
         '''
         def props = new Properties()
         props.load(new StringReader(CONFIG))
@@ -59,6 +62,7 @@ class DownloadOptsTest extends Specification {
         opts.queueMaxSize() == 11
         opts.bufferMaxSize() == MemoryUnit.of('222 MB')
         opts.chunkSize() == 44
+        opts.strategy() == DownloadOpts.Strategy.interleaved
         !opts.parallelEnabled()
     }
 
@@ -70,7 +74,8 @@ class DownloadOptsTest extends Specification {
                 NXF_S3_DOWNLOAD_QUEUE_SIZE: '11',
                 NXF_S3_DOWNLOAD_NUM_WORKERS: '22',
                 NXF_S3_DOWNLOAD_CHUNK_SIZE: '33',
-                NXF_S3_DOWNLOAD_BUFFER_MAX_MEM: '44 G'
+                NXF_S3_DOWNLOAD_BUFFER_MAX_MEM: '44 G',
+                NXF_S3_DOWNLOAD_STRATEGY: 'interleaved'
         ]
 
         when:
@@ -80,6 +85,7 @@ class DownloadOptsTest extends Specification {
         opts.queueMaxSize() == 11
         opts.numWorkers() == 22
         opts.chunkSize() == 33
+        opts.strategy() == DownloadOpts.Strategy.interleaved
         opts.bufferMaxSize() == MemoryUnit.of('44 GB')
     }
 

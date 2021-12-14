@@ -48,6 +48,7 @@ public class S3ParallelDownload {
     private ChunkBufferFactory bufferFactory;
     private static List<S3ParallelDownload> instances = new ArrayList<>(10);
     private static AtomicInteger chunksCount = new AtomicInteger();
+    private static AtomicInteger filesCount = new AtomicInteger();
     private final DownloadOpts opts;
 
     S3ParallelDownload(AmazonS3 client) {
@@ -60,7 +61,7 @@ public class S3ParallelDownload {
         this.executor = PriorityThreadPool.create("S3-downloader", opts.numWorkers(), opts.queueMaxSize());
         int poolCapacity = (int)(opts.bufferMaxSize().toBytes() / opts.chunkSize());
         this.bufferFactory = new ChunkBufferFactory(opts.chunkSize(), poolCapacity);
-        log.debug("Creating S3 download thread pool: workers={}; chunkSize={}; queueSize={}; max-mem={}; buffers={}", opts.numWorkers(), opts.chunkSize(), opts.queueMaxSize(), opts.bufferMaxSize(), poolCapacity);
+        log.debug("Creating S3 download thread pool: {}; pool-capacity={}", opts, poolCapacity);
     }
 
     static public S3ParallelDownload create(AmazonS3 client, DownloadOpts opts) {
@@ -108,20 +109,36 @@ public class S3ParallelDownload {
             throw new IllegalStateException(String.format("Object length is greater %s but got zero chunks to download", length));
 
         int chunkIndex=0;
+        int fileIndex = filesCount.getAndIncrement();
         for( GetObjectRequest it : chunks ) {
-            executor.submit(downloadChunk(result, chunksCount.getAndIncrement(), chunkIndex++, it));
+            executor.submit(downloadChunk(result, fileIndex, chunkIndex++, it));
+            // give the ability to schedule chunks of other file transfers 
+            try { Thread.sleep(10); }
+            catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         }
 
         return result;
     }
 
-    static int priority(int file, int chunk) {
-        return (1 << 16) * file + chunk;
+    static int seqOrder(int fileIndex, int chunkIndex) {
+        return (1 << 16) * fileIndex + chunkIndex;
+    }
+
+    protected int getPriorityIndex(final int fileIndex, final int chunkIndex) {
+        if( opts.strategy() == DownloadOpts.Strategy.interleaved ) {
+            // give an incremental index to each across all files
+            // this should behave as first arrived first served irrespective the file
+            return chunksCount.incrementAndGet();
+        }
+        else if( opts.strategy() == DownloadOpts.Strategy.sequential ) {
+            return seqOrder(fileIndex, chunkIndex);
+        }
+        throw new IllegalArgumentException("Unexpected download strategy=" + opts.strategy());
     }
 
     private Runnable downloadChunk(ChunkedInputStream chunkedStream, final int fileIndex, final int chunkIndex, final GetObjectRequest req) {
         // note: the use of the `index` determine the priority of the task in the thread pool
-        return new PriorityThreadPool.PriorityRunnable(priority(fileIndex,chunkIndex)) {
+        return new PriorityThreadPool.PriorityRunnable(getPriorityIndex(fileIndex,chunkIndex)) {
             @Override
             public void run()  {
                 try ( S3Object chunk = s3Client.getObject(req) ) {
