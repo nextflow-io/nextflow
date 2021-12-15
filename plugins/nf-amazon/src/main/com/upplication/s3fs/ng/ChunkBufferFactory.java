@@ -47,31 +47,40 @@ public class ChunkBufferFactory {
         this.count = new AtomicInteger();
     }
 
+    private double logistic(float x, double A, double K) {
+        return A / ( 1 + Math.exp( -1 * K * x ) );
+    }
+
+    private int delay( int current, int capacity ) {
+        float x = (float)current / capacity * 100;
+        return (int)Math.round(logistic(x-90, 100_000, 0.5));
+    }
+
     public ChunkBuffer create(int index) throws InterruptedException {
-        int it=0;
-        while( !Thread.currentThread().isInterrupted() ) {
-            if( (it+1) % 30 == 0 )
-                log.debug("Waiting for a download chunk buffer to become available - Consider to decrease the download workers or increase download buffer capacity");
-            ChunkBuffer result = it++==0 ? pool.poll() : pool.poll(1, TimeUnit.SECONDS);
-            if( result != null ) {
-                result.clear();
-                return result.withIndex(index);
-            }
-            // try to create a new buffer either if the tot number is less of the expected capacity
-            // - OR - allow the creation of a buffer over the expected capacity to prevent a stalling condition
-            // in which no more new buffer is allowed, but a buffer is needed to download a missing chunk required
-            // to unload the reading process in the expected sequential ordering
-            // `(it+1) % 5 == 0` represent 5 seconds, since the pool timeout is 1 sec
-            if( count.getAndIncrement() < capacity || (it+1) % 5 == 0  ) {
-                return new ChunkBuffer(this,chunkSize,index);
-            }
+        ChunkBuffer result = pool.poll(100, TimeUnit.MILLISECONDS);
+        if( result != null ) {
+            result.clear();
+            return result.withIndex(index);
         }
-        throw new InterruptedException("Chunk download was interrupted");
+
+        // add logistic delay to slow down the allocation of new buffer
+        // when the request approach or exceed the max capacity
+        final int cc = count.getAndIncrement();
+        final int dd = delay(cc, capacity);
+        log.debug("Creating a new buffer count={}; capacity={}; delay={}", cc, capacity, dd);
+        Thread.sleep( dd );
+        return new ChunkBuffer(this,chunkSize,index);
+
     }
 
     void giveBack(ChunkBuffer buffer) {
         if( pool.size()<capacity ) {
             pool.add(buffer);
+            log.debug("Returning buffer index={} to pool size={}", buffer.getIndex(), pool.size());
+        }
+        else {
+            int cc = count.decrementAndGet();
+            log.debug("Returning buffer index={} for GC; pool size={}; count={}", buffer.getIndex(), pool.size(), cc);
         }
     }
 
