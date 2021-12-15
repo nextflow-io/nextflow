@@ -1996,21 +1996,21 @@ class ConfigBuilderTest extends Specification {
         def txt = ConfigBuilder.resolveConfig(base, cmd)
         then:
         txt == '''\
-            params {
-               foo = 'Hello world'
-               awsKey = '[secret]'
-            }
+            params = [
+               foo : 'Hello world',
+               awsKey : '[secret]',
+            ]
             
-            process {
-               executor = { 'local' }
-            }
+            process = [
+               executor : { 'local' },
+            ]
 
             workDir = 'work'
             
-            tower {
-               enabled = true
-               endpoint = 'http://foo.com'
-            }
+            tower = [
+               enabled : true,
+               endpoint : 'http://foo.com',
+            ]
             '''.stripIndent()
 
         cleanup:

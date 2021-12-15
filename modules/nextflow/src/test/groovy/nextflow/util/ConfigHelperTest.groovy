@@ -121,23 +121,23 @@ class ConfigHelperTest extends Specification {
         def result = ConfigHelper.toCanonicalString(config)
         then:
         result == '''
-                    process {
-                       executor = 'slurm'
-                       queue = 'long'
-                    }
+                    process = [
+                       executor : 'slurm',
+                       queue : 'long',
+                    ]
                     
-                    docker {
-                       enabled = true
-                    }
+                    docker = [
+                       enabled : true,
+                    ]
 
-                    mail {
-                       from = 'yo@mail.com'
-                       smtp {
-                          port = 25
-                          user = 'yo'
-                          host = 'mail.com'
-                       }
-                    }
+                    mail = [
+                       from : 'yo@mail.com',
+                       smtp : [
+                          port : 25,
+                          user : 'yo',
+                          host : 'mail.com',
+                       ],
+                    ]
                     '''
                 .stripIndent().leftTrim()
 
@@ -146,23 +146,23 @@ class ConfigHelperTest extends Specification {
         result = ConfigHelper.toCanonicalString(config, true)
         then:
         result == '''
-                    docker {
-                       enabled = true
-                    }
+                    docker = [
+                       enabled : true,
+                    ]
                     
-                    mail {
-                       from = 'yo@mail.com'
-                       smtp {
-                          host = 'mail.com'
-                          port = 25
-                          user = 'yo'
-                       }
-                    }
+                    mail = [
+                       from : 'yo@mail.com',
+                       smtp : [
+                          host : 'mail.com',
+                          port : 25,
+                          user : 'yo',
+                       ],
+                    ]
 
-                    process {
-                       executor = 'slurm'
-                       queue = 'long'
-                    }
+                    process = [
+                       executor : 'slurm',
+                       queue : 'long',
+                    ]
                     '''
                 .stripIndent().leftTrim()
 
@@ -182,10 +182,10 @@ class ConfigHelperTest extends Specification {
         result == '''
                     'alpha-bravo' = 1
 
-                    'fizz+buzz' {
-                       x = 'hello'
-                       y = 'world'
-                    }
+                    'fizz+buzz' = [
+                       x : 'hello',
+                       y : 'world',
+                    ]
                     '''
                     .stripIndent().leftTrim()
     }
@@ -252,11 +252,11 @@ class ConfigHelperTest extends Specification {
         "foo"               | "foo"                 | 'foo'
         "foo-1"             | "'foo-1'"             | "'foo-1'"
 
-        "withLabel:foo"     | "'withLabel:foo'"     | "withLabel:foo"
-        "withLabel:1foo"    | "'withLabel:1foo'"    | "withLabel:'1foo'"
+        "withLabel:foo"     | "'withLabel:foo'"     | "'withLabel:foo'"
+        "withLabel:1foo"    | "'withLabel:1foo'"    | "'withLabel:1foo'"
 
-        "withName:foo"      | "'withName:foo'"      | "withName:foo"
-        "withName:2foo"     | "'withName:2foo'"     | "withName:'2foo'"
+        "withName:foo"      | "'withName:foo'"      | "'withName:foo'"
+        "withName:2foo"     | "'withName:2foo'"     | "'withName:2foo'"
     }
 
 

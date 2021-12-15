@@ -106,23 +106,23 @@ class CmdConfigTest extends Specification {
         cmd.printCanonical0(config, buffer)
         then:
         buffer.toString() == '''
-                    process {
-                       executor = 'slurm'
-                       queue = 'long'
-                    }
+                    process = [
+                       executor : 'slurm',
+                       queue : 'long',
+                    ]
                     
-                    docker {
-                       enabled = true
-                    }
+                    docker = [
+                       enabled : true,
+                    ]
 
-                    mail {
-                       from = 'yo@mail.com'
-                       smtp {
-                          host = 'mail.com'
-                          port = 25
-                          user = 'yo'
-                       }
-                    }
+                    mail = [
+                       from : 'yo@mail.com',
+                       smtp : [
+                          host : 'mail.com',
+                          port : 25,
+                          user : 'yo',
+                       ],
+                    ]
                     '''
                     .stripIndent().leftTrim()
 
@@ -194,20 +194,20 @@ class CmdConfigTest extends Specification {
         
         then:
         buffer.toString() == '''
-        manifest {
-           author = 'me'
-           mainScript = 'foo.nf'
-        }
+        manifest = [
+           author : 'me',
+           mainScript : 'foo.nf',
+        ]
         
-        process {
-           queue = 'cn-el7'
-           cpus = 4
-           memory = '10 GB'
-           time = '5h'
-           ext {
-              other = { 10.GB * task.attempt }
-           }
-        }
+        process = [
+           queue : 'cn-el7',
+           cpus : 4,
+           memory : '10 GB',
+           time : '5h',
+           ext : [
+              other : { 10.GB * task.attempt },
+           ],
+        ]
         '''
         .stripIndent().leftTrim()
 
@@ -249,12 +249,12 @@ class CmdConfigTest extends Specification {
         X2 = ['SOMETHING']
         X3 = [p:111, q:'bbb']
         
-        params {
-           alpha = ['SOMETHING/a', 'b', 'c']
-           delta = [['SOMETHING'], 'z']
-           gamma = [p:'SOMETHING/a', q:['SOMETHING']]
-           omega = [p:111, q:'bbb']
-        }
+        params = [
+           alpha : ['SOMETHING/a', 'b', 'c'],
+           delta : [['SOMETHING'], 'z'],
+           gamma : [p:'SOMETHING/a', q:['SOMETHING']],
+           omega : [p:111, q:'bbb'],
+        ]
         '''.stripIndent()
 
         when:
@@ -285,9 +285,9 @@ class CmdConfigTest extends Specification {
         cmd.run()
         then:
         buffer.toString() == '''\
-            process {
-               container = 'quay.io/nextflow/bash'
-            }
+            process = [
+               container : 'quay.io/nextflow/bash',
+            ]
             '''
             .stripIndent()
     }
