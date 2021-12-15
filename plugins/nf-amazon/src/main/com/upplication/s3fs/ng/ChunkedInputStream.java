@@ -111,7 +111,6 @@ public class ChunkedInputStream extends InputStream  {
 
                 ChunkBuffer buffer = chunks.poll(1, TimeUnit.SECONDS);
                 if( buffer == null ) {
-                    //log.trace("Chunks buffer queue empty - readsCount="+readsCount);
                     continue;
                 }
                 if( buffer.getIndex() != nextIndex ) {

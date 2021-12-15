@@ -127,4 +127,22 @@ class S3ParallelDownloadTest extends Specification {
         S3ParallelDownload.seqOrder(2,1) == (65536 * 2) +1
         S3ParallelDownload.seqOrder(2,2) == (65536 * 2) +2
     }
+
+    double logistic(float x, double A, double K) {
+        return A / ( 1 + Math.exp( -1 * K * x ) )
+    }
+
+    int delay( int current, int capacity ) {
+        def x = current / capacity * 100
+        Math.round(logistic(x-90, 100_000, 0.5))
+    }
+
+    def 'should compute buffer delay' () {
+        when:
+        120.times {
+            println "f($it) => " + delay(it, 100)
+        }
+        then:
+        noExceptionThrown()
+    }
 }
