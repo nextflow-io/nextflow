@@ -4,6 +4,6 @@ set -e
 # run normal mode
 #
 $NXF_RUN | tee .stdout
-cat .stdout | sort > .stdoutSorted
+sort .stdout > .stdoutSorted
 
-diff .stdoutSorted .expected || false
+diff -u .stdoutSorted .expected || false
