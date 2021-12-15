@@ -6,4 +6,4 @@ set -e
 $NXF_RUN | tee .stdout
 cat .stdout | sort > .stdoutSorted
 
-diff .expected .stdoutSorted || false
+diff .stdoutSorted .expected || false
