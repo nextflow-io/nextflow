@@ -141,10 +141,13 @@ class ConfigHelper {
 
                     writer.append(TAB*level)
                     writer.append(wrap1(key))
-                    writer.append(' {\n')
+                    writer.append( level == 0 ? ' = ' : ' : ' )
+                    writer.append( '[\n' )
                     canonicalFormat(writer, value, level+1,sort,stack)
                     writer.append(TAB*level)
-                    writer.append('}\n')
+                    writer.append(']')
+                    if ( level > 0 ) writer.append(',')
+                    writer.append( '\n' )
                 }
                 else {
                     // add a new-line to separate simple values from a previous config object
@@ -154,8 +157,9 @@ class ConfigHelper {
 
                     writer.append(TAB*level)
                     writer.append(wrap1(key))
-                    writer.append(' = ')
+                    writer.append( level == 0 ? ' = '  : ' : ')
                     writer.append( render0(value) )
+                    if ( level > 0 ) writer.append(',')
                     writer.append('\n')
                 }
             }
@@ -167,15 +171,7 @@ class ConfigHelper {
 
     static @PackageScope String wrap1(param) {
         final key = param.toString()
-        if( key.startsWith('withLabel:') )  {
-            return 'withLabel:' + wrap0(key.substring('withLabel:'.length()))
-        }
-        else if( key.startsWith('withName:') )  {
-            return 'withName:' + wrap0(key.substring('withName:'.length()))
-        }
-        else {
-            return wrap0(key)
-        }
+        return wrap0(key)
     }
 
     static @PackageScope String wrap0( param ) {
