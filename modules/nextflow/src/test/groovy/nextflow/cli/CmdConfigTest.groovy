@@ -215,6 +215,56 @@ class CmdConfigTest extends Specification {
         folder.deleteDir()
     }
 
+    def 'should parse config file with method' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def CONFIG = folder.resolve('nextflow.config')
+
+        CONFIG.text = '''
+        manifest {
+            author = 'me'
+            mainScript = 'foo.nf'
+        }
+        
+        process {
+          cpus = { getCpuValue() }
+        }
+        
+        def getCpuValue() {
+          4
+        }
+        '''
+        def buffer = new ByteArrayOutputStream()
+        // command definition
+        def cmd = new CmdConfig()
+        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
+        cmd.stdout = buffer
+        cmd.args = [ '.' ]
+
+        when:
+        cmd.run()
+
+        then:
+        buffer.toString() == '''
+        manifest {
+           author = 'me'
+           mainScript = 'foo.nf'
+        }
+        
+        process {
+           cpus = { getCpuValue() }
+        }
+        
+        def getCpuValue() {
+          4
+        }
+        '''
+                .stripIndent().leftTrim()
+
+        cleanup:
+        folder.deleteDir()
+    }
+
     def 'should handle variables' () {
         given:
         def folder = Files.createTempDirectory('test')
