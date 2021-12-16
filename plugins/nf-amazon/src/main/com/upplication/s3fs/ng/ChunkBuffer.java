@@ -32,7 +32,7 @@ public class ChunkBuffer implements Comparable<ChunkBuffer> {
 
     private final ChunkBufferFactory owner;
 
-    private volatile int index;
+    private final int index;
 
     ChunkBuffer(ChunkBufferFactory owner, int capacity, int index) {
         this.owner = owner;
@@ -43,11 +43,7 @@ public class ChunkBuffer implements Comparable<ChunkBuffer> {
     private ChunkBuffer(ByteBuffer buffer) {
         this.target = buffer;
         this.owner = null;
-    }
-
-    ChunkBuffer withIndex(int index) {
-        this.index = index;
-        return this;
+        this.index = 0;
     }
 
     int getIndex() {
