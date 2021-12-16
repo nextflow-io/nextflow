@@ -26,6 +26,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * Model a buffer for downlod chunk
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 public class ChunkBufferFactory {
@@ -56,27 +58,26 @@ public class ChunkBufferFactory {
         return (int)Math.round(logistic(x-90, 100_000, 0.5));
     }
 
-    public ChunkBuffer create(int index) throws InterruptedException {
+    public ChunkBuffer create() throws InterruptedException {
         ChunkBuffer result = pool.poll(100, TimeUnit.MILLISECONDS);
         if( result != null ) {
             result.clear();
-            return result.withIndex(index);
+            return result;
         }
 
         // add logistic delay to slow down the allocation of new buffer
         // when the request approach or exceed the max capacity
-        final int cc = count.getAndIncrement();
-        final int dd = delay(cc, capacity);
-        log.debug("Creating a new buffer count={}; capacity={}; delay={}", cc, capacity, dd);
+        final int indx = count.getAndIncrement();
+        final int dd = delay(indx, capacity);
+        log.debug("Creating a new buffer index={}; capacity={}; delay={}", indx, capacity, dd);
         Thread.sleep( dd );
-        return new ChunkBuffer(this,chunkSize,index);
-
+        return new ChunkBuffer(this, chunkSize, indx);
     }
 
     void giveBack(ChunkBuffer buffer) {
         if( pool.size()<capacity ) {
             pool.add(buffer);
-            log.debug("Returning buffer index={} to pool size={}", buffer.getIndex(), pool.size());
+            log.debug("Returning buffer {} to pool size={}", buffer.getIndex(), pool.size());
         }
         else {
             int cc = count.decrementAndGet();
