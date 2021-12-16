@@ -635,7 +635,7 @@ class Launcher {
      */
     static void main(String... args)  {
 
-        final launcher = DripMain.LAUNCHER ?: new Launcher()
+        final launcher = new Launcher()
         final status = launcher .command(args) .run()
         if( status )
             System.exit(status)
