@@ -35,8 +35,8 @@ public class FutureInputStream extends InputStream  {
     private final Iterator<Future<ChunkBuffer>> futures;
     private ChunkBuffer buffer;
 
-    FutureInputStream(Collection<Future<ChunkBuffer>> futures) {
-        this.futures = futures.iterator();
+    FutureInputStream(Iterator<Future<ChunkBuffer>> futures) {
+        this.futures = futures;
     }
 
     @Override
