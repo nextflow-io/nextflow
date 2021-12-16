@@ -80,6 +80,11 @@ class K8sDriverLauncher {
     private Map config
 
     /**
+     * Nextflow resolved config object with all data
+     */
+    private ConfigObject configObject
+
+    /**
      * Name of the config map used to propagate the nextflow
      * setting in the container
      */
@@ -117,7 +122,8 @@ class K8sDriverLauncher {
         this.interactive = name == 'login'
         if( background && interactive )
             throw new AbortOperationException("Option -bg conflicts with interactive mode")
-        this.config = makeConfig(pipelineName)
+        this.configObject = makeConfig(pipelineName)
+        this.config = configObject.toMap()
         this.k8sConfig = makeK8sConfig(config)
         this.k8sClient = makeK8sClient(k8sConfig)
         this.k8sConfig.checkStorageAndPaths(k8sClient)
@@ -237,7 +243,7 @@ class K8sDriverLauncher {
      * @param pipelineName Workflow project name
      * @return A {@link Map} modeling the execution configuration settings
      */
-    protected Map makeConfig(String pipelineName) {
+    protected ConfigObject makeConfig(String pipelineName) {
 
         def file = new File(pipelineName)
         if( !interactive && file.exists() ) {
@@ -318,9 +324,8 @@ class K8sDriverLauncher {
         if( !config.libDir )
             config.remove('libDir')
 
-        final result = config.toMap()
-        log.trace "K8s config object:\n${ConfigHelper.toCanonicalString(result).indent('  ')}"
-        return result
+        log.trace "K8s config object:\n${ConfigHelper.toCanonicalString(config).indent('  ')}"
+        return config
     }
 
 
@@ -535,8 +540,8 @@ class K8sDriverLauncher {
         configMap['init.sh'] = initScript
 
         // nextflow config file
-        if( config ) {
-            configMap['nextflow.config'] = ConfigHelper.toCanonicalString(config)
+        if( this.configObject ) {
+            configMap['nextflow.config'] = ConfigHelper.toCanonicalString( this.configObject )
         }
 
         // scm config file

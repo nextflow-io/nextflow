@@ -263,8 +263,9 @@ class ConfigHelper {
         int i=0
         for( Map.Entry entry : map.entrySet() ) {
             if( i++>0 ) result.append(', ')
+            result.append('\'')
             result.append(entry.key)
-            result.append(":")
+            result.append("':")
             result.append(render0(entry.value))
         }
         result.append(']')
@@ -275,10 +276,6 @@ class ConfigHelper {
         def result = new StringBuilder()
         canonicalFormat(result,object,0,sort,[])
         result.toString()
-    }
-
-    static String toCanonicalString(Map map, boolean sort=false) {
-        toCanonicalString(map.toConfigObject(), sort)
     }
 
     static String toPropertiesString(ConfigObject config, boolean sort=false) {

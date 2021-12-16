@@ -247,13 +247,13 @@ class CmdConfigTest extends Specification {
         buffer.toString() == '''\
         X1 = 'SOMETHING'
         X2 = ['SOMETHING']
-        X3 = [p:111, q:'bbb']
+        X3 = ['p':111, 'q':'bbb']
         
         params {
            alpha = ['SOMETHING/a', 'b', 'c']
            delta = [['SOMETHING'], 'z']
-           gamma = [p:'SOMETHING/a', q:['SOMETHING']]
-           omega = [p:111, q:'bbb']
+           gamma = ['p':'SOMETHING/a', 'q':['SOMETHING']]
+           omega = ['p':111, 'q':'bbb']
         }
         '''.stripIndent()
 
