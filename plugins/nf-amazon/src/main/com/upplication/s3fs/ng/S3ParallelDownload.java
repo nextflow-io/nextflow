@@ -17,50 +17,49 @@
 
 package com.upplication.s3fs.ng;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Queue;
-import java.util.Spliterator;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.LongStream;
-import java.util.stream.StreamSupport;
-
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.internal.ServiceUtils;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.transfer.internal.TransferManagerUtils;
+import com.upplication.s3fs.util.ByteBufferInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.SequenceInputStream;
+import java.nio.ByteBuffer;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Queue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 
 /**
  * Implements a multipart downloader for S3
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jordi Deu-Pons <jordi@seqera.io>
  */
 public class S3ParallelDownload {
 
-    static final private Logger log = LoggerFactory.getLogger(S3ParallelDownload.class);
+    private static final int BUFFER_SIZE = 1024 * 5;
+    private static final Logger log = LoggerFactory.getLogger(S3ParallelDownload.class);
+    private static final List<S3ParallelDownload> instances = new ArrayList<>(10);
 
     private final AmazonS3 s3Client;
-    private ThreadPoolExecutor executor;
-    private ChunkBufferFactory bufferFactory;
-    private static List<S3ParallelDownload> instances = new ArrayList<>(10);
-    private static AtomicInteger chunksCount = new AtomicInteger();
+    private final ThreadPoolExecutor executor;
+    private final DirectByteBufferPool bufferPool = new DirectByteBufferPool();
     private final DownloadOpts opts;
 
     S3ParallelDownload(AmazonS3 client) {
@@ -72,11 +71,10 @@ public class S3ParallelDownload {
         this.opts = opts;
         this.executor = (ThreadPoolExecutor) Executors.newFixedThreadPool( opts.numWorkers(), CustomThreadFactory.withName("S3-download") );
         int poolCapacity = (int)(opts.bufferMaxSize().toBytes() / opts.chunkSize());
-        this.bufferFactory = new ChunkBufferFactory(opts.chunkSize(), poolCapacity);
         log.debug("Creating S3 download thread pool: {}; pool-capacity={}", opts, poolCapacity);
     }
 
-    static public S3ParallelDownload create(AmazonS3 client, DownloadOpts opts) {
+    public static S3ParallelDownload create(AmazonS3 client, DownloadOpts opts) {
         S3ParallelDownload result = new S3ParallelDownload(client, opts);
         instances.add(result);
         return result;
@@ -95,7 +93,7 @@ public class S3ParallelDownload {
         }
     }
 
-    static public void shutdown(boolean hard) {
+    public static void shutdown(boolean hard) {
         log.debug("Shutdown S3 downloader");
         for( S3ParallelDownload it : instances )  {
             it.shutdown0(hard);
@@ -104,42 +102,44 @@ public class S3ParallelDownload {
     }
 
     public InputStream download( String bucketName, String key ) {
-        return new FutureInputStream(
+        return new SequenceInputStream(
                 getDownloadIterator(
                         prepareGetPartRequests(bucketName, key)
                 )
         );
     }
 
-    private Iterator<Future<ChunkBuffer>> getDownloadIterator(Iterator<GetObjectRequest> parts) {
+    private Enumeration<InputStream> getDownloadIterator(Iterator<GetObjectRequest> parts) {
 
         // FIFO queue of parts downloading in parallel
-        Queue<Future<ChunkBuffer>> futures = new LinkedList<>();
+        Queue<Future<InputStream>> futures = new LinkedList<>();
 
-        // Start downloading first 'numWorkers' parts
-        int submitted = 0;
-        while (parts.hasNext() && submitted < opts.numWorkers()) {
-            GetObjectRequest nextPart = parts.next();
-            futures.add(executor.submit(downloadChunk(nextPart)));
+        // Add at least one part to download
+        if (parts.hasNext()) {
+            futures.add(executor.submit(downloadChunk(parts.next())));
+        }
+
+        // Add up to 'numWorkers' parts if the executor is idle
+        int submitted = 1;
+        while (parts.hasNext() && submitted < opts.numWorkers() && executor.getActiveCount() < opts.numWorkers()) {
+            futures.add(executor.submit(downloadChunk(parts.next())));
             submitted++;
         }
 
-        return new Iterator<Future<ChunkBuffer>>() {
+        return new Enumeration<InputStream>() {
 
-            @Override
-            public boolean hasNext() {
+            public boolean hasMoreElements() {
                 return !futures.isEmpty() || parts.hasNext();
             }
 
-            @Override
-            public Future<ChunkBuffer> next() {
+            public InputStream nextElement() {
 
                 // Add next part to download
                 if (parts.hasNext()) {
                     futures.add(executor.submit(downloadChunk(parts.next())));
                 }
 
-                // Check if the executor is idle and submit some extra work
+                // Check if the executor is idle and submit one extra work to slowly increase the load
                 if (executor.getActiveCount() < opts.numWorkers() && parts.hasNext()) {
                     futures.add(executor.submit(downloadChunk(parts.next())));
                 }
@@ -149,15 +149,15 @@ public class S3ParallelDownload {
                 }
 
                 try {
-                    return futures.poll();
+                    return futures.poll().get();
                 } catch (Exception e) {
                     cleanUpAfterException();
-                    throw new RuntimeException("Unable to complete multipart download. Individual part download failed.", e);
+                    throw new RuntimeException("Unable to complete parallel download. Individual part download failed.", e);
                 }
             }
 
             private void cleanUpAfterException() {
-                for (Future<ChunkBuffer> future : futures) {
+                for (Future<?> future : futures) {
                     future.cancel(false);
                 }
             }
@@ -185,47 +185,57 @@ public class S3ParallelDownload {
         }
     }
 
-    static int seqOrder(int fileIndex, int chunkIndex) {
-        return (1 << 16) * fileIndex + chunkIndex;
-    }
+    private Callable<InputStream> downloadChunk(GetObjectRequest req) {
+        return () -> {
+            try (S3Object chunk = s3Client.getObject(req)) {
+                final long[] range = req.getRange();
+                final String chunkRef = range == null ?
+                        String.format("part=%s", req.getPartNumber()) :
+                        String.format("range=%s..%s", range[0], range[1]);
+                final String path = "s3://" + req.getBucketName() + '/' + req.getKey();
+                final long chunkSize = chunk.getObjectMetadata().getContentLength();
+                log.trace("Download chunk {}; path={}", chunkRef, path);
 
-    protected int getPriorityIndex(final int fileIndex, final int chunkIndex) {
-        if( opts.strategy() == DownloadOpts.Strategy.interleaved ) {
-            // give an incremental index to each across all files
-            // this should behave as first arrived first served irrespective the file
-            return chunksCount.incrementAndGet();
-        }
-        else if( opts.strategy() == DownloadOpts.Strategy.sequential ) {
-            return seqOrder(fileIndex, chunkIndex);
-        }
-        throw new IllegalArgumentException("Unexpected download strategy=" + opts.strategy());
-    }
-
-    private Callable<ChunkBuffer> downloadChunk(final GetObjectRequest req) {
-        // note: the use of the `index` determine the priority of the task in the thread pool
-        return new Callable<ChunkBuffer>() {
-            @Override
-            public ChunkBuffer call() throws Exception {
-                try ( S3Object chunk = s3Client.getObject(req) ) {
-                    final long[] range = req.getRange();
-                    final String chunkRef = range == null ?
-                            String.format("part=%s", req.getPartNumber()) :
-                            String.format("range=%s..%s", range[0], range[1]);
-                    final String path = "s3://" + req.getBucketName() + '/' + req.getKey();
-
-                    ChunkBuffer result = bufferFactory.create();
-                    try ( InputStream stream = chunk.getObjectContent() ) {
-                        result.fill(stream);
+                boolean closeStream = true;
+                InputStream stream = chunk.getObjectContent();
+                try {
+                    return bufferedStream(stream, chunkSize);
+                } catch (OutOfMemoryError e) {
+                    log.warn("Out of memory downloading chunk {}; path={}. Fallback to direct copy.", chunkRef, path);
+                    closeStream = false;
+                    return stream;
+                } catch (Throwable e) {
+                    String msg = String.format("Failed to download chunk %s; path=%s", chunkRef, path);
+                    throw new IOException(msg, e);
+                } finally {
+                    if (closeStream) {
+                        stream.close();
                     }
-                    catch (Throwable e) {
-                        String msg = String.format("Failed to download chunk %s; path=%s", chunkRef, path);
-                        throw new IOException(msg, e);
-                    }
-                    log.trace("Downloaded chunk {}; path={}", chunkRef, path);
-                    // return it
-                    result.makeReadable();
-                    return result;
                 }
+            }
+        };
+    }
+
+    private InputStream bufferedStream(InputStream stream, long size) throws IOException {
+
+        // Create or reuse a byte buffer.
+        ByteBuffer buffer = bufferPool.take((int) size);
+
+        // Copy stream to bytebuffer
+        int n;
+        byte[] b = new byte[BUFFER_SIZE];
+        while ((n = stream.read(b)) != -1) {
+            buffer.put(b, 0, n);
+        }
+
+        // Prepare for reading
+        buffer.flip();
+
+        return new ByteBufferInputStream(buffer) {
+            @Override
+            public void close() {
+                // Free the buffer to the pool
+                bufferPool.give(buffer);
             }
         };
     }
