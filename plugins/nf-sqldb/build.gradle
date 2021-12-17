@@ -18,6 +18,12 @@ apply plugin: 'java-test-fixtures'
 apply plugin: 'idea'
 apply plugin: 'groovy'
 
+repositories {
+    flatDir {
+        dirs 'libs'
+    }
+}
+
 sourceSets {
     main.java.srcDirs = []
     main.groovy.srcDirs = ['src/main']
@@ -43,6 +49,7 @@ dependencies {
     api 'org.postgresql:postgresql:42.2.23'
     api 'org.xerial:sqlite-jdbc:3.36.0.3'
     api 'org.duckdb:duckdb_jdbc:0.3.0'
+    implementation name: 'AthenaJDBC42_2.0.25.1001'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
