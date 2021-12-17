@@ -221,11 +221,6 @@ class CmdConfigTest extends Specification {
         def CONFIG = folder.resolve('nextflow.config')
 
         CONFIG.text = '''
-        manifest {
-            author = 'me'
-            mainScript = 'foo.nf'
-        }
-        
         process {
           cpus = { getCpuValue() }
         }
@@ -246,11 +241,6 @@ class CmdConfigTest extends Specification {
 
         then:
         buffer.toString() == '''
-        manifest {
-           author = 'me'
-           mainScript = 'foo.nf'
-        }
-        
         process {
            cpus = { getCpuValue() }
         }
