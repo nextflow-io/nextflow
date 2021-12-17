@@ -90,6 +90,8 @@ public class S3ParallelDownload {
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+        } finally {
+            bufferPool.close();
         }
     }
 
@@ -196,21 +198,14 @@ public class S3ParallelDownload {
                 final long chunkSize = chunk.getObjectMetadata().getContentLength();
                 log.trace("Download chunk {}; path={}", chunkRef, path);
 
-                boolean closeStream = true;
-                InputStream stream = chunk.getObjectContent();
-                try {
+                try (InputStream stream = chunk.getObjectContent()){
                     return bufferedStream(stream, chunkSize);
                 } catch (OutOfMemoryError e) {
                     log.warn("Out of memory downloading chunk {}; path={}. Fallback to direct copy.", chunkRef, path);
-                    closeStream = false;
-                    return stream;
+                    return new DownloadOnDemandInputStream(req, s3Client);
                 } catch (Throwable e) {
                     String msg = String.format("Failed to download chunk %s; path=%s", chunkRef, path);
                     throw new IOException(msg, e);
-                } finally {
-                    if (closeStream) {
-                        stream.close();
-                    }
                 }
             }
         };

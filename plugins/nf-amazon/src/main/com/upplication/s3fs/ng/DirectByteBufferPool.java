@@ -23,6 +23,9 @@
  */
 package com.upplication.s3fs.ng;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -33,8 +36,11 @@ import java.nio.ByteBuffer;
  */
 public final class DirectByteBufferPool extends AbstractBufferPool<ByteBuffer> {
 
+    private static final Logger log = LoggerFactory.getLogger(DirectByteBufferPool.class);
+
     @Override
     protected ByteBuffer allocate(int capacity) {
+        log.trace("Direct memory allocation of {} bytes", capacity);
         return ByteBuffer.allocateDirect(capacity);
     }
 
