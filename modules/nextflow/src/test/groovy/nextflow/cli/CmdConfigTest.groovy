@@ -265,6 +265,49 @@ class CmdConfigTest extends Specification {
         folder.deleteDir()
     }
 
+    def 'should parse config file with nested configs' () {
+        given:
+        def folder  = Files.createTempDirectory('test')
+        def CONFIG  = folder.resolve('nextflow.config')
+        def CONFIG2 = folder.resolve('nextflow2.config')
+        def CONFIG3 = folder.resolve('nextflow3.config')
+        CONFIG.text  = '''
+        profiles {
+          test { includeConfig 'nextflow2.config'}
+        }
+        '''
+        CONFIG2.text = '''
+        includeConfig 'nextflow3.config'
+        '''
+        CONFIG3.text = '''
+        params {
+          x = { 1 + 2 }
+        }
+        '''
+        def buffer = new ByteArrayOutputStream()
+        // command definition
+        def cmd = new CmdConfig()
+        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
+        cmd.profile = 'test'
+        cmd.stdout = buffer
+        cmd.args = [ '.' ]
+
+        when:
+        cmd.run()
+
+        then:
+        def result = buffer.toString()
+        buffer.toString() == '''
+        params {
+           x = { 1 + 2 }
+        }
+        '''
+                .stripIndent().leftTrim()
+
+        cleanup:
+        folder.deleteDir()
+    }
+
     def 'should handle variables' () {
         given:
         def folder = Files.createTempDirectory('test')
