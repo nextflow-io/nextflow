@@ -297,7 +297,7 @@ class CmdConfigTest extends Specification {
 
         then:
         def result = buffer.toString()
-        buffer.toString() == '''
+        result == '''
         params {
            x = { 1 + 2 }
         }
