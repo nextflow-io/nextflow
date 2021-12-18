@@ -18,10 +18,9 @@
 package com.upplication.s3fs.ng;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.internal.ServiceUtils;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.transfer.internal.TransferManagerUtils;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.upplication.s3fs.util.ByteBufferInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +42,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 
 /**
@@ -69,8 +67,8 @@ public class S3ParallelDownload {
     S3ParallelDownload(AmazonS3 client, DownloadOpts opts) {
         this.s3Client = client;
         this.opts = opts;
-        this.executor = (ThreadPoolExecutor) Executors.newFixedThreadPool( opts.numWorkers(), CustomThreadFactory.withName("S3-download") );
-        int poolCapacity = (int)(opts.bufferMaxSize().toBytes() / opts.chunkSize());
+        this.executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(opts.numWorkers(), new ThreadFactoryBuilder().setNameFormat("S3-download-%d").build());
+        int poolCapacity = (int) (opts.bufferMaxSize().toBytes() / opts.chunkSize());
         log.debug("Creating S3 download thread pool: {}; pool-capacity={}", opts, poolCapacity);
     }
 
@@ -81,14 +79,13 @@ public class S3ParallelDownload {
     }
 
     private void shutdown0(boolean hard) {
-        if( hard )
+        if (hard)
             executor.shutdownNow();
         else
             executor.shutdown();
         try {
             executor.awaitTermination(1, TimeUnit.HOURS);
-        }
-        catch (InterruptedException e) {
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } finally {
             bufferPool.close();
@@ -97,13 +94,13 @@ public class S3ParallelDownload {
 
     public static void shutdown(boolean hard) {
         log.debug("Shutdown S3 downloader");
-        for( S3ParallelDownload it : instances )  {
+        for (S3ParallelDownload it : instances) {
             it.shutdown0(hard);
         }
         log.debug("Shutdown S3 downloader - done");
     }
 
-    public InputStream download( String bucketName, String key ) {
+    public InputStream download(String bucketName, String key) {
         return new SequenceInputStream(
                 getDownloadIterator(
                         prepareGetPartRequests(bucketName, key)
@@ -166,25 +163,14 @@ public class S3ParallelDownload {
         };
     }
 
-    private boolean isDownloadParallel(String bucketName, String key) {
-        GetObjectRequest getObjectRequest = new GetObjectRequest(bucketName, key);
-        return TransferManagerUtils.isDownloadParallelizable(s3Client, getObjectRequest, ServiceUtils.getPartCount(getObjectRequest, s3Client));
-    }
-
     private Iterator<GetObjectRequest> prepareGetPartRequests(String bucketName, String key) {
-        if (isDownloadParallel(bucketName, key)) {
-            // Multi-part object that can be downloaded in parallel
-            int totalParts = ServiceUtils.getPartCount(new GetObjectRequest(bucketName, key), s3Client);
-            return IntStream.range(1, totalParts + 1).mapToObj(p -> new GetObjectRequest(bucketName, key).withPartNumber(p)).iterator();
-        } else {
-            // Use range to download in parallel
-            long size = s3Client.getObjectMetadata(bucketName, key).getContentLength();
-            int numberOfParts = (int) Math.ceil((double) size / opts.chunkSize());
-            return LongStream.range(0, numberOfParts)
-                    .mapToObj(index -> new AbstractMap.SimpleEntry<>(index * opts.chunkSize(),
-                            (index + 1) * opts.chunkSize() > size ? size - 1 : (index + 1) * opts.chunkSize() - 1))
-                    .map(range -> new GetObjectRequest(bucketName, key).withRange(range.getKey(), range.getValue())).iterator();
-        }
+        // Use range to download in parallel
+        long size = s3Client.getObjectMetadata(bucketName, key).getContentLength();
+        int numberOfParts = (int) Math.ceil((double) size / opts.chunkSize());
+        return LongStream.range(0, numberOfParts)
+                .mapToObj(index -> new AbstractMap.SimpleEntry<>(index * opts.chunkSize(),
+                        (index + 1) * opts.chunkSize() > size ? size - 1 : (index + 1) * opts.chunkSize() - 1))
+                .map(range -> new GetObjectRequest(bucketName, key).withRange(range.getKey(), range.getValue())).iterator();
     }
 
     private Callable<InputStream> downloadChunk(GetObjectRequest req) {
@@ -198,7 +184,7 @@ public class S3ParallelDownload {
                 final long chunkSize = chunk.getObjectMetadata().getContentLength();
                 log.trace("Download chunk {}; path={}", chunkRef, path);
 
-                try (InputStream stream = chunk.getObjectContent()){
+                try (InputStream stream = chunk.getObjectContent()) {
                     return bufferedStream(stream, chunkSize);
                 } catch (OutOfMemoryError e) {
                     log.warn("Out of memory downloading chunk {}; path={}. Fallback to direct copy.", chunkRef, path);
