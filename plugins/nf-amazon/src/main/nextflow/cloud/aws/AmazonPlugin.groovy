@@ -29,7 +29,8 @@ class AmazonPlugin extends BasePlugin {
     void stop() {
         super.stop()
         // shutdown s3 uploader
-        final aborted = (Global.session as Session).isAborted()
+        final session = (Global.session as Session)
+        final aborted = session ? session.isAborted() : false
         S3FileSystemProvider.shutdown(aborted)
     }
 }
