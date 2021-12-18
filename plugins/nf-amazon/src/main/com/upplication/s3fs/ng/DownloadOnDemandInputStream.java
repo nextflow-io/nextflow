@@ -25,19 +25,18 @@ public class DownloadOnDemandInputStream extends InputStream {
 
     private InputStream parentInputStream() throws IOException {
         if (this.parent == null) {
-            try (S3Object chunk = s3.getObject(req)) {
-                final long[] range = req.getRange();
-                final String chunkRef = range == null ?
-                        String.format("part=%s", req.getPartNumber()) :
-                        String.format("range=%s..%s", range[0], range[1]);
-                final String path = "s3://" + req.getBucketName() + '/' + req.getKey();
-                log.trace("Download chunk {}; path={}", chunkRef, path);
-                try {
-                    this.parent = chunk.getObjectContent();
-                } catch (Throwable e) {
-                    String msg = String.format("Failed to download chunk %s; path=%s", chunkRef, path);
-                    throw new IOException(msg, e);
-                }
+            S3Object chunk = s3.getObject(req);
+            final long[] range = req.getRange();
+            final String chunkRef = range == null ?
+                    String.format("part=%s", req.getPartNumber()) :
+                    String.format("range=%s..%s", range[0], range[1]);
+            final String path = "s3://" + req.getBucketName() + '/' + req.getKey();
+            log.trace("Download chunk {}; path={}", chunkRef, path);
+            try {
+                this.parent = chunk.getObjectContent();
+            } catch (Throwable e) {
+                String msg = String.format("Failed to download chunk %s; path=%s", chunkRef, path);
+                throw new IOException(msg, e);
             }
         }
         return this.parent;
@@ -51,5 +50,10 @@ public class DownloadOnDemandInputStream extends InputStream {
     @Override
     public int read(byte b[], int off, int len) throws IOException {
         return parentInputStream().read(b, off, len);
+    }
+
+    @Override
+    public void close() throws IOException {
+        parentInputStream().close();
     }
 }
