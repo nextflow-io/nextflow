@@ -17,6 +17,7 @@
 
 package com.upplication.s3fs.ng;
 
+import com.amazonaws.SdkClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
@@ -59,6 +60,16 @@ public class S3ParallelDownload {
     private final ThreadPoolExecutor executor;
     private final DirectByteBufferPool bufferPool = new DirectByteBufferPool();
     private final DownloadOpts opts;
+
+    private static class Task {
+        private final GetObjectRequest request;
+        private final Future<InputStream> future;
+
+        private Task(GetObjectRequest request, Future<InputStream> future) {
+            this.request = request;
+            this.future = future;
+        }
+    }
 
     S3ParallelDownload(AmazonS3 client) {
         this(client, new DownloadOpts());
@@ -108,56 +119,79 @@ public class S3ParallelDownload {
         );
     }
 
+    private Task submitTask(GetObjectRequest request) {
+        return new Task(request, executor.submit(downloadChunk(request)));
+    }
+
     private Enumeration<InputStream> getDownloadIterator(Iterator<GetObjectRequest> parts) {
 
         // FIFO queue of parts downloading in parallel
-        Queue<Future<InputStream>> futures = new LinkedList<>();
+        Queue<Task> tasks = new LinkedList<>();
 
         // Add at least one part to download
         if (parts.hasNext()) {
-            futures.add(executor.submit(downloadChunk(parts.next())));
+            tasks.add(submitTask(parts.next()));
         }
 
         // Add up to 'numWorkers' parts if the executor is idle
         int submitted = 1;
         while (parts.hasNext() && submitted < opts.numWorkers() && executor.getActiveCount() < opts.numWorkers()) {
-            futures.add(executor.submit(downloadChunk(parts.next())));
+            tasks.add(submitTask(parts.next()));
             submitted++;
         }
 
         return new Enumeration<InputStream>() {
 
             public boolean hasMoreElements() {
-                return !futures.isEmpty() || parts.hasNext();
+                return !tasks.isEmpty() || parts.hasNext();
             }
 
             public InputStream nextElement() {
 
                 // Add next part to download
                 if (parts.hasNext()) {
-                    futures.add(executor.submit(downloadChunk(parts.next())));
+                    tasks.add(submitTask(parts.next()));
                 }
 
                 // Check if the executor is idle and submit one extra work to slowly increase the load
                 if (executor.getActiveCount() < opts.numWorkers() && parts.hasNext()) {
-                    futures.add(executor.submit(downloadChunk(parts.next())));
+                    tasks.add(submitTask(parts.next()));
                 }
 
-                if (futures.isEmpty()) {
+                if (tasks.isEmpty()) {
                     throw new NoSuchElementException();
                 }
 
+                Task task = tasks.poll();
                 try {
-                    return futures.poll().get();
-                } catch (Exception e) {
+                    return task.future.get();
+                } catch (Throwable e) {
+                    Throwable cause = e.getCause();
+                    if (cause instanceof SdkClientException && !Thread.currentThread().isInterrupted()) {
+                        int size = Math.max(executor.getMaximumPoolSize() - 1, 4);
+                        executor.setCorePoolSize(size);
+                        executor.setMaximumPoolSize(size);
+                        log.warn("{}. Reducing executor pool size to {} current active threads {}", cause.getMessage(), size, executor.getActiveCount());
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException ex) {
+                            cleanUpAfterException();
+                            throw new RuntimeException(e);
+                        }
+                        log.warn("Downloading at main thread chunk {}; path={}.", getLogRef(task.request), getLogPath(task.request));
+                        return new DownloadOnDemandInputStream(task.request, s3Client);
+                    }
+
+                    // Unknown reason
                     cleanUpAfterException();
-                    throw new RuntimeException("Unable to complete parallel download. Individual part download failed.", e);
+                    String msg = String.format("Unable to complete parallel download. Individual part %s; path=%s download failed.", getLogRef(task.request), getLogPath(task.request));
+                    throw new RuntimeException(msg, e);
                 }
             }
 
             private void cleanUpAfterException() {
-                for (Future<?> future : futures) {
-                    future.cancel(false);
+                for (Task task : tasks) {
+                    task.future.cancel(false);
                 }
             }
         };
@@ -176,21 +210,19 @@ public class S3ParallelDownload {
     private Callable<InputStream> downloadChunk(GetObjectRequest req) {
         return () -> {
             try (S3Object chunk = s3Client.getObject(req)) {
-                final long[] range = req.getRange();
-                final String chunkRef = range == null ?
-                        String.format("part=%s", req.getPartNumber()) :
-                        String.format("range=%s..%s", range[0], range[1]);
-                final String path = "s3://" + req.getBucketName() + '/' + req.getKey();
+
                 final long chunkSize = chunk.getObjectMetadata().getContentLength();
-                log.trace("Download chunk {}; path={}", chunkRef, path);
+                if (log.isTraceEnabled()) {
+                    log.trace("Download chunk {}; path={}", getLogRef(req), getLogPath(req));
+                }
 
                 try (InputStream stream = chunk.getObjectContent()) {
                     return bufferedStream(stream, chunkSize);
                 } catch (OutOfMemoryError e) {
-                    log.warn("Out of memory downloading chunk {}; path={}. Fallback to direct copy.", chunkRef, path);
+                    log.warn("Out of memory downloading chunk {}; path={}. Fallback to direct copy.", getLogRef(req), getLogPath(req));
                     return new DownloadOnDemandInputStream(req, s3Client);
                 } catch (Throwable e) {
-                    String msg = String.format("Failed to download chunk %s; path=%s", chunkRef, path);
+                    String msg = String.format("Failed to download chunk %s; path=%s", getLogRef(req), getLogPath(req));
                     throw new IOException(msg, e);
                 }
             }
@@ -219,6 +251,17 @@ public class S3ParallelDownload {
                 bufferPool.give(buffer);
             }
         };
+    }
+
+    private static String getLogRef(GetObjectRequest req) {
+        final long[] range = req.getRange();
+        return range == null ?
+                String.format("part=%s", req.getPartNumber()) :
+                String.format("range=%s..%s", range[0], range[1]);
+    }
+
+    private static String getLogPath(GetObjectRequest req) {
+        return "s3://" + req.getBucketName() + '/' + req.getKey();
     }
 
 }
