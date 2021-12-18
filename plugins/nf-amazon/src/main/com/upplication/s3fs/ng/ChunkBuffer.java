@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 public class ChunkBuffer implements Comparable<ChunkBuffer> {
+    private static final int BUFFER_SIZE = 1024 * 5;
 
     private ByteBuffer target;
 
@@ -58,10 +59,15 @@ public class ChunkBuffer implements Comparable<ChunkBuffer> {
         target.put((byte)ch);
     }
 
+    void writeBytes(byte[] src, int offset, int length) {
+        target.put(src, offset, length);
+    }
+
     void fill(InputStream stream) throws IOException {
-        int ch;
-        while ((ch = stream.read())!=-1 && !Thread.currentThread().isInterrupted()) {
-            this.writeByte(ch);
+        int n;
+        byte[] b = new byte[BUFFER_SIZE];
+        while ((n = stream.read(b)) != -1 && !Thread.currentThread().isInterrupted()) {
+            this.writeBytes(b, 0, n);
         }
     }
 
