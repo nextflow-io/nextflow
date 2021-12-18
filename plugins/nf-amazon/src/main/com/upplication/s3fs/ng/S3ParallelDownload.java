@@ -176,7 +176,7 @@ public class S3ParallelDownload {
                             Thread.sleep(1000);
                         } catch (InterruptedException ex) {
                             cleanUpAfterException();
-                            throw new RuntimeException(e);
+                            Thread.currentThread().interrupt();
                         }
                         log.warn("Downloading at main thread chunk {}; path={}.", getLogRef(task.request), getLogPath(task.request));
                         return new DownloadOnDemandInputStream(task.request, s3Client);
@@ -190,6 +190,7 @@ public class S3ParallelDownload {
             }
 
             private void cleanUpAfterException() {
+                bufferPool.close();
                 for (Task task : tasks) {
                     task.future.cancel(false);
                 }
