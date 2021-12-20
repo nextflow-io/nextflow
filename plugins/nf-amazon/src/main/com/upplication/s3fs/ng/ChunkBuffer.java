@@ -28,6 +28,8 @@ import java.nio.ByteBuffer;
  */
 public class ChunkBuffer implements Comparable<ChunkBuffer> {
 
+    private static final int BUFFER_SIZE = 8192;
+
     private ByteBuffer target;
 
     private final ChunkBufferFactory owner;
@@ -59,9 +61,10 @@ public class ChunkBuffer implements Comparable<ChunkBuffer> {
     }
 
     void fill(InputStream stream) throws IOException {
-        int ch;
-        while ((ch = stream.read())!=-1 && !Thread.currentThread().isInterrupted()) {
-            this.writeByte(ch);
+        int n;
+        byte[] b = new byte[BUFFER_SIZE];
+        while ((n = stream.read(b)) != -1 ) {
+            target.put(b, 0, n);
         }
     }
 
@@ -79,6 +82,16 @@ public class ChunkBuffer implements Comparable<ChunkBuffer> {
 
     void clear() {
         target.clear();
+    }
+
+    int getBytes( byte[] buff, int off, int len ) {
+        int c=0;
+        int i=off;
+        while( c<len && target.hasRemaining() ) {
+            c++;
+            buff[i++] = target.get();
+        }
+        return c;
     }
 
     boolean hasRemaining() {

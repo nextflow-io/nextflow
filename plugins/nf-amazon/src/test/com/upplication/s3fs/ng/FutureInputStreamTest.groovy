@@ -17,8 +17,9 @@
 
 package com.upplication.s3fs.ng
 
-import java.util.concurrent.Callable
+
 import java.util.concurrent.Executors
+import java.util.function.Function
 
 import spock.lang.Specification
 /**
@@ -33,31 +34,28 @@ class FutureInputStreamTest extends Specification {
         def BYTES = STR.bytes
         def CHUNK_SIZE = BYTES.length  +2
         def TIMES = 10
-        def POOL_CAPACITY = 10
-        def buffers = new ChunkBufferFactory(CHUNK_SIZE, POOL_CAPACITY)
+        def CAPACITY = 5
+        def buffers = new ChunkBufferFactory(CHUNK_SIZE, CAPACITY)
         and:
         def executor = Executors.newFixedThreadPool(10)
 
-        when:
-        def futures = []
-        for( int it : 1..TIMES ) {
-            futures << executor.submit( new Callable<ChunkBuffer>() {
-                @Override
-                ChunkBuffer call() throws Exception {
-                    def chunk = buffers.create(0)
-                    chunk.fill( new ByteArrayInputStream(BYTES) )
-                    chunk.makeReadable()
-                    return chunk
-                }
-            })
-        }
         and:
-        def stream = new FutureInputStream(futures)
+        def parts = []; TIMES.times { parts.add(it) }
+        def Function<Integer,ChunkBuffer> task = {
+            def chunk = buffers.create()
+            chunk.fill( new ByteArrayInputStream(BYTES) )
+            chunk.makeReadable()
+            return chunk
+        }
+
+        when:
+        def itr = new FutureIterator(parts, task, executor, CAPACITY)
+        def stream = new FutureInputStream(itr)
 
         then:
         stream.text == STR * TIMES
         and:
-        buffers.getPoolSize() == POOL_CAPACITY
+        buffers.getPoolSize() == CAPACITY
 
         cleanup:
         executor.shutdownNow()

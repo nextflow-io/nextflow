@@ -18,11 +18,13 @@
 package com.upplication.s3fs.experiment
 
 import com.upplication.s3fs.experiment.TransferRateMeter
+import org.junit.Ignore
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Ignore
 class TransferRateMeterTest extends Specification {
 
     def 'should compute rate' () {
@@ -30,7 +32,7 @@ class TransferRateMeterTest extends Specification {
         def meter = new TransferRateMeter()
 
         when:
-        def t = Thread.start { 300.times { index -> sleep 100; meter.inc(10_000) } }
+        def t = Thread.start { 100.times { index -> sleep 100; meter.inc(10_000) } }
         t.join()
         then:
         noExceptionThrown()

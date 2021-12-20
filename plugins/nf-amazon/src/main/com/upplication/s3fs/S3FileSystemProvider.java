@@ -41,7 +41,6 @@
 
 package com.upplication.s3fs;
 
-import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -301,7 +300,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 			throw new IOException(String.format("Cannot access file: %s", path),e);
 		}
 
-		return new BufferedInputStream(result);
+		return result;
 	}
 
 	@Override
@@ -856,12 +855,19 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
 		if (accessKey == null && secretKey == null) {
 			client = new AmazonS3Client(new com.amazonaws.services.s3.AmazonS3Client(config));
-		} else {
-
+		}
+		else {
 			AWSCredentials credentials = (sessionToken == null
 						? new BasicAWSCredentials(accessKey.toString(), secretKey.toString())
 						: new BasicSessionCredentials(accessKey.toString(), secretKey.toString(), sessionToken.toString()) );
-			client = new AmazonS3Client(new com.amazonaws.services.s3.AmazonS3Client(credentials,config));
+
+			if( System.getenv("AWS_REGION")!=null ) {
+				client = new AmazonS3Client( config, credentials, System.getenv("AWS_REGION") );
+			}
+			else {
+				client = new AmazonS3Client(new com.amazonaws.services.s3.AmazonS3Client(credentials,config));
+			}
+
 		}
 
 		// note: path style access is going to be deprecated

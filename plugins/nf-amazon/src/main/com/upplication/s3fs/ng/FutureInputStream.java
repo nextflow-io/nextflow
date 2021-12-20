@@ -20,7 +20,6 @@ package com.upplication.s3fs.ng;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -35,8 +34,8 @@ public class FutureInputStream extends InputStream  {
     private final Iterator<Future<ChunkBuffer>> futures;
     private ChunkBuffer buffer;
 
-    FutureInputStream(Collection<Future<ChunkBuffer>> futures) {
-        this.futures = futures.iterator();
+    FutureInputStream(Iterator<Future<ChunkBuffer>> futures) {
+        this.futures = futures;
     }
 
     @Override
@@ -53,6 +52,22 @@ public class FutureInputStream extends InputStream  {
         }
 
         return buffer.getByte();
+    }
+
+    @Override
+    public int read(byte[] b, int off, int len) throws IOException {
+
+        if( (buffer == null || !buffer.hasRemaining()) ) {
+            freeBuffer();
+            if( futures.hasNext() )  {
+                buffer = nextBuffer();
+            }
+            else {
+                return -1;
+            }
+        }
+
+        return buffer.getBytes(b, off, len);
     }
 
     private ChunkBuffer nextBuffer() throws IOException {

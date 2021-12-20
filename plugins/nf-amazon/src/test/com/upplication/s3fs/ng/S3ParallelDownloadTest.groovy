@@ -20,9 +20,15 @@ package com.upplication.s3fs.ng
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.time.temporal.ChronoUnit
 
 import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.s3.model.ObjectMetadata
 import com.upplication.s3fs.S3FileSystem
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.function.ContextualSupplier
+import groovy.util.logging.Slf4j
 import spock.lang.Ignore
 import spock.lang.IgnoreIf
 import spock.lang.Requires
@@ -34,6 +40,7 @@ import spock.lang.Specification
  */
 @IgnoreIf({System.getenv('NXF_SMOKE')})
 @Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
+@Slf4j
 class S3ParallelDownloadTest extends Specification {
 
     @Shared
@@ -58,6 +65,7 @@ class S3ParallelDownloadTest extends Specification {
         s3Client = fs.client.getClient()
     }
 
+    @Ignore
     def 'should download small file' () {
         given:
         def downloader = new S3ParallelDownload(s3Client)
@@ -101,48 +109,120 @@ class S3ParallelDownloadTest extends Specification {
         stream?.close()
     }
 
+    def 'should create part single' () {
+        given:
+        def FILE_LEN = 1
+        def CHUNK_SIZE = 1000
+        and:
+        def client = Mock(AmazonS3)
+        def download = new S3ParallelDownload(client, new DownloadOpts(download_chunk_size: String.valueOf(CHUNK_SIZE)))
+        def META = Mock(ObjectMetadata) {getContentLength() >> FILE_LEN }
+
+        when:
+        def result = download.prepareGetPartRequests('foo','bar').iterator()
+        then:
+        1 * client.getObjectMetadata('foo','bar') >> META
+        and:
+        with(result.next()) {
+            getBucketName() == 'foo'
+            getKey() == 'bar'
+            getRange() == [0,0]
+        }
+        and:
+        !result.hasNext()
+    }
+
 
     def 'should create part requests' () {
         given:
-        def download = new S3ParallelDownload(Mock(AmazonS3), new DownloadOpts(download_chunk_size: '1000'))
+        def FILE_LEN = 3_000
+        def CHUNK_SIZE = 1000
+        and:
+        def client = Mock(AmazonS3)
+        def download = new S3ParallelDownload(client, new DownloadOpts(download_chunk_size: String.valueOf(CHUNK_SIZE)))
+        def META = Mock(ObjectMetadata) {getContentLength() >> FILE_LEN }
 
         when:
-        def result = download.prepareGetPartRequests('foo','bar', 3_000)
+        def result = download.prepareGetPartRequests('foo','bar').iterator()
         then:
-        result.size()==3
-
-    }
-
-    def 'validate priority index' () {
-        expect:
-        S3ParallelDownload.seqOrder(0,0) == 0
-        S3ParallelDownload.seqOrder(0,1) == 1
-        S3ParallelDownload.seqOrder(0,2) == 2
+        1 * client.getObjectMetadata('foo','bar') >> META
         and:
-        S3ParallelDownload.seqOrder(1,0) == 65536
-        S3ParallelDownload.seqOrder(1,1) == 65537
-        S3ParallelDownload.seqOrder(1,2) == 65538
-        and:
-        S3ParallelDownload.seqOrder(2,0) == (65536 * 2)
-        S3ParallelDownload.seqOrder(2,1) == (65536 * 2) +1
-        S3ParallelDownload.seqOrder(2,2) == (65536 * 2) +2
-    }
-
-    double logistic(float x, double A, double K) {
-        return A / ( 1 + Math.exp( -1 * K * x ) )
-    }
-
-    int delay( int current, int capacity ) {
-        def x = current / capacity * 100
-        Math.round(logistic(x-90, 100_000, 0.5))
-    }
-
-    def 'should compute buffer delay' () {
-        when:
-        120.times {
-            println "f($it) => " + delay(it, 100)
+        with(result.next()) {
+            getBucketName() == 'foo'
+            getKey() == 'bar'
+            getRange() == [0,999]
         }
+        and:
+        with(result.next()) {
+            getBucketName() == 'foo'
+            getKey() == 'bar'
+            getRange() == [1000,1999]
+        }
+        and:
+        with(result.next()) {
+            getBucketName() == 'foo'
+            getKey() == 'bar'
+            getRange() == [2000,2999]
+        }
+        and:
+        !result.hasNext()
+    }
+
+    def 'should create long requests' () {
+        given:
+        def FILE_LEN = 6_000_000_000
+        def CHUNK_SIZE = 2_000_000_000
+        and:
+        def client = Mock(AmazonS3)
+        def download = new S3ParallelDownload(client, new DownloadOpts(download_chunk_size: String.valueOf(CHUNK_SIZE)))
+        def META = Mock(ObjectMetadata) {getContentLength() >> FILE_LEN }
+
+        when:
+        def result = download.prepareGetPartRequests('foo','bar')
         then:
-        noExceptionThrown()
+        1 * client.getObjectMetadata('foo','bar') >> META
+        and:
+        with(result[0]) {
+            getBucketName() == 'foo'
+            getKey() == 'bar'
+            getRange() == [0,1_999_999_999]
+        }
+        and:
+        with(result[1]) {
+            getBucketName() == 'foo'
+            getKey() == 'bar'
+            getRange() == [2_000_000_000,3_999_999_999]
+        }
+        and:
+        with(result[2]) {
+            getBucketName() == 'foo'
+            getKey() == 'bar'
+            getRange() == [4_000_000_000,5_999_999_999]
+        }
+        and:
+        result.size()==3
+    }
+
+    @Ignore
+    def 'test failsafe' () {
+        given:
+        RetryPolicy<Object> retryPolicy = RetryPolicy.builder()
+                .handle(RuntimeException.class)
+//                .withDelay(Duration.ofSeconds(1))
+//                .withMaxDuration(Duration.of(60, ChronoUnit.SECONDS))
+                .withBackoff(1, 30, ChronoUnit.SECONDS)
+                .withMaxRetries(10)
+                .onFailedAttempt(e -> log.error("Connection attempt failed - cause: ${e.getLastFailure()}"))
+                .onRetry(e -> log.warn("Failure #{}. Retrying.", e.getAttemptCount()))
+                .build();
+
+        when:
+        def work = { dev.failsafe.ExecutionContext it ->
+            log.debug "try num ${it.getAttemptCount()}"
+            throw new RuntimeException("Break ${it.getAttemptCount()}")
+        } as ContextualSupplier
+        def result = Failsafe.with(retryPolicy).get( work )
+        then:
+        result == 'Hello'
     }
 }

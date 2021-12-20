@@ -49,14 +49,6 @@ public class ChunkBufferFactory {
         this.count = new AtomicInteger();
     }
 
-    private double logistic(float x, double A, double K) {
-        return A / ( 1 + Math.exp( -1 * K * x ) );
-    }
-
-    private int delay( int current, int capacity ) {
-        float x = (float)current / capacity * 100;
-        return (int)Math.round(logistic(x-90, 100_000, 0.5));
-    }
 
     public ChunkBuffer create() throws InterruptedException {
         ChunkBuffer result = pool.poll(100, TimeUnit.MILLISECONDS);
@@ -68,20 +60,21 @@ public class ChunkBufferFactory {
         // add logistic delay to slow down the allocation of new buffer
         // when the request approach or exceed the max capacity
         final int indx = count.getAndIncrement();
-        final int dd = delay(indx, capacity);
-        log.debug("Creating a new buffer index={}; capacity={}; delay={}", indx, capacity, dd);
-        Thread.sleep( dd );
+        if( log.isTraceEnabled() )
+            log.trace("Creating a new buffer index={}; capacity={}", indx, capacity);
         return new ChunkBuffer(this, chunkSize, indx);
     }
 
     void giveBack(ChunkBuffer buffer) {
         if( pool.size()<capacity ) {
             pool.add(buffer);
-            log.debug("Returning buffer {} to pool size={}", buffer.getIndex(), pool.size());
+            if( log.isTraceEnabled() )
+                log.trace("Returning buffer {} to pool size={}", buffer.getIndex(), pool.size());
         }
         else {
             int cc = count.decrementAndGet();
-            log.debug("Returning buffer index={} for GC; pool size={}; count={}", buffer.getIndex(), pool.size(), cc);
+            if( log.isTraceEnabled() )
+                log.trace("Returning buffer index={} for GC; pool size={}; count={}", buffer.getIndex(), pool.size(), cc);
         }
     }
 

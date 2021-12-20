@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 
+import nextflow.util.Duration;
 import nextflow.util.MemoryUnit;
 
 /**
@@ -30,14 +31,13 @@ import nextflow.util.MemoryUnit;
  */
 public class DownloadOpts {
 
-    enum Strategy { interleaved, sequential }
-
     final private boolean parallelEnabled;
     private final int queueMaxSize;
     private final int numWorkers;
     private final MemoryUnit chunkSize;
     private final MemoryUnit bufferMaxSize;
-    private final Strategy strategy;
+    private final int maxAttempts;
+    private final Duration maxDelay;
 
     DownloadOpts() {
         this(new Properties(), Collections.emptyMap());
@@ -63,14 +63,17 @@ public class DownloadOpts {
         this.numWorkers = props.containsKey("download_num_workers")
                 ? Integer.parseInt(props.getProperty("download_num_workers")) : ( env.containsKey("NXF_S3_DOWNLOAD_NUM_WORKERS") ? Integer.parseInt(env.get("NXF_S3_DOWNLOAD_NUM_WORKERS")) : 10 );
 
-        this.strategy = props.containsKey("download_strategy")
-                ? Strategy.valueOf(props.getProperty("download_strategy")) : ( env.containsKey("NXF_S3_DOWNLOAD_STRATEGY") ? Strategy.valueOf(env.get("NXF_S3_DOWNLOAD_STRATEGY")) : Strategy.sequential );
-
         this.chunkSize = props.containsKey("download_chunk_size")
                 ? MemoryUnit.of(props.getProperty("download_chunk_size")) : ( env.containsKey("NXF_S3_DOWNLOAD_CHUNK_SIZE") ? MemoryUnit.of(env.get("NXF_S3_DOWNLOAD_CHUNK_SIZE")) : MemoryUnit.of("10 MB") );
 
         this.bufferMaxSize = props.containsKey("download_buffer_max_size")
                 ? MemoryUnit.of(props.getProperty("download_buffer_max_size")) : ( env.containsKey("NXF_S3_DOWNLOAD_BUFFER_MAX_MEM") ? MemoryUnit.of(env.get("NXF_S3_DOWNLOAD_BUFFER_MAX_MEM")) : MemoryUnit.of("1 GB") );
+
+        this.maxAttempts = props.containsKey("download_max_attempts")
+                ? Integer.parseInt(props.getProperty("download_max_attempts")) : ( env.containsKey("NXF_S3_DOWNLOAD_MAX_ATTEMPTS") ? Integer.parseInt(env.get("NXF_S3_DOWNLOAD_MAX_ATTEMPTS")) : 5 );
+
+        this.maxDelay = props.containsKey("download_max_delay")
+                ? Duration.of(props.getProperty("download_max_delay")) : ( env.containsKey("NXF_S3_DOWNLOAD_MAX_DELAY") ? Duration.of(env.get("NXF_S3_DOWNLOAD_MAX_DELAY")) : Duration.of("90s") );
 
     }
 
@@ -84,8 +87,6 @@ public class DownloadOpts {
 
     public boolean parallelEnabled() { return parallelEnabled; }
 
-    public Strategy strategy() { return strategy; }
-
     public int queueMaxSize() { return queueMaxSize; }
 
     public MemoryUnit chunkMemSize() { return chunkSize; }
@@ -96,8 +97,16 @@ public class DownloadOpts {
 
     public int numWorkers() { return numWorkers; }
 
+    public long maxDelayMillis() {
+        return maxDelay.getMillis();
+    }
+
+    public int maxAttempts() {
+        return maxAttempts;
+    }
+
     @Override
     public String toString() {
-        return String.format("workers=%s; chunkSize=%s; queueSize=%s; max-mem=%s; strategy=%s", numWorkers, chunkSize, queueMaxSize, bufferMaxSize, strategy);
+        return String.format("workers=%s; chunkSize=%s; queueSize=%s; max-mem=%s; maxAttempts=%s; maxDelay=%s", numWorkers, chunkSize, queueMaxSize, bufferMaxSize, maxAttempts, maxDelay);
     }
 }
