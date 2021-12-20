@@ -42,7 +42,6 @@ public class ChunkBuffer implements Comparable<ChunkBuffer> {
         this.index = index;
     }
 
-
     int getIndex() {
         return index;
     }
@@ -64,19 +63,15 @@ public class ChunkBuffer implements Comparable<ChunkBuffer> {
     }
 
     void makeReadable() {
-        target.flip();
-    }
-
-    void mark() {
-        target.mark();
-    }
-
-    void reset() {
-        target.reset();
+        // cast to prevent Java 8 / Java 11 cross compile-runtime error
+        // https://www.morling.dev/blog/bytebuffer-and-the-dreaded-nosuchmethoderror/
+        ((java.nio.Buffer)target).flip();
     }
 
     void clear() {
-        target.clear();
+        // cast to prevent Java 8 / Java 11 cross compile-runtime error
+        // https://www.morling.dev/blog/bytebuffer-and-the-dreaded-nosuchmethoderror/
+        ((java.nio.Buffer)target).clear();
     }
 
     int getBytes( byte[] buff, int off, int len ) {
