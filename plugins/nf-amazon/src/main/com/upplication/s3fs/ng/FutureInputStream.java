@@ -78,7 +78,6 @@ public class FutureInputStream extends InputStream  {
             throw new IOException("Failed to acquire stream chunk", e);
         }
         catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
             throw new InterruptedIOException();
         }
     }

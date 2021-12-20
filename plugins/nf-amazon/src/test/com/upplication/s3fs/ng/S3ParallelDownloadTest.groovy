@@ -174,7 +174,7 @@ class S3ParallelDownloadTest extends Specification {
         def CHUNK_SIZE = 2_000_000_000
         and:
         def client = Mock(AmazonS3)
-        def download = new S3ParallelDownload(client, new DownloadOpts(download_chunk_size: String.valueOf(CHUNK_SIZE)))
+        def download = new S3ParallelDownload(client, new DownloadOpts(download_chunk_size: String.valueOf(CHUNK_SIZE), download_buffer_max_size: String.valueOf(CHUNK_SIZE)))
         def META = Mock(ObjectMetadata) {getContentLength() >> FILE_LEN }
 
         when:

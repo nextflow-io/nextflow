@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -58,10 +57,14 @@ public class S3ParallelDownload {
     }
 
     S3ParallelDownload(AmazonS3 client, DownloadOpts opts) {
+        if( opts.chunkSize() > opts.bufferMaxSize().toBytes() ) {
+            String msg = String.format("S3 download chunk size cannot be greater than download max buffer size - offending values chunk size=%s, buffer size=%s", opts.chunkSizeMem(), opts.bufferMaxSize());
+            throw new IllegalArgumentException(msg);
+        }
         this.s3Client = client;
         this.opts = opts;
-        this.executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(opts.numWorkers(), CustomThreadFactory.withName("S3-download"));
-        int poolCapacity = (int) (opts.bufferMaxSize().toBytes() / opts.chunkSize());
+        this.executor = Executors.newFixedThreadPool(opts.numWorkers(), CustomThreadFactory.withName("S3-download"));
+        int poolCapacity = (int)Math.ceil((float)opts.bufferMaxSize().toBytes() / opts.chunkSize());
         this.bufferFactory = new ChunkBufferFactory(opts.chunkSize(), poolCapacity);
         log.debug("Creating S3 download thread pool: {}; pool-capacity={}", opts, poolCapacity);
     }

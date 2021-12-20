@@ -75,6 +75,15 @@ public class FutureIterator<REQ,RESP> implements Iterator<Future<RESP>> {
             REQ req = parts.next();
             futures.add(executor.submit( () -> task.apply(req)) );
         }
-        return futures.poll();
+        try {
+            return futures.poll();
+        }
+        catch (Throwable t) {
+            // in case of error cancel all pending tasks  
+            for( Future<RESP> it : futures ) {
+                it.cancel(true);
+            }
+            throw t;
+        }
     }
 }

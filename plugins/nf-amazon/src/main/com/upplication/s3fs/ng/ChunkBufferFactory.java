@@ -17,8 +17,8 @@
 
 package com.upplication.s3fs.ng;
 
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -45,7 +45,7 @@ public class ChunkBufferFactory {
     public ChunkBufferFactory(int chunkSize, int capacity) {
         this.chunkSize = chunkSize;
         this.capacity = capacity;
-        this.pool = new LinkedBlockingQueue<>();
+        this.pool = new ArrayBlockingQueue<>(capacity);
         this.count = new AtomicInteger();
     }
 
@@ -66,8 +66,7 @@ public class ChunkBufferFactory {
     }
 
     void giveBack(ChunkBuffer buffer) {
-        if( pool.size()<capacity ) {
-            pool.add(buffer);
+        if( pool.offer(buffer) ) {
             if( log.isTraceEnabled() )
                 log.trace("Returning buffer {} to pool size={}", buffer.getIndex(), pool.size());
         }

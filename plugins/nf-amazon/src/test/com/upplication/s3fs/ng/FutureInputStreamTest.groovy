@@ -28,7 +28,7 @@ import spock.lang.Specification
  */
 class FutureInputStreamTest extends Specification {
 
-    def 'should read the stream ad give bakc the chunks' () {
+    def 'should read the stream ad give back the chunks' () {
         given:
         def STR = "hello world!"
         def BYTES = STR.bytes

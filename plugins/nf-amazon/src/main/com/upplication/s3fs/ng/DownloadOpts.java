@@ -55,7 +55,7 @@ public class DownloadOpts {
 
     DownloadOpts(Properties props, Map<String,String> env) {
         this.parallelEnabled = props.containsKey("download_parallel")
-                ? Boolean.parseBoolean(props.getProperty("download_parallel")) : (env.containsKey("NXF_S3_DOWNLOAD_PARALLEL") ? Boolean.parseBoolean(env.get("NXF_S3_DOWNLOAD_PARALLEL")) : true);
+                ? Boolean.parseBoolean(props.getProperty("download_parallel")) : (env.containsKey("NXF_S3_DOWNLOAD_PARALLEL") ? Boolean.parseBoolean(env.get("NXF_S3_DOWNLOAD_PARALLEL")) : false);
 
         this.queueMaxSize = props.containsKey("download_queue_max_size")
                 ? Integer.parseInt(props.getProperty("download_queue_max_size")) : ( env.containsKey("NXF_S3_DOWNLOAD_QUEUE_SIZE") ? Integer.parseInt(env.get("NXF_S3_DOWNLOAD_QUEUE_SIZE")) : 10_000 );
@@ -89,7 +89,7 @@ public class DownloadOpts {
 
     public int queueMaxSize() { return queueMaxSize; }
 
-    public MemoryUnit chunkMemSize() { return chunkSize; }
+    public MemoryUnit chunkSizeMem() { return chunkSize; }
 
     public int chunkSize() { return (int)chunkSize.toBytes(); }
 
