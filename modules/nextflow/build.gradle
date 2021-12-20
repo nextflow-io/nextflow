@@ -41,6 +41,7 @@ dependencies {
     api ('org.jsoup:jsoup:1.11.2')
     api 'jline:jline:2.9'
     api 'org.pf4j:pf4j:3.4.1'
+    api 'dev.failsafe:failsafe:3.1.0'
 
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
 
