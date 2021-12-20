@@ -30,7 +30,7 @@ public class ChunkBuffer implements Comparable<ChunkBuffer> {
 
     private static final int BUFFER_SIZE = 8192;
 
-    private ByteBuffer target;
+    private final ByteBuffer target;
 
     private final ChunkBufferFactory owner;
 
@@ -42,11 +42,6 @@ public class ChunkBuffer implements Comparable<ChunkBuffer> {
         this.index = index;
     }
 
-    private ChunkBuffer(ByteBuffer buffer) {
-        this.target = buffer;
-        this.owner = null;
-        this.index = 0;
-    }
 
     int getIndex() {
         return index;
@@ -99,13 +94,7 @@ public class ChunkBuffer implements Comparable<ChunkBuffer> {
     }
 
     public void release() {
-        if( owner!=null )
-            owner.giveBack(this);
-
-    }
-
-    public static ChunkBuffer wrap(byte[] data) {
-        return new ChunkBuffer(ByteBuffer.wrap(data));
+        owner.giveBack(this);
     }
 
     @Override

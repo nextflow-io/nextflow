@@ -34,7 +34,7 @@ class FutureInputStreamTest extends Specification {
         def BYTES = STR.bytes
         def CHUNK_SIZE = BYTES.length  +2
         def TIMES = 10
-        def CAPACITY = 5
+        def CAPACITY = 1
         def buffers = new ChunkBufferFactory(CHUNK_SIZE, CAPACITY)
         and:
         def executor = Executors.newFixedThreadPool(10)
