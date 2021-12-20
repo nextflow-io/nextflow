@@ -30,6 +30,7 @@ import java.util.function.Function;
  * specifies executor and iterates over the responses returned as {@link Future}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jordi Deu-Pons <jordi@seqera.io>
  */
 public class FutureIterator<REQ,RESP> implements Iterator<Future<RESP>> {
 
