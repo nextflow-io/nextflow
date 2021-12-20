@@ -51,9 +51,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.RegionUtils;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
@@ -90,6 +95,23 @@ public class AmazonS3Client {
 
 	public AmazonS3Client(AmazonS3 client){
 		this.client = client;
+	}
+
+	public AmazonS3Client(ClientConfiguration config) {
+		this.client = AmazonS3ClientBuilder.standard().withClientConfiguration(config).build();
+	}
+
+	public AmazonS3Client(ClientConfiguration config, AWSCredentials creds ) {
+		this(config, creds, Regions.DEFAULT_REGION.getName());
+	}
+
+	public AmazonS3Client(ClientConfiguration config, AWSCredentials creds, String region) {
+		this.client = AmazonS3ClientBuilder
+				.standard()
+				.withCredentials(new AWSStaticCredentialsProvider(creds))
+				.withClientConfiguration(config)
+				.withRegion( region )
+				.build();
 	}
 	/**
 	 * @see com.amazonaws.services.s3.AmazonS3Client#listBuckets()

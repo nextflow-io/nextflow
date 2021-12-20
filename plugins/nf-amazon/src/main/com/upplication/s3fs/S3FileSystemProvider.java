@@ -98,6 +98,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.upplication.s3fs.ng.DownloadOpts;
+import com.upplication.s3fs.ng.S3ParallelDownload;
 import com.upplication.s3fs.util.IOUtils;
 import com.upplication.s3fs.util.S3MultipartOptions;
 import com.upplication.s3fs.util.S3ObjectSummaryLookup;
@@ -148,6 +150,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
 	private Properties props;
 
+	private S3ParallelDownload downloader;
+
 	@Override
 	public String getScheme() {
 		return "s3";
@@ -190,6 +194,16 @@ public class S3FileSystemProvider extends FileSystemProvider {
 		if (!fileSystem.compareAndSet(null, result)) {
 			throw new FileSystemAlreadyExistsException(
 					"S3 filesystem already exists. Use getFileSystem() instead");
+		}
+
+		// create s3 downloader
+		DownloadOpts opts = DownloadOpts.from(props, System.getenv());
+		if( opts.parallelEnabled() ) {
+			log.debug("Using S3 multi-part downloader");
+			this.downloader = S3ParallelDownload.create(result.getClient().getClient(), opts);
+		}
+		else {
+			log.debug("Using S3 serial downloader");
 		}
 
 		return result;
@@ -266,12 +280,18 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
 		InputStream result;
 		try {
-			result = s3Path.getFileSystem().getClient()
-					.getObject(s3Path.getBucket(), s3Path.getKey())
-					.getObjectContent();
+			if( downloader==null ) {
+				result = s3Path.getFileSystem().getClient()
+						.getObject(s3Path.getBucket(), s3Path.getKey())
+						.getObjectContent();
 
-			if (result == null)
-				throw new IOException(String.format("The specified path is a directory: %s", path));
+				if (result == null)
+					throw new IOException(String.format("The specified path is a directory: %s", path));
+			}
+			else {
+				log.debug("S3 parallel download with direct buffer: s3://{}/{}",s3Path.getBucket(), s3Path.getKey());
+				result = downloader.download(s3Path.getBucket(), s3Path.getKey());
+			}
 		}
 		catch (AmazonS3Exception e) {
 			if (e.getStatusCode() == 404)
@@ -835,12 +855,20 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
 		if (accessKey == null && secretKey == null) {
 			client = new AmazonS3Client(new com.amazonaws.services.s3.AmazonS3Client(config));
-		} else {
-
+		}
+		else {
 			AWSCredentials credentials = (sessionToken == null
 						? new BasicAWSCredentials(accessKey.toString(), secretKey.toString())
 						: new BasicSessionCredentials(accessKey.toString(), secretKey.toString(), sessionToken.toString()) );
-			client = new AmazonS3Client(new com.amazonaws.services.s3.AmazonS3Client(credentials,config));
+
+			if( System.getenv("NXF_AWS_REGION")!=null ) {
+				log.debug("Creating AWS S3 client with region: " + System.getenv("NXF_AWS_REGION") );
+				client = new AmazonS3Client( config, credentials, System.getenv("NXF_AWS_REGION") );
+			}
+			else {
+				client = new AmazonS3Client(new com.amazonaws.services.s3.AmazonS3Client(credentials,config));
+			}
+
 		}
 
 		// note: path style access is going to be deprecated
@@ -940,4 +968,9 @@ public class S3FileSystemProvider extends FileSystemProvider {
     protected Path createTempDir() throws IOException {
         return Files.createTempDirectory("temp-s3-");
     }
+
+    public static void shutdown(boolean hard) {
+		S3OutputStream.shutdownExecutor(hard);
+		S3ParallelDownload.shutdown(hard);
+	}
 }

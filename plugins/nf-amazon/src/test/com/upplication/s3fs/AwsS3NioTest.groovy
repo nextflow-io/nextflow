@@ -17,6 +17,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import com.amazonaws.services.s3.AmazonS3
 import groovy.util.logging.Slf4j
 import spock.lang.Ignore
+import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Specification
@@ -28,7 +29,8 @@ import spock.lang.Timeout
  */
 @Slf4j
 @Timeout(30)
-@Requires({System.getenv('AWS_S3FS_ACCESS_KEY')})
+@IgnoreIf({System.getenv('NXF_SMOKE')})
+@Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
 class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     @Shared
