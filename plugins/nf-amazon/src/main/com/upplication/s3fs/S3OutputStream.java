@@ -211,7 +211,9 @@ public final class S3OutputStream extends OutputStream {
         final float expandFactor = 2.5f;
         final int newCapacity = Math.min( (int)(byteBuffer.capacity() * expandFactor), chunkSize );
 
-        byteBuffer.flip();
+        // cast to prevent Java 8 / Java 11 cross compile-runtime error
+        // https://www.morling.dev/blog/bytebuffer-and-the-dreaded-nosuchmethoderror/
+        ((java.nio.Buffer)byteBuffer).flip();
         ByteBuffer expanded = ByteBuffer.allocate(newCapacity);
         expanded.order(byteBuffer.order());
         expanded.put(byteBuffer);
@@ -434,8 +436,10 @@ public final class S3OutputStream extends OutputStream {
      * @throws IOException
      */
     private void uploadPart( final ByteBuffer buf, final byte[] checksum, final int partNumber, final boolean lastPart ) throws IOException {
-        buf.flip();
-        buf.mark();
+        // cast to prevent Java 8 / Java 11 cross compile-runtime error
+        // https://www.morling.dev/blog/bytebuffer-and-the-dreaded-nosuchmethoderror/
+        ((java.nio.Buffer)buf).flip();
+        ((java.nio.Buffer)buf).mark();
 
         int attempt=0;
         boolean success=false;
@@ -545,7 +549,9 @@ public final class S3OutputStream extends OutputStream {
      * @throws IOException
      */
     private void putObject(ByteBuffer buf, byte[] checksum) throws IOException {
-        buf.flip();
+        // cast to prevent Java 8 / Java 11 cross compile-runtime error
+        // https://www.morling.dev/blog/bytebuffer-and-the-dreaded-nosuchmethoderror/
+        ((java.nio.Buffer)buf).flip();
         putObject(new ByteBufferInputStream(buf), buf.limit(), checksum);
     }
 
