@@ -17,11 +17,13 @@
 
 package com.upplication.s3fs.util;
 
+import java.util.List;
 import java.util.Properties;
 
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectId;
 import com.amazonaws.services.s3.model.StorageClass;
+import com.amazonaws.services.s3.model.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +49,7 @@ public class S3UploadRequest extends S3MultipartOptions<S3UploadRequest> {
      */
     private ObjectMetadata metadata;
 
-
+    private List<Tag> tags;
 
     public S3UploadRequest() {
 
@@ -112,6 +114,15 @@ public class S3UploadRequest extends S3MultipartOptions<S3UploadRequest> {
 
     public S3UploadRequest setMetadata(ObjectMetadata metadata) {
         this.metadata = metadata;
+        return this;
+    }
+
+    public List<Tag> getTags() {
+        return tags;
+    }
+
+    public S3UploadRequest setTags(List<Tag> tags) {
+        this.tags = tags;
         return this;
     }
 

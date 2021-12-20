@@ -37,6 +37,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
+import nextflow.file.TagAwareFile
 import nextflow.util.PathTrie
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
@@ -84,6 +85,11 @@ class PublishDir {
      */
     boolean enabled = true
 
+    /**
+     * Tags to be associated to the target file
+     */
+    private def tags
+
     private PathMatcher matcher
 
     private FileSystem sourceFileSystem
@@ -120,6 +126,17 @@ class PublishDir {
         this.mode = mode
     }
 
+    static @PackageScope Map<String,String> resolveTags( tags ) {
+        def result = tags instanceof Closure
+                ? tags.call()
+                : tags
+
+        if( result instanceof Map<String,String> )
+            return result
+
+        throw new IllegalArgumentException("Invalid publishDir tags attribute: $tags")
+    }
+
     @PackageScope boolean checkNull(String str) {
         ( str =~ /\bnull\b/  ).find()
     }
@@ -152,10 +169,13 @@ class PublishDir {
             result.overwrite = Boolean.parseBoolean(params.overwrite.toString())
 
         if( params.saveAs )
-            result.saveAs = params.saveAs
+            result.saveAs = (Closure) params.saveAs
 
         if( params.enabled != null )
             result.enabled = Boolean.parseBoolean(params.enabled.toString())
+
+        if( params.tags != null )
+            result.tags = params.tags
 
         return result
     }
@@ -217,6 +237,7 @@ class PublishDir {
         this.sourceFileSystem = sourceDir ? sourceDir.fileSystem : null
         apply0(files)
     }
+
     /**
      * Apply the publishing process to the specified {@link TaskRun} instance
      *
@@ -258,6 +279,12 @@ class PublishDir {
         }
 
         final destination = resolveDestination(target)
+
+        // apply tags
+        if( this.tags!=null && destination instanceof TagAwareFile ) {
+            destination.setTags( resolveTags(this.tags) )
+        }
+
         if( inProcess ) {
             safeProcessFile(source, destination)
         }

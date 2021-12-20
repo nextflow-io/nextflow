@@ -74,6 +74,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -91,9 +92,11 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.Grant;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.ObjectTagging;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.Permission;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.Tag;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -354,7 +357,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
 		S3UploadRequest req = props != null ? new S3UploadRequest(props) : new S3UploadRequest();
 		req.setObjectId(fileToUpload.toS3ObjectId());
-
+		req.setTags(fileToUpload.getTagsList());
 		S3OutputStream stream = new S3OutputStream(s3.getClient(), req);
 		stream.setCannedAcl(s3.getCannedAcl());
 		return stream;
@@ -398,6 +401,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
         // and we can use the File SeekableByteChannel implementation
 		final SeekableByteChannel seekable = Files .newByteChannel(tempFile, options);
+		final List<Tag> tags = ((S3Path) path).getTagsList();
 
 		return new SeekableByteChannel() {
 			@Override
@@ -431,7 +435,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
                                 .getClient()
                                 .putObject(s3Path.getBucket(), s3Path.getKey(),
                                         stream,
-                                        metadata);
+                                        metadata,
+										tags);
                     }
                 }
                 else {
@@ -493,6 +498,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 		Preconditions.checkArgument(attrs.length == 0,
 				"attrs not yet supported: %s", ImmutableList.copyOf(attrs)); // TODO
 
+		List<Tag> tags = s3Path.getTagsList();
 		ObjectMetadata metadata = new ObjectMetadata();
 		metadata.setContentLength(0);
 		if( isAES256Enabled() )
@@ -504,7 +510,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 		s3Path.getFileSystem()
 				.getClient()
 				.putObject(s3Path.getBucket(), keyName,
-						new ByteArrayInputStream(new byte[0]), metadata);
+						new ByteArrayInputStream(new byte[0]), metadata, tags);
 	}
 
 	@Override
@@ -570,18 +576,22 @@ public class S3FileSystemProvider extends FileSystemProvider {
 		final S3MultipartOptions opts = props != null ? new S3MultipartOptions<>(props) : new S3MultipartOptions();
 		final int chunkSize = opts.getChunkSize();
 		final long length = sourceObjMetadata.getContentLength();
-
+		final List<Tag> tags = ((S3Path) target).getTagsList();
+		
 		if( length <= chunkSize ) {
 
 			CopyObjectRequest copyObjRequest = new CopyObjectRequest(s3Source.getBucket(), s3Source.getKey(),s3Target.getBucket(), s3Target.getKey());
-
+			if( tags.size()>0 ) {
+				copyObjRequest.setNewObjectTagging(new ObjectTagging(tags));
+			}
+			
 			ObjectMetadata targetObjectMetadata = null;
 			if( isAES256Enabled() ) {
 				targetObjectMetadata = new ObjectMetadata();
 				targetObjectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
 				copyObjRequest.setNewObjectMetadata(targetObjectMetadata);
 			}
-			log.trace("Copy file via copy object - source: source={}, target={}, metadata={}", s3Source, s3Target, targetObjectMetadata);
+			log.trace("Copy file via copy object - source: source={}, target={}, metadata={}, tags={}", s3Source, s3Target, targetObjectMetadata, tags);
 			client.copyObject(copyObjRequest);
 		}
 		else {
@@ -590,8 +600,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
 				targetObjectMetadata = new ObjectMetadata();
 				targetObjectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
 			}
-			log.trace("Copy file via multipart upload - source: source={}, target={}, metadata={}", s3Source, s3Target, targetObjectMetadata);
-			client.multipartCopyObject(s3Source, s3Target, length, opts, targetObjectMetadata);
+			log.trace("Copy file via multipart upload - source: source={}, target={}, metadata={}, tags={}", s3Source, s3Target, targetObjectMetadata, tags);
+			client.multipartCopyObject(s3Source, s3Target, length, opts, targetObjectMetadata, tags);
 		}
 	}
 
