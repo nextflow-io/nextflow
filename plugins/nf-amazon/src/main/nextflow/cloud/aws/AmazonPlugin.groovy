@@ -1,9 +1,9 @@
 package nextflow.cloud.aws
 
-
 import com.upplication.s3fs.S3FileSystemProvider
-import com.upplication.s3fs.S3OutputStream
 import groovy.transform.CompileStatic
+import nextflow.Global
+import nextflow.Session
 import nextflow.file.FileHelper
 import nextflow.plugin.BasePlugin
 import org.pf4j.PluginWrapper
@@ -29,6 +29,8 @@ class AmazonPlugin extends BasePlugin {
     void stop() {
         super.stop()
         // shutdown s3 uploader
-        S3OutputStream.shutdownExecutor()
+        final session = (Global.session as Session)
+        final aborted = session ? session.isAborted() : false
+        S3FileSystemProvider.shutdown(aborted)
     }
 }

@@ -1698,7 +1698,7 @@ class TaskProcessor {
         if( obj instanceof Path )
             return obj
 
-        if( obj == null )
+        if( !obj == null )
             throw new ProcessUnrecoverableException("Path value cannot be null")
         
         if( !(obj instanceof CharSequence) )
@@ -1711,8 +1711,10 @@ class TaskProcessor {
             return FileHelper.asPath(str)
         if( FileHelper.getUrlProtocol(str) )
             return FileHelper.asPath(str)
-
-        throw new ProcessUnrecoverableException("Not a valid path value: $str")
+        if( !str )
+            throw new ProcessUnrecoverableException("Path value cannot be empty")
+        
+        throw new ProcessUnrecoverableException("Not a valid path value: '$str'")
     }
 
     protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, FilePorter.Batch batch ) {

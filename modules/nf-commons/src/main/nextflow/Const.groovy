@@ -127,7 +127,7 @@ class Const {
       http://nextflow.io
 """
 
-    static public final String S3_UPLOADER_CLASS = 'com.upplication.s3fs.S3OutputStream'
+    static public final String S3_UPLOADER_CLASS = 'com.upplication.s3fs'
 
     static public final String ROLE_WORKER = 'worker'
 
