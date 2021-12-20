@@ -2045,6 +2045,7 @@ saveAs          A closure which, given the name of the file being published, ret
                 Return the value ``null`` from the closure to *not* publish a file.
                 This is useful when the process has multiple output files, but you want to publish only some of them.
 enabled         Enable or disable the publish rule depending on the boolean value specified (default: ``true``).
+tags            Allow to associate tags with the target file e.g. ``tag: [FOO: 'Hello world']`` (EXPERIMENTAL, currently only supported by files stored on AWS S3, requires version ``21.12.0-edge`` or later).
 =============== =================
 
 Table of publish modes:

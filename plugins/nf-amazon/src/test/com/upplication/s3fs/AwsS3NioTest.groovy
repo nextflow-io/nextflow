@@ -907,6 +907,39 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         cleanup:
         deleteBucket(bucketName)
     }
-    
+
+    def 'should tag a file' () {
+        given:
+        def bucketName = createBucket()
+        and:
+        def path = (S3Path) Paths.get(new URI("s3:///$bucketName/alpha.txt"))
+        def copy = (S3Path) Paths.get(new URI("s3:///$bucketName/omega.txt"))
+        and:
+        def client = path.getFileSystem().getClient()
+
+        when:
+        path.setTags(FOO: 'Hello world', BAR: 'xyz')
+        Files.createFile(path)
+        then:
+        Files.exists(path)
+        and:
+        def tags = client .getObjectTags(path.getBucket(), path.getKey())
+        tags.find { it.key=='FOO' }.value == 'Hello world'
+        tags.find { it.key=='BAR' }.value == 'xyz'
+
+        when:
+        copy.setTags(FOO: 'Hola mundo', BAZ: '123')
+        Files.copy(path, copy)
+        then:
+        Files.exists(copy)
+        and:
+        def copyTags = client .getObjectTags(copy.getBucket(), copy.getKey())
+        copyTags.find { it.key=='FOO' }.value == 'Hola mundo'
+        copyTags.find { it.key=='BAZ' }.value == '123'
+        copyTags.find { it.key=='BAR' } == null
+
+        cleanup:
+        deleteBucket(bucketName)
+    }
 
 }
