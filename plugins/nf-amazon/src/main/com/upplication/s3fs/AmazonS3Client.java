@@ -67,16 +67,19 @@ import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.CopyObjectResult;
 import com.amazonaws.services.s3.model.CopyPartRequest;
 import com.amazonaws.services.s3.model.CopyPartResult;
+import com.amazonaws.services.s3.model.GetObjectTaggingRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.ObjectTagging;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.Tag;
 import com.upplication.s3fs.util.S3MultipartOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -142,14 +145,18 @@ public class AmazonS3Client {
 		}
 		return client.putObject(req);
 	}
+	
 	/**
 	 * @see com.amazonaws.services.s3.AmazonS3Client#putObject(String, String, java.io.InputStream, ObjectMetadata)
 	 */
-	public PutObjectResult putObject(String bucket, String keyName, InputStream inputStream, ObjectMetadata metadata) {
+	public PutObjectResult putObject(String bucket, String keyName, InputStream inputStream, ObjectMetadata metadata, List<Tag> tags) {
 		PutObjectRequest req = new PutObjectRequest(bucket, keyName, inputStream, metadata);
 		if( cannedAcl != null ) {
-			log.trace("Setting canned ACL={}; bucket={} and stream", cannedAcl, bucket);
+			log.trace("Setting canned ACL={}; bucket={}; tags={} and stream", cannedAcl, bucket, tags);
 			req.withCannedAcl(cannedAcl);
+		}
+		if( tags != null ) {
+			req.setTagging(new ObjectTagging(tags));
 		}
 		return client.putObject(req);
 	}
@@ -236,14 +243,18 @@ public class AmazonS3Client {
 		return client.getObjectMetadata(bucketName, key);
 	}
 
-    /**
+	public List<Tag> getObjectTags(String bucketName, String key) {
+		return client.getObjectTagging(new GetObjectTaggingRequest(bucketName,key)).getTagSet();
+	}
+
+	/**
      * @see com.amazonaws.services.s3.AmazonS3Client#listNextBatchOfObjects(com.amazonaws.services.s3.model.ObjectListing)
      */
     public ObjectListing listNextBatchOfObjects(ObjectListing objectListing) {
         return client.listNextBatchOfObjects(objectListing);
     }
 
-	public void multipartCopyObject(S3Path s3Source, S3Path s3Target, Long objectSize, S3MultipartOptions opts, ObjectMetadata targetObjectMetadata ) {
+	public void multipartCopyObject(S3Path s3Source, S3Path s3Target, Long objectSize, S3MultipartOptions opts, ObjectMetadata targetObjectMetadata, List<Tag> tags ) {
 
 		final String sourceBucketName = s3Source.getBucket();
 		final String sourceObjectKey = s3Source.getKey();
@@ -262,6 +273,10 @@ public class AmazonS3Client {
 			initiateRequest.withObjectMetadata(targetObjectMetadata);
 		}
 
+		if( tags != null && tags.size()>0 ) {
+			initiateRequest.setTagging( new ObjectTagging(tags));
+		}
+		
 		InitiateMultipartUploadResult initResult = client.initiateMultipartUpload(initiateRequest);
 
 

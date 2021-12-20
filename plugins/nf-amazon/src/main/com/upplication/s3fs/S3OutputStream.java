@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
@@ -43,10 +44,12 @@ import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.ObjectTagging;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectId;
 import com.amazonaws.services.s3.model.StorageClass;
+import com.amazonaws.services.s3.model.Tag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.util.Base64;
 import com.upplication.s3fs.util.ByteBufferInputStream;
@@ -173,6 +176,8 @@ public final class S3OutputStream extends OutputStream {
 
     private CannedAccessControlList cannedAcl;
 
+    private List<Tag> tags;
+
     /**
      * Creates a s3 uploader output stream
      * @param s3 The S3 client
@@ -198,6 +203,7 @@ public final class S3OutputStream extends OutputStream {
         this.storageClass = request.getStorageClass();
         this.request = request;
         this.chunkSize = request.getChunkSize();
+        this.tags = request.getTags();
     }
 
     private ByteBuffer expandBuffer(ByteBuffer byteBuffer) {
@@ -566,6 +572,10 @@ public final class S3OutputStream extends OutputStream {
             request.setStorageClass(storageClass);
         }
 
+        if( tags!=null && tags.size()>0 ) {
+            request.setTagging( new ObjectTagging(tags) );
+        }
+        
         try {
             s3.putObject(request);
         } catch (final AmazonClientException e) {

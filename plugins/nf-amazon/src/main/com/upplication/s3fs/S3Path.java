@@ -50,12 +50,15 @@ import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import javax.annotation.Nullable;
 
 import com.amazonaws.services.s3.model.S3ObjectId;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.Tag;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -63,12 +66,13 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import nextflow.file.TagAwareFile;
 import static com.google.common.collect.Iterables.concat;
 import static com.google.common.collect.Iterables.filter;
 import static com.google.common.collect.Iterables.transform;
 import static java.lang.String.format;
 
-public class S3Path implements Path {
+public class S3Path implements Path, TagAwareFile {
 	
 	public static final String PATH_SEPARATOR = "/";
 	/**
@@ -85,6 +89,8 @@ public class S3Path implements Path {
 	private S3FileSystem fileSystem;
 
 	private S3ObjectSummary objectSummary;
+
+	private Map<String,String> tags;
 
 	/**
 	 * path must be a string of the form "/{bucket}", "/{bucket}/{key}" or just
@@ -535,6 +541,23 @@ public class S3Path implements Path {
 	// note: package scope to limit the access to this setter
 	void setObjectSummary(S3ObjectSummary objectSummary) {
 		this.objectSummary = objectSummary;
+	}
+
+	@Override
+	public void setTags(Map<String,String> tags) {
+		this.tags = tags;
+	}
+
+	public List<Tag> getTagsList() {
+		// nothing found, just return
+		if( tags==null )
+			return Collections.emptyList();
+		// create a list of Tag out of the Map
+		List<Tag> result = new ArrayList<>();
+		for( Map.Entry<String,String> entry : tags.entrySet()) {
+			result.add( new Tag(entry.getKey(), entry.getValue()) );
+		}
+		return result;
 	}
 
 	// ~ helpers methods
