@@ -23,11 +23,6 @@ apply plugin: 'java-test-fixtures'
 apply plugin: 'idea'
 apply plugin: 'groovy'
 
-repositories {
-    flatDir {
-        dirs 'libs'
-    }
-}
 
 sourceSets {
     main.java.srcDirs = []
@@ -55,7 +50,7 @@ dependencies {
     api 'org.postgresql:postgresql:42.2.23'
     api 'org.xerial:sqlite-jdbc:3.36.0.3'
     api 'org.duckdb:duckdb_jdbc:0.3.0'
-    api name: 'AthenaJDBC42_2.0.25.1001'
+    api files('downloads/unzip/AthenaJDBC42_2.0.25.1001.jar')
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
@@ -68,29 +63,21 @@ dependencies {
  * The following tasks download and confirm the MD5 checksum of the ZIP archive
  * for Simba Athena JDBC driver and extract its contents to the build directory
  */
-tasks.register('downloadZipFile', Download) {
+task downloadAthenDep(type: Download) {
     src 'https://s3.amazonaws.com/athena-downloads/drivers/JDBC/SimbaAthenaJDBC-2.0.25.1001/SimbaAthenaJDBC-2.0.25.1001.zip'
     dest new File(buildDir, 'downloads/SimbaAthenaJDBC-2.0.25.1001.zip')
     overwrite false
 }
 
-tasks.register('verifyFile', Verify) {
-    dependsOn 'downloadZipFile'
+task verifyAthenDep(type: Verify, dependsOn: downloadAthenDep) {
     src new File(buildDir, 'downloads/SimbaAthenaJDBC-2.0.25.1001.zip')
     algorithm 'MD5'
     checksum '71504d0317656d790978363358d0c068'
 }
 
-tasks.register('downloadAndUnzipFile', Copy) {
-    dependsOn 'downloadZipFile', 'verifyFile'
-    from zipTree(downloadZipFile.dest)
+task unzipAthenDep(dependsOn: verifyAthenDep, type: Copy) {
+    from zipTree(new File(buildDir, 'downloads/SimbaAthenaJDBC-2.0.25.1001.zip'))
     into "${buildDir}/downloads/unzip"
 }
 
-tasks.register('copyAthenaSimbaJar', Copy) {
-    dependsOn 'downloadAndUnzipFile'
-    from "${buildDir}/downloads/unzip/SimbaAthenaJDBC-2.0.25.1001/AthenaJDBC42_2.0.25.1001.jar"
-    into "libs"
-}
-
-compileGroovy.dependsOn('copyAthenaSimbaJar')
+project.compileGroovy.dependsOn('unzipAthenDep')
