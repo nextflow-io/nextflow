@@ -87,7 +87,7 @@ public class DownloadOpts {
 
     public boolean parallelEnabled() { return parallelEnabled; }
 
-    public int queueMaxSize() { return queueMaxSize; }
+    @Deprecated public int queueMaxSize() { return queueMaxSize; }
 
     public MemoryUnit chunkSizeMem() { return chunkSize; }
 
