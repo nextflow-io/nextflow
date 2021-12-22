@@ -252,4 +252,19 @@ class CmdRunTest extends Specification {
         then:
         cmd.getDisableJobsCancellation() == true
     }
+
+    @Unroll
+    def 'should guss is repo' () {
+        expect:
+        CmdRun.guessIsRepo(PATH) == EXPECTED
+        
+        where:
+        EXPECTED    | PATH
+        true        | 'http://github.com/foo'
+        true        | 'foo/bar'
+        and:
+        false       | 'script.nf'
+        false       | '/some/path'
+        false       | '../some/path'
+    }
 }
