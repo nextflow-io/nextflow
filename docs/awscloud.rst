@@ -218,7 +218,7 @@ Different queues bound to the same or different Compute environments can be conf
 Container Options
 =================
 
-As of version ``21.12.0-edge``, the use of the Nextflow :ref:`process-containerOptions` directive is supported to fine control
+As of version ``21.12.1-edge``, the use of the Nextflow :ref:`process-containerOptions` directive is supported to fine control
 the properties of the container execution associated with each Batch job.
 
 Not all the standard container options are supported by AWS Batch. These are the options accepted ::
@@ -247,7 +247,7 @@ Not all the standard container options are supported by AWS Batch. These are the
 
 Container options must be passed in their long from for "--option value" or short form "-o value", if available.
 
-Few examples ::
+Few examples::
 
   containerOptions '--tmpfs /run:rw,noexec,nosuid,size=128 --tmpfs /app:ro,size=64'
 
