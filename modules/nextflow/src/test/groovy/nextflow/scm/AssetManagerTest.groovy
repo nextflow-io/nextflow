@@ -130,6 +130,16 @@ class AssetManagerTest extends Specification {
         then:
         thrown(AbortOperationException)
 
+        when:
+        result = manager.resolveName('../blast/script.nf')
+        then:
+        thrown(AbortOperationException)
+
+        when:
+        result = manager.resolveName('./blast/script.nf')
+        then:
+        thrown(AbortOperationException)
+
     }
 
 
