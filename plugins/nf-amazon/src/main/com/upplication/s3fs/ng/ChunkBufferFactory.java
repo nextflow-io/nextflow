@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Model a buffer for downlod chunk
+ * Model a buffer for download chunk
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
