@@ -26,6 +26,8 @@ import nextflow.script.TaskClosure
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -273,8 +275,8 @@ class TaskConfigTest extends Specification {
 
     }
 
+    @Unroll
     def testGetCpus() {
-
         when:
         def config = new TaskConfig().setContext(ten: 10)
         config.cpus = value
@@ -290,7 +292,28 @@ class TaskConfigTest extends Specification {
         1            | true     | 1
         8            | true     | 8
         10           | true     | { ten ?: 0  }
+    }
 
+    @Unroll
+    def testGetCpuMillis() {
+        when:
+        def config = new TaskConfig().setContext(ten: 10)
+        config.cpus = VALUE
+
+        then:
+        config.getCpuMillis() == EXPECTED
+        config.hasCpus() == DEFINED
+
+        where:
+        EXPECTED    | DEFINED  | VALUE
+        1000        | false    | null
+        1000        | true     | 1
+        8000        | true     | 8
+        10000       | true     | { ten ?: 0  }
+        and:
+        100         | true     | 0.1
+        1500        | true     | 1.5
+        2100        | true     | '2100m'
     }
 
     def testGetStore() {
@@ -589,5 +612,59 @@ class TaskConfigTest extends Specification {
         process.createTaskConfig().secret == ['alpha', 'omega']
         process.createTaskConfig().getSecret() == ['alpha', 'omega']
 
+    }
+
+    @Unroll
+    def 'should parse cpus int'() {
+        expect:
+        TaskConfig.parseCpusInt(VALUE) == CPUS
+
+        where:
+        VALUE   | CPUS
+        1       | 1
+        8       | 8
+        and:
+        '1'     | 1
+        '8'     | 8
+        '256'   | 256
+        and:
+        '10m'   | 1
+        '999m'  | 1
+        '1100m' | 2
+        and:
+        1.0     | 1
+        1.1     | 2
+        8.0     | 8
+        and:
+        '1.0'    | 1
+        '1.1'    | 2
+        '8.0'    | 8
+    }
+
+    @Unroll
+    def 'should parse cpus millis'() {
+        expect:
+        TaskConfig.parseCpuMillis(VALUE) == MILLIS
+
+        where:
+        VALUE   | MILLIS
+        1       | 1_000
+        8       | 8_000
+        and:
+        '1'     | 1_000
+        '8'     | 8_000
+        '256'   | 256_000
+        and:
+        '10m'   | 10
+        '999m'  | 999
+        '1100m' | 1100
+        and:
+        1.0     | 1_000
+        1.1     | 1_100
+        8.0     | 8_000
+        and:
+        '1.0'    | 1_000
+        '1.1'    | 1_100
+        '8.0'    | 8_000
     }
 }

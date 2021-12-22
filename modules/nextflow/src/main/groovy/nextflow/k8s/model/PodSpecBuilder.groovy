@@ -64,7 +64,7 @@ class PodSpecBuilder {
 
     String workDir
 
-    Integer cpus
+    Integer cpuMillis
 
     String memory
 
@@ -93,7 +93,7 @@ class PodSpecBuilder {
     List<Map> tolerations = []
 
     boolean privileged
-    
+
     /**
      * @return A sequential volume unique identifier
      */
@@ -150,8 +150,8 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withCpus( Integer cpus ) {
-        this.cpus = cpus
+    PodSpecBuilder withCpuMillis(Integer cpus ) {
+        this.cpuMillis = cpus
         return this
     }
 
@@ -323,8 +323,8 @@ class PodSpecBuilder {
         }
 
         final res = [:]
-        if( this.cpus )
-            res.cpu = this.cpus
+        if( this.cpuMillis )
+            res.cpu = this.cpuMillis + 'm'
         if( this.memory )
             res.memory = this.memory
 
