@@ -250,9 +250,18 @@ class AssetManager {
     String resolveName( String name ) {
         assert name
 
+        //
+        // check if it's a repository fully qualified URL e.g. https://github.com/foo/bar
+        //
         def project = resolveNameFromGitUrl(name)
         if( project )
             return project
+
+        //
+        // otherwise it must be a canonical repository name e.g. user/project
+        //
+        if( ['./','../', '/' ].any(it->name.startsWith(it)) )
+            throw new AbortOperationException("Not a valid project name: $name")
 
         def parts = name.split('/') as List<String>
         def last = parts[-1]
@@ -459,7 +468,7 @@ class AssetManager {
             result = (ConfigObject)config.manifest
         }
         catch( Exception e ) {
-            throw new Exception("Project config file is malformed -- Cause: ${e.message ?: e}", e)
+            throw new AbortOperationException("Project config file is malformed -- Cause: ${e.message ?: e}", e)
         }
 
         // by default return an empty object

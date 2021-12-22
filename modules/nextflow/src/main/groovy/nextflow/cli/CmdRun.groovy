@@ -338,6 +338,33 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     protected ScriptFile getScriptFile(String pipelineName) {
+        try {
+            getScriptFile0(pipelineName)
+        }
+        catch (IllegalArgumentException | AbortOperationException e) {
+            if( e.message.startsWith("Not a valid project name:") && !guessIsRepo(pipelineName)) {
+                throw new AbortOperationException("Cannot find script file: $pipelineName")
+            }
+            else
+                throw e
+        }
+    }
+
+    static protected boolean guessIsRepo(String name) {
+        if( FileHelper.getUrlProtocol(name) != null )
+            return true
+        if( name.startsWith('/') )
+            return false
+        if( name.startsWith('./') || name.startsWith('../') )
+            return false
+        if( name.endsWith('.nf') )
+            return false
+        if( name.count('/') != 1 )
+            return false
+        return true
+    }
+
+    protected ScriptFile getScriptFile0(String pipelineName) {
         assert pipelineName
 
         /*
