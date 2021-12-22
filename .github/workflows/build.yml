@@ -120,4 +120,5 @@ jobs:
         name: test-reports-jdk-${{ matrix.java_version }}
         path: |
           **/build/reports/tests/test
+          validation/**
           integration-tests.tar
