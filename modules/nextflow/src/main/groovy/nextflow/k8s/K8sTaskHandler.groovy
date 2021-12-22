@@ -181,11 +181,11 @@ class K8sTaskHandler extends TaskHandler {
             builder.withEnv(PodEnv.value('NXF_OWNER', getOwner()))
 
         // add computing resources
-        final cpus = taskCfg.getCpus()
+        final cpus = taskCfg.getCpuMillis() 
         final mem = taskCfg.getMemory()
         final acc = taskCfg.getAccelerator()
         if( cpus )
-            builder.withCpus(cpus)
+            builder.withCpuMillis(cpus)
         if( mem )
             builder.withMemory(mem)
         if( acc )
