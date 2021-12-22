@@ -924,6 +924,7 @@ NXF_VER                         Defines what version of Nextflow to use.
 NXF_ORG                         Default `organization` prefix when looking for a hosted repository (default: ``nextflow-io``).
 NXF_GRAB                        Provides extra runtime dependencies downloaded from a Maven repository service.
 NXF_OPTS                        Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of ``-Dkey[=value]`` properties.
+NXF_JVM_ARGS                    Allows the setting Java VM options. This is similar to ``NXF_OPTS`` however it's only applied the JVM running Nextflow and not to any java pre-launching commands.
 NXF_CLASSPATH                   Allows the extension of the Java runtime classpath with extra JAR files or class folders.
 NXF_ASSETS                      Defines the directory where downloaded pipeline repositories are stored (default: ``$NXF_HOME/assets``)
 NXF_PID_FILE                    Name of the file where the process PID is saved when Nextflow is launched in background.

@@ -417,6 +417,7 @@ $NXF_VER
 $NXF_OPTS
 $NXF_GRAB
 $NXF_CLASSPATH
+$NXF_JVM_ARGS
 EOF
 }
 
@@ -450,9 +451,12 @@ else
       launcher+=(--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
+      [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
       launcher+=("${cli[@]:1}")
     else
-      launcher=("${cli[@]}")
+      launcher=("${cli[@]:0:1}")
+      [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
+      launcher+=("${cli[@]:1}")
     fi
 
     # Don't show errors if the LAUNCH_FILE can't be created
