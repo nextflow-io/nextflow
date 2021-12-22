@@ -170,13 +170,13 @@ class PodSpecBuilder {
     }
 
 
-    PodSpecBuilder withEnv( PodEnv var ) {
-        envVars.add(var)
+    PodSpecBuilder withEnv( PodEnv env ) {
+        envVars.add(env)
         return this
     }
 
-    PodSpecBuilder withEnv( Collection vars ) {
-        envVars.addAll(vars)
+    PodSpecBuilder withEnv( Collection envs ) {
+        envVars.addAll(envs)
         return this
     }
 
