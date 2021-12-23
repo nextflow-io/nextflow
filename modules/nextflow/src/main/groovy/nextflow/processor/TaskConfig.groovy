@@ -320,8 +320,8 @@ class TaskConfig extends LazyMap implements Cloneable {
             catch (NumberFormatException e) {
                 throw new IllegalArgumentException("Not a valid cpus value: '$value'", e)
             }
-         // turn float to unit
         }
+        // turn float to unit
         if( str.contains('.') ) {
             try {
                 return Math.ceil(str.toFloat())
