@@ -109,7 +109,7 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
             result << runOptions.join(' ') << ' '
 
         if( cpus ) {
-            result << "--cpus ${String.format(Locale.ROOT, "%.1f", cpus)} "
+            result << "--cpus ${cpus.toDecimalString()} "
         }
 
         if( memory ) {

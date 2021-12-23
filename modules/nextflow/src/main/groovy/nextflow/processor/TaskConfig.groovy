@@ -33,6 +33,7 @@ import nextflow.executor.res.AcceleratorResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
+import nextflow.util.CpuUnit
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 /**
@@ -281,82 +282,12 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     int getCpus() {
         final value = get('cpus')
-        value ? parseCpusInt(value) : 1  // note: always return at least 1 cpus
+        value ? CpuUnit.of(value).toCores() : 1  // note: always return at least 1 cpus
     }
 
-    int getCpuMillis() {
+    CpuUnit getCpuUnits() {
         final value = get('cpus')
-        value ? parseCpuMillis(value) : 1_000
-    }
-
-    static protected int parseCpusInt(value) {
-        if( value instanceof Integer )
-            return value
-        if( value instanceof Number )
-            return Math.ceil(value.toDouble())
-        if( value !instanceof CharSequence )
-            throw new IllegalArgumentException("Not a valid cpus value: '$value'")
-        // turn millis into an integer unit
-        final str = value.toString()
-        if( str.endsWith('m') ) {
-            try {
-                return Math.ceil((double)str.substring(0,str.length()-1).toInteger() / 1000)
-            }
-            catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Not a valid cpus value: '$value'", e)
-            }
-        }
-        // turn float to unit
-        if( str.contains('.') ) {
-            try {
-                return Math.ceil(str.toFloat())
-            }
-            catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Not a valid cpus value: '$value'", e)
-            }
-        }
-        // it should be an integer value
-        try {
-            return Math.ceil(str.toInteger())
-        }
-        catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Not a valid cpus value: '$value'", e)
-        }
-    }
-
-    static protected int parseCpuMillis(value) {
-        if( value instanceof Integer )
-            return value.toInteger() * 1000
-        if( value instanceof Number )
-            return Math.ceil(value.toDouble() * 1000)
-        if( value !instanceof CharSequence )
-            throw new IllegalArgumentException("Not a valid cpus value: '$value'")
-        // turn millis into an integer unit
-        final str = value.toString()
-        if( str.endsWith('m') ) {
-            try {
-                return str.substring(0,str.length()-1).toInteger()
-            }
-            catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Not a valid cpus value: '$value'", e)
-            }
-        }
-        // turn float to unit
-        if( str.contains('.') ) {
-            try {
-                return Math.ceil(str.toDouble() * 1000)
-            }
-            catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Not a valid cpus value: '$value'", e)
-            }
-        }
-        // it should be an integer value
-        try {
-            return str.toInteger() * 1000
-        }
-        catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Not a valid cpus value: '$value'", e)
-        }
+        value ? CpuUnit.of(value) : CpuUnit.ONE_CORE
     }
 
     int getMaxRetries() {

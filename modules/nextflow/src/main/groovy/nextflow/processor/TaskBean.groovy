@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.container.ContainerConfig
 import nextflow.executor.BashWrapperBuilder
+import nextflow.util.CpuUnit
 import nextflow.util.MemoryUnit
 
 /**
@@ -62,7 +63,7 @@ class TaskBean implements Serializable, Cloneable {
 
     String containerCpuset
 
-    Float containerCpus
+    CpuUnit containerCpus
 
     MemoryUnit containerMemory
 
@@ -133,7 +134,7 @@ class TaskBean implements Serializable, Cloneable {
         this.containerImage = task.getContainer()
         this.containerConfig = task.getContainerConfig()
         this.containerMemory = task.config.getMemory()
-        this.containerCpus = task.config.getCpus()
+        this.containerCpus = task.config.getCpuUnits()
         this.containerNative = task.isContainerNative()
         this.containerEnabled = task.isContainerEnabled()
         this.containerOptions = task.config.getContainerOptions()
