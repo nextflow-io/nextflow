@@ -181,7 +181,7 @@ class PublishDir {
     }
 
     @CompileStatic
-    protected void apply0(Set<Path> files) {
+    protected Set<Path> apply0(Set<Path> files) {
         assert path
 
         createPublishDir()
@@ -201,6 +201,7 @@ class PublishDir {
         /*
          * iterate over the file parameter and publish each single file
          */
+        Set<Path>
         for( Path value : dedupPaths(files) ) {
             apply1(value, inProcess)
         }
@@ -241,6 +242,7 @@ class PublishDir {
     /**
      * Apply the publishing process to the specified {@link TaskRun} instance
      *
+     * @param files Set of output files
      * @param task The task whose output need to be published
      */
     @CompileStatic
@@ -346,6 +348,8 @@ class PublishDir {
             FileHelper.deletePath(destination)
             processFileImpl(source, destination)
         }
+
+        notifyFilePublish(destination)
     }
 
     private String real0(Path p) {
@@ -469,6 +473,13 @@ class PublishDir {
         if( !mode ) {
             mode = stageInMode=='rellink' ? Mode.RELLINK : Mode.SYMLINK
         }
+    }
+
+    protected void notifyFilePublish(Path destination) {
+        if (Global.session instanceof Session) {
+            (Global.session as Session).notifyFilePublish(destination)
+        }
+
     }
 
 

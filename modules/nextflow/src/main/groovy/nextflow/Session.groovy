@@ -1021,6 +1021,10 @@ class Session implements ISession {
         observers.each { trace -> trace.onFlowCreate(this) }
     }
 
+    void notifyFilePublish(Path destination) {
+        observers.each { trace -> trace.onFilePublish(destination) }
+    }
+
     void notifyFlowComplete() {
         def copy = new ArrayList<TraceObserver>(observers)
         for( TraceObserver observer : copy  ) {
