@@ -38,7 +38,7 @@ import groovy.transform.EqualsAndHashCode
  */
 @CompileStatic
 @EqualsAndHashCode(includeFields = true)
-class CpuUnit {
+class CpuUnit implements Serializable, Cloneable {
 
     static public CpuUnit ONE_CORE = new CpuUnit(1_000)
 
@@ -74,6 +74,12 @@ class CpuUnit {
     private CpuUnit(int value) {
         this.millis = value
     }
+
+    /*
+     * Default constructor is required by Kryo serializer
+     * Do not remove of use directly
+     */
+    private CpuUnit() { this.millis=0 }
 
     static protected int parseCpuMillis(Number value) {
         if( value instanceof Integer )
