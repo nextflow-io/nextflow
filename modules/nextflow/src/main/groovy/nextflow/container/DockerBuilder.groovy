@@ -117,7 +117,7 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         result << 'run -i '
 
         if( cpus && !legacy )
-            result << "--cpus ${String.format(Locale.ROOT, "%.1f", cpus)} "
+            result << "--cpus ${cpus.toDecimalString()} "
 
         if( cpuset ) {
             if( legacy )

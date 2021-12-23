@@ -19,6 +19,7 @@ package nextflow.container
 
 import java.nio.file.Paths
 
+import nextflow.util.CpuUnit
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -143,12 +144,12 @@ class DockerBuilderTest extends Specification {
                 .runCommand == 'docker run -i --cpus 2.0 -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
-                .setCpus(1.414)
+                .setCpus(CpuUnit.of(1.4))
                 .build()
                 .runCommand == 'docker run -i --cpus 1.4 -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
-                .setCpus(2.5)
+                .setCpus(CpuUnit.of(2.5))
                 .setCpuset('1,2')
                 .build()
                 .runCommand == 'docker run -i --cpus 2.5 --cpuset-cpus 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'

@@ -301,7 +301,7 @@ class TaskConfigTest extends Specification {
         config.cpus = VALUE
 
         then:
-        config.getCpuMillis() == EXPECTED
+        config.getCpuUnits().toMillis() == EXPECTED
         config.hasCpus() == DEFINED
 
         where:
@@ -614,57 +614,4 @@ class TaskConfigTest extends Specification {
 
     }
 
-    @Unroll
-    def 'should parse cpus int'() {
-        expect:
-        TaskConfig.parseCpusInt(VALUE) == CPUS
-
-        where:
-        VALUE   | CPUS
-        1       | 1
-        8       | 8
-        and:
-        '1'     | 1
-        '8'     | 8
-        '256'   | 256
-        and:
-        '10m'   | 1
-        '999m'  | 1
-        '1100m' | 2
-        and:
-        1.0     | 1
-        1.1     | 2
-        8.0     | 8
-        and:
-        '1.0'    | 1
-        '1.1'    | 2
-        '8.0'    | 8
-    }
-
-    @Unroll
-    def 'should parse cpus millis'() {
-        expect:
-        TaskConfig.parseCpuMillis(VALUE) == MILLIS
-
-        where:
-        VALUE   | MILLIS
-        1       | 1_000
-        8       | 8_000
-        and:
-        '1'     | 1_000
-        '8'     | 8_000
-        '256'   | 256_000
-        and:
-        '10m'   | 10
-        '999m'  | 999
-        '1100m' | 1100
-        and:
-        1.0     | 1_000
-        1.1     | 1_100
-        8.0     | 8_000
-        and:
-        '1.0'    | 1_000
-        '1.1'    | 1_100
-        '8.0'    | 8_000
-    }
 }
