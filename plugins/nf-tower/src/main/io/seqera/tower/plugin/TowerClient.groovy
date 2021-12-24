@@ -11,6 +11,7 @@
 
 package io.seqera.tower.plugin
 
+import java.nio.file.Path
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -36,6 +37,7 @@ import nextflow.util.Duration
 import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
+
 /**
  * Send out messages via HTTP to a configured URL on different workflow
  * execution events.
@@ -124,7 +126,9 @@ class TowerClient implements TraceObserver {
 
     private String refreshToken
 
-    private String workspaceId 
+    private String workspaceId
+
+    private TowerReports reports
 
     /**
      * Constructor that consumes a URL and creates
@@ -136,6 +140,7 @@ class TowerClient implements TraceObserver {
         this.endpoint = checkUrl(endpoint)
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
+        this.reports = new TowerReports()
     }
 
     TowerClient withEnvironment(Map env) {
@@ -282,6 +287,9 @@ class TowerClient implements TraceObserver {
             throw new AbortOperationException("Invalid Tower response - Missing workflow Id")
         if( ret.message )
             log.warn(ret.message.toString())
+
+        // Prepare to collect report paths if tower configuration has a 'reports' section
+        reports.flowCreate(workflowId)
     }
 
     protected void setAuthToken(SimpleHttpClient client, String token) {
@@ -373,6 +381,8 @@ class TowerClient implements TraceObserver {
         events << new ProcessEvent(completed: true)
         // wait the submission of pending events
         sender.join()
+        // wait and flush reports content
+        reports.flowComplete()
         // notify the workflow completion
         terminated = true
         final req = makeCompleteReq(session)
@@ -446,6 +456,16 @@ class TowerClient implements TraceObserver {
     @Override
     void onFlowError(TaskHandler handler, TraceRecord trace) {
         events << new ProcessEvent(trace: trace)
+    }
+
+    /**
+     * Update reports file when a file is published
+     *
+     * @param destination File path at `publishDir` of the published file.
+     */
+    @Override
+    void onFilePublish(Path destination) {
+        reports.filePublish(destination)
     }
 
     protected void refreshToken(String refresh) {
