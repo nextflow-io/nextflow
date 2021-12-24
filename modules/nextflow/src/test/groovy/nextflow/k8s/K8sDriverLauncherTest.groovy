@@ -117,6 +117,7 @@ class K8sDriverLauncherTest extends Specification {
         new CmdKubeRun(process: [mem: '100',cpus:'2'])  | 'nextflow run foo -process.mem 100 -process.cpus 2'
         new CmdKubeRun(params: [alpha:'x', beta:'y'])   | 'nextflow run foo --alpha x --beta y'
         new CmdKubeRun(params: [alpha: '/path/*.txt'])  | 'nextflow run foo --alpha /path/\\*.txt'
+        new CmdKubeRun(entryName: 'lala')               | 'nextflow run foo -entry lala'
     }
 
     def 'should set the run name' () {
