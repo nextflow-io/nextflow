@@ -181,7 +181,7 @@ class PublishDir {
     }
 
     @CompileStatic
-    protected Set<Path> apply0(Set<Path> files) {
+    protected void apply0(Set<Path> files) {
         assert path
 
         createPublishDir()
@@ -201,7 +201,6 @@ class PublishDir {
         /*
          * iterate over the file parameter and publish each single file
          */
-        Set<Path>
         for( Path value : dedupPaths(files) ) {
             apply1(value, inProcess)
         }
@@ -479,7 +478,6 @@ class PublishDir {
         if (Global.session instanceof Session) {
             (Global.session as Session).notifyFilePublish(destination)
         }
-
     }
 
 
