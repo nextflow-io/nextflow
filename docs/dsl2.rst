@@ -348,7 +348,7 @@ execution context, as such it can be invoked in the ``workflow`` scope.
 Nextflow implicitly looks for the script file ``./some/module.nf`` resolving the path
 against the *including* script location.
 
-.. note:: Relative paths must begin with the ``./`` prefix.
+.. note:: Relative paths must begin with the ``./`` prefix. Also, the `include` statement must be defined **outside** of the workflow definition.
 
 Multiple inclusions
 -------------------
