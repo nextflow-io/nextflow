@@ -277,6 +277,16 @@ class ConfigHelper {
         result.toString()
     }
 
+    /**
+     * <b>Warning</b>: This method will interpret the whole map as a ConfigObject
+     * @param map
+     * @param sort
+     * @return
+     */
+    static String toCanonicalString(Map map, boolean sort=false) {
+        toCanonicalString(map.toConfigObject(), sort)
+    }
+
     static String toPropertiesString(ConfigObject config, boolean sort=false) {
         def result = propertiesFormat(config.toProperties())
         if( !result ) return result
