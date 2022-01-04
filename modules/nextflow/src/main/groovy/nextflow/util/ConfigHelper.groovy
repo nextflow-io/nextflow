@@ -263,9 +263,8 @@ class ConfigHelper {
         int i=0
         for( Map.Entry entry : map.entrySet() ) {
             if( i++>0 ) result.append(', ')
-            result.append('\'')
-            result.append(entry.key)
-            result.append("':")
+            result.append( wrap1( entry.key ) )
+            result.append(":")
             result.append(render0(entry.value))
         }
         result.append(']')
