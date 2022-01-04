@@ -353,6 +353,7 @@ class AzBatchService implements Closeable {
 
         final slots = computeSlots(task, pool)
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
+        // these env vars help avoid container timeouts, see https://github.com/nextflow-io/nextflow/discussions/2510
         List<EnvironmentSetting> environmentSettings = new ArrayList<>()
         environmentSettings << new EnvironmentSetting().withName('DOCKER_CLIENT_TIMEOUT').withValue('120')
         environmentSettings << new EnvironmentSetting().withName('COMPOSE_HTTP_TIMEOUT').withValue('120')
