@@ -228,7 +228,7 @@ class CmdConfigTest extends Specification {
         params {
           alpha = ["${X1}/a", "b", "c"]
           delta = [ X2, 'z' ]
-          gamma = [p: "${X1}/a", q: X2]
+          gamma = [p: "${X1}/a", q: X2, 'r-r': 'X1']
           omega = X3 
         }
         '''
@@ -252,7 +252,7 @@ class CmdConfigTest extends Specification {
         params {
            alpha = ['SOMETHING/a', 'b', 'c']
            delta = [['SOMETHING'], 'z']
-           gamma = [p:'SOMETHING/a', q:['SOMETHING']]
+           gamma = [p:'SOMETHING/a', q:['SOMETHING'], 'r-r':'X1']
            omega = [p:111, q:'bbb']
         }
         '''.stripIndent()
@@ -265,7 +265,7 @@ class CmdConfigTest extends Specification {
         result.X3 == [p:111, q:'bbb']
         result.params.alpha == ['SOMETHING/a', 'b', 'c']
         result.params.delta == [['SOMETHING'], 'z']
-        result.params.gamma == [p:'SOMETHING/a', q:['SOMETHING']]
+        result.params.gamma == [p:'SOMETHING/a', q:['SOMETHING'], 'r-r': 'X1']
         result.params.omega == [p:111, q:'bbb']
 
     }
