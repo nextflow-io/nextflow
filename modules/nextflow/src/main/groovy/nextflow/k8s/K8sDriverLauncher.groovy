@@ -77,12 +77,7 @@ class K8sDriverLauncher {
     /**
      * Nextflow resolved config object
      */
-    private Map config
-
-    /**
-     * Nextflow resolved config object with all data
-     */
-    private ConfigObject configObject
+    private ConfigObject config
 
     /**
      * Name of the config map used to propagate the nextflow
@@ -122,9 +117,8 @@ class K8sDriverLauncher {
         this.interactive = name == 'login'
         if( background && interactive )
             throw new AbortOperationException("Option -bg conflicts with interactive mode")
-        this.configObject = makeConfig(pipelineName)
-        this.config = configObject.toMap()
-        this.k8sConfig = makeK8sConfig(config)
+        this.config = makeConfig(pipelineName)
+        this.k8sConfig = makeK8sConfig(config.toMap())
         this.k8sClient = makeK8sClient(k8sConfig)
         this.k8sConfig.checkStorageAndPaths(k8sClient)
         createK8sConfigMap()
@@ -514,7 +508,7 @@ class K8sDriverLauncher {
         return interactive
     }
 
-    protected Map getConfig() {
+    protected ConfigObject getConfig() {
         return config
     }
 
@@ -541,8 +535,8 @@ class K8sDriverLauncher {
         configMap['init.sh'] = initScript
 
         // nextflow config file
-        if( this.configObject ) {
-            configMap['nextflow.config'] = ConfigHelper.toCanonicalString( this.configObject )
+        if( this.config ) {
+            configMap['nextflow.config'] = ConfigHelper.toCanonicalString( this.config )
         }
 
         // scm config file

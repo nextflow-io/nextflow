@@ -255,8 +255,7 @@ class K8sDriverLauncherTest extends Specification {
         K8S_CONFIG.getPodOptions() >> POD_OPTIONS
 
         when:
-        driver.configObject = NXF_CONFIG
-        driver.config = NXF_CONFIG.toMap()
+        driver.config = NXF_CONFIG
         driver.k8sConfig = K8S_CONFIG
         driver.cmd = new CmdKubeRun(paramsFile: params.toString())
 
