@@ -429,6 +429,7 @@ class K8sDriverLauncher {
         addOption(result, cmd.&env )
         addOption(result, cmd.&process )
         addOption(result, cmd.&params )
+        addOption(result, cmd.&entryName )
 
         if( paramsFile ) {
             result << "-params-file $paramsFile"

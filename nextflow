@@ -16,7 +16,7 @@
 #  limitations under the License.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'21.11.0-edge'}
+NXF_VER=${NXF_VER:-'21.12.1-edge'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -370,7 +370,7 @@ fi
 
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
 declare -a JAVA_OPTS=()
-JAVA_OPTS+=(-Dfile.encoding=UTF-8 -Dcapsule.trampoline -Dcapsule.java.cmd="$JAVA_CMD")
+JAVA_OPTS+=(-Dfile.encoding=UTF-8 -Dcapsule.trampoline -Dcapsule.java.cmd="$JAVA_CMD" -Dcom.sun.security.enableAIAcaIssuers=true)
 if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=(-Djava.awt.headless=true)
 fi
@@ -378,7 +378,7 @@ fi
 [[ "$JAVA_HOME" ]] && JAVA_OPTS+=(-Dcapsule.java.home="$JAVA_HOME")
 [[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=(-Dcapsule.log=$CAPSULE_LOG)
 [[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=(-Dcapsule.reset=true)
-[[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=(-XX:+TieredCompilation -XX:TieredStopAtLevel=1 -Dcom.sun.security.enableAIAcaIssuers=true)
+[[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=(-XX:+TieredCompilation -XX:TieredStopAtLevel=1)
 [[ "$NXF_OPTS" ]] && JAVA_OPTS+=($NXF_OPTS)
 [[ "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
 [[ "$NXF_GRAB" ]] && export NXF_GRAB
@@ -417,6 +417,7 @@ $NXF_VER
 $NXF_OPTS
 $NXF_GRAB
 $NXF_CLASSPATH
+$NXF_JVM_ARGS
 EOF
 }
 
@@ -450,9 +451,12 @@ else
       launcher+=(--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
+      [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
       launcher+=("${cli[@]:1}")
     else
-      launcher=("${cli[@]}")
+      launcher=("${cli[@]:0:1}")
+      [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
+      launcher+=("${cli[@]:1}")
     fi
 
     # Don't show errors if the LAUNCH_FILE can't be created

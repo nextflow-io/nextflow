@@ -1,6 +1,5 @@
 /*
  * Copyright 2020-2021, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,25 +12,31 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.cli
+package nextflow.processor
 
 import groovy.transform.CompileStatic
+
 /**
- * Drip bootstrap entry point
+ * Hold task initial counters
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-public class DripMain {
+class TaskStartParams {
 
-    static public Launcher LAUNCHER;
+    final TaskId id
+    final int index
 
-    public static void main(String... args ) {
+    TaskStartParams(TaskId id, int index) {
+        this.id = id
+        this.index = index
+    }
 
-        LAUNCHER = new Launcher();
-
+    String toString() {
+        "id=$id; index=$index"
     }
 
 }

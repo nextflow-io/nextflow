@@ -14,11 +14,11 @@ jobs:
   build:
     name: Build Nextflow
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        java_version: [8, 11, 17]
+        java_version: [11, 17]
 
     steps:
     - name: Environment
@@ -82,33 +82,6 @@ jobs:
         AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
         AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
-    - name: Setup Java 8
-      if: "matrix.java_version != 8 && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/testing') && !contains(github.event.head_commit.message, '[ci fast]')"
-      uses: actions/setup-java@v2
-      with:
-        java-version: 8
-        distribution: 'adopt'
-        architecture: x64
-        cache: gradle
-
-    - name: Integration vs Java 8
-      if: "matrix.java_version != 8 && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/testing') && !contains(github.event.head_commit.message, '[ci fast]')"
-      run: ./integration-tests.sh
-      env:
-        TEST_JDK: 8
-        TEST_SMOKE: true
-        GRADLE_OPTS: '-Dorg.gradle.daemon=false'
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        NXF_BITBUCKET_ACCESS_TOKEN: ${{ secrets.NXF_BITBUCKET_ACCESS_TOKEN }}
-        NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
-        NXF_GITLAB_ACCESS_TOKEN: ${{ secrets.NXF_GITLAB_ACCESS_TOKEN }}
-        NXF_AZURE_REPOS_TOKEN: ${{ secrets.NXF_AZURE_REPOS_TOKEN }}
-        AZURE_STORAGE_ACCOUNT_NAME: nfazurestore
-        AZURE_STORAGE_ACCOUNT_KEY: ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
-        AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
-        AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
-
     - name: Tar integration tests
       if: failure()
       run: tar -cvf integration-tests.tar tests/checks
@@ -120,4 +93,5 @@ jobs:
         name: test-reports-jdk-${{ matrix.java_version }}
         path: |
           **/build/reports/tests/test
+          validation/**
           integration-tests.tar

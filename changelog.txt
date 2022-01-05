@@ -1,5 +1,41 @@
 NEXTFLOW CHANGE-LOG
 ===================
+21.12.1-edge - 22 Dec 2021
+- Add tags attribute to publishDir directive [e78a997b5]
+- Add ability to disable running jobs cancellation [a13af9a3c]
+- Add ability to define containerProperties with using AWS Batch #2471 [ac7f1e71e] <Manuele Simi>
+- Add NXF_JVM_ARGS env variable [7afb2deed]
+- Improve paths validation [0849d583f]
+- Include S3FS provider into nf-amazon plugin [3a7bf8c7a]
+- Fix error reporting on missing script file #1951 [e1a0b240a]
+- Fix singularity docs #2493 [c66cb3ba7] <Jose Espinosa-Carrasco>
+- Fix cross compilation error cause by ByteBuffer [74916100f]
+- Fix File staging race condition + beta AWS parallel downloader [b7c262de3]
+- Fix enableAIAcaIssuers launcher flag [cd780aabd]
+- Fix task index sequence generation [3447e735b]
+- Fix Changes process directives invalidates tasks cache [967c1adff]
+- Fix Interrupted download of staged files cause execution to fail #1552 [847789fad]
+- Fix plugins start/stop for fs command [88d8be1f4]
+- Fix for nested params with the same name #2485 [02de4147c] <Jay Carey>
+- Fix race condition on plugin autoload status [ab00a50f5]
+- Fix failing test with Java 17 [1c6183c92] [4daf8d0a1]
+- Note on Azure Batch inactive pools #2483 [7fc116067] <Manuele Simi>
+- Remove drip launcher [909f95279]
+- Update azure test image [de9d5ee8c]
+- Update logging library [a957db646]
+- Bump nf-google@1.1.4 [93193a3f3]
+- Bump version 21.12.0-edge [9cb7ee81f]
+- Bump AWS sdk 1.12.129 [bd7ba1706]
+- Bump logback 1.2.9 [29f260717]
+- Bump Jsoup 1.14.3 [5776c0391]
+- Bump corretto:17.0.1 [f7e047ea4]
+
+21.12.0-edge - 22 Dec 2021 [SKIPPED]
+
+21.10.6 - 21 Dec 2021 
+- Bump Slf4j 1.7.32
+- Bump Logback 1.2.9
+
 21.10.5 - 8 Dec 2021
 - Fix race condition on plugin autoload status [73a0893ce]
 
