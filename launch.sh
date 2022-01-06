@@ -89,6 +89,9 @@ export NXF_PLUGINS_DIR
 export NXF_PLUGINS_MODE
 export NXF_PLUGINS_DEFAULT
 
+# Yourkit profiling library
+YOURKIT_AGENT=${YOURKIT_AGENT:-/Applications/YourKit-Java-Profiler-2021.11.app/Contents/Resources/bin/mac/libyjpagent.dylib}
+
 #
 # classpath when the application is compiled with gradle
 #
@@ -102,8 +105,8 @@ while [ "$*" != "" ]; do
   if [[ "$1" == '-debug' || "$1" == '-trace' ]]; then
     args+=("$1")
 
-  elif [ "$1" == --with-yourkit ]; then 
-    JVM_ARGS+=" -agentpath:/Applications/YourKit_Java_Profiler_2014_build_14104.app/bin/mac/libyjpagent.jnilib=onexit=snapshot,tracing,dir=$PWD/snapshot "
+  elif [ "$1" == --yourkit ]; then
+    JVM_ARGS+=" -agentpath:$YOURKIT_AGENT "
   elif [ "$1" == '--with-jrebel' ]; then
     if [ "$JREBEL_HOME" ]; then
     JVM_ARGS+=" -javaagent:$JREBEL_HOME/jrebel.jar -Drebel.log.file=./jrebel-client.log"

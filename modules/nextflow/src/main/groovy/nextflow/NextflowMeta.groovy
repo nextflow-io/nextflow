@@ -32,6 +32,7 @@ class NextflowMeta {
     static class Preview implements Flags {
         volatile float dsl
         boolean strict
+        boolean recursion
 
         void setDsl( float num ) {
             if( num != 2 && num != 1 )
@@ -39,6 +40,12 @@ class NextflowMeta {
             if( num == 2 && !ignoreWarnDsl2 )
                 log.warn1 "DSL 2 PREVIEW MODE IS DEPRECATED - USE THE STABLE VERSION INSTEAD -- Read more at https://www.nextflow.io/docs/latest/dsl2.html#dsl2-migration-notes"
             dsl = num
+        }
+
+        void setRecursion(Boolean recurse) {
+            if( recurse )
+                log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASE"
+            this.recursion = recurse
         }
     }
 
