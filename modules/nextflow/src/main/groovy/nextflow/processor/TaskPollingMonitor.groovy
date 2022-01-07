@@ -637,6 +637,7 @@ class TaskPollingMonitor implements TaskMonitor {
         while( runningQueue.size() ) {
 
             TaskHandler handler = runningQueue.poll()
+            println("Killing task: " + handler.task.name)
             try {
                 if( handler instanceof GridTaskHandler ) {
                     ((GridTaskHandler)handler).batch = batch
