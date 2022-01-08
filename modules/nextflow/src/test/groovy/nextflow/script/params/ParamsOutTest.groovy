@@ -229,14 +229,15 @@ class ParamsOutTest extends Specification {
               file "${z}.txt:sub/dir/${x}.fa" into channel4
               tuple "${z}.txt:${x}.fa" into channel5
               tuple file("${z}.txt:${x}.fa") into channel6
-
+              file meta.id into channel7 
+              file "$meta.id" into channel8
               return ''
             }
             '''
 
         def binding = [:]
         def process = parseAndReturnProcess(text, binding)
-        def ctx = [x: 'hola', y:99, z:'script_file']
+        def ctx = [x: 'hola', y:99, z:'script_file', meta: [id:'hello.txt']]
 
         when:
         FileOutParam out0 = process.config.getOutputs().get(0)
@@ -245,9 +246,11 @@ class ParamsOutTest extends Specification {
         FileOutParam out3 = process.config.getOutputs().get(3)
         TupleOutParam out4 = process.config.getOutputs().get(4)
         TupleOutParam out5 = process.config.getOutputs().get(5)
+        FileOutParam out6 = process.config.getOutputs().get(6)
+        FileOutParam out7 = process.config.getOutputs().get(7)
 
         then:
-        process.config.getOutputs().size() == 6
+        process.config.getOutputs().size() == 8
 
         out0.name == null
         out0.getFilePatterns(ctx,null) == ['hola_name']
@@ -287,6 +290,17 @@ class ParamsOutTest extends Specification {
         (out5.inner[0] as FileOutParam) .getFilePatterns(ctx,null) == ['script_file.txt','hola.fa']
         (out5.inner[0] as FileOutParam) .isDynamic()
 
+        out6.name == null
+        out6.getFilePatterns(ctx,null) == ['hello.txt']
+        out6.outChannel instanceof DataflowQueue
+        out6.outChannel == binding.channel7
+        out6.isDynamic()
+
+        out7.name == null
+        out7.getFilePatterns(ctx,null) == ['hello.txt']
+        out7.outChannel instanceof DataflowQueue
+        out7.outChannel == binding.channel8
+        out7.isDynamic()
     }
 
     def testFileOutFileCollection () {

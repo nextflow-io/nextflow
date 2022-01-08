@@ -1056,7 +1056,7 @@ class NextflowDSLImpl implements ASTTransformation {
             withinEachMethod = name == '_in_each'
 
             try {
-                if( isOutputValWithPropertyExpression(methodCall) ) {
+                if( isOutputWithPropertyExpression(methodCall) ) {
                     // transform an output value declaration such
                     //   output: val( obj.foo )
                     // to
@@ -1072,8 +1072,10 @@ class NextflowDSLImpl implements ASTTransformation {
             }
         }
 
-        protected boolean isOutputValWithPropertyExpression(MethodCallExpression methodCall) {
-            if( methodCall.methodAsString != '_out_val' )
+        static final private List<String> OUT_PROPERTY_VALID_TYPES = ['_out_val', '_out_env', '_out_file', '_out_path']
+
+        protected boolean isOutputWithPropertyExpression(MethodCallExpression methodCall) {
+            if( methodCall.methodAsString !in OUT_PROPERTY_VALID_TYPES  )
                 return false
             if( methodCall.getArguments() instanceof ArgumentListExpression ) {
                 def args = (ArgumentListExpression)methodCall.getArguments()
