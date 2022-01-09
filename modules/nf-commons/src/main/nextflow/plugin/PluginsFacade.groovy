@@ -362,11 +362,6 @@ class PluginsFacade implements PluginStateListener {
         if( executor == 'azurebatch' || workDir?.startsWith('az://') || bucketDir?.startsWith('az://') )
             plugins << defaultPlugins.getPlugin('nf-azure')
 
-        if( executor == 'ignite' || System.getProperty('nxf.node.daemon')=='true') {
-            plugins << defaultPlugins.getPlugin('nf-ignite')
-            plugins << defaultPlugins.getPlugin('nf-amazon')
-        }
-
         return plugins
     }
 
