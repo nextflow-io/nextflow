@@ -105,7 +105,6 @@ class FunctionalTests extends Specification {
                 shell = 'zsh'
                 maxForks = 10
                 environment = [a:1, b:2,c:3]
-                validExitStatus = [0,11,22,33]
             }
             '''
         def cfg = new ConfigSlurper().parse(configStr)
@@ -134,7 +133,6 @@ class FunctionalTests extends Specification {
         processor.config.maxForks == 11
         processor.config.dummyField == 99
         processor.config.environment.entrySet() == [a:1,b:2,c:3].entrySet()
-        processor.config.validExitStatus == [0,11,22,33]
 
     }
 
