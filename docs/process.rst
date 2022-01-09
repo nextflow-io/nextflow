@@ -1361,8 +1361,6 @@ The directives are:
 * `storeDir`_
 * `tag`_
 * `time`_
-* `validExitStatus`_
-
 
 
 accelerator
@@ -1664,8 +1662,7 @@ For example::
        <your command string here>
     }
 
-.. tip:: By definition a command script fails when it ends with a non-zero exit status. To change this behavior
-  see `validExitStatus`_.
+.. tip:: By definition a command script fails when it ends with a non-zero exit status.
 
 The ``retry`` `error strategy`, allows you to re-submit for execution a process
 returning an error condition. For example::
@@ -2362,37 +2359,6 @@ Multiple units can be used in a single declaration, for example: ``'1day 6hours 
   :ref:`condor-executor` and :ref:`awsbatch-executor` executors.
 
 See also: `cpus`_, `memory`_, `queue`_ and `Dynamic computing resources`_.
-
-
-.. _process-validExitStatus:
-
-validExitStatus
----------------
-
-.. warning::
-    This feature has been deprecated and will be removed in a future release.
-
-A process is terminated when the executed command returns an error exit status. By default any error status
-other than ``0`` is interpreted as an error condition.
-
-The ``validExitStatus`` directive allows you to fine control which error status will represent a successful command execution.
-You can specify a single value or multiple values as shown in the following example::
-
-
-    process returnOk {
-        validExitStatus 0,1,2
-
-         script:
-         """
-         echo Hello
-         exit 1
-         """
-    }
-
-
-In the above example, although the command script ends with a ``1`` exit status, the process
-will not return an error condition because the value ``1`` is declared as a `valid` status in
-the ``validExitStatus`` directive.
 
 
 Dynamic directives

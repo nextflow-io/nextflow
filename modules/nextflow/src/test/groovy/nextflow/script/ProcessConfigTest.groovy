@@ -48,7 +48,6 @@ class ProcessConfigTest extends Specification {
         expect:
         config.shell ==  ['/bin/bash','-ue']
         config.cacheable
-        config.validExitStatus == [0]
         config.maxRetries == 0
         config.maxErrors == -1
         config.errorStrategy == ErrorStrategy.TERMINATE
@@ -149,7 +148,6 @@ class ProcessConfigTest extends Specification {
         expect:
         config.containsKey('echo')
         config.containsKey('shell')
-        config.containsKey('validExitStatus')
         !config.containsKey('xyz')
         !config.containsKey('maxForks')
         config.maxForks == null
