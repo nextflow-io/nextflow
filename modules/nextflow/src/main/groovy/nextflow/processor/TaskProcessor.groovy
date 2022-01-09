@@ -831,14 +831,13 @@ class TaskProcessor {
 
 
         try {
-            final exit = task.config.getValidExitStatus()[0]
             // -- expose task exit status to make accessible as output value
-            task.config.exitStatus = exit
+            task.config.exitStatus = TaskConfig.EXIT_ZERO
             // -- check if all output resources are available
             collectOutputs(task)
             log.info "[skipping] Stored process > ${task.name}"
             // set the exit code in to the task object
-            task.exitStatus = exit
+            task.exitStatus = TaskConfig.EXIT_ZERO
             task.cached = true
             session.notifyTaskCached(new StoredTaskHandler(task))
 

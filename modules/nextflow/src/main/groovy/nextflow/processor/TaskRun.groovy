@@ -626,7 +626,7 @@ class TaskRun implements Cloneable {
         if( status == Integer.MAX_VALUE )
             return false
 
-        return status in config.getValidExitStatus()
+        return status == TaskConfig.EXIT_ZERO
     }
 
     /**

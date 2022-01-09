@@ -76,7 +76,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'storeDir',
             'tag',
             'time',
-            'validExitStatus',
             // input-output qualifiers
             'file',
             'set',
@@ -104,7 +103,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             echo: false,
             cacheable: true,
             shell: BashWrapperBuilder.BASH,
-            validExitStatus: [0],
             maxRetries: 0,
             maxErrors: -1,
             errorStrategy: ErrorStrategy.TERMINATE
@@ -298,8 +296,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     BaseScript getOwnerScript() { ownerScript }
 
     TaskConfig createTaskConfig() {
-        if(configProperties.validExitStatus != DEFAULT_CONFIG.validExitStatus)
-            log.warn1 "Directive 'validExitStatus' has been deprecated -- Check process '$processName'"
         return new TaskConfig(configProperties)
     }
 
