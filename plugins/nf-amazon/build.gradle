@@ -44,7 +44,6 @@ dependencies {
     api ('com.amazonaws:aws-java-sdk-iam:1.12.129')
     api ('com.amazonaws:aws-java-sdk-ecs:1.12.129')
     api ('com.amazonaws:aws-java-sdk-logs:1.12.129')
-    implementation ('org.apache.tika:tika-core:1.5')
         
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
