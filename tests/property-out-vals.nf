@@ -17,7 +17,6 @@
  */
  
 process foo {
-  validExitStatus 100
   output:
   val( task.exitStatus ) into ch1
   set val( record.foo ), val( record.bar ) into ch2
@@ -25,7 +24,7 @@ process foo {
   script:
   record = [foo:'aaa', bar: 'bbb']
   """
-  exit 100
+  exit 0
   """
 }
 
