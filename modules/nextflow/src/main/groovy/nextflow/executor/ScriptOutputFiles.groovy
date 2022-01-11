@@ -45,11 +45,15 @@ class ScriptOutputFiles implements Map<String,Glob> {
 
     static Glob glob(boolean value) { new Glob(value) }
 
-    static ScriptOutputFiles wrap(String... names) {
+    static ScriptOutputFiles wrap( boolean glob, String... names) {
         final result = new ScriptOutputFiles()
         for( String it : names )
-            result.put(it,new Glob(true))
+            result.put(it,new Glob( glob ))
         return result
+    }
+
+    static ScriptOutputFiles wrap(String... names) {
+        return wrap( true, names )
     }
 
     /**
