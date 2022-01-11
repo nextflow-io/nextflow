@@ -46,20 +46,6 @@ class ScriptOutputFilesTest extends Specification {
         'fo?.txt'   | true      | 'fo?.txt'
     }
 
-
-    def 'should remove star glob pattern'() {
-
-        expect:
-        ScriptOutputFiles.removeGlobStar('a/b/c') == 'a/b/c'
-        ScriptOutputFiles.removeGlobStar('/a/b/c') == '/a/b/c'
-        ScriptOutputFiles.removeGlobStar('some/*/path') == 'some/*/path'
-        ScriptOutputFiles.removeGlobStar('some/**/path') == 'some'
-        ScriptOutputFiles.removeGlobStar('some/**/path') == 'some'
-        ScriptOutputFiles.removeGlobStar('some*') == 'some*'
-        ScriptOutputFiles.removeGlobStar('some**') == '*'
-
-    }
-
     def 'should return shell escaped names' () {
         given:
         def files = new ScriptOutputFiles()

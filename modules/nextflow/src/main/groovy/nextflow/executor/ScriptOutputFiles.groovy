@@ -65,7 +65,7 @@ class ScriptOutputFiles implements Map<String,Glob> {
      *      The name containing escaping special chars to make it shell friendly
      */
     static String shellSpecialChars(String name, Glob glob) {
-        return glob ? Escape.path(removeGlobStar(name)) : Escape.wildcards(name)
+        return glob ? escapeGlob(name) : Escape.wildcards(name)
     }
 
     /**
@@ -78,36 +78,12 @@ class ScriptOutputFiles implements Map<String,Glob> {
         return loc
     }
 
-    /**
-     * Remove a glob star specifier returning the longest parent path
-     *
-     * <pre>
-     * /some/data/&#42;&#42;/file.txt  ->   /some/data
-     * /some/data/file.txt     ->   /some/data/file.txt
-     * /some&#42;&#42;                 ->   *
-     * </pre>
-     *
-     * @param path
-     * @return
-     */
-    static String removeGlobStar(String path) {
-
-        def p = path?.indexOf('**')
-        if( p == -1 )
-            return path
-
-        def slash = -1
-        for( int i=p-1; i>=0; i-- ) {
-            if( path.charAt(i) == '/' as char) {
-                slash = i
-                break
-            }
-        }
-
-        if( slash == -1 )
-            return '*'
-
-        path.substring(0,slash)
+    private static String escapeGlob( String path ){
+        String escaped = Escape.path( path, true )
+        //Bash glob behaves different than Java's Glob, if the path starts with **
+        //https://unix.stackexchange.com/questions/49913/recursive-glob
+        escaped = escaped.replace( '**', '{*,*/**/*}' )
+        escaped
     }
 
     void putName(String name, boolean glob) {
@@ -116,8 +92,8 @@ class ScriptOutputFiles implements Map<String,Glob> {
 
     String toShellEscapedNames() {
         final result = new ArrayList(target.size())
-        for( String it : target.keySet() ) {
-            result.add( tts(shellSpecialChars(it, target[it])) )
+        for( def it : target.entrySet() ) {
+            result.add( tts(shellSpecialChars( it.getKey(), it.getValue() )) )
         }
         return result.join(' ')
     }

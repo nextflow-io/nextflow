@@ -168,9 +168,14 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         final mode = stageoutMode ?: ( workDir==targetDir ? 'copy' : 'move' )
         return """\
             IFS=\$'\\n'
-            for name in \$(eval "ls -1d ${outputFiles.toShellEscapedNames()}" | sort | uniq); do
+            shopt -s globstar extglob || true
+            pathes=`ls -1d ${outputFiles.toShellEscapedNames()} | sort | uniq`
+            shopt -u globstar extglob || true
+            set -f
+            for name in \$pathes; do
                 ${stageOutCommand('$name', targetDir, mode)} || true
             done
+            set +f
             unset IFS""".stripIndent(true)
     }
 
