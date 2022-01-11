@@ -29,13 +29,21 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 
 /**
  * Implements a multipart downloader for S3
@@ -46,17 +54,17 @@ public class S3ParallelDownload {
 
     static final private Logger log = LoggerFactory.getLogger(S3ParallelDownload.class);
 
-    private final AmazonS3 s3Client;
+    private final S3Client s3Client;
     private ExecutorService executor;
     private ChunkBufferFactory bufferFactory;
     private static List<S3ParallelDownload> instances = new ArrayList<>(10);
     private final DownloadOpts opts;
 
-    S3ParallelDownload(AmazonS3 client) {
+    S3ParallelDownload(S3Client client) {
         this(client, new DownloadOpts());
     }
 
-    S3ParallelDownload(AmazonS3 client, DownloadOpts opts) {
+    S3ParallelDownload(S3Client client, DownloadOpts opts) {
         if( opts.chunkSize() > opts.bufferMaxSize().toBytes() ) {
             String msg = String.format("S3 download chunk size cannot be greater than download max buffer size - offending values chunk size=%s, buffer size=%s", opts.chunkSizeMem(), opts.bufferMaxSize());
             throw new IllegalArgumentException(msg);
@@ -69,8 +77,21 @@ public class S3ParallelDownload {
         log.debug("Creating S3 download thread pool: {}; pool-capacity={}", opts, poolCapacity);
     }
 
-    static public S3ParallelDownload create(AmazonS3 client, DownloadOpts opts) {
-        S3ParallelDownload result = new S3ParallelDownload(client, opts);
+    static public S3ParallelDownload create(Object accessKey, Object secretKey, Object sessionToken, DownloadOpts opts) {
+        S3ClientBuilder builder = S3Client.builder();
+        if (accessKey != null && secretKey != null) {
+            AwsCredentials credentials = (sessionToken == null
+                    ? AwsBasicCredentials.create(accessKey.toString(), secretKey.toString())
+                    : AwsSessionCredentials.create(accessKey.toString(), secretKey.toString(), sessionToken.toString()) );
+
+            if( System.getenv("NXF_AWS_REGION")!=null ) {
+                log.debug("Creating AWS S3 client with region: " + System.getenv("NXF_AWS_REGION") );
+                builder.region(Region.of(System.getenv("NXF_AWS_REGION")));
+            }
+
+            builder.credentialsProvider(StaticCredentialsProvider.create(credentials));
+        }
+        S3ParallelDownload result = new S3ParallelDownload(builder.build(), opts);
         instances.add(result);
         return result;
     }
@@ -98,13 +119,13 @@ public class S3ParallelDownload {
 
     protected List<GetObjectRequest> prepareGetPartRequests(String bucketName, String key) {
         // Use range to download in parallel
-        long size = s3Client.getObjectMetadata(bucketName, key).getContentLength();
+        long size = s3Client.headObject(HeadObjectRequest.builder().bucket(bucketName).key(key).build()).contentLength();
         int numberOfParts = (int) Math.ceil((double) size / opts.chunkSize());
         List<GetObjectRequest> result = new ArrayList<>(numberOfParts);
         for( int index=0; index<numberOfParts; index++ ) {
             long x = (long)index * opts.chunkSize();
             long y = (long)(index + 1) * opts.chunkSize() > size ? size - 1 : (long)(index + 1) * opts.chunkSize() - 1;
-            result.add( new GetObjectRequest(bucketName, key).withRange(x, y) );
+            result.add( GetObjectRequest.builder().bucket(bucketName).key(key).range(String.format("bytes=%d-%d", x, y)).build());
         }
         return result;
     }
@@ -121,27 +142,26 @@ public class S3ParallelDownload {
                 .handle(SocketException.class)
                 .withBackoff(50, opts.maxDelayMillis(), ChronoUnit.MILLIS)
                 .withMaxAttempts(opts.maxAttempts())
-                .onFailedAttempt(e -> log.error(String.format("Failed to download chunk #%s file s3://%s/%s", req.getPartNumber(), req.getBucketName(), req.getKey()), e.getLastFailure()))
+                .onFailedAttempt(e -> log.error(String.format("Failed to download #%s file s3://%s/%s", req.range(), req.bucket(), req.key()), e.getLastFailure()))
                 .build();
 
         return Failsafe.with(retryPolicy).get(() -> doDownload(req));
     }
 
     private ChunkBuffer doDownload(final GetObjectRequest req) throws IOException {
-        try (S3Object chunk = s3Client.getObject(req)) {
-            final long start = req.getRange()[0];
-            final long end = req.getRange()[1];
-            final String path = "s3://" + req.getBucketName() + '/' + req.getKey();
+        try (ResponseInputStream<GetObjectResponse> stream = s3Client.getObject(req)) {
+            final String path = "s3://" + req.bucket() + '/' + req.key();
+            final String range = req.range();
 
             ChunkBuffer result = bufferFactory.create();
-            try (InputStream stream = chunk.getObjectContent()) {
+            try {
                 result.fill(stream);
             }
             catch (Throwable e) {
-                String msg = String.format("Failed to download chunk range=%s..%s; path=%s", start, end, path);
+                String msg = String.format("Failed to download %s path=%s", range, path);
                 throw new IOException(msg, e);
             }
-            log.trace("Downloaded chunk range={}..{}; path={}", start, end, path);
+            log.trace("Downloaded {} path={}", range, path);
             // return it
             result.makeReadable();
             return result;

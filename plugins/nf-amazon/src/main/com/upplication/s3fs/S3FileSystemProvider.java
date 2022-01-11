@@ -203,7 +203,7 @@ public class S3FileSystemProvider extends FileSystemProvider {
 		DownloadOpts opts = DownloadOpts.from(props, System.getenv());
 		if( opts.parallelEnabled() ) {
 			log.debug("Using S3 multi-part downloader");
-			this.downloader = S3ParallelDownload.create(result.getClient().getClient(), opts);
+			this.downloader = S3ParallelDownload.create(accessKey, secretKey, sessionToken, opts);
 		}
 		else {
 			log.debug("Using S3 serial downloader");

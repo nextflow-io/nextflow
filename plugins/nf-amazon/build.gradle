@@ -38,12 +38,14 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:1.7.10'
     compileOnly 'org.pf4j:pf4j:3.4.1'
 
-    api ('com.amazonaws:aws-java-sdk-s3:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-ec2:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-batch:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-iam:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-ecs:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-logs:1.12.129')
+    api ('com.amazonaws:aws-java-sdk-s3:1.12.131')
+    api ('com.amazonaws:aws-java-sdk-ec2:1.12.131')
+    api ('com.amazonaws:aws-java-sdk-batch:1.12.131')
+    api ('com.amazonaws:aws-java-sdk-iam:1.12.131')
+    api ('com.amazonaws:aws-java-sdk-ecs:1.12.131')
+    api ('com.amazonaws:aws-java-sdk-logs:1.12.131')
+    api ('software.amazon.awssdk:s3:2.17.102')
+    api ('software.amazon.awssdk:auth:2.17.102')
         
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
