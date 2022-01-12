@@ -17,6 +17,8 @@
 
 package nextflow
 
+import java.util.function.Consumer
+
 import static nextflow.Const.*
 
 import java.nio.file.Files
@@ -1022,7 +1024,14 @@ class Session implements ISession {
     }
 
     void notifyFilePublish(Path destination) {
-        observers.each { trace -> trace.onFilePublish(destination) }
+        observers.each { observer -> {
+            try {
+                observer.onFilePublish(destination)
+            }
+            catch( Exception e ) {
+                log.error "Failed to invoke observer on file publish: $observer", e
+            }
+        }}
     }
 
     void notifyFlowComplete() {
