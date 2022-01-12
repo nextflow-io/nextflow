@@ -429,8 +429,11 @@ In the above example the process is executed three times, each time a value is r
 and used to process the script. Thus, it results in an output similar to the one shown below::
 
     process job 3
+    
     process job 1
+    
     process job 2
+    
 
 .. note:: The `channel` guarantees that items are delivered in the same order as they have been sent - but -
   since the process is executed in a parallel manner, there is no guarantee that they are processed in the
