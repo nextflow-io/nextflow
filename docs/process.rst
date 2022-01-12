@@ -560,6 +560,12 @@ Will output::
     seq1 seq2 seq3
     ...
 
+.. note::
+  This behaviour requires a limited buffer for the channel. In this examples was used in the first line `.buffer(size:3)`.
+
+.. note::
+  Processes with an limiited buffer input channel won't execute unless the buffer is filled. providing
+
 The target input file name can contain the ``*`` and ``?`` wildcards, that can be used
 to control the name of staged files. The following table shows how the wildcards are
 replaced depending on the cardinality of the received input collection.
