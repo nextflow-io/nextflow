@@ -467,7 +467,7 @@ specified in the input declaration. For example::
       input:
       file query_file from proteins
 
-      "blastp -query ${query_file} -db nr"
+      "blastp -query $query_file -db nr"
 
     }
 
