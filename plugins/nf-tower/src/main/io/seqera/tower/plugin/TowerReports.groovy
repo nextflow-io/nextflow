@@ -43,7 +43,7 @@ class TowerReports {
         loadReportPatterns(launchDir, workflowId)
         if (processReports) {
             final reportsPath = launchDir.resolve(System.getenv().getOrDefault("TOWER_REPORTS_FILE", "nf-${workflowId}-reports.tsv"))
-            this.reportsFile = new PrintWriter(Files.newBufferedWriter(reportsPath, Charset.defaultCharset()))
+            this.reportsFile = new PrintWriter(Files.newBufferedWriter(reportsPath, Charset.defaultCharset()), true)
             this.writer = new Agent<PrintWriter>(reportsFile)
 
             // send header
