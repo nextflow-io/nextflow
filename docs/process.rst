@@ -641,7 +641,7 @@ and the semantic for the input ``file`` described above.
 
 The important difference between ``file`` and ``path`` qualifier is that the first expects the
 values received as input to be *file* objects. When inputs is a different type, it automatically
-coverts to a string and saves it to a temporary files. This can be useful in some uses cases,
+coverts to a string and saves it to a temporary files. This can be useful in some use cases,
 but it turned out to be tricky in most common cases.
 
 The ``path`` qualifier instead interprets string values as the path location of the input file
