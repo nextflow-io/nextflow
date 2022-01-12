@@ -2,6 +2,7 @@ package io.seqera.tower.plugin
 
 import groovy.yaml.YamlSlurper
 import groovyx.gpars.agent.Agent
+import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 
 import java.nio.charset.Charset
@@ -104,7 +105,7 @@ class TowerReports {
 
             for (int p=0; p < matchers.size(); p++) {
                 if (matchers.get(p).matches(destination)) {
-                    final dst = destination.toAbsolutePath().toString()
+                    final dst = destination.toUriString()
                     final pattern = patterns.get(p)
                     writer.send { PrintWriter it -> it.println("${pattern}\t${dst}") }
                     break
