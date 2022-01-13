@@ -1,8 +1,8 @@
 package io.seqera.tower.plugin
 
+import groovy.util.logging.Slf4j
 import groovy.yaml.YamlSlurper
 import groovyx.gpars.agent.Agent
-import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 
 import java.nio.charset.Charset
@@ -12,13 +12,13 @@ import java.nio.file.PathMatcher
 import java.nio.file.Paths
 import java.util.stream.Collectors
 
-
 /**
  * If reports are defined at `nf-<workflow_id>-tower.yml`, collects all published files
  * that are reports and writes `nf-<workflow_id>-reports.tsv` file with all the paths.
  *
  * @author Jordi Deu-Pons
  */
+@Slf4j
 class TowerReports {
 
     private PrintWriter reportsFile
@@ -70,7 +70,7 @@ class TowerReports {
      */
     protected void loadReportPatterns(Path launchDir, String workflowId) {
         processReports = false
-        Path towerConfigPath = launchDir.resolve("nf-${workflowId}-tower.yml")
+        Path towerConfigPath = launchDir.resolve("tower.yml") //"nf-${workflowId}-tower.yml")
         if (Files.exists(towerConfigPath)) {
             final towerConfig = yamlSlurper.parse(towerConfigPath)
             this.patterns = new ArrayList<>()
@@ -107,7 +107,8 @@ class TowerReports {
                 if (matchers.get(p).matches(destination)) {
                     final dst = destination.toUriString()
                     final pattern = patterns.get(p)
-                    writer.send { PrintWriter it -> it.println("${pattern}\t${dst}") }
+                    log.debug("Adding report ${pattern} / ${dst}")
+                    writer.send { PrintWriter it -> it.println("${pattern}\t${dst}\t${destination.size()}") }
                     break
                 }
             }
