@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -73,6 +73,8 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     static final public NAME = 'run'
+
+    private Map<String,String> sysEnv = System.getenv()
 
     @Parameter(names=['-name'], description = 'Assign a mnemonic name to the a pipeline run')
     String runName
@@ -236,15 +238,19 @@ class CmdRun extends CmdBase implements HubOptions {
     Boolean getDisableJobsCancellation() {
         return disableJobsCancellation!=null
                 ?  disableJobsCancellation
-                : env.get('NXF_DISABLE_JOBS_CANCELLATION') as boolean
+                : sysEnv.get('NXF_DISABLE_JOBS_CANCELLATION') as boolean
     }
 
     @Override
     String getName() { NAME }
 
-    String getParamsFile() { paramsFile ?: env.get('NXF_PARAMS_FILE') }
+    String getParamsFile() {
+        return paramsFile ?: sysEnv.get('NXF_PARAMS_FILE')
+    }
 
-    boolean hasParams() { params || getParamsFile() }
+    boolean hasParams() {
+        return params || getParamsFile()
+    }
 
     @Override
     void run() {

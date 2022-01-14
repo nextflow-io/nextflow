@@ -3,7 +3,6 @@ configurations {
     defaultCfg.extendsFrom api 
     //provided
     console.extendsFrom defaultCfg
-    ignite.extendsFrom defaultCfg
     ga4gh.extendsFrom defaultCfg
     google.extendsFrom defaultCfg
     amazon.extendsFrom defaultCfg
@@ -26,7 +25,6 @@ dependencies {
     google  project(':plugins:nf-google')
     amazon  project(':plugins:nf-amazon')
     azure   project(':plugins:nf-azure')
-    ignite  project(':plugins:nf-ignite')
     tower   project(':plugins:nf-tower')
 }
 
@@ -136,7 +134,7 @@ task packAll(type: Jar) {
     archiveName = "nextflow-${version}-all.jar"
 
     from jar // embed our application jar
-    from (configurations.ignite + configurations.amazon + configurations.google + configurations.tower)
+    from (configurations.amazon + configurations.google + configurations.tower)
     from (configurations.capsule.collect { zipTree(it) })
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     
@@ -149,7 +147,6 @@ task packAll(type: Jar) {
 
     manifest.attributes('Main-Class': 'NextflowLoader', 'amazon')
     manifest.attributes('Main-Class': 'NextflowLoader', 'google')
-    manifest.attributes('Main-Class': 'NextflowLoader', 'ignite')
 
     if( project.hasProperty('GA4GH') ) {
         println "The build will include GA4GH dependencies."
