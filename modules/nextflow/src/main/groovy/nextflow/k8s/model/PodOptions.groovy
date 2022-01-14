@@ -51,6 +51,8 @@ class PodOptions {
 
     private PodNodeSelector nodeSelector
 
+    private Map affinity
+
     private PodSecurityContext securityContext
 
     PodOptions( List<Map> options=null ) {
@@ -109,6 +111,9 @@ class PodOptions {
         else if( entry.nodeSelector ) {
             this.nodeSelector = new PodNodeSelector(entry.nodeSelector)
         }
+        else if( entry.affinity instanceof Map ) {
+            this.affinity = entry.affinity as Map
+        }
         else if( entry.annotation && entry.value ) {
             this.annotations.put(entry.annotation as String, entry.value as String)
         }
@@ -129,14 +134,16 @@ class PodOptions {
 
     Map<String,String> getAnnotations() { annotations }
 
-    PodSecurityContext getSecurityContext() { securityContext }
-
     PodNodeSelector getNodeSelector() { nodeSelector }
 
     PodOptions setNodeSelector( PodNodeSelector sel ) {
         nodeSelector = sel
         return this
     }
+
+    Map getAffinity() { affinity }
+
+    PodSecurityContext getSecurityContext() { securityContext }
 
     PodOptions setSecurityContext( PodSecurityContext ctx ) {
         this.securityContext = ctx
@@ -159,6 +166,7 @@ class PodOptions {
 
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
+
         // env vars
         result.envVars.addAll(envVars)
         result.envVars.addAll( other.envVars )
@@ -181,8 +189,11 @@ class PodOptions {
         else
             result.securityContext = securityContext
 
-        // node select
+        // node selector
         result.nodeSelector = other.nodeSelector ?: this.nodeSelector
+
+        // affinity
+        result.affinity = other.affinity ?: this.affinity
 
         // pull policy
         if (other.imagePullPolicy)
