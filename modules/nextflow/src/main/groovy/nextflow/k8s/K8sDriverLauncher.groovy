@@ -54,6 +54,16 @@ class K8sDriverLauncher {
      */
     private String podImage
 
+    /** 
+     * Request CPUs to be used for the Nextflow driver pod
+     */
+    private int headCpus
+
+    /** 
+     * Request memory to be used for the Nextflow driver pod
+     */
+    private String headMemory
+
     /**
      * Nextflow execution run name
      */
@@ -474,6 +484,8 @@ class K8sDriverLauncher {
             .withEnv( PodEnv.value('NXF_ASSETS', k8sConfig.getProjectDir()) )
             .withEnv( PodEnv.value('NXF_EXECUTOR', 'k8s'))
             .withEnv( PodEnv.value('NXF_ANSI_LOG', 'false'))
+            .withMemory(headMemory?:"")
+            .withCpus(headCpus)
             .build()
 
         // note: do *not* set the work directory because it may need to be created  by the init script
