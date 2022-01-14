@@ -534,6 +534,16 @@ class PodSpecBuilderTest extends Specification {
         def opts = Mock(PodOptions)
         def builder = new PodSpecBuilder(podName: 'foo', imageName: 'image', command: ['echo'], labels: [runName: 'crazy_john'], annotations: [evict: 'false'])
 
+        def affinity = [
+            nodeAffinity: [
+                requiredDuringSchedulingIgnoredDuringExecution: [
+                    nodeSelectorTerms: [
+                        [key: "foo", operator: "In", values: ["bar", "baz"]]
+                    ]
+                ]
+            ]
+        ]
+
         when:
         def spec = builder.withPodOptions(opts).build()
         then:
@@ -547,41 +557,44 @@ class PodSpecBuilderTest extends Specification {
         _ * opts.getAnnotations() >> [OMEGA:'zzz', SIGMA:'www']
         _ * opts.getSecurityContext() >> new PodSecurityContext(1000)
         _ * opts.getNodeSelector() >> new PodNodeSelector(gpu:true, queue: 'fast')
+        _ * opts.getAffinity() >> affinity
 
         spec == [
-                apiVersion: 'v1',
-                kind: 'Pod',
-                metadata: [
+            apiVersion: 'v1',
+            kind: 'Pod',
+            metadata: [
+                name:'foo',
+                namespace:'default',
+                labels:[runName:'crazy_john', ALPHA:'xxx', GAMMA:'yyy'],
+                annotations: [evict: 'false', OMEGA:'zzz', SIGMA:'www']
+            ],
+            spec: [
+                restartPolicy:'Never',
+                securityContext: [ runAsUser: 1000 ],
+                imagePullSecrets: [[ name: 'myPullSecret' ]],
+                nodeSelector: [gpu: 'true', queue: 'fast'],
+                affinity: affinity,
+                
+                containers:[
+                    [
                         name:'foo',
-                        namespace:'default',
-                        labels:[runName:'crazy_john', ALPHA:'xxx', GAMMA:'yyy'],
-                        annotations: [evict: 'false', OMEGA:'zzz', SIGMA:'www']
-                ],
-                spec: [
-                        restartPolicy:'Never',
-                        securityContext: [ runAsUser: 1000 ],
-                        imagePullSecrets: [[ name: 'myPullSecret' ]],
-                        nodeSelector: [gpu: 'true', queue: 'fast'],
-                        
-                        containers:[
-                                [name:'foo',
-                                 image:'image',
-                                        imagePullPolicy: 'always',
-                                 command:['echo'],
-                                 env:[[name:'HELLO', value:'WORLD']],
-                                 volumeMounts:[
-                                         [name:'vol-1', mountPath:'/work'],
-                                         [name:'vol-2', mountPath:'/home/user'],
-                                         [name:'vol-3', mountPath:'/etc/secret.txt']
-                                 ],
-                                ]
+                        image:'image',
+                        imagePullPolicy: 'always',
+                        command:['echo'],
+                        env:[[name:'HELLO', value:'WORLD']],
+                        volumeMounts:[
+                            [name:'vol-1', mountPath:'/work'],
+                            [name:'vol-2', mountPath:'/home/user'],
+                            [name:'vol-3', mountPath:'/etc/secret.txt']
                         ],
-                        volumes:[
-                                [name:'vol-1', persistentVolumeClaim:[claimName:'pvc1']],
-                                [name:'vol-2', configMap:[name:'data']],
-                                [name:'vol-3', secret:[secretName:'blah']] ]
+                    ]
+                ],
+                volumes:[
+                    [name:'vol-1', persistentVolumeClaim:[claimName:'pvc1']],
+                    [name:'vol-2', configMap:[name:'data']],
+                    [name:'vol-3', secret:[secretName:'blah']]
                 ]
-
+            ]
         ]
 
     }
