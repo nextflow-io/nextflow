@@ -111,7 +111,7 @@ class PodOptions {
         else if( entry.nodeSelector ) {
             this.nodeSelector = new PodNodeSelector(entry.nodeSelector)
         }
-        else if( entry.affinity ) {
+        else if( entry.affinity instanceof Map ) {
             this.affinity = entry.affinity as Map
         }
         else if( entry.annotation && entry.value ) {
