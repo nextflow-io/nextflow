@@ -66,6 +66,8 @@ class PodSpecBuilder {
 
     String serviceAccount
 
+    boolean automountServiceAccountToken = true
+
     AcceleratorResource accelerator
 
     Collection<PodMountSecret> secrets = []
@@ -261,6 +263,9 @@ class PodSpecBuilder {
         if( opts.affinity )
             affinity = opts.affinity
 
+        // -- automountserviceaccounttoken
+        automountServiceAccountToken = opts.getAutomountServiceAccountToken()
+
         return this
     }
 
@@ -320,6 +325,9 @@ class PodSpecBuilder {
 
         if( this.serviceAccount )
             spec.serviceAccountName = this.serviceAccount
+
+        if( ! this.automountServiceAccountToken )
+            spec.automountServiceAccountToken = false
 
         if( securityContext )
             spec.securityContext = securityContext.toSpec()
