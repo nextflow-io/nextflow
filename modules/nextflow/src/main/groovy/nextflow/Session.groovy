@@ -36,6 +36,8 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
+import nextflow.cache.CacheDB
+import nextflow.cache.CacheFactory
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.dag.DAG
@@ -377,7 +379,7 @@ class Session implements ISession {
         binding.setParams( (Map)config.params )
         binding.setArgs( new ScriptRunner.ArgsList(args) )
 
-        cache = new CacheDB(uniqueId,runName).open()
+        cache = CacheFactory.create(uniqueId,runName).open()
 
         return this
     }
@@ -1095,7 +1097,7 @@ class Session implements ISession {
         CacheDB db = null
         try {
             log.trace "Cleaning-up workdir"
-            db = new CacheDB(uniqueId, runName).openForRead()
+            db = CacheFactory.create(uniqueId, runName).openForRead()
             db.eachRecord { HashCode hash, TraceRecord record ->
                 def deleted = db.removeTaskEntry(hash)
                 if( deleted ) {
