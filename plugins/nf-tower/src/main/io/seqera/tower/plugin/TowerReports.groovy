@@ -47,7 +47,7 @@ class TowerReports {
             this.writer = new Agent<PrintWriter>(reportsFile)
 
             // send header
-            this.writer.send { PrintWriter it -> it.println("key\tpath")}
+            this.writer.send { PrintWriter it -> it.println("key\tpath\tsize")}
         }
     }
 
@@ -70,7 +70,7 @@ class TowerReports {
      */
     protected void loadReportPatterns(Path launchDir, String workflowId) {
         processReports = false
-        Path towerConfigPath = launchDir.resolve("tower.yml") //"nf-${workflowId}-tower.yml")
+        Path towerConfigPath = launchDir.resolve("nf-${workflowId}-tower.yml")
         if (Files.exists(towerConfigPath)) {
             final towerConfig = yamlSlurper.parse(towerConfigPath)
             this.patterns = new ArrayList<>()
