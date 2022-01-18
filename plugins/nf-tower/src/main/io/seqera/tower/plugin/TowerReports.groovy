@@ -53,7 +53,7 @@ class TowerReports {
         Path launchDir = Paths.get('.').toRealPath()
         loadReportPatterns(launchDir, workflowId)
         if (processReports) {
-            final fileName = System.getenv().getOrDefault("TOWER_REPORTS_FILE", "nf-${workflowId}-reports.tsv")
+            final fileName = System.getenv().getOrDefault("TOWER_REPORTS_FILE", "nf-${workflowId}-reports.tsv".toString()) as String
             this.launchReportsPath = launchDir.resolve(fileName)
             this.workReportsPath = Global?.session?.workDir?.resolve(fileName)
             this.reportsFile = new PrintWriter(Files.newBufferedWriter(launchReportsPath, Charset.defaultCharset()), true)
