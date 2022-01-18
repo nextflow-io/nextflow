@@ -17,8 +17,6 @@
 
 package nextflow
 
-import java.util.function.Consumer
-
 import static nextflow.Const.*
 
 import java.nio.file.Files
