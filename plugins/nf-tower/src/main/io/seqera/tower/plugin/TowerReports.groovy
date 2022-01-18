@@ -1,8 +1,10 @@
 package io.seqera.tower.plugin
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovy.yaml.YamlSlurper
 import groovyx.gpars.agent.Agent
+import nextflow.Global
 import nextflow.file.FileHelper
 
 import java.nio.charset.Charset
@@ -10,6 +12,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.Paths
+import java.time.Duration
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.stream.Collectors
 
 /**
@@ -19,17 +23,24 @@ import java.util.stream.Collectors
  * @author Jordi Deu-Pons
  */
 @Slf4j
+@CompileStatic
 class TowerReports {
 
+    private Path launchReportsPath
+    private Path workReportsPath
     private PrintWriter reportsFile
     private boolean processReports
     private Agent<PrintWriter> writer
     private List<String> patterns
     private List<PathMatcher> matchers
     private YamlSlurper yamlSlurper
+    private Timer timer
+    private AtomicInteger totalReports
 
     TowerReports() {
         this.yamlSlurper = new YamlSlurper()
+        this.timer = new Timer()
+        this.totalReports = new AtomicInteger(0)
     }
 
     /**
@@ -42,12 +53,35 @@ class TowerReports {
         Path launchDir = Paths.get('.').toRealPath()
         loadReportPatterns(launchDir, workflowId)
         if (processReports) {
-            final reportsPath = launchDir.resolve(System.getenv().getOrDefault("TOWER_REPORTS_FILE", "nf-${workflowId}-reports.tsv"))
-            this.reportsFile = new PrintWriter(Files.newBufferedWriter(reportsPath, Charset.defaultCharset()), true)
+            final fileName = System.getenv().getOrDefault("TOWER_REPORTS_FILE", "nf-${workflowId}-reports.tsv")
+            this.launchReportsPath = launchDir.resolve(fileName)
+            this.workReportsPath = Global?.session?.workDir?.resolve(fileName)
+            this.reportsFile = new PrintWriter(Files.newBufferedWriter(launchReportsPath, Charset.defaultCharset()), true)
             this.writer = new Agent<PrintWriter>(reportsFile)
 
             // send header
             this.writer.send { PrintWriter it -> it.println("key\tpath\tsize")}
+
+            // Schedule a reports copy if launchDir and workDir are different
+            if (this.workReportsPath && this.launchReportsPath != this.workReportsPath) {
+                final lastTotalReports = new AtomicInteger(0)
+                final task = {
+                    // Copy the file only if there are new reports
+                    if (lastTotalReports.get() < this.totalReports.get()) {
+                        try {
+                            final total = this.totalReports.get()
+                            FileHelper.copyPath(launchReportsPath, workReportsPath)
+                            lastTotalReports.set(total)
+                        } catch (IOException e) {
+                            log.error("Copying reports file {} to the workdir.", this.launchReportsPath)
+                        }
+                    }
+                }
+
+                // Copy maximum 1 time per minute
+                final oneMinute = Duration.ofMinutes(1).toMillis()
+                this.timer.schedule(task, oneMinute, oneMinute)
+            }
         }
     }
 
@@ -56,6 +90,7 @@ class TowerReports {
      */
     void flowComplete() {
         if (processReports) {
+            timer.cancel()
             writer.await()
             reportsFile.flush()
             reportsFile.close()
@@ -107,8 +142,9 @@ class TowerReports {
                 if (matchers.get(p).matches(destination)) {
                     final dst = destination.toUriString()
                     final pattern = patterns.get(p)
-                    log.debug("Adding report ${pattern} / ${dst}")
                     writer.send { PrintWriter it -> it.println("${pattern}\t${dst}\t${destination.size()}") }
+                    final numRep = totalReports.incrementAndGet()
+                    log.debug("Adding report [{}] {} / {}", numRep, pattern, dst)
                     break
                 }
             }
