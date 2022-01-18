@@ -736,6 +736,7 @@ class FileHelper {
         return new PathMatcher() {
             @Override
             public boolean matches(Path path) {
+                log.debug("Matching '{}' with '{}'", expr, path.toString())
                 return pattern.matcher(path.toString()).matches();
             }
         };
