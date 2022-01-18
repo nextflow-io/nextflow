@@ -140,7 +140,7 @@ class TowerReports {
 
             for (int p=0; p < matchers.size(); p++) {
                 if (matchers.get(p).matches(destination)) {
-                    final dst = destination.toUriString()
+                    final dst = destination.toAbsolutePath().toUriString()
                     final pattern = patterns.get(p)
                     writer.send { PrintWriter it -> it.println("${pattern}\t${dst}\t${destination.size()}") }
                     final numRep = totalReports.incrementAndGet()
