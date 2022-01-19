@@ -5,7 +5,6 @@ import groovy.util.logging.Slf4j
 import groovy.yaml.YamlSlurper
 import groovyx.gpars.agent.Agent
 import nextflow.Global
-import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 
 import java.nio.charset.Charset
@@ -73,6 +72,7 @@ class TowerReports {
                             final total = this.totalReports.get()
                             FileHelper.copyPath(launchReportsPath, workReportsPath)
                             lastTotalReports.set(total)
+                            log.debug("Reports file sync to workdir with {} reports", total)
                         } catch (IOException e) {
                             log.error("Copying reports file {} to the workdir.", this.launchReportsPath)
                         }
@@ -145,7 +145,7 @@ class TowerReports {
                     final pattern = patterns.get(p)
                     writer.send { PrintWriter it -> it.println("${pattern}\t${dst}\t${destination.size()}") }
                     final numRep = totalReports.incrementAndGet()
-                    log.debug("Adding report [{}] {} -- {} -- {} -- {} -- {} -- {}", numRep, pattern, dst, destination.getScheme(), destination.toUri(), destination, FilesEx.toUriString(destination))
+                    log.debug("Adding report [{}] {} -- {}", numRep, pattern, dst)
                     break
                 }
             }
