@@ -72,9 +72,9 @@ class TowerReports {
                             final total = this.totalReports.get()
                             FileHelper.copyPath(launchReportsPath, workReportsPath)
                             lastTotalReports.set(total)
-                            log.debug("Reports file sync to workdir with {} reports", total)
+                            log.debug("Reports file sync to workdir with ${total} reports")
                         } catch (IOException e) {
-                            log.error("Copying reports file {} to the workdir.", this.launchReportsPath)
+                            log.error("Copying reports file ${launchReportsPath} to the workdir.")
                         }
                     }
                 }
@@ -145,7 +145,7 @@ class TowerReports {
                     final pattern = patterns.get(p)
                     writer.send { PrintWriter it -> it.println("${pattern}\t${dst}\t${destination.size()}") }
                     final numRep = totalReports.incrementAndGet()
-                    log.debug("Adding report [{}] {} -- {}", numRep, pattern, dst)
+                    log.debug("Adding report [${numRep}] ${pattern} -- ${dst}")
                     break
                 }
             }
