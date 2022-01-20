@@ -80,7 +80,24 @@ For example::
 		}
 	}
 
-The directory specified in `mountPath` is where the task can access to the files available in the File share.
+The files in the File share are available to the task in the directory:
+`<YOUR MOUNT DESTINATION>/<YOUR SOURCE FILE SHARE NAME>`.
+
+For instance, given the following configuration::
+
+	azure {
+		storage {
+			...
+			fileShares {
+				dir1 {
+					mountPath = "/mnt/mydata/"
+				}
+			}
+		}
+	}
+
+
+The task can access to the File share in `/mnt/mydata/dir1`.
 
 .. _azure-batch:
 
@@ -362,7 +379,7 @@ azure.batch.pools.<name>.scaleInterval          Specify the interval at which to
 azure.batch.pools.<name>.schedulePolicy         Specify the scheduling policy for the pool identified with ``<name>``. It can be either ``spread`` or ``pack`` (default: ``spread``).
 azure.batch.pools.<name>.privileged             Enable the task to run with elevated access. Ignored if `runAs` is set (default: ``false``).
 azure.batch.pools.<name>.runAs                  Specify the username under which the task is run. The user must already exist on each node of the pool.
-azure.batch.registry.server                     Specify the container registry from which to pull the Docker images (default: ``docker.io``, requires ``nf-azure@0.9.8``).
-azure.batch.registry.userName                   Specify the username to connect to a private container registry (requires ``nf-azure@0.9.8``).
-azure.batch.registry.password                   Specify the password to connect to a private container registry (requires ``nf-azure@0.9.8``).
+azure.registry.server                           Specify the container registry from which to pull the Docker images (default: ``docker.io``, requires ``nf-azure@0.9.8``).
+azure.registry.userName                         Specify the username to connect to a private container registry (requires ``nf-azure@0.9.8``).
+azure.registry.password                         Specify the password to connect to a private container registry (requires ``nf-azure@0.9.8``).
 ============================================== =================

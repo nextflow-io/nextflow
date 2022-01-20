@@ -77,6 +77,9 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
         })
     }
 
+    @Override
+    boolean activable() { true }
+
     /**
      * Load secrets from the stored json file
      * @return
@@ -118,7 +121,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
         }
     }
 
-    Set<String> listSecretNames() {
+    Set<String> listSecretsNames() {
         return secretsMap.keySet()
     }
 
@@ -153,7 +156,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
     }
 
     @Override
-    String getSecretEnv() {
+    String getSecretsEnv() {
         final tmp = makeTempSecretsFile()
         return tmp ? "source $tmp" : null
     }
