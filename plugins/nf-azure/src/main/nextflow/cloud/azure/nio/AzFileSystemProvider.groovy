@@ -62,6 +62,8 @@ class AzFileSystemProvider extends FileSystemProvider {
 
     private Map<String,String> env = new HashMap<>(System.getenv())
     private Map<String,AzFileSystem> fileSystems = [:]
+    private String sasToken = null
+    private String accountKey = null
 
     /**
      * @inheritDoc
@@ -69,6 +71,14 @@ class AzFileSystemProvider extends FileSystemProvider {
     @Override
     String getScheme() {
         return SCHEME
+    }
+
+    String getSasToken() {
+        return this.sasToken
+    }
+
+    String getAccountKey() {
+        return this.accountKey
     }
 
     static private AzPath asAzPath(Path path ) {
@@ -197,6 +207,13 @@ class AzFileSystemProvider extends FileSystemProvider {
                 : createBlobServiceWithKey(accountName, accountKey)
         final result = createFileSystem(client, bucket, config)
         fileSystems[bucket] = result
+
+        if (sasToken) {
+            this.sasToken = sasToken
+        }
+        if (accountKey) {
+            this.accountKey = accountKey
+        }
         return result
     }
 
