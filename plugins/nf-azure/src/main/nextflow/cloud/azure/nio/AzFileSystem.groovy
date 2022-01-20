@@ -15,6 +15,8 @@
  */
 package nextflow.cloud.azure.nio
 
+import com.azure.storage.common.Utility
+
 import java.nio.channels.Channels
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.DirectoryNotEmptyException
@@ -412,7 +414,11 @@ class AzFileSystem extends FileSystem {
         String sourceUrl = source.blobClient().getBlobUrl()
 
         if (sasToken != null) {
-            sourceUrl += "?${sasToken}"
+            if (sourceUrl.contains('?')){
+                sourceUrl = String.format("%s&%s", sourceUrl, sasToken);
+            } else {
+                sourceUrl = String.format("%s?%s", sourceUrl, sasToken);
+            }
         }
 
         SyncPoller<BlobCopyInfo, Void> pollResponse =
