@@ -33,9 +33,15 @@ class AzBashLib extends BashFunLib<AzBashLib> {
         nxf_az_upload() {
             local name=$1
             local target=${2%/} ## remove ending slash
-        
+            local base_name="$(basename "$name")"
+            local dir_name="$(dirname "$name")"
+
             if [[ -d $name ]]; then
-              azcopy cp "$name" "$target?$AZ_SAS" --recursive
+              if [[ "$base_name" == "$name" ]]; then
+                azcopy cp "$name" "$target?$AZ_SAS" --recursive
+              else
+                azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive
+              fi
             else
               azcopy cp "$name" "$target/$name?$AZ_SAS"
             fi
