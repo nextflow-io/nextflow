@@ -80,7 +80,24 @@ For example::
 		}
 	}
 
-The directory specified in `mountPath` is where the task can access to the files available in the File share.
+The files available in the File share will be available to the task in the directory:
+<YOUR MOUNT DESTINATION>/<YOUR SOURCE FILE SHARE NAME>.
+
+For instance, given the following configuration::
+
+	azure {
+		storage {
+			...
+			fileShares {
+				dir1 {
+					mountPath = "/mnt/mydata/"
+				}
+			}
+		}
+	}
+
+
+The task can access to the File share in `/mnt/mydata/dir1`.
 
 .. _azure-batch:
 
