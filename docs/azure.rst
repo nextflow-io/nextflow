@@ -80,8 +80,8 @@ For example::
 		}
 	}
 
-The files available in the File share will be available to the task in the directory:
-<YOUR MOUNT DESTINATION>/<YOUR SOURCE FILE SHARE NAME>.
+The files in the File share are available to the task in the directory:
+`<YOUR MOUNT DESTINATION>/<YOUR SOURCE FILE SHARE NAME>`.
 
 For instance, given the following configuration::
 
