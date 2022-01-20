@@ -1022,14 +1022,15 @@ class Session implements ISession {
     }
 
     void notifyFilePublish(Path destination) {
-        observers.each { observer -> {
+        def copy = new ArrayList<TraceObserver>(observers)
+        for( TraceObserver observer : copy  ) {
             try {
                 observer.onFilePublish(destination)
             }
             catch( Exception e ) {
                 log.error "Failed to invoke observer on file publish: $observer", e
             }
-        }}
+        }
     }
 
     void notifyFlowComplete() {
