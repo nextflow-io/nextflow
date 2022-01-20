@@ -15,8 +15,6 @@
  */
 package nextflow.cloud.azure.nio
 
-import com.azure.storage.common.Utility
-
 import java.nio.channels.Channels
 import java.nio.channels.SeekableByteChannel
 import java.nio.file.DirectoryNotEmptyException
