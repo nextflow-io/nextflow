@@ -138,7 +138,7 @@ class LocalSecretsProviderTest extends Specification {
         and:
         provider.getSecret('other') == null
         and:
-        provider.listSecretNames() == ['bar','foo'] as Set
+        provider.listSecretsNames() == ['bar', 'foo'] as Set
 
         cleanup:
         folder.deleteDir()
@@ -214,7 +214,7 @@ class LocalSecretsProviderTest extends Specification {
                      '''.stripIndent()
 
         when:
-        def env = provider.getSecretEnv()
+        def env = provider.getSecretsEnv()
         then:
         env == "source $file"
 
