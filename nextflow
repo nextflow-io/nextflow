@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-#  Copyright 2020-2021, Seqera Labs
+#  Copyright 2020-2022, Seqera Labs
 #  Copyright 2013-2019, Centre for Genomic Regulation (CRG)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@
 #  limitations under the License.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'21.11.0-SNAPSHOT'}
+NXF_VER=${NXF_VER:-'21.12.1-edge'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -142,28 +142,7 @@ function launch_nextflow() {
         cmdline+=("$x") 
     done 
 
-    if [[ $NXF_MPIRUN ]]; then
-        local rank=''
-        [[ $SLURM_PROCID ]] && rank=$SLURM_PROCID
-        [[ $OMPI_COMM_WORLD_RANK ]] && rank=$OMPI_COMM_WORLD_RANK
-        if [[ ! $rank ]]; then
-          echo_red 'It looks you are not running in a MPI enabled environment -- cannot find `$OMPI_COMM_WORLD_RANK` nor `$SLURM_PROCID` variable';
-          exit 1;
-        fi
-        if [[ $SLURM_CPUS_PER_TASK && $SLURM_MEM_PER_CPU ]]; then
-            export NXF_CLUSTER_MAXCPUS=$SLURM_CPUS_PER_TASK
-            export NXF_CLUSTER_MAXMEMORY="$(($SLURM_MEM_PER_CPU*$SLURM_CPUS_PER_TASK))MB"
-        fi
-        if [[ $rank == 0 ]]; then
-            # sleep a few seconds in order to wait worker daemons to bootstrap
-            sleep ${NXF_SLEEP:-10}
-            export NXF_EXECUTOR='ignite'
-            export NXF_CLUSTER_SHUTDOWNONCOMPLETE='true'
-        else
-            args=(-log .nextflow_node_${rank}.log node ignite)
-        fi
-    # start in daemon mode
-    elif [[ "$bg" ]]; then
+    if [[ "$bg" ]]; then
       local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
       cmdline+=("${args[@]}")
       exec "${cmdline[@]}" &
@@ -234,15 +213,6 @@ while [[ $# != 0 ]]; do
       exit 0
       fi
       ;;
-    -process.executor|-executor.name)
-      if [[ $2 && $2 == 'ignite' ]]; then
-      [ ! $NXF_MODE ] && NXF_MODE='ignite'; shift;
-      fi
-      ;;
-    -with-mpi)
-      [ ! $NXF_MODE ] && NXF_MODE='ignite'
-      NXF_MPIRUN='true'
-      ;;
     *)
       [[ $1 && $1 != -* && ! "$cmd" && ${commands[*]} =~ $1 ]] && cmd=$1
       ;;
@@ -276,16 +246,8 @@ NXF_PATH=$(dirname "$NXF_BIN")
 NXF_URL=${NXF_URL:-$NXF_BASE/v$NXF_VER/$NXF_JAR}
 NXF_GRAB=${NXF_GRAB:-''}
 NXF_CLASSPATH=${NXF_CLASSPATH:-''}
-NXF_MPIRUN=${NXF_MPIRUN:=''}
 NXF_HOST=${HOSTNAME:-localhost}
 [[ $NXF_LAUNCHER ]] || NXF_LAUNCHER=${NXF_HOME}/tmp/launcher/nextflow-${NXF_PACK}_${NXF_VER}/${NXF_HOST}
-
-if [[ $NXF_MODE == ignite ]]; then
-    # Fix JDK bug when there's a limit on the OS virtual memory
-    # https://bugs.openjdk.java.net/browse/JDK-8044054
-    # https://issues.apache.org/jira/browse/HADOOP-7154
-    export MALLOC_ARENA_MAX=4
-fi
 
 # Determine the path to this file
 if [[ $NXF_PACK = all ]]; then
@@ -350,10 +312,8 @@ else
       fi
       exit 1
   fi
-  if [[ ! $JAVA_VER =~ ^(1.8|9|10|11|12|13|14|15|16|17) ]]; then
-      echo_yellow "NOTE: Nextflow is not tested with Java $JAVA_VER -- It's recommended the use of version 8 up to 17\n"
-  elif [[ ! $JAVA_VER =~ ^(1.8|9|10|11) && $NXF_MODE == ignite ]]; then
-      echo_yellow "WARN: Apache Ignite executor is not tested with Java $JAVA_VER -- It's recommended the use of version 8 up to 11\n"
+  if [[ ! $JAVA_VER =~ ^(11|12|13|14|15|16|17) ]]; then
+      echo_yellow "NOTE: Nextflow is not tested with Java $JAVA_VER -- It's recommended the use of version 11 up to 17\n"
   fi
   mkdir -p $(dirname "$JAVA_KEY")
   [[ -f $JAVA_VER ]] && echo $JAVA_VER > "$JAVA_KEY"
@@ -370,7 +330,7 @@ fi
 
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
 declare -a JAVA_OPTS=()
-JAVA_OPTS+=(-Dfile.encoding=UTF-8 -Dcapsule.trampoline -Dcapsule.java.cmd="$JAVA_CMD")
+JAVA_OPTS+=(-Dfile.encoding=UTF-8 -Dcapsule.trampoline -Dcapsule.java.cmd="$JAVA_CMD" -Dcom.sun.security.enableAIAcaIssuers=true)
 if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=(-Djava.awt.headless=true)
 fi
@@ -378,7 +338,7 @@ fi
 [[ "$JAVA_HOME" ]] && JAVA_OPTS+=(-Dcapsule.java.home="$JAVA_HOME")
 [[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=(-Dcapsule.log=$CAPSULE_LOG)
 [[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=(-Dcapsule.reset=true)
-[[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=(-XX:+TieredCompilation -XX:TieredStopAtLevel=1 -Dcom.sun.security.enableAIAcaIssuers=true)
+[[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=(-XX:+TieredCompilation -XX:TieredStopAtLevel=1)
 [[ "$NXF_OPTS" ]] && JAVA_OPTS+=($NXF_OPTS)
 [[ "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
 [[ "$NXF_GRAB" ]] && export NXF_GRAB
@@ -417,6 +377,7 @@ $NXF_VER
 $NXF_OPTS
 $NXF_GRAB
 $NXF_CLASSPATH
+$NXF_JVM_ARGS
 EOF
 }
 
@@ -450,9 +411,12 @@ else
       launcher+=(--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
+      [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
       launcher+=("${cli[@]:1}")
     else
-      launcher=("${cli[@]}")
+      launcher=("${cli[@]:0:1}")
+      [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
+      launcher+=("${cli[@]:1}")
     fi
 
     # Don't show errors if the LAUNCH_FILE can't be created

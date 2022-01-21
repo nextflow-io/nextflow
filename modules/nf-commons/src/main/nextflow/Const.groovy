@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,17 +53,17 @@ class Const {
     /**
      * The application version
      */
-    static public final String APP_VER = "21.11.0-SNAPSHOT"
+    static public final String APP_VER = "21.12.1-edge"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static public final long APP_TIMESTAMP = 1642433960696
+    static public final long APP_TIMESTAMP = 1640159621033
 
     /**
      * The app build number
      */
-    static public final int APP_BUILDNUM = 5684
+    static public final int APP_BUILDNUM = 5653
 
     /**
      * The app build time string relative to UTC timezone
@@ -127,7 +127,7 @@ class Const {
       http://nextflow.io
 """
 
-    static public final String S3_UPLOADER_CLASS = 'com.upplication.s3fs.S3OutputStream'
+    static public final String S3_UPLOADER_CLASS = 'com.upplication.s3fs'
 
     static public final String ROLE_WORKER = 'worker'
 
