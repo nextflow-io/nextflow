@@ -139,6 +139,7 @@ class K8sDriverLauncherTest extends Specification {
         def pod = Mock(PodOptions)
         pod.getVolumeClaims() >> [ new PodVolumeClaim('pvc-1', '/mnt/path/data') ]
         pod.getMountConfigMaps() >> [ new PodMountConfig('cfg-2', '/mnt/path/cfg') ]
+        pod.automountServiceAccountToken >> true
 
         def k8s = Mock(K8sConfig)
         k8s.getNextflowImageName() >> 'the-image'
@@ -188,6 +189,7 @@ class K8sDriverLauncherTest extends Specification {
         def pod = Mock(PodOptions)
         pod.getVolumeClaims() >> [ new PodVolumeClaim('pvc-1', '/mnt/path/data') ]
         pod.getMountConfigMaps() >> [ new PodMountConfig('cfg-2', '/mnt/path/cfg') ]
+        pod.automountServiceAccountToken >> true
 
         def k8s = Mock(K8sConfig)
         k8s.getLaunchDir() >> '/the/user/dir'
