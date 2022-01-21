@@ -544,6 +544,8 @@ class PodSpecBuilderTest extends Specification {
             ]
         ]
 
+        opts.getAutomountServiceAccountToken() >> true
+
         when:
         def spec = builder.withPodOptions(opts).build()
         then:

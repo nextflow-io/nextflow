@@ -1981,6 +1981,7 @@ The ``pod`` directive allows the definition of the following options:
 ``runAsUser: <UID>``                              Specifies the user ID to be used to run the container.
 ``nodeSelector: <V>``                             Specifies which node the process will run on. See `Kubernetes nodeSelector <https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector>`_ for details.
 ``affinity: <V>``                                 Specifies affinity for which nodes the process should run on. See `Kubernetes affinity <https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity>`_ for details.
+``automountServiceAccountToken: <B>``             Specifies whether to automount service account token into process pods. If ``B`` is true, service account token is automounted into task pods (default).
 ================================================= =================================================
 
 When defined in the Nextflow configuration file, a pod setting can be defined using the canonical
