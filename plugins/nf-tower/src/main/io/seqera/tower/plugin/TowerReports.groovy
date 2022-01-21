@@ -32,7 +32,7 @@ class TowerReports {
     private PrintWriter reportsFile
     private boolean processReports
     private Agent<PrintWriter> writer
-    private List<String> patterns
+    private List<Map.Entry<String, Map<String, String>>> reportsEntries
     private List<PathMatcher> matchers
     private YamlSlurper yamlSlurper
     private Timer timer
@@ -62,7 +62,7 @@ class TowerReports {
             this.writer = new Agent<PrintWriter>(reportsFile)
 
             // send header
-            this.writer.send { PrintWriter it -> it.println("key\tpath\tsize")}
+            this.writer.send { PrintWriter it -> it.println("key\tpath\tsize\tdisplay\tmime_type")}
 
             // Schedule a reports copy if launchDir and workDir are different
             if (this.workReportsPath && this.launchReportsPath != this.workReportsPath) {
@@ -118,16 +118,14 @@ class TowerReports {
         // Load reports definitions if available
         if (Files.exists(towerConfigPath)) {
             final towerConfig = yamlSlurper.parse(towerConfigPath)
-            this.patterns = new ArrayList<>()
+            this.reportsEntries = new ArrayList<>()
             if (towerConfig instanceof Map && towerConfig.containsKey("reports")) {
-                final reports = towerConfig.get("reports") as Map
-                reports.keySet().forEach(k -> {
-                    if (k) {
-                        patterns.add(k.toString())
-                    }
-                })
+                Map<String, Map<String, String>> reports = (Map<String, Map<String, String>>) towerConfig.get("reports")
+                for (final e : reports) {
+                    this.reportsEntries.add(e)
+                }
             }
-            processReports = this.patterns.size() > 0
+            processReports = this.reportsEntries.size() > 0
         }
     }
 
@@ -143,18 +141,21 @@ class TowerReports {
             if (!matchers) {
                 // Initialize report matchers on first event to use the
                 // path matcher of the destination filesystem
-                matchers = patterns.stream()
-                        .map(p -> FileHelper.getPathMatcherFor("glob:**/${p}", destination.fileSystem))
+                matchers = reportsEntries.stream()
+                        .map(p -> FileHelper.getPathMatcherFor("glob:**/${p.key}", destination.fileSystem))
                         .collect(Collectors.toList())
             }
 
             for (int p=0; p < matchers.size(); p++) {
                 if (matchers.get(p).matches(destination)) {
                     final dst = destination.toUriString()
-                    final pattern = patterns.get(p)
-                    writer.send { PrintWriter it -> it.println("${pattern}\t${dst}\t${destination.size()}") }
+                    final reportEntry = this.reportsEntries.get(p)
+                    // Report properties
+                    final display = reportEntry.value.get("display", "")
+                    final mimeType = reportEntry.value.get("mimeType", "")
+                    writer.send { PrintWriter it -> it.println("${reportEntry.key}\t${dst}\t${destination.size()}\t${display}\t${mimeType}") }
                     final numRep = totalReports.incrementAndGet()
-                    log.debug("Adding report [${numRep}] ${pattern} -- ${dst}")
+                    log.debug("Adding report [${numRep}] ${reportEntry.key} -- ${dst}")
                     break
                 }
             }
