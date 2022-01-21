@@ -26,6 +26,8 @@ import org.pf4j.ExtensionPoint
  */
 interface SecretsProvider extends ExtensionPoint, Closeable {
 
+    boolean activable()
+
     /**
      * Loads the secretes from the underlying provider store
      *
@@ -60,10 +62,10 @@ interface SecretsProvider extends ExtensionPoint, Closeable {
      * Retrieve the collection of available secret names
      * @return The of secret names
      */
-    Set<String> listSecretNames()
+    Set<String> listSecretsNames()
 
     /**
      * @return A shell snippet defining the secrets as environment variables
      */
-    String getSecretEnv()
+    String getSecretsEnv()
 }

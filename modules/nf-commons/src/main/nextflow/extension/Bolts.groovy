@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -924,5 +924,18 @@ class Bolts {
             }
         }
         return (T)result
+    }
+
+    static <T extends Map> T deepMerge(T mergeIntoMap, T mergeFromMap, boolean replaceValues) {
+        for (Object key : mergeFromMap.keySet()) {
+            if (mergeFromMap.get(key) instanceof Map && mergeIntoMap.get(key) instanceof Map) {
+                mergeIntoMap.put(key, deepMerge((Map) mergeIntoMap.get(key), (Map) mergeFromMap.get(key), replaceValues));
+            } else {
+                if (!mergeIntoMap.containsKey(key) || replaceValues) {
+                    mergeIntoMap.put(key, mergeFromMap.get(key));
+                }
+            }
+        }
+        return deepClone(mergeIntoMap)
     }
 }

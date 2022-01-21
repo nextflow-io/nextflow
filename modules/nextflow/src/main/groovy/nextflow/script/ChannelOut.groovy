@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -80,10 +80,13 @@ class ChannelOut implements List<DataflowWriteChannel> {
     }
 
     /**
-     * Helper method that `spread`
+     * Helper method that convert the arguments array into a list expanding nested items of type
+     * {@link ChannelOut} into the corresponding elements
      *
      * @param args
+     *      The arguments array
      * @return
+     *      A list of argument replacing item of type {@link ChannelOut} to the expanded elements
      */
     static List spread(Object[] args) {
         final result = new ArrayList(args.size()*2)

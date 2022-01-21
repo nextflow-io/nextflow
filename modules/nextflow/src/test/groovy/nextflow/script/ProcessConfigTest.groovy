@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,7 +48,6 @@ class ProcessConfigTest extends Specification {
         expect:
         config.shell ==  ['/bin/bash','-ue']
         config.cacheable
-        config.validExitStatus == [0]
         config.maxRetries == 0
         config.maxErrors == -1
         config.errorStrategy == ErrorStrategy.TERMINATE
@@ -149,7 +148,6 @@ class ProcessConfigTest extends Specification {
         expect:
         config.containsKey('echo')
         config.containsKey('shell')
-        config.containsKey('validExitStatus')
         !config.containsKey('xyz')
         !config.containsKey('maxForks')
         config.maxForks == null

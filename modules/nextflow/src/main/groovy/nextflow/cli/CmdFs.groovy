@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,8 @@ import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
+import nextflow.plugin.Plugins
+
 /**
  * Implements `fs` command
  *
@@ -164,6 +166,16 @@ class CmdFs extends CmdBase implements UsageAware {
             return
         }
 
+        Plugins.setup()
+        try {
+            run0()
+        }
+        finally {
+            Plugins.stop()
+        }
+    }
+
+    private void run0() {
         final cmd = findCmd(args[0])
         if( !cmd ) {
             throw new AbortOperationException("Unknow file system command: `$cmd`")

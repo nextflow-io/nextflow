@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -61,8 +61,26 @@ class FileHelperTest extends Specification {
         when:
         FileHelper.asPath('file://some/file.txt')
         then:
-        thrown(IllegalArgumentException)
+        def e = thrown(IllegalArgumentException)
+        e.message == 'Malformed file URI: file://some/file.txt -- It must start either with a `file:/` or `file:///` prefix'
 
+        when:
+        FileHelper.asPath('')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == 'Path string cannot be empty'
+
+        when:
+        FileHelper.asPath('\n/some/file.txt')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Path string cannot start with blank or a special characters -- Offending path: '\\n/some/file.txt'"
+
+        when:
+        FileHelper.asPath('/some/file.txt\n')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Path string cannot ends with blank or a special characters -- Offending path: '/some/file.txt\\n'"
     }
 
     def 'should strip query params from http files' () {

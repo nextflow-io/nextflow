@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -94,7 +94,7 @@ class DataflowHelper {
         @Override
         boolean onException(final DataflowProcessor processor, final Throwable e) {
             OperatorEx.log.error("@unknown", e)
-            session.abort(e)
+            session?.abort(e)
             return true;
         }
     }

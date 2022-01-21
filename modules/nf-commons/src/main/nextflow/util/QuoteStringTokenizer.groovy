@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +26,7 @@ package nextflow.util
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  *
  */
-public class QuoteStringTokenizer implements Iterator<String>, Iterable<String> {
+class QuoteStringTokenizer implements Iterator<String>, Iterable<String> {
 
     private List<Character> chars = Arrays.<Character>asList(' ' as Character);
 

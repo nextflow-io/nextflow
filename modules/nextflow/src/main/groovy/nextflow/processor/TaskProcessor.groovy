@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -129,7 +129,11 @@ class TaskProcessor {
 
     final private static Pattern QUESTION_MARK = ~/(\?+)/
 
-    final private boolean invalidateCacheOnTaskDirectiveChange = System.getenv("NXF_ENABLE_CACHE_INVALIDATION_ON_TASK_DIRECTIVE_CHANGE")=='true'
+    @Memoized
+    static boolean getInvalidateCacheOnTaskDirectiveChange() {
+        final value = System.getenv("NXF_ENABLE_CACHE_INVALIDATION_ON_TASK_DIRECTIVE_CHANGE")
+        return value==null || value =='true'
+    }
 
     /**
      * Keeps track of the task instance executed by the current thread
@@ -556,17 +560,21 @@ class TaskProcessor {
     /**
      * The processor execution body
      *
-     * @param processor
-     * @param values
+     * @param args
+     *      The args array is expected to be composed by two elements:
+     *      the first must be an object object of type {@link TaskStartParams},
+     *      the second is the list of task input messages as received by the process
      */
-    final protected void invokeTask( def args ) {
+    final protected void invokeTask( Object[] args ) {
+        assert args.size()==2
+        final params = (TaskStartParams) args[0]
+        final values = (List) args[1]
 
         // create and initialize the task instance to be executed
-        final List values = args instanceof List ? args : [args]
-        log.trace "Invoking task > $name"
+        log.trace "Invoking task > $name with params=$params; values=$values"
 
         // -- create the task run instance
-        final task = createTaskRun()
+        final task = createTaskRun(params)
         // -- set the task instance as the current in this thread
         currentTask.set(task)
 
@@ -686,13 +694,10 @@ class TaskProcessor {
      * @return The new newly created {@code TaskRun}
      */
 
-    final protected TaskRun createTaskRun() {
-        log.trace "Creating a new task > $name"
-
-        def index = indexCount.incrementAndGet()
-        def task = new TaskRun(
-                id: TaskId.next(),
-                index: index,
+    final protected TaskRun createTaskRun(TaskStartParams params) {
+        final task = new TaskRun(
+                id: params.id,
+                index: params.index,
                 processor: this,
                 type: scriptType,
                 config: config.createTaskConfig(),
@@ -828,14 +833,13 @@ class TaskProcessor {
 
 
         try {
-            final exit = task.config.getValidExitStatus()[0]
             // -- expose task exit status to make accessible as output value
-            task.config.exitStatus = exit
+            task.config.exitStatus = TaskConfig.EXIT_ZERO
             // -- check if all output resources are available
             collectOutputs(task)
             log.info "[skipping] Stored process > ${task.name}"
             // set the exit code in to the task object
-            task.exitStatus = exit
+            task.exitStatus = TaskConfig.EXIT_ZERO
             task.cached = true
             session.notifyTaskCached(new StoredTaskHandler(task))
 
@@ -1696,7 +1700,7 @@ class TaskProcessor {
         if( obj instanceof Path )
             return obj
 
-        if( obj == null )
+        if( !obj == null )
             throw new ProcessUnrecoverableException("Path value cannot be null")
         
         if( !(obj instanceof CharSequence) )
@@ -1709,8 +1713,10 @@ class TaskProcessor {
             return FileHelper.asPath(str)
         if( FileHelper.getUrlProtocol(str) )
             return FileHelper.asPath(str)
-
-        throw new ProcessUnrecoverableException("Not a valid path value: $str")
+        if( !str )
+            throw new ProcessUnrecoverableException("Path value cannot be empty")
+        
+        throw new ProcessUnrecoverableException("Not a valid path value: '$str'")
     }
 
     protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, FilePorter.Batch batch ) {
@@ -2287,7 +2293,13 @@ class TaskProcessor {
             log.trace "<${name}> Before run -- messages: ${messages}"
             // the counter must be incremented here, otherwise it won't be consistent
             state.update { StateObj it -> it.incSubmitted() }
-            return messages;
+            // task index must be created here to guarantee consistent ordering
+            // with the sequence of messages arrival since this method is executed in a thread safe manner
+            final params = new TaskStartParams(TaskId.next(), indexCount.incrementAndGet())
+            final result = new ArrayList(2)
+            result[0] = params
+            result[1] = messages
+            return result
         }
 
 

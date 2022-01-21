@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -630,8 +630,14 @@ class TaskPollingMonitor implements TaskMonitor {
      * Kill all pending jobs when current execution session is aborted
      */
     protected void cleanup() {
-        if( !runningQueue.size() ) return
-        log.warn "Killing pending tasks (${runningQueue.size()})"
+        if( !runningQueue.size() )
+            return
+        if( session.disableJobsCancellation ) {
+            log.debug "Running tasks were not cancelled as requested (${runningQueue.size()})"
+            return
+        }
+
+        log.warn "Killing running tasks (${runningQueue.size()})"
 
         def batch = new BatchCleanup()
         while( runningQueue.size() ) {

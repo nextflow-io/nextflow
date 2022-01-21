@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -117,6 +117,7 @@ class K8sDriverLauncherTest extends Specification {
         new CmdKubeRun(process: [mem: '100',cpus:'2'])  | 'nextflow run foo -process.mem 100 -process.cpus 2'
         new CmdKubeRun(params: [alpha:'x', beta:'y'])   | 'nextflow run foo --alpha x --beta y'
         new CmdKubeRun(params: [alpha: '/path/*.txt'])  | 'nextflow run foo --alpha /path/\\*.txt'
+        new CmdKubeRun(entryName: 'lala')               | 'nextflow run foo -entry lala'
     }
 
     def 'should set the run name' () {
@@ -138,6 +139,7 @@ class K8sDriverLauncherTest extends Specification {
         def pod = Mock(PodOptions)
         pod.getVolumeClaims() >> [ new PodVolumeClaim('pvc-1', '/mnt/path/data') ]
         pod.getMountConfigMaps() >> [ new PodMountConfig('cfg-2', '/mnt/path/cfg') ]
+        pod.automountServiceAccountToken >> true
 
         def k8s = Mock(K8sConfig)
         k8s.getNextflowImageName() >> 'the-image'
@@ -187,6 +189,7 @@ class K8sDriverLauncherTest extends Specification {
         def pod = Mock(PodOptions)
         pod.getVolumeClaims() >> [ new PodVolumeClaim('pvc-1', '/mnt/path/data') ]
         pod.getMountConfigMaps() >> [ new PodMountConfig('cfg-2', '/mnt/path/cfg') ]
+        pod.automountServiceAccountToken >> true
 
         def k8s = Mock(K8sConfig)
         k8s.getLaunchDir() >> '/the/user/dir'
@@ -238,7 +241,7 @@ class K8sDriverLauncherTest extends Specification {
         def params = folder.resolve('params.json')
         params.text = 'bla-bla'
         def driver = Spy(K8sDriverLauncher)
-        def NXF_CONFIG = [foo: 'bar']
+        def NXF_CONFIG = [foo: 'bar'].toConfigObject()
 
         def SCM_FILE = folder.resolve('scm')
         SCM_FILE.text = "hello = 'world'\n"
@@ -288,7 +291,7 @@ class K8sDriverLauncherTest extends Specification {
 
         when:
         driver.cmd = new CmdKubeRun()
-        config = driver.makeConfig(NAME)
+        config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_EMPTY
         config.process.executor == 'k8s'
@@ -298,7 +301,7 @@ class K8sDriverLauncherTest extends Specification {
 
         when:
         driver.cmd = new CmdKubeRun()
-        config = driver.makeConfig(NAME)
+        config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
         config.process.executor == 'k8s'
@@ -311,7 +314,7 @@ class K8sDriverLauncherTest extends Specification {
 
         when:
         driver.cmd = new CmdKubeRun(volMounts: ['pvc-1:/this','pvc-2:/that'] )
-        config = driver.makeConfig(NAME)
+        config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_EMPTY
         config.process.executor == 'k8s'
@@ -329,7 +332,7 @@ class K8sDriverLauncherTest extends Specification {
 
         when:
         driver.cmd = new CmdKubeRun(volMounts: ['xyz:/this'] )
-        config = driver.makeConfig(NAME)
+        config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
         config.process.executor == 'k8s'
@@ -347,7 +350,7 @@ class K8sDriverLauncherTest extends Specification {
 
         when:
         driver.cmd = new CmdKubeRun(volMounts: ['xyz', 'bar:/mnt/bar'] )
-        config = driver.makeConfig(NAME)
+        config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
         config.process.executor == 'k8s'
@@ -376,14 +379,14 @@ class K8sDriverLauncherTest extends Specification {
 
         when:
         driver.cmd = new CmdKubeRun()
-        config = driver.makeConfig(NAME)
+        config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_EMPTY
         config.process.executor == 'k8s'
 
         when:
         driver.cmd = new CmdKubeRun()
-        config = driver.makeConfig(NAME)
+        config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
         config.process.executor == 'k8s'
@@ -392,7 +395,7 @@ class K8sDriverLauncherTest extends Specification {
 
         when:
         driver.cmd = new CmdKubeRun(volMounts: ['pvc-1:/this','pvc-2:/that'] )
-        config = driver.makeConfig(NAME)
+        config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_EMPTY
         config.process.executor == 'k8s'
@@ -403,7 +406,7 @@ class K8sDriverLauncherTest extends Specification {
 
         when:
         driver.cmd = new CmdKubeRun(volMounts: ['xyz:/this'] )
-        config = driver.makeConfig(NAME)
+        config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
         config.process.executor == 'k8s'

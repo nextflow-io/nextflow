@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -365,4 +365,31 @@ class BoltsTest extends Specification {
         map.bar.x == 2
     }
 
+    def 'should deep merge map and overwrite values when `replaceValues` is true'() {
+        given:
+        Map origMap = [foo: 1, bar: [x: 2, y: 3]]
+        Map newMap = [bar: [x: 4, z: 5]]
+
+        when:
+        def merge = Bolts.deepMerge(origMap, newMap, true)
+
+        then:
+        merge.bar.x == 4
+        merge.bar.y == 3
+        merge.bar.z == 5
+    }
+
+    def 'should deep merge map and not overwrite values when `replaceValues` is false'() {
+        given:
+        Map origMap = [foo: 1, bar: [x: 2, y: 3]]
+        Map newMap = [bar: [x: 4, z: 5]]
+
+        when:
+        def merge = Bolts.deepMerge(origMap, newMap, false)
+
+        then:
+        merge.bar.x == 2
+        merge.bar.y == 3
+        merge.bar.z == 5
+    }
 }

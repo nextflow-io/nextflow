@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,8 +21,6 @@ import static nextflow.extension.DataflowHelper.*
 import static nextflow.splitter.SplitterFactory.*
 import static nextflow.util.CheckHelper.*
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
@@ -32,7 +30,6 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.ChainWithClosure
 import groovyx.gpars.dataflow.operator.ControlMessage
-import groovyx.gpars.dataflow.operator.CopyChannelsClosure
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import groovyx.gpars.dataflow.operator.PoisonPill
@@ -289,21 +286,7 @@ class OperatorEx  {
     }
 
     DataflowWriteChannel until(DataflowReadChannel source, final Closure<Boolean> closure) {
-        def target = CH.createBy(source)
-        newOperator(source, target, {
-            final result = DefaultTypeTransformation.castToBoolean(closure.call(it))
-            final proc = ((DataflowProcessor) getDelegate())
-
-            if( result ) {
-                proc.bindOutput(Channel.STOP)
-                proc.terminate()
-            }
-            else {
-                proc.bindOutput(it)
-            }
-        })
-
-        return target
+        return new UntilOp(source,closure).apply()
     }
 
 
@@ -465,37 +448,7 @@ class OperatorEx  {
         if( source instanceof DataflowExpression )
             throw new IllegalArgumentException("Operator `take` cannot be applied to a value channel")
 
-        def count = 0
-        final target = CH.create()
-
-        if( n==0 ) {
-            target.bind(Channel.STOP)
-            return target
-        }
-
-        final listener = new DataflowEventAdapter() {
-            @Override
-            void afterRun(final DataflowProcessor processor, final List<Object> messages) {
-                if( ++count >= n ) {
-                    processor.bindOutput( Channel.STOP )
-                    processor.terminate()
-                }
-            }
-
-            boolean onException(final DataflowProcessor processor, final Throwable e) {
-                OperatorEx.log.error("@unknown", e)
-                session.abort(e)
-                return true;
-            }
-        }
-
-        newOperator(
-                inputs: [source],
-                outputs: [target],
-                listeners: (n > 0 ? [listener] : []),
-                new ChainWithClosure(new CopyChannelsClosure()))
-
-        return target
+        return new TakeOp(source,n).apply()
     }
 
     /**
@@ -1064,22 +1017,7 @@ class OperatorEx  {
         if( others.size()==0 )
             throw new IllegalArgumentException("Operator 'mix' should have at least one right operand")
 
-        def target = CH.create()
-        def count = new AtomicInteger( others.size()+1 )
-        def handlers = [
-                onNext: { target << it },
-                onComplete: { if(count.decrementAndGet()==0) { target << Channel.STOP } }
-        ]
-
-        subscribeImpl(source, handlers)
-        for( def it : others ) {
-            subscribeImpl(it, handlers)
-        }
-
-        def allSources = [source]
-        allSources.addAll(others)
-
-        return target
+        return new MixOp(source,others).apply()
     }
 
     DataflowWriteChannel join( DataflowReadChannel left, right ) {
@@ -1405,28 +1343,13 @@ class OperatorEx  {
     // NO DAG
     @DeprecatedDsl2
     DataflowWriteChannel merge(final DataflowReadChannel source, final DataflowReadChannel... others) {
-        final result = CH.createBy(source)
-        final List<DataflowReadChannel> inputs = new ArrayList<DataflowReadChannel>(1 + others.size())
-        inputs.add(source)
-        inputs.addAll(others)
-        final listener = stopErrorListener(source,result)
-        final params = createOpParams(inputs, result, listener)
-        newOperator(params, new DefaultMergeClosure(1 + others.size()))
-        return result;
+        new MergeOp(source,others as List).apply()
     }
 
     // NO DAG
     @DeprecatedDsl2
     DataflowWriteChannel merge(final DataflowReadChannel source, final List<DataflowReadChannel> others, final Closure closure=null) {
-        final result = CH.createBy(source)
-        final List<DataflowReadChannel> inputs = new ArrayList<DataflowReadChannel>(1 + others.size())
-        final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(1 + others.size())
-        inputs.add(source)
-        inputs.addAll(others)
-        final listener = stopErrorListener(source,result)
-        final params = createOpParams(inputs, result, listener)
-        newOperator(params, action)
-        return result;
+        new MergeOp(source,others,closure).apply()
     }
 
     DataflowWriteChannel randomSample(DataflowReadChannel source, int n, Long seed = null) {

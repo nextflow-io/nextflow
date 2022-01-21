@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,10 +27,10 @@ import spock.lang.Specification
  */
 class DurationTest extends Specification {
 
-    final long SEC = 1000
-    final long MIN = 60 * SEC
-    final long HOUR = 60 * MIN
-    final long DAY = 24 * HOUR
+    long SEC = 1000
+    long MIN = 60 * SEC
+    long HOUR = 60 * MIN
+    long DAY = 24 * HOUR
 
     def 'test create by string' () {
 

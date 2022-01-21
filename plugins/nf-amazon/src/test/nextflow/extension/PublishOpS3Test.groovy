@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,10 +34,10 @@ class PublishOpS3Test extends BaseSpec {
     def 'should infer task dir' () {
         given:
         def BASE = '/some/work/dir' as Path
-        def BUCKET = 's3:/other/bucket/dir' as Path
+        def BUCKET_DIR = 's3://other/bucket/dir' as Path
         def sess = Mock(Session) {
             getWorkDir() >> BASE
-            getBucketDir() >> BUCKET
+            getBucketDir() >> BUCKET_DIR
         }
         Global.session = sess
 
@@ -49,9 +49,9 @@ class PublishOpS3Test extends BaseSpec {
         result == Paths.get('/some/work/dir/xx/yyyy')
 
         when:
-        result = op.getTaskDir( BUCKET.resolve('pp/qqqq/other/file.fasta') )
+        result = op.getTaskDir( BUCKET_DIR.resolve('pp/qqqq/other/file.fasta') )
         then:
-        result == 's3:/other/bucket/dir/pp/qqqq' as Path
+        result == 's3://other/bucket/dir/pp/qqqq' as Path
 
 
         when:

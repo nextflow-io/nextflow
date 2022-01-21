@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,11 +67,11 @@ import nextflow.trace.TraceObserverFactory
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.Barrier
-import nextflow.util.BlockingThreadExecutorFactory
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
+import nextflow.util.ThreadPoolBuilder
 import nextflow.util.VersionNumber
 import sun.misc.Signal
 import sun.misc.SignalHandler
@@ -245,6 +245,8 @@ class Session implements ISession {
     String resolvedConfig
 
     boolean ansiLog
+
+    boolean disableJobsCancellation
 
     AnsiLogObserver ansiLogObserver
 
@@ -1309,15 +1311,41 @@ class Session implements ISession {
     @Memoized // <-- this guarantees that the same executor is used across different publish dir in the same session
     @CompileStatic
     synchronized ExecutorService getFileTransferThreadPool() {
-        final factory = new BlockingThreadExecutorFactory()
+        final DEFAULT_MIN_THREAD = Math.min(Runtime.runtime.availableProcessors(), 4)
+        final DEFAULT_MAX_THREAD = DEFAULT_MIN_THREAD
+        final DEFAULT_QUEUE = 10_000
+        final DEFAULT_KEEP_ALIVE =  Duration.of('60sec')
+        final DEFAULT_MAX_AWAIT = Duration.of('12 hour')
+
+        def minThreads = config.navigate("threadPool.FileTransfer.minThreads", DEFAULT_MIN_THREAD) as Integer
+        def maxThreads = config.navigate("threadPool.FileTransfer.maxThreads", DEFAULT_MAX_THREAD) as Integer
+        def maxQueueSize = config.navigate("threadPool.FileTransfer.maxQueueSize", DEFAULT_QUEUE) as Integer
+        def keepAlive = config.navigate("threadPool.FileTransfer.keepAlive", DEFAULT_KEEP_ALIVE) as Duration
+        def maxAwait = config.navigate("threadPool.FileTransfer.maxAwait", DEFAULT_MAX_AWAIT) as Duration
+        def allowThreadTimeout = config.navigate("threadPool.FileTransfer.allowThreadTimeout", false) as Boolean
+
+        if( minThreads>maxThreads ) {
+            log.debug("FileTransfer minThreads ($minThreads) cannot be greater than maxThreads ($maxThreads) - Setting minThreads to $maxThreads")
+            minThreads = maxThreads
+        }
+
+        final pool = new ThreadPoolBuilder()
                 .withName('FileTransfer')
-                .withMaxThreads( Runtime.runtime.availableProcessors()*3 )
-        final pool = factory.create()
+                .withMinSize(minThreads)
+                .withMaxSize(maxThreads)
+                .withQueueSize(maxQueueSize)
+                .withKeepAliveTime(keepAlive)
+                .withAllowCoreThreadTimeout(allowThreadTimeout)
+                .build()
 
         this.onShutdown {
-            final max = factory.maxAwait.millis
+            final max = maxAwait.millis
             final t0 = System.currentTimeMillis()
             // start shutdown process
+            if( aborted ) {
+                pool.shutdownNow()
+                return
+            }
             pool.shutdown()
             // wait for ongoing file transfer to complete
             int count=0

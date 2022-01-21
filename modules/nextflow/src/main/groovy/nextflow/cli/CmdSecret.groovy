@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -210,7 +210,7 @@ class CmdSecret extends CmdBase implements UsageAware {
 
         @Override
         void apply() {
-            final names = new ArrayList(provider.listSecretNames()).sort()
+            final names = new ArrayList(provider.listSecretsNames()).sort()
             if( names ) {
                 for( String it : names ) {
                     println it

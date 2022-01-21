@@ -67,7 +67,6 @@ class PluginsFacadeTest extends Specification {
         def defaults = new DefaultPlugins(plugins: [
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
-                'nf-ignite': new PluginSpec('nf-ignite', '0.1.0'),
                 'nf-tower': new PluginSpec('nf-tower', '0.1.0')
         ])
         and:
@@ -103,7 +102,6 @@ class PluginsFacadeTest extends Specification {
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
                 'nf-azure': new PluginSpec('nf-azure', '0.1.0'),
-                'nf-ignite': new PluginSpec('nf-ignite', '0.1.0'),
                 'nf-tower': new PluginSpec('nf-tower', '0.1.0')
         ])
         and:
@@ -115,15 +113,13 @@ class PluginsFacadeTest extends Specification {
         plugins.find { it.id == 'nf-amazon' }
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-azure' }
-        !plugins.find { it.id == 'nf-ignite' }
-        
+
         when:
         plugins = handler.defaultPluginsConf([process:[executor: 'google-lifesciences']])
         then:
         plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-amazon' }
         !plugins.find { it.id == 'nf-azure' }
-        !plugins.find { it.id == 'nf-ignite' }
 
         when:
         plugins = handler.defaultPluginsConf([process:[executor: 'azurebatch']])
@@ -132,21 +128,11 @@ class PluginsFacadeTest extends Specification {
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-amazon' }
         plugins.find { it.id == 'nf-azure' }
-        !plugins.find { it.id == 'nf-ignite' }
-
-        when:
-        plugins = handler.defaultPluginsConf([process:[executor: 'ignite']])
-        then:
-        plugins.find { it.id == 'nf-ignite' }
-        plugins.find { it.id == 'nf-amazon' }
-        !plugins.find { it.id == 'nf-google' }
-        !plugins.find { it.id == 'nf-azure' }
 
         when:
         plugins = handler.defaultPluginsConf([:])
         then:
         !plugins.find { it.id == 'nf-amazon' }
-        !plugins.find { it.id == 'nf-ignite' }
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-azure' }
 
@@ -158,7 +144,6 @@ class PluginsFacadeTest extends Specification {
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
                 'nf-azure': new PluginSpec('nf-azure', '0.1.0'),
-                'nf-ignite': new PluginSpec('nf-ignite', '0.1.0'),
                 'nf-tower': new PluginSpec('nf-tower', '0.1.0')
         ])
         and:
@@ -189,7 +174,6 @@ class PluginsFacadeTest extends Specification {
         plugins = handler.defaultPluginsConf([:])
         then:
         !plugins.find { it.id == 'nf-amazon' }
-        !plugins.find { it.id == 'nf-ignite' }
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-azure' }
 
@@ -201,7 +185,6 @@ class PluginsFacadeTest extends Specification {
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
                 'nf-azure': new PluginSpec('nf-azure', '0.1.0'),
-                'nf-ignite': new PluginSpec('nf-ignite', '0.1.0'),
                 'nf-tower': new PluginSpec('nf-tower', '0.1.0')
         ])
         and:
@@ -232,7 +215,6 @@ class PluginsFacadeTest extends Specification {
         plugins = handler.defaultPluginsConf([:])
         then:
         !plugins.find { it.id == 'nf-amazon' }
-        !plugins.find { it.id == 'nf-ignite' }
         !plugins.find { it.id == 'nf-google' }
         !plugins.find { it.id == 'nf-azure' }
 
@@ -244,7 +226,6 @@ class PluginsFacadeTest extends Specification {
         def defaults = new DefaultPlugins(plugins: [
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
-                'nf-ignite': new PluginSpec('nf-ignite', '0.1.0'),
                 'nf-tower': new PluginSpec('nf-tower', '0.1.0')
         ])
         and:

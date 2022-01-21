@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -219,6 +219,8 @@ class K8sTaskHandlerTest extends Specification {
         handler.client = client
         Map result
 
+        podOptions.automountServiceAccountToken >> true
+
         when:
         result = handler.newSubmitRequest(task)
         then:
@@ -274,6 +276,7 @@ class K8sTaskHandlerTest extends Specification {
 
         def podOptions = Mock(PodOptions)
         def CLAIMS = [ new PodVolumeClaim('first','/work'), new PodVolumeClaim('second','/data') ]
+        podOptions.automountServiceAccountToken >> true
 
         when:
         result = handler.newSubmitRequest(task)
