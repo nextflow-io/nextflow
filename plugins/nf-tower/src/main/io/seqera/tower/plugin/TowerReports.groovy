@@ -112,11 +112,11 @@ class TowerReports {
 
         // Check if Tower config file is define at assets
         if (!Files.exists(towerConfigPath)) {
-            towerConfigPath = this.session.baseDir.resolve("tower.yml")
+            towerConfigPath = this.session?.baseDir?.resolve("tower.yml")
         }
 
         // Load reports definitions if available
-        if (Files.exists(towerConfigPath)) {
+        if (towerConfigPath && Files.exists(towerConfigPath)) {
             final towerConfig = yamlSlurper.parse(towerConfigPath)
             this.reportsEntries = new ArrayList<>()
             if (towerConfig instanceof Map && towerConfig.containsKey("reports")) {
