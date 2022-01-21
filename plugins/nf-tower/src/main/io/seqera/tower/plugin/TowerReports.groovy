@@ -4,7 +4,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovy.yaml.YamlSlurper
 import groovyx.gpars.agent.Agent
-import nextflow.Global
+import nextflow.Session
 import nextflow.file.FileHelper
 
 import java.nio.charset.Charset
@@ -26,6 +26,7 @@ import java.util.stream.Collectors
 @CompileStatic
 class TowerReports {
 
+    private Session session
     private Path launchReportsPath
     private Path workReportsPath
     private PrintWriter reportsFile
@@ -37,7 +38,8 @@ class TowerReports {
     private Timer timer
     private AtomicInteger totalReports
 
-    TowerReports() {
+    TowerReports(Session session) {
+        this.session = session
         this.yamlSlurper = new YamlSlurper()
         this.timer = new Timer()
         this.totalReports = new AtomicInteger(0)
@@ -55,7 +57,7 @@ class TowerReports {
         if (processReports) {
             final fileName = System.getenv().getOrDefault("TOWER_REPORTS_FILE", "nf-${workflowId}-reports.tsv".toString()) as String
             this.launchReportsPath = launchDir.resolve(fileName)
-            this.workReportsPath = Global?.session?.workDir?.resolve(fileName)
+            this.workReportsPath = session?.workDir?.resolve(fileName)
             this.reportsFile = new PrintWriter(Files.newBufferedWriter(launchReportsPath, Charset.defaultCharset()), true)
             this.writer = new Agent<PrintWriter>(reportsFile)
 
@@ -107,6 +109,13 @@ class TowerReports {
     protected void loadReportPatterns(Path launchDir, String workflowId) {
         processReports = false
         Path towerConfigPath = launchDir.resolve("nf-${workflowId}-tower.yml")
+
+        // Check if Tower config file is define at assets
+        if (!Files.exists(towerConfigPath)) {
+            towerConfigPath = this.session.baseDir.resolve("tower.yml")
+        }
+
+        // Load reports definitions if available
         if (Files.exists(towerConfigPath)) {
             final towerConfig = yamlSlurper.parse(towerConfigPath)
             this.patterns = new ArrayList<>()

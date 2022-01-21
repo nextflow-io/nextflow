@@ -140,7 +140,7 @@ class TowerClient implements TraceObserver {
         this.endpoint = checkUrl(endpoint)
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
-        this.reports = new TowerReports()
+        this.reports = new TowerReports(session)
     }
 
     TowerClient withEnvironment(Map env) {
