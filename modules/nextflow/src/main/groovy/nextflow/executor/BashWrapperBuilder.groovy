@@ -256,6 +256,9 @@ class BashWrapperBuilder {
         if( !isSecretNative() ) {
             binding.secrets_env = getSecretsEnv()
         }
+        else {
+            binding.secrets_env = null
+        }
 
         /*
          * staging input files when required
@@ -292,7 +295,7 @@ class BashWrapperBuilder {
 
     protected String getSecretsEnv() {
         return SecretsLoader.isEnabled()
-                ? SecretsLoader.instance.load() .getSecretEnv()
+                ? SecretsLoader.instance.load() .getSecretsEnv()
                 : null
     }
 

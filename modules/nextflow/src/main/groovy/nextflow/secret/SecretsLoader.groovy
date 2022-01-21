@@ -18,6 +18,7 @@
 package nextflow.secret
 
 import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 
@@ -26,6 +27,7 @@ import nextflow.plugin.Plugins
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @Singleton
 class SecretsLoader {
 
@@ -35,7 +37,11 @@ class SecretsLoader {
 
     @Memoized
     SecretsProvider load() {
-        final provider = Plugins.getExtensions(SecretsProvider).first()
+        // discover all available secrets provider
+        final all = Plugins.getPriorityExtensions(SecretsProvider)
+        // find first activable in the current environment
+        final provider = all.find { it.activable() }
+        log.debug "Discovered secrets providers: $all - activable => $provider"
         if( provider )
             return provider.load()
         else

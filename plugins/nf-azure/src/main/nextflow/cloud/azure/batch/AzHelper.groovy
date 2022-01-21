@@ -14,6 +14,11 @@
  * limitations under the License.
  */
 package nextflow.cloud.azure.batch
+import com.azure.storage.blob.BlobServiceClient
+import com.azure.storage.common.sas.AccountSasPermission
+import com.azure.storage.common.sas.AccountSasResourceType
+import com.azure.storage.common.sas.AccountSasService
+import com.azure.storage.common.sas.AccountSasSignatureValues
 
 import java.nio.file.Path
 import java.time.OffsetDateTime
@@ -55,6 +60,10 @@ class AzHelper {
         generateSas(az0(path).containerClient(), duration)
     }
 
+    static String generateAccountSas(Path path, Duration duration) {
+        generateAccountSas(az0(path).getFileSystem().getBlobServiceClient(), duration)
+    }
+
     static BlobContainerSasPermission CONTAINER_PERMS = new BlobContainerSasPermission()
             .setAddPermission(true)
             .setCreatePermission(true)
@@ -75,6 +84,24 @@ class AzHelper {
             .setTagsPermission(true)
             .setWritePermission(true)
 
+    static AccountSasPermission ACCOUNT_PERMS = new AccountSasPermission()
+            .setAddPermission(true)
+            .setCreatePermission(true)
+            .setDeletePermission(true)
+            .setListPermission(true)
+            .setReadPermission(true)
+            .setTagsPermission(true)
+            .setWritePermission(true)
+            .setUpdatePermission(true)
+
+    static AccountSasService ACCOUNT_SERVICES = new AccountSasService()
+            .setBlobAccess(true)
+            .setFileAccess(true)
+
+    static AccountSasResourceType ACCOUNT_RESOURCES = new AccountSasResourceType()
+            .setContainer(true)
+            .setObject(true)
+            .setService(true)
 
     static String generateSas(BlobContainerClient client, Duration duration) {
         final now = OffsetDateTime .now()
@@ -88,4 +115,14 @@ class AzHelper {
         return client .generateSas(signature)
     }
 
+    static String generateAccountSas(BlobServiceClient client, Duration duration) {
+        final expiryTime = OffsetDateTime.now().plusSeconds(duration.toSeconds());
+        final signature = new AccountSasSignatureValues(
+                expiryTime,
+                ACCOUNT_PERMS,
+                ACCOUNT_SERVICES,
+                ACCOUNT_RESOURCES)
+
+        return client.generateAccountSas(signature)
+    }
 }

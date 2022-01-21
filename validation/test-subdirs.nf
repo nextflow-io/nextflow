@@ -7,6 +7,7 @@ process foo {
     path 'test5.txt' into ch5
     path 'test6.txt' into ch6
     path 'test7.txt' into ch7
+    path 'gsfolder5/sub' into ch8
 
     """
     mkdir -p gsfolder/sub
@@ -26,6 +27,8 @@ process foo {
     echo 'Hello 6'>>test6.txt
     echo 'Hello 7'>>test7.txt
 
+    mkdir -p gsfolder5/sub
+    touch gsfolder5/sub/test8.txt
     """
 }
 

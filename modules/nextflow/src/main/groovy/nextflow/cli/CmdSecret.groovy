@@ -210,7 +210,7 @@ class CmdSecret extends CmdBase implements UsageAware {
 
         @Override
         void apply() {
-            final names = new ArrayList(provider.listSecretNames()).sort()
+            final names = new ArrayList(provider.listSecretsNames()).sort()
             if( names ) {
                 for( String it : names ) {
                     println it
