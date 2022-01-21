@@ -16,8 +16,7 @@
  */
 package nextflow.processor
 
-import nextflow.script.ERROR_IN_NEXTFLOW_PIPELINE
-import nextflow.script.ScriptMeta
+import nextflow.script.ErrorInNextflowPipeline
 
 import static nextflow.processor.ErrorStrategy.*
 
@@ -1237,7 +1236,7 @@ class TaskProcessor {
 
         def result = new StringBuilder()
         result << '\nError context:'
-        result << new ERROR_IN_NEXTFLOW_PIPELINE(error).getMessage()
+        result << new ErrorInNextflowPipeline(error).getMessage()
         result << 'Caused by:\n'
 
         def message

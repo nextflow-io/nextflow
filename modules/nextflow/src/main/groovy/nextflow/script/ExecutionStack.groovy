@@ -109,7 +109,7 @@ class ExecutionStack {
             def last_cause = e
             while (last_cause.getCause() != null)
                 last_cause = last_cause.getCause()
-            last_cause.initCause(new ERROR_IN_NEXTFLOW_PIPELINE(e))
+            last_cause.initCause(new ErrorInNextflowPipeline(e))
         }
     }
 
@@ -133,11 +133,11 @@ class ExecutionStack {
 }
 
 @CompileStatic
-class ERROR_IN_NEXTFLOW_PIPELINE extends Throwable {
+class ErrorInNextflowPipeline extends Throwable {
 
     Throwable source;
 
-    ERROR_IN_NEXTFLOW_PIPELINE(Throwable source) {
+    ErrorInNextflowPipeline(Throwable source) {
         this.source = source
         this.setStackTrace(new StackTraceElement[0])
     }
