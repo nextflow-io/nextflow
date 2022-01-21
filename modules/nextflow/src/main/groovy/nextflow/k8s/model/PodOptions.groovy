@@ -55,12 +55,15 @@ class PodOptions {
 
     private PodSecurityContext securityContext
 
+    private boolean automountServiceAccountToken
+
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         envVars = new HashSet<>(size)
         mountSecrets = new HashSet<>(size)
         mountConfigMaps = new HashSet<>(size)
         mountClaims = new HashSet<>(size)
+        automountServiceAccountToken = true
         init(options)
     }
 
@@ -117,6 +120,9 @@ class PodOptions {
         else if( entry.annotation && entry.value ) {
             this.annotations.put(entry.annotation as String, entry.value as String)
         }
+        else if( entry.automountServiceAccountToken instanceof Boolean ) {
+            this.automountServiceAccountToken = entry.automountServiceAccountToken as Boolean
+        }
         else 
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -161,6 +167,13 @@ class PodOptions {
 
     PodOptions setImagePullPolicy( String policy ) {
         this.imagePullPolicy = policy
+        return this
+    }
+
+    boolean getAutomountServiceAccountToken() { automountServiceAccountToken }
+
+    PodOptions setAutomountServiceAccountToken( boolean mount ) {
+        this.automountServiceAccountToken = mount
         return this
     }
 
@@ -214,6 +227,8 @@ class PodOptions {
         // annotations
         result.annotations.putAll(annotations)
         result.annotations.putAll(other.annotations)
+
+        result.automountServiceAccountToken = other.automountServiceAccountToken & this.automountServiceAccountToken
 
         return result
     }
