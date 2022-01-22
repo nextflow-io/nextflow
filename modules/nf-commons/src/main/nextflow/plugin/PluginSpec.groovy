@@ -27,7 +27,7 @@ import nextflow.util.CacheHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Canonical
-class PluginSpec implements CacheFunnel {
+class PluginSpec implements CacheFunnel, Comparable<PluginSpec> {
 
     /**
      * Plugin unique ID
@@ -64,7 +64,13 @@ class PluginSpec implements CacheFunnel {
         return hasher
     }
 
+    @Override
     String toString() {
         version ? "${id}@${version}" : id
+    }
+
+    @Override
+    int compareTo(PluginSpec that) {
+        return this.toString() <=> that.toString()
     }
 }
