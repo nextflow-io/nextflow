@@ -217,9 +217,8 @@ class K8sTaskHandlerTest extends Specification {
         def podOptions = Mock(PodOptions)
         handler.builder = builder
         handler.client = client
-        Map result
-
         podOptions.automountServiceAccountToken >> true
+        Map result
 
         when:
         result = handler.newSubmitRequest(task)
@@ -237,26 +236,30 @@ class K8sTaskHandlerTest extends Specification {
         2 * podOptions.getMountSecrets() >> [ new PodMountSecret('my-secret/key-z', '/data/secret.txt') ]
         2 * podOptions.getMountConfigMaps() >> [ new PodMountConfig('my-data/key-x', '/etc/file.txt') ]
 
-        result == [ apiVersion: 'v1',
-                    kind: 'Pod',
-                    metadata: [name:'nf-123', namespace:'default' ],
-                    spec: [
-                            restartPolicy:'Never',
-                            containers:[
-                                    [name:'nf-123',
-                                     image:'debian:latest',
-                                     command:['/bin/bash', '-ue','.command.run'],
-                                     workingDir:'/some/work/dir',
-                                     env:[[name:'FOO', value:'bar']],
-                                     volumeMounts:[ [name:'vol-1', mountPath:'/etc'],
-                                                    [name:'vol-2', mountPath:'/data'] ]
-                                    ]
-                            ],
-                            volumes:[
-                                    [name:'vol-1', configMap:[name:'my-data', items:[[key:'key-x', path:'file.txt']]]],
-                                    [name:'vol-2', secret:[secretName:'my-secret', items:[[key:'key-z', path:'secret.txt']]]]
-                            ]
+        result == [
+            apiVersion: 'v1',
+            kind: 'Pod',
+            metadata: [name:'nf-123', namespace:'default' ],
+            spec: [
+                restartPolicy: 'Never',
+                containers: [
+                    [
+                        name: 'nf-123',
+                        image: 'debian:latest',
+                        command: ['/bin/bash', '-ue','.command.run'],
+                        workingDir: '/some/work/dir',
+                        env: [[name:'FOO', value:'bar']],
+                        volumeMounts: [
+                            [name:'vol-1', mountPath:'/etc'],
+                            [name:'vol-2', mountPath:'/data']
+                        ]
                     ]
+                ],
+                volumes:[
+                    [name:'vol-1', configMap:[name:'my-data', items:[[key:'key-x', path:'file.txt']]]],
+                    [name:'vol-2', secret:[secretName:'my-secret', items:[[key:'key-z', path:'secret.txt']]]]
+                ]
+            ]
         ]
 
     }
@@ -294,24 +297,29 @@ class K8sTaskHandlerTest extends Specification {
         1 * client.getConfig() >> new ClientConfig()
         2 * podOptions.getVolumeClaims() >> CLAIMS
 
-        result == [ apiVersion: 'v1',
-                    kind: 'Pod',
-                    metadata: [name:'nf-123', namespace:'default' ],
-                    spec: [
-                            restartPolicy:'Never',
-                            containers:[
-                                    [name: 'nf-123',
-                                     image: 'debian:latest',
-                                     command: ['/bin/bash', '-ue', '.command.run'],
-                                     workingDir: '/some/work/dir',
-                                     volumeMounts: [
-                                             [name:'vol-1', mountPath:'/work'],
-                                             [name:'vol-2', mountPath:'/data']
-                                     ] ]
-                            ],
-                            volumes: [   [name:'vol-1', persistentVolumeClaim:[claimName: 'first']],
-                                         [name:'vol-2', persistentVolumeClaim:[claimName: 'second']] ]
+        result == [
+            apiVersion: 'v1',
+            kind: 'Pod',
+            metadata: [name:'nf-123', namespace:'default'],
+            spec: [
+                restartPolicy: 'Never',
+                containers: [
+                    [
+                        name: 'nf-123',
+                        image: 'debian:latest',
+                        command: ['/bin/bash', '-ue', '.command.run'],
+                        workingDir: '/some/work/dir',
+                        volumeMounts: [
+                            [name:'vol-1', mountPath:'/work'],
+                            [name:'vol-2', mountPath:'/data']
+                        ]
                     ]
+                ],
+                volumes: [
+                    [name:'vol-1', persistentVolumeClaim:[claimName: 'first']],
+                    [name:'vol-2', persistentVolumeClaim:[claimName: 'second']]
+                ]
+            ]
         ]
 
 
@@ -330,24 +338,29 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
 
-        result == [ apiVersion: 'v1',
-                    kind: 'Pod',
-                    metadata: [name:'nf-123', namespace:'default' ],
-                    spec: [
-                            restartPolicy:'Never',
-                            containers:[
-                                    [name: 'nf-123',
-                                     image: 'debian:latest',
-                                     command: ['/bin/bash', '-ue', '.command.run'],
-                                     workingDir: '/some/work/dir',
-                                     volumeMounts: [
-                                             [name:'vol-3', mountPath:'/tmp'],
-                                             [name:'vol-4', mountPath: '/data']
-                                     ] ]
-                            ],
-                            volumes: [  [name:'vol-3', hostPath:[path:'/tmp']],
-                                        [name:'vol-4', hostPath:[path:'/data']]]
+        result == [
+            apiVersion: 'v1',
+            kind: 'Pod',
+            metadata: [name:'nf-123', namespace:'default'],
+            spec: [
+                restartPolicy: 'Never',
+                containers: [
+                    [
+                        name: 'nf-123',
+                        image: 'debian:latest',
+                        command: ['/bin/bash', '-ue', '.command.run'],
+                        workingDir: '/some/work/dir',
+                        volumeMounts: [
+                            [name:'vol-3', mountPath:'/tmp'],
+                            [name:'vol-4', mountPath: '/data']
+                        ]
                     ]
+                ],
+                volumes: [
+                    [name:'vol-3', hostPath:[path:'/tmp']],
+                    [name:'vol-4', hostPath:[path:'/data']]
+                ]
+            ]
         ]
 
     }
