@@ -71,6 +71,8 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
     int parallelThreadCount
     int downloadMaxComponents
     boolean keepAliveOnFailure
+    Map<String,String> customLabels
+
 
     int maxParallelTransfers = MAX_TRANSFER
     int maxTransferAttempts = MAX_TRANSFER_ATTEMPTS
@@ -149,6 +151,7 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
         final parallelThreadCount = config.navigate('google.storage.parallelThreadCount', DEF_PARALLEL_THREAD_COUNT) as int
         final downloadMaxComponents = config.navigate('google.storage.downloadMaxComponents', DEF_DOWNLOAD_MAX_COMPONENTS) as int
 
+        final customLabels = parseLabels(config.navigate('google.labels') as String)
 
         new GoogleLifeSciencesConfig(
                 project: project,
@@ -173,10 +176,25 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
                 serviceAccountEmail: serviceAccountEmail,
                 parallelThreadCount: parallelThreadCount,
                 downloadMaxComponents: downloadMaxComponents,
-                keepAliveOnFailure: keepAlive
+                keepAliveOnFailure: keepAlive,
+                customLabels: customLabels
             )
     }
-
+    static private Map<String,String> parseLabels(String list) {
+        def parsedLabels=[:];
+        if (list!= null){
+            def keyValue = list.split(',');
+            for( String values : keyValue ){
+                def keyAndValue = values.split('=');
+                if (keyAndValue.length == 2){
+                    parsedLabels.put(keyAndValue[0].trim(), keyAndValue[1].trim())
+                }else{
+                    log.warn "label \"" + keyAndValue[0].trim() + "\" ignored"
+                }
+            }
+        }
+        return parsedLabels
+    }
     static private Integer debugMode0(value) {
         if( value instanceof Boolean )
             return value ? 1 : 0

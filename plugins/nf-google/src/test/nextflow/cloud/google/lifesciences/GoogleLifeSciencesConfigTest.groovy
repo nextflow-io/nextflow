@@ -285,4 +285,16 @@ class GoogleLifeSciencesConfigTest extends Specification {
         config.maxParallelTransfers == 20
         config.delayBetweenAttempts == Duration.of('30 sec')
     }
+
+    def 'should config labels' () {
+        when:
+        def config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', lifeSciences: [:]]])
+        then:
+        config.customLabels == [:]
+
+        when:
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', labels: 'mylabel=myvalue']])
+        then:
+        config.customLabels == [ mylabel: "myvalue"]
+    }
 }

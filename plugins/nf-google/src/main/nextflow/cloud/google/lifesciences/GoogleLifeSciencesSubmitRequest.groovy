@@ -73,4 +73,6 @@ class GoogleLifeSciencesSubmitRequest {
     String serviceAccountEmail
 
     boolean keepAliveOnFailure
+
+    Map labels =[:]
 }

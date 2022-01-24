@@ -171,7 +171,7 @@ class GoogleLifeSciencesHelper {
         final actions = new ArrayList(5)
         actions.addAll( createActions(req) )
         final pipeline = createPipeline( actions, createResources(req) )
-        runPipeline(req.project, req.location, pipeline, ["taskName" : req.taskName])
+        runPipeline(req.project, req.location, pipeline, ["taskName" : req.taskName] + req.labels)
     }
 
     protected Resources createResources(GoogleLifeSciencesSubmitRequest req) {
@@ -222,7 +222,10 @@ class GoogleLifeSciencesHelper {
             list.add(acc)
             vm.setAccelerators(list)
         }
-
+        if( req.labels ) {
+            vm.setLabels(req.labels)
+        }
+        
         final result = new Resources()
                 .setZones(req.zone)
                 .setRegions(req.region)
