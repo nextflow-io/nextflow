@@ -88,8 +88,48 @@ pipeline script.
 .. warning:: Since Nextflow uses the same Bash syntax for variable substitutions in strings, you need to manage them
   carefully depending on if you want to evaluate a variable in the Nextflow context - or - in the Bash environment execution.
 
-When you need to access a system environment variable  in your script you have two options. The first choice is as
-easy as defining your script block by using a single-quote string. For example::
+When you need to access a system's environment variable in your script you have three options. 
+
+The first choise is to use Nexflow and Bash environment variables simultaneously. 
+
+Nextflow will use Bash's environment variables unless they are overwritten within the Nextflow context. 
+The first example will print `Nextflow`::
+
+    PATH = "Nextflow"
+    process printNextflow {
+
+       """"
+       echo The path is: $PATH
+       """"
+
+    }
+
+While the second example will print Bash's ``PATH`` variable::
+
+    process printPath {
+
+       """"
+       echo The path is: $PATH
+       """"
+
+    }
+
+Nextflow will throw an error if a variable cannot be found in either context.
+
+.. tip::
+   It is common practice to write Bash variables only with upper case letters. This can also be used to distinguish between variables coming from Nextflow or Bash visually. For example::
+
+    path = "Nextflow"
+    process printPathAndNextflow {
+
+       """"
+       echo The path is: $PATH
+       echo The path is: $path
+       """"
+
+    }
+
+The second choice is as easy as defining your script block by using a single-quote string. For example::
 
     process printPath {
 
