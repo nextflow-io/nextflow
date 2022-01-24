@@ -94,9 +94,9 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
     protected void initBatchService() {
         config = AzConfig.getConfig(session)
         batchService = new AzBatchService(this)
-        // generate a SAS token if missing
+        // generate an account SAS token if missing
         if( !config.storage().sasToken )
-            config.storage().sasToken = AzHelper.generateContainerSas(workDir, config.storage().tokenDuration)
+            config.storage().sasToken = AzHelper.generateAccountSas(workDir, config.storage().tokenDuration)
 
         session.onShutdown { batchService.close() }
     }

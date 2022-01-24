@@ -66,6 +66,8 @@ class PodSpecBuilder {
 
     String serviceAccount
 
+    boolean automountServiceAccountToken = true
+
     AcceleratorResource accelerator
 
     Collection<PodMountSecret> secrets = []
@@ -79,6 +81,8 @@ class PodSpecBuilder {
     PodSecurityContext securityContext
 
     PodNodeSelector nodeSelector
+
+    Map affinity
 
     /**
      * @return A sequential volume unique identifier
@@ -252,8 +256,15 @@ class PodSpecBuilder {
         // -- security context
         if( opts.securityContext )
             securityContext = opts.securityContext
+        // -- node selector
         if( opts.nodeSelector )
             nodeSelector = opts.nodeSelector
+        // -- affinity
+        if( opts.affinity )
+            affinity = opts.affinity
+
+        // -- automountserviceaccounttoken
+        automountServiceAccountToken = opts.getAutomountServiceAccountToken()
 
         return this
     }
@@ -309,8 +320,14 @@ class PodSpecBuilder {
         if( nodeSelector )
             spec.nodeSelector = nodeSelector.toSpec()
 
+        if( affinity )
+            spec.affinity = affinity
+
         if( this.serviceAccount )
             spec.serviceAccountName = this.serviceAccount
+
+        if( ! this.automountServiceAccountToken )
+            spec.automountServiceAccountToken = false
 
         if( securityContext )
             spec.securityContext = securityContext.toSpec()

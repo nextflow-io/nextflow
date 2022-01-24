@@ -34,6 +34,7 @@ class PodOptionsTest extends Specification {
         options.getEnvVars() == [] as Set
         options.getMountSecrets() == [] as Set
         options.getMountConfigMaps() == [] as Set
+        options.automountServiceAccountToken == true
     }
 
     def 'should set pullPolicy' () {
@@ -432,5 +433,24 @@ class PodOptionsTest extends Specification {
         then:
         opts.nodeSelector.toSpec() == [foo: '1', bar: 'true', baz: 'Z']
 
+    }
+
+    def 'should set pod automountServiceToken' () {
+        when:
+        def opts = new PodOptions([[automountServiceAccountToken: false]])
+        then:
+        opts.automountServiceAccountToken == false
+    }
+
+    def 'should merge pod automountServiceToken' () {
+        when:
+        def opts = new PodOptions() + new PodOptions([[automountServiceAccountToken: false]])
+        then:
+        opts.automountServiceAccountToken == false
+
+        when:
+        opts = new PodOptions([[automountServiceAccountToken: false]]) + new PodOptions()
+        then:
+        opts.automountServiceAccountToken == false
     }
 }

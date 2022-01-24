@@ -219,6 +219,8 @@ class K8sTaskHandlerTest extends Specification {
         handler.client = client
         Map result
 
+        podOptions.automountServiceAccountToken >> true
+
         when:
         result = handler.newSubmitRequest(task)
         then:
@@ -274,6 +276,7 @@ class K8sTaskHandlerTest extends Specification {
 
         def podOptions = Mock(PodOptions)
         def CLAIMS = [ new PodVolumeClaim('first','/work'), new PodVolumeClaim('second','/data') ]
+        podOptions.automountServiceAccountToken >> true
 
         when:
         result = handler.newSubmitRequest(task)
