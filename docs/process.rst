@@ -11,6 +11,7 @@ delimited by curly brackets. The process body must contain a string which repres
 a script that is executed by it. A basic process looks like the following example::
 
   process sayHello {
+      echo true
 
       """
       echo 'Hello world!' > file
@@ -97,6 +98,7 @@ The first example will print `Nextflow`::
 
     PATH = "Nextflow"
     process printNextflow {
+       echo true
 
        """"
        echo The path is: $PATH
@@ -107,6 +109,7 @@ The first example will print `Nextflow`::
 While the second example will print Bash's ``PATH`` variable::
 
     process printPath {
+       echo true
 
        """"
        echo The path is: $PATH
@@ -121,6 +124,7 @@ Nextflow will throw an error if a variable cannot be found in either context.
 
     path = "Nextflow"
     process printPathAndNextflow {
+       echo true
 
        """"
        echo The path is: $PATH
@@ -132,6 +136,7 @@ Nextflow will throw an error if a variable cannot be found in either context.
 The second choice is as easy as defining your script block by using a single-quote string. For example::
 
     process printPath {
+       echo true
 
        '''
        echo The path is: $PATH
@@ -313,6 +318,7 @@ In this way it is possible to use both Nextflow and Bash variables in the same p
 the latter and making process scripts more readable and easy to maintain. For example::
 
     process myTask {
+        echo true
 
         input:
         val str from 'Hello', 'Hola', 'Bonjour'
@@ -459,6 +465,8 @@ by using the specified input name, as shown in the following example::
     num = Channel.from( 1, 2, 3 )
 
     process basicExample {
+      echo true
+
       input:
       val x from num
 
@@ -488,6 +496,8 @@ Thus the above example can be written as shown below::
     num = Channel.from( 1, 2, 3 )
 
     process basicExample {
+      echo true
+
       input:
       val num
 
@@ -589,6 +599,8 @@ the file name will be appended by a numerical suffix representing its ordinal po
     fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(size:3)
 
     process blastThemAll {
+        echo true
+        
         input:
         file 'seq' from fasta
 
@@ -633,6 +645,8 @@ The following fragment shows how a wildcard can be used in the input file declar
     fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(size:3)
 
     process blastThemAll {
+        echo true
+
         input:
         file 'seq?.fa' from fasta
 
@@ -654,6 +668,8 @@ are allowed to use other input values as variables in the file name string. For 
 
 
   process simpleCount {
+    echo true
+    
     input:
     val x from species
     file "${x}.fa" from genomes
@@ -736,6 +752,8 @@ of the command executed by the process. For example::
     str = Channel.from('hello', 'hola', 'bonjour', 'ciao').map { it+'\n' }
 
     process printAll {
+       echo true
+
        input:
        stdin str
 
@@ -764,6 +782,7 @@ on the value received from the channel. For example::
     str = Channel.from('hello', 'hola', 'bonjour', 'ciao')
 
     process printEnv {
+        echo true
 
         input:
         env HELLO from str
@@ -1456,6 +1475,7 @@ This may be useful to initialise the underlying cluster environment or for other
 For example::
 
     process foo {
+      echo true
 
       beforeScript 'source /cluster/bin/setup'
 
@@ -1677,7 +1697,7 @@ For example::
 
     Hello
 
-Without specifying ``echo true`` you won't see the ``Hello`` string printed out when executing the above example.
+Without specifying ``echo true`` you won't see the ``Hello`` string printed out when executing the above examples.
 
 
 .. _process-page-error-strategy:
@@ -1837,6 +1857,8 @@ The ``maxErrors`` directive allows you to specify the maximum number of times a 
 By default this directive is disabled, you can set it as shown in the example below::
 
     process retryIfFail {
+      echo true
+
       errorStrategy 'retry'
       maxErrors 5
 
@@ -1880,6 +1902,8 @@ re-submitted in case of failure. This value is applied only when using the ``ret
 only one retry is allowed, you can increase this value as shown below::
 
     process retryIfFail {
+        echo true
+
         errorStrategy 'retry'
         maxRetries 3
 
@@ -2006,6 +2030,8 @@ and config maps when using the :ref:`k8s-executor` executor.
 For example::
 
   process your_task {
+    echo true
+
     pod env: 'FOO', value: 'bar'
 
     '''
@@ -2352,6 +2378,8 @@ The ``tag`` directive allows you to associate each process execution with a cust
 to identify them in the log file or in the trace execution report. For example::
 
     process foo {
+      echo true
+
       tag "$code"
 
       input:
@@ -2463,6 +2491,7 @@ For example::
 
 
    process foo {
+      echo true
 
       queue { entries > 100 ? 'long' : 'short' }
 
