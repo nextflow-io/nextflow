@@ -19,8 +19,8 @@ a script that is executed by it. A basic process looks like the following exampl
   }
 
 
-A process may contain five definition blocks, respectively: directives,
-inputs, outputs, when clause and finally the process script. The syntax is defined as follows:
+A process may contain six definition blocks, respectively: directives,
+inputs, outputs, when clause, stub and finally the process script. The syntax is defined as follows:
 
 ::
 
@@ -37,6 +37,9 @@ inputs, outputs, when clause and finally the process script. The syntax is defin
      when:
       < condition >
 
+     stub:
+      < stub script to be executed with -stub-run>
+
      [script|shell|exec]:
      < user script to be executed >
 
@@ -50,8 +53,7 @@ Script
 
 The `script` block is a string statement that defines the command that is executed by the process to carry out its task.
 
-A process contains one and only one script block, and it must be the last statement when the process contains
-input and output declarations.
+A process contains one and only one script block, and it must be placed after the input and output declarations when those are present in the process.
 
 The entered string is executed as a `Bash <http://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ script in the
 `host` system. It can be any command, script or combination of them, that you would normally use in terminal shell
