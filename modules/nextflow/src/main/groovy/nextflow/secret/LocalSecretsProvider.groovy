@@ -26,6 +26,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.util.CacheHelper
@@ -39,6 +40,7 @@ import nextflow.util.CacheHelper
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class LocalSecretsProvider implements SecretsProvider, Closeable {
 
@@ -54,6 +56,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
 
     LocalSecretsProvider() {
         storeFile = makeStoreFile()
+        log.debug "Secrets store: $storeFile"
         secretsMap = makeSecretsSet()
     }
 
