@@ -446,11 +446,11 @@ The qualifiers available are the ones listed in the following table:
 Qualifier   Semantic
 =========== =============
 val         Lets you access the received input value by its name in the process script.
-env         Lets you use the received value to set an environment variable named
-            as the specified input name.
 file        Lets you handle the received value as a file, staging it properly in the execution context.
 path        Lets you handle the received value as a path, staging the file properly in the execution context.
 stdin       Lets you forward the received value to the process `stdin` special file.
+env         Lets you use the received value to set an environment variable named
+            as the specified input name.
 tuple       Lets you handle a group of input values having one of the above qualifiers.
 each        Lets you execute the process for each entry in the input collection.
 =========== =============
