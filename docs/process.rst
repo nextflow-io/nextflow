@@ -701,13 +701,13 @@ The ``path`` input qualifier was introduced by Nextflow version 19.10.0 and it's
 for the ``file`` qualifier, therefore it's backward compatible with the syntax
 and the semantic for the input ``file`` described above.
 
-The important difference between ``file`` and ``path`` qualifier is that the first expects the
-values received as input to be *file* objects. When inputs is a different type, it automatically
-coverts to a string and saves it to a temporary files. This can be useful in some use cases,
+The important difference between ``path`` and ``file`` qualifier is that the latter expects the
+values received as input to be *file* objects. Inputs of a different type, are automatically
+converted into a string and saved to temporary files. This can be useful in some use cases,
 but it turned out to be tricky in most common cases.
 
 The ``path`` qualifier instead interprets string values as the path location of the input file
-and automatically converts to a file object.
+and automatically converts them to a file object.
 
 ::
 
@@ -727,7 +727,7 @@ and automatically converts to a file object.
 
 
 
-The option ``stageAs`` allow you to control how the file should be named in the task work
+The option ``stageAs`` allows you to control how the file should be named in the task work
 directory, providing a specific name or a name pattern as described in the `Multiple input files`_
 section::
 
