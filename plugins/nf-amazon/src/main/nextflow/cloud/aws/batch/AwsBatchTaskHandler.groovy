@@ -758,7 +758,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         catch (AWSBatchException e) {
             if( e.statusCode>=500 )
                 // raise a process exception so that nextflow can try to recover it
-                throw new ProcessSubmitException("Failed to register job defintion: ${req.jobDefinitionName} - Reason: ${e.errorCode}", e)
+                throw new ProcessSubmitException("Failed to register job definition: ${req.jobDefinitionName} - Reason: ${e.errorCode}", e)
             else
                 // status code < 500 are not expected to be recoverable, just throw it again
                 throw e

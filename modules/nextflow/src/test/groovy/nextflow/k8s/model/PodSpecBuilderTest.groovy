@@ -544,8 +544,6 @@ class PodSpecBuilderTest extends Specification {
             ]
         ]
 
-        opts.getAutomountServiceAccountToken() >> true
-
         when:
         def spec = builder.withPodOptions(opts).build()
         then:
@@ -560,6 +558,8 @@ class PodSpecBuilderTest extends Specification {
         _ * opts.getSecurityContext() >> new PodSecurityContext(1000)
         _ * opts.getNodeSelector() >> new PodNodeSelector(gpu:true, queue: 'fast')
         _ * opts.getAffinity() >> affinity
+        _ * opts.getAutomountServiceAccountToken() >> false
+        _ * opts.getPriorityClassName() >> 'high-priority'
 
         spec == [
             apiVersion: 'v1',
@@ -576,6 +576,8 @@ class PodSpecBuilderTest extends Specification {
                 imagePullSecrets: [[ name: 'myPullSecret' ]],
                 nodeSelector: [gpu: 'true', queue: 'fast'],
                 affinity: affinity,
+                automountServiceAccountToken: false,
+                priorityClassName: 'high-priority',
                 
                 containers:[
                     [

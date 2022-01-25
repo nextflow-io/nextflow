@@ -84,6 +84,8 @@ class PodSpecBuilder {
 
     Map affinity
 
+    String priorityClassName
+
     /**
      * @return A sequential volume unique identifier
      */
@@ -262,9 +264,10 @@ class PodSpecBuilder {
         // -- affinity
         if( opts.affinity )
             affinity = opts.affinity
-
-        // -- automountserviceaccounttoken
-        automountServiceAccountToken = opts.getAutomountServiceAccountToken()
+        // -- automount service account token
+        automountServiceAccountToken = opts.automountServiceAccountToken
+        // -- priority class name
+        priorityClassName = opts.priorityClassName
 
         return this
     }
@@ -334,6 +337,9 @@ class PodSpecBuilder {
 
         if( imagePullSecret )
             spec.imagePullSecrets = createPullSecret()
+
+        if( priorityClassName )
+            spec.priorityClassName = priorityClassName
 
         // add labels
         if( labels )
