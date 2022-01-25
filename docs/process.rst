@@ -4,9 +4,9 @@
 Processes
 *********
 
-In Nextflow a `process` is the basic processing `primitive` to execute a user script.
+In Nextflow a *process* is the basic processing *primitive* to execute a user script.
 
-The process definition starts with the keyword ``process``, followed by process name and finally the process `body`
+The process definition starts with the keyword ``process``, followed by process name and finally the process *body*
 delimited by curly brackets. The process body must contain a string which represents the command or, more generally,
 a script that is executed by it. A basic process looks like the following example::
 
@@ -52,12 +52,12 @@ inputs, outputs, when clause, stub and finally the process script. The syntax is
 Script
 ======
 
-The `script` block is a string statement that defines the command that is executed by the process to carry out its task.
+The *script* block is a string statement that defines the command that is executed by the process to carry out its task.
 
 A process contains one and only one script block, and it must be placed after the input and output declarations when those are present in the process.
 
-The entered string is executed as a `Bash <http://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ script in the
-`host` system. It can be any command, script or combination of them, that you would normally use in terminal shell
+The entered string is executed as a *Bash <http://en.wikipedia.org/wiki/Bash_(Unix_shell)>*_ script in the
+*host* system. It can be any command, script or combination of them, that you would normally use in terminal shell
 or in a common Bash script.
 
 The only limitation to the commands that can be used in the script statement is given by the availability of those
@@ -147,7 +147,7 @@ The second choice is as easy as defining your script block by using a single-quo
 The drawback of this solution is that you will not able to access variables defined in the pipeline script context,
 in your script block.
 
-To fix this, define your script by using a double-quote string and `escape` the system environment variables by
+To fix this, define your script by using a double-quote string and *escape* the system environment variables by
 prefixing them with a back-slash ``\`` character, as shown in the following example::
 
 
@@ -162,23 +162,23 @@ prefixing them with a back-slash ``\`` character, as shown in the following exam
     }
 
 In this example the ``$MAX`` variable has to be defined somewhere before, in the pipeline script.
-`Nextflow` replaces it with the actual value before executing the script. Instead, the ``$DB`` variable
+*Nextflow* replaces it with the actual value before executing the script. Instead, the ``$DB`` variable
 must exist in the script execution environment and the Bash interpreter will replace it with the actual value.
 
 .. tip::
   Alternatively you can use the :ref:`process-shell` block definition which allows a script to contain both
   Bash and Nextflow variables without having to escape the first.
 
-Scripts `à la carte`
+Scripts *à la carte*
 --------------------
 
 The process script is interpreted by Nextflow as a Bash script by default, but you are not limited to it.
 
 You can use your favourite scripting language (e.g. Perl, Python, Ruby, R, etc), or even mix them in the same pipeline.
 
-A pipeline may be composed by processes that execute very different tasks. Using `Nextflow` you can choose the scripting
-language that better fits the task carried out by a specified process. For example for some processes `R` could be
-more useful than `Perl`, in other you may need to use `Python` because it provides better access to a library or an API, etc.
+A pipeline may be composed by processes that execute very different tasks. Using *Nextflow* you can choose the scripting
+language that better fits the task carried out by a specified process. For example for some processes *R* could be
+more useful than *Perl*, in other you may need to use *Python* because it provides better access to a library or an API, etc.
 
 To use a scripting other than Bash, simply start your process script with the corresponding
 `shebang <http://en.wikipedia.org/wiki/Shebang_(Unix)>`_ declaration. For example::
@@ -208,7 +208,7 @@ To use a scripting other than Bash, simply start your process script with the co
 
 .. tip:: Since the actual location of the interpreter binary file can change across platforms, to make your scripts
    more portable it is wise to use the ``env`` shell command followed by the interpreter's name, instead of the absolute
-   path of it. Thus, the `shebang` declaration for a Perl script, for example,
+   path of it. Thus, the *shebang* declaration for a Perl script, for example,
    would look like: ``#!/usr/bin/env perl`` instead of the one in the above pipeline fragment.
 
 
@@ -383,7 +383,7 @@ Stub
     This is an incubating feature. It may change in future versions.
 
 As of version 20.11.0-edge it's possible to define a command *stub* that replaces the actual process command, when
-the `-stub-run` or `-stub` command line option. ::
+the ``-stub-run`` or ``-stub`` command line option. ::
 
     process INDEX {
         input:
@@ -411,7 +411,7 @@ of the real one in a quicker manner. This can also be used as an alternative for
 
 .. tip::
     The ``stub`` block can be defined before or after the process ``script`` definition.
-    When the execution is run with the option `-stub-run` and a process is not implementing the ``stub`` command the
+    When the execution is run with the option ``-stub-run`` and a process is not implementing the ``stub`` command the
     real is executed.
 
 
@@ -422,7 +422,7 @@ Inputs
 
 Nextflow processes are isolated from each other but can communicate between themselves sending values through channels.
 
-The `input` block defines from which channels the process expects to receive data. You can only define one
+The *input* block defines from which channels the process expects to receive data. You can only define one
 input block at a time and it must contain one or more input declarations.
 
 The input block follows the syntax shown below::
@@ -431,12 +431,12 @@ The input block follows the syntax shown below::
       <input qualifier> <input name> [from <source channel>] [attributes]
 
 
-An input definition starts with an input `qualifier` and the input `name`, followed by the keyword ``from`` and
+An input definition starts with an input *qualifier* and the input *name*, followed by the keyword ``from`` and
 the actual channel over which inputs are received. Finally some input optional attributes can be specified.
 
 .. note:: When the input name is the same as the channel name, the ``from`` part of the declaration can be omitted.
 
-The input qualifier declares the `type` of data to be received. This information is used by Nextflow to apply the
+The input qualifier declares the *type* of data to be received. This information is used by Nextflow to apply the
 semantic rules associated to each qualifier and handle it properly depending on the target execution platform
 (grid, cloud, etc).
 
@@ -448,7 +448,7 @@ Qualifier   Semantic
 val         Lets you access the received input value by its name in the process script.
 file        Lets you handle the received value as a file, staging it properly in the execution context.
 path        Lets you handle the received value as a path, staging the file properly in the execution context.
-stdin       Lets you forward the received value to the process `stdin` special file.
+stdin       Lets you forward the received value to the process *stdin* special file.
 env         Lets you use the received value to set an environment variable named
             as the specified input name.
 tuple       Lets you handle a group of input values having one of the above qualifiers.
@@ -485,7 +485,7 @@ and used to process the script. Thus, it results in an output similar to the one
     process job 2
     
 
-.. note:: The `channel` guarantees that items are delivered in the same order as they have been sent - but -
+.. note:: The *channel* guarantees that items are delivered in the same order as they have been sent - but -
   since the process is executed in a parallel manner, there is no guarantee that they are processed in the
   same order as they are received. In fact, in the above example, value ``3`` is processed before the others.
 
@@ -528,7 +528,7 @@ specified in the input declaration. For example::
     }
 
 In the above example all the files ending with the suffix ``.fa`` are sent over the channel ``proteins``.
-Then, these files are received by the process which will execute a `BLAST` query on each of them.
+Then, these files are received by the process which will execute a *BLAST* query on each of them.
 
 When the file input name is the same as the channel name, the ``from`` part of the input declaration can be omitted.
 Thus, the above example could be written as shown below::
@@ -580,7 +580,7 @@ in a different execution context (i.e. the folder where the job is executed) and
 execution is launched.
 
 .. tip:: This allows you to execute the process command various time without worrying the files names changing.
-  In other words, `Nextflow` helps you write pipeline tasks that are self-contained and decoupled by the execution
+  In other words, *Nextflow* helps you write pipeline tasks that are self-contained and decoupled by the execution
   environment. This is also the reason why you should avoid whenever possible to use absolute or relative paths
   referencing files in your pipeline processes.
 
@@ -619,7 +619,7 @@ Will output::
     ...
 
 .. note::
-  This behaviour requires a limited buffer for the channel. In this examples was used in the first line `.buffer(size:3)`.
+  This behaviour requires a limited buffer for the channel. In this examples was used in the first line ``.buffer(size:3)``.
 
 .. note::
   Processes with an limiited buffer input channel won't execute unless the buffer is filled. providing
@@ -667,7 +667,7 @@ The following fragment shows how a wildcard can be used in the input file declar
 Dynamic input file names
 ------------------------
 
-When the input file name is specified by using the ``name`` file clause or the short `string` notation, you
+When the input file name is specified by using the ``name`` file clause or the short *string* notation, you
 are allowed to use other input values as variables in the file name string. For example::
 
 
@@ -722,7 +722,7 @@ and automatically converts to a file object.
 
 .. note::
     Provided input value should represent an absolute path location i.e. the string value
-    **must** be prefixed with a `/` character or with a supported URI protocol i.e. ``file://``,
+    **must** be prefixed with a */* character or with a supported URI protocol i.e. ``file://``,
     ``http://``, ``s3://``, etc. and it cannot contains special characters (e.g. ``\n``, etc.).
 
 
@@ -810,7 +810,7 @@ on the value received from the channel. For example::
 Input of type 'set'
 -------------------
 
-.. warning:: The `set` input type has been deprecated. See `tuple` instead.
+.. warning:: The *set* input type has been deprecated. See *tuple* instead.
 
 
 .. _process-input-tuple:
@@ -894,7 +894,7 @@ every time a new data is received. For example::
 
 In the above example every time a file of sequences is received as input by the process,
 it executes *three* tasks running a T-coffee alignment with a different value for the ``mode`` parameter.
-This is useful when you need to `repeat` the same task for a given set of parameters.
+This is useful when you need to *repeat* the same task for a given set of parameters.
 
 Since version 0.25+ input repeaters can be applied to files as well. For example::
 
@@ -1002,14 +1002,14 @@ See also: :ref:`channel-types`.
 Outputs
 =======
 
-The `output` declaration block allows you to define the channels used by the process to send out the results produced.
+The *output* declaration block allows you to define the channels used by the process to send out the results produced.
 You can only define one output block at a time and it must contain one or more output declarations.
 
 The output block follows the syntax shown below::
     output:
       <output qualifier> <output name> [into <target channel>[,channel,..]] [attribute [,..]]
 
-Output definitions start by an output `qualifier` and the output `name`, followed by the keyword ``into`` and
+Output definitions start by an output *qualifier* and the output *name*, followed by the keyword ``into`` and
 one or more channels over which outputs are sent. Finally some optional attributes can be specified.
 
 .. note:: When the output name is the same as the channel name, the ``into`` part of the declaration can be omitted.
@@ -1026,7 +1026,7 @@ val         Sends variables with the name specified over the output channel.
 file        Sends a file produced by the process with the name specified over the output channel.
 path        Sends a file produced by the process with the name specified over the output channel (replaces ``file``).
 env         Sends the variable defined in the process environment with the name specified over the output channel.
-stdout      Sends the executed process `stdout` over the output channel.
+stdout      Sends the executed process *stdout* over the output channel.
 tuple       Sends multiple values over the same output channel.
 =========== =============
 
@@ -1034,8 +1034,8 @@ tuple       Sends multiple values over the same output channel.
 Output values
 -------------
 
-The ``val`` qualifier allows you to output a `value` defined in the script context. In a common usage scenario,
-this is a value which has been defined in the `input` declaration block, as shown in the following example::
+The ``val`` qualifier allows you to output a *value* defined in the script context. In a common usage scenario,
+this is a value which has been defined in the *input* declaration block, as shown in the following example::
 
    methods = ['prot','dna', 'rna']
 
@@ -1100,7 +1100,7 @@ For example::
 
 In the above example the process, when executed, creates a file named ``result.txt`` containing a random number.
 Since a file parameter using the same name is declared between the outputs, when the task is completed that
-file is sent over the ``numbers`` channel. A downstream `process` declaring the same channel as `input` will
+file is sent over the ``numbers`` channel. A downstream *process* declaring the same channel as *input* will
 be able to receive it.
 
 .. note:: If the channel specified as output has not been previously declared in the pipeline script, it
@@ -1112,7 +1112,7 @@ be able to receive it.
 Multiple output files
 ---------------------
 
-When an output file name contains a ``*`` or ``?`` wildcard character it is interpreted as a `glob`_ path matcher.
+When an output file name contains a ``*`` or ``?`` wildcard character it is interpreted as a *glob*_ path matcher.
 This allows you to *capture* multiple files into a list object and output them as a sole emission. For example::
 
     process splitLetters {
@@ -1239,7 +1239,7 @@ glob            When ``true`` the specified name is interpreted as a glob patter
 hidden          When ``true`` hidden files are included in the matching output files (default: ``false``)
 followLinks     When ``true`` target files are return in place of any matching symlink (default: ``true``)
 type            Type of paths returned, either ``file``, ``dir`` or ``any`` (default: ``any``, or ``file`` if the specified file name pattern contains a `**` - double star - symbol)
-maxDepth        Maximum number of directory levels to visit (default: `no limit`)
+maxDepth        Maximum number of directory levels to visit (default: *no limit*)
 includeInputs   When ``true`` any input files matching an output file glob pattern are included.
 ============== =====================
 
@@ -1259,7 +1259,7 @@ includeInputs   When ``true`` any input files matching an output file glob patte
 Output 'stdout' special file
 ----------------------------
 
-The ``stdout`` qualifier allows you to `capture` the `stdout` output of the executed process and send it over
+The ``stdout`` qualifier allows you to *capture* the *stdout* output of the executed process and send it over
 the channel specified in the output parameter declaration. For example::
 
     process sayHello {
@@ -1300,7 +1300,7 @@ and send it over the channel specified in the output parameter declaration::
 Output 'set' of values
 ----------------------
 
-.. warning:: The `set` output type has been deprecated. See `tuple` instead.
+.. warning:: The *set* output type has been deprecated. See *tuple* instead.
 
 
 .. _process-out-tuple:
@@ -1309,7 +1309,7 @@ Output 'tuple' of values
 ------------------------
 
 The ``tuple`` qualifier allows you to send multiple values into a single channel. This feature is useful
-when you need to `group together` the results of multiple executions of the same process, as shown in the following
+when you need to *group together* the results of multiple executions of the same process, as shown in the following
 example::
 
     query_ch = Channel.fromPath '*.fa'
@@ -1331,14 +1331,14 @@ example::
     }
 
 
-In the above example a `BLAST` task is executed for each pair of ``species`` and ``query`` that are received.
+In the above example a *BLAST* task is executed for each pair of ``species`` and ``query`` that are received.
 When the task completes a new tuple containing the value for ``species`` and the file ``result`` is sent to the ``blastOuts`` channel.
 
 
-A `tuple` declaration can contain any combination of the following qualifiers, previously described: ``val``, ``file`` and ``stdout``.
+A *tuple* declaration can contain any combination of the following qualifiers, previously described: ``val``, ``file`` and ``stdout``.
 
-.. tip:: Variable identifiers are interpreted as `values` while strings literals are interpreted as `files` by default,
-  thus the above output `tuple` can be rewritten using a short notation as shown below.
+.. tip:: Variable identifiers are interpreted as *values* while strings literals are interpreted as *files* by default,
+  thus the above output *tuple* can be rewritten using a short notation as shown below.
 
 ::
 
@@ -1392,15 +1392,15 @@ It is useful to enable/disable the process execution depending on the state of v
 Directives
 ==========
 
-Using the `directive` declarations block you can provide optional settings that will affect the execution of the current
+Using the *directive* declarations block you can provide optional settings that will affect the execution of the current
 process.
 
-They must be entered at the top of the process `body`, before any other declaration blocks (i.e. ``input``, ``output``, etc) 
+They must be entered at the top of the process *body*, before any other declaration blocks (i.e. ``input``, ``output``, etc) 
 and have the following syntax::
 
     name value [, value2 [,..]]
 
-Some directives are generally available to all processes, some others depends on the `executor` currently defined.
+Some directives are generally available to all processes, some others depends on the *executor* currently defined.
 
 The directives are:
 
@@ -1453,7 +1453,7 @@ e.g. *GPU* processor. For example::
     }
 
 
-The above examples will request 4 GPUs of type `nvidia-tesla-k80`.
+The above examples will request 4 GPUs of type *nvidia-tesla-k80*.
 
 
 .. note:: This directive is only supported by :ref:`awsbatch-executor`, :ref:`google-lifesciences-executor` and :ref:`k8s-executor` executors.
@@ -1499,7 +1499,7 @@ the pipeline is launched with the :ref:`resume <getstart-resume>` option, any fo
 along with the same inputs, will cause the process execution to be skipped, producing the stored data as
 the actual results.
 
-The caching feature generates a unique `key` by indexing the process script and inputs. This key is used
+The caching feature generates a unique *key* by indexing the process script and inputs. This key is used
 to identify univocally the outputs produced by the process execution.
 
 
@@ -1637,7 +1637,7 @@ See also: `penv`_, `memory`_, `time`_, `queue`_, `maxForks`_
 clusterOptions
 --------------
 
-The ``clusterOptions`` directive allows the usage of any `native` configuration option accepted by your cluster submit command.
+The ``clusterOptions`` directive allows the usage of any *native* configuration option accepted by your cluster submit command.
 You can use it to request non-standard resources or use settings that are specific to your cluster and not supported
 out of the box by Nextflow.
 
@@ -1684,9 +1684,9 @@ See also: `cpus`_, `memory`_ `time`_, `queue`_ and `Dynamic computing resources`
 echo
 ----
 
-By default the `stdout` produced by the commands executed in all processes is ignored.
-Setting the ``echo`` directive to ``true`` you can forward the process `stdout` to the current top
-running process `stdout` file, showing it in the shell terminal.
+By default the *stdout* produced by the commands executed in all processes is ignored.
+Setting the ``echo`` directive to ``true`` you can forward the process *stdout* to the current top
+running process *stdout* file, showing it in the shell terminal.
 
 For example::
 
@@ -1763,7 +1763,7 @@ See also: `maxErrors`_, `maxRetries`_ and `Dynamic computing resources`_.
 executor
 --------
 
-The `executor` defines the underlying system where processes are executed. By default a process uses the executor
+The *executor* defines the underlying system where processes are executed. By default a process uses the executor
 defined globally in the ``nextflow.config`` file.
 
 The ``executor`` directive allows you to configure what executor has to be used by the process, overriding the default
@@ -1801,7 +1801,7 @@ The following example shows how to set the process's executor::
    }
 
 
-.. note:: Each executor provides its own set of configuration options that can set be in the `directive` declarations block.
+.. note:: Each executor provides its own set of configuration options that can set be in the *directive* declarations block.
    See :ref:`executor-page` section to read about specific executor directives.
 
 .. _process-ext:
@@ -1857,7 +1857,7 @@ See also: `cpus`_ and `memory`_.
 maxErrors
 ---------
 
-The ``maxErrors`` directive allows you to specify the maximum number of times a process can fail when using the ``retry`` `error strategy`.
+The ``maxErrors`` directive allows you to specify the maximum number of times a process can fail when using the ``retry`` *error strategy*.
 By default this directive is disabled, you can set it as shown in the example below::
 
     process retryIfFail {
@@ -1902,7 +1902,7 @@ maxRetries
 ----------
 
 The ``maxRetries`` directive allows you to define the maximum number of times a process instance can be
-re-submitted in case of failure. This value is applied only when using the ``retry`` `error strategy`. By default
+re-submitted in case of failure. This value is applied only when using the ``retry`` *error strategy*. By default
 only one retry is allowed, you can increase this value as shown below::
 
     process retryIfFail {
@@ -2002,7 +2002,7 @@ can be specified in a single ``module`` directive by separating all the module n
 penv
 ----
 
-The ``penv`` directive  allows you to define the `parallel environment` to be used when submitting a parallel task to the
+The ``penv`` directive  allows you to define the *parallel environment* to be used when submitting a parallel task to the
 :ref:`SGE <sge-executor>` resource manager. For example::
 
     process big_job {
@@ -2117,7 +2117,7 @@ Name            Description
 =============== =================
 mode            The file publishing method. See the following table for possible values.
 overwrite       When ``true`` any existing file in the specified folder will be overridden (default: ``true`` during normal
-                pipeline execution and ``false`` when pipeline execution is `resumed`).
+                pipeline execution and ``false`` when pipeline execution is *resumed*).
 pattern         Specifies a `glob`_ file pattern that selects which files to publish from the overall set of output files.
 path            Specifies the directory where files need to be published. **Note**: the syntax ``publishDir '/some/dir'`` is a shortcut for ``publishDir path: '/some/dir'``.
 saveAs          A closure which, given the name of the file being published, returns the actual file name or a full path where the file is required to be stored.
@@ -2142,7 +2142,7 @@ copyNoFollow    Copies the output files into the published directory without fol
 move            Moves the output files into the published directory. **Note**: this is only supposed to be used for a `terminating` process i.e. a process whose output is not consumed by any other downstream process.
 =============== =================
 
-.. note:: The `mode` value needs to be specified as a string literal i.e. enclosed by quote characters. Multiple parameters
+.. note:: The *mode* value needs to be specified as a string literal i.e. enclosed by quote characters. Multiple parameters
   need to be separated by a colon character. For example:
 
 ::
@@ -2170,7 +2170,7 @@ move            Moves the output files into the published directory. **Note**: t
 queue
 -----
 
-The ``queue`` directory allows you to set the `queue` where jobs are scheduled when using a grid based executor
+The ``queue`` directory allows you to set the *queue* where jobs are scheduled when using a grid based executor
 in your pipeline. For example::
 
     process grid_job {
@@ -2238,7 +2238,7 @@ scratch
 
 The ``scratch`` directive allows you to execute the process in a temporary folder that is local to the execution node.
 
-This is useful when your pipeline is launched by using a `grid` executor, because it allows you to decrease the NFS
+This is useful when your pipeline is launched by using a *grid* executor, because it allows you to decrease the NFS
 overhead by running the pipeline processes in a temporary directory in the local disk of the actual execution node.
 Only the files declared as output in the process definition will be copied in the pipeline working area.
 
@@ -2294,15 +2294,15 @@ ram-disk    Creates a scratch folder in the RAM disk ``/dev/shm/`` (experimental
 storeDir
 --------
 
-The ``storeDir`` directive allows you to define a directory that is used as `permanent` cache for your process results.
+The ``storeDir`` directive allows you to define a directory that is used as *permanent* cache for your process results.
 
 In more detail, it affects the process execution in two main ways:
 
-#. The process is executed only if the files declared in the `output` clause do not exist in the directory specified by
+#. The process is executed only if the files declared in the *output* clause do not exist in the directory specified by
    the ``storeDir`` directive. When the files exist the process execution is skipped and these files are used as
    the actual process result.
 
-#. Whenever a process is successfully completed the files listed in the `output` declaration block are moved into the directory
+#. Whenever a process is successfully completed the files listed in the *output* declaration block are moved into the directory
    specified by the ``storeDir`` directive.
 
 The following example shows how to use the ``storeDir`` directive to create a directory containing a BLAST database
@@ -2330,7 +2330,7 @@ for each species specified by an input parameter::
 
 
 .. warning:: The ``storeDir`` directive is meant for long term process caching and should not be used to
-    output the files produced by a process to a specific folder or organise result data in `semantic` directory structure.
+    output the files produced by a process to a specific folder or organise result data in *semantic* directory structure.
     In these cases you may use the `publishDir`_ directive instead.
 
 .. note:: The use of AWS S3 path is supported however it requires the installation of the `AWS CLI tool <https://aws.amazon.com/cli/>`_
