@@ -2144,7 +2144,7 @@ class TaskProcessor {
 
             if( task.type == ScriptType.SCRIPTLET ) {
                 if( task.exitStatus == Integer.MAX_VALUE )
-                    throw new NodeTerminationException("Process `${task.name}` terminated for an unknown reason -- Likely it has been terminated by the external system")
+                    throw new ProcessFailedException("Process `${task.name}` terminated for an unknown reason -- Likely it has been terminated by the external system")
 
                 if ( !task.isSuccess() )
                     throw new ProcessFailedException("Process `${task.name}` terminated with an error exit status (${task.exitStatus})")
