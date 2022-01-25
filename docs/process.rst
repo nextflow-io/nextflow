@@ -636,7 +636,7 @@ Cardinality   Name pattern     Staged file names
  many        ``file??.ext``  ``file01.ext``, ``file02.ext``, ``file03.ext``, ..
  many        ``dir/*``       named as the source file, created in ``dir`` subdirectory
  many        ``dir??/*``     named as the source file, created in a progressively indexed subdirectory e.g. ``dir01/``, ``dir02/``, etc.
- many        ``dir*/*``      (as above)
+ many        ``dir*/*``      (as above but without padding)
 ============ ============== ==================================================
 
 The following fragment shows how a wildcard can be used in the input file declaration::
