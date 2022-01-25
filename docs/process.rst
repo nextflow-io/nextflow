@@ -740,6 +740,15 @@ section::
       """
     }
 
+The renaming syntax of *file* inputs can also be used with *path* instead of ``stageAs``::
+
+    process foo {
+      input:
+        path "data.txt" from '/some/data/file.txt'
+      """
+        your_command --in data.txt
+      """
+    }
 
 .. tip::
     The ``path`` qualifier should be preferred over ``file`` to handle process input files
