@@ -38,7 +38,7 @@ class DownloadOptsTest extends Specification {
         opts.queueMaxSize() == 10_000
         opts.bufferMaxSize() == MemoryUnit.of('1 GB')
         opts.chunkSize() == 10 * 1024 * 1024
-        !opts.parallelEnabled()
+        opts.parallelEnabled()
         opts.maxDelayMillis() == Duration.of('90s').toMillis()
         opts.maxAttempts() == 5
     }
@@ -46,7 +46,7 @@ class DownloadOptsTest extends Specification {
     def 'should set options with properties' () {
         given:
         def CONFIG = '''
-        download_parallel = true
+        download_parallel = false
         download_queue_max_size = 11
         download_buffer_max_size = 222MB
         download_num_workers = 33
@@ -64,7 +64,7 @@ class DownloadOptsTest extends Specification {
         opts.queueMaxSize() == 11
         opts.bufferMaxSize() == MemoryUnit.of('222 MB')
         opts.chunkSize() == 44
-        opts.parallelEnabled()
+        !opts.parallelEnabled()
         opts.maxAttempts() == 99
         opts.maxDelayMillis() == Duration.of('99s').toMillis()
     }
@@ -73,7 +73,7 @@ class DownloadOptsTest extends Specification {
     def 'should set options with env' () {
         given:
         def ENV = [
-                NXF_S3_DOWNLOAD_PARALLEL: 'true',
+                NXF_S3_DOWNLOAD_PARALLEL: 'false',
                 NXF_S3_DOWNLOAD_QUEUE_SIZE: '11',
                 NXF_S3_DOWNLOAD_NUM_WORKERS: '22',
                 NXF_S3_DOWNLOAD_CHUNK_SIZE: '33',
@@ -85,7 +85,7 @@ class DownloadOptsTest extends Specification {
         when:
         def opts = DownloadOpts.from(new Properties(), ENV)
         then:
-        opts.parallelEnabled()
+        !opts.parallelEnabled()
         opts.queueMaxSize() == 11
         opts.numWorkers() == 22
         opts.chunkSize() == 33
