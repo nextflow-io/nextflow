@@ -509,6 +509,10 @@ Thus the above example can be written as shown below::
 Input of files
 --------------
 
+.. tip::
+    The ``path`` qualifier should be preferred over ``file`` to handle process input files
+    when using Nextflow 19.10.0 or later.
+
 The ``file`` qualifier allows the handling of file values in the process execution context. This means that
 Nextflow will stage it in the process execution directory, and it can be access in the script by using the name
 specified in the input declaration. For example::
