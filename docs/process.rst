@@ -851,7 +851,7 @@ is associated to a corresponding element with the ``tuple`` definition. For exam
 In the above example the ``tuple`` parameter is used to define the value ``x`` and the file ``latin.txt``,
 which will receive a value from the same channel.
 
-In the ``tuple`` declaration items can be defined by using the following qualifiers: ``val``, ``env``, ``file`` and ``stdin``.
+In the ``tuple`` declaration items can be defined by using the following qualifiers: ``val``, ``env``, ``file``, ``path`` and ``stdin``.
 
 A shorter notation can be used by applying the following substitution rules:
 
@@ -862,6 +862,9 @@ val(x)          x
 file(x)         (not supported)
 file('name')    'name'
 file(x:'name')  x:'name'
+path(x)         (not supported)
+path('name')    (not supported)
+path(x:'name')  (not supported) 
 stdin           '-'
 env(x)          (not supported)
 ============== =======
