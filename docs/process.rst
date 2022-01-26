@@ -357,7 +357,7 @@ This means that instead of specifying the process command to be executed as a st
 define it by providing one or more language statements, as you would do in the rest of the pipeline script.
 Simply starting the script definition block with the ``exec:`` keyword, for example::
 
-    x = Channel.from( 'a', 'b', 'c')
+    x = Channel.of( 'a', 'b', 'c')
 
     process simpleSum {
         input:
@@ -462,7 +462,7 @@ Input of generic values
 The ``val`` qualifier allows you to receive data of any type as input. It can be accessed in the process script
 by using the specified input name, as shown in the following example::
 
-    num = Channel.from( 1, 2, 3 )
+    num = Channel.of( 1, 2, 3 )
 
     process basicExample {
       echo true
@@ -493,7 +493,7 @@ and used to process the script. Thus, it results in an output similar to the one
 When the ``val`` has the same name as the channel from where the data is received, the ``from`` part can be omitted.
 Thus the above example can be written as shown below::
 
-    num = Channel.from( 1, 2, 3 )
+    num = Channel.of( 1, 2, 3 )
 
     process basicExample {
       echo true
@@ -762,7 +762,7 @@ The ``stdin`` input qualifier allows you the forwarding of the value received fr
 `standard input <http://en.wikipedia.org/wiki/Standard_streams#Standard_input_.28stdin.29>`_
 of the command executed by the process. For example::
 
-    str = Channel.from('hello', 'hola', 'bonjour', 'ciao').map { it+'\n' }
+    str = Channel.of('hello', 'hola', 'bonjour', 'ciao').map { it+'\n' }
 
     process printAll {
        echo true
@@ -792,7 +792,7 @@ Input of type 'env'
 The ``env`` qualifier allows you to define an environment variable in the process execution context based
 on the value received from the channel. For example::
 
-    str = Channel.from('hello', 'hola', 'bonjour', 'ciao')
+    str = Channel.of('hello', 'hola', 'bonjour', 'ciao')
 
     process printEnv {
         echo true
@@ -961,8 +961,8 @@ For example::
   process foo {
     echo true
     input:
-    val x from Channel.from(1,2)
-    val y from Channel.from('a','b','c')
+    val x from Channel.of(1,2)
+    val y from Channel.of('a','b','c')
     script:
      """
      echo $x and $y
@@ -995,7 +995,7 @@ To better understand this behavior compare the previous example with the followi
     echo true
     input:
     val x from Channel.value(1)
-    val y from Channel.from('a','b','c')
+    val y from Channel.of('a','b','c')
     script:
      """
      echo $x and $y
@@ -1327,7 +1327,7 @@ when you need to *group together* the results of multiple executions of the same
 example::
 
     query_ch = Channel.fromPath '*.fa'
-    species_ch = Channel.from 'human', 'cow', 'horse'
+    species_ch = Channel.of 'human', 'cow', 'horse'
 
     process blast {
 
