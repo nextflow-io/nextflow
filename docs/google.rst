@@ -211,6 +211,8 @@ if the virtual machine was terminated preemptively::
       maxRetries = 5
     }
 
+.. note:: Preemptible instances have a `runtime limit <https://cloud.google.com/compute/docs/instances/preemptible>`_ of 24 hours.
+
 .. tip:: For an exhaustive list of all possible error codes, please refer to the official Google LifeSciences `documentation <https://cloud.google.com/life-sciences/docs/troubleshooting#error_codes>`_.
 
 Hybrid execution
@@ -247,8 +249,13 @@ specify the local storage for the jobs computed locally::
 .. warning:: The Google Storage path needs to contain at least sub-directory. Don't use only the
   bucket name e.g. ``gs://my-bucket``.
 
-Limitation
-----------
+Quotas
+------
+
+Compute resources in Google Cloud are subject to `resource quotas <https://cloud.google.com/compute/quotas>`_ which may affect your ability to run pipelines at scale. You can request quota increases, and your quotas may automatically increase over time as you use the platform. In particular, GPU quotas are initially set to 0, so you must explicitly request a quota increase in order to use GPUs. Initially you can request an increase to 1 GPU at a time, and after one billing cycle you may be able to increase it further.
+
+Limitations
+-----------
 
 * Currently it's not possible to specify a disk type different from the default one assigned
   by the service depending on the chosen instance type.
