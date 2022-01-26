@@ -813,6 +813,8 @@ on the value received from the channel. For example::
     bonjour world!
     hola world!
 
+This is useful if environment variables have to be overwritten or arguments are only accepted as environment variables.
+For example, ``ssh`` has no password parameter and only accepts passwords via environment variables.
 
 .. _process-input-set:
 
