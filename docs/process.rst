@@ -619,7 +619,7 @@ Will output::
     ...
 
 .. note::
-  This behaviour requires a limited buffer for the channel. In this examples was used in the first line ``.buffer(size:3)``.
+  This behaviour requires a limited buffer for the channel. In this examples ``.buffer(size:3)`` was used in the first line.
 
 .. note::
   Processes with an limiited buffer input channel won't execute unless the buffer is filled. providing
