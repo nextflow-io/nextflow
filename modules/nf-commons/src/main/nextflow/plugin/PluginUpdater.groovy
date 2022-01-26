@@ -57,7 +57,7 @@ class PluginUpdater extends UpdateManager {
 
     private boolean pullOnly
 
-    private DefaultPlugins defaultPlugins = new DefaultPlugins()
+    private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
 
     protected PluginUpdater(CustomPluginManager pluginManager) {
         super(pluginManager)

@@ -57,6 +57,8 @@ class PodOptions {
 
     private boolean automountServiceAccountToken
 
+    private String priorityClassName
+
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         envVars = new HashSet<>(size)
@@ -123,6 +125,9 @@ class PodOptions {
         else if( entry.automountServiceAccountToken instanceof Boolean ) {
             this.automountServiceAccountToken = entry.automountServiceAccountToken as Boolean
         }
+        else if( entry.priorityClassName ) {
+            this.priorityClassName = entry.priorityClassName
+        }
         else 
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -177,6 +182,8 @@ class PodOptions {
         return this
     }
 
+    String getPriorityClassName() { priorityClassName }
+
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
 
@@ -228,7 +235,11 @@ class PodOptions {
         result.annotations.putAll(annotations)
         result.annotations.putAll(other.annotations)
 
+        // automount service account token
         result.automountServiceAccountToken = other.automountServiceAccountToken & this.automountServiceAccountToken
+
+        // priority class name
+        result.priorityClassName = other.priorityClassName ?: this.priorityClassName
 
         return result
     }

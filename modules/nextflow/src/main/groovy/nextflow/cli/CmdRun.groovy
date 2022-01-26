@@ -335,8 +335,12 @@ class CmdRun extends CmdBase implements HubOptions {
             runName = HistoryFile.DEFAULT.generateNextName()
         }
 
-        else if( HistoryFile.DEFAULT.checkExistsByName(runName) )
+        else if( HistoryFile.DEFAULT.checkExistsByName(runName) && !ignoreHistory() )
             throw new AbortOperationException("Run name `$runName` has been already used -- Specify a different one")
+    }
+
+    private static boolean ignoreHistory() {
+        System.getenv('NXF_IGNORE_RESUME_HISTORY')=='true'
     }
 
     static protected boolean matchRunName(String name) {
