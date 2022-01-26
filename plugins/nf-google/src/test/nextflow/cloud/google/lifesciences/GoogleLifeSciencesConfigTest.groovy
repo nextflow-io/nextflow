@@ -293,7 +293,13 @@ class GoogleLifeSciencesConfigTest extends Specification {
         config.customLabels == [:]
 
         when:
-        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', labels: 'mylabel=myvalue']])
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', labels: [mylabel: 'myvalue']]])
+        then:
+        config.customLabels == [ mylabel: "myvalue"]
+
+
+        when:
+        config = GoogleLifeSciencesConfig.fromSession0([google:[project:'foo', region:'x', labels: [mylabel: 'myvalue', invalidlabel:[some:'trash']]]])
         then:
         config.customLabels == [ mylabel: "myvalue"]
     }

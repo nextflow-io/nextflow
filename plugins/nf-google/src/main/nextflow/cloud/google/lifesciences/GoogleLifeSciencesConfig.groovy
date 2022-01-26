@@ -151,7 +151,7 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
         final parallelThreadCount = config.navigate('google.storage.parallelThreadCount', DEF_PARALLEL_THREAD_COUNT) as int
         final downloadMaxComponents = config.navigate('google.storage.downloadMaxComponents', DEF_DOWNLOAD_MAX_COMPONENTS) as int
 
-        final customLabels = parseLabels(config.navigate('google.labels') as String)
+        final customLabels = checkLabels(config.navigate('google.labels') as Map)
 
         new GoogleLifeSciencesConfig(
                 project: project,
@@ -180,16 +180,15 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
                 customLabels: customLabels
             )
     }
-    static private Map<String,String> parseLabels(String list) {
+    static private Map<String,String> checkLabels(Map labelmap) {
         def parsedLabels=[:];
-        if (list!= null){
-            def keyValue = list.split(',');
-            for( String values : keyValue ){
-                def keyAndValue = values.split('=');
-                if (keyAndValue.length == 2){
-                    parsedLabels.put(keyAndValue[0].trim(), keyAndValue[1].trim())
+        if (labelmap!= null){
+            for (entry in labelmap) {
+                if (entry.key instanceof String && entry.value instanceof String){
+                    
+                    parsedLabels.put((entry.key as String).trim(),(entry.value as String).trim())
                 }else{
-                    log.warn "label \"" + keyAndValue[0].trim() + "\" ignored"
+                    log.warn "label \"" + entry.key + "\" ignored"
                 }
             }
         }
