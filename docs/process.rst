@@ -1363,6 +1363,8 @@ The directives are:
 * `time`_
 
 
+.. _process-accelerator:
+
 accelerator
 -----------
 
@@ -1379,22 +1381,28 @@ e.g. *GPU* processor. For example::
     }
 
 
-The above examples will request 4 GPUs of type `nvidia-tesla-k80`.
+The above examples will request 4 GPUs of type ``nvidia-tesla-k80``.
+
+.. note:: This directive is only used by certain executors. Refer to the
+  :ref:`executor-page` page to see which executors support this directive.
+
+.. tip:: The accelerator ``type`` option depends on the target execution platform. Refer to the target
+  platform documentation for details on the available accelerators:
+
+  - `AWS <https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_>`_
+  - `Google Cloud <https://cloud.google.com/compute/docs/gpus/>`_
+  - `Kubernetes <https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus>`_
 
 
-.. note:: This directive is only supported by :ref:`awsbatch-executor`, :ref:`google-lifesciences-executor` and :ref:`k8s-executor` executors.
-
-.. tip:: The accelerator ``type`` option value depends by the target execution platform. Refer to the target
-  platform documentation for details on the available accelerators. `AWS <https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_>`_
-  `Google <https://cloud.google.com/compute/docs/gpus/>`_
-  `Kubernetes <https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus>`_.
-
+.. _process-afterScript:
 
 afterScript
 -----------
 
 The ``afterScript`` directive allows you to execute a custom (Bash) snippet immediately *after* the main process has run.
 This may be useful to clean up your staging area.
+
+.. _process-beforeScript:
 
 beforeScript
 ------------
@@ -1566,9 +1574,8 @@ The ``clusterOptions`` directive allows the usage of any `native` configuration 
 You can use it to request non-standard resources or use settings that are specific to your cluster and not supported
 out of the box by Nextflow.
 
-.. note:: This directive is taken in account only when using a grid based executor:
-  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`, :ref:`pbspro-executor`,
-  :ref:`moab-executor` and :ref:`condor-executor` executors.
+.. note:: This directive is only used by grid executors. Refer to the
+  :ref:`executor-page` page to see which executors support this directive.
 
 .. _process-disk:
 
@@ -1599,8 +1606,8 @@ GB      Gigabytes
 TB      Terabytes
 ======= =============
 
-.. note:: This directive currently is taken in account only by the :ref:`ignite-executor`
-  and the :ref:`condor-executor` executors.
+.. note:: This directive is only used by certain executors. Refer to the
+  :ref:`executor-page` page to see which executors support this directive.
 
 See also: `cpus`_, `memory`_ `time`_, `queue`_ and `Dynamic computing resources`_.
 
@@ -1694,24 +1701,26 @@ defined globally in the ``nextflow.config`` file.
 The ``executor`` directive allows you to configure what executor has to be used by the process, overriding the default
 configuration. The following values can be used:
 
-=====================  ==================
-Name                   Executor
-=====================  ==================
-``local``              The process is executed in the computer where `Nextflow` is launched.
-``sge``                The process is executed using the Sun Grid Engine / `Open Grid Engine <http://gridscheduler.sourceforge.net/>`_.
-``uge``                The process is executed using the `Univa Grid Engine <https://en.wikipedia.org/wiki/Univa_Grid_Engine/>`_ job scheduler.
-``lsf``                The process is executed using the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
-``slurm``              The process is executed using the SLURM job scheduler.
-``pbs``                The process is executed using the `PBS/Torque <http://en.wikipedia.org/wiki/Portable_Batch_System>`_ job scheduler.
-``pbspro``             The process is executed using the `PBS Pro <https://www.pbsworks.com/>`_ job scheduler.
-``moab``               The process is executed using the `Moab <http://www.adaptivecomputing.com/moab-hpc-basic-edition/>`_ job scheduler.
-``condor``             The process is executed using the `HTCondor <https://research.cs.wisc.edu/htcondor/>`_ job scheduler.
-``nqsii``              The process is executed using the `NQSII <https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster>`_ job scheduler.
-``ignite``             The process is executed using the `Apache Ignite <https://ignite.apache.org/>`_ cluster.
-``k8s``                The process is executed using the `Kubernetes <https://kubernetes.io/>`_ cluster.
-``awsbatch``           The process is executed using the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
-``google-pipelines``   The process is executed using the `Google Genomics Pipelines <https://cloud.google.com/genomics/>`_ service.
-=====================  ==================
+========================  ==================
+Name                      Executor
+========================  ==================
+``awsbatch``              The process is executed using the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
+``azurebatch``            The process is executed using the `Azure Batch <https://azure.microsoft.com/en-us/services/batch/>`_ service.
+``condor``                The process is executed using the `HTCondor <https://research.cs.wisc.edu/htcondor/>`_ job scheduler.
+``google-lifesciences``   The process is executed using the `Google Genomics Pipelines <https://cloud.google.com/life-sciences>`_ service.
+``ignite``                The process is executed using the `Apache Ignite <https://ignite.apache.org/>`_ cluster.
+``k8s``                   The process is executed using the `Kubernetes <https://kubernetes.io/>`_ cluster.
+``local``                 The process is executed in the computer where `Nextflow` is launched.
+``lsf``                   The process is executed using the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
+``moab``                  The process is executed using the `Moab <http://www.adaptivecomputing.com/moab-hpc-basic-edition/>`_ job scheduler.
+``nqsii``                 The process is executed using the `NQSII <https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster>`_ job scheduler.
+``pbs``                   The process is executed using the `PBS/Torque <http://en.wikipedia.org/wiki/Portable_Batch_System>`_ job scheduler.
+``pbspro``                The process is executed using the `PBS Pro <https://www.pbsworks.com/>`_ job scheduler.
+``sge``                   The process is executed using the Sun Grid Engine / `Open Grid Engine <http://gridscheduler.sourceforge.net/>`_.
+``slurm``                 The process is executed using the SLURM job scheduler.
+``tes``                   The process is executed using the `GA4GH TES <https://github.com/ga4gh/task-execution-schemas>`_ service.
+``uge``                   The process is executed using the `Univa Grid Engine <https://en.wikipedia.org/wiki/Univa_Grid_Engine/>`_ job scheduler.
+========================  ==================
 
 The following example shows how to set the process's executor::
 
@@ -1726,8 +1735,8 @@ The following example shows how to set the process's executor::
    }
 
 
-.. note:: Each executor provides its own set of configuration options that can set be in the `directive` declarations block.
-   See :ref:`executor-page` section to read about specific executor directives.
+.. note:: Each executor supports additional directives and ``executor`` configuration options. Refer to the
+  :ref:`executor-page` page to see what each executor supports.
 
 .. _process-ext:
 
@@ -1753,6 +1762,36 @@ In the above example, the process uses a container whose version is controlled b
 This can be defined in the ``nextflow.config`` file as shown below::
 
     process.ext.version = '2.5.3'
+
+
+.. _process-label:
+
+label
+-----
+
+The ``label`` directive allows the annotation of processes with mnemonic identifier of your choice.
+For example::
+
+  process bigTask {
+
+    label 'big_mem'
+
+    '''
+    <task script>
+    '''
+  }
+
+
+The same label can be applied to more than a process and multiple labels can be applied to the same
+process using the ``label`` directive more than one time.
+
+.. note:: A label must consist of alphanumeric characters or ``_``, must start with an alphabetic character
+  and must end with an alphanumeric character.
+
+Labels are useful to organise workflow processes in separate groups which can be referenced
+in the configuration file to select and configure subset of processes having similar computing requirements.
+
+See the :ref:`config-process-selectors` documentation for details.
 
 
 .. _process-machineType:
@@ -1940,8 +1979,6 @@ The ``penv`` directive  allows you to define the `parallel environment` to be us
 This configuration depends on the parallel environment provided by your grid engine installation. Refer to your
 cluster documentation or contact your admin to learn more about this.
 
-.. note:: This setting is available when using the :ref:`sge-executor` executor.
-
 See also: `cpus`_, `memory`_, `time`_
 
 .. _process-pod:
@@ -2117,38 +2154,8 @@ Multiple queues can be specified by separating their names with a comma for exam
     }
 
 
-.. note:: This directive is taken in account only by the following executors: :ref:`sge-executor`, :ref:`lsf-executor`,
-  :ref:`slurm-executor` and :ref:`pbs-executor` executors.
-
-
-.. _process-label:
-
-label
------
-
-The ``label`` directive allows the annotation of processes with mnemonic identifier of your choice.
-For example::
-
-  process bigTask {
-
-    label 'big_mem'
-
-    '''
-    <task script>
-    '''
-  }
-
-
-The same label can be applied to more than a process and multiple labels can be applied to the same
-process using the ``label`` directive more than one time.
-
-.. note:: A label must consist of alphanumeric characters or ``_``, must start with an alphabetic character
-  and must end with an alphanumeric character.
-
-Labels are useful to organise workflow processes in separate groups which can be referenced
-in the configuration file to select and configure subset of processes having similar computing requirements.
-
-See the :ref:`config-process-selectors` documentation for details.
+.. note:: This directive is only used by certain executors. Refer to the
+  :ref:`executor-page` page to see which executors support this directive.
 
 
 .. _process-scratch:
@@ -2358,9 +2365,8 @@ The following time unit suffixes can be used when specifying the duration value:
 
 Multiple units can be used in a single declaration, for example: ``'1day 6hours 3minutes 30seconds'``
 
-.. note:: This directive is taken in account only when using one of the following grid based executors:
-  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`,
-  :ref:`condor-executor` and :ref:`awsbatch-executor` executors.
+.. note:: This directive is only used by certain executors. Refer to the
+  :ref:`executor-page` page to see which executors support this directive.
 
 See also: `cpus`_, `memory`_, `queue`_ and `Dynamic computing resources`_.
 
