@@ -620,11 +620,13 @@ class K8sTaskHandlerTest extends Specification {
         proc.getName() >> 'hello-proc'
         exec.getSession() >> sess
         sess.getUniqueId() >> uuid
-        exec.getK8sConfig() >> [pod: [
+        exec.getK8sConfig() >> [
+            podOptions: [
                 [label: 'foo', value: 'bar'],
                 [label: 'app', value: 'nextflow'],
                 [label: 'x', value: 'hello_world']
-        ]]
+            ]
+        ]
 
         labels.app == 'nextflow'
         labels.foo == 'bar'

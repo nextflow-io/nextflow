@@ -89,17 +89,20 @@ class K8sConfigTest extends Specification {
 
         when:
         cfg = new K8sConfig([
-                storageClaimName: 'pvc-2',
-                storageMountPath: '/data',
-                pod: [  [volumeClaim:'foo', mountPath: '/here'],
-                        [volumeClaim: 'bar', mountPath: '/there']] ])
+            storageClaimName: 'pvc-2',
+            storageMountPath: '/data',
+            podOptions: [
+                [volumeClaim:'foo', mountPath: '/here'],
+                [volumeClaim: 'bar', mountPath: '/there']
+            ]
+        ])
         then:
         cfg.getStorageClaimName() == 'pvc-2'
         cfg.getStorageMountPath() == '/data'
         cfg.getPodOptions().getVolumeClaims() == [
-                new PodVolumeClaim('pvc-2', '/data'),
-                new PodVolumeClaim('foo', '/here'),
-                new PodVolumeClaim('bar', '/there')
+            new PodVolumeClaim('pvc-2', '/data'),
+            new PodVolumeClaim('foo', '/here'),
+            new PodVolumeClaim('bar', '/there')
         ] as Set
 
 
@@ -185,7 +188,7 @@ class K8sConfigTest extends Specification {
 
 
         when:
-        opts = new K8sConfig(pod: [ [pullPolicy: 'Always'], [env: 'HELLO', value: 'WORLD'] ]).getPodOptions()
+        opts = new K8sConfig(podOptions: [ [pullPolicy: 'Always'], [env: 'HELLO', value: 'WORLD'] ]).getPodOptions()
         then:
         opts.getImagePullPolicy() == 'Always'
         opts.getEnvVars() == [ PodEnv.value('HELLO','WORLD') ] as Set
@@ -285,20 +288,20 @@ class K8sConfigTest extends Specification {
     def 'should create k8s config with one volume claim' () {
 
         when:
-        def cfg = new K8sConfig( pod: [runAsUser: 1000] )
+        def cfg = new K8sConfig( podOptions: [runAsUser: 1000] )
         then:
         cfg.getPodOptions().getSecurityContext() == new PodSecurityContext(1000)
         cfg.getPodOptions().getVolumeClaims().size() == 0
 
         when:
-        cfg = new K8sConfig( pod: [volumeClaim: 'nf-0001', mountPath: '/workspace'] )
+        cfg = new K8sConfig( podOptions: [volumeClaim: 'nf-0001', mountPath: '/workspace'] )
         then:
         cfg.getPodOptions().getSecurityContext() == null
         cfg.getPodOptions().getVolumeClaims() == [new PodVolumeClaim('nf-0001', '/workspace')] as Set
 
 
         when:
-        cfg = new K8sConfig( pod: [
+        cfg = new K8sConfig( podOptions: [
                 [runAsUser: 1000],
                 [volumeClaim: 'nf-0001', mountPath: '/workspace'],
                 [volumeClaim: 'nf-0002', mountPath: '/data', subPath: '/home']

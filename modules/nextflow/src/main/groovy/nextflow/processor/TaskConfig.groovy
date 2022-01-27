@@ -380,7 +380,7 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     PodOptions getPodOptions() {
-        new PodOptions((List)get('pod'))
+        new PodOptions((List)get('podOptions'))
     }
 
     AcceleratorResource getAccelerator() {

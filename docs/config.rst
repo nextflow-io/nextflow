@@ -672,7 +672,7 @@ serviceAccount      Defines the Kubernetes `service account name <https://kubern
 launchDir           Defines the path where the workflow is launched and the user data is stored. This must be a path in a shared K8s persistent volume (default: ``<volume-claim-mount-path>/<user-name>``.
 workDir             Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default:``<user-dir>/work``).
 projectDir          Defines the path where Nextflow projects are downloaded. This must be a path in a shared K8s persistent volume (default: ``<volume-claim-mount-path>/projects``).
-pod                 Allows the definition of one or more pod configuration options such as environment variables, config maps, secrets, etc. It allows the same settings as the :ref:`process-pod` process directive.
+podOptions          Defines one or more pod configuration options such as environment variables, config maps, secrets, etc. It allows the same options as the :ref:`process-podOptions` process directive.
 pullPolicy          Defines the strategy to be used to pull the container image e.g. ``pullPolicy: 'Always'``.
 runAsUser           Defines the user ID to be used to run the containers. Shortcut for the ``securityContext`` option.
 securityContext     Defines the `security context <https://kubernetes.io/docs/tasks/configure-pod-container/security-context/>`_ for all pods.

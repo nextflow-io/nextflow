@@ -257,17 +257,22 @@ class K8sDriverLauncher {
         }
 
         def config = loadConfig(pipelineName)
-
-        // normalize pod entries
         def k8s = config.k8s
 
-        if( !k8s.isSet('pod') )
-            k8s.pod = []
-        else if( k8s.pod instanceof Map ) {
-            k8s.pod = [ k8s.pod ]
+        // -- backward compatibility
+        if( k8s.pod ) {
+            log.warn "Config setting k8s.pod has been renamed to k8s.podOptions"
+            k8s.put('podOptions', k8s.pod)
+            k8s.remove('pod')
         }
-        else if( !(k8s.pod instanceof List) )
-            throw new IllegalArgumentException("Illegal k8s.pod configuratun value: ${k8s.pod}")
+
+        // -- normalize pod options
+        if( !k8s.podOptions )
+            k8s.podOptions = []
+        else if( k8s.podOptions instanceof Map )
+            k8s.podOptions = [ k8s.podOptions ]
+        else if( !(k8s.podOptions instanceof List) )
+            throw new IllegalArgumentException("Illegal k8s.podOptions configuratun value: ${k8s.podOptions}")
 
         // -- use the volume claims specified in the command line
         //   to populate the pod config
@@ -281,7 +286,7 @@ class K8sDriverLauncher {
                 k8s.storageMountPath = path
             }
             else {
-                k8s.pod.add( [volumeClaim: name, mountPath: path] )
+                k8s.podOptions.add( [volumeClaim: name, mountPath: path] )
             }
         }
 
@@ -296,7 +301,7 @@ class K8sDriverLauncher {
                     k8s.storageMountPath = path
                 }
                 else if( !cmd.volMounts ) {
-                    k8s.pod.add( [volumeClaim: name, mountPath: path] )
+                    k8s.podOptions.add( [volumeClaim: name, mountPath: path] )
                 }
             }
             // remove it
@@ -317,8 +322,8 @@ class K8sDriverLauncher {
             k8s.workDir = config.workDir
 
         // -- some cleanup
-        if( !k8s.pod )
-            k8s.remove('pod')
+        if( !k8s.podOptions )
+            k8s.remove('podOptions')
 
         if( !k8s.storageClaimName )
             k8s.remove('storageClaimName')

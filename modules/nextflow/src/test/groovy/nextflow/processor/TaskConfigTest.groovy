@@ -536,17 +536,19 @@ class TaskConfigTest extends Specification {
 
         when:
         def process = new ProcessConfig(script)
-        process.pod secret: 'foo', mountPath: '/this'
-        process.pod secret: 'bar', env: 'BAR_XXX'
+        process.podOptions secret: 'foo', mountPath: '/this'
+        process.podOptions secret: 'bar', env: 'BAR_XXX'
         
         then:
-        process.get('pod') == [
-                    [secret: 'foo', mountPath: '/this'],
-                    [secret: 'bar', env: 'BAR_XXX'] ]
+        process.get('podOptions') == [
+            [secret: 'foo', mountPath: '/this'],
+            [secret: 'bar', env: 'BAR_XXX']
+        ]
 
         process.createTaskConfig().getPodOptions() == new PodOptions([
-                    [secret: 'foo', mountPath: '/this'],
-                    [secret: 'bar', env: 'BAR_XXX'] ])
+            [secret: 'foo', mountPath: '/this'],
+            [secret: 'bar', env: 'BAR_XXX']
+        ])
 
     }
 
