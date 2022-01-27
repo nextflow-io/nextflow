@@ -864,7 +864,7 @@ file('name')    'name'
 file(x:'name')  x:'name'
 path(x)         (not supported)
 path('name')    (not supported)
-path(x:'name')  (not supported) 
+path(x, stageAs:'name')  (not supported) 
 stdin           '-'
 env(x)          (not supported)
 ============== =======
