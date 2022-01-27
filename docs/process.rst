@@ -1713,12 +1713,13 @@ Name                      Executor
 ``lsf``                   The process is executed using the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
 ``moab``                  The process is executed using the `Moab <http://www.adaptivecomputing.com/moab-hpc-basic-edition/>`_ job scheduler.
 ``nqsii``                 The process is executed using the `NQSII <https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster>`_ job scheduler.
+``oge``                   Alias for the ``sge`` executor.
 ``pbs``                   The process is executed using the `PBS/Torque <http://en.wikipedia.org/wiki/Portable_Batch_System>`_ job scheduler.
 ``pbspro``                The process is executed using the `PBS Pro <https://www.pbsworks.com/>`_ job scheduler.
 ``sge``                   The process is executed using the Sun Grid Engine / `Open Grid Engine <http://gridscheduler.sourceforge.net/>`_.
 ``slurm``                 The process is executed using the SLURM job scheduler.
 ``tes``                   The process is executed using the `GA4GH TES <https://github.com/ga4gh/task-execution-schemas>`_ service.
-``uge``                   The process is executed using the `Univa Grid Engine <https://en.wikipedia.org/wiki/Univa_Grid_Engine/>`_ job scheduler.
+``uge``                   Alias for the ``sge`` executor.
 ========================  ==================
 
 The following example shows how to set the process's executor::
