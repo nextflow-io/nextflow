@@ -1761,7 +1761,7 @@ machineType
 -----------
 
 The ``machineType`` can be used to specify a predefined Google Compute Platform `machine type <https://cloud.google.com/compute/docs/machine-types>`_
-when running using the :ref:`Google Pipeline <google-pipelines>` executor.
+when running using the :ref:`Google Life Sciences <google-lifesciences-executor>` executor.
 
 This directive is optional and if specified overrides the cpus and memory directives::
 

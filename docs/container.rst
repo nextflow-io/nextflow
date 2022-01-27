@@ -21,7 +21,7 @@ suited for use in HPC environments. Its main advantage is that it can be used wi
 making use of user namespaces in the Linux kernel. Charliecloud is able to pull from Docker registries.
 
 .. note::
-    This feature requires Nextflow version ``21.03.0-edge`` or later and Charliecloud ``v0.22` or later.
+    This feature requires Nextflow version ``21.03.0-edge`` or later and Charliecloud ``v0.22`` or later.
 
 .. warning::
     This is an incubating feature. The use in production environment is not recommended.

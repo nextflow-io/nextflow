@@ -291,7 +291,7 @@ To enable this executor set the property ``process.executor = 'awsbatch'`` in th
 The pipeline can be launched either in a local computer or a EC2 instance. The latter is suggested for heavy or long
 running workloads. Moreover a S3 bucket must be used as pipeline work directory.
 
-See the :ref:`AWS Batch<awscloud-batch>` page for further configuration details.
+See the :ref:`AWS Batch<aws-batch>` page for further configuration details.
 
 .. _azurebatch-executor:
 

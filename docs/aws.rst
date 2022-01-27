@@ -1,4 +1,4 @@
-.. _awscloud-page:
+.. _aws-page:
 
 ************
 Amazon Cloud
@@ -85,7 +85,7 @@ Nextflow requires policies also to access `S3 buckets <https://aws.amazon.com/s3
 Depending on the pipeline configuration, the above actions can be done all in a single bucket but, more likely, spread across multiple
 buckets. Once the list of buckets used by the pipeline is identified, there are two alternative ways to give Nextflow access to these buckets:
 
-1. grant access to all buckets by attaching the policy "s3:*" to the AIM identity. This works only if buckets do not set their own access policies (see point 2);
+1. grant access to all buckets by attaching the policy ``"s3:*"`` to the AIM identity. This works only if buckets do not set their own access policies (see point 2);
 2. for a more fine grained control, assign to each bucket the following policy (replace the placeholders with the actual values)::
 
 	{
@@ -126,7 +126,7 @@ buckets. Once the list of buckets used by the pipeline is identified, there are 
 See the `bucket policy documentation <https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-policy.html>`_
 for additional details.
 
-.. _awscloud-batch:
+.. _aws-batch:
 
 AWS Batch
 =========
@@ -142,7 +142,7 @@ of the jobs submitted.
 Nextflow provides a built-in support for AWS Batch which allows the seamless deployment of a Nextflow pipeline
 in the cloud offloading the process executions as Batch jobs.
 
-.. _awscloud-batch-config:
+.. _aws-batch-config:
 
 AWS CLI
 --------
@@ -423,7 +423,7 @@ of hybrid workloads in which some jobs are execute in the local computer or loca
 some jobs are offloaded to AWS Batch service.
 
 To enable this feature use one or more :ref:`config-process-selectors` in your Nextflow configuration file to apply
-the AWS Batch :ref:`configuration <awscloud-batch-config>` only to a subset of processes in your workflow.
+the AWS Batch :ref:`configuration <aws-batch-config>` only to a subset of processes in your workflow.
 For example::
 
 
