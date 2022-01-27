@@ -1380,7 +1380,6 @@ e.g. *GPU* processor. For example::
         """
     }
 
-
 The above examples will request 4 GPUs of type ``nvidia-tesla-k80``.
 
 .. note:: This directive is only used by certain executors. Refer to the
@@ -1402,6 +1401,7 @@ afterScript
 The ``afterScript`` directive allows you to execute a custom (Bash) snippet immediately *after* the main process has run.
 This may be useful to clean up your staging area.
 
+
 .. _process-beforeScript:
 
 beforeScript
@@ -1421,6 +1421,7 @@ For example::
       """
 
     }
+
 
 .. _process-cache:
 
@@ -1477,13 +1478,13 @@ For example::
     '''
   }
 
-
 Multiple packages can be specified separating them with a blank space eg. ``bwa=0.7.15 fastqc=0.11.5``.
 The name of the channel from where a specific package needs to be downloaded can be specified using the usual
 Conda notation i.e. prefixing the package with the channel name as shown here ``bioconda::bwa=0.7.15``.
 
 The ``conda`` directory also allows the specification of a Conda environment file
 path or the path of an existing environment directory. See the :ref:`conda-page` page for further details.
+
 
 .. _process-container:
 
@@ -1497,7 +1498,6 @@ It requires the Docker daemon to be running in machine where the pipeline is exe
 
 For example::
 
-
     process runThisInDocker {
 
       container 'dockerbox:tag'
@@ -1507,7 +1507,6 @@ For example::
       """
 
     }
-
 
 Simply replace in the above script ``dockerbox:tag`` with the Docker image name you want to use.
 
@@ -1525,7 +1524,6 @@ The ``containerOptions`` directive allows you to specify any container execution
 container engine (ie. Docker, Singularity, etc). This can be useful to provide container settings
 only for a specific process e.g. mount a custom path::
 
-
   process runThisWithDocker {
 
       container 'busybox:latest'
@@ -1538,8 +1536,8 @@ only for a specific process e.g. mount a custom path::
       '''
   }
 
+.. warning:: This feature is not supported by the :ref:`k8s-executor` or :ref:`azurebatch-executor` executors.
 
-.. warning:: This feature is not supported by :ref:`k8s-executor` and :ref:`azurebatch-executor` executors.
 
 .. _process-cpus:
 
@@ -1559,11 +1557,11 @@ For example::
       """
     }
 
-
 This directive is required for tasks that execute multi-process or multi-threaded commands/tools and it is meant
 to reserve enough CPUs when a pipeline task is executed through a cluster resource manager.
 
 See also: `penv`_, `memory`_, `time`_, `queue`_, `maxForks`_
+
 
 .. _process-clusterOptions:
 
@@ -1576,6 +1574,7 @@ out of the box by Nextflow.
 
 .. note:: This directive is only used by grid executors. Refer to the
   :ref:`executor-page` page to see which executors support this directive.
+
 
 .. _process-disk:
 
@@ -1611,6 +1610,7 @@ TB      Terabytes
 
 See also: `cpus`_, `memory`_ `time`_, `queue`_ and `Dynamic computing resources`_.
 
+
 .. _process-echo:
 
 echo
@@ -1636,7 +1636,7 @@ For example::
 Without specifying ``echo true`` you won't see the ``Hello`` string printed out when executing the above example.
 
 
-.. _process-page-error-strategy:
+.. _process-error-strategy:
 
 errorStrategy
 -------------
@@ -1656,7 +1656,6 @@ Name            Executor
 ``retry``       Re-submit for execution a process returning an error condition.
 ============== ==================
 
-
 When setting the ``errorStrategy`` directive to ``ignore`` the process doesn't stop on an error condition,
 it just reports a message notifying you of the error event.
 
@@ -1671,7 +1670,7 @@ For example::
 
 .. tip:: By definition a command script fails when it ends with a non-zero exit status.
 
-The ``retry`` `error strategy`, allows you to re-submit for execution a process
+The ``retry`` error strategy allows you to re-submit for execution a process
 returning an error condition. For example::
 
     process retryIfFail {
@@ -1681,7 +1680,6 @@ returning an error condition. For example::
        <your command string here>
     }
 
-
 The number of times a failing process is re-executed is defined by the `maxRetries`_ and `maxErrors`_ directives.
 
 .. note:: More complex strategies depending on the task exit status
@@ -1689,6 +1687,7 @@ The number of times a failing process is re-executed is defined by the `maxRetri
   directive. See the `Dynamic directives`_ section for details.
 
 See also: `maxErrors`_, `maxRetries`_ and `Dynamic computing resources`_.
+
 
 .. _process-executor:
 
@@ -1724,7 +1723,6 @@ Name                      Executor
 
 The following example shows how to set the process's executor::
 
-
    process doSomething {
 
       executor 'sge'
@@ -1734,9 +1732,9 @@ The following example shows how to set the process's executor::
 
    }
 
-
 .. note:: Each executor supports additional directives and ``executor`` configuration options. Refer to the
   :ref:`executor-page` page to see what each executor supports.
+
 
 .. _process-ext:
 
@@ -1781,7 +1779,6 @@ For example::
     '''
   }
 
-
 The same label can be applied to more than a process and multiple labels can be applied to the same
 process using the ``label`` directive more than one time.
 
@@ -1816,6 +1813,7 @@ This directive is optional and if specified overrides the cpus and memory direct
     
 See also: `cpus`_ and `memory`_.
 
+
 .. _process-maxErrors:
 
 maxErrors
@@ -1838,6 +1836,7 @@ By default this directive is disabled, you can set it as shown in the example be
 
 See also: `errorStrategy`_ and `maxRetries`_.
 
+
 .. _process-maxForks:
 
 maxForks
@@ -1858,6 +1857,7 @@ If you want to execute a process in a sequential manner, set this directive to o
 
     }
 
+
 .. _process-maxRetries:
 
 maxRetries
@@ -1875,7 +1875,6 @@ only one retry is allowed, you can increase this value as shown below::
         echo 'do this as that .. '
         """
     }
-
 
 .. note:: There is a subtle but important difference between ``maxRetries`` and the ``maxErrors`` directive.
     The latter defines the total number of errors that are allowed during the process execution (the same process can
@@ -1901,7 +1900,6 @@ The ``memory`` directive allows you to define how much memory the process is all
         your task script here
         """
     }
-
 
 The following memory unit suffix can be used when specifying the memory value:
 
@@ -1981,6 +1979,7 @@ cluster documentation or contact your admin to learn more about this.
 
 See also: `cpus`_, `memory`_, `time`_
 
+
 .. _process-pod:
 
 pod
@@ -2044,7 +2043,6 @@ publishDir
 
 The ``publishDir`` directive allows you to publish the process output files to a specified folder. For example::
 
-
     process foo {
 
         publishDir '/data/chunks'
@@ -2056,7 +2054,6 @@ The ``publishDir`` directive allows you to publish the process output files to a
         printf 'Hola' | split -b 1 - chunk_
         '''
     }
-
 
 The above example splits the string ``Hola`` into file chunks of a single byte. When complete the ``chunk_*`` output files
 are published into the ``/data/chunks`` folder.
@@ -2116,7 +2113,6 @@ move            Moves the output files into the published directory. **Note**: t
         '''
     }
 
-
 .. warning:: Files are copied into the specified directory in an *asynchronous* manner, thus they may not be immediately
   available in the published directory at the end of the process execution. For this reason files published by a process
   must not be accessed by other downstream processes.
@@ -2140,7 +2136,6 @@ in your pipeline. For example::
         """
     }
 
-
 Multiple queues can be specified by separating their names with a comma for example::
 
     process grid_job {
@@ -2152,7 +2147,6 @@ Multiple queues can be specified by separating their names with a comma for exam
         your task script here
         """
     }
-
 
 .. note:: This directive is only used by certain executors. Refer to the
   :ref:`executor-page` page to see which executors support this directive.
@@ -2182,7 +2176,6 @@ In its basic form simply specify ``true`` at the directive value, as shown below
     <task script>
     '''
   }
-
 
 By doing this, it tries to execute the script in the directory defined by the variable ``$TMPDIR`` in the execution node.
 If this variable does not exist, it will create a new temporary directory by using the Linux command ``mktemp``.
@@ -2215,6 +2208,7 @@ $YOUR_VAR   Creates a scratch folder in the directory defined by the ``$YOUR_VAR
 /my/tmp     Creates a scratch folder in the specified directory.
 ram-disk    Creates a scratch folder in the RAM disk ``/dev/shm/`` (experimental).
 =========== ==================
+
 
 .. _process-storeDir:
 
@@ -2255,13 +2249,13 @@ for each species specified by an input parameter::
 
   }
 
-
 .. warning:: The ``storeDir`` directive is meant for long term process caching and should not be used to
     output the files produced by a process to a specific folder or organise result data in `semantic` directory structure.
     In these cases you may use the `publishDir`_ directive instead.
 
 .. note:: The use of AWS S3 path is supported however it requires the installation of the `AWS CLI tool <https://aws.amazon.com/cli/>`_
   (i.e. ``aws``) in the target computing node.
+
 
 .. _process-stageInMode:
 
@@ -2325,7 +2319,6 @@ The above snippet will print a log similar to the following one, where process n
     [d2/1c6175] Submitted process > foo (gamma)
     [1c/3ef220] Submitted process > foo (omega)
 
-
 See also :ref:`Trace execution report <trace-report>`
 
 
@@ -2344,8 +2337,6 @@ The ``time`` directive allows you to define how long a process is allowed to run
         your task script here
         """
     }
-
-
 
 The following time unit suffixes can be used when specifying the duration value:
 
