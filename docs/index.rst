@@ -25,12 +25,8 @@ Contents:
    amazons3
    azure
    google
+   container
    conda
-   docker
-   shifter
-   singularity
-   podman
-   charliecloud
    ignite
    kubernetes
    tracing

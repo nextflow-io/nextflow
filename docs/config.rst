@@ -199,8 +199,7 @@ brackets, as shown below::
         enabled = true
     }
 
-
-Read :ref:`charliecloud-page` page to learn more how use Charliecloud containers with Nextflow.
+Read :ref:`container-charliecloud` page to learn more about how to use Charliecloud containers with Nextflow.
 
 
 .. _config-cloud:
@@ -296,9 +295,7 @@ brackets, as shown below::
         temp = 'auto'
     }
 
-
-
-Read :ref:`docker-page` page to learn more how use Docker containers with Nextflow.
+Read :ref:`container-docker` page to learn more about how to use Docker containers with Nextflow.
 
 
 .. _config-env:
@@ -581,8 +578,7 @@ brackets, as shown below::
         temp = 'auto'
     }
 
-
-Read :ref:`podman-page` page to learn more how use Podman containers with Nextflow.
+Read :ref:`container-podman` page to learn more about how to use Podman containers with Nextflow.
 
 
 .. _config-process:
@@ -711,6 +707,25 @@ overwrite           When ``true`` overwrites existing report file instead of rol
 ================== ================
 
 
+.. _config-shifter:
+
+Scope `shifter`
+-------------------
+
+The ``shifter`` configuration scope controls how `Shifter <https://docs.nersc.gov/programming/shifter/overview/>`_ containers are executed
+by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             Turn this flag to ``true`` to enable Shifter execution (default: ``false``).
+================== ================
+
+Read :ref:`container-shifter` page to learn more about how to use Shifter containers with Nextflow.
+
+
 .. _config-singularity:
 
 Scope `singularity`
@@ -734,8 +749,7 @@ cacheDir            The directory where remote Singularity images are stored. Wh
 pullTimeout         The amount of time the Singularity pull can last, exceeding which the process is terminated (default: ``20 min``).
 ================== ================
 
-
-Read :ref:`singularity-page` page to learn more how use Singularity containers with Nextflow.
+Read :ref:`container-singularity` page to learn more about how to use Singularity containers with Nextflow.
 
 
 .. _config-timeline:
