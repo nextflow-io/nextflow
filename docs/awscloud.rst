@@ -218,7 +218,7 @@ Different queues bound to the same or different Compute environments can be conf
 Container Options
 =================
 
-As of version ``21.12.0-edge``, the use of the Nextflow :ref:`process-containerOptions` directive is supported to fine control
+As of version ``21.12.1-edge``, the use of the Nextflow :ref:`process-containerOptions` directive is supported to fine control
 the properties of the container execution associated with each Batch job.
 
 Not all the standard container options are supported by AWS Batch. These are the options accepted ::
@@ -247,7 +247,7 @@ Not all the standard container options are supported by AWS Batch. These are the
 
 Container options must be passed in their long from for "--option value" or short form "-o value", if available.
 
-Few examples ::
+Few examples::
 
   containerOptions '--tmpfs /run:rw,noexec,nosuid,size=128 --tmpfs /app:ro,size=64'
 
@@ -328,6 +328,10 @@ configuration as shown below::
     aws.batch.cliPath = '/home/ec2-user/miniconda/bin/aws'
 
 Replace the path above with the one matching the location where ``aws`` tool is installed in your AMI.
+
+.. warning:: The grandparent directory of the ``aws`` tool will be mounted into the container at the same path as the host,
+  e.g. ``/home/ec2-user/miniconda``, which will shadow existing files in the container.
+  Ensure you use a path that is not already present in the container.
 
 .. note:: Using a version of Nextflow prior 19.07.x the config setting `executor.awscli` should be used
   instead of `aws.batch.cliPath`.

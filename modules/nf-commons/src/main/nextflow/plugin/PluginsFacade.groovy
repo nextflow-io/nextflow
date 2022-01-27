@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ class PluginsFacade implements PluginStateListener {
     private Path root
     private PluginUpdater updater
     private CustomPluginManager manager
-    private DefaultPlugins defaultPlugins
+    private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
     private String indexUrl = Plugins.DEFAULT_PLUGINS_REPO
 
     PluginsFacade() {
@@ -56,14 +56,12 @@ class PluginsFacade implements PluginStateListener {
         if( mode=='dev' && root.toString()=='plugins' )
             root = detectPluginsDevRoot()
         System.setProperty('pf4j.mode', mode)
-        defaultPlugins = new DefaultPlugins()
     }
 
     PluginsFacade(Path root, String mode=PROD_MODE) {
         this.mode = mode
         this.root = root
         System.setProperty('pf4j.mode', mode)
-        defaultPlugins = new DefaultPlugins()
     }
 
     protected Path getPluginsDir() {
@@ -174,7 +172,7 @@ class PluginsFacade implements PluginStateListener {
         if( manager )
             throw new IllegalArgumentException("Plugin system was already setup")
         else {
-            log.debug "Setting up plugin manager > mode=${mode}; plugins-dir=$root"
+            log.debug "Setting up plugin manager > mode=${mode}; plugins-dir=$root; core-plugins: ${defaultPlugins.toSortedString()}"
             // make sure plugins dir exists
             if( mode!=DEV_MODE && !FilesEx.mkdirs(root) )
                 throw new IOException("Unable to create plugins dir: $root")
@@ -361,11 +359,6 @@ class PluginsFacade implements PluginStateListener {
 
         if( executor == 'azurebatch' || workDir?.startsWith('az://') || bucketDir?.startsWith('az://') )
             plugins << defaultPlugins.getPlugin('nf-azure')
-
-        if( executor == 'ignite' || System.getProperty('nxf.node.daemon')=='true') {
-            plugins << defaultPlugins.getPlugin('nf-ignite')
-            plugins << defaultPlugins.getPlugin('nf-amazon')
-        }
 
         return plugins
     }

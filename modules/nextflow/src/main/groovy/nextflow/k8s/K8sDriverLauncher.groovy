@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,6 +54,16 @@ class K8sDriverLauncher {
      */
     private String podImage
 
+    /** 
+     * Request CPUs to be used for the Nextflow driver pod
+     */
+    private int headCpus
+
+    /** 
+     * Request memory to be used for the Nextflow driver pod
+     */
+    private String headMemory
+
     /**
      * Nextflow execution run name
      */
@@ -77,7 +87,7 @@ class K8sDriverLauncher {
     /**
      * Nextflow resolved config object
      */
-    private Map config
+    private ConfigObject config
 
     /**
      * Name of the config map used to propagate the nextflow
@@ -118,7 +128,7 @@ class K8sDriverLauncher {
         if( background && interactive )
             throw new AbortOperationException("Option -bg conflicts with interactive mode")
         this.config = makeConfig(pipelineName)
-        this.k8sConfig = makeK8sConfig(config)
+        this.k8sConfig = makeK8sConfig(config.toMap())
         this.k8sClient = makeK8sClient(k8sConfig)
         this.k8sConfig.checkStorageAndPaths(k8sClient)
         createK8sConfigMap()
@@ -237,7 +247,7 @@ class K8sDriverLauncher {
      * @param pipelineName Workflow project name
      * @return A {@link Map} modeling the execution configuration settings
      */
-    protected Map makeConfig(String pipelineName) {
+    protected ConfigObject makeConfig(String pipelineName) {
 
         def file = new File(pipelineName)
         if( !interactive && file.exists() ) {
@@ -318,9 +328,8 @@ class K8sDriverLauncher {
         if( !config.libDir )
             config.remove('libDir')
 
-        final result = config.toMap()
-        log.trace "K8s config object:\n${ConfigHelper.toCanonicalString(result).indent('  ')}"
-        return result
+        log.trace "K8s config object:\n${ConfigHelper.toCanonicalString(config).indent('  ')}"
+        return config
     }
 
 
@@ -424,6 +433,7 @@ class K8sDriverLauncher {
         addOption(result, cmd.&env )
         addOption(result, cmd.&process )
         addOption(result, cmd.&params )
+        addOption(result, cmd.&entryName )
 
         if( paramsFile ) {
             result << "-params-file $paramsFile"
@@ -474,6 +484,8 @@ class K8sDriverLauncher {
             .withEnv( PodEnv.value('NXF_ASSETS', k8sConfig.getProjectDir()) )
             .withEnv( PodEnv.value('NXF_EXECUTOR', 'k8s'))
             .withEnv( PodEnv.value('NXF_ANSI_LOG', 'false'))
+            .withMemory(headMemory?:"")
+            .withCpus(headCpus)
             .build()
 
         // note: do *not* set the work directory because it may need to be created  by the init script
@@ -508,7 +520,7 @@ class K8sDriverLauncher {
         return interactive
     }
 
-    protected Map getConfig() {
+    protected ConfigObject getConfig() {
         return config
     }
 
@@ -535,8 +547,8 @@ class K8sDriverLauncher {
         configMap['init.sh'] = initScript
 
         // nextflow config file
-        if( config ) {
-            configMap['nextflow.config'] = ConfigHelper.toCanonicalString(config)
+        if( this.config ) {
+            configMap['nextflow.config'] = ConfigHelper.toCanonicalString( this.config )
         }
 
         // scm config file

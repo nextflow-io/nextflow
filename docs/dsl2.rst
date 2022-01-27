@@ -4,10 +4,10 @@
 DSL 2
 ******
 
-Nextflow provides a syntax extension that implements that allow the definition of module libraries and
+Nextflow provides a syntax extension that allows the definition of module libraries and
 simplifies the writing of complex data analysis pipelines.
 
-To enable this feature you need to defined the following directive at the beginning of
+To enable this feature you need to define the following directive at the beginning of
 your workflow script::
 
     nextflow.enable.dsl=2
@@ -16,7 +16,7 @@ your workflow script::
 Function
 ========
 
-Nextflow allows the definition of custom function in the workflow script using the following syntax::
+Nextflow allows the definition of custom functions in the workflow script using the following syntax::
 
     def <function name> ( arg1, arg, .. ) {
         <function body>
@@ -34,12 +34,12 @@ For example::
 
 
 The above snippet defines two simple functions, that can be invoked in the workflow script as ``foo()`` which
-returns the ``Hello world`` string and ``bar(10,20)`` which return the sum of two parameters.
+returns the ``Hello world`` string and ``bar(10,20)`` which returns the sum of two parameters (``30`` in this case).
 
 .. tip:: Functions implicitly return the result of the last evaluated statement.
 
-The keyword ``return`` can be used to explicitly exit from a function returning the specified value.
-for example::
+The keyword ``return`` can be used to explicitly exit from a function and return the specified value.
+For example::
 
     def fib( x ) {
         if( x <= 1 )
@@ -56,10 +56,10 @@ Process definition
 
 The new DSL separates the definition of a process from its invocation. The process definition follows the usual 
 syntax as described in the :ref:`process documentation <process-page>`. The only difference is that the
-``from`` and ``into`` channel declaration has to be omitted.
+``from`` and ``into`` channel declarations have to be omitted.
 
 Then a process can be invoked as a function in the ``workflow`` scope, passing the expected
-input channels as parameters as it if were a custom function. For example::
+input channels as parameters as if it were a custom function. For example::
 
     nextflow.enable.dsl=2
 
@@ -98,18 +98,18 @@ Process composition
 -------------------
 
 Processes having matching *input-output* declaration can be composed so that the output
-of the first process is passed as input to the following process. Taking in consideration
-the previous process definition, it's possible to write the following::
+of the first process is passed as input to the next process. Taking in consideration
+the previous example, it's possible to write the following::
 
     workflow {
         bar(foo())
     }
 
 
-Process outputs
+Process output
 ---------------
 
-A process output can also be accessed using the ``out`` attribute for the respective
+A process output can also be accessed using the ``out`` attribute on the corresponding
 process object. For example::
 
     workflow {
@@ -126,8 +126,8 @@ using the array element operator e.g. ``out[0]``, ``out[1]``, etc. or using
 Process named output
 --------------------
 
-The process output definition allows the use of the ``emit`` option to define a name identifier
-that can be used to reference the channel in the external scope. For example::
+The ``emit`` option can be added to the process output definition to assign a name identifier. This name
+can be used to reference the channel within the caller scope. For example::
 
     process foo {
       output:
@@ -146,7 +146,7 @@ that can be used to reference the channel in the external scope. For example::
 Process named stdout
 --------------------
 
-The process can name stdout using the ``emit`` option::
+The ``emit`` option can be used also to name the stdout::
 
     process sayHello {
         input:
@@ -181,7 +181,7 @@ invocation of one or more processes and operators::
 
 
 For example, the above snippet defines a workflow component, named ``my_pipeline``, that can be invoked from
-another workflow component definition as any other function or process i.e. ``my_pipeline()``.
+another workflow component definition as any other function or process with ``my_pipeline()``.
 
 
 Workflow parameters
@@ -199,7 +199,7 @@ A workflow component can access any variable and parameter defined in the outer 
         }
 
 
-Workflow inputs
+Workflow input
 ---------------
 
 A workflow component can declare one or more input channels using the ``take`` keyword. For example::
@@ -207,12 +207,12 @@ A workflow component can declare one or more input channels using the ``take`` k
         workflow my_pipeline {
             take: data
             main:
-            foo(data)
-            bar(foo.out)
+              foo(data)
+              bar(foo.out)
         }
 
 .. warning::
-  When the ``take`` keyword is used, the beginning of the workflow body needs to be identified with the
+  When the ``take`` keyword is used, the beginning of the workflow body must be identified with the
   ``main`` keyword.
 
 Then, the input can be specified as an argument in the workflow invocation statement::
@@ -227,10 +227,10 @@ Then, the input can be specified as an argument in the workflow invocation state
   (ie. non-consumable).
 
 
-Workflow outputs
+Workflow output
 ----------------
 
-A workflow component can declare one or more out channels using the ``emit`` keyword. For example::
+A workflow component can declare one or more output channels using the ``emit`` keyword. For example::
 
     workflow my_pipeline {
         main:
@@ -240,12 +240,14 @@ A workflow component can declare one or more out channels using the ``emit`` key
           bar.out
     }
 
-Then, the result of the ``my_pipeline`` execution can be accessed using the ``out`` property ie.
-``my_pipeline.out``. When there are multiple output channels declared, use the array bracket notation
-to access each output component as described for the `Process outputs`_ definition.
+Then, the result of the ``my_pipeline`` execution can be accessed using the ``out`` property, i.e.
+``my_pipeline.out``. When multiple output channels are declared, use the array bracket notation
+to access each output channel as described for the `Process output`_ definition.
 
-Alternatively, the output channel can be accessed using the identifier name which it's assigned to
-in the ``emit`` declaration::
+Workflow named output
+---------------------
+If the output channel is assigned to an identifier in the ``emit`` declaration, such identifier can be used
+to reference the channel within the caller scope. For example::
 
      workflow my_pipeline {
         main:
@@ -258,11 +260,11 @@ in the ``emit`` declaration::
 Then, the result of the above snippet can accessed using ``my_pipeline.out.my_data``.
 
 
-Implicit workflow
------------------
+Entry point of execution
+------------------------
 
-A workflow definition which does not declare any name is assumed to be the main workflow and it's
-implicitly executed. Therefore it's the entry point of the workflow application.
+A workflow definition which does not declare any name (also known as *implicit workflow*) is
+the entry point of execution for the workflow application.
 
 .. note::
   Implicit workflow definition is ignored when a script is included as module. This
@@ -270,13 +272,13 @@ implicitly executed. Therefore it's the entry point of the workflow application.
   application script. 
 
 .. tip::
-  An alternative workflow entry can be specified using the ``-entry`` command line option.
+  An alternative named workflow entry can be specified using the ``-entry`` command line option.
 
 
 Workflow composition
 --------------------
 
-Workflows defined in your script or imported by a module inclusion can be invoked and composed
+Workflows defined in your script or imported with `Module inclusion`_ can be invoked and composed
 as any other process in your application.
 
 ::
@@ -312,7 +314,7 @@ as any other process in your application.
     invoked in two different workflow scopes, like for example ``foo`` in the above snippet that
     is used either in ``flow1`` and ``flow2``. The workflow execution path along with the
     process names defines the process *fully qualified name* that is used to distinguish the
-    two different process invocations i.e. ``flow1:foo`` and ``flow2:foo`` in the above example.
+    two different process invocations, i.e. ``flow1:foo`` and ``flow2:foo`` in the above example.
 
 .. tip::
     The process fully qualified name can be used as a valid :ref:`process selector <config-process-selectors>` in the
@@ -322,14 +324,17 @@ as any other process in your application.
 Modules
 =======
 
-The new DSL allows the definition module scripts that
+The new DSL allows the definition of *module scripts* that
 can be included and shared across workflow applications.
 
-A module can contain the definition of a function, process and workflow definitions
-as described in the above sections.
+A module script (or simply, module) can contain the definition of functions, processes and workflows
+as described in the previous sections.
 
-Modules include
----------------
+.. note::
+    Functions, processes and workflows are globally referred as *components*.
+
+Module inclusion
+----------------
 
 A component defined in a module script can be imported into another Nextflow script using the ``include`` keyword.
 
@@ -342,18 +347,18 @@ For example::
         foo(data)
     }
 
-The above snippets includes a process with name ``foo`` defined in the module script in the main
-execution context, as such it can be invoked in the ``workflow`` scope.
+The above snippet includes a process with name ``foo`` defined in the module script in the main
+execution context. This way, `foo`` can be invoked in the ``workflow`` scope.
 
 Nextflow implicitly looks for the script file ``./some/module.nf`` resolving the path
 against the *including* script location.
 
-.. note:: Relative paths must begin with the ``./`` prefix.
+.. note:: Relative paths must begin with the ``./`` prefix. Also, the ``include`` statement must be defined **outside** of the workflow definition.
 
 Multiple inclusions
 -------------------
 
-A Nextflow script allows the inclusion of any number of modules. When multiple
+A Nextflow script allows the inclusion of an arbitrary number of modules and components. When multiple
 components need to be included from the same module script, the component names can be
 specified in the same inclusion using the curly brackets notation as shown below::
 
@@ -369,8 +374,8 @@ specified in the same inclusion using the curly brackets notation as shown below
 Module aliases
 --------------
 
-When including a module component it's possible to specify a name *alias*.
-This allows the inclusion and the invocation of the same component multiple times
+When including a module component, it's possible to specify an *alias* with the ``as`` keyword.
+This allows the inclusion and the invocation of components with the same name
 in your script using different names. For example::
 
     include { foo } from './some/module'
@@ -381,7 +386,7 @@ in your script using different names. For example::
         bar(other_data)
     }
 
-The same is possible when including multiple components from the same module script as shown below::
+The same is possible when including the same component multiple times from the same module script as shown below::
 
     include { foo; foo as bar } from './some/module'
 
@@ -444,7 +449,7 @@ The above snippet prints::
     Ciao world!
 
 
-Finally the include option ``params`` allows the specification of one or more parameters without
+Finally, the include option ``params`` allows the specification of one or more parameters without
 inheriting any value from the external environment. 
 
 .. _module-templates:
@@ -514,7 +519,7 @@ Using the new DSL, Nextflow channels are automatically forked when connecting tw
 
 For example::
 
-    Channel
+    channel
         .from('Hello','Hola','Ciao')
         .set{ cheers }
 
@@ -527,8 +532,8 @@ For example::
         .view()
 
 
-The same is valid for the result (channel) of a process execution. Therefore a process output can be used by
-two or more processes without the need to fork them using the :ref:`operator-into` operator, making the
+The same is valid for the result (channel) of a process execution. Therefore a process output can be consumed by
+two or more processes without the need to fork it using the :ref:`operator-into` operator, making the
 writing of workflow scripts more fluent and readable.
 
 
@@ -544,7 +549,7 @@ Nextflow processes and operators can be composed using the ``|`` *pipe* operator
         input: val data
         output: val result
         exec:
-        result = "$data world"
+          result = "$data world"
     }
 
     workflow {
@@ -553,8 +558,8 @@ Nextflow processes and operators can be composed using the ``|`` *pipe* operator
 
 
 
-The above snippet defines a process named ``foo`` then invoke it passing the content of the
-``data`` channel. The result is piped to the :ref:`operator-map` operator which converts each string
+The above snippet defines a process named ``foo`` and invokes it passing the content of the
+``data`` channel. The result is then piped to the :ref:`operator-map` operator which converts each string
 to uppercase and finally, the last :ref:`operator-view` operator prints it.
 
 
@@ -562,7 +567,7 @@ The *and* operator
 ------------------
 
 The ``&`` *and* operator allows feeding of two or more processes with the content of the same
-channel(s) e.g.::
+channel(s). For example::
 
     process foo {
       input: val data
@@ -583,10 +588,10 @@ channel(s) e.g.::
     }
 
 
-In the above snippet the channel emitting the ``Hello`` is piped with the :ref:`operator-map`
-which reverses the string value. Then, the result is passed to either ``foo`` and ``bar``
-processes which are executed in parallel. The result is pair of channels whose content
-is merged into a single channel using the :ref:`operator-mix` operator. Finally the result is printed
+In the above snippet the channel emitting the ``Hello`` string is piped with the :ref:`operator-map`
+which reverses the string value. Then, the result is passed to both ``foo`` and ``bar``
+processes which are executed in parallel. Each process outputs a channel, and the two channels are merged
+into a single channel using the :ref:`operator-mix` operator. Finally the result is printed
 using the :ref:`operator-view` operator.
 
 .. tip::
@@ -612,8 +617,8 @@ DSL2 migration notes
 * DSL2 final version is activated using the declaration ``nextflow.enable.dsl=2`` in place of ``nextflow.preview.dsl=2``.
 * Process inputs of type ``set`` have to be replaced with :ref:`tuple <process-input-tuple>`.
 * Process outputs of type ``set`` have to be replaced with :ref:`tuple <process-out-tuple>`.
-* Process output option ``mode flatten`` is not available anymore. Replace it using the :ref:`operator-flatten` operator on the corresponding output channel.
-* Anonymous and unwrapped includes are not supported anymore. Replace it with a explicit module inclusion. For example::
+* Process output option ``mode flatten`` is no longer available. Replace it using the :ref:`operator-flatten` operator on the corresponding output channel.
+* Anonymous and unwrapped includes are not supported anymore. Replace them with an explicit module inclusion. For example::
 
         include './some/library'
         include bar from './other/library'
@@ -641,7 +646,7 @@ DSL2 migration notes
           tuple X, 'some-file.bam'
          script:
            '''
-           your_command
+           your_command --in $X some-file.bam
            '''
         }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,6 +34,7 @@ class PodOptionsTest extends Specification {
         options.getEnvVars() == [] as Set
         options.getMountSecrets() == [] as Set
         options.getMountConfigMaps() == [] as Set
+        options.getAutomountServiceAccountToken() == true
     }
 
     def 'should set pullPolicy' () {
@@ -223,9 +224,11 @@ class PodOptionsTest extends Specification {
                 [secret: 'x', mountPath: '/x'],
                 [config: 'y', mountPath: '/y'],
                 [volumeClaim: 'z', mountPath: '/z'],
-                [securityContext: [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]],
 
-                [nodeSelector: 'foo=X, bar=Y']
+                [securityContext: [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]],
+                [nodeSelector: 'foo=X, bar=Y'],
+                [automountServiceAccountToken: false],
+                [priorityClassName: 'high-priority']
         ]
 
         PodOptions opts
@@ -287,6 +290,10 @@ class PodOptionsTest extends Specification {
         opts.securityContext.toSpec() == [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]
 
         opts.nodeSelector.toSpec() == [foo: 'X', bar: "Y"]
+
+        opts.getAutomountServiceAccountToken() == false
+
+        opts.getPriorityClassName() == 'high-priority'
     }
 
     def 'should copy image pull policy' (){
@@ -426,11 +433,25 @@ class PodOptionsTest extends Specification {
         opts.getSecurityContext().toSpec() == ctx
     }
 
-    def 'should create pod node select' () {
+    def 'should create pod node selector' () {
         when:
         def opts = new PodOptions([ [nodeSelector: 'foo=1, bar=true, baz=Z'] ])
         then:
         opts.nodeSelector.toSpec() == [foo: '1', bar: 'true', baz: 'Z']
 
+    }
+
+    def 'should set pod automount service token' () {
+        when:
+        def opts = new PodOptions([[automountServiceAccountToken: false]])
+        then:
+        opts.getAutomountServiceAccountToken() == false
+    }
+
+    def 'should set pod priority class name' () {
+        when:
+        def opts = new PodOptions([[priorityClassName: 'high-priority']])
+        then:
+        opts.getPriorityClassName() == 'high-priority'
     }
 }

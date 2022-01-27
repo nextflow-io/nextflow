@@ -674,7 +674,8 @@ workDir             Defines the path where the workflow temporary data is stored
 projectDir          Defines the path where Nextflow projects are downloaded. This must be a path in a shared K8s persistent volume (default: ``<volume-claim-mount-path>/projects``).
 pod                 Allows the definition of one or more pod configuration options such as environment variables, config maps, secrets, etc. It allows the same settings as the :ref:`process-pod` process directive.
 pullPolicy          Defines the strategy to be used to pull the container image e.g. ``pullPolicy: 'Always'``.
-runAsUser           Defines the user ID to be used to run the containers.
+runAsUser           Defines the user ID to be used to run the containers. Shortcut for the ``securityContext`` option.
+securityContext     Defines the `security context <https://kubernetes.io/docs/tasks/configure-pod-container/security-context/>`_ for all pods.
 storageClaimName    The name of the persistent volume claim where store workflow result data.
 storageMountPath    The path location used to mount the persistent volume claim (default: ``/workspace``).
 storageSubPath      The path in the persistent volume to be mounted (default: root).
@@ -924,6 +925,7 @@ NXF_VER                         Defines what version of Nextflow to use.
 NXF_ORG                         Default `organization` prefix when looking for a hosted repository (default: ``nextflow-io``).
 NXF_GRAB                        Provides extra runtime dependencies downloaded from a Maven repository service.
 NXF_OPTS                        Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of ``-Dkey[=value]`` properties.
+NXF_JVM_ARGS                    Allows the setting Java VM options. This is similar to ``NXF_OPTS`` however it's only applied the JVM running Nextflow and not to any java pre-launching commands (requires ``21.12.1-edge`` or later).
 NXF_CLASSPATH                   Allows the extension of the Java runtime classpath with extra JAR files or class folders.
 NXF_ASSETS                      Defines the directory where downloaded pipeline repositories are stored (default: ``$NXF_HOME/assets``)
 NXF_PID_FILE                    Name of the file where the process PID is saved when Nextflow is launched in background.
