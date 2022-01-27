@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -256,6 +256,9 @@ class BashWrapperBuilder {
         if( !isSecretNative() ) {
             binding.secrets_env = getSecretsEnv()
         }
+        else {
+            binding.secrets_env = null
+        }
 
         /*
          * staging input files when required
@@ -292,7 +295,7 @@ class BashWrapperBuilder {
 
     protected String getSecretsEnv() {
         return SecretsLoader.isEnabled()
-                ? SecretsLoader.instance.load() .getSecretEnv()
+                ? SecretsLoader.instance.load() .getSecretsEnv()
                 : null
     }
 

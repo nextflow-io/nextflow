@@ -20,7 +20,6 @@ import com.microsoft.azure.batch.protocol.models.AutoUserScope
 import com.microsoft.azure.batch.protocol.models.AutoUserSpecification
 import com.microsoft.azure.batch.protocol.models.AzureFileShareConfiguration
 import com.microsoft.azure.batch.protocol.models.ElevationLevel
-import com.microsoft.azure.batch.protocol.models.EnvironmentSetting
 import com.microsoft.azure.batch.protocol.models.MountConfiguration
 import com.microsoft.azure.batch.protocol.models.UserIdentity
 
@@ -353,10 +352,7 @@ class AzBatchService implements Closeable {
 
         final slots = computeSlots(task, pool)
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
-        // these env vars help avoid container timeouts, see https://github.com/nextflow-io/nextflow/discussions/2510
-        List<EnvironmentSetting> environmentSettings = new ArrayList<>()
-        environmentSettings << new EnvironmentSetting().withName('DOCKER_CLIENT_TIMEOUT').withValue('120')
-        environmentSettings << new EnvironmentSetting().withName('COMPOSE_HTTP_TIMEOUT').withValue('120')
+
         final taskToAdd = new TaskAddParameter()
                 .withId(taskId)
                 .withUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs))
@@ -365,7 +361,6 @@ class AzBatchService implements Closeable {
                 .withResourceFiles(resourceFileUrls(task,sas))
                 .withOutputFiles(outputFileUrls(task, sas))
                 .withRequiredSlots(slots)
-                .withEnvironmentSettings(environmentSettings)
         client.taskOperations().createTask(jobId, taskToAdd)
         return new AzTaskKey(jobId, taskId)
     }

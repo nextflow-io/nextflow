@@ -6,7 +6,7 @@ Processes
 
 In Nextflow a `process` is the basic processing `primitive` to execute a user script.
 
-The process definition starts with keyword the ``process``, followed by process name and finally the process `body`
+The process definition starts with the keyword ``process``, followed by process name and finally the process `body`
 delimited by curly brackets. The process body must contain a string which represents the command or, more generally,
 a script that is executed by it. A basic process looks like the following example::
 
@@ -1361,8 +1361,6 @@ The directives are:
 * `storeDir`_
 * `tag`_
 * `time`_
-* `validExitStatus`_
-
 
 
 accelerator
@@ -1664,8 +1662,7 @@ For example::
        <your command string here>
     }
 
-.. tip:: By definition a command script fails when it ends with a non-zero exit status. To change this behavior
-  see `validExitStatus`_.
+.. tip:: By definition a command script fails when it ends with a non-zero exit status.
 
 The ``retry`` `error strategy`, allows you to re-submit for execution a process
 returning an error condition. For example::
@@ -1981,8 +1978,12 @@ The ``pod`` directive allows the definition of the following options:
 ``volumeClaim: <V>, mountPath: </absolute/path>`` Mounts a `Persistent volume claim <https://kubernetes.io/docs/concepts/storage/persistent-volumes/>`_ with name ``V`` to the specified path location. Use the optional `subPath` parameter to mount a directory inside the referenced volume instead of its root. The volume may be mounted with `readOnly: true`, but is read/write by default.
 ``imagePullPolicy: <V>``                          Specifies the strategy to be used to pull the container image e.g. ``imagePullPolicy: 'Always'``.
 ``imagePullSecret: <V>``                          Specifies the secret name to access a private container image registry. See `Kubernetes documentation <https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod>`_ for details.
-``runAsUser: <UID>``                              Specifies the user ID to be used to run the container.
-``nodeSelector: <V>``                             Specifies which node the process will run on. See `Kubernetes nodeSelector <https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector>`_ for details.
+``runAsUser: <UID>``                              Specifies the user ID to be used to run the container. Shortcut for the ``securityContext`` option.
+``securityContext: <V>``                          Specifies the pod security context. See `Kubernetes security context <https://kubernetes.io/docs/tasks/configure-pod-container/security-context/>`_ for details.
+``nodeSelector: <V>``                             Specifies which node the process will run on. See `Kubernetes nodeSelector <https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector>`_ for details.
+``affinity: <V>``                                 Specifies affinity for which nodes the process should run on. See `Kubernetes affinity <https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity>`_ for details.
+``automountServiceAccountToken: <V>``             Specifies whether to `automount service account token <https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/>`_ into process pods. If ``V`` is true, service account token is automounted into task pods (default).
+``priorityClassName: <V>``                        Specifies the `priority class name <https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/>`_ for pods.
 ================================================= =================================================
 
 When defined in the Nextflow configuration file, a pod setting can be defined using the canonical
@@ -2362,37 +2363,6 @@ Multiple units can be used in a single declaration, for example: ``'1day 6hours 
   :ref:`condor-executor` and :ref:`awsbatch-executor` executors.
 
 See also: `cpus`_, `memory`_, `queue`_ and `Dynamic computing resources`_.
-
-
-.. _process-validExitStatus:
-
-validExitStatus
----------------
-
-.. warning::
-    This feature has been deprecated and will be removed in a future release.
-
-A process is terminated when the executed command returns an error exit status. By default any error status
-other than ``0`` is interpreted as an error condition.
-
-The ``validExitStatus`` directive allows you to fine control which error status will represent a successful command execution.
-You can specify a single value or multiple values as shown in the following example::
-
-
-    process returnOk {
-        validExitStatus 0,1,2
-
-         script:
-         """
-         echo Hello
-         exit 1
-         """
-    }
-
-
-In the above example, although the command script ends with a ``1`` exit status, the process
-will not return an error condition because the value ``1`` is declared as a `valid` status in
-the ``validExitStatus`` directive.
 
 
 Dynamic directives

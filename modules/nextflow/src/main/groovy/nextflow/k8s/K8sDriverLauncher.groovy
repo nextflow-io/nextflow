@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,6 +53,16 @@ class K8sDriverLauncher {
      * Container image to be used for the Nextflow driver pod
      */
     private String podImage
+
+    /** 
+     * Request CPUs to be used for the Nextflow driver pod
+     */
+    private int headCpus
+
+    /** 
+     * Request memory to be used for the Nextflow driver pod
+     */
+    private String headMemory
 
     /**
      * Nextflow execution run name
@@ -474,6 +484,8 @@ class K8sDriverLauncher {
             .withEnv( PodEnv.value('NXF_ASSETS', k8sConfig.getProjectDir()) )
             .withEnv( PodEnv.value('NXF_EXECUTOR', 'k8s'))
             .withEnv( PodEnv.value('NXF_ANSI_LOG', 'false'))
+            .withMemory(headMemory?:"")
+            .withCpus(headCpus)
             .build()
 
         // note: do *not* set the work directory because it may need to be created  by the init script

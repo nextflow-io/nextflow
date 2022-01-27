@@ -32,6 +32,9 @@ class DummySecretsProvider implements SecretsProvider {
     }
 
     @Override
+    boolean activable() { true }
+
+    @Override
     SecretsProvider load() {
         return this
     }
@@ -52,14 +55,14 @@ class DummySecretsProvider implements SecretsProvider {
     }
 
     @Override
-    Set<String> listSecretNames() {
+    Set<String> listSecretsNames() {
         return target.keySet()
     }
 
     @Override
     void close() throws IOException { }
 
-    String getSecretEnv() {
+    String getSecretsEnv() {
         String result = ''
         target.each { k,v -> result += "export $k=$v\n" }
         return result

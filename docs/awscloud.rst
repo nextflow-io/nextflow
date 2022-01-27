@@ -329,6 +329,10 @@ configuration as shown below::
 
 Replace the path above with the one matching the location where ``aws`` tool is installed in your AMI.
 
+.. warning:: The grandparent directory of the ``aws`` tool will be mounted into the container at the same path as the host,
+  e.g. ``/home/ec2-user/miniconda``, which will shadow existing files in the container.
+  Ensure you use a path that is not already present in the container.
+
 .. note:: Using a version of Nextflow prior 19.07.x the config setting `executor.awscli` should be used
   instead of `aws.batch.cliPath`.
 

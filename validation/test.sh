@@ -74,7 +74,7 @@ fi
 #
 # Azure Batch tests
 #
-if [ "$AZURE_BATCH_ACCOUNT_KEY" ]; then
+if [ "$AZURE_BATCH_ACCOUNT_KEY" ] && [[ ${TEST_JDK} == 11 ]]; then
   echo "Azure batch tests"
   bash azure.sh
 else

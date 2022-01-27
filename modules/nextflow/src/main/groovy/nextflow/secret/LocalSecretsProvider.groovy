@@ -26,6 +26,7 @@ import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.util.CacheHelper
@@ -39,6 +40,7 @@ import nextflow.util.CacheHelper
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class LocalSecretsProvider implements SecretsProvider, Closeable {
 
@@ -54,6 +56,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
 
     LocalSecretsProvider() {
         storeFile = makeStoreFile()
+        log.debug "Secrets store: $storeFile"
         secretsMap = makeSecretsSet()
     }
 
@@ -76,6 +79,9 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
             }
         })
     }
+
+    @Override
+    boolean activable() { true }
 
     /**
      * Load secrets from the stored json file
@@ -118,7 +124,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
         }
     }
 
-    Set<String> listSecretNames() {
+    Set<String> listSecretsNames() {
         return secretsMap.keySet()
     }
 
@@ -153,7 +159,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
     }
 
     @Override
-    String getSecretEnv() {
+    String getSecretsEnv() {
         final tmp = makeTempSecretsFile()
         return tmp ? "source $tmp" : null
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,6 +66,8 @@ class PodSpecBuilder {
 
     String serviceAccount
 
+    boolean automountServiceAccountToken = true
+
     AcceleratorResource accelerator
 
     Collection<PodMountSecret> secrets = []
@@ -79,6 +81,10 @@ class PodSpecBuilder {
     PodSecurityContext securityContext
 
     PodNodeSelector nodeSelector
+
+    Map affinity
+
+    String priorityClassName
 
     /**
      * @return A sequential volume unique identifier
@@ -252,8 +258,16 @@ class PodSpecBuilder {
         // -- security context
         if( opts.securityContext )
             securityContext = opts.securityContext
+        // -- node selector
         if( opts.nodeSelector )
             nodeSelector = opts.nodeSelector
+        // -- affinity
+        if( opts.affinity )
+            affinity = opts.affinity
+        // -- automount service account token
+        automountServiceAccountToken = opts.automountServiceAccountToken
+        // -- priority class name
+        priorityClassName = opts.priorityClassName
 
         return this
     }
@@ -309,14 +323,23 @@ class PodSpecBuilder {
         if( nodeSelector )
             spec.nodeSelector = nodeSelector.toSpec()
 
+        if( affinity )
+            spec.affinity = affinity
+
         if( this.serviceAccount )
             spec.serviceAccountName = this.serviceAccount
+
+        if( ! this.automountServiceAccountToken )
+            spec.automountServiceAccountToken = false
 
         if( securityContext )
             spec.securityContext = securityContext.toSpec()
 
         if( imagePullSecret )
             spec.imagePullSecrets = createPullSecret()
+
+        if( priorityClassName )
+            spec.priorityClassName = priorityClassName
 
         // add labels
         if( labels )

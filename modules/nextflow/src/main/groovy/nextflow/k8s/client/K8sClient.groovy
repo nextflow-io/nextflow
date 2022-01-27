@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -209,7 +209,7 @@ class K8sClient {
                 // this may happen when K8s node is shutdown and the pod is evicted
                 // therefore process exception is thrown so that the failure
                 // can be managed by the nextflow as re-triable execution
-                throw new ProcessFailedException("Unable to find pod $name - The pod may be evicted by a node shutdown event")
+                throw new NodeTerminationException("Unable to find pod $name - The pod may be evicted by a node shutdown event")
             }
             throw err
         }
