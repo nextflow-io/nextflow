@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,6 @@
  */
  
 process foo {
-  validExitStatus 100
   output:
   val( task.exitStatus ) into ch1
   set val( record.foo ), val( record.bar ) into ch2
@@ -25,7 +24,7 @@ process foo {
   script:
   record = [foo:'aaa', bar: 'bbb']
   """
-  exit 100
+  exit 0
   """
 }
 

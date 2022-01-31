@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Model a buffer for downlod chunk
+ * Model a buffer for download chunk
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

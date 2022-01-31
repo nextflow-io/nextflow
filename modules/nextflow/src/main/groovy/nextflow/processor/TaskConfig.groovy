@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +43,7 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TaskConfig extends LazyMap implements Cloneable {
 
-    static private final List<Integer> EXIT_ZERO = [0]
+    static public final EXIT_ZERO = 0
 
     private transient Map cache = new LinkedHashMap(20)
 
@@ -193,17 +193,6 @@ class TaskConfig extends LazyMap implements Cloneable {
         }
 
         return value != null && value.toString().toLowerCase() in Const.BOOL_YES
-    }
-
-    List<Integer> getValidExitStatus() {
-        def result = get('validExitStatus')
-        if( result instanceof List<Integer> )
-            return result as List<Integer>
-
-        if( result != null )
-            return [result as Integer]
-
-        return EXIT_ZERO
     }
 
     ErrorStrategy getErrorStrategy() {

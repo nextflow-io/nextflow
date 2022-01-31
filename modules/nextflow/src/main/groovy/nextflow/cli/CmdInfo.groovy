@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,10 +28,10 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
+import nextflow.plugin.DefaultPlugins
 import nextflow.scm.AssetManager
 import nextflow.util.MemoryUnit
 import org.yaml.snakeyaml.Yaml
-
 /**
  * CLI sub-command INFO
  *
@@ -236,6 +236,11 @@ class CmdInfo extends CmdBase {
         // file system
         result << BLANK << "File systems: "
         result << FileSystemProvider.installedProviders().collect { it.scheme }.join(', ')
+        result << NEWLINE
+
+        // plugins
+        result << BLANK << "Core plugins: "
+        result << DefaultPlugins.INSTANCE.toSortedString(', ')
         result << NEWLINE
 
         // JVM options

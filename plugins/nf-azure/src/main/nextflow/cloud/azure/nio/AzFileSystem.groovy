@@ -408,8 +408,19 @@ class AzFileSystem extends FileSystem {
 
     @PackageScope
     void copy(AzPath source, AzPath target) {
+        final sasToken = provider.getSasToken()
+        String sourceUrl = source.blobClient().getBlobUrl()
+
+        if (sasToken != null) {
+            if (sourceUrl.contains('?')){
+                sourceUrl = String.format("%s&%s", sourceUrl, sasToken);
+            } else {
+                sourceUrl = String.format("%s?%s", sourceUrl, sasToken);
+            }
+        }
+
         SyncPoller<BlobCopyInfo, Void> pollResponse =
-                target.blobClient().beginCopy( source.blobClient().getBlobUrl(), null )
+                target.blobClient().beginCopy( sourceUrl, null )
         pollResponse.waitForCompletion(Duration.ofSeconds(maxCopyDurationSecs))
     }
 
