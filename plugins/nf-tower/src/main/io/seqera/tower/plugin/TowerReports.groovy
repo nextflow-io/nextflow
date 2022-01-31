@@ -12,6 +12,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.stream.Collectors
@@ -71,11 +72,11 @@ class TowerReports {
                     if (lastTotalReports.get() < this.totalReports.get()) {
                         try {
                             final total = this.totalReports.get()
-                            FileHelper.copyPath(launchReportsPath, workReportsPath)
+                            FileHelper.copyPath(launchReportsPath, workReportsPath, StandardCopyOption.REPLACE_EXISTING)
                             lastTotalReports.set(total)
                             log.debug("Reports file sync to workdir with ${total} reports")
                         } catch (IOException e) {
-                            log.error("Copying reports file ${launchReportsPath} to the workdir.")
+                            log.error("Error copying reports file ${launchReportsPath} to the workdir -- ${e.message}")
                         }
                     }
                 }
@@ -110,7 +111,7 @@ class TowerReports {
      */
     protected void loadReportPatterns(Path launchDir, String workflowId) {
         processReports = false
-        Path towerConfigPath = launchDir.resolve("nf-${workflowId}-tower.yml")
+        Path towerConfigPath = launchDir.resolve("tower.yml")
 
         // Check if Tower config file is define at assets
         if (!Files.exists(towerConfigPath)) {
