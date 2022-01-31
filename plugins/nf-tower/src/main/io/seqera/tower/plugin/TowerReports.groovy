@@ -2,6 +2,7 @@ package io.seqera.tower.plugin
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import groovy.yaml.YamlRuntimeException
 import groovy.yaml.YamlSlurper
 import groovyx.gpars.agent.Agent
 import nextflow.Session
@@ -15,7 +16,6 @@ import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.stream.Collectors
 
 /**
  * If reports are defined at `nf-<workflow_id>-tower.yml`, collects all published files
@@ -111,7 +111,7 @@ class TowerReports {
      */
     protected void loadReportPatterns(Path launchDir, String workflowId) {
         processReports = false
-        Path towerConfigPath = launchDir.resolve("tower.yml")
+        Path towerConfigPath = launchDir.resolve("nf-${workflowId}-tower.yml")
 
         // Check if Tower config file is define at assets
         if (!Files.exists(towerConfigPath)) {
@@ -120,15 +120,20 @@ class TowerReports {
 
         // Load reports definitions if available
         if (towerConfigPath && Files.exists(towerConfigPath)) {
-            final towerConfig = yamlSlurper.parse(towerConfigPath)
-            this.reportsEntries = new ArrayList<>()
-            if (towerConfig instanceof Map && towerConfig.containsKey("reports")) {
-                Map<String, Map<String, String>> reports = (Map<String, Map<String, String>>) towerConfig.get("reports")
-                for (final e : reports) {
-                    this.reportsEntries.add(e)
+            try {
+                final towerConfig = yamlSlurper.parse(towerConfigPath)
+                this.reportsEntries = new ArrayList<>()
+                if (towerConfig instanceof Map && towerConfig.containsKey("reports")) {
+                    Map<String, Map<String, String>> reports = (Map<String, Map<String, String>>) towerConfig.get("reports")
+                    for (final e : reports) {
+                        this.reportsEntries.add(e)
+                    }
                 }
+                processReports = this.reportsEntries.size() > 0
+            } catch (YamlRuntimeException e) {
+                final msg = e?.cause?.message ?: e.message
+                throw new IllegalArgumentException("Invalid tower.yml format -- ${msg}")
             }
-            processReports = this.reportsEntries.size() > 0
         }
     }
 
