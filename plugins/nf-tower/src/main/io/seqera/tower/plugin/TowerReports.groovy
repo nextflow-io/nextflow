@@ -144,9 +144,7 @@ class TowerReports {
             if (!matchers) {
                 // Initialize report matchers on first event to use the
                 // path matcher of the destination filesystem
-                matchers = reportsEntries.stream()
-                        .map(p -> FileHelper.getPathMatcherFor("glob:**/${p.key}", destination.fileSystem))
-                        .collect(Collectors.toList())
+                matchers = reportsEntries.collect {FileHelper.getPathMatcherFor(convertToGlobPattern(it.key), destination.fileSystem) as PathMatcher}
             }
 
             for (int p=0; p < matchers.size(); p++) {
@@ -163,5 +161,10 @@ class TowerReports {
                 }
             }
         }
+    }
+
+    protected static String convertToGlobPattern(String reportKey) {
+        final prefix = reportKey.startsWith("**/") ? "" : "**/"
+        return "glob:${prefix}${reportKey}"
     }
 }
