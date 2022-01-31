@@ -53,7 +53,8 @@ class TowerReports {
      */
     void flowCreate(String workflowId) {
         Path launchDir = Paths.get('.').toRealPath()
-        loadReportPatterns(launchDir, workflowId)
+        reportsEntries = parseReportEntries(launchDir, workflowId)
+        processReports = reportsEntries.size() > 0
         if (processReports) {
             final fileName = System.getenv().getOrDefault("TOWER_REPORTS_FILE", "nf-${workflowId}-reports.tsv".toString()) as String
             this.launchReportsPath = launchDir.resolve(fileName)
@@ -104,13 +105,12 @@ class TowerReports {
     }
 
     /**
-     * Load all report glob patterns from tower config yaml file.
+     * Load all report entries from tower config yaml file.
      *
      * @param launchDir Nextflow launch directory
      * @param workflowId Tower workflow ID
      */
-    protected void loadReportPatterns(Path launchDir, String workflowId) {
-        processReports = false
+    protected List<Map.Entry<String, Map<String, String>>> parseReportEntries(Path launchDir, String workflowId) {
         Path towerConfigPath = launchDir.resolve("nf-${workflowId}-tower.yml")
 
         // Check if Tower config file is define at assets
@@ -119,22 +119,23 @@ class TowerReports {
         }
 
         // Load reports definitions if available
+        List<Map.Entry<String, Map<String, String>>> reportsEntries = []
         if (towerConfigPath && Files.exists(towerConfigPath)) {
             try {
-                final towerConfig = yamlSlurper.parse(towerConfigPath)
-                this.reportsEntries = new ArrayList<>()
+                final towerConfig = this.yamlSlurper.parse(towerConfigPath)
                 if (towerConfig instanceof Map && towerConfig.containsKey("reports")) {
                     Map<String, Map<String, String>> reports = (Map<String, Map<String, String>>) towerConfig.get("reports")
                     for (final e : reports) {
-                        this.reportsEntries.add(e)
+                        reportsEntries.add(e)
                     }
                 }
-                processReports = this.reportsEntries.size() > 0
             } catch (YamlRuntimeException e) {
                 final msg = e?.cause?.message ?: e.message
                 throw new IllegalArgumentException("Invalid tower.yml format -- ${msg}")
             }
         }
+
+        return reportsEntries
     }
 
     /**
