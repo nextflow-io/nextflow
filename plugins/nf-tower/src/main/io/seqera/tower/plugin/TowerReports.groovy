@@ -52,7 +52,7 @@ class TowerReports {
      * @param workflowId Tower workflow ID
      */
     void flowCreate(String workflowId) {
-        Path launchDir = Paths.get('.').toRealPath()
+        Path launchDir = getLaunchDir()
         reportsEntries = parseReportEntries(launchDir, workflowId)
         processReports = reportsEntries.size() > 0
         if (processReports) {
@@ -88,6 +88,15 @@ class TowerReports {
                 this.timer.schedule(task, oneMinute, oneMinute)
             }
         }
+    }
+
+    /**
+     * Retrieve current launch dir
+     *
+     * @return Launch directory path
+     */
+    protected Path getLaunchDir() {
+        return Paths.get('.').toRealPath()
     }
 
     /**
