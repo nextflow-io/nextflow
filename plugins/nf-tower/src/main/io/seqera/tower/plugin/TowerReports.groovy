@@ -41,7 +41,6 @@ class TowerReports {
     TowerReports(Session session) {
         this.session = session
         this.yamlSlurper = new YamlSlurper()
-        this.timer = new Timer()
         this.totalReports = new AtomicInteger(0)
     }
 
@@ -83,6 +82,7 @@ class TowerReports {
 
                 // Copy maximum 1 time per minute
                 final oneMinute = Duration.ofMinutes(1).toMillis()
+                this.timer = new Timer()
                 this.timer.schedule(task, oneMinute, oneMinute)
             }
         }
@@ -93,7 +93,9 @@ class TowerReports {
      */
     void flowComplete() {
         if (processReports) {
-            timer.cancel()
+            if (timer) {
+                timer.cancel()
+            }
             writer.await()
             reportsFile.flush()
             reportsFile.close()
