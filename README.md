@@ -185,8 +185,8 @@ Build from source
 Required dependencies
 ---------------------
 
-* Compiler Java 8 or later
-* Runtime Java 8 or later
+* Compiler Java 11 or later
+* Runtime Java 11 or later
 
 Build from source
 -----------------
