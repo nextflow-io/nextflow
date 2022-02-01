@@ -17,6 +17,7 @@
 
 package nextflow.cli
 
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.regex.Pattern
 
@@ -530,9 +531,6 @@ class CmdRun extends CmdBase implements HubOptions {
     private Path validateParamsFile(String file) {
 
         def result = FileHelper.asPath(file)
-        if( !result.exists() )
-            throw new AbortOperationException("Specified params file does not exists: $file")
-
         def ext = result.getExtension()
         if( !VALID_PARAMS_FILE.contains(ext) )
             throw new AbortOperationException("Not a valid params file extension: $file -- It must be one of the following: ${VALID_PARAMS_FILE.join(',')}")
@@ -570,6 +568,9 @@ class CmdRun extends CmdBase implements HubOptions {
             def json = (Map)new JsonSlurper().parseText(text)
             result.putAll(json)
         }
+        catch (NoSuchFileException | FileNotFoundException e) {
+            throw new AbortOperationException("Specified params file does not exists: $file")
+        }
         catch( Exception e ) {
             throw new AbortOperationException("Cannot parse params file: $file - Cause: ${e.message}", e)
         }
@@ -580,6 +581,9 @@ class CmdRun extends CmdBase implements HubOptions {
             def text = configVars ? replaceVars0(file.text, configVars) : file.text
             def yaml = (Map)new Yaml().load(text)
             result.putAll(yaml)
+        }
+        catch (NoSuchFileException | FileNotFoundException e) {
+            throw new AbortOperationException("Specified params file does not exists: $file")
         }
         catch( Exception e ) {
             throw new AbortOperationException("Cannot parse params file: $file", e)
