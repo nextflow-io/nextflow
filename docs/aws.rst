@@ -1,4 +1,4 @@
-.. _awscloud-page:
+.. _aws-page:
 
 ************
 Amazon Cloud
@@ -28,6 +28,7 @@ See :ref:`AWS configuration<config-aws>` for more details.
   it spares you from managing/distributing AWS keys explicitly.
   Read the `IAM Roles <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html>`_ documentation
   and `this blog post <https://aws.amazon.com/blogs/security/granting-permission-to-launch-ec2-instances-with-iam-roles-passrole-permission/>`_ for more details.
+
 
 AWS IAM policies
 =================
@@ -85,7 +86,7 @@ Nextflow requires policies also to access `S3 buckets <https://aws.amazon.com/s3
 Depending on the pipeline configuration, the above actions can be done all in a single bucket but, more likely, spread across multiple
 buckets. Once the list of buckets used by the pipeline is identified, there are two alternative ways to give Nextflow access to these buckets:
 
-1. grant access to all buckets by attaching the policy "s3:*" to the AIM identity. This works only if buckets do not set their own access policies (see point 2);
+1. grant access to all buckets by attaching the policy ``"s3:*"`` to the AIM identity. This works only if buckets do not set their own access policies (see point 2);
 2. for a more fine grained control, assign to each bucket the following policy (replace the placeholders with the actual values)::
 
 	{
@@ -126,7 +127,8 @@ buckets. Once the list of buckets used by the pipeline is identified, there are 
 See the `bucket policy documentation <https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-policy.html>`_
 for additional details.
 
-.. _awscloud-batch:
+
+.. _aws-batch:
 
 AWS Batch
 =========
@@ -142,7 +144,7 @@ of the jobs submitted.
 Nextflow provides a built-in support for AWS Batch which allows the seamless deployment of a Nextflow pipeline
 in the cloud offloading the process executions as Batch jobs.
 
-.. _awscloud-batch-config:
+.. _aws-batch-config:
 
 AWS CLI
 --------
@@ -152,10 +154,9 @@ which the job runs in order to stage the required input files and to copy back t
 
 The ``aws`` tool can be made available in the container in two ways:
 
-1 - installed in the Docker image(s) used during the pipeline execution
+1. installed in the Docker image(s) used during the pipeline execution,
 
-2 - installed in a custom `AMI (Amazon Machine Image) <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html>`_ to
-use in place of the default AMI when configuring AWS Batch (see next section).
+2. installed in a custom `AMI (Amazon Machine Image) <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html>`_ to use in place of the default AMI when configuring AWS Batch (see next section).
 
 The latter approach is preferred because it allows the use of existing Docker images without the need to add
 the AWS CLI tool to them.
@@ -165,32 +166,30 @@ See the sections below to learn how to create a custom AMI and install the AWS C
 Get started
 -------------
 
-1 - In the AWS Console, create a `Compute environment <http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html>`_ (CE) in your AWS Batch Service.
-    1.1 - if are using a custom AMI (see following sections), the AMI ID must be specified in the CE configuration
-    1.2 - make sure to select an AMI (either custom or existing) with Docker installed (see following sections)
-    1.3 - make sure the policy ``AmazonS3FullAccess`` (granting access to S3 buckets) is attached to the instance role configured for the CE
-    1.4 - if you plan to use Docker images from Amazon ECS container, make sure the ``AmazonEC2ContainerServiceforEC2Role`` policy is also attached to the instance role
+1. In the AWS Console, create a `Compute environment <http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html>`_ (CE) in your AWS Batch Service.
 
-2 - In the AWS Console, create (at least) one `Job Queue <https://docs.aws.amazon.com/batch/latest/userguide/job_queues.html>`_
-and bind it to the Compute environment
+    a. If you are using a custom AMI (see following sections), the AMI ID must be specified in the CE configuration
+    b. Make sure to select an AMI (either custom or existing) with Docker installed (see following sections)
+    c. Make sure the policy ``AmazonS3FullAccess`` (granting access to S3 buckets) is attached to the instance role configured for the CE
+    d. If you plan to use Docker images from Amazon ECS container, make sure the ``AmazonEC2ContainerServiceforEC2Role`` policy is also attached to the instance role
 
-3 - In the AWS Console, create an S3 storage's bucket for the bucket-dir (see below) and others for the input data and
-results, if/as needed
+2. In the AWS Console, create (at least) one `Job Queue <https://docs.aws.amazon.com/batch/latest/userguide/job_queues.html>`_ and bind it to the Compute environment.
 
-4 - Make sure your pipeline processes specifies one or more Docker containers by using the :ref:`process-container` directive.
+3. In the AWS Console, create an S3 storage's bucket for the bucket-dir (see below) and others for the input data and results, as needed.
 
-5 - Container images need to be published in a Docker registry such as `Docker Hub <https://hub.docker.com/>`_,
-`Quay <https://quay.io/>`_ or `ECS Container Registry <https://aws.amazon.com/ecr/>`_ that can be reached by ECS Batch.
+4. Make sure your pipeline processes specifies one or more Docker containers by using the :ref:`process-container` directive.
+
+5. Container images need to be published in a Docker registry such as `Docker Hub <https://hub.docker.com/>`_, `Quay <https://quay.io/>`_ or `ECS Container Registry <https://aws.amazon.com/ecr/>`_ that can be reached by ECS Batch.
 
 Configuration
 -------------
 
 When configuring your pipeline:
 
-1 - import the `nf-amazon` plugin
-2 - specify the AWS Batch :ref:`executor<awsbatch-executor>`
-3 - specify one or more AWS Batch queues for the execution by using the :ref:`process-queue` directive
-4 - specify the AWS job container properties by using the :ref:`process-containerOptions` directive.
+1. import the `nf-amazon` plugin
+2. specify the AWS Batch :ref:`executor<awsbatch-executor>`
+3. specify one or more AWS Batch queues for the execution by using the :ref:`process-queue` directive
+4. specify the AWS job container properties by using the :ref:`process-containerOptions` directive.
 
 An example ``nextflow.config`` file is shown below::
 
@@ -215,6 +214,7 @@ An example ``nextflow.config`` file is shown below::
 
 Different queues bound to the same or different Compute environments can be configured according to each process' requirements.
 
+
 Container Options
 =================
 
@@ -222,7 +222,6 @@ As of version ``21.12.1-edge``, the use of the Nextflow :ref:`process-containerO
 the properties of the container execution associated with each Batch job.
 
 Not all the standard container options are supported by AWS Batch. These are the options accepted ::
-
 
     -e, --env string
         Set environment variables (format: <name> or <name>=<value>)
@@ -255,25 +254,26 @@ Few examples::
 
   containerOptions '--ulimit nofile=1280:2560 --ulimit nproc=16:32 --privileged'
 
-
 Check the `AWS doc <https://docs.aws.amazon.com/batch/latest/APIReference/API_ContainerProperties.html>`_ for further details.
+
 
 Custom AMI
 ==========
+
 There are several reasons why you might need to create your own `AMI (Amazon Machine Image) <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html>`_
 to use in your Compute environments. Typically:
 
-1 - you do not want to modify your existing Docker images and prefer to install the CLI tool on the hosting environment
+- You do not want to modify your existing Docker images and prefer to install the CLI tool on the hosting environment
 
-2 - the existing AMI (selected from the marketplace) does not have Docker installed
+- The existing AMI (selected from the marketplace) does not have Docker installed
 
-3 - you need to attach a larger storage to your EC2 instance (the default ECS instance AMI has only a 30G storage
-volume which may not be enough for most data analysis pipelines)
+- You need to attach a larger storage to your EC2 instance (the default ECS instance AMI has only a 30G storage volume which may not be enough for most data analysis pipelines)
 
-4 - you need to install additional software, not available in the Docker image used to execute the job
+- You need to install additional software, not available in the Docker image used to execute the job
 
 Create your custom AMI
 ----------------------
+
 In the EC2 Dashboard, click the `Launch Instance` button, then choose `AWS Marketplace` in the left pane and enter
 `ECS` in the search box. In result list select `Amazon ECS-Optimized Amazon Linux 2 AMI`, then continue as usual to
 configure and launch the instance.
@@ -317,7 +317,6 @@ When complete, verify that the AWS CLI package works correctly::
 
     $ ./miniconda/bin/aws --version
     aws-cli/1.19.79 Python/3.8.5 Linux/4.14.231-173.361.amzn2.x86_64 botocore/1.20.79
-
 
 .. note:: The ``aws`` tool will be placed in a directory named ``bin`` in the main installation folder.
   Modifying this directory structure, after the installation, will cause the tool to not work properly.
@@ -378,6 +377,7 @@ To test the installation::
 .. note:: The ``AmazonEC2ContainerServiceforEC2Role`` policy must be attached to the instance role in order to be able to
     connect the EC2 instance created by the Compute Environment to the ECS container.
 
+
 Jobs & Execution
 ================
 
@@ -397,7 +397,6 @@ directive and specifing, in place of the container image name, the Job definitio
 
   process.container = 'job-definition://your-job-definition-name'
 
-
 Pipeline execution
 ------------------
 
@@ -409,7 +408,6 @@ The pipeline execution must specifies a AWS Storage bucket where jobs intermedia
 ``-bucket-dir`` command line options. For example::
 
   nextflow run my-pipeline -bucket-dir s3://my-bucket/some/path
-
 
 .. warning::
   The bucket path should include at least a top level directory name e.g. use ``s3://my-bucket/work``
@@ -423,9 +421,8 @@ of hybrid workloads in which some jobs are execute in the local computer or loca
 some jobs are offloaded to AWS Batch service.
 
 To enable this feature use one or more :ref:`config-process-selectors` in your Nextflow configuration file to apply
-the AWS Batch :ref:`configuration <awscloud-batch-config>` only to a subset of processes in your workflow.
+the AWS Batch :ref:`configuration <aws-batch-config>` only to a subset of processes in your workflow.
 For example::
-
 
   aws {
       region = 'eu-west-1'
@@ -441,7 +438,6 @@ For example::
         container = 'my/image:tag'
     }
   }
-
 
 The above configuration snippet will deploy the execution with AWS Batch only for processes annotated
 with the :ref:`process-label` ``bigTask``, the remaining process with run in the local computer.
@@ -469,7 +465,6 @@ or to specify *read-only* option. For example::
     }
   }
 
-
 The above snippet defines two volume mounts the jobs executed in your pipeline. The first mounting the
 host path ``/tmp`` in the same path in the container and using *read-write* access mode. The second
 mounts the path ``/host/path`` in the host environment to the ``/mnt/path`` in the container using the
@@ -483,7 +478,6 @@ Troubleshooting
 **Problem**: The Pipeline execution terminates with an AWS error message similar to the one shown below::
 
     JobQueue <your queue> not found
-
 
 Make sure you have defined a AWS region in the Nextflow configuration file and it matches the region
 in which your Batch environment has been created.
@@ -517,6 +511,7 @@ the docker service or container configuration, network status, etc.
 
 This `AWS page <https://aws.amazon.com/premiumsupport/knowledge-center/batch-job-stuck-runnable-status/>`_ provides several
 resolutions and tips to investigate and work around the issue.
+
 
 Advanced configuration
 ======================

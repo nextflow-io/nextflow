@@ -21,16 +21,12 @@ Contents:
    config
    dsl2
    cli
-   awscloud
+   container
+   conda
+   aws
    amazons3
    azure
    google
-   conda
-   docker
-   shifter
-   singularity
-   podman
-   charliecloud
    ignite
    kubernetes
    tracing

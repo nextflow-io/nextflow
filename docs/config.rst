@@ -27,7 +27,7 @@ first override the same ones that may appear in the second one, and so on.
   ``-C <config file>``.
 
 Config syntax
---------------
+-------------
 
 A Nextflow configuration file is a simple text file containing a set of properties defined using the syntax::
 
@@ -37,13 +37,11 @@ Please note, string values need to be wrapped in quotation characters while numb
 Also note that values are typed, meaning for example that, ``1`` is different from ``'1'``, since the first is interpreted
 as the number one, while the latter is interpreted as a string value.
 
-
-Config Variables
+Config variables
 ----------------
 
 Configuration properties can be used as variables in the configuration file itself, by using the usual
 ``$propertyName`` or ``${expression}`` syntax.
-
 
 For example::
 
@@ -59,13 +57,11 @@ not defined in the Nextflow configuration file(s) is supposed to be a reference 
 So, in the above example the property ``customPath`` is defined as the current system ``PATH`` to which
 the string ``/my/app/folder`` is appended.
 
-
 Config comments
-------------------
+---------------
 
 Configuration files use the same conventions for comments used by the Groovy or Java programming languages. Thus, use ``//`` to comment
 a single line or ``/*`` .. ``*/`` to comment a block on multiple lines.
-
 
 Config include
 --------------
@@ -96,460 +92,6 @@ following example::
         q = 'another string ..'
    }
 
-
-.. _config-env:
-
-Scope `env`
------------
-
-The ``env`` scope allows the definition one or more variable that will be exported in the environment where the
-workflow tasks will be executed.
-
-Simply prefix your variable names with the ``env`` scope or surround them by curly brackets, as shown below::
-
-   env.ALPHA = 'some value'
-   env.BETA = "$HOME/some/path"
-
-   env {
-        DELTA = 'one more'
-        GAMMA = "/my/path:$PATH"
-   }
-
-.. tip:: In the above example, variables like `$HOME` and `$PATH` are evaluated when the workflow is launched. If
-  you want these variables to be evaluated during task execution, escape them with `\$`. This difference is important
-  for variables like `$PATH`, which may be very different in the workflow environment versus the task environment.
-
-
-Scope `params`
---------------
-
-The ``params`` scope allows you to define parameters that will be accessible in the pipeline script. Simply prefix the
-parameter names with the ``params`` scope or surround them by curly brackets, as shown below::
-
-     params.custom_param = 123
-     params.another_param = 'string value .. '
-
-     params {
-
-        alpha_1 = true
-        beta_2 = 'another string ..'
-
-     }
-
-
-
-.. _config-process:
-
-Scope `process`
----------------
-
-The ``process`` configuration scope allows you to provide the default configuration for the processes in your pipeline.
-
-You can specify here any property described in the :ref:`process directive<process-directives>` and the executor sections.
-For examples::
-
-  process {
-    executor='sge'
-    queue='long'
-    clusterOptions = '-pe smp 10 -l virtual_free=64G,h_rt=30:00:00'
-  }
-
-
-By using this configuration all processes in your pipeline will be executed through the SGE cluster, with the specified
-settings.
-
-.. _config-process-selectors:
-
-Process selectors
-^^^^^^^^^^^^^^^^^
-
-The ``withLabel`` selectors allow the configuration of all processes annotated with a :ref:`process-label` directive as
-shown below::
-
-    process {
-        withLabel: big_mem {
-            cpus = 16
-            memory = 64.GB
-            queue = 'long'
-        }
-    }
-
-The above configuration example assigns 16 cpus, 64 Gb of memory and the ``long`` queue to all processes annotated
-with the ``big_mem`` label.
-
-
-In the same manner, the ``withName`` selector allows the configuration of a specific process in your pipeline by its name.
-For example::
-
-    process {
-        withName: hello {
-            cpus = 4
-            memory = 8.GB
-            queue = 'short'
-        }
-    }
-
-.. tip:: Either label and process names do not need to be enclosed with quote characters, provided the name
-  does include special characters (e.g. ``-``, ``!``, etc) or it's not a keyword or a built-in type identifier.
-  In case of doubt, you can enclose the label names or the process names with single or double quote characters.
-
-.. _config-selector-expressions:
-
-Selector expressions
-^^^^^^^^^^^^^^^^^^^^
-
-Both label and process name selectors allow the use of a regular expression in order to apply the same configuration
-to all processes matching the specified pattern condition. For example::
-
-    process {
-        withLabel: 'foo|bar' {
-            cpus = 2
-            memory = 4.GB
-        }
-    }
-
-The above configuration snippet sets 2 cpus and 4 GB of memory to the processes annotated with with a label ``foo``
-and ``bar``.
-
-A process selector can be negated prefixing it with the special character ``!``. For example::
-
-    process {
-        withLabel: 'foo' { cpus = 2 }
-        withLabel: '!foo' { cpus = 4 }
-        withName: '!align.*' { queue = 'long' }
-    }
-
-The above configuration snippet sets 2 cpus for the processes annotated with the ``foo`` label and 4 cpus to all processes
-*not* annotated with that label. Finally it sets the use of ``long`` queue to all process whose name does *not* start
-with ``align``.
-
-.. _config-selectors-priority:
-
-Selectors priority
-^^^^^^^^^^^^^^^^^^
-
-When mixing generic process configuration and selectors the following priority rules are applied (from lower to higher):
-
-1. Process generic configuration.
-2. Process specific directive defined in the workflow script.
-3. ``withLabel`` selector definition.
-4. ``withName`` selector definition.
-
-For example::
-
-    process {
-        cpus = 4
-        withLabel: foo { cpus = 8 }
-        withName: bar { cpus = 32 }
-    }
-
-Using the above configuration snippet, all workflow processes use 4 cpus if not otherwise specified in the workflow
-script. Moreover processes annotated with the ``foo`` label use 8 cpus. Finally the process named ``bar``
-uses 32 cpus.
-
-
-.. _config-executor:
-
-Scope `executor`
-----------------
-
-The ``executor`` configuration scope allows you to set the optional executor settings, listed in the following table.
-
-===================== =====================
-Name                  Description
-===================== =====================
-name                  The name of the executor to be used e.g. ``local``, ``sge``, etc.
-queueSize             The number of tasks the executor will handle in a parallel manner (default: ``100``).
-pollInterval          Determines how often a poll occurs to check for a process termination.
-dumpInterval          Determines how often the executor status is written in the application log file (default: ``5min``).
-queueStatInterval     Determines how often the queue status is fetched from the cluster system. This setting is used only by grid executors (default: ``1min``).
-exitReadTimeout       Determines how long the executor waits before return an error status when a process is terminated but the `exit` file does not exist or it is empty. This setting is used only by grid executors (default: ``270 sec``).
-killBatchSize         Determines the number of jobs that can be `killed` in a single command execution (default: ``100``).
-submitRateLimit       Determines the max rate of job submission per time unit, for example ``'10sec'`` eg. max 10 jobs per second or ``'50/2min'`` i.e. 50 job submissions every 2 minutes (default: `unlimited`).
-perJobMemLimit        Specifies Platform LSF *per-job* memory limit mode. See :ref:`lsf-executor`.
-jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }`` Note: when using this option you need to make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
-cpus                  The maximum number of CPUs made available by the underlying system (only used by the ``local`` executor).
-memory                The maximum amount of memory made available by the underlying system (only used by the ``local`` executor).
-===================== =====================
-
-
-
-The executor settings can be defined as shown below::
-
-    executor {
-        name = 'sge'
-        queueSize = 200
-        pollInterval = '30 sec'
-    }
-
-
-When using two (or more) different executors in your pipeline, you can specify their settings separately by prefixing
-the executor name with the symbol ``$`` and using it as special scope identifier. For example::
-
-  executor {
-    $sge {
-        queueSize = 100
-        pollInterval = '30sec'
-    }
-
-    $local {
-        cpus = 8
-        memory = '32 GB'
-    }
-  }
-
-The above configuration example can be rewritten using the dot notation as shown below::
-
-    executor.$sge.queueSize = 100
-    executor.$sge.pollInterval = '30sec'
-    executor.$local.cpus = 8
-    executor.$local.memory = '32 GB'
-
-.. _config-docker:
-
-Scope `docker`
---------------
-
-The ``docker`` configuration scope controls how `Docker <https://www.docker.com>`_ containers are executed by Nextflow.
-
-The following settings are available:
-
-================== ================
-Name                Description
-================== ================
-enabled             Turn this flag to ``true`` to enable Docker execution (default: ``false``).
-envWhitelist        Comma separated list of environment variable names to be included in the container environment.
-legacy              Uses command line options removed since version 1.10.x (default: ``false``).
-sudo                Executes Docker run command as ``sudo`` (default: ``false``).
-tty                 Allocates a pseudo-tty (default: ``false``).
-temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created.
-remove              Clean-up the container after the execution (default: ``true``). For details see: https://docs.docker.com/engine/reference/run/#clean-up---rm .
-runOptions          This attribute can be used to provide any extra command line options supported by the ``docker run`` command. For details see: https://docs.docker.com/engine/reference/run/ .
-registry            The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
-fixOwnership        Fixes ownership of files created by the docker container.
-engineOptions       This attribute can be used to provide any option supported by the Docker engine i.e. ``docker [OPTIONS]``.
-mountFlags          Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`
-================== ================
-
-The above options can be used by prefixing them with the ``docker`` scope or surrounding them by curly
-brackets, as shown below::
-
-    process.container = 'nextflow/examples'
-
-    docker {
-        enabled = true
-        temp = 'auto'
-    }
-
-
-
-Read :ref:`docker-page` page to learn more how use Docker containers with Nextflow.
-
-
-.. _config-singularity:
-
-Scope `singularity`
--------------------
-
-The ``singularity`` configuration scope controls how `Singularity <https://sylabs.io/singularity/>`_ containers are executed
-by Nextflow.
-
-The following settings are available:
-
-================== ================
-Name                Description
-================== ================
-enabled             Turn this flag to ``true`` to enable Singularity execution (default: ``false``).
-engineOptions       This attribute can be used to provide any option supported by the Singularity engine i.e. ``singularity [OPTIONS]``.
-envWhitelist        Comma separated list of environment variable names to be included in the container environment.
-runOptions          This attribute can be used to provide any extra command line options supported by the ``singularity exec``.
-noHttps             Turn this flag to ``true`` to pull the Singularity image with http protocol (default: ``false``).
-autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
-cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
-pullTimeout         The amount of time the Singularity pull can last, exceeding which the process is terminated (default: ``20 min``).
-================== ================
-
-
-Read :ref:`singularity-page` page to learn more how use Singularity containers with Nextflow.
-
-.. _config-podman:
-
-Scope `podman`
---------------
-
-The ``podman`` configuration scope controls how `Podman <https://podman.io/>`_ containers are executed by Nextflow.
-
-The following settings are available:
-
-================== ================
-Name                Description
-================== ================
-enabled             Turn this flag to ``true`` to enable Podman execution (default: ``false``).
-envWhitelist        Comma separated list of environment variable names to be included in the container environment.
-temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created.
-remove              Clean-up the container after the execution (default: ``true``).
-runOptions          This attribute can be used to provide any extra command line options supported by the ``podman run`` command.
-registry            The registry from where container images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
-engineOptions       This attribute can be used to provide any option supported by the Docker engine i.e. ``podman [OPTIONS]``.
-mountFlags          Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`
-================== ================
-
-The above options can be used by prefixing them with the ``podman`` scope or surrounding them by curly
-brackets, as shown below::
-
-    process.container = 'nextflow/examples'
-
-    podman {
-        enabled = true
-        temp = 'auto'
-    }
-
-
-
-Read :ref:`podman-page` page to learn more how use Podman containers with Nextflow.
-
-.. _config-charliecloud:
-
-Scope `charliecloud`
---------------------
-
-The ``charliecloud`` configuration scope controls how `Charliecloud <https://hpc.github.io/charliecloud/>`_ containers are executed by Nextflow.
-
-The following settings are available:
-
-================== ================
-Name                Description
-================== ================
-enabled             Turn this flag to ``true`` to enable Charliecloud execution (default: ``false``).
-envWhitelist        Comma separated list of environment variable names to be included in the container environment.
-temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created.
-runOptions          This attribute can be used to provide any extra command line options supported by the ``ch-run`` command.
-cacheDir            The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
-pullTimeout         The amount of time the Charliecloud pull can last, exceeding which the process is terminated (default: ``20 min``).
-================== ================
-
-The above options can be used by prefixing them with the ``charliecloud`` scope or surrounding them by curly
-brackets, as shown below::
-
-    process.container = 'nextflow/examples'
-
-    charliecloud {
-        enabled = true
-    }
-
-
-
-Read :ref:`charliecloud-page` page to learn more how use Charliecloud containers with Nextflow.
-
-.. _config-manifest:
-
-Scope `manifest`
-----------------
-
-The ``manifest`` configuration scope allows you to define some meta-data information needed when publishing your pipeline project on GitHub, BitBucket or GitLab, or when running your pipeline.
-
-The following settings are available:
-
-================== ================
-Name                Description
-================== ================
-author              Project author name (use a comma to separate multiple names).
-defaultBranch       Git repository default branch (default: ``master``).
-recurseSubmodules   Turn this flag to ``true`` to pull submodules recursively from the Git repository
-description         Free text describing the workflow project.
-doi                 Project related publication DOI identifier.
-homePage            Project home page URL.
-mainScript          Project main script (default: ``main.nf``).
-name                Project short name.
-nextflowVersion     Minimum required Nextflow version.
-version             Project version number.
-================== ================
-
-The above options can be used by prefixing them with the ``manifest`` scope or surrounding them by curly
-brackets. For example::
-
-    manifest {
-        homePage = 'http://foo.com'
-        description = 'Pipeline does this and that'
-        mainScript = 'foo.nf'
-        version = '1.0.0'
-    }
-
-
-To learn how to publish your pipeline on GitHub, BitBucket or GitLab code repositories read :ref:`sharing-page`
-documentation page.
-
-Nextflow version
-^^^^^^^^^^^^^^^^
-
-The ``nextflowVersion`` setting allows you to specify a minimum required version to run the pipeline.
-This may be useful to ensure that a specific version is used::
-
-    nextflowVersion = '1.2.3'        // exact match
-    nextflowVersion = '1.2+'         // 1.2 or later (excluding 2 and later)
-    nextflowVersion = '>=1.2'        // 1.2 or later
-    nextflowVersion = '>=1.2, <=1.5' // any version in the 1.2 .. 1.5 range
-    nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version
-                                        does not match required version.
-
-.. _config-trace:
-
-Scope `trace`
--------------
-
-The ``trace`` scope allows you to control the layout of the execution trace file generated by Nextflow.
-
-The following settings are available:
-
-================== ================
-Name                Description
-================== ================
-enabled             When ``true`` turns on the generation of the execution trace report file (default: ``false``).
-fields              Comma separated list of fields to be included in the report. The available fields are listed at :ref:`this page <trace-fields>`
-file                Trace file name (default: ``trace.txt``).
-sep                 Character used to separate values in each row (default: ``\t``).
-raw                 When ``true`` turns on raw number report generation i.e. date and time are reported as milliseconds and memory as number of bytes
-overwrite           When ``true`` overwrites an existing trace file instead of rolling it.
-================== ================
-
-The above options can be used by prefixing them with the ``trace`` scope or surrounding them by curly
-brackets. For example::
-
-    trace {
-        enabled = true
-        file = 'pipeline_trace.txt'
-        fields = 'task_id,name,status,exit,realtime,%cpu,rss'
-    }
-
-
-To learn more about the execution report that can be generated by Nextflow read :ref:`trace-report` documentation page.
-
-.. _config-dag:
-
-Scope `dag`
--------------
-
-The ``dag`` scope allows you to control the layout of the execution graph file generated by Nextflow.
-
-The following settings are available:
-
-================== ================
-Name                Description
-================== ================
-enabled             When ``true`` turns on the generation of the execution graph report file (default: ``false``).
-file                Graph file name (default: ``dag.dot``).
-================== ================
-
-The above options can be used by prefixing them with the ``dag`` scope or surrounding them by curly
-brackets. For example::
-
-    dag {
-        enabled = true
-        file = 'pipeline_dag.html'
-    }
-
-
-To learn more about the execution graph that can be generated by Nextflow read :ref:`dag-visualisation` documentation page.
 
 .. _config-aws:
 
@@ -623,6 +165,39 @@ maxParallelTransfers        Max parallel upload/download transfer operations *pe
 maxTransferAttempts         Max number of downloads attempts from S3 (default: `1`).
 =========================== ================
 
+
+.. _config-charliecloud:
+
+Scope `charliecloud`
+--------------------
+
+The ``charliecloud`` configuration scope controls how `Charliecloud <https://hpc.github.io/charliecloud/>`_ containers are executed by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             Turn this flag to ``true`` to enable Charliecloud execution (default: ``false``).
+envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created.
+runOptions          This attribute can be used to provide any extra command line options supported by the ``ch-run`` command.
+cacheDir            The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
+pullTimeout         The amount of time the Charliecloud pull can last, exceeding which the process is terminated (default: ``20 min``).
+================== ================
+
+The above options can be used by prefixing them with the ``charliecloud`` scope or surrounding them by curly
+brackets, as shown below::
+
+    process.container = 'nextflow/examples'
+
+    charliecloud {
+        enabled = true
+    }
+
+Read :ref:`container-charliecloud` page to learn more about how to use Charliecloud containers with Nextflow.
+
+
 .. _config-cloud:
 
 Scope `cloud`
@@ -650,6 +225,150 @@ createOptions       Defines any extra command line options supported by the ``co
 createTimeout       Defines the amount of time the Conda environment creation can last. The creation process is terminated when the timeout is exceeded (default: ``20 min``).
 useMamba            Uses the ``mamba`` binary instead of ``conda`` to create the conda environments. For details see: https://github.com/mamba-org/mamba.
 ================== ================
+
+
+.. _config-dag:
+
+Scope `dag`
+-------------
+
+The ``dag`` scope allows you to control the layout of the execution graph file generated by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             When ``true`` turns on the generation of the execution graph report file (default: ``false``).
+file                Graph file name (default: ``dag.dot``).
+================== ================
+
+The above options can be used by prefixing them with the ``dag`` scope or surrounding them by curly
+brackets. For example::
+
+    dag {
+        enabled = true
+        file = 'pipeline_dag.html'
+    }
+
+To learn more about the execution graph that can be generated by Nextflow read :ref:`dag-visualisation` documentation page.
+
+
+.. _config-docker:
+
+Scope `docker`
+--------------
+
+The ``docker`` configuration scope controls how `Docker <https://www.docker.com>`_ containers are executed by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             Turn this flag to ``true`` to enable Docker execution (default: ``false``).
+envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+legacy              Uses command line options removed since version 1.10.x (default: ``false``).
+sudo                Executes Docker run command as ``sudo`` (default: ``false``).
+tty                 Allocates a pseudo-tty (default: ``false``).
+temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created.
+remove              Clean-up the container after the execution (default: ``true``). For details see: https://docs.docker.com/engine/reference/run/#clean-up---rm .
+runOptions          This attribute can be used to provide any extra command line options supported by the ``docker run`` command. For details see: https://docs.docker.com/engine/reference/run/ .
+registry            The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
+fixOwnership        Fixes ownership of files created by the docker container.
+engineOptions       This attribute can be used to provide any option supported by the Docker engine i.e. ``docker [OPTIONS]``.
+mountFlags          Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`
+================== ================
+
+The above options can be used by prefixing them with the ``docker`` scope or surrounding them by curly
+brackets, as shown below::
+
+    process.container = 'nextflow/examples'
+
+    docker {
+        enabled = true
+        temp = 'auto'
+    }
+
+Read :ref:`container-docker` page to learn more about how to use Docker containers with Nextflow.
+
+
+.. _config-env:
+
+Scope `env`
+-----------
+
+The ``env`` scope allows the definition one or more variable that will be exported in the environment where the
+workflow tasks will be executed.
+
+Simply prefix your variable names with the ``env`` scope or surround them by curly brackets, as shown below::
+
+   env.ALPHA = 'some value'
+   env.BETA = "$HOME/some/path"
+
+   env {
+        DELTA = 'one more'
+        GAMMA = "/my/path:$PATH"
+   }
+
+.. tip:: In the above example, variables like `$HOME` and `$PATH` are evaluated when the workflow is launched. If
+  you want these variables to be evaluated during task execution, escape them with `\$`. This difference is important
+  for variables like `$PATH`, which may be very different in the workflow environment versus the task environment.
+
+
+.. _config-executor:
+
+Scope `executor`
+----------------
+
+The ``executor`` configuration scope allows you to set the optional executor settings, listed in the following table.
+
+===================== =====================
+Name                  Description
+===================== =====================
+name                  The name of the executor to be used e.g. ``local``, ``sge``, etc.
+queueSize             The number of tasks the executor will handle in a parallel manner (default: ``100``).
+pollInterval          Determines how often a poll occurs to check for a process termination.
+dumpInterval          Determines how often the executor status is written in the application log file (default: ``5min``).
+queueStatInterval     Determines how often the queue status is fetched from the cluster system. This setting is used only by grid executors (default: ``1min``).
+exitReadTimeout       Determines how long the executor waits before return an error status when a process is terminated but the `exit` file does not exist or it is empty. This setting is used only by grid executors (default: ``270 sec``).
+killBatchSize         Determines the number of jobs that can be `killed` in a single command execution (default: ``100``).
+submitRateLimit       Determines the max rate of job submission per time unit, for example ``'10sec'`` eg. max 10 jobs per second or ``'50/2min'`` i.e. 50 job submissions every 2 minutes (default: `unlimited`).
+perJobMemLimit        Specifies Platform LSF *per-job* memory limit mode. See :ref:`lsf-executor`.
+jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }`` Note: when using this option you need to make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
+cpus                  The maximum number of CPUs made available by the underlying system (only used by the ``local`` executor).
+memory                The maximum amount of memory made available by the underlying system (only used by the ``local`` executor).
+===================== =====================
+
+The executor settings can be defined as shown below::
+
+    executor {
+        name = 'sge'
+        queueSize = 200
+        pollInterval = '30 sec'
+    }
+
+When using two (or more) different executors in your pipeline, you can specify their settings separately by prefixing
+the executor name with the symbol ``$`` and using it as special scope identifier. For example::
+
+  executor {
+    $sge {
+        queueSize = 100
+        pollInterval = '30sec'
+    }
+
+    $local {
+        cpus = 8
+        memory = '32 GB'
+    }
+  }
+
+The above configuration example can be rewritten using the dot notation as shown below::
+
+    executor.$sge.queueSize = 100
+    executor.$sge.pollInterval = '30sec'
+    executor.$local.cpus = 8
+    executor.$local.memory = '32 GB'
 
 
 .. _config-k8s:
@@ -684,22 +403,6 @@ volumeClaims        (deprecated)
 
 See the :ref:`k8s-page` documentation for more details.
 
-.. _config-timeline:
-
-Scope `timeline`
-----------------
-
-The ``timeline`` scope allows you to enable/disable the processes execution timeline report generated by Nextflow.
-
-The following settings are available:
-
-================== ================
-Name                Description
-================== ================
-enabled             When ``true`` turns on the generation of the timeline report file (default: ``false``).
-file                Timeline file name (default: ``timeline.html``).
-overwrite           When ``true`` overwrites an existing timeline file instead of rolling it.
-================== ================
 
 .. _config-mail:
 
@@ -739,6 +442,59 @@ For example, the following snippet shows how to configure Nextflow to send email
         smtp.starttls.required = true
     }
 
+
+.. _config-manifest:
+
+Scope `manifest`
+----------------
+
+The ``manifest`` configuration scope allows you to define some meta-data information needed when publishing your pipeline project on GitHub, BitBucket or GitLab, or when running your pipeline.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+author              Project author name (use a comma to separate multiple names).
+defaultBranch       Git repository default branch (default: ``master``).
+recurseSubmodules   Turn this flag to ``true`` to pull submodules recursively from the Git repository
+description         Free text describing the workflow project.
+doi                 Project related publication DOI identifier.
+homePage            Project home page URL.
+mainScript          Project main script (default: ``main.nf``).
+name                Project short name.
+nextflowVersion     Minimum required Nextflow version.
+version             Project version number.
+================== ================
+
+The above options can be used by prefixing them with the ``manifest`` scope or surrounding them by curly
+brackets. For example::
+
+    manifest {
+        homePage = 'http://foo.com'
+        description = 'Pipeline does this and that'
+        mainScript = 'foo.nf'
+        version = '1.0.0'
+    }
+
+
+To learn how to publish your pipeline on GitHub, BitBucket or GitLab code repositories read :ref:`sharing-page`
+documentation page.
+
+Nextflow version
+^^^^^^^^^^^^^^^^
+
+The ``nextflowVersion`` setting allows you to specify a minimum required version to run the pipeline.
+This may be useful to ensure that a specific version is used::
+
+    nextflowVersion = '1.2.3'        // exact match
+    nextflowVersion = '1.2+'         // 1.2 or later (excluding 2 and later)
+    nextflowVersion = '>=1.2'        // 1.2 or later
+    nextflowVersion = '>=1.2, <=1.5' // any version in the 1.2 .. 1.5 range
+    nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version
+                                        does not match required version.
+
+
 .. _config-notification:
 
 Scope `notification`
@@ -762,6 +518,169 @@ The notification message is sent my using the STMP server defined in the configu
 If no mail configuration is provided, it tries to send the notification message by using the external mail command
 eventually provided by the underlying system (eg. ``sendmail`` or ``mail``).
 
+
+.. _config-params:
+
+Scope `params`
+--------------
+
+The ``params`` scope allows you to define parameters that will be accessible in the pipeline script. Simply prefix the
+parameter names with the ``params`` scope or surround them by curly brackets, as shown below::
+
+     params.custom_param = 123
+     params.another_param = 'string value .. '
+
+     params {
+
+        alpha_1 = true
+        beta_2 = 'another string ..'
+
+     }
+
+
+.. _config-podman:
+
+Scope `podman`
+--------------
+
+The ``podman`` configuration scope controls how `Podman <https://podman.io/>`_ containers are executed by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             Turn this flag to ``true`` to enable Podman execution (default: ``false``).
+envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created.
+remove              Clean-up the container after the execution (default: ``true``).
+runOptions          This attribute can be used to provide any extra command line options supported by the ``podman run`` command.
+registry            The registry from where container images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
+engineOptions       This attribute can be used to provide any option supported by the Docker engine i.e. ``podman [OPTIONS]``.
+mountFlags          Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`
+================== ================
+
+The above options can be used by prefixing them with the ``podman`` scope or surrounding them by curly
+brackets, as shown below::
+
+    process.container = 'nextflow/examples'
+
+    podman {
+        enabled = true
+        temp = 'auto'
+    }
+
+Read :ref:`container-podman` page to learn more about how to use Podman containers with Nextflow.
+
+
+.. _config-process:
+
+Scope `process`
+---------------
+
+The ``process`` configuration scope allows you to provide the default configuration for the processes in your pipeline.
+
+You can specify here any property described in the :ref:`process directive<process-directives>` and the executor sections.
+For examples::
+
+  process {
+    executor='sge'
+    queue='long'
+    clusterOptions = '-pe smp 10 -l virtual_free=64G,h_rt=30:00:00'
+  }
+
+By using this configuration all processes in your pipeline will be executed through the SGE cluster, with the specified
+settings.
+
+.. _config-process-selectors:
+
+Process selectors
+^^^^^^^^^^^^^^^^^
+
+The ``withLabel`` selectors allow the configuration of all processes annotated with a :ref:`process-label` directive as
+shown below::
+
+    process {
+        withLabel: big_mem {
+            cpus = 16
+            memory = 64.GB
+            queue = 'long'
+        }
+    }
+
+The above configuration example assigns 16 cpus, 64 Gb of memory and the ``long`` queue to all processes annotated
+with the ``big_mem`` label.
+
+In the same manner, the ``withName`` selector allows the configuration of a specific process in your pipeline by its name.
+For example::
+
+    process {
+        withName: hello {
+            cpus = 4
+            memory = 8.GB
+            queue = 'short'
+        }
+    }
+
+.. tip:: Either label and process names do not need to be enclosed with quote characters, provided the name
+  does include special characters (e.g. ``-``, ``!``, etc) or it's not a keyword or a built-in type identifier.
+  In case of doubt, you can enclose the label names or the process names with single or double quote characters.
+
+.. _config-selector-expressions:
+
+Selector expressions
+^^^^^^^^^^^^^^^^^^^^
+
+Both label and process name selectors allow the use of a regular expression in order to apply the same configuration
+to all processes matching the specified pattern condition. For example::
+
+    process {
+        withLabel: 'foo|bar' {
+            cpus = 2
+            memory = 4.GB
+        }
+    }
+
+The above configuration snippet sets 2 cpus and 4 GB of memory to the processes annotated with with a label ``foo``
+and ``bar``.
+
+A process selector can be negated prefixing it with the special character ``!``. For example::
+
+    process {
+        withLabel: 'foo' { cpus = 2 }
+        withLabel: '!foo' { cpus = 4 }
+        withName: '!align.*' { queue = 'long' }
+    }
+
+The above configuration snippet sets 2 cpus for the processes annotated with the ``foo`` label and 4 cpus to all processes
+*not* annotated with that label. Finally it sets the use of ``long`` queue to all process whose name does *not* start
+with ``align``.
+
+.. _config-selector-priority:
+
+Selector priority
+^^^^^^^^^^^^^^^^^
+
+When mixing generic process configuration and selectors the following priority rules are applied (from lower to higher):
+
+1. Process generic configuration.
+2. Process specific directive defined in the workflow script.
+3. ``withLabel`` selector definition.
+4. ``withName`` selector definition.
+
+For example::
+
+    process {
+        cpus = 4
+        withLabel: foo { cpus = 8 }
+        withName: bar { cpus = 32 }
+    }
+
+Using the above configuration snippet, all workflow processes use 4 cpus if not otherwise specified in the workflow
+script. Moreover processes annotated with the ``foo`` label use 8 cpus. Finally the process named ``bar``
+uses 32 cpus.
+
+
 .. _config-report:
 
 Scope `report`
@@ -778,10 +697,73 @@ overwrite           When ``true`` overwrites existing report file instead of rol
 ================== ================
 
 
+.. _config-shifter:
+
+Scope `shifter`
+-------------------
+
+The ``shifter`` configuration scope controls how `Shifter <https://docs.nersc.gov/programming/shifter/overview/>`_ containers are executed
+by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             Turn this flag to ``true`` to enable Shifter execution (default: ``false``).
+================== ================
+
+Read :ref:`container-shifter` page to learn more about how to use Shifter containers with Nextflow.
+
+
+.. _config-singularity:
+
+Scope `singularity`
+-------------------
+
+The ``singularity`` configuration scope controls how `Singularity <https://sylabs.io/singularity/>`_ containers are executed
+by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             Turn this flag to ``true`` to enable Singularity execution (default: ``false``).
+engineOptions       This attribute can be used to provide any option supported by the Singularity engine i.e. ``singularity [OPTIONS]``.
+envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+runOptions          This attribute can be used to provide any extra command line options supported by the ``singularity exec``.
+noHttps             Turn this flag to ``true`` to pull the Singularity image with http protocol (default: ``false``).
+autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
+cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
+pullTimeout         The amount of time the Singularity pull can last, exceeding which the process is terminated (default: ``20 min``).
+================== ================
+
+Read :ref:`container-singularity` page to learn more about how to use Singularity containers with Nextflow.
+
+
+.. _config-timeline:
+
+Scope `timeline`
+----------------
+
+The ``timeline`` scope allows you to enable/disable the processes execution timeline report generated by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             When ``true`` turns on the generation of the timeline report file (default: ``false``).
+file                Timeline file name (default: ``timeline.html``).
+overwrite           When ``true`` overwrites an existing timeline file instead of rolling it.
+================== ================
+
+
 .. _config-tower:
 
 Scope `tower`
---------------
+-------------
 
 The ``tower`` configuration scope controls the settings for the `Nextflow Tower <https://tower.nf>`_ monitoring and tracing service.
 
@@ -811,6 +793,39 @@ brackets, as shown below::
 .. tip:: 
   The Tower workspace ID can also the specified using the environment variable ``TOWER_WORKSPACE_ID`` (config file has priority over the environment variable). 
 
+
+.. _config-trace:
+
+Scope `trace`
+-------------
+
+The ``trace`` scope allows you to control the layout of the execution trace file generated by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             When ``true`` turns on the generation of the execution trace report file (default: ``false``).
+fields              Comma separated list of fields to be included in the report. The available fields are listed at :ref:`this page <trace-fields>`
+file                Trace file name (default: ``trace.txt``).
+sep                 Character used to separate values in each row (default: ``\t``).
+raw                 When ``true`` turns on raw number report generation i.e. date and time are reported as milliseconds and memory as number of bytes
+overwrite           When ``true`` overwrites an existing trace file instead of rolling it.
+================== ================
+
+The above options can be used by prefixing them with the ``trace`` scope or surrounding them by curly
+brackets. For example::
+
+    trace {
+        enabled = true
+        file = 'pipeline_trace.txt'
+        fields = 'task_id,name,status,exit,realtime,%cpu,rss'
+    }
+
+To learn more about the execution report that can be generated by Nextflow read :ref:`trace-report` documentation page.
+
+
 .. _config-weblog:
 
 Scope `weblog`
@@ -826,6 +841,7 @@ Name                Description
 enabled             If ``true`` it will send HTTP POST requests to a given url.
 url                The url where to send HTTP POST requests (default: ``http:localhost``).
 ================== ================
+
 
 .. _config-miscellaneous:
 
@@ -845,6 +861,7 @@ cleanup             If ``true``, on a successful completion of a run all files i
 .. warning:: 
     The use of the above ``cleanup`` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. 
     Also, be aware that deleting all scratch files can take a lot of time especially when using shared file system or remote cloud storage.
+
 
 .. _config-profiles:
 
@@ -877,7 +894,6 @@ to the same profile using a common prefix. For example::
 
     }
 
-
 This configuration defines three different profiles: ``standard``, ``cluster`` and ``cloud`` that set different process
 configuration strategies depending on the target runtime platform. By convention the ``standard`` profile is implicitly used
 when no other profile is specified by the user.
@@ -886,8 +902,6 @@ when no other profile is specified by the user.
     with a comma character, for example::
 
         nextflow run <your script> -profile standard,cloud
-
-
 
 .. danger:: When using the *profiles* feature in your config file do NOT set attributes in the same scope both
   inside and outside a ``profiles`` context. For example::
@@ -908,6 +922,7 @@ when no other profile is specified by the user.
   used in the ``foo`` and ``bar`` profile contexts.
 
 The above feature requires version 0.28.x or higher.
+
 
 .. _config-env-vars:
 

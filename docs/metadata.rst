@@ -122,7 +122,7 @@ For example::
 
 .. note:: Both the ``onError`` and ``onComplete`` handlers are invoked when an error condition is encountered.
     However the first is called as soon as the error is raised, while the second just before the pipeline execution
-    is going to terminate. When using the ``finish`` :ref:`process-page-error-strategy`, between the two there could be
+    is going to terminate. When using the ``finish`` :ref:`process-error-strategy`, between the two there could be
     a significant time gap depending on the time required to complete any pending job.
 
 
