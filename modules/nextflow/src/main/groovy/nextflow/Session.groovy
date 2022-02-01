@@ -1021,6 +1021,18 @@ class Session implements ISession {
         observers.each { trace -> trace.onFlowCreate(this) }
     }
 
+    void notifyFilePublish(Path destination) {
+        def copy = new ArrayList<TraceObserver>(observers)
+        for( TraceObserver observer : copy  ) {
+            try {
+                observer.onFilePublish(destination)
+            }
+            catch( Exception e ) {
+                log.error "Failed to invoke observer on file publish: $observer", e
+            }
+        }
+    }
+
     void notifyFlowComplete() {
         def copy = new ArrayList<TraceObserver>(observers)
         for( TraceObserver observer : copy  ) {
