@@ -74,8 +74,14 @@ class SysHelperTest extends Specification {
     }
 
     def 'should format date string' () {
-        expect:
-        SysHelper.fmtDate(1470901220000, TimeZone.getTimeZone('GMT+2')) == '11-Aug-2016 09:40'
+        when:
+        String fmt = SysHelper.fmtDate(dateInMilis, TimeZone.getTimeZone('GMT+2'), locale)
+        then:
+        fmt == expected
+        where:
+        dateInMilis | locale | expected
+        1470901220000  | 'en' | '11-Aug-2016 09:40'
+        1470901220000  | 'es' | '11-ago.-2016 09:40'
     }
 
 }

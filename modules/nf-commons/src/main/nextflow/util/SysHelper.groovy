@@ -16,6 +16,9 @@
  */
 
 package nextflow.util
+
+import org.apache.commons.lang.LocaleUtils
+
 import java.lang.management.ManagementFactory
 import java.text.SimpleDateFormat
 
@@ -47,8 +50,8 @@ class SysHelper {
      * @return
      *      The formatted date string
      */
-    static String fmtDate(long dateInMillis, TimeZone tz=null) {
-        fmtDate(new Date(dateInMillis), tz)
+    static String fmtDate(long dateInMillis, TimeZone tz=null, String locale=null) {
+        fmtDate(new Date(dateInMillis), tz, locale)
     }
 
     /**
@@ -62,8 +65,8 @@ class SysHelper {
      * @return
      *      The formatted date string
      */
-    static String fmtDate(Date date, TimeZone tz=null) {
-        def formatter=new SimpleDateFormat(DATE_FORMAT)
+    static String fmtDate(Date date, TimeZone tz=null, String locale=null) {
+        def formatter=new SimpleDateFormat(DATE_FORMAT, locale ? LocaleUtils.toLocale(locale) : Locale.default)
         if(tz) formatter.setTimeZone(tz)
         formatter.format(date)
     }
