@@ -622,6 +622,25 @@ with the current execution context.
   own private temporary directory, and input files are automatically staged to this directory by Nextflow. 
   This guarantees that input files with the same name won't overwrite each other.
 
+Dynamic input multiple file names
+------------------------
+
+In some cases, it might be necessary to stage in multiple files, but keep a folder hierarchy or change the
+naming for each file individually.
+Therefore, you can access the sourceObj and storePath of each input file.::
+
+  fasta = Channel.fromPath( "/root/*/*.fa" ).buffer(size:10, remainder: true)
+  process blastThemAll {
+
+      input:
+      file {"${sourceObj.parent}/${sourceObj.name}.fa"} from fasta
+
+      """
+      find . -name "*"
+      """
+
+  }
+
 
 Input of type 'path'
 --------------------
