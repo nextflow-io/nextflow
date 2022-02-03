@@ -17,6 +17,9 @@
 
 package nextflow.extension
 
+import org.apache.commons.lang.LocaleUtils
+import spock.lang.Ignore
+
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -41,24 +44,32 @@ class BoltsTest extends Specification {
 
         given:
         def now = new Date(1513285947928)
+        def defLocale = Locale.getDefault(Locale.Category.FORMAT)
+        def useLocale = new Locale.Builder().setLanguage(locale).build()
+        Locale.setDefault(Locale.Category.FORMAT, useLocale)
 
         when:
-        def formatter = new SimpleDateFormat(fmt)
+        def formatter = new SimpleDateFormat(fmt, Locale.ENGLISH)
         formatter.setTimeZone(TimeZone.getTimeZone(tz))
         then:
         Bolts.format(now, fmt, tz) == expected
         formatter.format(now) == expected
 
-        where:
-        tz      | fmt                       | expected
-        'UTC'   | 'dd-MM-yyyy HH:mm'        | '14-12-2017 21:12'
-        'CET'   | 'dd-MM-yyyy HH:mm'        | '14-12-2017 22:12'
-        'UTC'   | 'dd-MMM-yyyy HH:mm:ss'    | '14-Dec-2017 21:12:27'
-        'CST'   | 'dd-MM-yyyy HH:mm'        | '14-12-2017 15:12'
-        'CST'   | 'dd-MMM-yyyy HH:mm:ss'    | '14-Dec-2017 15:12:27'
+        cleanup:
+        Locale.setDefault(Locale.Category.FORMAT, defLocale)
 
+        where:
+        tz      | fmt                       | locale  | expected
+        'UTC'   | 'dd-MM-yyyy HH:mm'        | 'en'    | '14-12-2017 21:12'
+        'CET'   | 'dd-MM-yyyy HH:mm'        | 'en'    | '14-12-2017 22:12'
+        'UTC'   | 'dd-MMM-yyyy HH:mm:ss'    | 'en'    | '14-Dec-2017 21:12:27'
+        'CST'   | 'dd-MM-yyyy HH:mm'        | 'en'    | '14-12-2017 15:12'
+        'CST'   | 'dd-MMM-yyyy HH:mm:ss'    | 'en'    | '14-Dec-2017 15:12:27'
+        'UTC'   | 'dd-MMM-yyyy HH:mm:ss'    | 'es'    | '14-Dec-2017 21:12:27'
+        'CST'   | 'dd-MMM-yyyy HH:mm:ss'    | 'es'    | '14-Dec-2017 15:12:27'
     }
 
+    @Ignore("we dont need to test java functionalities")
     def 'should format offset datetime' () {
         given:
         def now = OffsetDateTime.ofInstant(Instant.ofEpochMilli(1513285947928), ZoneId.of('CET'))
