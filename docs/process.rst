@@ -2117,7 +2117,28 @@ move            Moves the output files into the published directory. **Note**: t
 .. warning:: Files are copied into the specified directory in an *asynchronous* manner, thus they may not be immediately
   available in the published directory at the end of the process execution. For this reason files published by a process
   must not be accessed by other downstream processes.
+  
+  In addition, only outputs specified in the ``output:`` block are searched and published, not the entire outputs of the process. For example:
+  
+::
 
+    process foo {
+        publishDir "/other/output/dir/", glob "*.txt"
+        
+        output:
+        path(out_file) into downstream_if_needed
+
+        script:
+        out_file = "some_output.txt"
+        another_file = "other.txt"
+        
+        """
+        echo "some inputs" > $out_file
+        echo "another text" > $another_file
+        """
+        
+        // publishDir will publishes some_output.txt, but not other.txt to /other/output/dir/
+    } 
 
 .. _process-queue:
 
