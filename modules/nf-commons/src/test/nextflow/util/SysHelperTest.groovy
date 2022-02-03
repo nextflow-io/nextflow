@@ -74,14 +74,23 @@ class SysHelperTest extends Specification {
     }
 
     def 'should format date string' () {
+        given:
+        def defLocale = Locale.getDefault(Locale.Category.FORMAT)
+        def useLocale = new Locale.Builder().setLanguage(locale).build()
+        Locale.setDefault(Locale.Category.FORMAT, useLocale)
+
         when:
-        String fmt = SysHelper.fmtDate(dateInMilis, TimeZone.getTimeZone('GMT+2'), locale)
+        String fmt = SysHelper.fmtDate(dateInMilis, TimeZone.getTimeZone('GMT+2'))
         then:
         fmt == expected
+
+        cleanup:
+        Locale.setDefault(Locale.Category.FORMAT, defLocale)
+
         where:
         dateInMilis | locale | expected
         1470901220000  | 'en' | '11-Aug-2016 09:40'
-        1470901220000  | 'es' | '11-ago.-2016 09:40'
+        1470901220000  | 'es' | '11-Aug-2016 09:40'
     }
 
 }

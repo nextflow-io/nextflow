@@ -17,8 +17,6 @@
 
 package nextflow.extension
 
-import org.apache.commons.lang.LocaleUtils
-
 import java.nio.file.Path
 import java.text.DateFormat
 import java.text.SimpleDateFormat
@@ -62,12 +60,12 @@ class Bolts {
     static private Pattern PATTERN_LEFT_TRIM = ~/^\s+/
 
     @Memoized
-    static private ThreadLocal<DateFormat> getLocalDateFormat(String fmt, TimeZone tz, String locale) {
+    static private ThreadLocal<DateFormat> getLocalDateFormat(String fmt, TimeZone tz) {
 
         return new ThreadLocal<DateFormat>() {
             @Override
             protected DateFormat initialValue() {
-                def result = new SimpleDateFormat(fmt, locale ? LocaleUtils.toLocale(locale) : Locale.ENGLISH)
+                def result = new SimpleDateFormat(fmt, Locale.ENGLISH)
                 if(tz) result.setTimeZone(tz)
                 return result
             }
@@ -82,14 +80,13 @@ class Bolts {
      * @param tz The timezone to be used eg. {@code UTC}. If {@code null} the current timezone is used.
      * @return The date-time formatted as a string
      */
-    static String format(Date self, String format=null, String tz=null, String locale=null) {
+    static String format(Date self, String format=null, String tz=null) {
         TimeZone zone = tz ? TimeZone.getTimeZone(tz) : null
-        getLocalDateFormat(format ?: DATETIME_FORMAT, zone, locale).get().format(self)
+        getLocalDateFormat(format ?: DATETIME_FORMAT, zone).get().format(self)
     }
 
-    static String format(OffsetDateTime self, String format, String locale=null) {
-        return self.format(DateTimeFormatter.ofPattern(format)
-                .withLocale(locale ? LocaleUtils.toLocale(locale) : Locale.ENGLISH))
+    static String format(OffsetDateTime self, String format) {
+        return self.format(DateTimeFormatter.ofPattern(format).withLocale(Locale.ENGLISH))
     }
 
     /**
@@ -100,8 +97,8 @@ class Bolts {
      * @param tz The timezone to be used. If {@code null} the current timezone is used.
      * @return The date-time formatted as a string
      */
-    static String format(Date self, String format, TimeZone tz, String locale=null) {
-        getLocalDateFormat(format ?: DATETIME_FORMAT, tz, locale).get().format(self)
+    static String format(Date self, String format, TimeZone tz) {
+        getLocalDateFormat(format ?: DATETIME_FORMAT, tz).get().format(self)
     }
 
     static List pairs(Map self, Map opts=null) {
