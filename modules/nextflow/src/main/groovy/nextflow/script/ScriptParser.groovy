@@ -17,6 +17,9 @@
 
 package nextflow.script
 
+import org.codehaus.groovy.control.ErrorCollector
+import org.codehaus.groovy.control.MultipleCompilationErrorsException
+
 import java.nio.file.Path
 
 import com.google.common.hash.Hashing
@@ -168,7 +171,12 @@ class ScriptParser {
     ScriptParser parse(String scriptText, GroovyShell interpreter) {
         final String clazzName = computeClassName(scriptText)
         try {
-            script = (BaseScript)interpreter.parse(scriptText, clazzName)
+            NextflowMeta.instance.checkDsl2Mode(scriptText)
+            Script baseScript = interpreter.parse(scriptText, clazzName)
+            if( baseScript !instanceof BaseScript ){
+               throw new CompilationFailedException(0, null)
+            }
+            script = (BaseScript)baseScript
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(scriptPath)
             meta.setModule(module)
@@ -178,6 +186,7 @@ class ScriptParser {
             String type = module ? "Module" : "Script"
             String header = "$type compilation error\n- file : ${FilesEx.toUriString(scriptPath)}"
             String msg = e.message ?: header
+            msg = msg != 'startup failed' ? msg : header
             msg = msg.replaceAll(/startup failed:\n/,'')
             msg = msg.replaceAll(~/$clazzName(: \d+:\b*)?/, header+'\n- cause:')
             throw new ScriptCompilationException(msg, e)
