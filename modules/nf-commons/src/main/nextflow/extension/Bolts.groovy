@@ -67,7 +67,7 @@ class Bolts {
         return new ThreadLocal<DateFormat>() {
             @Override
             protected DateFormat initialValue() {
-                def result = new SimpleDateFormat(fmt, locale ? LocaleUtils.toLocale(locale) : Locale.default)
+                def result = new SimpleDateFormat(fmt, locale ? LocaleUtils.toLocale(locale) : Locale.ENGLISH)
                 if(tz) result.setTimeZone(tz)
                 return result
             }
@@ -89,7 +89,7 @@ class Bolts {
 
     static String format(OffsetDateTime self, String format, String locale=null) {
         return self.format(DateTimeFormatter.ofPattern(format)
-                .withLocale(locale ? LocaleUtils.toLocale(locale) : Locale.default))
+                .withLocale(locale ? LocaleUtils.toLocale(locale) : Locale.ENGLISH))
     }
 
     /**

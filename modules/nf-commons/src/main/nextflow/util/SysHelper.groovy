@@ -66,7 +66,7 @@ class SysHelper {
      *      The formatted date string
      */
     static String fmtDate(Date date, TimeZone tz=null, String locale=null) {
-        def formatter=new SimpleDateFormat(DATE_FORMAT, locale ? LocaleUtils.toLocale(locale) : Locale.default)
+        def formatter=new SimpleDateFormat(DATE_FORMAT, locale ? LocaleUtils.toLocale(locale) : Locale.ENGLISH)
         if(tz) formatter.setTimeZone(tz)
         formatter.format(date)
     }
