@@ -17,7 +17,6 @@
 
 package nextflow.extension
 
-
 import java.nio.file.Path
 import java.text.DateFormat
 import java.text.SimpleDateFormat
@@ -66,7 +65,7 @@ class Bolts {
         return new ThreadLocal<DateFormat>() {
             @Override
             protected DateFormat initialValue() {
-                def result = new SimpleDateFormat(fmt)
+                def result = new SimpleDateFormat(fmt, Locale.ENGLISH)
                 if(tz) result.setTimeZone(tz)
                 return result
             }
@@ -87,7 +86,7 @@ class Bolts {
     }
 
     static String format(OffsetDateTime self, String format) {
-        return self.format(DateTimeFormatter.ofPattern(format))
+        return self.format(DateTimeFormatter.ofPattern(format).withLocale(Locale.ENGLISH))
     }
 
     /**
