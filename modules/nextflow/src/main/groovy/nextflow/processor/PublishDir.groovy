@@ -475,8 +475,9 @@ class PublishDir {
     }
 
     protected void notifyFilePublish(Path destination) {
-        if (Global.session instanceof Session) {
-            (Global.session as Session).notifyFilePublish(destination)
+        final sess = Global.session
+        if (sess instanceof Session) {
+            sess.notifyFilePublish(destination)
         }
     }
 
