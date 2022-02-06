@@ -434,10 +434,6 @@ class AzBatchService implements Closeable {
         throw new IllegalStateException("Cannot find a matching VM image with publister=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification")
     }
 
-    protected boolean hasPool(String poolId) {
-        config.batch().pool(poolId)
-    }
-
     protected AzVmPoolSpec specFromPoolConfig(String poolId) {
 
         def opts = config.batch().pool(poolId)
@@ -509,7 +505,7 @@ class AzBatchService implements Closeable {
             }
         }
 
-        return poolId && hasPool(poolId)
+        return poolId
                 ? specFromPoolConfig(poolId)
                 : specFromAutoPool(task)
 
@@ -529,7 +525,7 @@ class AzBatchService implements Closeable {
                 createPool(spec)
             }
             else {
-                throw new IllegalArgumentException("Can't find Azure Batch pool '$spec.poolId' - Make sure it exists or enable the use `allowPoolCreation=true` in the nextflow config file")
+                throw new IllegalArgumentException("Can't find Azure Batch pool '$spec.poolId' - Make sure it exists or enablethe use `allowPoolCreation=true` in the nextflow config file")
             }
         }
         else {
