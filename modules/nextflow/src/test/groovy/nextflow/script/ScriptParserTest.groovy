@@ -141,5 +141,28 @@ class ScriptParserTest extends Specification {
         e.message.contains("- cause: Unexpected input: ')'")
         e.message.contains('foo.nf\n')
     }
+
+    def 'should run a script with unescaped blocks' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptParser(session)
+        def binding = new ScriptBinding(params:[:])
+
+        def TEXT = '''
+        text = 
+        ```
+        echo \\n
+        ```        
+        '''
+
+        when:
+        parser.setBinding(binding)
+        parser.runScript(TEXT)
+
+        then:
+        parser.script instanceof BaseScript
+        binding.getVariable('text').toString().indexOf('echo \\n') != -1
+    }
     
 }

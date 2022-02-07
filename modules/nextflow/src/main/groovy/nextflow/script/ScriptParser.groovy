@@ -169,7 +169,8 @@ class ScriptParser {
         final String clazzName = computeClassName(scriptText)
         try {
             NextflowMeta.instance.checkDsl2Mode(scriptText)
-            script = (BaseScript)interpreter.parse(scriptText, clazzName)
+            String unescaped = unescapedScript(scriptText)
+            script = (BaseScript)interpreter.parse(unescaped, clazzName)
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(scriptPath)
             meta.setModule(module)
@@ -220,6 +221,29 @@ class ScriptParser {
         setupContext()
         result = script.run()
         return this
+    }
+
+    private unescapedScript(String str){
+        def cursor = 0
+        def newString=''
+
+        while( (cursor=str.indexOf('```')) != -1 ){
+            newString += str.subSequence(0,cursor)
+            str = str.substring(cursor+3)
+            if( (cursor=str.indexOf('```')) != -1 ){
+                def unescape = str.subSequence(0,cursor)
+                unescape = unescape.replaceAll(/\\n/,'\\\\\\\\n')
+                        .replaceAll(/\\t/,'\\\\\\\\t')
+                        .replaceAll(/\\r/,'\\\\\\\\r')
+                        .replaceAll(/\\f/,'\\\\\\\\f')
+                newString += "'''"+unescape+"'''"
+                str = str.substring(cursor+3)
+            }else{
+                newString += '```'
+            }
+        }
+        newString+=str
+        newString
     }
 
 }
