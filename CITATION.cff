@@ -19,6 +19,6 @@ authors:
     orcid: "https://orcid.org/0000-0003-1461-0988"
 title: "Nextflow enables reproducible computational workflows"
 version: 1.0.0
-doi: https://doi.org/10.1038/nbt.3820
+doi: 10.1038/nbt.3820
 date-released: 2017-04-11
 url: "https://nextflow.io"
