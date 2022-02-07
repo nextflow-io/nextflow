@@ -29,7 +29,7 @@ import com.beust.jcommander.Parameters
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.CacheDB
+import nextflow.cache.CacheDB
 import nextflow.Global
 import nextflow.ISession
 import nextflow.Session
