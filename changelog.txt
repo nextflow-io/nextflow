@@ -1,5 +1,51 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.01.0-edge - 7 Feb 2022
+- Add support for Tower reports (#2523) [de3d76349] <Jordi Deu-Pons>
+- Add RateLimitExceededException when GitHub api limit is reached [ff123c605]
+- Add fetch tags and branches to local git provider [e1de8e0ac]
+- Add K8s priorityClassName pod option, updated tests (#2585) [51650f8c4] <Ben Sherman>
+- Add securityContext pod option to docs (#2584) [19f16f0da] <Ben Sherman>
+- Add automountServiceAccountToken option for k8s executor (#2562) [1b5908e4c] <xhejtman>
+- Add warn about AWS CLI grandparent path in container (#2565) [67073b0c5] <Simon Li>
+- Add affinity option to pod directive (#2522) [640cbed48](3 weeks ago) <Ben Sherman>
+- Add ability to specify memory/cpu resources for the control pod (#2559) [13f3e036d] <xhejtman>
+- Add `-entry` parameter to pass in k8s executor (#2525) [a96233af6] <xhejtman>
+- Add AWS Athena JDBC driver for nf-sqldb plugin (#2500) [462575f05] <Abhinav Sharma>
+- Fix process output 'env' as array (#2624) [0a246dc2c] <Jorge Aguilera>
+- Fix make date format to change independent from system locale [d1e5f6e76] <Jorge Aguilera>
+- Fix double access of params file [459ebab7b] <Paolo Di Tommaso>
+- Fix Use account SAS token instead of service SAS token (#2576) [d5125975d] <Florian De Temmerman>
+- Fix upload of nested directory outputs on azure (#2578) [85ad55225] [744447155] <Florian De Temmerman>
+- Fix Docs Typo (#2556) [942be46f6] <Kibubu>
+- Fix NXF_PARAMS_FILE is not recognised #2549 [62f5fe1d9]
+- Fix failing tests (4 weeks ago) <Paolo Di Tommaso>
+- Fix Unable to use output path with nested properties [ceceb0784]
+- Fix Nextflow couldn't parse generated nextflow.config under some circumstances (#2496) [2dfbbc63c] <Fabian Lehmann>
+- Fix invalid use of `var` keyword [8418cc8d6]
+- Improve k8s executor throwing NodeTerminationException on node shutdown (#2590) [084c8d6ca] <Patrick Hüther>
+- Improve docs on `include` statements (#2520) [9c140cee3] <Alexander Toenges>
+- Improve core plugins info & logging [dfa544ac9]
+- Improve Secrets handling [1c0ad4679] [329502d19] [[26b4be906]]
+- Improve DSL2 documentation [048b026f2] [e2e8b5557] <Manuele Simi>
+- Improve documentation (#2600) [787a1fd84] <Ben Sherman>
+- Allow disabling history file unique check [c3677c311]
+- Make S3 parallel download as default [b490f146d] [03dae9d6e]
+- Run Azure integration tests only with Java 11 [0890ceeb3]
+- Prepare for Java >= 11 build [8c0566fc3] [5ba16dd18] [405b67365]
+- Use Standard_A3 instance type for Azure tests [67e7d3ab3] [b97b0010c]
+- Refactor cache store using plugins [54bf7a61d]
+- Update google cloud docs (#2594) [dfa867953] <Ben Sherman>
+- Update the azure docs for registry [96baf288e] <Abhinav Sharma>
+- Update copyright info [807a816a5]
+- Remove gradle logs about tasks dependencies (#2618) [cae44e00b] <Jorge Aguilera>
+- Remove Tika deps for nf-amazon module [95620d42b]
+- Remove deprecated validExitStatuas directive [b3117e789] [2188d51a0]
+- Remove support for Apache Ignite [d4dc1cfe1] [64d2773fd]
+- Bump nf-amazon@1.5.0 as default plugin
+- Bump Gradle 7.3.3 [f00bfb0d3]
+- Bump nf-amazon@1.5.0 [40f90aa92] [[2bc16732e]]
+
 21.12.1-edge - 22 Dec 2021
 - Add tags attribute to publishDir directive [e78a997b5]
 - Add ability to disable running jobs cancellation [a13af9a3c]
