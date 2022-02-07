@@ -1,6 +1,5 @@
 /*
  * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,26 +12,38 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.processor
+package nextflow.cache
 
-import groovy.transform.EqualsAndHashCode
-import groovy.transform.ToString
+import com.google.common.hash.HashCode
 import groovy.transform.TupleConstructor
-import nextflow.trace.TraceRecord
+
 /**
- * Model a task entry persisted in the {@link nextflow.cache.CacheDB}
+ * Defines the contract for a pluggable cache storage
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@ToString
-@EqualsAndHashCode
-@TupleConstructor
-class TaskEntry {
+interface CacheStore {
 
-    TraceRecord trace
+    @TupleConstructor
+    static class Index {
+        final HashCode key
+        final boolean cached
+    }
 
-    TaskContext context
+    CacheStore open()
+    CacheStore openForRead()
+    void close()
+    void drop()
+
+    byte[] getEntry(HashCode key)
+    void putEntry(HashCode key, byte[] value)
+    void deleteEntry(HashCode key)
+
+    void writeIndex(HashCode key, boolean cached)
+    Iterator<Index> iterateIndex()
+    void deleteIndex()
 
 }
