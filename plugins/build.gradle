@@ -97,7 +97,7 @@ subprojects {
     /*
      * Copy the plugin in the project root build/plugins directory
      */
-    task "copyPluginZip${project.name}"(type: Copy) {
+    task copyPluginZip(type: Copy) {
         from makeZip
         into "$rootProject.buildDir/plugins"
     }
@@ -105,8 +105,8 @@ subprojects {
     /*
      * Unzip the plugin artifact in the project root build/plugins directory
      */
-    task "unzipPlugin${project.name}"(type: Copy) {
-        from "copyPluginZip${project.name}"
+    task unzipPlugin(type: Copy, dependsOn: copyPluginZip) {
+        from zipTree("$rootProject.buildDir/plugins/${project.name}-${project.version}.zip")
         into "$rootProject.buildDir/plugins/${project.name}-${project.version}"
     }
 
@@ -173,9 +173,8 @@ classes.dependsOn subprojects.copyPluginLibs
 /*
  * "install" the plugin the project root build/plugins directory
  */
-assemble.dependsOn subprojects*.tasks.collect {
-    it.matching {task -> task.name.startsWith('unzipPlugin')}
-}.flatten()
+assemble.dependsOn subprojects.unzipPlugin
+
 /*
  * Merge and publish the plugins index file
  */
