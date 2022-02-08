@@ -18,6 +18,7 @@
 package nextflow.cloud.azure.file
 
 import groovy.transform.Memoized
+import nextflow.cloud.azure.config.AzCopyOpts
 import nextflow.executor.BashFunLib
 import nextflow.util.Duration
 
@@ -50,17 +51,17 @@ class AzBashLib extends BashFunLib<AzBashLib> {
         nxf_az_upload() {
             local name=\$1
             local target=\${2%/} ## remove ending slash
-            local base_name="\$(basename "$name")"
-            local dir_name="\$(dirname "$name")"
+            local base_name="\$(basename "\$name")"
+            local dir_name="\$(dirname "\$name")"
 
-            if [[ -d $name ]]; then
-              if [[ "$base_name" == "$name" ]]; then
-                azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $blobTier --block-size-mb $blockSize
+            if [[ -d \$name ]]; then
+              if [[ "\$base_name" == "\$name" ]]; then
+                azcopy cp "\$name" "\$target?\$AZ_SAS" --recursive --block-blob-tier $blobTier --block-size-mb $blockSize
               else
-                azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $blobTier --block-size-mb $blockSize
+                azcopy cp "\$name" "\$target/\$dir_name?\$AZ_SAS" --recursive --block-blob-tier $blobTier --block-size-mb $blockSize
               fi
             else
-              azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $blobTier --block-size-mb $blockSize
+              azcopy cp "\$name" "\$target/\$name?\$AZ_SAS" --block-blob-tier $blobTier --block-size-mb $blockSize
             fi
         }
         
@@ -71,10 +72,10 @@ class AzBashLib extends BashFunLib<AzBashLib> {
             local ret
             mkdir -p "\$basedir"
         
-            ret=$(azcopy cp "\$source?$AZ_SAS" "\$target" 2>&1) || {
+            ret=\$(azcopy cp "\$source?\$AZ_SAS" "\$target" 2>&1) || {
                 ## if fails check if it was trying to download a directory
                 mkdir -p \$target
-                azcopy cp "\$source/*?$AZ_SAS" "\$target" --recursive >/dev/null || {
+                azcopy cp "\$source/*?\$AZ_SAS" "\$target" --recursive >/dev/null || {
                     rm -rf \$target
                     >&2 echo "Unable to download path: \$source"
                     exit 1
@@ -89,14 +90,14 @@ class AzBashLib extends BashFunLib<AzBashLib> {
     }
 
     @Memoized
-    static String script(Integer maxParallelTransfers, Integer maxTransferAttempts, Duration delayBetweenAttempts) {
+    static String script(AzCopyOpts opts, Integer maxParallelTransfers, Integer maxTransferAttempts, Duration delayBetweenAttempts) {
         new AzBashLib()
                 .includeCoreFun(true)
                 .withMaxParallelTransfers(maxParallelTransfers)
                 .withMaxTransferAttempts(maxTransferAttempts)
                 .withDelayBetweenAttempts(delayBetweenAttempts)
-                .withBlobTier()
-                .withBlockSize()
+                .withBlobTier(opts.blobTier)
+                .withBlockSize(opts.blockSize)
                 .render()
     }
 
