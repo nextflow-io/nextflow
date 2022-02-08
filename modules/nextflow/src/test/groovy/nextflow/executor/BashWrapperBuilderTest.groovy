@@ -877,8 +877,8 @@ class BashWrapperBuilderTest extends Specification {
         str == '''
             # capture process environment
             set +u
-            echo FOO=$FOO > .command.env
-            echo BAR=$BAR >> .command.env
+            echo FOO=${FOO[@]} > .command.env
+            echo BAR=${BAR[@]} >> .command.env
             '''
             .stripIndent()
 

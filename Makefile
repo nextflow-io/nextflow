@@ -43,7 +43,7 @@ compile:
 	@echo "DONE `date`"
 
 assemble:
-	./gradlew compile assemble
+	./gradlew compile assemble :plugins:assemble
 
 check:
 	./gradlew check

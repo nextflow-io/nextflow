@@ -1,6 +1,5 @@
 /*
  * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,26 +12,32 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.processor
+package nextflow.cache
 
-import groovy.transform.EqualsAndHashCode
-import groovy.transform.ToString
-import groovy.transform.TupleConstructor
-import nextflow.trace.TraceRecord
+import java.nio.file.Path
+
+import groovy.transform.CompileStatic
+import nextflow.exception.AbortOperationException
+
 /**
- * Model a task entry persisted in the {@link nextflow.cache.CacheDB}
+ * Implements the default cache factory
+ *
+ * @see DefaultCacheStore
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@ToString
-@EqualsAndHashCode
-@TupleConstructor
-class TaskEntry {
+@CompileStatic
+class DefaultCacheFactory extends CacheFactory {
 
-    TraceRecord trace
-
-    TaskContext context
+    @Override
+    protected CacheDB newInstance(UUID uniqueId, String runName, Path home) {
+        if( !uniqueId ) throw new AbortOperationException("Missing cache `uuid`")
+        if( !runName ) throw new AbortOperationException("Missing cache `runName`")
+        final store = new DefaultCacheStore(uniqueId, runName, home)
+        return new CacheDB(store)
+    }
 
 }
