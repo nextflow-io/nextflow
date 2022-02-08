@@ -1,5 +1,7 @@
 package nextflow.cloud.azure.file
 
+import nextflow.cloud.azure.config.AzConfig
+import nextflow.cloud.azure.config.AzCopyOpts
 import nextflow.util.Duration
 import spock.lang.Specification
 
@@ -7,9 +9,21 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class AzBashLibTest extends Specification{
+class AzBashLibTest extends Specification {
 
-    def 'should return base script' () {
+    def 'TEMP'() {
+
+        when:
+        def script = AzBashLib.script(new AzCopyOpts([blobSize: '100', blobTier: 'Hot']),
+                10,
+                20,
+                Duration.of('30s'))
+
+        then:
+        print(script)
+    }
+
+    def 'should return base script'() {
         expect:
         AzBashLib.script() == '''
                 nxf_az_upload() {
@@ -20,12 +34,12 @@ class AzBashLibTest extends Specification{
         
                     if [[ -d $name ]]; then
                       if [[ "$base_name" == "$name" ]]; then
-                        azcopy cp "$name" "$target?$AZ_SAS" --recursive
+                        azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier None --block-size-mb 4
                       else
-                        azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive
+                        azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive  --block-blob-tier None --block-size-mb 4
                       fi
                     else
-                      azcopy cp "$name" "$target/$name?$AZ_SAS"
+                      azcopy cp "$name" "$target/$name?$AZ_SAS"  --block-blob-tier None --block-size-mb 4
                     fi
                 }
                 
@@ -49,9 +63,10 @@ class AzBashLibTest extends Specification{
                 '''.stripIndent()
     }
 
-    def 'should return script with config' () {
+    def 'should return script with config, with no azcopy opts'() {
+
         expect:
-        AzBashLib.script(10, 20, Duration.of('30s')) == '''\
+        AzBashLib.script(new AzCopyOpts(), 10, 20, Duration.of('30s')) == '''\
             # bash helper functions
             nxf_cp_retry() {
                 local max_attempts=20
@@ -115,12 +130,12 @@ class AzBashLibTest extends Specification{
     
                 if [[ -d $name ]]; then
                   if [[ "$base_name" == "$name" ]]; then
-                    azcopy cp "$name" "$target?$AZ_SAS" --recursive
+                    azcopy cp "$name" "$target?$AZ_SAS" --recursive  --block-blob-tier None --block-size-mb 4
                   else
-                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive
+                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive  --block-blob-tier None --block-size-mb 4
                   fi
                 else
-                  azcopy cp "$name" "$target/$name?$AZ_SAS"
+                  azcopy cp "$name" "$target/$name?$AZ_SAS"  --block-blob-tier None --block-size-mb 4
                 fi
             }
             
@@ -143,4 +158,5 @@ class AzBashLibTest extends Specification{
             }
             '''.stripIndent()
     }
+
 }

@@ -29,8 +29,8 @@ import nextflow.util.Duration
  */
 class AzBashLib extends BashFunLib<AzBashLib> {
 
-    private String blockSize = '4'
-    private String blobTier = 'None' // None | Hot | Cool | Archive
+    private String blockSize
+    private String blobTier
 
 
     AzBashLib withBlockSize(String value) {
@@ -90,6 +90,13 @@ class AzBashLib extends BashFunLib<AzBashLib> {
     }
 
     @Memoized
+    static String script() {
+        new AzBashLib()
+                .includeCoreFun(true)
+                .render()
+    }
+
+    @Memoized
     static String script(AzCopyOpts opts, Integer maxParallelTransfers, Integer maxTransferAttempts, Duration delayBetweenAttempts) {
         new AzBashLib()
                 .includeCoreFun(true)
@@ -101,8 +108,4 @@ class AzBashLib extends BashFunLib<AzBashLib> {
                 .render()
     }
 
-    @Memoized
-    static String script() {
-        new AzBashLib().render()
-    }
 }
