@@ -28,43 +28,60 @@ import nextflow.util.Duration
  */
 class AzBashLib extends BashFunLib<AzBashLib> {
 
+    private String blockSize = '4'
+    private String blobTier = 'None' // None | Hot | Cool | Archive
+
+
+    AzBashLib withBlockSize(String value) {
+        if( value )
+            this.blockSize = value
+        return this
+    }
+
+    AzBashLib withBlobTier(String value) {
+        if( value )
+            this.blobTier = value
+        return this
+    }
+
+
     protected String azLib() {
-        '''
+        """
         nxf_az_upload() {
-            local name=$1
-            local target=${2%/} ## remove ending slash
-            local base_name="$(basename "$name")"
-            local dir_name="$(dirname "$name")"
+            local name=\$1
+            local target=\${2%/} ## remove ending slash
+            local base_name="\$(basename "$name")"
+            local dir_name="\$(dirname "$name")"
 
             if [[ -d $name ]]; then
               if [[ "$base_name" == "$name" ]]; then
-                azcopy cp "$name" "$target?$AZ_SAS" --recursive
+                azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $blobTier --block-size-mb $blockSize
               else
-                azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive
+                azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $blobTier --block-size-mb $blockSize
               fi
             else
-              azcopy cp "$name" "$target/$name?$AZ_SAS"
+              azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $blobTier --block-size-mb $blockSize
             fi
         }
         
         nxf_az_download() {
-            local source=$1
-            local target=$2
-            local basedir=$(dirname $2)
+            local source=\$1
+            local target=\$2
+            local basedir=\$(dirname \$2)
             local ret
-            mkdir -p "$basedir"
+            mkdir -p "\$basedir"
         
-            ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
+            ret=$(azcopy cp "\$source?$AZ_SAS" "\$target" 2>&1) || {
                 ## if fails check if it was trying to download a directory
-                mkdir -p $target
-                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
-                    rm -rf $target
-                    >&2 echo "Unable to download path: $source"
+                mkdir -p \$target
+                azcopy cp "\$source/*?$AZ_SAS" "\$target" --recursive >/dev/null || {
+                    rm -rf \$target
+                    >&2 echo "Unable to download path: \$source"
                     exit 1
                 }
             }
         }
-        '''.stripIndent()
+        """.stripIndent()
     }
 
     String render() {
@@ -78,6 +95,8 @@ class AzBashLib extends BashFunLib<AzBashLib> {
                 .withMaxParallelTransfers(maxParallelTransfers)
                 .withMaxTransferAttempts(maxTransferAttempts)
                 .withDelayBetweenAttempts(delayBetweenAttempts)
+                .withBlobTier()
+                .withBlockSize()
                 .render()
     }
 

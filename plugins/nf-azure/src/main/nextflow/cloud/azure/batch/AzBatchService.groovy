@@ -347,7 +347,7 @@ class AzBatchService implements Closeable {
         }
         final containerOpts = new TaskContainerSettings()
                 .withImageName(container)
-                // mount host certificates otherwise `azcopy fails
+                // mount host certificates otherwise `azcopy` fails
                 .withContainerRunOptions("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro ${volumes} ")
 
         final slots = computeSlots(task, pool)
