@@ -24,10 +24,10 @@ class AzBashLibTest extends Specification {
                       if [[ "$base_name" == "$name" ]]; then
                         azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier None --block-size-mb 4
                       else
-                        azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive  --block-blob-tier None --block-size-mb 4
+                        azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier None --block-size-mb 4
                       fi
                     else
-                      azcopy cp "$name" "$target/$name?$AZ_SAS"  --block-blob-tier None --block-size-mb 4
+                      azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier None --block-size-mb 4
                     fi
                 }
                 
@@ -118,12 +118,12 @@ class AzBashLibTest extends Specification {
     
                 if [[ -d $name ]]; then
                   if [[ "$base_name" == "$name" ]]; then
-                    azcopy cp "$name" "$target?$AZ_SAS" --recursive  --block-blob-tier None --block-size-mb 4
+                    azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier None --block-size-mb 4
                   else
-                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive  --block-blob-tier None --block-size-mb 4
+                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier None --block-size-mb 4
                   fi
                 else
-                  azcopy cp "$name" "$target/$name?$AZ_SAS"  --block-blob-tier None --block-size-mb 4
+                  azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier None --block-size-mb 4
                 fi
             }
             
@@ -147,7 +147,7 @@ class AzBashLibTest extends Specification {
             '''.stripIndent()
     }
 
-    def 'should return script with config, with azcopy opts'() {
+    def 'should return script with config, with custom azcopy opts'() {
 
         expect:
         AzBashLib.script(new AzCopyOpts([blobTier: "Hot", blockSize: "10"]), 10, 20, Duration.of('30s')) == '''\
@@ -214,12 +214,12 @@ class AzBashLibTest extends Specification {
     
                 if [[ -d $name ]]; then
                   if [[ "$base_name" == "$name" ]]; then
-                    azcopy cp "$name" "$target?$AZ_SAS" --recursive  --block-blob-tier Hot --block-size-mb 10
+                    azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier Hot --block-size-mb 10
                   else
-                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive  --block-blob-tier Hot --block-size-mb 10
+                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier Hot --block-size-mb 10
                   fi
                 else
-                  azcopy cp "$name" "$target/$name?$AZ_SAS"  --block-blob-tier Hot --block-size-mb 10
+                  azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier Hot --block-size-mb 10
                 fi
             }
             

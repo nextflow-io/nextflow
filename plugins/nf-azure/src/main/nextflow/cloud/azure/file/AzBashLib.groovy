@@ -29,8 +29,8 @@ import nextflow.util.Duration
  */
 class AzBashLib extends BashFunLib<AzBashLib> {
 
-    private String blockSize
-    private String blobTier
+    private String blockSize = AzCopyOpts.DEFAULT_BLOCK_SIZE
+    private String blobTier = AzCopyOpts.DEFAULT_BLOB_TIER
 
 
     AzBashLib withBlockSize(String value) {
@@ -91,9 +91,7 @@ class AzBashLib extends BashFunLib<AzBashLib> {
 
     @Memoized
     static String script() {
-        new AzBashLib()
-                .includeCoreFun(true)
-                .render()
+        new AzBashLib().render()
     }
 
     @Memoized
