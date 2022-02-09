@@ -10,7 +10,7 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class AzBashLibTest extends Specification {
-    
+
     def 'should return base script'() {
         expect:
         AzBashLib.script() == '''
