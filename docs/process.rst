@@ -1688,6 +1688,16 @@ The number of times a failing process is re-executed is defined by the `maxRetri
 
 See also: `maxErrors`_, `maxRetries`_ and `Dynamic computing resources`_.
 
+As shortcut you can pass a Map, as a second argument, to configure the `maxRetries`_ and `maxErrors`_ directives.
+For example::
+
+    process retryIfFail {
+       errorStrategy 'retry', maxRetries:3, maxErrors:10
+
+       script:
+       <your command string here>
+    }
+
 
 .. _process-executor:
 

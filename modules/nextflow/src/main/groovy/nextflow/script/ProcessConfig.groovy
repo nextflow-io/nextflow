@@ -89,6 +89,11 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'stageOutMode'
     ]
 
+    static final public List<String> ERROR_STRATEGY_CONFIGURATION = [
+            'maxErrors',
+            'maxRetries',
+    ]
+
     /**
      * Names of directives that can be used more than once in the process definition
      */
@@ -755,8 +760,45 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      * @return
      *      The {@link ProcessConfig} instance itself.
      */
-    ProcessConfig errorStrategy( strategy ) {
+    ProcessConfig errorStrategy( strategy) {
+        this.errorStrategy(strategy, [:])
+    }
+
+    /**
+     * Implements the {@code errorStrategy} directive
+     *
+     * @see ErrorStrategy
+     *
+     * @param params
+     *      A map of configuration
+     * @param strategy
+     *      A string representing the error strategy to be used.
+     * @return
+     *      The {@link ProcessConfig} instance itself.
+     */
+    ProcessConfig errorStrategy( Map<String,Object>params, Object strategy) {
+        this.errorStrategy(strategy, params)
+    }
+
+    /**
+     * Implements the {@code errorStrategy} directive
+     *
+     * @see ErrorStrategy
+     *
+     * @param strategy
+     *      A string representing the error strategy to be used.
+     * @param params
+     *      A map of configuration
+     * @return
+     *      The {@link ProcessConfig} instance itself.
+     */
+    ProcessConfig errorStrategy(Object strategy , Map<String,Object>params) {
         configProperties.put('errorStrategy', strategy)
+        for( String str : ERROR_STRATEGY_CONFIGURATION){
+            if( params[str]){
+                configProperties.put(str, params[str])
+            }
+        }
         return this
     }
 
