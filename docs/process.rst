@@ -1334,6 +1334,7 @@ The directives are:
 * `afterScript`_
 * `beforeScript`_
 * `cache`_
+* `cleanup`_
 * `cpus`_
 * `conda`_
 * `container`_
@@ -1358,7 +1359,6 @@ The directives are:
 * `scratch`_
 * `stageInMode`_
 * `stageOutMode`_
-* `cleanup`__
 * `storeDir`_
 * `tag`_
 * `time`_
@@ -1458,6 +1458,31 @@ Value                 Description
 ``'deep'``            Enable caching. Cache keys are created indexing input files content.
 ``'lenient'``         Enable caching. Cache keys are created indexing input files path and size attributes (this policy provides a workaround for incorrect caching invalidation observed on shared file systems due to inconsistent files timestamps; requires version 0.32.x or later).
 ===================== =================
+
+
+
+.. _process-cleanup:
+
+cleanup
+-------
+
+The ``cleanup`` directive allows you to control the removal the temporary folder that is local to the execution node
+once the task is completed. This is useful when you are debugging failed tasks or would like to regain space on the task node.
+
+In its basic form simply specify ``true`` at the directive value, as shown below::
+
+  process myTask {
+
+    cleanup true
+
+
+    '''
+    <task script>
+    '''
+  }
+
+.. tip::
+   Also see the :ref:`process-scratch` directive.
 
 
 .. _process-conda:
@@ -2210,29 +2235,6 @@ $YOUR_VAR   Creates a scratch folder in the directory defined by the ``$YOUR_VAR
 /my/tmp     Creates a scratch folder in the specified directory.
 ram-disk    Creates a scratch folder in the RAM disk ``/dev/shm/`` (experimental).
 =========== ==================
-
-.. _process-cleanup:
-
-cleanup
--------
-
-The ``cleanup`` directive allows you to control the removal the temporary folder that is local to the execution node
-once the task is completed. This is useful when you are debugging failed tasks or would like to regain space on the task node.
-
-In its basic form simply specify ``true`` at the directive value, as shown below::
-
-  process myTask {
-
-    cleanup true
-
-
-    '''
-    <task script>
-    '''
-  }
-
-.. tip::
-   Also see the :ref:`process-scratch` directive.
 
 .. _process-storeDir:
 
