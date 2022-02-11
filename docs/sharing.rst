@@ -322,7 +322,7 @@ using the configuration snippet shown below::
             platform = 'azurerepos'
             user = 'your-user'
             password = 'your-password'
-            token = 'your-api-token' // When token is used, password is not necessary.
+            token = 'your-api-token' // Only token is allowed
 
         }
 
