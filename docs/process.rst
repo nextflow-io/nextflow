@@ -1335,11 +1335,11 @@ The directives are:
 * `beforeScript`_
 * `cache`_
 * `cleanup`_
-* `cpus`_
 * `conda`_
 * `container`_
 * `containerOptions`_
 * `clusterOptions`_
+* `cpus`_
 * `disk`_
 * `echo`_
 * `errorStrategy`_
@@ -1564,6 +1564,18 @@ only for a specific process e.g. mount a custom path::
 
 .. warning:: This feature is not supported by the :ref:`k8s-executor` or :ref:`azurebatch-executor` executors.
 
+.. _process-clusterOptions:
+
+clusterOptions
+--------------
+
+The ``clusterOptions`` directive allows the usage of any `native` configuration option accepted by your cluster submit command.
+You can use it to request non-standard resources or use settings that are specific to your cluster and not supported
+out of the box by Nextflow.
+
+.. note:: This directive is only used by grid executors. Refer to the
+  :ref:`executor-page` page to see which executors support this directive.
+
 
 .. _process-cpus:
 
@@ -1587,19 +1599,6 @@ This directive is required for tasks that execute multi-process or multi-threade
 to reserve enough CPUs when a pipeline task is executed through a cluster resource manager.
 
 See also: `penv`_, `memory`_, `time`_, `queue`_, `maxForks`_
-
-
-.. _process-clusterOptions:
-
-clusterOptions
---------------
-
-The ``clusterOptions`` directive allows the usage of any `native` configuration option accepted by your cluster submit command.
-You can use it to request non-standard resources or use settings that are specific to your cluster and not supported
-out of the box by Nextflow.
-
-.. note:: This directive is only used by grid executors. Refer to the
-  :ref:`executor-page` page to see which executors support this directive.
 
 
 .. _process-disk:
