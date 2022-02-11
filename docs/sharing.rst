@@ -201,7 +201,7 @@ The attributes marked with a * are only required when defining the configuration
 
 .. tip::
   A custom location for the SCM file can be specified using the ``NXF_SCM_FILE`` environment variable (requires
- version ``20.10.0`` or later).
+  version ``20.10.0`` or later).
 
 BitBucket credentials
 ---------------------
@@ -282,7 +282,9 @@ that can be found in your GitLab `account page <https://gitlab.com/profile/accou
 
     }
 
-.. tip:: The ``token`` field is optional and the token value could also be specified in the ``password`` field.
+.. tip::
+    The GitLab *token* string can be used as the ``password`` value in the above setting.
+    When doing that the ``token`` field can be omitted.
 
 
 Gitea credentials
@@ -314,7 +316,7 @@ Azure Repos credentials
 
 Nextflow has a builtin support for `Azure Repos <https://azure.microsoft.com/en-us/services/devops/repos/>`_, a Git source
 code management service hosted in the Azure cloud. To access your Azure Repos with Nextflow provide the repository credentials
-using the configuration snippet shown below:
+using the configuration snippet shown below::
 
     providers {
 
@@ -522,7 +524,7 @@ have created. For example::
 In this way when you launch the pipeline execution, the Docker image will be automatically downloaded and used to run
 your tasks.
 
-Read the :ref:`docker-page` page to learn more on how to use Docker containers with Nextflow.
+Read the :ref:`container-page` page to learn more on how to use containers with Nextflow.
 
 
 This mix of technologies makes it possible to write self-contained and truly reproducible pipelines which require

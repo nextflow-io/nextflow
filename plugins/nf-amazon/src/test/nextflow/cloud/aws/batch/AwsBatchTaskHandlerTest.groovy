@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,7 +39,6 @@ import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
 import nextflow.processor.BatchContext
-import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -94,8 +93,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getVcpus() == 4
-        req.getContainerOverrides().getMemory() == 8192
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
         req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws s3 cp --only-show-errors .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()]
         req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
@@ -113,8 +112,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getVcpus() == 4
-        req.getContainerOverrides().getMemory() == 8192
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
         req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws --region eu-west-1 s3 cp --only-show-errors .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws --region eu-west-1 s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()]
         req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
@@ -133,14 +132,17 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def req = handler.newSubmitRequest(task)
         then:
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', region: 'eu-west-1') }
+        handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', region: 'eu-west-1') }
+        and:
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
-
+        and:
         def res = req.getContainerOverrides().getResourceRequirements()
-        res.size()==1
-        res[0].getValue() == '2'
-        res[0].getType() == 'GPU'
+        res.size()==3
+        and:
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='GPU'}.getValue() == '2'
     }
 
 
@@ -155,11 +157,11 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig()
-
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        and:
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
-
+        and:
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
@@ -171,11 +173,11 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig(time: '5 sec')
-
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        and:
         1 * handler.getJobQueue(task) >> 'queue2'
         1 * handler.getJobDefinition(task) >> 'job-def:2'
-
+        and:
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue2'
         req.getJobDefinition() == 'job-def:2'
@@ -188,11 +190,11 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig(time: '1 hour')
-
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        and:
         1 * handler.getJobQueue(task) >> 'queue3'
         1 * handler.getJobDefinition(task) >> 'job-def:3'
-
+        and:
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue3'
         req.getJobDefinition() == 'job-def:3'
@@ -204,8 +206,9 @@ class AwsBatchTaskHandlerTest extends Specification {
     def 'should create an aws submit request with retry'() {
 
         given:
-        def VAR_FOO = new KeyValuePair().withName('FOO').withValue('1')
-        def VAR_BAR = new KeyValuePair().withName('BAR').withValue('2')
+        def VAR_RETRY_MODE = new KeyValuePair().withName('AWS_RETRY_MODE').withValue('adaptive')
+        def VAR_MAX_ATTEMPTS = new KeyValuePair().withName('AWS_MAX_ATTEMPTS').withValue('10')
+        def VAR_METADATA_ATTEMPTS = new KeyValuePair().withName('AWS_METADATA_SERVICE_NUM_ATTEMPTS').withValue('10')
         def task = Mock(TaskRun)
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4, maxRetries: 2)
@@ -215,18 +218,19 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def req = handler.newSubmitRequest(task)
         then:
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', retryMode: 'adaptive', maxTransferAttempts: 10) }
+        and:
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
-        1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
         1 * handler.wrapperFile >> Paths.get('/bucket/test/.command.run')
         1 * handler.getLogFile() >> Paths.get('/bucket/test/.command.log')
-
+        and:
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
         // no error `retry` error strategy is defined by NF, use `maxRetries` to se Batch attempts
         req.getRetryStrategy() == new RetryStrategy().withAttempts(3)
+        req.getContainerOverrides().getEnvironment() == [VAR_RETRY_MODE, VAR_MAX_ATTEMPTS, VAR_METADATA_ATTEMPTS]
     }
 
     def 'should return job queue'() {
@@ -270,27 +274,31 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     }
 
+    protected KeyValuePair kv(String K, String V) {
+        new KeyValuePair().withName(K).withValue(V)
+    }
+
     def 'should return job envs'() {
         given:
-        def VAR_FOO = new KeyValuePair().withName('FOO').withValue('hello')
-        def VAR_BAR = new KeyValuePair().withName('BAR').withValue('world')
-        def VAR_NXF = new KeyValuePair().withName('NXF_DEBUG').withValue('2')
 
-        def bean = new TaskBean()
-        bean.environment = [FOO:'hello', BAR: 'world']
-        def handler = [:] as AwsBatchTaskHandler
-        handler.bean = bean
+        def handler = Spy(new AwsBatchTaskHandler(environment: ENV)) {
+            getAwsOptions() >> Mock(AwsOptions) {
+                getRetryMode() >> RETRY_MODE
+                getMaxTransferAttempts() >> MAX_ATTEMPTS
+            }
+        }
 
-        when:
-        def vars = handler.getEnvironmentVars()
-        then:
-        vars.size() == 0
+        expect:
+        handler.getEnvironmentVars() == EXPECTED
 
-        when:
-        handler.environment = [NXF_DEBUG: '2', NXF_FOO: 'ignore']
-        vars = handler.getEnvironmentVars()
-        then:
-        vars == [ VAR_NXF ]
+        where:
+        RETRY_MODE  | MAX_ATTEMPTS  |  ENV                                  | EXPECTED
+        null        | null          | [FOO:'hello', BAR: 'world']           | []
+        null        | null          | [NXF_DEBUG: '2', NXF_FOO: 'ignore']   | [kv('NXF_DEBUG','2')]
+        'standard'  | 5             | [NXF_DEBUG: '1']                      | [kv('NXF_DEBUG','1'), kv('AWS_RETRY_MODE','standard'), kv('AWS_MAX_ATTEMPTS','5'), kv('AWS_METADATA_SERVICE_NUM_ATTEMPTS','5')]
+        'adaptive'  | null          | [FOO:'hello']                         | [kv('AWS_RETRY_MODE','adaptive')]
+        'legacy'    | null          | [FOO:'hello']                         | [kv('AWS_RETRY_MODE','legacy')]
+        'built-in'  | null          | [FOO:'hello']                         | []
     }
 
     def 'should strip invalid chars for job definition name' () {
@@ -455,7 +463,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         given:
         def IMAGE = 'foo/bar:1.0'
         def JOB_NAME = 'nf-foo-bar-1-0'
-        def handler = Spy(AwsBatchTaskHandler)
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+        }
         handler.executor = Mock(AwsBatchExecutor)
 
         when:
@@ -490,7 +500,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_NAME = 'nf-foo-bar-1-0'
         def executor = Mock(AwsBatchExecutor)
         def opts = Mock(AwsOptions)
-        def handler = Spy(AwsBatchTaskHandler)
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+        }
         handler.executor = executor 
 
         when:
@@ -519,7 +531,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_NAME = 'nf-foo-bar-1-0'
         def opts = Mock(AwsOptions)
         def executor = Mock(AwsBatchExecutor)
-        def handler = Spy(AwsBatchTaskHandler)
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+        }
         handler.executor = executor
 
         when:
@@ -531,6 +545,31 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         then:
         result.getContainerProperties().getJobRoleArn() == ROLE
+    }
+
+    def 'should set container linux properties'  () {
+        given:
+        def ROLE = 'aws::foo::bar'
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def opts = Mock(AwsOptions)
+        def taskConfig = new TaskConfig(containerOptions: '--privileged --user foo')
+        def executor = Mock(AwsBatchExecutor)
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { getConfig() >> taskConfig  }
+        }
+        handler.executor = executor
+
+        when:
+        def result = handler.makeJobDefRequest(IMAGE)
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> opts
+
+        then:
+        result.getContainerProperties().getUser() == 'foo'
+        result.getContainerProperties().getPrivileged() == true
+
     }
 
     def 'should check task status' () {

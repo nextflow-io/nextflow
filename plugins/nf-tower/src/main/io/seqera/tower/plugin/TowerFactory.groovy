@@ -49,7 +49,7 @@ class TowerFactory implements TraceObserverFactory {
         if ( !endpoint || endpoint=='-' )
             endpoint = env.get('TOWER_API_ENDPOINT') ?: TowerClient.DEF_ENDPOINT_URL
 
-        final tower = new TowerClient(session, endpoint)
+        final tower = new TowerClient(session, endpoint).withEnvironment(env)
         if( aliveInterval )
             tower.aliveInterval = aliveInterval
         if( requestInterval )

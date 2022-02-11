@@ -1,6 +1,6 @@
 NEXTFLOW
 
-Copyright 2020-2021, Seqera Labs
+Copyright 2020-2022, Seqera Labs
 Copyright 2013-2019, Centre for Genomic Regulation (CRG)
 
 
@@ -36,10 +36,6 @@ This software includes source code and libraries developed by:
 
     Apache Groovy
     Copyright 2003-2018 Apache Software Foundation
-    Licensed under Apache License, Version 2.0
-
-    Apache Ignite
-    Copyright 2018 The Apache Software Foundation
     Licensed under Apache License, Version 2.0
 
     AWS SDK for Java

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,6 +37,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
+import nextflow.file.TagAwareFile
 import nextflow.util.PathTrie
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
@@ -84,6 +85,11 @@ class PublishDir {
      */
     boolean enabled = true
 
+    /**
+     * Tags to be associated to the target file
+     */
+    private def tags
+
     private PathMatcher matcher
 
     private FileSystem sourceFileSystem
@@ -93,6 +99,8 @@ class PublishDir {
     private String stageInMode
 
     private boolean nullPathWarn
+
+    private String taskName
 
     @Lazy
     private ExecutorService threadPool = (Global.session as Session).getFileTransferThreadPool()
@@ -116,6 +124,17 @@ class PublishDir {
 
     void setMode( Mode mode )  {
         this.mode = mode
+    }
+
+    static @PackageScope Map<String,String> resolveTags( tags ) {
+        def result = tags instanceof Closure
+                ? tags.call()
+                : tags
+
+        if( result instanceof Map<String,String> )
+            return result
+
+        throw new IllegalArgumentException("Invalid publishDir tags attribute: $tags")
     }
 
     @PackageScope boolean checkNull(String str) {
@@ -150,10 +169,13 @@ class PublishDir {
             result.overwrite = Boolean.parseBoolean(params.overwrite.toString())
 
         if( params.saveAs )
-            result.saveAs = params.saveAs
+            result.saveAs = (Closure) params.saveAs
 
         if( params.enabled != null )
             result.enabled = Boolean.parseBoolean(params.enabled.toString())
+
+        if( params.tags != null )
+            result.tags = params.tags
 
         return result
     }
@@ -215,9 +237,11 @@ class PublishDir {
         this.sourceFileSystem = sourceDir ? sourceDir.fileSystem : null
         apply0(files)
     }
+
     /**
      * Apply the publishing process to the specified {@link TaskRun} instance
      *
+     * @param files Set of output files
      * @param task The task whose output need to be published
      */
     @CompileStatic
@@ -235,6 +259,7 @@ class PublishDir {
         this.sourceDir = task.targetDir
         this.sourceFileSystem = sourceDir.fileSystem
         this.stageInMode = task.config.stageInMode
+        this.taskName = task.name
 
         apply0(files)
     }
@@ -255,6 +280,12 @@ class PublishDir {
         }
 
         final destination = resolveDestination(target)
+
+        // apply tags
+        if( this.tags!=null && destination instanceof TagAwareFile ) {
+            destination.setTags( resolveTags(this.tags) )
+        }
+
         if( inProcess ) {
             safeProcessFile(source, destination)
         }
@@ -289,7 +320,7 @@ class PublishDir {
             processFile(source, target)
         }
         catch( Throwable e ) {
-            log.warn "Failed to publish file: $source; to: $target [${mode.toString().toLowerCase()}] -- See log file for details", e
+            log.warn "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details", e
         }
     }
 
@@ -303,6 +334,8 @@ class PublishDir {
             processFileImpl(source, destination)
         }
         catch( FileAlreadyExistsException e ) {
+            if( checkIsSameRealPath(source, destination) )
+                return 
             // make sure destination and source does not overlap
             // see https://github.com/nextflow-io/nextflow/issues/2177
             if( checkSourcePathConflicts(destination))
@@ -314,6 +347,8 @@ class PublishDir {
             FileHelper.deletePath(destination)
             processFileImpl(source, destination)
         }
+
+        notifyFilePublish(destination)
     }
 
     private String real0(Path p) {
@@ -332,14 +367,27 @@ class PublishDir {
         }
     }
 
+    protected boolean checkIsSameRealPath(Path source, Path target) {
+        if( !isSymlinkMode() || source.fileSystem!=target.fileSystem )
+            return false
+
+        final t1 = real0(target)
+        final s1 = real0(source)
+        final result = s1 == t1
+        log.trace "Skipping publishDir since source and target real paths are the same - target=$target; real=$t1"
+        return result
+    }
+
     protected boolean checkSourcePathConflicts(Path target) {
-        if( sourceDir.fileSystem!=target.fileSystem )
+        if( !isSymlinkMode() || sourceDir.fileSystem!=target.fileSystem )
             return false
 
         final t1 = real0(target)
         final s1 = real0(sourceDir)
         if( t1.startsWith(s1) ) {
-            def msg = "Refuse to publish file since destination path conflicts with task work directory!"
+            def msg = "Refuse to publish file since destination path conflicts with the task work directory!"
+            if( taskName )
+                msg += "\n- offending task  : $taskName"
             msg += "\n- offending file  : $target"
             if( t1 != target.toString() )
                 msg += "\n- real destination: $t1"
@@ -348,6 +396,10 @@ class PublishDir {
             return true
         }
         return false
+    }
+
+    protected boolean isSymlinkMode() {
+        return !mode || mode == Mode.SYMLINK || mode == Mode.RELLINK
     }
 
     @CompileStatic
@@ -419,6 +471,13 @@ class PublishDir {
 
         if( !mode ) {
             mode = stageInMode=='rellink' ? Mode.RELLINK : Mode.SYMLINK
+        }
+    }
+
+    protected void notifyFilePublish(Path destination) {
+        final sess = Global.session
+        if (sess instanceof Session) {
+            sess.notifyFilePublish(destination)
         }
     }
 

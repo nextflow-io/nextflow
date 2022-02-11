@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 
 package nextflow.cli
 
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.regex.Pattern
 
@@ -40,11 +41,9 @@ import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
 import nextflow.secret.SecretsLoader
-import nextflow.util.ConfigHelper
 import nextflow.util.CustomPoolFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
-import nextflow.util.SecretHelper
 import org.yaml.snakeyaml.Yaml
 /**
  * CLI sub-command RUN
@@ -75,6 +74,8 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     static final public NAME = 'run'
+
+    private Map<String,String> sysEnv = System.getenv()
 
     @Parameter(names=['-name'], description = 'Assign a mnemonic name to the a pipeline run')
     String runName
@@ -232,12 +233,25 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-plugins'], description = 'Specify the plugins to be applied for this run e.g. nf-amazon,nf-tower')
     String plugins
 
+    @Parameter(names=['-disable-jobs-cancellation'], description = 'Prevent the cancellation of child jobs on execution termination')
+    Boolean disableJobsCancellation
+
+    Boolean getDisableJobsCancellation() {
+        return disableJobsCancellation!=null
+                ?  disableJobsCancellation
+                : sysEnv.get('NXF_DISABLE_JOBS_CANCELLATION') as boolean
+    }
+
     @Override
     String getName() { NAME }
 
-    String getParamsFile() { paramsFile ?: env.get('NXF_PARAMS_FILE') }
+    String getParamsFile() {
+        return paramsFile ?: sysEnv.get('NXF_PARAMS_FILE')
+    }
 
-    boolean hasParams() { params || getParamsFile() }
+    boolean hasParams() {
+        return params || getParamsFile()
+    }
 
     @Override
     void run() {
@@ -288,7 +302,9 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
-        runner.session.resolvedConfig = resolveConfig(scriptFile.parent)
+        runner.session.disableJobsCancellation = getDisableJobsCancellation()
+        if( withTower || log.isTraceEnabled() )
+            runner.session.resolvedConfig = ConfigBuilder.resolveConfig(scriptFile.parent, this)
         // note config files are collected during the build process
         // this line should be after `ConfigBuilder#build`
         runner.session.configFiles = builder.parsedConfigFiles
@@ -320,8 +336,12 @@ class CmdRun extends CmdBase implements HubOptions {
             runName = HistoryFile.DEFAULT.generateNextName()
         }
 
-        else if( HistoryFile.DEFAULT.checkExistsByName(runName) )
+        else if( HistoryFile.DEFAULT.checkExistsByName(runName) && !ignoreHistory() )
             throw new AbortOperationException("Run name `$runName` has been already used -- Specify a different one")
+    }
+
+    private static boolean ignoreHistory() {
+        System.getenv('NXF_IGNORE_RESUME_HISTORY')=='true'
     }
 
     static protected boolean matchRunName(String name) {
@@ -329,6 +349,33 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     protected ScriptFile getScriptFile(String pipelineName) {
+        try {
+            getScriptFile0(pipelineName)
+        }
+        catch (IllegalArgumentException | AbortOperationException e) {
+            if( e.message.startsWith("Not a valid project name:") && !guessIsRepo(pipelineName)) {
+                throw new AbortOperationException("Cannot find script file: $pipelineName")
+            }
+            else
+                throw e
+        }
+    }
+
+    static protected boolean guessIsRepo(String name) {
+        if( FileHelper.getUrlProtocol(name) != null )
+            return true
+        if( name.startsWith('/') )
+            return false
+        if( name.startsWith('./') || name.startsWith('../') )
+            return false
+        if( name.endsWith('.nf') )
+            return false
+        if( name.count('/') != 1 )
+            return false
+        return true
+    }
+
+    protected ScriptFile getScriptFile0(String pipelineName) {
         assert pipelineName
 
         /*
@@ -484,9 +531,6 @@ class CmdRun extends CmdBase implements HubOptions {
     private Path validateParamsFile(String file) {
 
         def result = FileHelper.asPath(file)
-        if( !result.exists() )
-            throw new AbortOperationException("Specified params file does not exists: $file")
-
         def ext = result.getExtension()
         if( !VALID_PARAMS_FILE.contains(ext) )
             throw new AbortOperationException("Not a valid params file extension: $file -- It must be one of the following: ${VALID_PARAMS_FILE.join(',')}")
@@ -524,6 +568,9 @@ class CmdRun extends CmdBase implements HubOptions {
             def json = (Map)new JsonSlurper().parseText(text)
             result.putAll(json)
         }
+        catch (NoSuchFileException | FileNotFoundException e) {
+            throw new AbortOperationException("Specified params file does not exists: $file")
+        }
         catch( Exception e ) {
             throw new AbortOperationException("Cannot parse params file: $file - Cause: ${e.message}", e)
         }
@@ -535,28 +582,12 @@ class CmdRun extends CmdBase implements HubOptions {
             def yaml = (Map)new Yaml().load(text)
             result.putAll(yaml)
         }
+        catch (NoSuchFileException | FileNotFoundException e) {
+            throw new AbortOperationException("Specified params file does not exists: $file")
+        }
         catch( Exception e ) {
             throw new AbortOperationException("Cannot parse params file: $file", e)
         }
     }
-
-    protected String resolveConfig(Path baseDir) {
-
-        if( !withTower )
-            return null
-
-        final config = new ConfigBuilder()
-                .setShowClosures(true)
-                .setOptions(launcher.options)
-                .setCmdRun(this)
-                .setBaseDir(baseDir)
-                .buildConfigObject()
-
-        // strip secret
-        SecretHelper.hideSecrets(config)
-
-        ConfigHelper.toCanonicalString(config, false)
-    }
-
 
 }

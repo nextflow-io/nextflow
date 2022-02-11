@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,6 +41,7 @@ import nextflow.trace.TimelineObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.WebLogObserver
 import nextflow.util.HistoryFile
+import nextflow.util.SecretHelper
 /**
  * Builds up the Nextflow configuration object
  *
@@ -824,4 +825,21 @@ class ConfigBuilder {
         }
     }
 
+    static String resolveConfig(Path baseDir, CmdRun cmdRun) {
+
+        final config = new ConfigBuilder()
+                .setShowClosures(true)
+                .setOptions(cmdRun.launcher.options)
+                .setCmdRun(cmdRun)
+                .setBaseDir(baseDir)
+                .buildConfigObject()
+
+        // strip secret
+        SecretHelper.hideSecrets(config)
+        // compute config
+        final result = toCanonicalString(config, false)
+        // dump config for debugging
+        log.trace "Resolved config:\n${result.indent('\t')}"
+        return result
+    }
 }

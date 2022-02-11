@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@ package nextflow.scm
 
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Constants
+import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.revwalk.RevWalk
 import org.eclipse.jgit.treewalk.TreeWalk
 /**
@@ -101,5 +102,36 @@ class LocalRepositoryProvider extends RepositoryProvider {
         }
     }
 
+    @Override
+    List<TagInfo> getTags() {
+        final String prefix = 'refs/tags/'
+
+        try ( final git = Git.open(new File(this.path, project))) {
+            List<Ref> tags = git.tagList().call()
+            final result = new ArrayList(tags.size())
+            for (Ref ref : tags) {
+                if( ref.name.startsWith(prefix) ) {
+                    result.add( new TagInfo(ref.name.substring(prefix.length()), ref.getObjectId().name()))
+                }
+            }
+            return result
+        }
+    }
+
+    @Override
+    List<BranchInfo> getBranches() {
+        final String prefix = 'refs/heads/'
+
+        try ( final git = Git.open(new File(this.path, project))) {
+            List<Ref> tags = git.branchList().call()
+            final result = new ArrayList(tags.size())
+            for (Ref ref : tags) {
+                if( ref.name.startsWith(prefix) ) {
+                    result.add( new BranchInfo(ref.name.substring(prefix.length()), ref.getObjectId().name()) )
+                }
+            }
+            return result
+        }
+    }
 
 }

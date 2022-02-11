@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -181,7 +181,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
         }
 
         if( !entryFlow ) {
-            log.warn "No entry workflow defined"
+            if( meta.getLocalWorkflowNames() )
+                log.warn "No entry workflow specified"
             return result
         }
 

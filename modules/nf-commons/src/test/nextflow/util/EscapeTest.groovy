@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ package nextflow.util
 import java.nio.file.Paths
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -82,4 +83,16 @@ class EscapeTest extends Specification {
         Escape.cli('nextflow','--foo','a[!b-c]') == "nextflow --foo 'a[!b-c]'"
     }
 
+    @Unroll
+    def 'should escape blanks' () {
+        expect:
+        Escape.blanks(STR) == EXPECT
+        where:
+        STR         | EXPECT
+        'foo '      | 'foo '
+        'foo\n'     | 'foo\\n'
+        'foo\t'     | 'foo\\t'
+        'foo\f'     | 'foo\\f'
+        'foo\r'     | 'foo\\r'
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,7 +51,13 @@ class PodOptions {
 
     private PodNodeSelector nodeSelector
 
+    private Map affinity
+
     private PodSecurityContext securityContext
+
+    private boolean automountServiceAccountToken
+
+    private String priorityClassName
 
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
@@ -59,6 +65,7 @@ class PodOptions {
         mountSecrets = new HashSet<>(size)
         mountConfigMaps = new HashSet<>(size)
         mountClaims = new HashSet<>(size)
+        automountServiceAccountToken = true
         init(options)
     }
 
@@ -109,8 +116,17 @@ class PodOptions {
         else if( entry.nodeSelector ) {
             this.nodeSelector = new PodNodeSelector(entry.nodeSelector)
         }
+        else if( entry.affinity instanceof Map ) {
+            this.affinity = entry.affinity as Map
+        }
         else if( entry.annotation && entry.value ) {
             this.annotations.put(entry.annotation as String, entry.value as String)
+        }
+        else if( entry.automountServiceAccountToken instanceof Boolean ) {
+            this.automountServiceAccountToken = entry.automountServiceAccountToken as Boolean
+        }
+        else if( entry.priorityClassName ) {
+            this.priorityClassName = entry.priorityClassName
         }
         else 
             throw new IllegalArgumentException("Unknown pod options: $entry")
@@ -129,14 +145,16 @@ class PodOptions {
 
     Map<String,String> getAnnotations() { annotations }
 
-    PodSecurityContext getSecurityContext() { securityContext }
-
     PodNodeSelector getNodeSelector() { nodeSelector }
 
     PodOptions setNodeSelector( PodNodeSelector sel ) {
         nodeSelector = sel
         return this
     }
+
+    Map getAffinity() { affinity }
+
+    PodSecurityContext getSecurityContext() { securityContext }
 
     PodOptions setSecurityContext( PodSecurityContext ctx ) {
         this.securityContext = ctx
@@ -157,8 +175,18 @@ class PodOptions {
         return this
     }
 
+    boolean getAutomountServiceAccountToken() { automountServiceAccountToken }
+
+    PodOptions setAutomountServiceAccountToken( boolean mount ) {
+        this.automountServiceAccountToken = mount
+        return this
+    }
+
+    String getPriorityClassName() { priorityClassName }
+
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
+
         // env vars
         result.envVars.addAll(envVars)
         result.envVars.addAll( other.envVars )
@@ -181,8 +209,11 @@ class PodOptions {
         else
             result.securityContext = securityContext
 
-        // node select
+        // node selector
         result.nodeSelector = other.nodeSelector ?: this.nodeSelector
+
+        // affinity
+        result.affinity = other.affinity ?: this.affinity
 
         // pull policy
         if (other.imagePullPolicy)
@@ -203,6 +234,12 @@ class PodOptions {
         // annotations
         result.annotations.putAll(annotations)
         result.annotations.putAll(other.annotations)
+
+        // automount service account token
+        result.automountServiceAccountToken = other.automountServiceAccountToken & this.automountServiceAccountToken
+
+        // priority class name
+        result.priorityClassName = other.priorityClassName ?: this.priorityClassName
 
         return result
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import nextflow.util.CacheHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Canonical
-class PluginSpec implements CacheFunnel {
+class PluginSpec implements CacheFunnel, Comparable<PluginSpec> {
 
     /**
      * Plugin unique ID
@@ -64,7 +64,13 @@ class PluginSpec implements CacheFunnel {
         return hasher
     }
 
+    @Override
     String toString() {
         version ? "${id}@${version}" : id
+    }
+
+    @Override
+    int compareTo(PluginSpec that) {
+        return this.toString() <=> that.toString()
     }
 }

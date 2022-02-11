@@ -1255,10 +1255,7 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
     $ nextflow run nextflow-io/hello -dsl2
 
 
-- Invoke the pipeline with a specific workflow as the entry-point, this option is meant to be used with DSL-2.
-For more information on DSL-2, please
-
-refer the :ref:`dsl2-page`::
+- Invoke the pipeline with a specific workflow as the entry-point, this option is meant to be used with DSL-2. For more information on DSL-2, please refer to :ref:`dsl2-page` ::
 
    $ nextflow run main.nf -entry workflow_A
 

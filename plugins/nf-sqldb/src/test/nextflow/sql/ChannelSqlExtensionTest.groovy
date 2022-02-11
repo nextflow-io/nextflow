@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ class ChannelSqlExtensionTest extends Specification {
 
     def 'should create channel from query' () {
         given:
-        def JDBC_URL = 'jdbc:h2:mem:test_' + Random.newInstance().nextInt(1_000)
+        def JDBC_URL = 'jdbc:h2:mem:test_' + Random.newInstance().nextInt(1_000_000)
         def sql = Sql.newInstance(JDBC_URL, 'sa', null)
         and:
         sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
@@ -64,7 +64,7 @@ class ChannelSqlExtensionTest extends Specification {
 
     def 'should insert data into table' () {
         given:
-        def JDBC_URL = 'jdbc:h2:mem:test_' + Random.newInstance().nextInt(1_000)
+        def JDBC_URL = 'jdbc:h2:mem:test_' + Random.newInstance().nextInt(1_000_000)
         def sql = Sql.newInstance(JDBC_URL, 'sa', null)
         and:
         sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')

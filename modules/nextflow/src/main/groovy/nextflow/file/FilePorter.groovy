@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +17,18 @@
 
 package nextflow.file
 
+import java.nio.file.FileVisitResult
+import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -90,24 +95,20 @@ class FilePorter {
             FileTransfer transfer = stagingTransfers.get(source)
             if( transfer == null ) {
                 transfer = createFileTransfer(source, stageDir)
-                transfer.refCount = 1
                 transfer.result = submitForExecution(transfer)
                 stagingTransfers.put(source, transfer)
             }
-            else
-                transfer.refCount ++
+            // increment the ref count
+            transfer.refCount.incrementAndGet()
 
             return transfer
         }
     }
 
     protected void decOrRemove(FileTransfer action) {
-        synchronized (stagingTransfers) {
-            final key = action.source
-            assert stagingTransfers.containsKey(key)
-            if( --action.refCount == 0 ) {
-                stagingTransfers.remove(key)
-            }
+        //assert stagingTransfers.containsKey(key)
+        if( action.refCount.decrementAndGet() == 0 ) {
+            stagingTransfers.remove(action.source)
         }
     }
 
@@ -227,15 +228,18 @@ class FilePorter {
          */
         final int maxRetries
 
-        volatile int refCount
+        final AtomicInteger refCount
         volatile Future result
         private String message
+        private int debugDelay
 
         FileTransfer(Path foreignPath, Path stagePath, int maxRetries=0) {
             this.source = foreignPath
             this.target = stagePath
             this.maxRetries = maxRetries
             this.message = "Staging foreign file: ${source.toUriString()}"
+            this.refCount = new AtomicInteger(0)
+            this.debugDelay = System.getProperty('filePorter.debugDelay') as Integer ?: 0
         }
 
         @Override
@@ -257,7 +261,7 @@ class FilePorter {
                     return stageForeignFile0(filePath, stagePath)
                 }
                 catch( IOException e ) {
-                    if( count++ < maxRetries && !(e instanceof NoSuchFileException )) {
+                    if( count++ < maxRetries && e !instanceof NoSuchFileException && e !instanceof InterruptedIOException && !Thread.currentThread().isInterrupted() ) {
                         def message = "Unable to stage foreign file: ${filePath.toUriString()} (try ${count}) -- Cause: $e.message"
                         log.isDebugEnabled() ? log.warn(message, e) : log.warn(message)
 
@@ -280,12 +284,71 @@ class FilePorter {
         }
 
         private Path stageForeignFile0(Path source, Path target) {
-            if( target.exists() ) {
+            if( target.exists() && checkPathIntegrity(source,target) ) {
                 log.debug "Local cache found for foreign file ${source.toUriString()} at ${target.toUriString()}"
                 return target
             }
             log.debug "Copying foreign file ${source.toUriString()} to work dir: ${target.toUriString()}"
+            if( debugDelay )
+                sleep ( new Random().nextInt(debugDelay) )
             return FileHelper.copyPath(source, target)
+        }
+
+        private boolean checkPathIntegrity(Path source, Path target) {
+            boolean same
+            try {
+                // the file must have the same size. this is needed
+                // to prevent re-using broken files left by a previous interrupted download
+                final attrs = Files.readAttributes(source, BasicFileAttributes)
+                same = attrs.isDirectory()
+                    ? checkDirIntegrity0(source, target)
+                    : attrs.size() == Files.size(target)
+            }
+            catch (Exception e) {
+                log.debug "Unable to determine stage file integrity: source=$source; target=$target", e
+                same = false
+            }
+            finally {
+                // if the files sizes don't match, delete it
+                if( !same ) {
+                    log.debug "Invalid cached stage path - deleting: $target"
+                    safeDelete(target)
+                }
+                return same
+            }
+        }
+
+        private boolean checkDirIntegrity0(Path sourceDir, Path targetDir) {
+
+            // traverse the sourceDir directory and for each file check exists
+            // a corresponding file in the target directory having the same size
+            boolean same = true
+            Files.walkFileTree(sourceDir, new SimpleFileVisitor<Path>() {
+                FileVisitResult visitFile(Path sourceFile, BasicFileAttributes attrs) {
+                    final rel = sourceDir.relativize(sourceFile).toString()
+
+                    if( attrs.size() != Files.size(targetDir.resolve(rel)) ) {
+                        same = false
+                        return FileVisitResult.TERMINATE
+                    }
+                    else {
+                        same = true
+                        return FileVisitResult.CONTINUE
+                    }
+                }} )
+            return same
+        }
+        
+        private void safeDelete(Path target) {
+            try {
+                if( Files.isDirectory(target) )
+                    FilesEx.deleteDir(target)
+                else
+                    Files.delete(target)
+            }
+            catch (Exception e) {
+                log.warn "Unable to delete staged file: $target", e
+            }
         }
 
         synchronized String getMessageAndClear() {

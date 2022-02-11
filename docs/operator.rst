@@ -1325,7 +1325,7 @@ emitted by the target channel (on the right) having the same key.
 
 There are two important caveats when using the ``cross`` operator:
 
-	#. The operator is not `reflexive`, i.e. the result of ``a.cross(b)`` is different from ``b.cross(a)`` 
+	#. The operator is not `commutative`, i.e. the result of ``a.cross(b)`` is different from ``b.cross(a)`` 
 	#. The source channel should emits items for which there's no key repetition i.e. the emitted 
 	   items have an unique key identifier. 
 
@@ -1445,9 +1445,9 @@ The following example shows how use a `closure` to collect and sort all sequence
 
 
 .. warning:: The ``collectFile`` operator needs to store files in a temporary folder that is automatically deleted on 
-  job completion. For performance reasons this folder is located in the machine's local storage,
- and it will require as much free space as are the data you are collecting. Optionally, an alternative temporary data
- folder can be specified by using the ``tempDir`` parameter.
+    job completion. For performance reasons this folder is located in the machine's local storage,
+    and it will require as much free space as are the data you are collecting. Optionally, an alternative temporary data
+    folder can be specified by using the ``tempDir`` parameter.
 
 .. _operator-combine:
 

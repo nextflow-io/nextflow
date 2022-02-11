@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@
  */
 
 package nextflow.processor
+
+import nextflow.util.CmdLineOptionMap
 
 import static nextflow.processor.TaskProcessor.*
 
@@ -41,7 +43,7 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TaskConfig extends LazyMap implements Cloneable {
 
-    static private final List<Integer> EXIT_ZERO = [0]
+    static public final EXIT_ZERO = 0
 
     private transient Map cache = new LinkedHashMap(20)
 
@@ -84,6 +86,40 @@ class TaskConfig extends LazyMap implements Cloneable {
         context.put(TASK_CONTEXT_PROPERTY_NAME, this)
 
         return this
+    }
+
+    /**
+     * Evaluate a task config attribute. The main difference of this method
+     * is that does not cache the result value.
+     *
+     * @param path
+     *      The task config to be evaluated e.g. `cpus`. Note it allows
+     *      traversing nested object separating keys with a dot e.g. `ext.args`
+     * @return
+     *      The value associate with the config key. Dynamic value i.e. closure are
+     *      automatically resolved to target value.
+     */
+    Object eval(String path) {
+        return eval0(this, path.tokenize('.'), path)
+    }
+
+    private Object eval0(Object object, List<String> path, String key ) {
+        assert path, "Missing task attribute name"
+        def result = null
+        if( object instanceof LazyMap ) {
+            result = ((LazyMap)object).getValue(path.first())
+        }
+        else if( Object instanceof Map ) {
+            result = ((Map)object).get(path.first())
+        }
+        else if( path.size()>1 ) {
+            throw new IllegalArgumentException()
+        }
+
+        if( path.size()==1 || result==null )
+            return result
+
+        return eval0( result, path.subList(1,path.size()), key )
     }
 
     def getProperty(String name) {
@@ -136,7 +172,7 @@ class TaskConfig extends LazyMap implements Cloneable {
         }
     }
 
-    protected boolean isDynamic() {
+    boolean isDynamic() {
         if( super.isDynamic() )
             return true
 
@@ -145,7 +181,6 @@ class TaskConfig extends LazyMap implements Cloneable {
 
         return false
     }
-
 
     boolean getEcho() {
         def value = get('echo')
@@ -158,17 +193,6 @@ class TaskConfig extends LazyMap implements Cloneable {
         }
 
         return value != null && value.toString().toLowerCase() in Const.BOOL_YES
-    }
-
-    List<Integer> getValidExitStatus() {
-        def result = get('validExitStatus')
-        if( result instanceof List<Integer> )
-            return result as List<Integer>
-
-        if( result != null )
-            return [result as Integer]
-
-        return EXIT_ZERO
     }
 
     ErrorStrategy getErrorStrategy() {
@@ -379,9 +403,15 @@ class TaskConfig extends LazyMap implements Cloneable {
         return opts instanceof CharSequence ? opts.toString() : null
     }
 
-    Map getContainerOptionsMap() {
+    CmdLineOptionMap getContainerOptionsMap() {
         def opts = get('containerOptions')
-        return opts instanceof Map ? opts : Collections.emptyMap()
+        if( opts instanceof Map )
+            return CmdLineOptionMap.fromMap(opts)
+        if( opts instanceof CharSequence )
+            return CmdLineHelper.parseGnuArgs(opts.toString())
+        if( opts!=null )
+            throw new IllegalArgumentException("Invalid `containerOptions` directive value: $opts [${opts.getClass().getName()}]")
+        return CmdLineOptionMap.emptyOption()
     }
 
     /**
@@ -486,8 +516,10 @@ class LazyMap implements Map<String,Object> {
 
         /*
          * resolve the values in a map object
+         * note: 'ext' property is meant for extension attributes
+         * as it should be preserved as LazyMap
          */
-        else if( value instanceof Map ) {
+        else if( value instanceof Map && name!='ext' ) {
             return resolveParams(name, value)
         }
 
@@ -557,8 +589,12 @@ class LazyMap implements Map<String,Object> {
      * @return The associated value
      */
     Object get( key ) {
-        def value = target.get(key)
-        resolve(key as String, value)
+        return getValue(key)
+    }
+
+    Object getValue(Object key) {
+        final value = target.get(key)
+        return resolve(key as String, value)
     }
 
     Object put( String key, Object value ) {
@@ -570,7 +606,7 @@ class LazyMap implements Map<String,Object> {
                 if (value.values[i] instanceof Closure)
                     dynamic |= true
         }
-        target.put(key, value)
+        return target.put(key, value)
     }
 
     @Override
@@ -585,6 +621,7 @@ class LazyMap implements Map<String,Object> {
         for( String key : allKeys ) { result << "$key: ${getProperty(key)}".toString() }
         result.join('; ')
     }
+
 }
 
 @CompileStatic

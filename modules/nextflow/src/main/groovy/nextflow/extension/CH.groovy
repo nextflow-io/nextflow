@@ -108,6 +108,10 @@ class CH {
         obj instanceof DataflowReadChannel || obj instanceof DataflowWriteChannel
     }
 
+    static boolean isValue(obj) {
+        return obj instanceof DataflowExpression
+    }
+
     static boolean isChannelQueue(obj) {
         obj instanceof DataflowQueue || obj instanceof DataflowStreamReadAdapter || obj instanceof DataflowStreamWriteAdapter
     }

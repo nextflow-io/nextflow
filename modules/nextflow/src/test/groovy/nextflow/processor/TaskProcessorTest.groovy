@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -801,6 +801,35 @@ class TaskProcessorTest extends Specification {
         result.size() == 1
         result[0] == new FileHolder(PATH)
 
+    }
+
+    def 'should get task directive vars' () {
+        given:
+        def processor = Spy(TaskProcessor)
+        processor.config = Mock(ProcessConfig)
+        and:
+        def task = Mock(TaskRun)
+        and:
+        def config = new TaskConfig()
+        config.cpus = 4
+        config.ext.alpha = 'AAAA'
+        config.ext.delta = { foo }
+        config.ext.omega = "${-> bar}"
+        and:
+        config.setContext( foo: 'DDDD', bar: 'OOOO' )
+
+        when:
+        def result = processor.getTaskDirectiveVars(task)
+        then:
+        1 * task.getVariableNames() >> {[ 'task.cpus', 'task.ext.alpha', 'task.ext.delta', 'task.ext.omega' ] as Set}
+        1 * task.getConfig() >> config
+        then:
+        result == [
+                'task.cpus': 4,
+                'task.ext.alpha': 'AAAA',
+                'task.ext.delta': 'DDDD',
+                'task.ext.omega': 'OOOO',
+        ]
     }
 
 }

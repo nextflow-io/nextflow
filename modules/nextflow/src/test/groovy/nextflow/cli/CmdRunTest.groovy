@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -70,50 +70,6 @@ class CmdRunTest extends Specification {
         [:]             | /x.y\.z/  | 'Hola'    | ['x': ['y.z': 'Hola']]
     }
 
-    def 'should return parsed config' () {
-        given:
-        def cmd = new CmdRun(profile: 'first', withTower: 'http://foo.com', launcher: new Launcher())
-        def base = Files.createTempDirectory('test')
-        base.resolve('nextflow.config').text = '''
-        profiles {
-            first {
-                params {
-                  foo = 'Hello world'
-                  awsKey = 'xyz'
-                }
-                process {
-                    executor = { 'local' }
-                }
-            }
-            second {
-                params.none = 'Blah'
-            }
-        }
-        '''
-        when:
-        def txt = cmd.resolveConfig(base)
-        then:
-        txt == '''\
-            params {
-               foo = 'Hello world'
-               awsKey = '[secret]'
-            }
-            
-            process {
-               executor = { 'local' }
-            }
-
-            workDir = 'work'
-            
-            tower {
-               enabled = true
-               endpoint = 'http://foo.com'
-            }
-            '''.stripIndent()
-
-        cleanup:
-        base?.deleteDir()
-    }
 
     @Unroll
     def 'should check run name #STR' () {
@@ -163,6 +119,8 @@ class CmdRunTest extends Specification {
         then:
         params.abc == 1
         params.xyz == 2
+        and:
+        cmd.hasParams()
         
         when:
         file = folder.resolve('params.yaml')
@@ -173,22 +131,24 @@ class CmdRunTest extends Specification {
         then:
         params.foo == 1
         params.bar == 2
+        and:
+        cmd.hasParams()
 
         when:
-        cmd = new CmdRun(env: [NXF_PARAMS_FILE: file.toString()])
+        cmd = new CmdRun(sysEnv: [NXF_PARAMS_FILE: file.toString()])
         params = cmd.parsedParams()
         then:
         params.foo == 1
         params.bar == 2
-
+        and:
+        cmd.hasParams()
 
         when:
-        cmd = new CmdRun(env: [NXF_PARAMS_FILE: '/missing/path'])
+        cmd = new CmdRun(sysEnv: [NXF_PARAMS_FILE: '/missing/path.yml'])
         cmd.parsedParams()
         then:
         def e = thrown(AbortOperationException)
-        e.message == 'Specified params file does not exists: /missing/path'
-
+        e.message == 'Specified params file does not exists: /missing/path.yml'
 
         cleanup:
         folder?.delete()
@@ -252,7 +212,7 @@ class CmdRunTest extends Specification {
         and:
         new CmdRun(params: [foo:'x']).hasParams()
         new CmdRun(paramsFile: '/some/file.yml').hasParams()
-        new CmdRun(env:[NXF_PARAMS_FILE: '/some/file.yml']).hasParams()
+        new CmdRun(sysEnv:[NXF_PARAMS_FILE: '/some/file.yml']).hasParams()
     }
 
     def 'should replace values' () {
@@ -279,4 +239,37 @@ class CmdRunTest extends Specification {
             omega: "${unknown}"
             '''.stripIndent()
     }
+
+    def 'should validate dont kill jobs' () {
+        when:
+        def cmd = new CmdRun()
+        then:
+        cmd.getDisableJobsCancellation() == false
+
+        when:
+        cmd = new CmdRun(disableJobsCancellation: true)
+        then:
+        cmd.getDisableJobsCancellation() == true
+
+        when:
+        cmd = new CmdRun(sysEnv: [NXF_DISABLE_JOBS_CANCELLATION: true])
+        then:
+        cmd.getDisableJobsCancellation() == true
+    }
+
+    @Unroll
+    def 'should guss is repo' () {
+        expect:
+        CmdRun.guessIsRepo(PATH) == EXPECTED
+        
+        where:
+        EXPECTED    | PATH
+        true        | 'http://github.com/foo'
+        true        | 'foo/bar'
+        and:
+        false       | 'script.nf'
+        false       | '/some/path'
+        false       | '../some/path'
+    }
+
 }

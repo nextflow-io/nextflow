@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -794,13 +794,16 @@ class NextflowDSLImpl implements ASTTransformation {
             newArgs << ( new ConstantExpression(source.toString()) )
             newArgs << ( new ConstantExpression(section) )
 
+            // collect all variable tokens and pass them as single list argument
             final variables = fetchVariables(closure,unit)
+            final listArg = new ArrayList(variables.size())
             for( TokenValRef var: variables ) {
                 def pName = new ConstantExpression(var.name)
                 def pLine = new ConstantExpression(var.lineNum)
                 def pCol = new ConstantExpression(var.colNum)
-                newArgs << createX( TokenValRef, pName, pLine, pCol )
+                listArg << createX( TokenValRef, pName, pLine, pCol )
             }
+            newArgs << ( new ListExpression(listArg) )
 
             // invokes the BodyDef constructor
             createX( BodyDef, newArgs )
@@ -1053,7 +1056,7 @@ class NextflowDSLImpl implements ASTTransformation {
             withinEachMethod = name == '_in_each'
 
             try {
-                if( isOutputValWithPropertyExpression(methodCall) ) {
+                if( isOutputWithPropertyExpression(methodCall) ) {
                     // transform an output value declaration such
                     //   output: val( obj.foo )
                     // to
@@ -1069,8 +1072,10 @@ class NextflowDSLImpl implements ASTTransformation {
             }
         }
 
-        protected boolean isOutputValWithPropertyExpression(MethodCallExpression methodCall) {
-            if( methodCall.methodAsString != '_out_val' )
+        static final private List<String> OUT_PROPERTY_VALID_TYPES = ['_out_val', '_out_env', '_out_file', '_out_path']
+
+        protected boolean isOutputWithPropertyExpression(MethodCallExpression methodCall) {
+            if( methodCall.methodAsString !in OUT_PROPERTY_VALID_TYPES  )
                 return false
             if( methodCall.getArguments() instanceof ArgumentListExpression ) {
                 def args = (ArgumentListExpression)methodCall.getArguments()

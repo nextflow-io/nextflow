@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -519,6 +519,12 @@ class FilesExTest extends Specification {
         new StringReader(text).tail(3).toString() == '88888888\n\n999999999'
         new StringReader(text).tail(6).toString() == '7777777\n\n\n88888888\n\n999999999'
 
+    }
+
+    def testTailWithEmptyFile() {
+        expect:
+        new StringReader('').tail(1).toString() == ''
+        new StringReader('').tail(10).toString() == ''
     }
 
 

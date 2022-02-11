@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -460,6 +460,9 @@ class LoggerHelper {
         else if( fail instanceof ClassNotFoundException ) {
             buffer.append("Class not found: ${normalize(fail.message)}")
         }
+        else if( fail instanceof NoClassDefFoundError) {
+            buffer.append("Class definition not found: ${normalize(fail.message)}")
+        }
         else if( fail instanceof DirectoryNotEmptyException ) {
             buffer.append("Unable to delete not empty directory: $fail.message")
         }
@@ -543,7 +546,7 @@ class LoggerHelper {
             if( hasLeftTarget ) msg += " on $left"
             def tips = type.getMethods().collect { it.name }.closest(name)
             if( tips )
-                msg += " -- Did you mean?\n" + tips.collect { "  $it"}.join('\n')
+                msg += " -- Did you mean?\n" + tips.sort().collect { "  $it"}.join('\n')
         }
 
         return msg

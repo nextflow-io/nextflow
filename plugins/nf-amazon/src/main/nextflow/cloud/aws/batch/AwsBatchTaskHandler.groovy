@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,6 +39,7 @@ import com.amazonaws.services.batch.model.MountPoint
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
 import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
 import com.amazonaws.services.batch.model.ResourceRequirement
+import com.amazonaws.services.batch.model.ResourceType
 import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
@@ -61,6 +62,9 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
+
+import static AwsContainerOptionsMapper.createContainerOpts
+
 /**
  * Implements a task handler for AWS Batch jobs
  */
@@ -236,10 +240,14 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( done ) {
             // finalize the task
             task.exitStatus = readExitFile()
-            if (job?.status == 'FAILED')
-                task.error = new ProcessUnrecoverableException(job?.getStatusReason())
             task.stdout = outputFile
-            task.stderr = executor.getJobOutputStream(jobId) ?: errorFile
+            if( job?.status == 'FAILED' ) {
+                task.error = new ProcessUnrecoverableException(job?.getStatusReason())
+                task.stderr = executor.getJobOutputStream(jobId) ?: errorFile
+            }
+            else {
+                task.stderr = errorFile
+            }
             status = TaskStatus.COMPLETED
             return true
         }
@@ -446,13 +454,18 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         result.setJobDefinitionName(name)
         result.setType(JobDefinitionType.Container)
 
+        // create the container opts based on task config 
+        final containerOpts = task.getConfig().getContainerOptionsMap()
+        final container = createContainerOpts(containerOpts)
+
         // container definition
-        final container = new ContainerProperties()
+        final _1_cpus = new ResourceRequirement().withType(ResourceType.VCPU).withValue('1')
+        final _1_gb = new ResourceRequirement().withType(ResourceType.MEMORY).withValue('1024')
+        container
                 .withImage(image)
-        // note the actual command, memory and cpus are overridden when the job is executed
                 .withCommand('true')
-                .withMemory(1024)
-                .withVcpus(1)
+                // note the actual command, memory and cpus are overridden when the job is executed
+                .withResourceRequirements( _1_cpus, _1_gb )
 
         final jobRole = opts.getJobRole()
         if( jobRole )
@@ -479,7 +492,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         // add to this list all values that has to contribute to the
         // job definition unique name creation
-        hashingTokens.addAll([name, image, awscli, volumes, jobRole])
+        final tokens = [name, image, awscli, volumes, jobRole]
+        if( containerOpts )
+            tokens.add(containerOpts)
+        hashingTokens.addAll(tokens)
 
         return result
     }
@@ -610,23 +626,26 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
 
         // set the actual command
+        final resources = new ArrayList<ResourceRequirement>(5)
         def container = new ContainerOverrides()
         container.command = getSubmitCommand()
         // set the task memory
         if( task.config.getMemory() ) {
             final mega = (int)task.config.getMemory().toMega()
             if( mega >= 4 )
-                container.memory = mega
+                resources << new ResourceRequirement().withType(ResourceType.MEMORY).withValue(mega.toString())
             else
                 log.warn "Ignoring task $bean.name memory directive: ${task.config.getMemory()} -- AWS Batch job memory request cannot be lower than 4 MB"
         }
         // set the task cpus
         if( task.config.getCpus() > 1 )
-            container.vcpus = task.config.getCpus()
+            resources << new ResourceRequirement().withType(ResourceType.VCPU).withValue(task.config.getCpus().toString())
 
-        if( task.config.getAccelerator() ) {
-            container.setResourceRequirements(createResList(task.config.getAccelerator()))
-        }
+        if( task.config.getAccelerator() )
+            resources << createGpuResource(task.config.getAccelerator())
+
+        if( resources )
+            container.withResourceRequirements(resources)
 
         // set the environment
         def vars = getEnvironmentVars()
@@ -638,15 +657,13 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return result
     }
 
-    protected List<ResourceRequirement> createResList(AcceleratorResource acc) {
+    protected ResourceRequirement createGpuResource(AcceleratorResource acc) {
         final res = new ResourceRequirement()
         final type = acc.type ?: 'GPU'
         final count = acc.request?.toString() ?: '1'
         res.setType(type.toUpperCase())
         res.setValue(count)
-        final result = new ArrayList(1)
-        result.add(res)
-        return result
+        return res
     }
 
     /**
@@ -656,6 +673,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         def vars = []
         if( this.environment?.containsKey('NXF_DEBUG') )
             vars << new KeyValuePair().withName('NXF_DEBUG').withValue(this.environment['NXF_DEBUG'])
+        if( this.getAwsOptions().retryMode && this.getAwsOptions().retryMode in AwsOptions.VALID_RETRY_MODES)
+            vars << new KeyValuePair().withName('AWS_RETRY_MODE').withValue(this.getAwsOptions().retryMode)
+        if( this.getAwsOptions().maxTransferAttempts ) {
+            vars << new KeyValuePair().withName('AWS_MAX_ATTEMPTS').withValue(this.getAwsOptions().maxTransferAttempts as String)
+            vars << new KeyValuePair().withName('AWS_METADATA_SERVICE_NUM_ATTEMPTS').withValue(this.getAwsOptions().maxTransferAttempts as String)
+        }
         return vars
     }
 
@@ -735,7 +758,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         catch (AWSBatchException e) {
             if( e.statusCode>=500 )
                 // raise a process exception so that nextflow can try to recover it
-                throw new ProcessSubmitException("Failed to register job defintion: ${req.jobDefinitionName} - Reason: ${e.errorCode}", e)
+                throw new ProcessSubmitException("Failed to register job definition: ${req.jobDefinitionName} - Reason: ${e.errorCode}", e)
             else
                 // status code < 500 are not expected to be recoverable, just throw it again
                 throw e

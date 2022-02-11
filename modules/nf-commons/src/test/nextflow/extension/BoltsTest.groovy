@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,9 @@
  */
 
 package nextflow.extension
+
+import org.apache.commons.lang.LocaleUtils
+import spock.lang.Ignore
 
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -41,24 +44,32 @@ class BoltsTest extends Specification {
 
         given:
         def now = new Date(1513285947928)
+        def defLocale = Locale.getDefault(Locale.Category.FORMAT)
+        def useLocale = new Locale.Builder().setLanguage(locale).build()
+        Locale.setDefault(Locale.Category.FORMAT, useLocale)
 
         when:
-        def formatter = new SimpleDateFormat(fmt)
+        def formatter = new SimpleDateFormat(fmt, Locale.ENGLISH)
         formatter.setTimeZone(TimeZone.getTimeZone(tz))
         then:
         Bolts.format(now, fmt, tz) == expected
         formatter.format(now) == expected
 
-        where:
-        tz      | fmt                       | expected
-        'UTC'   | 'dd-MM-yyyy HH:mm'        | '14-12-2017 21:12'
-        'CET'   | 'dd-MM-yyyy HH:mm'        | '14-12-2017 22:12'
-        'UTC'   | 'dd-MMM-yyyy HH:mm:ss'    | '14-Dec-2017 21:12:27'
-        'CST'   | 'dd-MM-yyyy HH:mm'        | '14-12-2017 15:12'
-        'CST'   | 'dd-MMM-yyyy HH:mm:ss'    | '14-Dec-2017 15:12:27'
+        cleanup:
+        Locale.setDefault(Locale.Category.FORMAT, defLocale)
 
+        where:
+        tz      | fmt                       | locale  | expected
+        'UTC'   | 'dd-MM-yyyy HH:mm'        | 'en'    | '14-12-2017 21:12'
+        'CET'   | 'dd-MM-yyyy HH:mm'        | 'en'    | '14-12-2017 22:12'
+        'UTC'   | 'dd-MMM-yyyy HH:mm:ss'    | 'en'    | '14-Dec-2017 21:12:27'
+        'CST'   | 'dd-MM-yyyy HH:mm'        | 'en'    | '14-12-2017 15:12'
+        'CST'   | 'dd-MMM-yyyy HH:mm:ss'    | 'en'    | '14-Dec-2017 15:12:27'
+        'UTC'   | 'dd-MMM-yyyy HH:mm:ss'    | 'es'    | '14-Dec-2017 21:12:27'
+        'CST'   | 'dd-MMM-yyyy HH:mm:ss'    | 'es'    | '14-Dec-2017 15:12:27'
     }
 
+    @Ignore("we dont need to test java functionalities")
     def 'should format offset datetime' () {
         given:
         def now = OffsetDateTime.ofInstant(Instant.ofEpochMilli(1513285947928), ZoneId.of('CET'))
@@ -365,4 +376,31 @@ class BoltsTest extends Specification {
         map.bar.x == 2
     }
 
+    def 'should deep merge map and overwrite values when `replaceValues` is true'() {
+        given:
+        Map origMap = [foo: 1, bar: [x: 2, y: 3]]
+        Map newMap = [bar: [x: 4, z: 5]]
+
+        when:
+        def merge = Bolts.deepMerge(origMap, newMap, true)
+
+        then:
+        merge.bar.x == 4
+        merge.bar.y == 3
+        merge.bar.z == 5
+    }
+
+    def 'should deep merge map and not overwrite values when `replaceValues` is false'() {
+        given:
+        Map origMap = [foo: 1, bar: [x: 2, y: 3]]
+        Map newMap = [bar: [x: 4, z: 5]]
+
+        when:
+        def merge = Bolts.deepMerge(origMap, newMap, false)
+
+        then:
+        merge.bar.x == 2
+        merge.bar.y == 3
+        merge.bar.z == 5
+    }
 }

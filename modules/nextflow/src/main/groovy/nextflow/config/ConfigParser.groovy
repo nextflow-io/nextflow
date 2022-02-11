@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -346,7 +346,7 @@ class ConfigParser {
                 }
             }
             if( name=='params' && result instanceof Map && paramVars ) {
-                result.putAll(paramVars)
+                result.putAll(Bolts.deepMerge(result, paramVars, true))
             }
             result
         }
@@ -408,7 +408,7 @@ class ConfigParser {
                         co = current.config.get(name)
                     }
                     else if (current.scope.get(name) instanceof ConfigObject) {
-                        co = current.scope.get(name)
+                        co = current.scope.get(name).clone()
                     }
                     else {
                         co = new ConfigObject()

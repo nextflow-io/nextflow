@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -151,20 +151,23 @@ class BashWrapperBuilderTest extends Specification {
     def 'should create launcher with input' () {
         given:
         def folder = Files.createTempDirectory('test')
-
         /*
          * simple bash run
          */
-        when:
-        newBashWrapperBuilder(
-                workDir: folder,
-                input: 'foo bar' ) .build()
+        and:
+        def builder = newBashWrapperBuilder( workDir: folder, input: 'foo bar' )
 
+        when:
+        builder.build()
         then:
+        builder.targetInputFile() == folder.resolve('.command.in')
+        builder.targetScriptFile() == folder.resolve('.command.sh')
+        builder.targetWrapperFile() == folder.resolve('.command.run')
+        and:
         Files.exists(folder.resolve('.command.sh'))
         Files.exists(folder.resolve('.command.run'))
         Files.exists(folder.resolve('.command.in'))
-
+        and:
         folder.resolve('.command.in').text == 'foo bar'
         folder.resolve('.command.sh').text.contains('echo Hello world!')
         folder.resolve('.command.run').text.contains('nxf_main')
@@ -874,8 +877,8 @@ class BashWrapperBuilderTest extends Specification {
         str == '''
             # capture process environment
             set +u
-            echo FOO=$FOO > .command.env
-            echo BAR=$BAR >> .command.env
+            echo FOO=${FOO[@]} > .command.env
+            echo BAR=${BAR[@]} >> .command.env
             '''
             .stripIndent()
 

@@ -16,11 +16,9 @@
 
 package nextflow.script
 
-
 import java.nio.file.Files
 
 import nextflow.exception.DuplicateModuleIncludeException
-import nextflow.exception.MissingProcessException
 import spock.lang.Timeout
 import test.Dsl2Spec
 import test.MockScriptRunner
@@ -76,6 +74,34 @@ class ScriptIncludesTest extends Dsl2Spec {
         binding.ret3 == 'Hola and mundo'
         binding.ret4 == "I'm local"
         binding.ret4 == result
+    }
+
+    def 'should invoke foreign functions from operator' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        def foo(str) {
+          return str.reverse()
+        }   
+        '''
+
+        SCRIPT.text = """  
+        include { foo } from "$MODULE" 
+        workflow {
+           emit:
+           channel.of('hello world').map { foo(it) }
+        }
+        """
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+
+        then:
+        result.val == 'dlrow olleh'
     }
 
     def 'should invoke a workflow from include' () {
@@ -1008,7 +1034,9 @@ class ScriptIncludesTest extends Dsl2Spec {
         when:
         new MockScriptRunner().setScript(SCRIPT).execute()
         then:
-        def e = thrown(MissingProcessException)
+        def e = thrown(IllegalStateException)
+        e.message == "Include statement is not allowed within a workflow definition"
+
 
     }
 }

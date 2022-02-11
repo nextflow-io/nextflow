@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +38,7 @@ import nextflow.processor.TaskRun
 import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 /**
- * Builder to create the BASH script which is used to
+ * Builder to create the Bash script which is used to
  * wrap and launch the user task
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -168,7 +168,7 @@ class BashWrapperBuilder {
         result.append('set +u\n')
         for( int i=0; i<names.size(); i++) {
             final key = names[i]
-            result.append "echo $key=\$$key "
+            result.append "echo $key=\${$key[@]} "
             result.append( i==0 ? '> ' : '>> ' )
             result.append(TaskRun.CMD_ENV)
             result.append('\n')
@@ -256,6 +256,9 @@ class BashWrapperBuilder {
         if( !isSecretNative() ) {
             binding.secrets_env = getSecretsEnv()
         }
+        else {
+            binding.secrets_env = null
+        }
 
         /*
          * staging input files when required
@@ -292,7 +295,7 @@ class BashWrapperBuilder {
 
     protected String getSecretsEnv() {
         return SecretsLoader.isEnabled()
-                ? SecretsLoader.instance.load() .getSecretEnv()
+                ? SecretsLoader.instance.load() .getSecretsEnv(secretNames)
                 : null
     }
 
@@ -322,25 +325,31 @@ class BashWrapperBuilder {
             log.warn1("Task runtime metrics are not reported when using macOS without a container engine")
 
         final wrapper = buildNew0()
-        write0(wrapperFile, wrapper)
-        write0(scriptFile, script)
+        final result = write0(targetWrapperFile(), wrapper)
+        write0(targetScriptFile(), script)
         if( input != null )
-            write0(inputFile, input.toString())
-        return wrapperFile
+            write0(targetInputFile(), input.toString())
+        return result
     }
 
-    private void write0(Path path, String data) {
+    protected Path targetWrapperFile() { return wrapperFile }
+
+    protected Path targetScriptFile() { return scriptFile }
+
+    protected Path targetInputFile() { return inputFile }
+
+    private Path write0(Path path, String data) {
         try {
-            Files.write(path, data.getBytes())
+            return Files.write(path, data.getBytes())
         }
         catch (FileSystemException e) {
             // throw a ProcessStageException so that the error can be recovered
             // via nextflow re-try mechanism
-            new ProcessException("Unable to create file ${path.toUriString()}", e)
+            throw new ProcessException("Unable to create file ${path.toUriString()}", e)
         }
     }
 
-    private String getHelpersScript() {
+    protected String getHelpersScript() {
         def result = new StringBuilder()
 
         def s1 = copyStrategy.getBeforeStartScript()

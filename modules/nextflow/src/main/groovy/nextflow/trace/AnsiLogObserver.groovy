@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -379,7 +379,7 @@ class AnsiLogObserver implements TraceObserver {
         if( tot == 0  )
             return "[$hh] process > $label -"
 
-        final x = tot ? Math.round(com / tot * 100f) : 0
+        final x = tot ? Math.floor(com / tot * 100f).toInteger() : 0
         final pct = "[${String.valueOf(x).padLeft(3)}%]".toString()
 
         final numbs = "${(int)com} of ${(int)tot}".toString()

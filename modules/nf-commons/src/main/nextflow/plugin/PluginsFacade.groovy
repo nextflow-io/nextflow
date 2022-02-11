@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
-import nextflow.util.CacheHelper
 import org.pf4j.DefaultPluginManager
 import org.pf4j.PluginManager
 import org.pf4j.PluginState
@@ -40,7 +39,6 @@ import org.pf4j.PluginStateListener
 @CompileStatic
 class PluginsFacade implements PluginStateListener {
 
-    private Path PLUGINS_LOCAL_ROOT = Paths.get('.nextflow/plr')
     private static final String DEV_MODE = 'dev'
     private static final String PROD_MODE = 'prod'
     private Map<String,String> env = new HashMap<>(System.getenv())
@@ -49,23 +47,21 @@ class PluginsFacade implements PluginStateListener {
     private Path root
     private PluginUpdater updater
     private CustomPluginManager manager
-    private DefaultPlugins defaultPlugins
+    private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
     private String indexUrl = Plugins.DEFAULT_PLUGINS_REPO
 
     PluginsFacade() {
         mode = getPluginsMode()
         root = getPluginsDir()
         if( mode=='dev' && root.toString()=='plugins' )
-            root = detectDevPluginsRoot()
+            root = detectPluginsDevRoot()
         System.setProperty('pf4j.mode', mode)
-        defaultPlugins = new DefaultPlugins()
     }
 
     PluginsFacade(Path root, String mode=PROD_MODE) {
         this.mode = mode
         this.root = root
         System.setProperty('pf4j.mode', mode)
-        defaultPlugins = new DefaultPlugins()
     }
 
     protected Path getPluginsDir() {
@@ -84,11 +80,26 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
-    protected Path detectDevPluginsRoot() {
+    private boolean isNextflowDevRoot(File file) {
+        file.name=='nextflow' && file.isDirectory() && new File(file, 'settings.gradle').isFile()
+    }
+
+    private Path pluginsDevRoot(File path) {
+        // main project root
+        if( isNextflowDevRoot(path) )
+            return path.toPath().resolve('plugins')
+        // when nextflow is included into another build, check the sibling directory
+        if( new File(path,'settings.gradle').exists() && isNextflowDevRoot(path=new File(path,'../nextflow')) )
+            return path.toPath().resolve('plugins')
+        else
+            return null
+    }
+
+    protected Path detectPluginsDevRoot() {
         def file = new File('.').absoluteFile
         do {
-            if( file.name=='nextflow' && file.isDirectory() && new File(file, 'settings.gradle').isFile() ) {
-                final root = file.toPath().resolve('plugins')
+            final root = pluginsDevRoot(file)
+            if( root ) {
                 log.debug "Detected dev plugins root: $root"
                 return root
             }
@@ -134,17 +145,8 @@ class PluginsFacade implements PluginStateListener {
         this.updater = createUpdater(root, manager)
     }
 
-    protected Path localRoot(List<PluginSpec> specs) {
-        final unique = specs ? CacheHelper.hasher(specs).hash().toString() : 'empty'
-        final localRoot = PLUGINS_LOCAL_ROOT.resolve(unique)
-        log.debug "Plugins local root: $localRoot"
-        FilesEx.mkdirs(localRoot)
-        return localRoot
-    }
-
     protected CustomPluginManager createManager(Path root, List<PluginSpec> specs) {
-        final localRoot = localRoot(specs)
-        final result = mode!=DEV_MODE ? new LocalPluginManager(localRoot, root, specs) : new DevPluginManager(root)
+        final result = mode!=DEV_MODE ? new LocalPluginManager(root, specs) : new DevPluginManager(root)
         result.addPluginStateListener(this)
         return result
     }
@@ -170,7 +172,7 @@ class PluginsFacade implements PluginStateListener {
         if( manager )
             throw new IllegalArgumentException("Plugin system was already setup")
         else {
-            log.debug "Setting up plugin manager > mode=${mode}; plugins-dir=$root"
+            log.debug "Setting up plugin manager > mode=${mode}; plugins-dir=$root; core-plugins: ${defaultPlugins.toSortedString()}"
             // make sure plugins dir exists
             if( mode!=DEV_MODE && !FilesEx.mkdirs(root) )
                 throw new IOException("Unable to create plugins dir: $root")
@@ -357,11 +359,6 @@ class PluginsFacade implements PluginStateListener {
 
         if( executor == 'azurebatch' || workDir?.startsWith('az://') || bucketDir?.startsWith('az://') )
             plugins << defaultPlugins.getPlugin('nf-azure')
-
-        if( executor == 'ignite' || System.getProperty('nxf.node.daemon')=='true') {
-            plugins << defaultPlugins.getPlugin('nf-ignite')
-            plugins << defaultPlugins.getPlugin('nf-amazon')
-        }
 
         return plugins
     }

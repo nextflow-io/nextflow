@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,6 @@
  */
 
 package nextflow.extension
-
 
 import java.nio.file.Path
 import java.text.DateFormat
@@ -66,7 +65,7 @@ class Bolts {
         return new ThreadLocal<DateFormat>() {
             @Override
             protected DateFormat initialValue() {
-                def result = new SimpleDateFormat(fmt)
+                def result = new SimpleDateFormat(fmt, Locale.ENGLISH)
                 if(tz) result.setTimeZone(tz)
                 return result
             }
@@ -87,7 +86,7 @@ class Bolts {
     }
 
     static String format(OffsetDateTime self, String format) {
-        return self.format(DateTimeFormatter.ofPattern(format))
+        return self.format(DateTimeFormatter.ofPattern(format).withLocale(Locale.ENGLISH))
     }
 
     /**
@@ -924,5 +923,18 @@ class Bolts {
             }
         }
         return (T)result
+    }
+
+    static <T extends Map> T deepMerge(T mergeIntoMap, T mergeFromMap, boolean replaceValues) {
+        for (Object key : mergeFromMap.keySet()) {
+            if (mergeFromMap.get(key) instanceof Map && mergeIntoMap.get(key) instanceof Map) {
+                mergeIntoMap.put(key, deepMerge((Map) mergeIntoMap.get(key), (Map) mergeFromMap.get(key), replaceValues));
+            } else {
+                if (!mergeIntoMap.containsKey(key) || replaceValues) {
+                    mergeIntoMap.put(key, mergeFromMap.get(key));
+                }
+            }
+        }
+        return deepClone(mergeIntoMap)
     }
 }

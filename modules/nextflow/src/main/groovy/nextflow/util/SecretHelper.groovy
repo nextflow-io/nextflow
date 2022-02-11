@@ -12,7 +12,7 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class SecretHelper {
 
-    static public final Pattern SECRET_KEYS = ~/(?im)^AWS.+|.*TOKEN.*|.*SECRET.*|.*accessKey.*/
+    static public final Pattern SECRET_KEYS = ~/(?im)^AWS.+|.*TOKEN.*|.*PASSWORD.*|.*SECRET.*|.*accessKey.*/
 
     // note: ?i stands for ignore case - ?m stands for multiline
     static public final Pattern SECRET_REGEX = ~/(?im)(^AWS[^=]*|.*TOKEN[^=]*|.*SECRET[^=]*)=(.*)$/

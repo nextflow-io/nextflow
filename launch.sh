@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#  Copyright 2020-2021, Seqera Labs
+#  Copyright 2020-2022, Seqera Labs
 #  Copyright 2013-2019, Centre for Genomic Regulation (CRG)
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,13 +67,13 @@ fi
 JAVA_VER=$(echo "$JAVA_VER" | awk '/version/ {gsub(/"/, "", $3); print $3}')
 major=${BASH_REMATCH[1]}
 minor=${BASH_REMATCH[2]}
-version_check="^(1.8|9|10|11|12|13|14|15)"
+version_check="^(1.8|9|10|11|12|13|14|15|16|17)"
 if [[ ! $JAVA_VER =~ $version_check ]]; then
     echo "Error: cannot find Java or it's a wrong version -- please make sure that Java 8 or higher is installed"
     exit 1
 fi
 JVM_ARGS+=" -Dfile.encoding=UTF-8 -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
-[[ $JAVA_VER =~ ^(9|10|11|12|13|14|15|16) ]] && JVM_ARGS+=" --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.nio.file.spi=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/sun.nio.fs=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED"
+[[ $JAVA_VER =~ ^(9|10|11|12|13|14|15|16|17) ]] && JVM_ARGS+=" --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.nio.file.spi=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/sun.nio.fs=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED"
 
 ## flight recorded -- http://docs.oracle.com/javacomponents/jmc-5-4/jfr-runtime-guide/run.htm
 ##JVM_ARGS+=" -XX:+UnlockCommercialFeatures -XX:+FlightRecorder -XX:StartFlightRecording=duration=60s,filename=myrecording.jfr"
@@ -89,6 +89,9 @@ export NXF_PLUGINS_DIR
 export NXF_PLUGINS_MODE
 export NXF_PLUGINS_DEFAULT
 
+# Yourkit profiling library
+YOURKIT_AGENT=${YOURKIT_AGENT:-/Applications/YourKit-Java-Profiler-2021.11.app/Contents/Resources/bin/mac/libyjpagent.dylib}
+
 #
 # classpath when the application is compiled with gradle
 #
@@ -102,8 +105,8 @@ while [ "$*" != "" ]; do
   if [[ "$1" == '-debug' || "$1" == '-trace' ]]; then
     args+=("$1")
 
-  elif [ "$1" == --with-yourkit ]; then 
-    JVM_ARGS+=" -agentpath:/Applications/YourKit_Java_Profiler_2014_build_14104.app/bin/mac/libyjpagent.jnilib=onexit=snapshot,tracing,dir=$PWD/snapshot "
+  elif [ "$1" == --yourkit ]; then
+    JVM_ARGS+=" -agentpath:$YOURKIT_AGENT "
   elif [ "$1" == '--with-jrebel' ]; then
     if [ "$JREBEL_HOME" ]; then
     JVM_ARGS+=" -javaagent:$JREBEL_HOME/jrebel.jar -Drebel.log.file=./jrebel-client.log"
