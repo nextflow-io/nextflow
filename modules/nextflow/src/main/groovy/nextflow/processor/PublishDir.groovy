@@ -17,6 +17,9 @@
 
 package nextflow.processor
 
+import nextflow.NF
+import nextflow.exception.ProcessException
+
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -84,6 +87,11 @@ class PublishDir {
      * Enable disable publish rule
      */
     boolean enabled = true
+
+    /**
+     * Trow an exception in case publish fails
+     */
+    boolean failOnError = false
 
     /**
      * Tags to be associated to the target file
@@ -173,6 +181,9 @@ class PublishDir {
 
         if( params.enabled != null )
             result.enabled = Boolean.parseBoolean(params.enabled.toString())
+
+        if( params.failOnError != null )
+            result.failOnError = Boolean.parseBoolean(params.failOnError.toString())
 
         if( params.tags != null )
             result.tags = params.tags
@@ -321,6 +332,10 @@ class PublishDir {
         }
         catch( Throwable e ) {
             log.warn "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details", e
+            if( NF.strictMode || failOnError){
+                final session = Global.session as Session
+                session?.abort(e)
+            }
         }
     }
 

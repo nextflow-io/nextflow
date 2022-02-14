@@ -64,3 +64,7 @@ test {
 application {
     mainClass = 'nextflow.cli.Launcher'
 }
+
+run{
+    args( (project.hasProperty("runCmd") ? project.findProperty("runCmd") : "set a cmd to run").split(' ') )
+}
