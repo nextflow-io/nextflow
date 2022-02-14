@@ -110,10 +110,6 @@ class PublishDir {
 
     private String taskName
 
-    TaskProcessor taskProcessor
-
-    TaskRun taskRun
-
     @Lazy
     private ExecutorService threadPool = (Global.session as Session).getFileTransferThreadPool()
 
@@ -337,9 +333,8 @@ class PublishDir {
         catch( Throwable e ) {
             log.warn "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details", e
             if( NF.strictMode || failOnError){
-                if( taskProcessor && taskRun ){
-                    taskProcessor.publishFailed(taskRun, e, target)
-                }
+                final session = Global.session as Session
+                session?.abort(e)
             }
         }
     }

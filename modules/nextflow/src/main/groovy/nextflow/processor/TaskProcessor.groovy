@@ -1285,8 +1285,6 @@ class TaskProcessor {
         }
 
         for( PublishDir pub : publishList ) {
-            pub.taskProcessor = this
-            pub.taskRun = task
             publishOutputs0(task, pub)
         }
     }
@@ -1313,11 +1311,6 @@ class TaskProcessor {
         }
 
         publish.apply(files, task)
-    }
-
-    @CompileStatic
-    protected void publishFailed( TaskRun taskRun, Throwable t, Path file ) {
-        session.abort(t)
     }
 
     /**
