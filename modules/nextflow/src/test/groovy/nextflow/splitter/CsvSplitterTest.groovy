@@ -20,6 +20,8 @@ package nextflow.splitter
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import java.nio.charset.Charset
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -32,6 +34,13 @@ class CsvSplitterTest extends Specification {
         eta,theta,iota
         mu,nu,xi
         pi,rho,sigma
+        '''
+        .stripIndent().trim()
+
+    def bomText = '\ufeffh1,h2,h3\n'+'''
+        1,2,3
+        4,5,6
+        7,8,9
         '''
         .stripIndent().trim()
 
@@ -273,6 +282,23 @@ class CsvSplitterTest extends Specification {
         'a, ,c'                 | '"'  | true | ['a','','c']
         'a," ",c'               | '"'  | true | ['a','','c']
         'a, " " ,c'             | '"'  | true | ['a',' ','c']
+
+    }
+
+    def testSplitBOMCsvWithHeaderCols() {
+        given:
+        def file = File.createTempFile('bom','csv')
+        file.deleteOnExit()
+        file.bytes = bomText.bytes
+
+        when:
+        def items = new CsvSplitter().target(file).options(header:true).list()
+        then:
+        items.size() == 3
+
+        items[0].h1 == '1'
+        items[0].h2 == '2'
+        items[0].h3 == '3'
 
     }
 
