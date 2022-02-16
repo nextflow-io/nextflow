@@ -1540,11 +1540,10 @@ only for a specific process e.g. mount a custom path::
 cpus
 ----
 
-The ``cpus`` directive allows you to define the number of (logical) CPU required by the process' task.
+The ``cpus`` directive allows you to define the number of (logical) CPUs required by the process' task.
 For example::
 
     process big_job {
-
       cpus 8
       executor 'sge'
 
@@ -1556,6 +1555,28 @@ For example::
 
 This directive is required for tasks that execute multi-process or multi-threaded commands/tools and it is meant
 to reserve enough CPUs when a pipeline task is executed through a cluster resource manager.
+
+For executors that support fractional CPUs (e.g. :ref:`k8s-page`), the number of CPUs can also be a expressed as a floating-point value or in terms of millis, for example::
+
+    process tiny_job_a {
+      cpus 0.5
+
+      """
+      echo ${task.cpus}
+      """
+    }
+
+    process tiny_job_b {
+      cpus '500m'
+
+      """
+      echo ${task.cpus}
+      """
+    }
+
+If used with an executor that doesn't support fractional CPUs, it will be rounded up to the next integer. Additionally, ``task.cpus`` is always rounded to the next integer, regardless of the executor. In the above example, ``task.cpus`` will be ``1`` in both cases.
+
+.. note:: The alternate unit-based syntax (e.g. ``cpus 500.m``) is not supported because the ``m`` unit already refers to minutes.
 
 See also: `penv`_, `memory`_, `time`_, `queue`_, `maxForks`_
 
