@@ -16,13 +16,14 @@
  */
 
 package nextflow.container
+
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.regex.Pattern
 
+import com.google.common.io.BaseEncoding
 import groovy.transform.PackageScope
 import nextflow.util.Escape
-
 /**
  * Helper class to normalise a container image name depending
  * the the current select container engine
@@ -54,30 +55,29 @@ class ContainerHandler {
     String normalizeImageName(String imageName) {
         final engine = config.getEngine()
         if( engine == 'shifter' ) {
-            normalizeShifterImageName(imageName)
+            return normalizeShifterImageName(imageName)
         }
-        else if( engine == 'udocker' ) {
-            normalizeUdockerImageName(imageName)
+        if( engine == 'udocker' ) {
+            return normalizeUdockerImageName(imageName)
         }
-        else if( engine == 'singularity' ) {
+        if( engine == 'singularity' ) {
             final normalizedImageName = normalizeSingularityImageName(imageName)
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
             
             final result = requiresCaching ? createSingularityCache(this.config, normalizedImageName) : normalizedImageName
-            Escape.path(result)
+            return Escape.path(result)
         }
-        else if( engine == 'charliecloud' ) {
+        if( engine == 'charliecloud' ) {
             // if the imagename starts with '/' it's an absolute path
             // otherwise we assume it's in a remote registry and pull it from there
             final requiresCaching = !imageName.startsWith('/')
             final result = requiresCaching ? createCharliecloudCache(this.config, imageName) : imageName
-            Escape.path(result)
+            return Escape.path(result)
         }
-        else {
-            normalizeDockerImageName(imageName)
-        }
+        // fallback to docker
+        return normalizeDockerImageName(imageName)
     }
 
     @PackageScope
@@ -209,4 +209,39 @@ class ContainerHandler {
         // prefix it with the `docker://` pseudo protocol used by singularity to download it
         return "docker://${img}"
     }
+
+
+    String proxyReg(String proxy, String image) {
+        final p = image.lastIndexOf('/')
+        if( p==-1 ) {
+            return "$proxy/${encodeBase32('library')}/$image"
+        }
+        String base = image.substring(0,p)
+        String name = image.substring(p)
+        if( base.contains('.') && !base.contains('/') )
+            base += '/library'
+        return "$proxy/${encodeBase32(base)}${name}"
+    }
+
+    final private static char PADDING = '_' as char
+    final private static BaseEncoding BASE32 = BaseEncoding.base32() .withPadChar(PADDING)
+
+    static String encodeBase32(String str, boolean padding=false) {
+        final result = BASE32.encode(str.bytes).toLowerCase()
+        if( padding )
+            return result
+        final p = result.indexOf(PADDING as byte)
+        return p == -1 ? result : result.substring(0,p)
+    }
+
+    static String decodeBase32(String encoded) {
+        final result = BASE32.decode(encoded.toUpperCase())
+        return new String(result)
+    }
+
+    static String resolve(String str) {
+        def parts = str.tokenize('/')
+        return decodeBase32(parts[1]) + '/' + parts[2]
+    }
+
 }
