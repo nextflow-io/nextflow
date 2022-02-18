@@ -381,7 +381,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptRuntimeException)
-        err.message == "Access to 'foo.out' is undefined since process doesn't declare any output"
+        err.message == "Access to 'foo.out' is undefined since process 'foo' doesn't declare any output or it was not executed (review your script is calling it with 'foo()')"
     }
 
     def 'should report error accessing undefined out/b' () {
@@ -403,7 +403,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptRuntimeException)
-        err.message == "Access to 'foo.out' is undefined since process doesn't declare any output"
+        err.message == "Access to 'foo.out' is undefined since process 'foo' doesn't declare any output or it was not executed (review your script is calling it with 'foo()')"
     }
 
     def 'should report error accessing undefined out/c' () {
