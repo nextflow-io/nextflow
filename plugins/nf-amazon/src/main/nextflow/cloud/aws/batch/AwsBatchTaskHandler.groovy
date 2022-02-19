@@ -575,6 +575,13 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( !ContainerNameValidator.isValidImageName(name) ) throw new IllegalArgumentException("Invalid container image name: $name")
 
         def result = name.replaceAll(/[^a-zA-Z0-9\-_]+/,'-')
+        // job definition len cannot exceed 128 char
+        // take first 40 chars + add a unique hash
+        if( result.length()>125 ) {
+            final hash = name.md5()
+            result = result.substring(0,40) + '-' + hash
+        }
+
         return "nf-" + result
     }
 

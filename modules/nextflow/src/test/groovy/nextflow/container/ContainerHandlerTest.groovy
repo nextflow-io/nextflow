@@ -264,9 +264,9 @@ class ContainerHandlerTest extends Specification {
         ContainerHandler.resolve(result) == RESOLVED
 
         where:
-        IMAGE                       | EXPECTED                                      | RESOLVED
-        'busybox'                   | 'foo.io/nruwe4tboj4q/busybox'                 | 'library/busybox'
-        'quay.io/busybox:v1'        | 'foo.io/of2wc6jonfxs63djmjzgc4tz/busybox:v1'  | 'quay.io/library/busybox:v1'
-        'quay.io/this/that:latest'  | 'foo.io/of2wc6jonfxs65dinfzq/that:latest'     | 'quay.io/this/that:latest'
+        IMAGE                       | EXPECTED                                          | RESOLVED
+        'busybox'                   | 'foo.io/tw/nruwe4tboj4q/busybox'                  | 'library/busybox'
+        'quay.io/busybox:v1'        | 'foo.io/tw/of2wc6jonfxs63djmjzgc4tz/busybox:v1'   | 'quay.io/library/busybox:v1'
+        'quay.io/this/that:latest'  | 'foo.io/tw/of2wc6jonfxs65dinfzq/that:latest'      | 'quay.io/this/that:latest'
     }
 }

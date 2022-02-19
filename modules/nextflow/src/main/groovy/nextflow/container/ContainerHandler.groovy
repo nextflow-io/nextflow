@@ -22,7 +22,10 @@ import java.nio.file.Paths
 import java.util.regex.Pattern
 
 import com.google.common.io.BaseEncoding
+import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import nextflow.util.Escape
 /**
  * Helper class to normalise a container image name depending
@@ -31,6 +34,8 @@ import nextflow.util.Escape
  * @author Emilio Palumbo <emilio.palumbo@crg.eu>
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
+@CompileStatic
 class ContainerHandler {
 
     final private static Path CWD = Paths.get('.').toAbsolutePath()
@@ -210,17 +215,21 @@ class ContainerHandler {
         return "docker://${img}"
     }
 
-
+    @Memoized
     String proxyReg(String proxy, String image) {
         final p = image.lastIndexOf('/')
         if( p==-1 ) {
-            return "$proxy/${encodeBase32('library')}/$image"
+            final result = "$proxy/tw/${encodeBase32('library')}/$image"
+            log.debug "Using proxy reg image => $result"
+            return result
         }
         String base = image.substring(0,p)
         String name = image.substring(p)
         if( base.contains('.') && !base.contains('/') )
             base += '/library'
-        return "$proxy/${encodeBase32(base)}${name}"
+        final result = "$proxy/tw/${encodeBase32(base)}${name}"
+        log.debug "Using proxy reg image => $result"
+        return result
     }
 
     final private static char PADDING = '_' as char
@@ -241,7 +250,7 @@ class ContainerHandler {
 
     static String resolve(String str) {
         def parts = str.tokenize('/')
-        return decodeBase32(parts[1]) + '/' + parts[2]
+        return decodeBase32(parts[2]) + '/' + parts[3]
     }
 
 }
