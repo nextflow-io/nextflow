@@ -1291,7 +1291,7 @@ Update the nextflow runtime to the latest available version.
 **Description**
 
 The ``self-update`` command directs the ``nextflow`` cli to update itself to the latest stable release. 
-The ``self-update`` command also updates the `Nextflow launcher script <https://github.com/nextflow-io/nextflow/blob/master/nextflow>`_ in addition to the Java artifacts, whereas the ``NXF_VER`` environment variables only updates the Java artifacts.
+This command also updates the `Nextflow launcher script <https://github.com/nextflow-io/nextflow/blob/master/nextflow>`_ in addition to the Java artifacts, whereas the ``NXF_VER`` environment variables only updates the Java artifacts.
 
 
 **Examples**
