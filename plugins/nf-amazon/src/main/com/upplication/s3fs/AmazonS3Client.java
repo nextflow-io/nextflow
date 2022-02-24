@@ -155,7 +155,7 @@ public class AmazonS3Client {
 			log.trace("Setting canned ACL={}; bucket={}; tags={} and stream", cannedAcl, bucket, tags);
 			req.withCannedAcl(cannedAcl);
 		}
-		if( tags != null ) {
+		if( tags != null && tags.size()>0 ) {
 			req.setTagging(new ObjectTagging(tags));
 		}
 		return client.putObject(req);
