@@ -82,6 +82,8 @@ class LocalRepositoryProvider extends RepositoryProvider {
             def tree = commit.getTree()
 
             def treeWalk = TreeWalk.forPath(repo, path, tree)
+            if( !treeWalk )
+                return null
             def id = treeWalk.getObjectId(0)
             def loader = repo.open(id)
 
