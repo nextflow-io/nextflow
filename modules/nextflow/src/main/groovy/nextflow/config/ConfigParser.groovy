@@ -346,9 +346,9 @@ class ConfigParser {
                 }
             }
             if( name=='params' && result instanceof Map && paramVars ) {
-                result.putAll(Bolts.deepMerge(result, paramVars, true))
+                result.putAll(Bolts.deepMerge(result, paramVars))
             }
-            result
+            return result
         }
 
         ConfigObject overrides = new ConfigObject()
