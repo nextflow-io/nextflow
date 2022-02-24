@@ -282,6 +282,40 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should include config with params' () {
+        given:
+        def folder = File.createTempDir()
+        def configMain = new File(folder,'nextflow.config').absoluteFile
+        def snippet1 = new File(folder,'igenomes.config').absoluteFile
+
+
+        configMain.text = '''
+        includeConfig 'igenomes.config'
+        '''
+
+        snippet1.text = '''
+        params {
+          genomes {
+            'GRCh37' {
+              fasta = "${params.igenomes_base}/genome.fa"
+              bwa   = "${params.igenomes_base}/BWAIndex/genome.fa"
+            }
+          }
+        }
+        '''
+
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun(params: [igenomes_base: 'test'])
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(configMain.toPath())
+
+        then:
+        config.params.genomes.GRCh37 == [fasta:'test/genome.fa', bwa:'test/BWAIndex/genome.fa']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 
     def 'should fetch the config path from env var' () {
         given:

@@ -925,16 +925,28 @@ class Bolts {
         return (T)result
     }
 
-    static <T extends Map> T deepMerge(T mergeIntoMap, T mergeFromMap, boolean replaceValues) {
-        for (Object key : mergeFromMap.keySet()) {
-            if (mergeFromMap.get(key) instanceof Map && mergeIntoMap.get(key) instanceof Map) {
-                mergeIntoMap.put(key, deepMerge((Map) mergeIntoMap.get(key), (Map) mergeFromMap.get(key), replaceValues));
-            } else {
-                if (!mergeIntoMap.containsKey(key) || replaceValues) {
-                    mergeIntoMap.put(key, mergeFromMap.get(key));
-                }
+    static Map deepMerge(Map target, Map source) {
+        final result = cloneMap0(target)
+        for (Object name : source.keySet()) {
+            // to prevent side-effects with ConfigObject object (which creates a value on-fly
+            // when getting it, always use `containsKey` before
+            if( result.containsKey(name) && result.get(name) instanceof Map && source.containsKey(name) && source.get(name) instanceof Map  ) {
+                result.put(name, deepMerge( (Map)result.get(name), (Map)source.get(name)))
+            }
+            else {
+                result.put(name, source.get(name))
             }
         }
-        return deepClone(mergeIntoMap)
+        return result
     }
+
+    static private Map cloneMap0(Map map) {
+        if( map instanceof ConfigObject )
+            return ((ConfigObject)map).clone()
+        if( map instanceof LinkedHashMap )
+            return new LinkedHashMap<>(map)
+        else
+            return new HashMap<>(map)
+    }
+    
 }
