@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+1.5.2 - 25 Feb 2022
+- Prevent S3 tagging with empty list
+
 1.5.1 - 19 Feb 2022
 - Fix Batch Job name exceed max allowed size
 
