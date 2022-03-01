@@ -31,6 +31,9 @@ class LocalRepositoryProviderTest extends Specification {
     @Shared
     Path testFolder
 
+    @Shared
+    Git repo
+
     def setup() {
         testFolder = Files.createTempDirectory('test').toAbsolutePath()
 
@@ -38,11 +41,10 @@ class LocalRepositoryProviderTest extends Specification {
         testFolder.resolve('project_hello').mkdirs()
         def dir = testFolder.resolve('project_hello').toFile()
         def init = Git.init()
-        def repo = init.setDirectory( dir ).call()
+        this.repo = init.setDirectory( dir ).call()
         new File(dir, 'main.nf').text = 'main script'
         repo.add().addFilepattern('main.nf').call()
         repo.commit().setMessage('First commit').call()
-
     }
 
     def cleanup() {
@@ -122,5 +124,55 @@ class LocalRepositoryProviderTest extends Specification {
 
     }
 
+    def 'should list tags' () {
+        given:
+        def dir = testFolder.toFile()
+        def ref1 = repo.tag().setName('tag_1').setMessage('First tag').call()
+        // add new file
+        new File(dir, 'foo.nf').text = 'foo script'
+        repo.add().addFilepattern('foo.nf').call()
+        repo.commit().setMessage('Second commit').call()
+        def ref2 = repo.tag().setName('tag_2').setMessage('Second tag').call()
 
+        and:
+        def config = new ProviderConfig('local', [path: testFolder])
+        def manager = new LocalRepositoryProvider('project_hello', config)
+
+        when:
+        def tags = manager.getTags()
+        then:
+        tags.size() == 2
+        and:
+        tags[0].name == 'tag_1'
+        tags[0].getCommitId() == ref1.getObjectId().name()
+        and:
+        tags[1].name == 'tag_2'
+        tags[1].getCommitId() == ref2.getObjectId().name()
+    }
+
+    def 'should list branches' () {
+        given:
+        def dir = testFolder.toFile()
+        def ref1 = repo.branchCreate().setName('branch_1').call()
+        // add new file
+        new File(dir, 'foo.nf').text = 'foo script'
+        repo.add().addFilepattern('foo.nf').call()
+        repo.commit().setMessage('Second commit').call()
+        def ref2 = repo.branchCreate().setName('branch_2').call()
+
+        and:
+        def config = new ProviderConfig('local', [path: testFolder])
+        def manager = new LocalRepositoryProvider('project_hello', config)
+
+        when:
+        def branches = manager.getBranches()
+        then:
+        branches.size() == 3
+        and:
+        branches.find { it.name == 'master' }
+        and:
+        branches.find { it.name == 'branch_1' }.commitId == ref1.getObjectId().name()
+        and:
+        branches.find { it.name == 'branch_2' }.commitId == ref2.getObjectId().name()
+    }
 }

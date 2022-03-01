@@ -1,5 +1,11 @@
 nf-amazon changelog
 ===================
+1.5.2 - 25 Feb 2022
+- Prevent S3 tagging with empty list
+
+1.5.1 - 19 Feb 2022
+- Fix Batch Job name exceed max allowed size
+
 1.5.0 - 21 Jan 2022
 - Add support for secrets management to AWS Batch executor
 - Enable parallel s3 downloads by defualt

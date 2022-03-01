@@ -159,9 +159,19 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
     }
 
     @Override
-    String getSecretsEnv() {
+    String getSecretsEnv(List<String> secretNames) {
+        if( !secretNames )
+            return null
+        final filter = secretNames.collect(it -> "-e '$it=.*'").join(' ')
         final tmp = makeTempSecretsFile()
-        return tmp ? "source $tmp" : null
+        // mac does not allow source an anonymous pipe
+        // https://stackoverflow.com/a/32596626/395921
+        return tmp ? "source /dev/stdin <<<\"\$(cat <(grep -w $filter $tmp))\"" : null
+    }
+
+    @Deprecated
+    String getSecretsEnv() {
+        return getSecretsEnv(null)
     }
 
     /**

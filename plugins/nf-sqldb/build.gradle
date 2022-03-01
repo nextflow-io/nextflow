@@ -13,10 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+plugins {
+    id 'de.undercouch.download' version '4.1.2'
+}
+
 apply plugin: 'java'
 apply plugin: 'java-test-fixtures'
 apply plugin: 'idea'
 apply plugin: 'groovy'
+
 
 sourceSets {
     main.java.srcDirs = []
@@ -36,6 +42,7 @@ dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:1.7.10'
     compileOnly 'org.pf4j:pf4j:3.4.1'
+    compileOnly "org.slf4j:log4j-over-slf4j:1.7.32"
     api("org.codehaus.groovy:groovy-sql:3.0.9") { transitive = false }
     api 'com.h2database:h2:1.4.200'
     api 'mysql:mysql-connector-java:8.0.22'
@@ -43,6 +50,7 @@ dependencies {
     api 'org.postgresql:postgresql:42.2.23'
     api 'org.xerial:sqlite-jdbc:3.36.0.3'
     api 'org.duckdb:duckdb_jdbc:0.3.0'
+    api files('downloads/unzip/AthenaJDBC42_2.0.25.1001.jar')
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
@@ -50,3 +58,26 @@ dependencies {
     testImplementation "org.codehaus.groovy:groovy-nio:3.0.9"
 }
 
+
+/**
+ * The following tasks download and confirm the MD5 checksum of the ZIP archive
+ * for Simba Athena JDBC driver and extract its contents to the build directory
+ */
+task downloadAthenDep(type: Download) {
+    src 'https://s3.amazonaws.com/athena-downloads/drivers/JDBC/SimbaAthenaJDBC-2.0.25.1001/SimbaAthenaJDBC-2.0.25.1001.zip'
+    dest new File(buildDir, 'downloads/SimbaAthenaJDBC-2.0.25.1001.zip')
+    overwrite false
+}
+
+task verifyAthenDep(type: Verify, dependsOn: downloadAthenDep) {
+    src new File(buildDir, 'downloads/SimbaAthenaJDBC-2.0.25.1001.zip')
+    algorithm 'MD5'
+    checksum '71504d0317656d790978363358d0c068'
+}
+
+task unzipAthenDep(dependsOn: verifyAthenDep, type: Copy) {
+    from zipTree(new File(buildDir, 'downloads/SimbaAthenaJDBC-2.0.25.1001.zip'))
+    into "${buildDir}/downloads/unzip"
+}
+
+project.compileGroovy.dependsOn('unzipAthenDep')

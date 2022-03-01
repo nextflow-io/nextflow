@@ -25,20 +25,20 @@ you have modified.
 Sphinx can be installed either with
 
 ```
-pip install -U Sphinx
+pip install -U sphinx==3.5.4
 ```
 
 or
 
 ```
-conda install sphinx
+conda install sphinx==3.5.4
 ```
 
 ### Theme 
 
 Docs uses the [sphinx_rtd_theme](https://github.com/readthedocs/sphinx_rtd_theme) theme. 
 
-To update it, clone the bove repo, then copy `sphinx_rtd_theme/sphinx_rtd_theme` directory 
+To update it, clone the above repo, then copy `sphinx_rtd_theme/sphinx_rtd_theme` directory 
 into `docs/_themes`.  
 
 ### License

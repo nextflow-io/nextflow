@@ -33,6 +33,10 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:1.7.10'
     compileOnly 'org.pf4j:pf4j:3.4.1'
 
+    api("org.codehaus.groovy:groovy-yaml:3.0.9")  { transitive=false }
+    api "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.12.5"
+    api "com.fasterxml.jackson.core:jackson-databind:2.12.5"
+
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.codehaus.groovy:groovy:3.0.9"
     testImplementation "org.codehaus.groovy:groovy-nio:3.0.9"

@@ -1,6 +1,5 @@
 /*
  * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,20 +12,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow
+package nextflow.cache
+
 import java.nio.file.Files
 
 import com.google.common.hash.HashCode
+import nextflow.cache.CacheDB
+import nextflow.cache.DefaultCacheStore
 import nextflow.executor.CachedTaskHandler
-import nextflow.processor.TaskId
-import nextflow.script.ProcessConfig
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskEntry
+import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.BodyDef
+import nextflow.script.ProcessConfig
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
 import spock.lang.Specification
@@ -46,7 +49,8 @@ class CacheDBTest extends Specification {
         def runName = 'test_1'
 
         // -- the session object
-        def cache = new CacheDB(uuid, runName, folder)
+        def store = new DefaultCacheStore(uuid, runName, folder)
+        def cache = new CacheDB(store)
 
         // -- the processor mock
         def proc = Mock(TaskProcessor)
@@ -120,7 +124,6 @@ class CacheDBTest extends Specification {
 
     def 'should write some tasks and iterate over them' () {
 
-
         setup:
         def folder = Files.createTempDirectory('test')
         def uuid = UUID.randomUUID()
@@ -129,9 +132,11 @@ class CacheDBTest extends Specification {
         def hash3 = CacheHelper.hasher('x').hash()
         def runName = 'test_1'
         def trace = Mock(TraceRecord)
+        and:
+        def store = new DefaultCacheStore(uuid, runName, folder)
 
         when:
-        def cache = new CacheDB(uuid, runName, folder).open()
+        def cache = new CacheDB(store).open()
 
         def h1 = makeTaskHandler(hash1, [task_id: 1, process: 'foo', exit: 0])
         cache.writeTaskEntry0(h1, h1.traceRecord)
