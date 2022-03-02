@@ -49,6 +49,8 @@ import nextflow.extension.FilesEx
 import nextflow.plugin.Plugins
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
+import nextflow.util.StringUtils
+
 /**
  * Provides some helper method handling files
  *
@@ -57,6 +59,9 @@ import nextflow.util.Escape
 @Slf4j
 @CompileStatic
 class FileHelper {
+
+    @PackageScope
+    static Map<String,String> env = System.getenv()
 
     static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z][a-zA-Z0-9]*)\:\\/\\/.+/
 
@@ -1097,4 +1102,52 @@ class FileHelper {
         return m.matches() ? m.group(1) : null
     }
 
+    static String concatPath(String left, String right) {
+        // when starting with a `\` the right right is an absolute right
+        if( right.startsWith('/') )
+            return right
+
+        final scheme = getUrlProtocol(right)
+        if( scheme==null ) {
+            return addEndingSlash(left) + right
+        }
+        // it's assumed right starting with a protocol are absolute
+        return right
+    }
+
+    static String addEndingSlash(String path) {
+        if( !path )
+            return null
+
+        // normalise thr path stripping  the ending slash
+        while( path.endsWith('/') ) {
+            final len = path.length()
+            if( path=='/' )
+                break
+            if( len>3 && path.substring(len-3) == '://' )
+                break
+            if( path=='file:/' )
+                break
+            path = path.substring(0,path.length()-1)
+        }
+
+        // add the slash if needed
+        return path=='/' || path.endsWith('://')
+                ? path
+                : path + '/'
+    }
+
+    static String relPath(String path) {
+        if( env==null || !env.NXF_FILE_BASE_DIR )
+            return path
+        return concatPath(env.NXF_FILE_BASE_DIR, path)
+    }
+
+    static Path relPath(Path path) {
+        if( env==null || !env.NXF_FILE_BASE_DIR )
+            return path
+        return path.isAbsolute()
+                ? path
+                : FileHelper.asPath(env.NXF_FILE_BASE_DIR).resolve( path.toString() )
+    }
 }

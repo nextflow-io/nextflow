@@ -1003,4 +1003,105 @@ class FileHelperTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
+
+    @Unroll
+    def 'should resolve relative string paths'() {
+        given:
+        FileHelper.env = [NXF_FILE_BASE_DIR: BASE_DIR]
+
+        expect:
+        FileHelper.relPath(PATH)  == EXPECTED
+
+        cleanup:
+        FileHelper.env = System.getenv()
+
+        where:
+        PATH                    | BASE_DIR      | EXPECTED
+        'foo/bar.txt'           | null          | 'foo/bar.txt'
+        '/foo/bar.txt'          | null          | '/foo/bar.txt'
+        's3://foo/bar.txt'      | null          | 's3://foo/bar.txt'
+        and:
+        'foo/bar.txt'           | '/data/dir'   | '/data/dir/foo/bar.txt'
+        'foo/bar.txt'           | '/data/dir/'  | '/data/dir/foo/bar.txt'
+        '/foo/bar.txt'          | '/data/dir'   | '/foo/bar.txt'
+        's3://foo/bar.txt'      | '/data/dir'   | 's3://foo/bar.txt'
+        and:
+        'foo/bar.txt'           | 's3://data'   | 's3://data/foo/bar.txt'
+        'foo/bar.txt'           | 's3://data/'  | 's3://data/foo/bar.txt'
+        '/foo/bar.txt'          | 's3://data'   | '/foo/bar.txt'
+        's3://foo/bar.txt'      | 's3://data'   | 's3://foo/bar.txt'
+    }
+
+    @Unroll
+    def 'should resolve relative object paths'() {
+        given:
+        FileHelper.env = [NXF_FILE_BASE_DIR: BASE_DIR]
+
+        expect:
+        FileHelper.relPath(FileHelper.asPath(PATH))  == FileHelper.asPath(EXPECTED)
+
+        cleanup:
+        FileHelper.env = System.getenv()
+
+        where:
+        PATH                    | BASE_DIR      | EXPECTED
+        'foo/bar.txt'           | null          | 'foo/bar.txt'
+        '/foo/bar.txt'          | null          | '/foo/bar.txt'
+        'file:/foo/bar.txt'     | null          | 'file:/foo/bar.txt'
+        'ftp://foo/bar.txt'      | null          | 'ftp://foo/bar.txt'
+        and:
+        'foo/bar.txt'           | '/data/dir'   | '/data/dir/foo/bar.txt'
+        'foo/bar.txt'           | '/data/dir/'  | '/data/dir/foo/bar.txt'
+        '/foo/bar.txt'          | '/data/dir'   | '/foo/bar.txt'
+        'file:/foo/bar.txt'     | '/data/dir'   | 'file:/foo/bar.txt'
+        'ftp://foo/bar.txt'     | '/data/dir'   | 'ftp://foo/bar.txt'
+        and:
+        'foo/bar.txt'           | 'ftp://data'   | 'ftp://data/foo/bar.txt'
+        'foo/bar.txt'           | 'ftp://data/'  | 'ftp://data/foo/bar.txt'
+        '/foo/bar.txt'          | 'ftp://data'   | '/foo/bar.txt'
+        'file:/foo/bar.txt'     | 'ftp://data'   | 'file:/foo/bar.txt'
+        'http://foo/bar.txt'    | 'ftp://data'   | 'http://foo/bar.txt'
+    }
+
+    @Unroll
+    def 'should add ending slash from #PATH' () {
+        expect:
+        FileHelper.addEndingSlash(PATH) == EXPECTED
+        where:
+        PATH                | EXPECTED
+        'foo'               | 'foo/'
+        '/foo'              | '/foo/'
+        '/foo/'             | '/foo/'
+        '/foo///'           | '/foo/'
+        '//'                | '/'
+        and:
+        'file://foo'        | 'file://foo/'
+        'file://foo/'       | 'file://foo/'
+        'file:/'            | 'file://'
+        'file://'           | 'file://'
+        'file:///'          | 'file://'
+        and:
+        'https://'          | 'https://'
+        'https:///'         | 'https://'
+    }
+
+    @Unroll
+    def 'should concat paths'() {
+        expect:
+        FileHelper.concatPath(LEFT, RIGHT) == EXPECTED
+
+        where:
+        LEFT        | RIGHT         | EXPECTED
+        'foo'       | 'bar'         | 'foo/bar'
+        'foo/'      | 'bar'         | 'foo/bar'
+        '/foo/'     | 'bar'         | '/foo/bar'
+        '/foo//'    | 'bar'         | '/foo/bar'
+        and:
+        'foo'       | '/bar'        | '/bar'
+        'foo'       | 's3://bar'    | 's3://bar'
+        and:
+        'foo'       | 'file:/x'     | 'file:/x'
+        'foo'       | 'file://x'    | 'file://x'
+    }
+
 }

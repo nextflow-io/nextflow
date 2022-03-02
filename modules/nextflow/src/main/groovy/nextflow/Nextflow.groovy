@@ -17,6 +17,8 @@
 
 package nextflow
 
+import static nextflow.file.FileHelper.*
+
 import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
@@ -43,7 +45,6 @@ import nextflow.util.ArrayTuple
 import nextflow.util.CacheHelper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import static nextflow.file.FileHelper.isGlobAllowed
 /**
  * Defines the main methods imported by default in the script scope
  *
@@ -84,6 +85,8 @@ class Nextflow {
 
     }
 
+
+
     /**
      * Get one or more file object given the specified path or glob pattern.
      *
@@ -105,7 +108,7 @@ class Nextflow {
         final path = filePattern as Path
         final glob = options?.containsKey('glob') ? options.glob as boolean : isGlobAllowed(path)
         if( !glob ) {
-            return FileHelper.checkIfExists(path, options)
+            return checkIfExists(path, options)
         }
 
         // if it isn't a glob pattern simply return it a normalized absolute Path object
@@ -113,10 +116,10 @@ class Nextflow {
         if( !splitter.isPattern() ) {
             def normalised = splitter.strip(path.toString())
             if( path instanceof Path )  {
-                return FileHelper.checkIfExists(path.fileSystem.getPath(normalised), options)
+                return checkIfExists(path.fileSystem.getPath(normalised), options)
             }
             else {
-                return FileHelper.checkIfExists(FileHelper.asPath(normalised), options)
+                return checkIfExists(asPath(normalised), options)
             }
         }
 
