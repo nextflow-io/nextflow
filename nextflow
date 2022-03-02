@@ -394,8 +394,13 @@ else
     cli=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
     [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit 1
 
+    pat='"([^"]*)"(.*)'
+    [[ "${cli[@]}" =~ $pat ]]
+    cmd=(${BASH_REMATCH[1]})
+    rest=(${BASH_REMATCH[2]})
+
     if [[ "$JAVA_VER" =~ ^(9|10|11|12|13|14|15|16|17) ]]; then
-      launcher=("${cli[@]:0:1}")
+      launcher="${cmd[@]}"
       launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
@@ -412,11 +417,11 @@ else
       launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
       [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
-      launcher+=("${cli[@]:1}")
+      launcher+=("${rest[@]}")
     else
-      launcher=("${cli[@]:0:1}")
+      launcher="${cmd[@]}"
       [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
-      launcher+=("${cli[@]:1}")
+      launcher+=("${rest[@]}")
     fi
 
     # Don't show errors if the LAUNCH_FILE can't be created
