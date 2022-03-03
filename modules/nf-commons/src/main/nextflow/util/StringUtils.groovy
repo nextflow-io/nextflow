@@ -23,7 +23,7 @@ import java.util.regex.Pattern
 import com.google.common.net.InetAddresses
 import groovy.transform.CompileStatic
 /**
- * Path string helper routines
+ * String helper routines
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -35,27 +35,26 @@ class StringUtils {
     static final private Pattern URL_PASSWORD = ~/^[a-zA-Z][a-zA-Z0-9]*:\\/\\/(.+)@.+/
 
     /**
-     * See also {@link nextflow.file.FileHelper#getUrlProtocol(java.lang.String)}
-     *
-     * @param str A string URI path
-     * @return the URI protocol if provided or {@code null} otherwise
+     * Deprecated. Use {@link nextflow.file.FileHelper#getUrlProtocol(java.lang.String)} instead
      */
     static String getUrlProtocol(String str) {
-        if( str==null )
-            return null
-        if( str.startsWith('file:/') )
-            return 'file'
         final m = URL_PROTOCOL.matcher(str)
         return m.matches() ? m.group(1) : null
     }
 
     static final private Pattern BASE_URL = ~/(?i)((?:[a-z][a-zA-Z0-9]*)?:\/\/[^:|\/]+(?::\d*)?)(?:$|\/.*)/
+    static final private Pattern FILE_URL = ~/(?i)((?:file)?:\/\/[^:|\/]+(?::\d*)?)(?:$|\/.*)/
 
     static String baseUrl(String url) {
         if( !url )
             return null
         final m = BASE_URL.matcher(url)
-        return m.matches() ? m.group(1).toLowerCase() : null
+        if( m.matches() )
+            return m.group(1).toLowerCase()
+        final n = FILE_URL.matcher(url)
+        if( n.matches() )
+            return n.group(1).toLowerCase()
+        return false
     }
 
     static private Pattern multilinePattern = ~/"?(password|token|secret|license)"?\s?[:=]\s?"?(\w+)"?/

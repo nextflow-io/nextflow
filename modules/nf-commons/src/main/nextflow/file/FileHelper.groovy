@@ -49,8 +49,6 @@ import nextflow.extension.FilesEx
 import nextflow.plugin.Plugins
 import nextflow.util.CacheHelper
 import nextflow.util.Escape
-import nextflow.util.StringUtils
-
 /**
  * Provides some helper method handling files
  *
@@ -63,7 +61,8 @@ class FileHelper {
     @PackageScope
     static Map<String,String> env = System.getenv()
 
-    static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z][a-zA-Z0-9]*)\:\\/\\/.+/
+    static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z][a-zA-Z0-9]*):\\/\\/.+/
+    static final public Pattern BASE_URL = ~/(?i)((?:[a-z][a-zA-Z0-9]*)?:\/\/[^:|\/]+(?::\d*)?)(?:$|\/.*)/
 
     static final private Path localTempBasePath
 
@@ -1098,6 +1097,12 @@ class FileHelper {
     }
 
     static String getUrlProtocol(String str) {
+        if( !str )
+            return null
+        // note: `file:/foo` is a valid file pseudo-protocol, and represents absolute
+        // `/foo` path with no remote hostname specified
+        if( str.startsWith('file:/'))
+            return 'file'
         final m = URL_PROTOCOL.matcher(str)
         return m.matches() ? m.group(1) : null
     }

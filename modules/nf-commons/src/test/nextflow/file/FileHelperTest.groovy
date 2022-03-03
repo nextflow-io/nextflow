@@ -963,9 +963,51 @@ class FileHelperTest extends Specification {
         EXPECTED    | STR
         'ftp'       | 'ftp://abc.com'
         's3'        | 's3://bucket/abc'
+        'file'      | 'file:/foo/bar'       // <-- note: this is a valid protocol scheme, representing the absolute path `/foo/bar`
+        'file'      | 'file://foo.io/bar'   // <-- note: file path representing the file `/bar` located in the host `foo.io`
+        and:
+        null        | 's3:/bucket/abc'
         null        | '3s://bucket/abc'
         null        | 'abc:xyz'
         null        | '/a/bc/'
+    }
+
+    @Unroll
+    def 'should find base url #STR' () {
+        expect:
+        FileHelper.baseUrl(STR) == BASE
+
+        where:
+        BASE                | STR
+        null                | null
+        'http://foo.com'    | 'http://foo.com'
+        'http://foo.com'    | 'http://foo.com/abc'
+        'http://foo.com'    | 'http://foo.com/abc/mskd0fs =ds0f'
+        and:
+        'https://foo.com'    | 'https://foo.com'
+        'https://foo.com'    | 'https://foo.com/abc'
+        'https://foo.com'    | 'https://foo.com/abc/mskd0fs =ds0f'
+        and:
+        'https://foo.com'    | 'HTTPS://FOO.COM'
+        'https://foo.com'    | 'HTTPS://FOO.COM/ABC'
+        'https://foo.com'    | 'HTTPS://FOO.COM/ABC/MSKD0FS =DS0F'
+        and:
+        'https://foo.com:80' | 'https://foo.com:80'
+        'https://foo.com:80' | 'https://foo.com:80/abc'
+        'https://foo.com:80' | 'https://foo.com:80/abc/mskd0fs =ds0f'
+        and:
+        'ftp://foo.com:80'   | 'ftp://foo.com:80'
+        'ftp://foo.com:80'   | 'ftp://foo.com:80/abc'
+        's3://foo.com:80'    | 's3://foo.com:80/abc'
+        and:
+        'dx://project-123'   | 'dx://project-123'
+        'dx://project-123:'  | 'dx://project-123:'
+        'dx://project-123:'  | 'dx://project-123:/abc'
+        and:
+        null                 | 'blah'
+        null                 | 'http:/xyz.com'
+        null                 | '1234://xyz'
+        null                 | '1234://xyz.com/abc'
     }
 
     @Unroll
@@ -1019,17 +1061,25 @@ class FileHelperTest extends Specification {
         PATH                    | BASE_DIR      | EXPECTED
         'foo/bar.txt'           | null          | 'foo/bar.txt'
         '/foo/bar.txt'          | null          | '/foo/bar.txt'
+        'file:/foo/bar.txt'     | null          | 'file:/foo/bar.txt'
         's3://foo/bar.txt'      | null          | 's3://foo/bar.txt'
         and:
         'foo/bar.txt'           | '/data/dir'   | '/data/dir/foo/bar.txt'
         'foo/bar.txt'           | '/data/dir/'  | '/data/dir/foo/bar.txt'
         '/foo/bar.txt'          | '/data/dir'   | '/foo/bar.txt'
+        'file:/foo/bar.txt'     | '/data/dir'   | 'file:/foo/bar.txt'
         's3://foo/bar.txt'      | '/data/dir'   | 's3://foo/bar.txt'
         and:
-        'foo/bar.txt'           | 's3://data'   | 's3://data/foo/bar.txt'
-        'foo/bar.txt'           | 's3://data/'  | 's3://data/foo/bar.txt'
-        '/foo/bar.txt'          | 's3://data'   | '/foo/bar.txt'
-        's3://foo/bar.txt'      | 's3://data'   | 's3://foo/bar.txt'
+        'foo/bar.txt'           | 'file:/data/dir'      | 'file:/data/dir/foo/bar.txt'
+        'foo/bar.txt'           | 'file:/data/dir/'     | 'file:/data/dir/foo/bar.txt'
+        '/foo/bar.txt'          | 'file:/data/dir'      | '/foo/bar.txt'
+        's3://foo/bar.txt'      | 'file:/data/dir'      | 's3://foo/bar.txt'
+        and:
+        'foo/bar.txt'           | 's3://data'           | 's3://data/foo/bar.txt'
+        'foo/bar.txt'           | 's3://data/'          | 's3://data/foo/bar.txt'
+        '/foo/bar.txt'          | 's3://data'           | '/foo/bar.txt'
+        'file:/foo/bar.txt'     | 's3://data/dir'       | 'file:/foo/bar.txt'
+        's3://foo/bar.txt'      | 's3://data'           | 's3://foo/bar.txt'
     }
 
     @Unroll
