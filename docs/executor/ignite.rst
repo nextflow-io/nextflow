@@ -1,4 +1,4 @@
-.. _ignite-page:
+.. _ignite-executor:
 
 *************
 Apache Ignite
@@ -8,7 +8,15 @@ Apache Ignite
   This feature has been phased out and is no longer supported as of version 22.01.x.
 
 Nextflow can be be deployed in a *cluster* mode by using `Apache Ignite <https://ignite.apache.org/>`_, an in-memory data-grid
-and clustering platform.
+and clustering platform. The ``ignite`` executor allows you to run a pipeline on an Apache Ignite cluster.
+
+To enable this executor set ``process.executor = 'ignite'`` in the ``nextflow.config`` file.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+* :ref:`process-cpus`
+* :ref:`process-disk`
+* :ref:`process-memory`
 
 Apache Ignite is packaged with Nextflow itself, so you won't need to install it separately or configure other third party
 software.
@@ -71,7 +79,7 @@ Provide a list of pre-configured IP addresses on the daemon launch command line,
 
 
 Advanced options
-=====================
+================
 
 The following cluster node configuration options can be used.
 

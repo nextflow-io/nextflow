@@ -1,4 +1,4 @@
-.. _k8s-page:
+.. _k8s-executor:
 
 **********
 Kubernetes
@@ -10,8 +10,14 @@ containerized applications.
 It provides clustering and file system abstractions that allows the execution of containerised workloads across
 different cloud platforms and on-premises installations.
 
-The built-in support for Kubernetes provided by Nextflow streamlines the execution of containerised workflows in
-Kubernetes clusters.
+The ``k8s`` executor allows you to run a containerized pipeline on a Kubernetes cluster.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+* :ref:`process-accelerator`
+* :ref:`process-cpus`
+* :ref:`process-memory`
+* :ref:`process-pod`
 
 
 Concepts
@@ -27,7 +33,7 @@ When using the ``k8s`` executor Nextflow deploys the workflow execution as a Kub
 the workflow execution and submits a separate pod execution for each job that need to be carried out by the workflow
 application.
 
-.. image:: images/nextflow-k8s-min.png
+.. image:: /images/nextflow-k8s-min.png
 
 
 Requirements
@@ -76,6 +82,7 @@ specified in the Nextflow configuration file, see the :ref:`Kubernetes configura
 Once the pod execution starts, the application in the foreground prints the console output produced by the running
 workflow pod.
 
+
 Interactive login
 =================
 
@@ -91,7 +98,7 @@ login session.
 
 
 Running in a pod
-==================
+================
 
 The main convenience of the ``kuberun`` command is that it spares the user from manually creating a pod from
 where the main Nextflow application is launched. In this scenario, the user environment is not containerised.
@@ -101,13 +108,13 @@ Kubernetes cluster. In these cases you will need to use the plain Nextflow ``run
 the ``k8s`` executor and the required persistent volume claim in the ``nextflow.config`` file as shown below::
 
     process {
-       executor = 'k8s'
+      executor = 'k8s'
     }
 
     k8s {
-       storageClaimName = 'vol-claim'
-       storageMountPath = '/mount/path'
-       storageSubPath = '/my-data'
+      storageClaimName = 'vol-claim'
+      storageMountPath = '/mount/path'
+      storageSubPath = '/my-data'
     }
 
 In the above snippet replace ``vol-claim`` with the name of an existing persistent volume claim and replace
@@ -120,24 +127,26 @@ with the directory in the volume to be mounted (default: ``/``).
 
 .. tip:: It is also possible to mount multiple volumes using the ``pod`` directive, setting such as ``k8s.pod = [ [volumeClaim: "other-pvc", mountPath: "/other" ]]``
 
+
 Pod settings
 ============
 
 The process :ref:`process-pod` directive allows the definition of pods specific settings, such as environment variables,
 secrets and config maps when using the :ref:`k8s-executor` executor. See the :ref:`process-pod` directive for more details.
 
+
 Limitation
 ==========
 
 .. note::
-  The ``kuberun`` command does not allow the execution of local Nextflow scripts and it's has been designed to
+  The ``kuberun`` command does not allow the execution of local Nextflow scripts and it has been designed to
   provide a shortcut to simple pipeline deployment into a Kubernetes cluster.
 
   For stable pipeline deployment, Nextflow needs to be executed as a pod as mentioned in the `Running in a pod`_ section.
   In alternative take in consideration a managed provisioning service such as `Nextflow Tower <https://tower.nf>`_.
 
+
 Advanced configuration
 ======================
 
-Read :ref:`Kubernetes configuration<config-k8s>` and :ref:`executor <k8s-executor>` sections to learn more
-about advanced configuration options.
+Read :ref:`Kubernetes configuration<config-k8s>` section to learn more about advanced configuration options.

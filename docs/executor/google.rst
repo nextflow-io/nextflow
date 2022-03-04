@@ -1,4 +1,4 @@
-.. _google-page:
+.. _google-executor:
 
 ************
 Google Cloud
@@ -9,6 +9,7 @@ Requirements
 
 Nextflow
 --------
+
 The support for Google Cloud requires Nextflow version ``20.01.0`` or later. To install it define the following variables
 in your system environment::
 
@@ -40,7 +41,6 @@ credentials for that VM.
 
 See the `Application Default Credentials <https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http>`_ documentation for how to enable other use cases.
 
-
 Finally, the ``GOOGLE_APPLICATION_CREDENTIALS`` environment variable can be used to specify location
 of the Google credentials file.
 
@@ -58,23 +58,38 @@ credentials file just downloaded::
 
     export GOOGLE_APPLICATION_CREDENTIALS=/path/your/file/creds.json
 
+
 .. _google-lifesciences:
 
 Cloud Life Sciences
 ===================
 
-`Cloud Life Sciences <https://cloud.google.com/life-sciences/>`_ is a managed computing service that allows the execution of
-containerized workloads in the Google Cloud Platform infrastructure.
+`Google Cloud Life Sciences <https://cloud.google.com/life-sciences/>`_ is a managed computing service that allows the execution of
+containerized workloads in the Google Cloud Platform.
 
 Nextflow provides built-in support for Cloud Life Sciences API which allows the seamless deployment of a Nextflow pipeline
-in the cloud, offloading the process executions through the Google Cloud service.
+in the cloud, offloading the process executions to Google Cloud.
+
+The pipeline processes must specify the Docker image to use by defining the ``container`` directive, either in the pipeline
+script or the ``nextflow.config`` file. Moreover the pipeline work directory must be located in a Google Storage
+bucket.
+
+To enable this executor set the property ``process.executor = 'google-lifesciences'`` in the ``nextflow.config`` file.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+* :ref:`process-accelerator`
+* :ref:`process-cpus`
+* :ref:`process-disk`
+* :ref:`process-machineType`
+* :ref:`process-memory`
 
 .. note::
   This features requires Nextflow ``20.01.0-edge`` or later.
 
 .. warning::
-  This API works well for coarse-grained workloads i.e. long running jobs. It's not suggested the use
-  this feature for pipelines spawning many short lived tasks.
+  This API works well for coarse-grained workloads i.e. long running jobs, but is not ideal for pipelines that spawn many short-lived tasks.
+
 
 .. _google-lifesciences-config:
 
@@ -142,7 +157,6 @@ google.storage.maxTransferAttempts             Max number of downloads attempts 
 google.storage.parallelThreadCount             Defines the value for the option ``GSUtil:parallel_thread_count`` used by ``gsutil`` for transfer input and output data (default: ``1``, requires version ``21.06.0-edge`` or later).
 google.storage.downloadMaxComponents           Defines the value for the option ``GSUtil:sliced_object_download_max_components`` used by ``gsutil`` for transfer input and output data (default: ``8``, requires version ``21.06.0-edge`` or later).
 ============================================== =================
-
 
 Process definition
 ------------------
@@ -239,7 +253,6 @@ For example::
         zone = 'europe-west1-b'
     }
 
-
 Then deploy the workflow execution using the ``-bucket-dir`` to specify a Google Storage path
 for the jobs computed by the Google Pipeline service and, optionally, the ``-work-dir`` to
 specify the local storage for the jobs computed locally::
@@ -259,8 +272,6 @@ Limitations
 
 * Currently it's not possible to specify a disk type different from the default one assigned
   by the service depending on the chosen instance type.
-
-
 
 Troubleshooting
 ---------------

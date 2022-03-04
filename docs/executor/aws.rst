@@ -1,8 +1,8 @@
-.. _aws-page:
+.. _aws-executor:
 
-************
-Amazon Cloud
-************
+*******************
+Amazon Web Services
+*******************
 
 AWS security credentials
 =========================
@@ -90,38 +90,38 @@ buckets. Once the list of buckets used by the pipeline is identified, there are 
 2. for a more fine grained control, assign to each bucket the following policy (replace the placeholders with the actual values)::
 
 	{
-    "Version": "2012-10-17",
-    "Id": "<my policy id>",
-    "Statement": [
-        {
-            "Sid": "<my statement id>",
-            "Effect": "Allow",
-            "Principal": {
-                "AWS": "<ARN of the nextflow identity>"
-            },
-            "Action": [
-                "s3:GetObject",
-                "s3:PutObject",
-                "s3:DeleteObject"
-            ],
-            "Resource": "arn:aws:s3:::<bucket name>/*"
-        },
-        {
-            "Sid": "AllowSSLRequestsOnly",
-            "Effect": "Deny",
-            "Principal": "*",
-            "Action": "s3:*",
-            "Resource": [
-                "arn:aws:s3:::<bucket name>",
-                "arn:aws:s3:::<bucket name>/*"
-            ],
-            "Condition": {
-                "Bool": {
-                    "aws:SecureTransport": "false"
-                }
-            }
-        }
-    ]
+      "Version": "2012-10-17",
+      "Id": "<my policy id>",
+      "Statement": [
+          {
+              "Sid": "<my statement id>",
+              "Effect": "Allow",
+              "Principal": {
+                  "AWS": "<ARN of the nextflow identity>"
+              },
+              "Action": [
+                  "s3:GetObject",
+                  "s3:PutObject",
+                  "s3:DeleteObject"
+              ],
+              "Resource": "arn:aws:s3:::<bucket name>/*"
+          },
+          {
+              "Sid": "AllowSSLRequestsOnly",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                  "arn:aws:s3:::<bucket name>",
+                  "arn:aws:s3:::<bucket name>/*"
+              ],
+              "Condition": {
+                  "Bool": {
+                      "aws:SecureTransport": "false"
+                  }
+              }
+          }
+      ]
 	}
 
 See the `bucket policy documentation <https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-policy.html>`_
@@ -133,9 +133,6 @@ for additional details.
 AWS Batch
 =========
 
-.. note::
-    Requires Nextflow version `0.26.0` or later.
-
 `AWS Batch <https://aws.amazon.com/batch/>`_ is a managed computing service that allows the execution of containerised
 workloads in the Amazon cloud infrastructure. It dynamically provisions the optimal quantity and type of compute
 resources (e.g., CPU or memory optimized compute resources) based on the volume and specific resource requirements
@@ -143,6 +140,26 @@ of the jobs submitted.
 
 Nextflow provides a built-in support for AWS Batch which allows the seamless deployment of a Nextflow pipeline
 in the cloud offloading the process executions as Batch jobs.
+
+The pipeline processes must specify the Docker image to use by defining the ``container`` directive, either in the pipeline
+script or the ``nextflow.config`` file.
+
+To enable this executor set the property ``process.executor = 'awsbatch'`` in the ``nextflow.config`` file.
+
+The pipeline can be launched either in a local computer or a EC2 instance. The latter is suggested for heavy or long
+running workloads. Moreover a S3 bucket must be used as pipeline work directory.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+* :ref:`process-accelerator`
+* :ref:`process-cpus`
+* :ref:`process-disk`
+* :ref:`process-memory`
+* :ref:`process-queue`
+
+.. note::
+    Requires Nextflow version `0.26.0` or later.
+
 
 .. _aws-batch-config:
 
@@ -186,8 +203,8 @@ Configuration
 
 When configuring your pipeline:
 
-1. import the `nf-amazon` plugin
-2. specify the AWS Batch :ref:`executor<awsbatch-executor>`
+1. import the ``nf-amazon`` plugin
+2. specify the ``awsbatch`` executor
 3. specify one or more AWS Batch queues for the execution by using the :ref:`process-queue` directive
 4. specify the AWS job container properties by using the :ref:`process-containerOptions` directive.
 
@@ -291,6 +308,7 @@ The new AMI ID needs to be specified when creating the Batch Compute Environment
 
 .. warning:: Any installation must be completed on the EC2 instance BEFORE creating the AMI.
 
+
 .. _aws-cli:
 
 AWS CLI installation
@@ -336,7 +354,7 @@ Replace the path above with the one matching the location where ``aws`` tool is 
   instead of `aws.batch.cliPath`.
 
 Docker installation
----------------------------------------
+-------------------
 Docker is required by Nextflow to execute tasks on AWS Batch. `Amazon ECS-Optimized Amazon Linux 2 AMI` has Docker installed,
 however if you create your AMI starting from a different AMI that does not have Docker installed, you need to do it manually.
 
@@ -425,17 +443,17 @@ the AWS Batch :ref:`configuration <aws-batch-config>` only to a subset of proces
 For example::
 
   aws {
-      region = 'eu-west-1'
-      batch {
-        cliPath = '/home/ec2-user/miniconda/bin/aws'
-      }
+    region = 'eu-west-1'
+    batch {
+      cliPath = '/home/ec2-user/miniconda/bin/aws'
+    }
   }
 
   process {
-      withLabel: bigTask {
-        executor = 'awsbatch'
-        queue = 'my-batch-queue'
-        container = 'my/image:tag'
+    withLabel: bigTask {
+      executor = 'awsbatch'
+      queue = 'my-batch-queue'
+      container = 'my/image:tag'
     }
   }
 
@@ -450,7 +468,7 @@ User provided container volume mounts can be provided as shown below::
   aws {
     region = 'eu-west-1'
     batch {
-        volumes = '/tmp'
+      volumes = '/tmp'
     }
   }
 
@@ -461,7 +479,7 @@ or to specify *read-only* option. For example::
   aws {
     region = 'eu-west-1'
     batch {
-        volumes = ['/tmp', '/host/path:/mnt/path:ro']
+      volumes = ['/tmp', '/host/path:/mnt/path:ro']
     }
   }
 

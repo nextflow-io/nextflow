@@ -17,18 +17,13 @@ Contents:
    process
    channel
    operator
-   executor
+   executor/index
    config
    dsl2
    cli
    container
    conda
-   aws
    amazons3
-   azure
-   google
-   ignite
-   kubernetes
    tracing
    sharing
    metadata
