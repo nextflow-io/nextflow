@@ -1,7 +1,7 @@
 NEXTFLOW CHANGE-LOG
 ===================
 22.02.1-edge - 3 Mar 2022
-- Prevent multiple parsing of params file
+- Prevent multiple parsing of params file [38bb1f71]
 
 22.02.0-edge - 25 Feb 2022
 - Fix Prevent S3 tagging with empty list [ae7db466]
