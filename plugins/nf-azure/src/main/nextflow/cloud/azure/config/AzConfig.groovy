@@ -34,10 +34,13 @@ class AzConfig {
 
     private AzRegistryOpts registryOpts
 
+    private AzRetryConfig retryConfig
+
     AzConfig(Map azure) {
         this.batchOpts = new AzBatchOpts( (Map)azure.batch ?: Collections.emptyMap() )
         this.storageOpts = new AzStorageOpts( (Map)azure.storage ?: Collections.emptyMap() )
         this.registryOpts = new AzRegistryOpts( (Map)azure.registry ?: Collections.emptyMap() )
+        this.retryConfig = new AzRetryConfig( (Map)azure.retryPolicy ?: Collections.emptyMap() )
     }
 
     AzBatchOpts batch() { batchOpts }
@@ -45,6 +48,8 @@ class AzConfig {
     AzStorageOpts storage() { storageOpts }
 
     AzRegistryOpts registry() { registryOpts }
+
+    AzRetryConfig retryConfig() { retryConfig }
 
     static AzConfig getConfig(Session session) {
         if( !session )
