@@ -322,6 +322,8 @@ class ConfigParser {
         LinkedList stack = new LinkedList()
         LinkedList profileStack = new LinkedList()
         stack << [config: config, scope: [:]]
+        boolean intoProfile = false
+
         def pushStack = { co ->
             stack << [config: co, scope: stack.last.scope.clone()]
         }
@@ -352,90 +354,116 @@ class ConfigParser {
         }
 
         ConfigObject overrides = new ConfigObject()
-        mc.invokeMethod = { String name, args ->
-            def result
-            if (args.length == 1 && args[0] instanceof Closure) {
-                if( profileStack && profileStack.last == 'profiles' )
-                    profileNames.add(name)
 
-                if (name in conditionValues.keySet()) {
+        def parseClosure = { String name, args ->
+            if( profileStack && profileStack.last == 'profiles' )
+                profileNames.add(name)
+
+            if (name in conditionValues.keySet()) {
+                try {
+                    if( name == 'profiles'){
+                        intoProfile=true
+                    }
+                    currentConditionalBlock.push(name)
+                    conditionalBlocks.push([:])
+                    args[0].call()
+                } finally {
+                    currentConditionalBlock.pop()
+                    for (entry in conditionalBlocks.pop().entrySet()) {
+                        def c = stack.last.config
+                        (c != config? c : overrides).merge(entry.value)
+                    }
+                    if( name == 'profiles'){
+                        intoProfile=false
+                    }
+                }
+                return
+            }
+
+            if (currentConditionalBlock.size() > 0) {
+                String conditionalBlockKey = currentConditionalBlock.peek()
+                conditionalNames.add(name)
+                if (name in conditionValues[conditionalBlockKey]) {
+                    def co = conditionalBlocks.peek()[conditionalBlockKey]
+                    if( co == null ) {
+                        co = new ConfigObject()
+                        conditionalBlocks.peek()[conditionalBlockKey] = co
+                    }
+
+                    pushStack.call(co)
                     try {
-                        currentConditionalBlock.push(name)
-                        conditionalBlocks.push([:])
+                        currentConditionalBlock.pop()
                         args[0].call()
                     } finally {
-                        currentConditionalBlock.pop()
-                        for (entry in conditionalBlocks.pop().entrySet()) {
-                            def c = stack.last.config
-                            (c != config? c : overrides).merge(entry.value)
-                        }
+                        currentConditionalBlock.push(conditionalBlockKey)
                     }
-                } else if (currentConditionalBlock.size() > 0) {
-                    String conditionalBlockKey = currentConditionalBlock.peek()
-                    conditionalNames.add(name)
-                    if (name in conditionValues[conditionalBlockKey]) {
-                        def co = conditionalBlocks.peek()[conditionalBlockKey]
-                        if( co == null ) {
-                            co = new ConfigObject()
-                            conditionalBlocks.peek()[conditionalBlockKey] = co
-                        }
-
-                        pushStack.call(co)
-                        try {
-                            currentConditionalBlock.pop()
-                            args[0].call()
-                        } finally {
-                            currentConditionalBlock.push(conditionalBlockKey)
-                        }
-                        stack.removeLast()
-                    }
-                }
-                else if( name == 'plugins' ) {
-                    if( stack.size()>1 )
-                        throw new ConfigParseException("Plugins definition is only allowed in config top-most scope")
-                    // Implements `plugins` mini-dsl for plugins definition
-                    def dsl = new PluginsDsl()
-                    def clo = args[0] as Closure
-                    clo.delegate = dsl
-                    clo.resolveStrategy = Closure.DELEGATE_ONLY
-                    clo.call()
-                    assignName.call(name, dsl.plugins)
-                }
-                else {
-                    def current = stack.last
-                    def co
-                    if (current.config.get(name) instanceof ConfigObject) {
-                        co = current.config.get(name)
-                    }
-                    else if (current.scope.get(name) instanceof ConfigObject) {
-                        co = current.scope.get(name).clone()
-                    }
-                    else {
-                        co = new ConfigObject()
-                    }
-
-                    profileStack.add(name)
-                    assignName.call(name, co)
-                    pushStack.call(co)
-                    args[0].call()
                     stack.removeLast()
-                    profileStack.removeLast()
                 }
-            } else if (args.length == 2 && args[1] instanceof Closure) {
-                try {
-                    prefix = name + '.'
-                    assignName.call(name, args[0])
-                    args[1].call()
-                } finally { prefix = "" }
-            } else {
-                MetaMethod mm = mc.getMetaMethod(name, args)
-                if (mm) {
-                    result = mm.invoke(delegate, args)
-                } else {
-                    throw new MissingMethodException(name, getClass(), args)
-                }
+                return
             }
-            result
+
+            if( name == 'plugins' ) {
+                if( stack.size()>1 )
+                    throw new ConfigParseException("Plugins definition is only allowed in config top-most scope")
+                // Implements `plugins` mini-dsl for plugins definition
+                def dsl = new PluginsDsl()
+                def clo = args[0] as Closure
+                clo.delegate = dsl
+                clo.resolveStrategy = Closure.DELEGATE_ONLY
+                clo.call()
+                assignName.call(name, dsl.plugins)
+                return
+            }
+
+            def current = intoProfile ? stack.first : stack.last
+            def co
+            if (current.config.get(name) instanceof ConfigObject) {
+                co = current.config.get(name)
+            }
+            else if (current.scope.get(name) instanceof ConfigObject) {
+                co = current.scope.get(name).clone()
+            }
+            else {
+                co = new ConfigObject()
+            }
+
+            profileStack.add(name)
+            assignName.call(name, co)
+            pushStack.call(co)
+
+            args[0].call()
+            if (current.scope.get(name) instanceof ConfigObject) {
+                current.scope.get(name).merge(co)
+            }else{
+                current.scope.put(name,co)
+            }
+            stack.removeLast()
+            profileStack.removeLast()
+        }
+
+        def parseRaw = { String name, args ->
+            try {
+                prefix = name + '.'
+                assignName.call(name, args[0])
+                args[1].call()
+            } finally {
+                prefix = ""
+            }
+        }
+
+        mc.invokeMethod = { String name, args ->
+            if (args.length == 1 && args[0] instanceof Closure) {
+                return parseClosure(name, args)
+            }
+            if (args.length == 2 && args[1] instanceof Closure) {
+                return parseRaw(name, args)
+            }
+            MetaMethod mm = mc.getMetaMethod(name, args)
+            if (mm) {
+                mm.invoke(delegate, args)
+            } else {
+                throw new MissingMethodException(name, getClass(), args)
+            }
         }
         script.metaClass = mc
 
