@@ -1,8 +1,28 @@
-.. _aws-executor:
+.. _awsbatch-executor:
 
-*******************
-Amazon Web Services
-*******************
+*********
+AWS Batch
+*********
+
+Nextflow provides a built-in support for AWS Batch which allows the seamless deployment of a Nextflow pipeline
+in the cloud offloading the process executions as Batch jobs.
+
+The pipeline processes must specify the Docker image to use by defining the ``container`` directive, either in the pipeline
+script or the ``nextflow.config`` file.
+
+To enable this executor set the property ``process.executor = 'awsbatch'`` in the ``nextflow.config`` file.
+
+The pipeline can be launched either in a local computer or a EC2 instance. The latter is suggested for heavy or long
+running workloads. Moreover a S3 bucket must be used as pipeline work directory.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+* :ref:`process-accelerator`
+* :ref:`process-cpus`
+* :ref:`process-disk`
+* :ref:`process-memory`
+* :ref:`process-queue`
+
 
 AWS security credentials
 =========================
@@ -77,52 +97,49 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
 
 S3 policies
 ------------
-Nextflow requires policies also to access `S3 buckets <https://aws.amazon.com/s3/>`_ in order to:
 
-1. use the workdir
-2. pull input data
-3. publish results
+Nextflow requires policies also to access `S3 buckets <https://aws.amazon.com/s3/>`_ in order to use the work directory, pull input data, and publish results.
 
 Depending on the pipeline configuration, the above actions can be done all in a single bucket but, more likely, spread across multiple
 buckets. Once the list of buckets used by the pipeline is identified, there are two alternative ways to give Nextflow access to these buckets:
 
-1. grant access to all buckets by attaching the policy ``"s3:*"`` to the AIM identity. This works only if buckets do not set their own access policies (see point 2);
-2. for a more fine grained control, assign to each bucket the following policy (replace the placeholders with the actual values)::
+1. Grant access to all buckets by attaching the policy ``"s3:*"`` to the AIM identity. This works only if buckets do not set their own access policies (see point 2);
+2. For more fine grained control, assign to each bucket the following policy (replace the placeholders with the actual values)::
 
-	{
-      "Version": "2012-10-17",
-      "Id": "<my policy id>",
-      "Statement": [
-          {
-              "Sid": "<my statement id>",
-              "Effect": "Allow",
-              "Principal": {
-                  "AWS": "<ARN of the nextflow identity>"
-              },
-              "Action": [
-                  "s3:GetObject",
-                  "s3:PutObject",
-                  "s3:DeleteObject"
-              ],
-              "Resource": "arn:aws:s3:::<bucket name>/*"
-          },
-          {
-              "Sid": "AllowSSLRequestsOnly",
-              "Effect": "Deny",
-              "Principal": "*",
-              "Action": "s3:*",
-              "Resource": [
-                  "arn:aws:s3:::<bucket name>",
-                  "arn:aws:s3:::<bucket name>/*"
-              ],
-              "Condition": {
-                  "Bool": {
-                      "aws:SecureTransport": "false"
-                  }
-              }
-          }
-      ]
-	}
+    {
+        "Version": "2012-10-17",
+        "Id": "<my policy id>",
+        "Statement": [
+            {
+                "Sid": "<my statement id>",
+                "Effect": "Allow",
+                "Principal": {
+                    "AWS": "<ARN of the nextflow identity>"
+                },
+                "Action": [
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "s3:DeleteObject"
+                ],
+                "Resource": "arn:aws:s3:::<bucket name>/*"
+            },
+            {
+                "Sid": "AllowSSLRequestsOnly",
+                "Effect": "Deny",
+                "Principal": "*",
+                "Action": "s3:*",
+                "Resource": [
+                    "arn:aws:s3:::<bucket name>",
+                    "arn:aws:s3:::<bucket name>/*"
+                ],
+                "Condition": {
+                    "Bool": {
+                        "aws:SecureTransport": "false"
+                    }
+                }
+            }
+        ]
+    }
 
 See the `bucket policy documentation <https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-policy.html>`_
 for additional details.
@@ -137,28 +154,6 @@ AWS Batch
 workloads in the Amazon cloud infrastructure. It dynamically provisions the optimal quantity and type of compute
 resources (e.g., CPU or memory optimized compute resources) based on the volume and specific resource requirements
 of the jobs submitted.
-
-Nextflow provides a built-in support for AWS Batch which allows the seamless deployment of a Nextflow pipeline
-in the cloud offloading the process executions as Batch jobs.
-
-The pipeline processes must specify the Docker image to use by defining the ``container`` directive, either in the pipeline
-script or the ``nextflow.config`` file.
-
-To enable this executor set the property ``process.executor = 'awsbatch'`` in the ``nextflow.config`` file.
-
-The pipeline can be launched either in a local computer or a EC2 instance. The latter is suggested for heavy or long
-running workloads. Moreover a S3 bucket must be used as pipeline work directory.
-
-Resource requests and other job characteristics can be controlled via the following process directives:
-
-* :ref:`process-accelerator`
-* :ref:`process-cpus`
-* :ref:`process-disk`
-* :ref:`process-memory`
-* :ref:`process-queue`
-
-.. note::
-    Requires Nextflow version `0.26.0` or later.
 
 
 .. _aws-batch-config:

@@ -401,7 +401,7 @@ storageSubPath      The path in the persistent volume to be mounted (default: ro
 volumeClaims        (deprecated)
 ================== ================
 
-See the :ref:`k8s-page` documentation for more details.
+See the :ref:`k8s-executor` documentation for more details.
 
 
 .. _config-mail:

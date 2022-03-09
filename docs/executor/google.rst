@@ -1,8 +1,29 @@
-.. _google-executor:
+.. _google-lifesciences-executor:
 
-************
-Google Cloud
-************
+********************
+Google Life Sciences
+********************
+
+Nextflow provides built-in support for Cloud Life Sciences API which allows the seamless deployment of a Nextflow pipeline
+in the cloud, offloading the process executions to Google Cloud.
+
+The pipeline processes must specify the Docker image to use by defining the ``container`` directive, either in the pipeline
+script or the ``nextflow.config`` file. Moreover the pipeline work directory must be located in a Google Storage
+bucket.
+
+To enable this executor set the property ``process.executor = 'google-lifesciences'`` in the ``nextflow.config`` file.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+* :ref:`process-accelerator`
+* :ref:`process-cpus`
+* :ref:`process-disk`
+* :ref:`process-machineType`
+* :ref:`process-memory`
+
+.. warning::
+  This API works well for coarse-grained workloads i.e. long running jobs, but is not ideal for pipelines that spawn many short-lived tasks.
+
 
 Requirements
 ============
@@ -66,29 +87,6 @@ Cloud Life Sciences
 
 `Google Cloud Life Sciences <https://cloud.google.com/life-sciences/>`_ is a managed computing service that allows the execution of
 containerized workloads in the Google Cloud Platform.
-
-Nextflow provides built-in support for Cloud Life Sciences API which allows the seamless deployment of a Nextflow pipeline
-in the cloud, offloading the process executions to Google Cloud.
-
-The pipeline processes must specify the Docker image to use by defining the ``container`` directive, either in the pipeline
-script or the ``nextflow.config`` file. Moreover the pipeline work directory must be located in a Google Storage
-bucket.
-
-To enable this executor set the property ``process.executor = 'google-lifesciences'`` in the ``nextflow.config`` file.
-
-Resource requests and other job characteristics can be controlled via the following process directives:
-
-* :ref:`process-accelerator`
-* :ref:`process-cpus`
-* :ref:`process-disk`
-* :ref:`process-machineType`
-* :ref:`process-memory`
-
-.. note::
-  This features requires Nextflow ``20.01.0-edge`` or later.
-
-.. warning::
-  This API works well for coarse-grained workloads i.e. long running jobs, but is not ideal for pipelines that spawn many short-lived tasks.
 
 
 .. _google-lifesciences-config:
@@ -160,6 +158,7 @@ google.storage.downloadMaxComponents           Defines the value for the option 
 
 Process definition
 ------------------
+
 Processes can be defined as usual and by default the ``cpus`` and ``memory`` directives are used to instantiate a custom
 machine type with the specified compute resources.  If ``memory`` is not specified, 1GB of memory is allocated per cpu.
 A persistent disk will be created with size corresponding to the ``disk`` directive.  If ``disk`` is not specified, the
@@ -190,8 +189,6 @@ Examples::
         """
     }
 
-.. note:: This feature requires Nextflow 19.07.0 or later.
-
 Pipeline execution
 ------------------
 
@@ -202,7 +199,6 @@ The pipeline execution must specify a Google Storage bucket where the workflow's
 the ``-work-dir`` command line options. For example::
 
     nextflow run <script or project name> -work-dir gs://my-bucket/some/path
-
 
 .. tip:: Any input data **not** stored in a Google Storage bucket will automatically be transferred to the
   pipeline work bucket. Use this feature with caution being careful to avoid unnecessary data transfers.
@@ -239,7 +235,6 @@ some other jobs are offloaded to Google Pipelines service.
 To enable this feature use one or more :ref:`config-process-selectors` in your Nextflow configuration file to apply
 the Google Pipelines *executor* only to a subset of processes in your workflow.
 For example::
-
 
     process {
         withLabel: bigTask {
@@ -293,6 +288,6 @@ Troubleshooting
 
 * Enable the optional SSH daemon in the job VM using the option ``google.lifeSciences.sshDaemon = true``
 
-* Make sure you are choosing a `location` where  `Cloud Life Sciences API is available <https://cloud.google.com/life-sciences/docs/concepts/locations>`_,
-  and a `region` or `zone` where `Compute Engine is available <https://cloud.google.com/compute/docs/regions-zones/>`_.
+* Make sure you are choosing a ``location`` where  `Cloud Life Sciences API is available <https://cloud.google.com/life-sciences/docs/concepts/locations>`_,
+  and a ``region`` or ``zone`` where `Compute Engine is available <https://cloud.google.com/compute/docs/regions-zones/>`_.
 
