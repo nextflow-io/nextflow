@@ -100,8 +100,11 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
     @Override
     void lazyInit() {
         super.lazyInit()
-        inner.each { opt ->
-            if( opt instanceof FileOutParam ) opt.optional(this.optional)
+        // don't override when optional value is not explicitly set
+        if ( this.optional != null ) {
+            inner.each { opt ->
+                if( opt instanceof FileOutParam ) opt.optional(this.optional)
+            }
         }
     }
 
