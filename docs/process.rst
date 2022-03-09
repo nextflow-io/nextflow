@@ -11,11 +11,9 @@ delimited by curly brackets. The process body must contain a string which repres
 a script that is executed by it. A basic process looks like the following example::
 
   process sayHello {
-
       """
       echo 'Hello world!' > file
       """
-
   }
 
 
@@ -65,13 +63,11 @@ The script block can be a simple string or multi-line string. The latter simplif
 composed by multiple commands spanning over multiple lines. For example::
 
     process doMoreThings {
-
       """
       blastp -db $db -query query.fa -outfmt 6 > blast_result
       cat blast_result | head -n 10 | cut -f 2 > top_hits
       blastdbcmd -db $db -entry_batch top_hits > sequences
       """
-
     }
 
 As explained in the script tutorial section, strings can be defined by using a single-quote
@@ -86,15 +82,13 @@ pipeline script.
 .. warning:: Since Nextflow uses the same Bash syntax for variable substitutions in strings, you need to manage them
   carefully depending on if you want to evaluate a variable in the Nextflow context - or - in the Bash environment execution.
 
-When you need to access a system environment variable  in your script you have two options. The first choice is as
+When you need to access a system environment variable in your script you have two options. The first choice is as
 easy as defining your script block by using a single-quote string. For example::
 
     process printPath {
-
-       '''
-       echo The path is: $PATH
-       '''
-
+      '''
+      echo The path is: $PATH
+      '''
     }
 
 The drawback of this solution is that you will not able to access variables defined in the pipeline script context,
@@ -105,13 +99,11 @@ prefixing them with a back-slash ``\`` character, as shown in the following exam
 
 
     process doOtherThings {
-
       """
       blastp -db \$DB -query query.fa -outfmt 6 > blast_result
       cat blast_result | head -n $MAX | cut -f 2 > top_hits
       blastdbcmd -db \$DB -entry_batch top_hits > sequences
       """
-
     }
 
 In this example the ``$MAX`` variable has to be defined somewhere before, in the pipeline script.
@@ -137,17 +129,14 @@ To use a scripting other than Bash, simply start your process script with the co
 `shebang <http://en.wikipedia.org/wiki/Shebang_(Unix)>`_ declaration. For example::
 
     process perlStuff {
-
         """
         #!/usr/bin/perl
 
         print 'Hi there!' . '\n';
         """
-
     }
 
-    process pyStuff {
-
+    process pythonStuff {
         """
         #!/usr/bin/python
 
@@ -155,7 +144,6 @@ To use a scripting other than Bash, simply start your process script with the co
         y = 'world!'
         print "%s - %s" % (x,y)
         """
-
     }
 
 
@@ -222,13 +210,11 @@ A template is simply a shell script file that Nextflow is able to execute by usi
 as shown below::
 
     process template_example {
-
         input:
         val STR from 'this', 'that'
 
         script:
         template 'my_script.sh'
-
     }
 
 
@@ -271,7 +257,6 @@ In this way it is possible to use both Nextflow and Bash variables in the same p
 the latter and making process scripts more readable and easy to maintain. For example::
 
     process myTask {
-
         input:
         val str from 'Hello', 'Hola', 'Bonjour'
 
@@ -279,7 +264,6 @@ the latter and making process scripts more readable and easy to maintain. For ex
         '''
         echo User $USER says !{str}
         '''
-
     }
 
 
@@ -340,6 +324,7 @@ the `-stub-run` or `-stub` command line option. ::
     process INDEX {
         input:
           path transcriptome
+
         output:
           path 'index'
 
@@ -421,7 +406,6 @@ by using the specified input name, as shown in the following example::
       val x from num
 
       "echo process job $x"
-
     }
 
 
@@ -447,7 +431,6 @@ Thus the above example can be written as shown below::
       val num
 
       "echo process job $num"
-
     }
 
 
@@ -465,7 +448,6 @@ specified in the input declaration. For example::
       file query_file from proteins
 
       "blastp -query ${query_file} -db nr"
-
     }
 
 In the above example all the files ending with the suffix ``.fa`` are sent over the channel ``proteins``.
@@ -481,7 +463,6 @@ Thus, the above example could be written as shown below::
       file proteins
 
       "blastp -query $proteins -db nr"
-
     }
 
 
@@ -512,7 +493,6 @@ Using this, the previous example can be re-written as shown below::
       file 'query.fa' from proteins
 
       "blastp -query query.fa -db nr"
-
     }
 
 
@@ -548,7 +528,6 @@ the file name will be appended by a numerical suffix representing its ordinal po
         file 'seq' from fasta
 
         "echo seq*"
-
     }
 
 Will output::
@@ -586,7 +565,6 @@ The following fragment shows how a wildcard can be used in the input file declar
         file 'seq?.fa' from fasta
 
         "cat seq1.fa seq2.fa seq3.fa"
-
     }
 
 
@@ -643,8 +621,9 @@ and automatically converts to a file object.
     process foo {
       input:
         path x from '/some/data/file.txt'
+
       """
-        your_command --in $x
+      your_command --in $x
       """
     }
 
@@ -664,8 +643,9 @@ section::
     process foo {
       input:
         path x, stageAs: 'data.txt' from '/some/data/file.txt'
+
       """
-        your_command --in data.txt
+      your_command --in data.txt
       """
     }
 
@@ -685,13 +665,12 @@ of the command executed by the process. For example::
     str = Channel.from('hello', 'hola', 'bonjour', 'ciao').map { it+'\n' }
 
     process printAll {
-       input:
-       stdin str
+      input:
+      stdin str
 
-       """
-       cat -
-       """
-
+      """
+      cat -
+      """
     }
 
 It will output::
@@ -713,14 +692,12 @@ on the value received from the channel. For example::
     str = Channel.from('hello', 'hola', 'bonjour', 'ciao')
 
     process printEnv {
-
         input:
         env HELLO from str
 
         '''
         echo $HELLO world!
         '''
-
     }
 
 ::
@@ -749,18 +726,17 @@ The ``tuple`` qualifier allows you to group multiple parameters in a single para
 when a process receives, in input, tuples of values that need to be handled separately. Each element in the tuple
 is associated to a corresponding element with the ``tuple`` definition. For example::
 
-     values = Channel.of( [1, 'alpha'], [2, 'beta'], [3, 'delta'] )
+    values = Channel.of( [1, 'alpha'], [2, 'beta'], [3, 'delta'] )
 
-     process tupleExample {
-         input:
-         tuple val(x), file('latin.txt') from values
+    process tupleExample {
+        input:
+        tuple val(x), file('latin.txt') from values
 
-         """
-         echo Processing $x
-         cat - latin.txt > copy
-         """
-
-     }
+        """
+        echo Processing $x
+        cat - latin.txt > copy
+        """
+    }
 
 
 In the above example the ``tuple`` parameter is used to define the value ``x`` and the file ``latin.txt``,
@@ -783,17 +759,17 @@ env(x)          (not supported)
 
 Thus the previous example could be rewritten as follows::
 
-      values = Channel.of( [1, 'alpha'], [2, 'beta'], [3, 'delta'] )
+    values = Channel.of( [1, 'alpha'], [2, 'beta'], [3, 'delta'] )
 
-      process tupleExample {
-          input:
-          tuple x, 'latin.txt' from values
+    process tupleExample {
+        input:
+        tuple x, 'latin.txt' from values
 
-          """
-          echo Processing $x
-          cat - latin.txt > copy
-          """
-      }
+        """
+        echo Processing $x
+        cat - latin.txt > copy
+        """
+    }
 
 File names can be defined in *dynamic* manner as explained in the `Dynamic input file names`_ section.
 
@@ -872,13 +848,15 @@ For example::
 
   process foo {
     echo true
+
     input:
     val x from Channel.from(1,2)
     val y from Channel.from('a','b','c')
+
     script:
-     """
-     echo $x and $y
-     """
+    """
+    echo $x and $y
+    """
   }
 
 
@@ -905,13 +883,15 @@ To better understand this behavior compare the previous example with the followi
 
   process bar {
     echo true
+
     input:
     val x from Channel.value(1)
     val y from Channel.from('a','b','c')
+
     script:
-     """
-     echo $x and $y
-     """
+    """
+    echo $x and $y
+    """
   }
 
 The above snippet executes the ``bar`` process three times because the first input is a *value channel*, therefore
@@ -932,6 +912,7 @@ The `output` declaration block allows you to define the channels used by the pro
 You can only define one output block at a time and it must contain one or more output declarations.
 
 The output block follows the syntax shown below::
+
     output:
       <output qualifier> <output name> [into <target channel>[,channel,..]] [attribute [,..]]
 
@@ -1011,14 +992,12 @@ For example::
 
 
     process randomNum {
+      output:
+      file 'result.txt' into numbers
 
-       output:
-       file 'result.txt' into numbers
-
-       '''
-       echo $RANDOM > result.txt
-       '''
-
+      '''
+      echo $RANDOM > result.txt
+      '''
     }
 
     numbers.subscribe { println "Received: " + it.text }
@@ -1042,7 +1021,6 @@ When an output file name contains a ``*`` or ``?`` wildcard character it is inte
 This allows you to *capture* multiple files into a list object and output them as a sole emission. For example::
 
     process splitLetters {
-
         output:
         file 'chunk_*' into letters
 
@@ -1086,7 +1064,6 @@ declaration.
 By using the ``mode`` attribute the previous example can be re-written as shown below::
 
     process splitLetters {
-
         output:
         file 'chunk_*' into letters mode flatten
 
@@ -1212,6 +1189,7 @@ and send it over the channel specified in the output parameter declaration::
     process myTask {
         output:
         env FOO into target
+
         script:
         '''
         FOO=$(ls -la)
@@ -1242,18 +1220,17 @@ example::
     species_ch = Channel.from 'human', 'cow', 'horse'
 
     process blast {
+      input:
+        val species from query_ch
+        file query from species_ch
 
-    input:
-      val species from query_ch
-      file query from species_ch
+      output:
+        tuple val(species), file('result') into blastOuts
 
-    output:
-      tuple val(species), file('result') into blastOuts
-
-    script:
-      """
-      blast -db nr -query $query > result
-      """
+      script:
+        """
+        blast -db nr -query $query > result
+        """
     }
 
 
@@ -1309,7 +1286,6 @@ It is useful to enable/disable the process execution depending on the state of v
       """
       blastp -query $proteins -db nr
       """
-
     }
 
 
@@ -1413,13 +1389,11 @@ This may be useful to initialise the underlying cluster environment or for other
 For example::
 
     process foo {
-
       beforeScript 'source /cluster/bin/setup'
 
       """
       echo bar
       """
-
     }
 
 
@@ -1512,13 +1486,11 @@ It requires the Docker daemon to be running in machine where the pipeline is exe
 For example::
 
     process runThisInDocker {
-
       container 'dockerbox:tag'
 
       """
       <your holy script here>
       """
-
     }
 
 Simply replace in the above script ``dockerbox:tag`` with the Docker image name you want to use.
@@ -1538,11 +1510,11 @@ container engine (ie. Docker, Singularity, etc). This can be useful to provide c
 only for a specific process e.g. mount a custom path::
 
   process runThisWithDocker {
-
       container 'busybox:latest'
       containerOptions '--volume /data/db:/db'
 
-      output: file 'output.txt'
+      output:
+      file 'output.txt'
 
       '''
       your_command --data /db > output.txt
@@ -1561,7 +1533,6 @@ The ``cpus`` directive allows you to define the number of (logical) CPU required
 For example::
 
     process big_job {
-
       cpus 8
       executor 'sge'
 
@@ -1584,7 +1555,6 @@ disk
 The ``disk`` directive allows you to define how much local disk storage the process is allowed to use. For example::
 
     process big_job {
-
         disk '2 GB'
         executor 'cirrus'
 
@@ -1662,10 +1632,10 @@ it just reports a message notifying you of the error event.
 For example::
 
     process ignoreAnyError {
-       errorStrategy 'ignore'
+      errorStrategy 'ignore'
 
-       script:
-       <your command string here>
+      script:
+      <your command string here>
     }
 
 .. tip:: By definition a command script fails when it ends with a non-zero exit status.
@@ -1674,10 +1644,10 @@ The ``retry`` error strategy allows you to re-submit for execution a process
 returning an error condition. For example::
 
     process retryIfFail {
-       errorStrategy 'retry'
+      errorStrategy 'retry'
 
-       script:
-       <your command string here>
+      script:
+      <your command string here>
     }
 
 The number of times a failing process is re-executed is defined by the `maxRetries`_ and `maxErrors`_ directives.
@@ -1772,7 +1742,6 @@ The ``label`` directive allows the annotation of processes with mnemonic identif
 For example::
 
   process bigTask {
-
     label 'big_mem'
 
     '''
@@ -1849,13 +1818,11 @@ By default this value is equals to the number of CPU cores available minus 1.
 If you want to execute a process in a sequential manner, set this directive to one. For example::
 
     process doNotParallelizeIt {
+      maxForks 1
 
-       maxForks 1
-
-       '''
-       <your script here>
-       '''
-
+      '''
+      <your script here>
+      '''
     }
 
 
@@ -1893,7 +1860,6 @@ memory
 The ``memory`` directive allows you to define how much memory the process is allowed to use. For example::
 
     process big_job {
-
         memory '2 GB'
         executor 'sge'
 
@@ -1934,7 +1900,6 @@ In a process definition you can use the ``module`` directive to load a specific 
 process execution environment. For example::
 
   process basicExample {
-
     module 'ncbi-blast/2.2.27'
 
     """
@@ -1965,7 +1930,6 @@ The ``penv`` directive  allows you to define the `parallel environment` to be us
 :ref:`SGE <sge-executor>` resource manager. For example::
 
     process big_job {
-
       cpus 4
       penv 'smp'
       executor 'sge'
@@ -2045,7 +2009,6 @@ publishDir
 The ``publishDir`` directive allows you to publish the process output files to a specified folder. For example::
 
     process foo {
-
         publishDir '/data/chunks'
 
         output:
@@ -2104,7 +2067,6 @@ move            Moves the output files into the published directory. **Note**: t
 ::
 
     process foo {
-
         publishDir '/data/chunks', mode: 'copy', overwrite: false
 
         output:
@@ -2129,7 +2091,6 @@ The ``queue`` directory allows you to set the `queue` where jobs are scheduled w
 in your pipeline. For example::
 
     process grid_job {
-
         queue 'long'
         executor 'sge'
 
@@ -2141,7 +2102,6 @@ in your pipeline. For example::
 Multiple queues can be specified by separating their names with a comma for example::
 
     process grid_job {
-
         queue 'short,long,cn-el6'
         executor 'sge'
 
@@ -2168,7 +2128,6 @@ Only the files declared as output in the process definition will be copied in th
 In its basic form simply specify ``true`` at the directive value, as shown below::
 
   process simpleTask {
-
     scratch true
 
     output:
@@ -2234,7 +2193,6 @@ for each species specified by an input parameter::
   genomes = Channel.fromPath(params.genomes)
 
   process formatBlastDatabases {
-
     storeDir '/db/genomes'
 
     input:
@@ -2248,7 +2206,6 @@ for each species specified by an input parameter::
     """
     makeblastdb -dbtype nucl -in ${species} -out ${dbName}
     """
-
   }
 
 .. warning:: The ``storeDir`` directive is meant for long term process caching and should not be used to
@@ -2332,7 +2289,6 @@ time
 The ``time`` directive allows you to define how long a process is allowed to run. For example::
 
     process big_job {
-
         time '1h'
 
         """
@@ -2374,7 +2330,6 @@ In order to be defined in a dynamic manner the directive's value needs to be exp
 statement, as in the following example::
 
     process foo {
-
       executor 'sge'
       queue { entries > 100 ? 'long' : 'short' }
 
@@ -2437,7 +2392,6 @@ of a process failure and try to re-execute it using a higher limit. For example:
 
 
     process foo {
-
         memory { 2.GB * task.attempt }
         time { 1.hour * task.attempt }
 
@@ -2446,7 +2400,6 @@ of a process failure and try to re-execute it using a higher limit. For example:
 
         script:
         <your job here>
-
     }
 
 
@@ -2470,6 +2423,7 @@ conditions::
     process foo {
       errorStrategy { sleep(Math.pow(2, task.attempt) * 200 as long); return 'retry' }
       maxRetries 5
+
       script:
       '''
       your_command --here

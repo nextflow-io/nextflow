@@ -64,6 +64,7 @@ For example::
     process foo {
       input:
       val x from 1
+
       output:
       file 'x.txt' into result
 

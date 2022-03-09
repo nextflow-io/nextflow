@@ -195,6 +195,7 @@ alignments are in the channel ``clustalw_alns``:
     process generate_bootstrap_replicates {
         input:
         file clustalw_phylip from clustalw_phylips
+
         output:
         file "${clustalw_alignment.baseName}.phy" to clustalw_phylips
 
@@ -226,7 +227,6 @@ To perform a process *n* times, we can specify the input to be
 
         script:
         // Generate Bootstrap Trees
-
         """
         raxmlHPC -m PROTGAMMAJTT -n tmpPhylip${x} -s tmpPhylip${x}
         mv "RAxML_bestTree.tmpPhylip${x}" bootstrapTree_${x}.nwk
@@ -263,7 +263,6 @@ This is also useful if all the items of a channel are required to be in the work
         do
             cat \$treeFile >> concatenatedBootstrapTrees.nwk
         done
-
         """
     }
 

@@ -91,7 +91,6 @@ Copy the following example into your favourite text editor and save it to a file
     params.str = 'Hello world!'
 
     process splitLetters {
-
         output:
         file 'chunk_*' into letters
 
@@ -102,7 +101,6 @@ Copy the following example into your favourite text editor and save it to a file
 
 
     process convertToUpper {
-
         input:
         file x from letters.flatten()
 
@@ -169,7 +167,6 @@ For the sake of this tutorial, modify the ``convertToUpper`` process in the prev
 process script with the string ``rev $x``, so that the process looks like this::
 
     process convertToUpper {
-
         input:
         file x from letters
 

@@ -1350,8 +1350,10 @@ Viewing the contents of a downloaded pipeline. ::
 
     process sayHello {
       echo true
+
       input:
         val x from cheers
+
       script:
         """
         echo '$x world!'
@@ -1385,8 +1387,10 @@ Viewing the contents of a downloaded pipeline without omitting the header. ::
 
     process sayHello {
       echo true
+
       input:
         val x from cheers
+
       script:
         """
         echo '$x world!'

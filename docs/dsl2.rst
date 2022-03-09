@@ -66,6 +66,7 @@ input channels as parameters as if it were a custom function. For example::
     process foo {
         output:
           path 'foo.txt'
+
         script:
           """
           your_command > foo.txt
@@ -75,8 +76,10 @@ input channels as parameters as if it were a custom function. For example::
      process bar {
         input:
           path x
+
         output:
           path 'bar.txt'
+
         script:
           """
           another_command $x > bar.txt
@@ -151,8 +154,10 @@ The ``emit`` option can be used also to name the stdout::
     process sayHello {
         input:
             val cheers
+
         output:
             stdout emit: verbiage
+
         script:
         """
         echo -n $cheers
@@ -462,55 +467,55 @@ can be placed under the ``templates`` directory where the module script is locat
 For example, let's suppose to have a project L with a module script defining 2 processes (P1 and P2) and both use templates.
 The template files can be made available under the local ``templates`` directory::
 
-	Project L
-		|-myModules.nf
-		|-templates
-			|-P1-template.sh
-			|-P2-template.sh
+    Project L
+        |-myModules.nf
+        |-templates
+            |-P1-template.sh
+            |-P2-template.sh
 
 Then, we have a second project A with a workflow that includes P1 and P2::
 
-	Pipeline A
-		|-main.nf
+    Pipeline A
+        |-main.nf
 
 Finally, we have a third project B with a workflow that includes again P1 and P2::
 
-	Pipeline B
-		|-main.nf
+    Pipeline B
+        |-main.nf
 
 With the possibility to keep the template files inside the project L, A and B can use the modules defined in L without any changes.
 A future prject C would do the same, just cloning L (if not available on the system) and including its module script.
 
 Beside promoting sharing modules across pipelines, there are several advantages in keeping the module template under the script path::
 
-1. module components are *self-contained*,
-2. module components can be tested independently from the pipeline(s) importing them,
-3. it is possible to create libraries of module components.
+    1. module components are *self-contained*,
+    2. module components can be tested independently from the pipeline(s) importing them,
+    3. it is possible to create libraries of module components.
 
 Ultimately, having multiple template locations allows a more structured organization within the same project. If a project
 has several module components, and all them use templates, the project could group module scripts and their templates as needed. For example::
 
-	baseDir
-		|-main.nf
-		|-Phase0-Modules
-			|-mymodules1.nf
-			|-mymodules2.nf
-			|-templates
-				|-P1-template.sh
-				|-P2-template.sh
-		|-Phase1-Modules
-			|-mymodules3.nf
-			|-mymodules4.nf
-			|-templates
-				|-P3-template.sh
-				|-P4-template.sh
-		|-Phase2-Modules
-			|-mymodules5.nf
-			|-mymodules6.nf
-			|-templates
-				|-P5-template.sh
-				|-P6-template.sh
-				|-P7-template.sh
+    baseDir
+        |-main.nf
+        |-Phase0-Modules
+            |-mymodules1.nf
+            |-mymodules2.nf
+            |-templates
+                |-P1-template.sh
+                |-P2-template.sh
+        |-Phase1-Modules
+            |-mymodules3.nf
+            |-mymodules4.nf
+            |-templates
+                |-P3-template.sh
+                |-P4-template.sh
+        |-Phase2-Modules
+            |-mymodules5.nf
+            |-mymodules6.nf
+            |-templates
+                |-P5-template.sh
+                |-P6-template.sh
+                |-P7-template.sh
 
 
 Channel forking
@@ -547,10 +552,14 @@ The *pipe* operator
 Nextflow processes and operators can be composed using the ``|`` *pipe* operator. For example::
 
     process foo {
-        input: val data
-        output: val result
+        input:
+        val data
+
+        output:
+        val result
+
         exec:
-          result = "$data world"
+        result = "$data world"
     }
 
     workflow {
@@ -571,21 +580,29 @@ The ``&`` *and* operator allows feeding of two or more processes with the conten
 channel(s). For example::
 
     process foo {
-      input: val data
-      output: val result
-      exec:
+        input:
+        val data
+
+        output:
+        val result
+
+        exec:
         result = "$data world"
     }
 
     process bar {
-        input: val data
-        output: val result
+        input:
+        val data
+
+        output:
+        val result
+
         exec:
-          result = data.toUpperCase()
+        result = data.toUpperCase()
     }
 
     workflow {
-       channel.from('Hello') | map { it.reverse() } | (foo & bar) | mix | view
+        channel.from('Hello') | map { it.reverse() } | (foo & bar) | mix | view
     }
 
 
@@ -645,10 +662,11 @@ DSL2 migration notes
         process foo {
         input:
           tuple X, 'some-file.bam'
-         script:
-           '''
-           your_command --in $X some-file.bam
-           '''
+
+        script:
+          '''
+          your_command --in $X some-file.bam
+          '''
         }
 
   Use::
@@ -656,10 +674,11 @@ DSL2 migration notes
         process foo {
         input:
           tuple val(X), path('some-file.bam')
-         script:
-           '''
-           your_command --in $X some-file.bam
-           '''
+
+        script:
+          '''
+          your_command --in $X some-file.bam
+          '''
         }
 
 
@@ -672,10 +691,10 @@ DSL2 migration notes
           tuple X, 'some-file.bam'
 
         script:
-           X = 'some value'
-           '''
-           your_command > some-file.bam
-           '''
+          X = 'some value'
+          '''
+          your_command > some-file.bam
+          '''
         }
 
   Use::
@@ -685,10 +704,10 @@ DSL2 migration notes
           tuple val(X), path('some-file.bam')
 
         script:
-           X = 'some value'
-           '''
-           your_command > some-file.bam
-           '''
+          X = 'some value'
+          '''
+          your_command > some-file.bam
+          '''
         }
 
 

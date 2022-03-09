@@ -403,11 +403,11 @@ For example::
 
 It prints the following output::
 
-	a: 1	b: 2
-	a: 3	b: 3
-	a: 6	b: 4
-	a: 10	b: 5
-	result = 15
+    a: 1 b: 2
+    a: 3 b: 3
+    a: 6 b: 4
+    a: 10 b: 5
+    result = 15
 
 
 .. note:: In a common usage scenario the first function parameter is used as an `accumulator` and
@@ -433,9 +433,9 @@ array that maps each key to the set of items identified by that key.
 For example::
 
     Channel
-    	.from('hello','ciao','hola', 'hi', 'bonjour')
-    	.groupBy { String str -> str[0] } 
-    	.view()
+        .from('hello','ciao','hola', 'hi', 'bonjour')
+        .groupBy { String str -> str[0] }
+        .view()
 
 :: 
 
@@ -571,7 +571,7 @@ the source channel into subsets:
   
 
 * ``buffer( size: n )``: transform the source channel in such a way that it emits tuples 
-  made up of `n` elements. An incomplete tuple is discarded. For example::
+  made up of ``n`` elements. An incomplete tuple is discarded. For example::
 
     Channel
         .from( 1,2,3,1,2,3,1 ) 
@@ -583,8 +583,8 @@ the source channel into subsets:
     [3, 1]
     [2, 3]
 
-If you want to emit the last items in a tuple containing less than `n` elements, simply 
-add the parameter ``remainder`` specifying ``true``, for example::
+  If you want to emit the last items in a tuple containing less than ``n`` elements, simply 
+  add the parameter ``remainder`` specifying ``true``, for example::
 
     Channel
         .from( 1,2,3,1,2,3,1 )
@@ -599,7 +599,7 @@ add the parameter ``remainder`` specifying ``true``, for example::
 
 
 
-* ``buffer( size: n, skip: m )``: as in the previous example, it emits tuples containing `n` elements, 
+* ``buffer( size: n, skip: m )``: as in the previous example, it emits tuples containing ``n`` elements, 
   but skips ``m`` values before starting to collect the values for the next tuple (including the first emission). For example::
 
     Channel
@@ -611,8 +611,8 @@ add the parameter ``remainder`` specifying ``true``, for example::
     [3, 4, 5]
     [3, 4, 5]
 
-If you want to emit the remaining items in a tuple containing less than `n` elements, simply
-add the parameter ``remainder`` specifying ``true``, as shown in the previous example.
+  If you want to emit the remaining items in a tuple containing less than ``n`` elements, simply
+  add the parameter ``remainder`` specifying ``true``, as shown in the previous example.
 
 See also: `collate`_ operator.
 
@@ -714,9 +714,9 @@ The ``flatten`` operator transforms a channel in such a way that every item of t
 is flattened so that each single entry is emitted separately by the resulting channel. For example::
 
     Channel
-    	.from( [1,[2,3]], 4, [5,[6]] )
-    	.flatten()
-    	.view()
+        .from( [1,[2,3]], 4, [5,[6]] )
+        .flatten()
+        .view()
 
 :: 
     
@@ -739,12 +739,12 @@ The ``toList`` operator collects all the items emitted by a channel to a ``List`
 and emits the resulting collection as a single item. For example::
 
     Channel
-    	.from( 1, 2, 3, 4 )
-    	.toList() 
-    	.subscribe onNext: { println it }, onComplete: { println 'Done' }
-    	
+        .from( 1, 2, 3, 4 )
+        .toList()
+        .subscribe onNext: { println it }, onComplete: { println 'Done' }
+
 ::
- 
+
     [1,2,3,4]
     Done
 
@@ -758,9 +758,9 @@ The ``toSortedList`` operator collects all the items emitted by a channel to a `
 and emits the resulting collection as a single item. For example::
 
     Channel
-    	.from( 3, 2, 1, 4 )
-    	.toSortedList()
-    	.subscribe onNext: { println it }, onComplete: { println 'Done' }
+        .from( 3, 2, 1, 4 )
+        .toSortedList()
+        .subscribe onNext: { println it }, onComplete: { println 'Done' }
 
 ::
 
@@ -1306,28 +1306,28 @@ for which they have a matching key.
 The key is defined, by default, as the first entry in an array, a list or map object,
 or the value itself for any other data type. For example:: 
 
-	source = Channel.from( [1, 'alpha'], [2, 'beta'] )
-	target = Channel.from( [1, 'x'], [1, 'y'], [1, 'z'], [2,'p'], [2,'q'], [2,'t'] )
+    source = Channel.from( [1, 'alpha'], [2, 'beta'] )
+    target = Channel.from( [1, 'x'], [1, 'y'], [1, 'z'], [2,'p'], [2,'q'], [2,'t'] )
 
-	source.cross(target).view()
+    source.cross(target).view()
 
 It will output:: 
 
-	[ [1, alpha], [1, x] ]
-	[ [1, alpha], [1, y] ]
-	[ [1, alpha], [1, z] ]
-	[ [2, beta],  [2, p] ]
-	[ [2, beta],  [2, q] ]
-	[ [2, beta],  [2, t] ]
+    [ [1, alpha], [1, x] ]
+    [ [1, alpha], [1, y] ]
+    [ [1, alpha], [1, z] ]
+    [ [2, beta],  [2, p] ]
+    [ [2, beta],  [2, q] ]
+    [ [2, beta],  [2, t] ]
 
 The above example shows how the items emitted by the source channels are associated to the ones
 emitted by the target channel (on the right) having the same key. 
 
 There are two important caveats when using the ``cross`` operator:
 
-	#. The operator is not `commutative`, i.e. the result of ``a.cross(b)`` is different from ``b.cross(a)`` 
-	#. The source channel should emits items for which there's no key repetition i.e. the emitted 
-	   items have an unique key identifier. 
+    #. The operator is not `commutative`, i.e. the result of ``a.cross(b)`` is different from ``b.cross(a)`` 
+    #. The source channel should emits items for which there's no key repetition i.e. the emitted 
+       items have an unique key identifier. 
 
 Optionally, a mapping function can be specified in order to provide a custom rule to associate an item to a key,
 in a similar manner as shown for the `phase`_ operator.
@@ -1436,12 +1436,12 @@ It will print::
 The following example shows how use a `closure` to collect and sort all sequences in a FASTA file from shortest to longest::
 
     Channel
-         .fromPath('/data/sequences.fa')
-         .splitFasta( record: [id: true, sequence: true] )
-         .collectFile( name:'result.fa', sort: { it.size() } )  {
+        .fromPath('/data/sequences.fa')
+        .splitFasta( record: [id: true, sequence: true] )
+        .collectFile( name:'result.fa', sort: { it.size() } )  {
             it.sequence
-          }
-         .view { it.text }
+        }
+        .view { it.text }
 
 
 .. warning:: The ``collectFile`` operator needs to store files in a temporary folder that is automatically deleted on 
@@ -1874,15 +1874,15 @@ list will be assigned to the output channel with the corresponding position inde
 
     queue1.view { "Channel 1: $it" }
     queue2.view { "Channel 2: $it" }
-	
+
 ::
 
-	Channel 1: 3
-	Channel 2: 4
-	Channel 1: 5
-	Channel 2: 16
-	Channel 2: 64
-	Channel 1: 9
+    Channel 1: 3
+    Channel 2: 4
+    Channel 1: 5
+    Channel 2: 16
+    Channel 2: 64
+    Channel 1: 9
 
 
 When the `mapping function` is omitted, the source channel must emit tuples of values. In this case the operator ``separate``
@@ -1911,7 +1911,7 @@ It will output::
 
 A second version of the ``separate`` operator takes an integer `n` as an argument and returns a list of `n` channels,
 each of which gets a value from the corresponding element in the list returned by the closure as explained above.
-For example::	
+For example::
 
     source = Channel.from(1,2,3)
     (queue1, queue2, queue3) = source.separate(3) { a -> [a, a+1, a*a] }
@@ -2053,22 +2053,22 @@ a function that returns the value to be compared. The example below shows how to
 item that has the minimum length:: 
 
     Channel
-    	.from("hello","hi","hey")
-    	.min { it.size() } 
-    	.view()
+        .from("hello","hi","hey")
+        .min { it.size() }
+        .view()
 
 ::
 
-	 "hi"
+    "hi"
 
 Alternatively it is possible to specify a comparator function i.e. a :ref:`closure <script-closure>`
 taking two parameters that represent two emitted items to be compared. For example:: 
 
 
     Channel
-    	.from("hello","hi","hey")
-    	.min { a,b -> a.size() <=> b.size() } 
-    	.view()
+        .from("hello","hi","hey")
+        .min { a,b -> a.size() <=> b.size() } 
+        .view()
 
 
 .. _operator-max:
@@ -2094,22 +2094,22 @@ a function that returns the value to be compared. The example below shows how to
 item that has the maximum length:: 
 
     Channel
-    	.from("hello","hi","hey")
-    	.max { it.size() } 
-    	.view()
+        .from("hello","hi","hey")
+        .max { it.size() } 
+        .view()
 
 ::
 
-	 "hello"
+     "hello"
 
 Alternatively it is possible to specify a comparator function i.e. a :ref:`closure <script-closure>`
 taking two parameters that represent two emitted items to be compared. For example:: 
 
 
     Channel
-    	.from("hello","hi","hey")
-    	.max { a,b -> a.size() <=> b.size() } 
-    	.view()
+        .from("hello","hi","hey")
+        .max { a,b -> a.size() <=> b.size() } 
+        .view()
 
 
 .. _operator-sum:
@@ -2133,14 +2133,14 @@ For example::
 An optional :ref:`closure <script-closure>` parameter can be specified in order to provide 
 a function that, given an item, returns the value to be summed. For example:: 
 
-	Channel
-		.from( 4, 1, 7, 5 )
-		.sum { it * it } 
-		.view { "Square: $it" }
+    Channel
+        .from( 4, 1, 7, 5 )
+        .sum { it * it } 
+        .view { "Square: $it" }
 
 ::
 
-	Square: 91
+    Square: 91
 
 
 
@@ -2259,7 +2259,7 @@ The ``print`` operator prints the items emitted by a channel to the standard out
 An optional :ref:`closure <script-closure>` parameter can be specified to customise how items are printed.
 For example::
 
-  Channel
+    Channel
         .from('foo', 'bar', 'baz', 'qux')
         .print { it.toUpperCase() + ' ' }
 
@@ -2281,31 +2281,31 @@ println
 The ``println`` operator prints the items emitted by a channel to the console standard output appending
 a *new line* character to each of them. For example::
 
-  Channel
+    Channel
         .from('foo', 'bar', 'baz', 'qux')
         .println()
 
 It prints::
 
-        foo
-        bar
-        baz
-        qux
+    foo
+    bar
+    baz
+    qux
 
 
 An optional closure parameter can be specified to customise how items are printed. For example::
 
-  Channel
+    Channel
         .from('foo', 'bar', 'baz', 'qux')
         .view { "~ $it" }
 
 
 It prints::
 
-        ~ foo
-        ~ bar
-        ~ baz
-        ~ qux
+    ~ foo
+    ~ bar
+    ~ baz
+    ~ qux
 
 See also: `print`_ and `view`_.
 
@@ -2328,8 +2328,8 @@ How the channel items are printed can be controlled by using an optional closure
 the actual value of the item to be printed::
 
     Channel.from(1,2,3)
-            .map { it -> [it, it*it] }
-            .view { num, sqr -> "Square of: $num is $sqr" }
+        .map { it -> [it, it*it] }
+        .view { num, sqr -> "Square of: $num is $sqr" }
 
 It prints::
 

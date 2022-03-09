@@ -21,7 +21,6 @@ In the first example, let's consider the simple use case in which a process perf
   #!/usr/bin/env nextflow
 
   process CpuUsageEx1 {
-    
     cpus 2
 
     """
@@ -37,7 +36,6 @@ In the second example, some time will be spent performing pure computation and s
   #!/usr/bin/env nextflow
 
   process CpuUsageEx2 {
-    
     cpus 1
 
     """
@@ -62,7 +60,6 @@ The third example is similar to the second one except that the pure computation 
   #!/usr/bin/env nextflow
 
   process CpuUsageEx3 {
-    
     cpus 2
 
     """
@@ -238,23 +235,19 @@ The first and second programs are executed in ``foo`` and ``bar`` processes resp
   #!/usr/bin/env nextflow
 
   process foo {
-  
       memory '1.5 GB'
   
       """
       memory_vmem_1GiB_ram_0Gib
       """
-
   }
 
   process bar {
-
       memory '1.5 GB'
 
       """
       memory_vmem_1GiB_ram_1Gib
       """
-
   }
 
 The `Virtual (RAM + Disk swap)` tab shows that both ``foo`` and ``bar`` processes use the same amount of virtual memory (~1 GiB):
