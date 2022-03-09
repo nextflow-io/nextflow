@@ -62,14 +62,14 @@ the corresponding AWS credentials settings.
 Process secrets
 ===============
 
-Secrets can be access by pipeline processes by using the `secret` directive. For example::
+Secrets can be access by pipeline processes by using the ``secret`` directive. For example::
 
     process someJob {
         secret 'MY_ACCESS_KEY'
         secret 'MY_SECRET_KEY'
 
         """
-        your_command --access $MY_ACCESS_KEY --secret $MY_SECRET_KEY
+        your_command --access \$MY_ACCESS_KEY --secret \$MY_SECRET_KEY
         """
     }
 
@@ -77,4 +77,10 @@ The above snippet runs a command in with the variables ``MY_ACCESS_KEY`` and ``M
 process execution environment holding the values defines in the secret store.
 
 .. warning::
+    The secrets are made available in the process context running the command script as environment variables.
+    Therefore make sure to escape the variable name identifier with a backslash as shown
+    in the example above, otherwise a variable with the same will be evaluated in the Nextflow script
+    context instead of the command script.
+
+.. note::
     This feature is only available when using the local or batch scheduler executions e.g. Slurm, Grid Engine, etc.
