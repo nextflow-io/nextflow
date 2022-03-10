@@ -1335,7 +1335,8 @@ class TaskProcessor {
                 value = value instanceof Path ? value.text : value?.toString()
 
             case OptionalParam:
-                if( value == null && config.outputs[param.index].optional == true ) {
+                def parentParam = config.outputs[param.index]
+                if( value == null && parentParam instanceof OptionalParam && parentParam.optional == true ) {
                     final holder = [] as MissingParam
                     holder.missing = param
                     tuples[param.index] = holder
