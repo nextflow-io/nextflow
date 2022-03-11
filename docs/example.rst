@@ -41,11 +41,11 @@ In more detail:
 
 * lines 8-20: The process that splits the provided file.
 
-* line 10: Opens the `input` declaration block. The lines following this clause are interpreted as input definitions.
+* line 10: Opens the ``input`` declaration block. The lines following this clause are interpreted as input definitions.
 
 * line 11: Defines the process input file. This file is received from the variable ``sequences`` and will be named ``input.fa``.
 
-* line 13: Opens the `output` declaration block. Lines following this clause are interpreted as output definitions.
+* line 13: Opens the ``output`` declaration block. Lines following this clause are interpreted as output definitions.
 
 * line 14: Defines that the process output files whose names match the pattern ``seq_*``. These files are sent over the
   channel ``records``.
@@ -55,11 +55,11 @@ In more detail:
 * lines 22-33: Defines the second process, that receives the splits produced by the previous process and reverses their
   content.
 
-* line 24: Opens the `input` declaration block. Lines following this clause are interpreted as input definitions.
+* line 24: Opens the ``input`` declaration block. Lines following this clause are interpreted as input definitions.
 
 * line 25: Defines the process input file. This file is received through the channel ``records``.
 
-* line 27: Opens the `output` declaration block. Lines following this clause are interpreted as output definitions.
+* line 27: Opens the ``output`` declaration block. Lines following this clause are interpreted as output definitions.
 
 * line 28: The `standard output` of the executed script is declared as the process output. This output is sent over the
   channel ``result``.
@@ -81,7 +81,7 @@ In order to make the above script able to handle any number of files simply repl
 By doing this the ``sequences`` variable is assigned to the channel created by the :ref:`channel-path` method. This
 channel emits all the files that match the pattern specified by the parameter ``params.in``.
 
-Given that you saved the script to a file named ``example.nf`` and you have a list of `FASTA` files in a folder
+Given that you saved the script to a file named ``example.nf`` and you have a list of ``FASTA`` files in a folder
 named ``dataset/``, you can execute it by entering this command::
 
   nextflow example.nf --in 'dataset/*.fa'

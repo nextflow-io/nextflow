@@ -213,7 +213,7 @@ creates a channel emitting three entries each of which is a list containing two 
 value
 -----
 
-The `value` factory method is used to create a *value* channel. An optional not ``null`` argument
+The ``value`` factory method is used to create a *value* channel. An optional not ``null`` argument
 can be specified to bind the channel to a specific value. For example::
 
     expl1 = Channel.value()
@@ -516,7 +516,7 @@ For example::
 operator <<
 -----------
 
-The operator ``<<`` is just a syntax sugar for the `bind` method. Thus, the following example produce
+The operator ``<<`` is just a syntax sugar for the ``bind`` method. Thus, the following example produce
 an identical result as the previous one::
 
     myChannel = Channel.create()

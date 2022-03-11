@@ -788,7 +788,7 @@ Field       Description
 by          The index (zero based) of the element to be transposed.
             Multiple elements can be defined specifying as list of indices e.g. ``by: [0,2]``
 remainder   When ``false`` incomplete tuples are discarded (default). When ``true`` incomplete tuples are emitted
-            containing a `null` in place of a missing element.
+            containing a ``null`` in place of a missing element.
 =========== ============================
 
 

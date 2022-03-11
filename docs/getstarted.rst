@@ -74,10 +74,10 @@ Stable & Edge releases
 
 A *stable* version of Nextflow is released on a six-months basic schedule, in the 1st and 3rd quarter of every year.
 
-Along with the stable release, an `edge` version is released on a monthly basis. This version is useful to test and
+Along with the stable release, an ``edge`` version is released on a monthly basis. This version is useful to test and
 use most recent updates and experimental features.
 
-To use the latest `edge` release run the following snippet in your shell terminal::
+To use the latest ``edge`` release run the following snippet in your shell terminal::
 
     export NXF_EDGE=1
     nextflow self-update
@@ -205,7 +205,7 @@ Pipeline parameters
 --------------------
 
 Pipeline parameters are simply declared by prepending to a variable name the prefix ``params``, separated by dot character.
-Their value can be specified on the command line by prefixing the parameter name with a double `dash` character, i.e. ``--paramName``
+Their value can be specified on the command line by prefixing the parameter name with a double dash character, i.e. ``--paramName``
 
 For the sake of this tutorial, you can try to execute the previous example specifying a different input
 string parameter, as shown below::

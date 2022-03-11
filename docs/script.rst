@@ -847,7 +847,7 @@ For example, the following line prints a file name and size::
 
 .. tip::
     The invocation of any method name starting with the ``get`` prefix can be shortcut by
-    omitting the `get` prefix and ``()`` parentheses. Therefore, writing ``myFile.getName()``
+    omitting the ``get`` prefix and ``()`` parentheses. Therefore, writing ``myFile.getName()``
     is exactly the same as ``myFile.name`` and ``myFile.getBaseName()`` is the same as ``myFile.baseName``
     and so on.
 
@@ -878,7 +878,7 @@ HTTP/FTP files
 --------------
 
 Nextflow provides transparent integration of HTTP/S and FTP protocols for handling remote resources
-as local file system objects. Simply specify the resource URL as the argument of the `file` object::
+as local file system objects. Simply specify the resource URL as the argument of the ``file`` object::
 
     pdb = file('http://files.rcsb.org/header/5FID.pdb')
 

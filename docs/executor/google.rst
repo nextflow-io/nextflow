@@ -105,8 +105,8 @@ Create a ``nextflow.config`` file in the project root directory. The config must
 
 * Google Life Sciences as Nextflow executor i.e. ``process.executor = 'google-lifesciences'``.
 * The Docker container images to be used to run pipeline tasks e.g. ``process.container = 'biocontainers/salmon:0.8.2--1'``.
-* The Google Cloud `project` ID to run in e.g. ``google.project = 'rare-lattice-222412'``.
-* The Google Cloud `region` or `zone`. This is where the Compute Engine VMs will be started.
+* The Google Cloud ``project`` ID to run in e.g. ``google.project = 'rare-lattice-222412'``.
+* The Google Cloud ``region`` or `zone`. This is where the Compute Engine VMs will be started.
   You need to specify either one, **not** both. Multiple regions or zones can be specified by
   separating them with a comma e.g. ``google.zone = 'us-central1-f,us-central-1-b'``.
 

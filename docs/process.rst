@@ -45,7 +45,7 @@ inputs, outputs, when clause and finally the process script. The syntax is defin
 Script
 ======
 
-The `script` block is a string statement that defines the command that is executed by the process to carry out its task.
+The ``script`` block is a string statement that defines the command that is executed by the process to carry out its task.
 
 A process contains one and only one script block, and it must be the last statement when the process contains
 input and output declarations.
@@ -349,7 +349,7 @@ Inputs
 
 Nextflow processes are isolated from each other but can communicate between themselves sending values through channels.
 
-The `input` block defines from which channels the process expects to receive data. You can only define one
+The ``input`` block defines from which channels the process expects to receive data. You can only define one
 input block at a time and it must contain one or more input declarations.
 
 The input block follows the syntax shown below::
@@ -376,7 +376,7 @@ env         Lets you use the received value to set an environment variable named
             as the specified input name.
 file        Lets you handle the received value as a file, staging it properly in the execution context.
 path        Lets you handle the received value as a path, staging the file properly in the execution context.
-stdin       Lets you forward the received value to the process `stdin` special file.
+stdin       Lets you forward the received value to the process ``stdin`` special file.
 tuple       Lets you handle a group of input values having one of the above qualifiers.
 each        Lets you execute the process for each entry in the input collection.
 =========== =============
@@ -687,7 +687,7 @@ on the value received from the channel. For example::
 Input of type 'set'
 -------------------
 
-.. warning:: The `set` input type has been deprecated. Use `tuple` instead.
+.. warning:: The ``set`` input type has been deprecated. Use ``tuple`` instead.
 
 
 .. _process-input-tuple:
@@ -876,7 +876,7 @@ See also: :ref:`channel-types`.
 Outputs
 =======
 
-The `output` declaration block allows you to define the channels used by the process to send out the results produced.
+The ``output`` declaration block allows you to define the channels used by the process to send out the results produced.
 You can only define one output block at a time and it must contain one or more output declarations.
 
 The output block follows the syntax shown below::
@@ -900,7 +900,7 @@ val         Sends variables with the name specified over the output channel.
 file        Sends a file produced by the process with the name specified over the output channel.
 path        Sends a file produced by the process with the name specified over the output channel (replaces ``file``).
 env         Sends the variable defined in the process environment with the name specified over the output channel.
-stdout      Sends the executed process `stdout` over the output channel.
+stdout      Sends the executed process ``stdout`` over the output channel.
 tuple       Sends multiple values over the same output channel.
 =========== =============
 
@@ -909,7 +909,7 @@ Output values
 -------------
 
 The ``val`` qualifier allows you to output a `value` defined in the script context. In a common usage scenario,
-this is a value which has been defined in the `input` declaration block, as shown in the following example::
+this is a value which has been defined in the ``input`` declaration block, as shown in the following example::
 
    methods = ['prot','dna', 'rna']
 
@@ -967,7 +967,7 @@ For example::
 
 In the above example the process, when executed, creates a file named ``result.txt`` containing a random number.
 Since a file parameter using the same name is declared between the outputs, when the task is completed that
-file is sent over the ``numbers`` channel. A downstream `process` declaring the same channel as `input` will
+file is sent over the ``numbers`` channel. A downstream process declaring the same channel as ``input`` will
 be able to receive it.
 
 .. note:: If the channel specified as output has not been previously declared in the pipeline script, it
@@ -1126,7 +1126,7 @@ includeInputs   When ``true`` any input files matching an output file glob patte
 Output 'stdout' special file
 ----------------------------
 
-The ``stdout`` qualifier allows you to `capture` the `stdout` output of the executed process and send it over
+The ``stdout`` qualifier allows you to `capture` the ``stdout`` output of the executed process and send it over
 the channel specified in the output parameter declaration. For example::
 
     process sayHello {
@@ -1169,7 +1169,7 @@ and send it over the channel specified in the output parameter declaration::
 Output 'set' of values
 ----------------------
 
-.. warning:: The `set` output type has been deprecated. Use `tuple` instead.
+.. warning:: The ``set`` output type has been deprecated. Use ``tuple`` instead.
 
 
 .. _process-out-tuple:
@@ -1198,13 +1198,13 @@ example::
         """
     }
 
-In the above example a `BLAST` task is executed for each pair of ``species`` and ``query`` that are received.
+In the above example a ``blast`` task is executed for each pair of ``species`` and ``query`` that are received.
 When the task completes a new tuple containing the value for ``species`` and the file ``result`` is sent to the ``blastOuts`` channel.
 
-A `tuple` declaration can contain any combination of the following qualifiers, previously described: ``val``, ``file`` and ``stdout``.
+A ``tuple`` declaration can contain any combination of the following qualifiers, previously described: ``val``, ``file`` and ``stdout``.
 
 .. tip::
-  Variable identifiers are interpreted as `values`, whereas string literals are interpreted as `files` by default,
+  Variable identifiers are interpreted as ``val``s, whereas string literals are interpreted as ``file``s by default,
   thus the above output ``tuple`` can be rewritten using a short notation as shown below::
 
     output:
@@ -1254,15 +1254,14 @@ It is useful to enable/disable the process execution depending on the state of v
 Directives
 ==========
 
-Using the `directive` declarations block you can provide optional settings that will affect the execution of the current
-process.
+Directives are optional settings that affect the execution of the current process.
 
-They must be entered at the top of the process `body`, before any other declaration blocks (i.e. ``input``, ``output``, etc) 
+They must be entered at the top of the process body, before any other declaration blocks (``input``, ``output``, etc),
 and have the following syntax::
 
     name value [, value2 [,..]]
 
-Some directives are generally available to all processes, some others depends on the `executor` currently defined.
+Some directives are generally available to all processes, while others depend on the `executor` currently defined.
 
 The directives are:
 
@@ -1550,9 +1549,9 @@ See also: `cpus`_, `memory`_ `time`_, `queue`_ and `Dynamic computing resources`
 echo
 ----
 
-By default the `stdout` produced by the commands executed in all processes is ignored.
-Setting the ``echo`` directive to ``true`` you can forward the process `stdout` to the current top
-running process `stdout` file, showing it in the shell terminal.
+By default the ``stdout`` produced by the commands executed in all processes is ignored.
+Setting the ``echo`` directive to ``true`` you can forward the process ``stdout`` to the current top
+running process ``stdout`` file, showing it in the shell terminal.
 
 For example::
 
@@ -1937,9 +1936,9 @@ The ``pod`` directive allows the definition of the following options:
 ``env: <E>, fieldPath: <V>``                      Defines an environment variable with name ``E`` and whose value is given by the ``V`` `field path <https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/>`_.
 ``env: <E>, config: <C/K>``                       Defines an environment variable with name ``E`` and whose value is given by the entry associated to the key with name ``K`` in the `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name ``C``.
 ``env: <E>, secret: <S/K>``                       Defines an environment variable with name ``E`` and whose value is given by the entry associated to the key with name ``K`` in the `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name ``S``.
-``config: <C/K>, mountPath: </absolute/path>``    The content of the `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name ``C`` with key ``K`` is made available to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the `ConfigMap` entries are exposed in that path.
-``secret: <S/K>, mountPath: </absolute/path>``    The content of the `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name ``S`` with key ``K`` is made available to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the `Secret` entries are exposed in that path.
-``volumeClaim: <V>, mountPath: </absolute/path>`` Mounts a `Persistent volume claim <https://kubernetes.io/docs/concepts/storage/persistent-volumes/>`_ with name ``V`` to the specified path location. Use the optional `subPath` parameter to mount a directory inside the referenced volume instead of its root. The volume may be mounted with `readOnly: true`, but is read/write by default.
+``config: <C/K>, mountPath: </absolute/path>``    The content of the `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name ``C`` with key ``K`` is made available to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the ``ConfigMap`` entries are exposed in that path.
+``secret: <S/K>, mountPath: </absolute/path>``    The content of the `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name ``S`` with key ``K`` is made available to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the ``Secret`` entries are exposed in that path.
+``volumeClaim: <V>, mountPath: </absolute/path>`` Mounts a `Persistent volume claim <https://kubernetes.io/docs/concepts/storage/persistent-volumes/>`_ with name ``V`` to the specified path location. Use the optional ``subPath`` parameter to mount a directory inside the referenced volume instead of its root. The volume may be mounted with `readOnly: true`, but is read/write by default.
 ``imagePullPolicy: <V>``                          Specifies the strategy to be used to pull the container image e.g. ``imagePullPolicy: 'Always'``.
 ``imagePullSecret: <V>``                          Specifies the secret name to access a private container image registry. See `Kubernetes documentation <https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod>`_ for details.
 ``runAsUser: <UID>``                              Specifies the user ID to be used to run the container. Shortcut for the ``securityContext`` option.
@@ -2140,15 +2139,15 @@ ram-disk    Creates a scratch folder in the RAM disk ``/dev/shm/`` (experimental
 storeDir
 --------
 
-The ``storeDir`` directive allows you to define a directory that is used as `permanent` cache for your process results.
+The ``storeDir`` directive allows you to define a directory that is used as a `permanent` cache for your process results.
 
 In more detail, it affects the process execution in two main ways:
 
-#. The process is executed only if the files declared in the `output` clause do not exist in the directory specified by
+#. The process is executed only if the files declared in the ``output`` block do not exist in the directory specified by
    the ``storeDir`` directive. When the files exist the process execution is skipped and these files are used as
    the actual process result.
 
-#. Whenever a process is successfully completed the files listed in the `output` declaration block are moved into the directory
+#. Whenever a process is successfully completed the files listed in the ``output`` block are moved into the directory
    specified by the ``storeDir`` directive.
 
 The following example shows how to use the ``storeDir`` directive to create a directory containing a BLAST database
@@ -2262,19 +2261,19 @@ The ``time`` directive allows you to define how long a process is allowed to run
 
 The following time unit suffixes can be used when specifying the duration value:
 
-+---------------------------------+--------------+
-| Unit                            | Description  |
-+=================================+==============+
-| `ms`, `milli`, `millis`         | Milliseconds |
-+---------------------------------+--------------+
-| `s`, `sec`, `second`, `seconds` | Seconds      |
-+---------------------------------+--------------+
-| `m`, `min`, `minute`, `minutes` | Minutes      |
-+---------------------------------+--------------+
-| `h`, `hour`, `hours`            | Hours        |
-+---------------------------------+--------------+
-| `d`, `day`, `days`              | Days         |
-+---------------------------------+--------------+
++-----------------------------------------+--------------+
+| Unit                                    | Description  |
++=========================================+==============+
+| ``ms``, ``milli``, ``millis``           | Milliseconds |
++-----------------------------------------+--------------+
+| ``s``, ``sec``, ``second``, ``seconds`` | Seconds      |
++-----------------------------------------+--------------+
+| ``m``, ``min``, ``minute``, ``minutes`` | Minutes      |
++-----------------------------------------+--------------+
+| ``h``, ``hour``, ``hours``              | Hours        |
++-----------------------------------------+--------------+
+| ``d``, ``day``, ``days``                | Days         |
++-----------------------------------------+--------------+
 
 Multiple units can be used in a single declaration, for example: ``'1day 6hours 3minutes 30seconds'``
 

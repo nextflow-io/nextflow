@@ -259,11 +259,11 @@ Send logs to `Syslog <https://en.wikipedia.org/wiki/Syslog>`_ server endpoint.
 
 **Description**
 
-The ``-syslog`` option is used to send logs to a `Syslog` logging server at the specified endpoint.
+The ``-syslog`` option is used to send logs to a Syslog logging server at the specified endpoint.
 
 **Examples**
 
-Send the logs to a `Syslog` server at specific endpoint. ::
+Send the logs to a Syslog server at specific endpoint. ::
 
     $ nextflow -syslog localhost:1234 run nextflow-io/hello
 

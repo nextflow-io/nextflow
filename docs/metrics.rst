@@ -28,7 +28,7 @@ In the first example, let's consider the simple use case in which a process perf
     """
   }
 
-In the second example, some time will be spent performing pure computation and some time just waiting. Using the program `stress <https://people.seas.harvard.edu/~apw/stress/>`_  and `sleep` as follows would report 75% in the `Raw Usage` tab::
+In the second example, some time will be spent performing pure computation and some time just waiting. Using the program `stress <https://people.seas.harvard.edu/~apw/stress/>`_  and ``sleep`` as follows would report 75% in the `Raw Usage` tab::
 
   #!/usr/bin/env nextflow
 
@@ -79,7 +79,7 @@ The plot has three tabs showing the usage of the physical memory (RAM), the virt
 .. tip::
   To better understand the memory usage plot, it is important to know that:
 
-  - the total amount of memory used by a processs is the `virtual memory (vmem)`. The `vmem` contains all memory areas whether they are in the physical memory (RAM), in the Swap space, on the disk or shared with other processes,
+  - the total amount of memory used by a processs is the `virtual memory (vmem)`. The ``vmem`` contains all memory areas whether they are in the physical memory (RAM), in the Swap space, on the disk or shared with other processes,
   - the `resident set size (RSS)` is the amount of space of `physical memory (RAM)` held by a process,
   - the relationship is: vmem :math:`\geq` RSS + Swap,
   - the ``memory`` directive sets the RAM requested by the process.

@@ -43,6 +43,6 @@ image to use, i.e.::
 
 **Known Limitations**
 
-* Automatic deployment of workflow scripts in the `bin` folder is not supported.
+* Automatic deployment of workflow scripts in the ``bin`` folder is not supported.
 * Process output directories are not supported. For details see `#76 <https://github.com/ga4gh/task-execution-schemas/issues/76>`_.
 * Glob patterns in process output declarations are not supported. For details see `#77 <https://github.com/ga4gh/task-execution-schemas/issues/77>`_.

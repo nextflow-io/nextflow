@@ -541,4 +541,4 @@ This mix of technologies makes it possible to write self-contained and truly rep
 zero configuration and can be reproduced in any system having a Java VM and a Docker engine installed.
 
 
-.. [#] BitBucket provides two types of version control system: `Git` and `Mercurial`. Nextflow supports only `Git` based repositories.
+.. [#] BitBucket provides two types of version control system: Git and Mercurial. Nextflow supports only Git repositories.

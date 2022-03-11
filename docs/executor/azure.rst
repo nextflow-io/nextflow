@@ -35,7 +35,7 @@ Nextflow has built-in support for `Azure Blob Storage <https://azure.microsoft.c
 Files stored in a Azure blob container can be accessed transparently in your pipeline script like any other file
 in the local file system.
 
-The Blob storage account `name` and `key` needs to be provided in the Nextflow configuration file as shown below::
+The Blob storage account `name` and `key` need to be provided in the Nextflow configuration file as shown below::
 
     azure {
       storage {
@@ -367,7 +367,7 @@ azure.batch.autoPoolMode                        Enable the automatic creation of
 azure.batch.allowPoolCreation                   Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: ``false``).
 azure.batch.deleteJobsOnCompletion              Enable the automatic deletion of jobs created by the pipeline execution (default: ``true``).
 azure.batch.deletePoolsOnCompletion             Enable the automatic deletion of compute node pools upon pipeline completion (default: ``false``).
-azure.batch.copyToolInstallMode                 Specify where the `azcopy` tool used by Nextflow. When ``node`` is specified it's copied once during the pool creation. When ``task`` is provider, it's installed for each task execution (default: ``node``).
+azure.batch.copyToolInstallMode                 Specify where the ``azcopy`` tool used by Nextflow. When ``node`` is specified it's copied once during the pool creation. When ``task`` is provider, it's installed for each task execution (default: ``node``).
 azure.batch.pools.<name>.publisher              Specify the publisher of virtual machine type used by the pool identified with ``<name>`` (default: ``microsoft-azure-batch``, requires ``nf-azure@0.11.0``).
 azure.batch.pools.<name>.offer                  Specify the offer type of the virtual machine type used by the pool identified with ``<name>`` (default: ``centos-container``, requires ``nf-azure@0.11.0``).
 azure.batch.pools.<name>.sku                    Specify the ID of the Compute Node agent SKU which the pool identified with ``<name>`` supports (default: ``batch.node.centos 8``, requires ``nf-azure@0.11.0``).
@@ -379,7 +379,7 @@ azure.batch.pools.<name>.fileShareRootPath      If mounting File Shares, this is
 azure.batch.pools.<name>.scaleFormula           Specify the scale formula for the pool identified with ``<name>``. See Azure Batch `scaling documentation <https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling>`_ for details.
 azure.batch.pools.<name>.scaleInterval          Specify the interval at which to automatically adjust the Pool size according to the autoscale formula. The minimum and maximum value are 5 minutes and 168 hours respectively (default: `10 mins`).
 azure.batch.pools.<name>.schedulePolicy         Specify the scheduling policy for the pool identified with ``<name>``. It can be either ``spread`` or ``pack`` (default: ``spread``).
-azure.batch.pools.<name>.privileged             Enable the task to run with elevated access. Ignored if `runAs` is set (default: ``false``).
+azure.batch.pools.<name>.privileged             Enable the task to run with elevated access. Ignored if ``runAs`` is set (default: ``false``).
 azure.batch.pools.<name>.runAs                  Specify the username under which the task is run. The user must already exist on each node of the pool.
 azure.registry.server                           Specify the container registry from which to pull the Docker images (default: ``docker.io``, requires ``nf-azure@0.9.8``).
 azure.registry.userName                         Specify the username to connect to a private container registry (requires ``nf-azure@0.9.8``).

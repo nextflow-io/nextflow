@@ -62,7 +62,7 @@ the corresponding AWS credentials settings.
 Process secrets
 ===============
 
-Secrets can be access by pipeline processes by using the `secret` directive. For example::
+Secrets can be access by pipeline processes by using the ``secret`` directive. For example::
 
     process someJob {
         secret 'MY_ACCESS_KEY'
