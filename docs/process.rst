@@ -769,7 +769,7 @@ In the above example every time a file of sequences is received as input by the 
 it executes *three* tasks running a T-coffee alignment with a different value for the ``mode`` parameter.
 This is useful when you need to `repeat` the same task for a given set of parameters.
 
-Since version 0.25+ input repeaters can be applied to files as well. For example::
+Input repeaters can be applied to files as well. For example::
 
     sequences = Channel.fromPath('*.fa')
     methods = ['regular', 'expresso']
@@ -1391,7 +1391,7 @@ Value                 Description
 ``false``             Disable cache feature.
 ``true`` (default)    Enable caching. Cache keys are created indexing input files meta-data information (name, size and last update timestamp attributes).
 ``'deep'``            Enable caching. Cache keys are created indexing input files content.
-``'lenient'``         Enable caching. Cache keys are created indexing input files path and size attributes (this policy provides a workaround for incorrect caching invalidation observed on shared file systems due to inconsistent files timestamps; requires version 0.32.x or later).
+``'lenient'``         Enable caching. Cache keys are created indexing input files path and size attributes (this policy provides a workaround for incorrect caching invalidation observed on shared file systems due to inconsistent files timestamps).
 ===================== =================
 
 

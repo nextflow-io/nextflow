@@ -83,8 +83,8 @@ requirement eventually needed by your workflow script. The required version stri
 comparison operators eg ``>``, ``>=``, ``=``, etc. or postfixed with the ``+`` operator to specify a minimal version
 requirement. For example::
 
-    if( !nextflow.version.matches('0.22+') ) {
-        println "This workflow requires Nextflow version 0.22 or greater -- You are running version $nextflow.version"
+    if( !nextflow.version.matches('21.04+') ) {
+        println "This workflow requires Nextflow version 21.04 or greater -- You are running version $nextflow.version"
         exit 1
     }
 

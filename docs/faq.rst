@@ -95,7 +95,7 @@ In our example above would now have the folder ``broccoli`` in the results direc
 contain the file ``broccoli.aln``.
 
 If the input file has multiple extensions (e.g. ``brocolli.tar.gz``), you will want to use
-``file.simpleName`` instead, to strip all of them (available since Nextflow 0.25+).
+``file.simpleName`` instead, to strip all of them.
 
 
 How do I use the same channel multiple times?
@@ -275,4 +275,4 @@ A: Sometimes it is necessary to use a different version of Nextflow for a specif
 
 ::
 
-    NXF_VER=0.28.0 nextflow run main.nf
+    NXF_VER=21.04 nextflow run main.nf

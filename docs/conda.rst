@@ -19,8 +19,7 @@ flexibility provided by Nextflow.
 Prerequisites
 -------------
 
-This feature requires Nextflow version 0.30.x or higher and the Conda or
-`Miniconda <https://conda.io/miniconda.html>`_ package manager installed on your system.
+This feature requires the Conda or `Miniconda <https://conda.io/miniconda.html>`_ package manager to be installed on your system.
 
 
 How it works
