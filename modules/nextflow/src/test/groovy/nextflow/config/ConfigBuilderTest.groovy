@@ -2050,5 +2050,56 @@ class ConfigBuilderTest extends Specification {
         cleanup:
         base?.deleteDir()
     }
+
+    def 'should merge profiles with conditions' () {
+        given:
+        def folder = Files.createTempDirectory("mergeprofiles")
+        def main = folder.resolve('main.conf')
+        def test = folder.resolve('test.conf')
+        def process = folder.resolve('process.conf')
+
+        main.text = '''
+        params {
+            load_config = null
+            present = true
+        }
+        
+        profiles {
+            test { includeConfig 'test.conf' }
+        }
+        
+        if (params.load_config) {
+            includeConfig 'process.conf'
+        }        
+        '''
+        test.text = '''
+        params {
+            load_config = true
+        }    
+        '''
+
+        process.text = '''
+        process {
+            withName: FOO {
+                ext.args = '--quiet'
+            }
+        }        
+        params{
+            another = true
+        }
+        '''
+
+        when:
+        def cfg = new ConfigBuilder().setProfile('test').buildConfig0([:], [main])
+        then:
+        cfg.process.'withName:FOO'
+        cfg.params.load_config == true
+        cfg.params.present == true
+        cfg.params.another == true
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }
 
