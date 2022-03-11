@@ -1336,7 +1336,7 @@ class TaskProcessor {
 
             case OptionalParam:
                 def parentParam = config.outputs[param.index]
-                if( value == null && parentParam instanceof OptionalParam && parentParam.optional == true ) {
+                if( value == null && parentParam instanceof OptionalParam && parentParam.optional ) {
                     final holder = [] as MissingParam
                     holder.missing = param
                     tuples[param.index] = holder
@@ -1444,7 +1444,7 @@ class TaskProcessor {
 
         // fetch the output value
         final val = collectOutEnvMap(workDir).get(param.name)
-        if ( val == null && param.optional != true )
+        if ( val == null && !param.optional )
             throw new MissingValueException("Missing environment variable: $param.name")
         // set into the output set
         task.setOutput(param,val)
@@ -1518,7 +1518,7 @@ class TaskProcessor {
             if( result )
                 allFiles.addAll(result)
 
-            else if ( param.optional != true ) {
+            else if ( !param.optional ) {
                 def msg = "Missing output file(s) `$filePattern` expected by process `${task.name}`"
                 if( inputsRemovedFlag )
                     msg += " (note: input files are not included in the default matching set)"
@@ -1526,7 +1526,7 @@ class TaskProcessor {
             }
         }
 
-        if ( param.optional == true && allFiles.size() == 0 ) {
+        if ( param.optional && allFiles.size() == 0 ) {
             task.setOutput( param, null )
         } else {
             task.setOutput( param, allFiles.size()==1 ? allFiles[0] : allFiles )

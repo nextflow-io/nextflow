@@ -1207,8 +1207,10 @@ class ParamsOutTest extends Specification {
         when:
         def process = parseAndReturnProcess(text, [:])
         TupleOutParam out0 = process.config.getOutputs().get(0)
+        out0.lazyInit()
         then:
         out0.inner[0] instanceof FileOutParam
+        out0.inner[1] instanceof FileOutParam
         and:
         (out0.inner[0] as FileOutParam).getName() == 'x'
         (out0.inner[0] as FileOutParam).getMaxDepth() == 1
@@ -1217,6 +1219,47 @@ class ParamsOutTest extends Specification {
         (out0.inner[1] as FileOutParam).getName() == 'y'
         (out0.inner[1] as FileOutParam).getMaxDepth() == 2
         (out0.inner[1] as FileOutParam).getOptional() == true
+    }
+
+    def 'check whether file optional value is overridden when tuple is optional' () {
+        given:
+        def text = '''
+            process foo {
+              output:
+              tuple path(x,maxDepth:1,optional:false), path(y,maxDepth:2,optional:true) optional false
+              tuple path(x,maxDepth:2,optional:false), path(y,maxDepth:1,optional:true) optional true
+
+              return ''
+            }
+            '''
+
+        when:
+        def process = parseAndReturnProcess(text, [:])
+        TupleOutParam out0 = process.config.getOutputs().get(0)
+        TupleOutParam out1 = process.config.getOutputs().get(1)
+        out0.lazyInit()
+        out1.lazyInit()
+        then:
+        out0.inner[0] instanceof FileOutParam
+        out0.inner[1] instanceof FileOutParam
+        out1.inner[0] instanceof FileOutParam
+        out1.inner[1] instanceof FileOutParam
+        and:
+        (out0.inner[0] as FileOutParam).getName() == 'x'
+        (out0.inner[0] as FileOutParam).getMaxDepth() == 1
+        (out0.inner[0] as FileOutParam).getOptional() == false
+        and:
+        (out0.inner[1] as FileOutParam).getName() == 'y'
+        (out0.inner[1] as FileOutParam).getMaxDepth() == 2
+        (out0.inner[1] as FileOutParam).getOptional() == true
+        and:
+        (out1.inner[0] as FileOutParam).getName() == 'x'
+        (out1.inner[0] as FileOutParam).getMaxDepth() == 2
+        (out1.inner[0] as FileOutParam).getOptional() == true
+        and:
+        (out1.inner[1] as FileOutParam).getName() == 'y'
+        (out1.inner[1] as FileOutParam).getMaxDepth() == 1
+        (out1.inner[1] as FileOutParam).getOptional() == true
     }
 
 

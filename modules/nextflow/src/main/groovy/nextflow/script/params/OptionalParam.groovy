@@ -25,11 +25,11 @@ package nextflow.script.params
  */
 trait OptionalParam {
 
-    Boolean optional = null
+    boolean optional = false
 
-    Boolean getOptional() { optional }
+    boolean getOptional() { optional }
 
-    def optional( Boolean value ) {
+    def optional( boolean value ) {
         this.optional = value
         return this
     }
