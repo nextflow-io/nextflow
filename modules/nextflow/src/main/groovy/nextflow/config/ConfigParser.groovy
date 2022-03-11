@@ -322,7 +322,7 @@ class ConfigParser {
         LinkedList stack = new LinkedList()
         LinkedList profileStack = new LinkedList()
         stack << [config: config, scope: [:]]
-        boolean intoProfile = false
+        boolean withinProfile = false
 
         def pushStack = { co ->
             stack << [config: co, scope: stack.last.scope.clone()]
@@ -363,7 +363,7 @@ class ConfigParser {
                 if (name in conditionValues.keySet()) {
                     try {
                         if( name == 'profiles'){
-                            intoProfile=true
+                            withinProfile=true
                         }
                         currentConditionalBlock.push(name)
                         conditionalBlocks.push([:])
@@ -375,7 +375,7 @@ class ConfigParser {
                             (c != config? c : overrides).merge(entry.value)
                         }
                         if( name == 'profiles'){
-                            intoProfile=false
+                            withinProfile=false
                         }
                     }
                 } else if (currentConditionalBlock.size() > 0) {
@@ -410,7 +410,7 @@ class ConfigParser {
                     assignName.call(name, dsl.plugins)
                 }
                 else {
-                    def current = intoProfile ? stack.first : stack.last
+                    def current = withinProfile ? stack.first : stack.last
                     def co
                     if (current.config.get(name) instanceof ConfigObject) {
                         co = current.config.get(name)
