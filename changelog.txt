@@ -1,5 +1,23 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.02.1-edge - 3 Mar 2022
+- Prevent multiple parsing of params file [38bb1f71]
+
+22.02.0-edge - 25 Feb 2022
+- Fix Prevent S3 tagging with empty list [ae7db466]
+- Fix Azure repos tests [856aacf0]
+- Fix isse on includeConfig resolution #2675 [6591a9e1]
+- Fix NPE when accessing not existing Git file [6c79f8fd]
+- Fix Batch Job name exceed max allowed size [e8b70ca3]
+- Fix detect and skip bom mark in files (#2645) [02b06ba3] <Jorge Aguilera>
+- Feature: Abort session if publish fails (#2643) [79b3836b] <Jorge Aguilera>
+- Fix report overwrite cannot be disabled [202b5c9c] #2647 
+- Fix match bash interpreter irrespective the path [c2d2b9b2]
+- Fix build warning + plugins assemble (#2634) [00dd143a] <Jorge Aguilera>
+- Fix CITATION.cff and add automatic validation of your citation metadata [15698a45] <Faruk D>
+- Bump nf-amazon@1.5.1 [a4496bb2]
+- Bump nf-amazon@1.5.2 [e51139bb]
+
 22.01.0-edge - 7 Feb 2022
 - Add support for Tower reports (#2523) [de3d76349] <Jordi Deu-Pons>
 - Add RateLimitExceededException when GitHub api limit is reached [ff123c605]

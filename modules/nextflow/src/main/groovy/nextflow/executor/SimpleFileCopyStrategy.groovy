@@ -114,14 +114,24 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
     String getStageInputFilesScript(Map<String,Path> inputFiles) {
         assert inputFiles != null
 
+        def len = inputFiles.size()
         def delete = []
         def links = []
         for( Map.Entry<String,Path> entry : inputFiles ) {
             final stageName = entry.key
             final storePath = entry.value
 
-            // delete all previous files with the same name
-            delete << "rm -f ${Escape.path(stageName)}"
+            // Delete all previous files with the same name
+            // Note: the file deletion is only needed to prevent
+            // file name collisions when re-running the runner script
+            // for debugging purpose. However, this can cause the creation
+            // of a very big runner script when a large number of files is
+            // given due to the file name duplication. Therefore the rationale
+            // here is to keep the deletion only when a file input number is
+            // given (which is more likely during pipeline development) and
+            // drop in any case  when they are more than 100
+            if( len<100 )
+                delete << "rm -f ${Escape.path(stageName)}"
 
             // link them
             links << stageInputFile( storePath, stageName )

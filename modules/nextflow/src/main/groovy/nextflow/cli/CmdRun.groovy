@@ -303,7 +303,9 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
         runner.session.disableJobsCancellation = getDisableJobsCancellation()
-        if( withTower || log.isTraceEnabled() )
+
+        final isTowerEnabled = config.navigate('tower.enabled') as Boolean
+        if( isTowerEnabled || log.isTraceEnabled() )
             runner.session.resolvedConfig = ConfigBuilder.resolveConfig(scriptFile.parent, this)
         // note config files are collected during the build process
         // this line should be after `ConfigBuilder#build`
@@ -569,10 +571,10 @@ class CmdRun extends CmdBase implements HubOptions {
             result.putAll(json)
         }
         catch (NoSuchFileException | FileNotFoundException e) {
-            throw new AbortOperationException("Specified params file does not exists: $file")
+            throw new AbortOperationException("Specified params file does not exists: ${file.toUriString()}")
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Cannot parse params file: $file - Cause: ${e.message}", e)
+            throw new AbortOperationException("Cannot parse params file: ${file.toUriString()} - Cause: ${e.message}", e)
         }
     }
 
@@ -583,10 +585,10 @@ class CmdRun extends CmdBase implements HubOptions {
             result.putAll(yaml)
         }
         catch (NoSuchFileException | FileNotFoundException e) {
-            throw new AbortOperationException("Specified params file does not exists: $file")
+            throw new AbortOperationException("Specified params file does not exists: ${file.toUriString()}")
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Cannot parse params file: $file", e)
+            throw new AbortOperationException("Cannot parse params file: ${file.toUriString()}", e)
         }
     }
 
