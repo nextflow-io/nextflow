@@ -18,6 +18,7 @@
 package nextflow.cloud.azure.file
 
 import groovy.transform.Memoized
+import nextflow.cloud.azure.config.AzCopyOpts
 import nextflow.executor.BashFunLib
 import nextflow.util.Duration
 
@@ -27,6 +28,32 @@ import nextflow.util.Duration
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class AzBashLib extends BashFunLib<AzBashLib> {
+
+    private String blockSize = AzCopyOpts.DEFAULT_BLOCK_SIZE
+    private String blobTier = AzCopyOpts.DEFAULT_BLOB_TIER
+
+
+    AzBashLib withBlockSize(String value) {
+        if( value )
+            this.blockSize = value
+        return this
+    }
+
+    AzBashLib withBlobTier(String value) {
+        if( value )
+            this.blobTier = value
+        return this
+    }
+
+
+    protected String setupAzCopyOpts() {
+        """
+        # custom env variables used for azcopy opts
+        export AZCOPY_BLOCK_SIZE_MB=${blockSize}
+        export AZCOPY_BLOCK_BLOB_TIER=${blobTier}
+        """.stripIndent()
+    }
+
 
     protected String azLib() {
         '''
@@ -38,12 +65,12 @@ class AzBashLib extends BashFunLib<AzBashLib> {
 
             if [[ -d $name ]]; then
               if [[ "$base_name" == "$name" ]]; then
-                azcopy cp "$name" "$target?$AZ_SAS" --recursive
+                azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
               else
-                azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive
+                azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
               fi
             else
-              azcopy cp "$name" "$target/$name?$AZ_SAS"
+              azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
             fi
         }
         
@@ -68,16 +95,18 @@ class AzBashLib extends BashFunLib<AzBashLib> {
     }
 
     String render() {
-        super.render() + azLib()
+        super.render() + setupAzCopyOpts() + azLib()
     }
 
     @Memoized
-    static String script(Integer maxParallelTransfers, Integer maxTransferAttempts, Duration delayBetweenAttempts) {
+    static String script(AzCopyOpts opts, Integer maxParallelTransfers, Integer maxTransferAttempts, Duration delayBetweenAttempts) {
         new AzBashLib()
                 .includeCoreFun(true)
                 .withMaxParallelTransfers(maxParallelTransfers)
                 .withMaxTransferAttempts(maxTransferAttempts)
                 .withDelayBetweenAttempts(delayBetweenAttempts)
+                .withBlobTier(opts.blobTier)
+                .withBlockSize(opts.blockSize)
                 .render()
     }
 
