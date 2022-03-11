@@ -362,7 +362,7 @@ class ConfigParser {
 
                 if (name in conditionValues.keySet()) {
                     try {
-                        if( name == 'profiles'){
+                        if( name == 'profiles' ){
                             withinProfile=true
                         }
                         currentConditionalBlock.push(name)
@@ -374,7 +374,7 @@ class ConfigParser {
                             def c = stack.last.config
                             (c != config? c : overrides).merge(entry.value)
                         }
-                        if( name == 'profiles'){
+                        if( name == 'profiles' ){
                             withinProfile=false
                         }
                     }
@@ -431,7 +431,7 @@ class ConfigParser {
 
                     if (current.scope.get(name) instanceof ConfigObject) {
                         current.scope.get(name).merge(co)
-                    }else{
+                    } else {
                         current.scope.put(name,co)
                     }
                 }
