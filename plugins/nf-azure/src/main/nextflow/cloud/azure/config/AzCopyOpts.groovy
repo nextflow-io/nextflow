@@ -1,7 +1,7 @@
 /*
  * Copyright 2021, Microsoft Corp
  * Copyright 2022, Seqera Labs
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -16,12 +16,32 @@
  */
 package nextflow.cloud.azure.config
 
+import groovy.transform.CompileStatic
+
 /**
- * Define the strategy to install the azcopy tool
+ * Model Azure azcopy tool config settings from nextflow config file
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Abhinav Sharma <abhi18av@outlook.com>
  */
-enum CopyToolInstallMode {
-    node,
-    task
+@CompileStatic
+class AzCopyOpts {
+
+    static public final String DEFAULT_BLOCK_SIZE = "4"
+    static public final String DEFAULT_BLOB_TIER = "None"
+
+    String blockSize
+    String blobTier
+
+    AzCopyOpts() {
+        this.blockSize = DEFAULT_BLOCK_SIZE
+        this.blobTier =  DEFAULT_BLOB_TIER
+    }
+
+
+    AzCopyOpts(Map config) {
+        assert config!=null
+        this.blockSize = config.blockSize ?: DEFAULT_BLOCK_SIZE
+        this.blobTier = config.blobTier ?: DEFAULT_BLOB_TIER
+    }
+
 }
