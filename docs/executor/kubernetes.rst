@@ -93,8 +93,8 @@ For debugging purpose it's possible to execute a Nextflow pod and launch an inte
 This command creates a pod, sets up the volume claim(s), configures the Nextflow environment and finally launches a Bash
 login session.  
 
-.. warning:: The pod is automatically destroyed once the shell session terminates. Do not use to start long running
-  workflow executions in background.
+.. warning:: The pod is automatically destroyed once the shell session terminates. Do not use it to start long-running
+  workflow executions in the background.
 
 
 Running in a pod
@@ -121,11 +121,15 @@ In the above snippet replace ``vol-claim`` with the name of an existing persiste
 ``/mount/path`` with the actual desired mount path (default: ``/workspace``) and ``storageSubPath``
 with the directory in the volume to be mounted (default: ``/``).
 
-.. warning:: The running pod must have been created with the same persistent volume claim name and mount as the
+.. warning::
+    The running pod must have been created with the same persistent volume claim name and mount as the
     one specified in your Nextflow configuration file.
     Note also that the ``run`` command does not support the ``-v`` option.
 
-.. tip:: It is also possible to mount multiple volumes using the ``pod`` directive, setting such as ``k8s.pod = [ [volumeClaim: "other-pvc", mountPath: "/other" ]]``
+.. tip::
+    It is also possible to mount additional volumes using the ``pod`` directive, for example::
+
+        k8s.pod = [ [volumeClaim: "other-pvc", mountPath: "/other" ] ]
 
 
 Pod settings
@@ -139,11 +143,11 @@ Limitation
 ==========
 
 .. note::
-  The ``kuberun`` command does not allow the execution of local Nextflow scripts and it has been designed to
-  provide a shortcut to simple pipeline deployment into a Kubernetes cluster.
+  The ``kuberun`` command does not allow the execution of local Nextflow scripts. It is intended only as
+  a shortcut to simple pipeline deployment into a Kubernetes cluster.
 
   For stable pipeline deployment, Nextflow needs to be executed as a pod as mentioned in the `Running in a pod`_ section.
-  In alternative take in consideration a managed provisioning service such as `Nextflow Tower <https://tower.nf>`_.
+  Consider using a managed service such as `Nextflow Tower <https://tower.nf>`_.
 
 
 Advanced configuration

@@ -7,7 +7,7 @@ The ``moab`` executor allows you to run your pipeline script by using the
 `Moab <https://en.wikipedia.org/wiki/Moab_Cluster_Suite>`_ resource manager by
 `Adaptive Computing <http://www.adaptivecomputing.com/>`_.
 
-.. warning:: This is an incubating feature. It may change in future Nextflow releases.
+.. warning:: This feature is experimental, and may change in a future release.
 
 Nextflow manages each process as a separate job that is submitted to the cluster by using the ``msub`` command provided
 by the resource manager.

@@ -25,7 +25,6 @@ The process that follows, receives these files and it simply `reverses` their co
     </style>
     <script src="https://gist.github.com/pditommaso/92fea4525cd66c286904.js"></script>
 
-
 In more detail:
 
 * line 1: The script starts with a `shebang <http://en.wikipedia.org/wiki/Shebang_(Unix)>`_ declaration. This allows you
@@ -69,17 +68,15 @@ In more detail:
 
 * line 35: Prints a `result` each time a new item is received on the ``result`` channel.
 
+.. tip::
+  The above example can manage only a single file at a time. If you want to execute it for multiple files,
+  you will need to launch it several times.
 
-.. tip:: The above example can manage only a single file at a time. If you want to execute it for two (or more) different files
-   you will need to launch it several times.
-
-   It is possible to modify it in such a way that it can handle any number of input files, as shown below.
-
+  It is possible to modify it in such a way that it can handle any number of input files, as shown below.
 
 In order to make the above script able to handle any number of files simply replace `line 3` with the following line::
 
   sequences = Channel.fromPath(params.in)
-
 
 By doing this the ``sequences`` variable is assigned to the channel created by the :ref:`channel-path` method. This
 channel emits all the files that match the pattern specified by the parameter ``params.in``.
@@ -89,8 +86,7 @@ named ``dataset/``, you can execute it by entering this command::
 
   nextflow example.nf --in 'dataset/*.fa'
 
-
-.. warning:: Make sure you enclose the ``dataset/*.fa`` parameter value in single-quotation characters,
+.. warning:: Make sure you enclose the ``dataset/*.fa`` parameter value in quotes,
   otherwise the Bash environment will expand the ``*`` symbol to the actual file names and the example won't work.
 
 More examples

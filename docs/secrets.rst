@@ -9,7 +9,7 @@ As of version ``21.09.0-edge``, Nextflow adds the built-in support for pipeline 
 and manage sensitive information for pipeline execution in a safe manner.
 
 .. warning::
-    This is a preview feature, therefore options and syntax may change in future release.
+    This feature is experimental, and may change in a future release.
 
 How it works
 ============
@@ -22,7 +22,7 @@ When the pipeline execution is launched Nextflow inject the secrets in pipeline 
 into temporary execution files. The secrets are accessible into the job command via environment variables.
 
 .. note::
-  This feature needs to be enabled by settings the following environment variable in the launching environment::
+    This feature must be enabled by setting the following environment variable in the launch environment::
 
         export NXF_ENABLE_SECRETS=true
 
@@ -77,4 +77,4 @@ The above snippet runs a command in with the variables ``MY_ACCESS_KEY`` and ``M
 process execution environment holding the values defines in the secret store.
 
 .. warning::
-    This feature is only available when using the local or batch scheduler executions e.g. Slurm, Grid Engine, etc.
+    This feature is only available when using the local or grid executors (Slurm, Grid Engine, etc).

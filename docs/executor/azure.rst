@@ -48,7 +48,7 @@ As an alternative to the account key it can also used `Shared Access Token` usin
 of the ``accountKey`` attribute.
 
 .. tip::
-    When creating the `Shared Access Token` make sure to allow the resource types `Container` and `Object` and allow
+    When creating the `Shared Access Token`, make sure to allow the resource types `Container` and `Object` and allow
     the permissions: `Read`, `Write`, `Delete`, `List`, `Add`, `Create`.
 
 .. tip::
@@ -191,19 +191,19 @@ Pool specific settings, e.g. VM type and count, should be provided in the ``auto
     }
 
 .. warning::
-    Don't forget to clean up the Batch pools to avoid in extra charges in the Batch account or use the auto scaling feature.
+    Don't forget to clean up the Batch pools or use auto scaling to avoid extra charges to your Batch account.
 
 .. warning::
-   Make sure your Batch account has enough resources to satisfy the pipeline's requirements and the pool configuration.
+    Make sure your Batch account has enough resources to satisfy the pipeline's requirements and the pool configuration.
 
 .. warning::
-   Nextflow uses the same pool Id across pipeline executions, if the pool features have not changed.
-   Therefore, when using ``deletePoolsOnCompletion=true``, make sure the pool is completely removed from the Azure Batch account
-   before re-running the pipeline. The following message is returned when the pool is still shutting down ::
+    Nextflow uses the same pool ID across pipeline executions, as long as the pool features have not changed.
+    Therefore, when using ``deletePoolsOnCompletion=true``, make sure the pool is completely removed from the Azure Batch account
+    before re-running the pipeline. The following message is returned when the pool is still shutting down ::
 
-    Error executing process > '<process name> (1)'
-    Caused by:
-        Azure Batch pool '<pool name>' not in active state
+        Error executing process > '<process name> (1)'
+        Caused by:
+            Azure Batch pool '<pool name>' not in active state
 
 
 Named pools
@@ -342,9 +342,9 @@ The private registry is not exclusive, rather it is an addition to the configura
 Public images from other registries are still pulled (if requested by a Task) when a private registry is configured.
 
 .. note::
-  When using containers hosted into a private registry, the registry name must also be provided in the container name
+  When using containers hosted in a private registry, the registry name must also be provided in the container name
   specified via the :ref:`container <process-container>` directive using the format: ``[server]/[your-organization]/[your-image]:[tag]``.
-  Read more about image fully qualified image names in the `Docker documentation <https://docs.docker.com/engine/reference/commandline/pull/#pull-from-a-different-registry>`_.
+  Read more about fully qualified image names in the `Docker documentation <https://docs.docker.com/engine/reference/commandline/pull/#pull-from-a-different-registry>`_.
 
 
 Advanced settings

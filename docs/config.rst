@@ -23,8 +23,9 @@ of priority:
 When more than one of these ways of specifying configurations are used, they are merged, so that the settings in the
 first override the same ones that may appear in the second one, and so on.
 
-.. tip:: If you want to ignore any default configuration files and use only the custom one use the command line option
-  ``-C <config file>``.
+.. tip::
+  If you want to ignore any default configuration files and use only the custom one, use ``-C <config file>``.
+
 
 Config syntax
 -------------
@@ -36,6 +37,7 @@ A Nextflow configuration file is a simple text file containing a set of properti
 Please note, string values need to be wrapped in quotation characters while numbers and boolean values (``true``, ``false``) do not.
 Also note that values are typed, meaning for example that, ``1`` is different from ``'1'``, since the first is interpreted
 as the number one, while the latter is interpreted as a string value.
+
 
 Config variables
 ----------------
@@ -57,11 +59,13 @@ not defined in the Nextflow configuration file(s) is supposed to be a reference 
 So, in the above example the property ``customPath`` is defined as the current system ``PATH`` to which
 the string ``/my/app/folder`` is appended.
 
+
 Config comments
 ---------------
 
 Configuration files use the same conventions for comments used by the Groovy or Java programming languages. Thus, use ``//`` to comment
 a single line or ``/*`` .. ``*/`` to comment a block on multiple lines.
+
 
 Config include
 --------------
@@ -311,9 +315,10 @@ Simply prefix your variable names with the ``env`` scope or surround them by cur
         GAMMA = "/my/path:$PATH"
    }
 
-.. tip:: In the above example, variables like `$HOME` and `$PATH` are evaluated when the workflow is launched. If
+.. tip::
+  In the above example, variables like `$HOME` and `$PATH` are evaluated when the workflow is launched. If
   you want these variables to be evaluated during task execution, escape them with `\$`. This difference is important
-  for variables like `$PATH`, which may be very different in the workflow environment versus the task environment.
+  for variables like `$PATH`, which may be different in the workflow environment versus the task environment.
 
 
 .. _config-executor:
@@ -477,7 +482,6 @@ brackets. For example::
         version = '1.0.0'
     }
 
-
 To learn how to publish your pipeline on GitHub, BitBucket or GitLab code repositories read :ref:`sharing-page`
 documentation page.
 
@@ -527,15 +531,13 @@ Scope `params`
 The ``params`` scope allows you to define parameters that will be accessible in the pipeline script. Simply prefix the
 parameter names with the ``params`` scope or surround them by curly brackets, as shown below::
 
-     params.custom_param = 123
-     params.another_param = 'string value .. '
+    params.custom_param = 123
+    params.another_param = 'string value .. '
 
-     params {
-
+    params {
         alpha_1 = true
         beta_2 = 'another string ..'
-
-     }
+    }
 
 
 .. _config-podman:
@@ -583,14 +585,15 @@ The ``process`` configuration scope allows you to provide the default configurat
 You can specify here any property described in the :ref:`process directive<process-directives>` and the executor sections.
 For examples::
 
-  process {
-    executor='sge'
-    queue='long'
-    clusterOptions = '-pe smp 10 -l virtual_free=64G,h_rt=30:00:00'
-  }
+    process {
+        executor = 'sge'
+        queue = 'long'
+        clusterOptions = '-pe smp 10 -l virtual_free=64G,h_rt=30:00:00'
+    }
 
 By using this configuration all processes in your pipeline will be executed through the SGE cluster, with the specified
 settings.
+
 
 .. _config-process-selectors:
 
@@ -622,9 +625,11 @@ For example::
         }
     }
 
-.. tip:: Either label and process names do not need to be enclosed with quote characters, provided the name
-  does include special characters (e.g. ``-``, ``!``, etc) or it's not a keyword or a built-in type identifier.
-  In case of doubt, you can enclose the label names or the process names with single or double quote characters.
+.. tip::
+  Label and process names do not need to be enclosed with quotes, provided the name
+  does not include special characters (``-``, ``!``, etc) and is not a keyword or a built-in type identifier.
+  When in doubt, you can enclose the label names or the process names with single or double quotes.
+
 
 .. _config-selector-expressions:
 
@@ -655,6 +660,7 @@ A process selector can be negated prefixing it with the special character ``!``.
 The above configuration snippet sets 2 cpus for the processes annotated with the ``foo`` label and 4 cpus to all processes
 *not* annotated with that label. Finally it sets the use of ``long`` queue to all process whose name does *not* start
 with ``align``.
+
 
 .. _config-selector-priority:
 
@@ -791,7 +797,7 @@ brackets, as shown below::
   Your ``accessToken`` can be obtained from your Tower instance in the `Tokens page <https://tower.nf/tokens>`.
 
 .. tip:: 
-  The Tower workspace ID can also the specified using the environment variable ``TOWER_WORKSPACE_ID`` (config file has priority over the environment variable). 
+  The Tower workspace ID can also be specified using the environment variable ``TOWER_WORKSPACE_ID`` (config file has priority over the environment variable). 
 
 
 .. _config-trace:
@@ -859,8 +865,8 @@ cleanup             If ``true``, on a successful completion of a run all files i
 ================== ================
 
 .. warning:: 
-    The use of the above ``cleanup`` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. 
-    Also, be aware that deleting all scratch files can take a lot of time especially when using shared file system or remote cloud storage.
+    The use of the ``cleanup`` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. 
+    Also, be aware that deleting all scratch files can take a lot of time, especially when using a shared file system or remote cloud storage.
 
 
 .. _config-profiles:
@@ -898,13 +904,15 @@ This configuration defines three different profiles: ``standard``, ``cluster`` a
 configuration strategies depending on the target runtime platform. By convention the ``standard`` profile is implicitly used
 when no other profile is specified by the user.
 
-.. tip:: Two or more configuration profiles can be specified by separating the profile names
-    with a comma character, for example::
+.. tip::
+    Multiple configuration profiles can be specified by separating the profile names
+    with a comma, for example::
 
         nextflow run <your script> -profile standard,cloud
 
-.. danger:: When using the *profiles* feature in your config file do NOT set attributes in the same scope both
-  inside and outside a ``profiles`` context. For example::
+.. danger::
+    When using the ``profiles`` feature in your config file, do NOT set attributes in the same scope both
+    inside and outside a ``profiles`` context. For example::
 
         process.cpus = 1
 
@@ -918,10 +926,8 @@ when no other profile is specified by the user.
           }
         }
 
-  In the above example the ``process.cpus`` attribute is not correctly applied because the ``process`` scope is also
-  used in the ``foo`` and ``bar`` profile contexts.
-
-The above feature requires version 0.28.x or higher.
+    In the above example, the ``process.cpus`` attribute is not correctly applied because the ``process`` scope is also
+    used in the ``foo`` and ``bar`` profiles.
 
 
 .. _config-env-vars:
@@ -930,36 +936,36 @@ Environment variables
 =====================
 
 The following environment variables control the configuration of the Nextflow runtime and
-the Java virtual machine used by it.
+the underlying Java virtual machine.
 
 =============================== ================
 Name                            Description
 =============================== ================
-NXF_HOME                        Nextflow home directory (default: ``$HOME/.nextflow``).
-NXF_VER                         Defines what version of Nextflow to use.
-NXF_ORG                         Default `organization` prefix when looking for a hosted repository (default: ``nextflow-io``).
-NXF_GRAB                        Provides extra runtime dependencies downloaded from a Maven repository service.
-NXF_OPTS                        Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of ``-Dkey[=value]`` properties.
-NXF_JVM_ARGS                    Allows the setting Java VM options. This is similar to ``NXF_OPTS`` however it's only applied the JVM running Nextflow and not to any java pre-launching commands (requires ``21.12.1-edge`` or later).
-NXF_CLASSPATH                   Allows the extension of the Java runtime classpath with extra JAR files or class folders.
-NXF_ASSETS                      Defines the directory where downloaded pipeline repositories are stored (default: ``$NXF_HOME/assets``)
-NXF_PID_FILE                    Name of the file where the process PID is saved when Nextflow is launched in background.
-NXF_WORK                        Directory where working files are stored (usually your *scratch* directory)
-NXF_TEMP                        Directory where temporary files are stored
-NXF_DEBUG                       Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
-NXF_EXECUTOR                    Defines the default process executor e.g. `sge`
-NXF_CONDA_CACHEDIR              Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all computing nodes.
-NXF_SINGULARITY_CACHEDIR        Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
-NXF_SINGULARITY_LIBRARYDIR      Directory where remote Singularity images are retrieved. It should be a directory accessible to all computing nodes (requires: ``21.09.0-edge`` or later).
-NXF_CHARLIECLOUD_CACHEDIR       Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
-NXF_JAVA_HOME                   Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the ``JAVA_HOME`` variable if defined.
-NXF_OFFLINE                     When ``true`` disables the project automatic download and update from remote repositories (default: ``false``).
-NXF_CLOUD_DRIVER                Defines the default cloud driver to be used if not specified in the config file or as command line option, either ``aws`` or ``google``.
 NXF_ANSI_LOG                    Enables/disables ANSI console output (default ``true`` when ANSI terminal is detected).
 NXF_ANSI_SUMMARY                Enables/disables ANSI completion summary: `true|false` (default: print summary if execution last more than 1 minute).
-NXF_SCM_FILE                    Defines the path location of the SCM config file (requires version ``20.10.0`` or later).
-NXF_PARAMS_FILE                 Defines the path location of the pipeline parameters file (requires version ``20.10.0`` or later).
+NXF_ASSETS                      Defines the directory where downloaded pipeline repositories are stored (default: ``$NXF_HOME/assets``)
+NXF_CHARLIECLOUD_CACHEDIR       Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
+NXF_CLASSPATH                   Allows the extension of the Java runtime classpath with extra JAR files or class folders.
+NXF_CLOUD_DRIVER                Defines the default cloud driver to be used if not specified in the config file or as command line option, either ``aws`` or ``google``.
+NXF_CONDA_CACHEDIR              Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all computing nodes.
+NXF_DEBUG                       Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
 NXF_DISABLE_JOBS_CANCELLATION   Disables the cancellation of child jobs on workflow execution termination (requires ``21.12.0-edge`` or later).
+NXF_EXECUTOR                    Defines the default process executor e.g. `sge`
+NXF_GRAB                        Provides extra runtime dependencies downloaded from a Maven repository service.
+NXF_HOME                        Nextflow home directory (default: ``$HOME/.nextflow``).
+NXF_JAVA_HOME                   Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the ``JAVA_HOME`` variable if defined.
+NXF_JVM_ARGS                    Allows the setting Java VM options. This is similar to ``NXF_OPTS`` however it's only applied the JVM running Nextflow and not to any java pre-launching commands (requires ``21.12.1-edge`` or later).
+NXF_OFFLINE                     When ``true`` disables the project automatic download and update from remote repositories (default: ``false``).
+NXF_OPTS                        Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of ``-Dkey[=value]`` properties.
+NXF_ORG                         Default `organization` prefix when looking for a hosted repository (default: ``nextflow-io``).
+NXF_PARAMS_FILE                 Defines the path location of the pipeline parameters file (requires version ``20.10.0`` or later).
+NXF_PID_FILE                    Name of the file where the process PID is saved when Nextflow is launched in background.
+NXF_SCM_FILE                    Defines the path location of the SCM config file (requires version ``20.10.0`` or later).
+NXF_SINGULARITY_CACHEDIR        Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
+NXF_SINGULARITY_LIBRARYDIR      Directory where remote Singularity images are retrieved. It should be a directory accessible to all computing nodes (requires: ``21.09.0-edge`` or later).
+NXF_TEMP                        Directory where temporary files are stored
+NXF_VER                         Defines what version of Nextflow to use.
+NXF_WORK                        Directory where working files are stored (usually your *scratch* directory)
 JAVA_HOME                       Defines the path location of the Java VM installation used to run Nextflow.
 JAVA_CMD                        Defines the path location of the Java binary command used to launch Nextflow.
 HTTP_PROXY                      Defines the HTTP proxy server. As of version ``21.06.0-edge``, proxy authentication is supported providing the credentials in the proxy URL e.g. ``http://user:password@proxy-host.com:port``.

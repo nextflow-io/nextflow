@@ -21,11 +21,10 @@ Resource requests and other job characteristics can be controlled via the follow
 * :ref:`process-time`
 
 .. note::
+    LSF supports both *per-core* and *per-job* memory limits. Nextflow assumes that LSF works in the
+    *per-core* memory limit mode, thus it divides the requested :ref:`process-memory` by the number of requested :ref:`process-cpus`.
 
-    LSF supports both *per-core* and *per-job* memory limit. Nextflow assumes that LSF works in the
-    *per-core* memory limits mode, thus it divides the requested :ref:`process-memory` by the number of requested :ref:`process-cpus`.
-
-    This is not required when LSF is configured to work in *per-job* memory limit mode. You will need to specified that
+    This is not required when LSF is configured to work in *per-job* memory limit mode. You will need to specify it by
     adding the option ``perJobMemLimit`` in :ref:`config-executor` in the Nextflow configuration file.
 
     See also the `Platform LSF documentation <https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_job_memlimit.5.dita>`_.

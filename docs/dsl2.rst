@@ -48,6 +48,7 @@ For example::
             fib(x-1) + fib(x-2)
     }
 
+
 Process
 =======
 
@@ -73,7 +74,7 @@ input channels as parameters as if it were a custom function. For example::
           """
     }
 
-     process bar {
+    process bar {
         input:
           path x
 
@@ -91,7 +92,6 @@ input channels as parameters as if it were a custom function. For example::
         foo()
         bar(data)
     }
-
 
 .. warning::
   A process component can be invoked only once in the same workflow context.
@@ -121,10 +121,10 @@ process object. For example::
         bar.out.view()
     }
 
-
 When a process defines two or more output channels, each of them can be accessed
 using the array element operator e.g. ``out[0]``, ``out[1]``, etc. or using
 *named outputs* (see below).
+
 
 Process named output
 --------------------
@@ -145,7 +145,8 @@ can be used to reference the channel within the caller scope. For example::
         foo()
         foo.out.samples_bam.view()
     }
-    
+
+
 Process named stdout
 --------------------
 
@@ -170,6 +171,7 @@ The ``emit`` option can be used also to name the stdout::
         sayHello.out.verbiage.view()
     }
 
+
 Workflow
 ========
 
@@ -184,7 +186,6 @@ invocation of one or more processes and operators::
         bar( foo.out.collect() )
     }
 
-
 For example, the above snippet defines a workflow component, named ``my_pipeline``, that can be invoked from
 another workflow component definition as any other function or process with ``my_pipeline()``.
 
@@ -194,14 +195,14 @@ Workflow parameters
 
 A workflow component can access any variable and parameter defined in the outer scope::
 
-        params.data = '/some/data/file'
+    params.data = '/some/data/file'
 
-        workflow my_pipeline {
-            if( params.data )
-                bar(params.data)
-            else
-                bar(foo())
-        }
+    workflow my_pipeline {
+        if( params.data )
+            bar(params.data)
+        else
+            bar(foo())
+    }
 
 
 Workflow input
@@ -209,12 +210,12 @@ Workflow input
 
 A workflow component can declare one or more input channels using the ``take`` keyword. For example::
 
-        workflow my_pipeline {
-            take: data
-            main:
-              foo(data)
-              bar(foo.out)
-        }
+    workflow my_pipeline {
+        take: data
+        main:
+            foo(data)
+            bar(foo.out)
+    }
 
 .. warning::
   When the ``take`` keyword is used, the beginning of the workflow body must be identified with the
@@ -227,8 +228,8 @@ Then, the input can be specified as an argument in the workflow invocation state
     }
 
 .. note::
-  Workflow inputs are by definition *channel* data structures. If a basic data type is provided
-  instead, ie. number, string, list, etc. it's implicitly converted to a :ref:`channel value <channel-type-value>`
+  Workflow inputs are always channels by definition. If a basic data type is provided instead,
+  such as a number, string, list, etc. it is implicitly converted to a :ref:`channel value <channel-type-value>`
   (ie. non-consumable).
 
 
@@ -249,6 +250,7 @@ Then, the result of the ``my_pipeline`` execution can be accessed using the ``ou
 ``my_pipeline.out``. When multiple output channels are declared, use the array bracket notation
 to access each output channel as described for the `Process output`_ definition.
 
+
 Workflow named output
 ---------------------
 If the output channel is assigned to an identifier in the ``emit`` declaration, such identifier can be used
@@ -265,19 +267,19 @@ to reference the channel within the caller scope. For example::
 Then, the result of the above snippet can accessed using ``my_pipeline.out.my_data``.
 
 
-Entry point of execution
-------------------------
+Workflow entrypoint
+-------------------
 
 A workflow definition which does not declare any name (also known as *implicit workflow*) is
 the entry point of execution for the workflow application.
 
 .. note::
-  Implicit workflow definition is ignored when a script is included as module. This
-  allows the writing of a workflow script that can be used either as a library module and as
-  application script. 
+  Implicit workflow definition is ignored when a script is included as a module. This
+  allows the writing of a workflow script that can be used either as a library module or as
+  an application script. 
 
 .. tip::
-  An alternative named workflow entry can be specified using the ``-entry`` command line option.
+  A different workflow entrypoint can be specified using the ``-entry`` command line option.
 
 
 Workflow composition
@@ -309,21 +311,20 @@ as any other process in your application.
     workflow {
         take: data
         main:
-          flow1(data)
-          flow2(flow1.out)
+            flow1(data)
+            flow2(flow1.out)
     }
-
 
 .. note::
     Nested workflow execution determines an implicit scope. Therefore the same process can be
     invoked in two different workflow scopes, like for example ``foo`` in the above snippet that
-    is used either in ``flow1`` and ``flow2``. The workflow execution path along with the
-    process names defines the process *fully qualified name* that is used to distinguish the
+    is used both in ``flow1`` and ``flow2``. The workflow execution path, along with the
+    process names, determines the *fully qualified process name* that is used to distinguish the
     two different process invocations, i.e. ``flow1:foo`` and ``flow2:foo`` in the above example.
 
 .. tip::
-    The process fully qualified name can be used as a valid :ref:`process selector <config-process-selectors>` in the
-    ``nextflow.config`` file and it has priority over the process simple name.
+    The fully qualified process name can be used as a valid :ref:`process selector <config-process-selectors>` in the
+    ``nextflow.config`` file and it has priority over the simple process name.
 
 
 Modules
@@ -336,7 +337,8 @@ A module script (or simply, module) can contain the definition of functions, pro
 as described in the previous sections.
 
 .. note::
-    Functions, processes and workflows are globally referred as *components*.
+    Functions, processes and workflows are globally referred to as *components*.
+
 
 Module inclusion
 ----------------
@@ -358,7 +360,9 @@ execution context. This way, `foo`` can be invoked in the ``workflow`` scope.
 Nextflow implicitly looks for the script file ``./some/module.nf`` resolving the path
 against the *including* script location.
 
-.. note:: Relative paths must begin with the ``./`` prefix. Also, the ``include`` statement must be defined **outside** of the workflow definition.
+.. note::
+    Relative paths must begin with the ``./`` prefix. Also, the ``include`` statement must be defined **outside** of the workflow definition.
+
 
 Multiple inclusions
 -------------------
@@ -429,18 +433,15 @@ The above snippet prints::
 
     Hola Mundo
 
-
 .. note::
   The module inherits the parameters defined *before* the ``include`` statement, therefore any further
   parameter set later is ignored.
 
 .. tip::
-  Define all pipeline parameters at the beginning of the script *before*
-  any ``include`` declaration.
+  Define all pipeline parameters at the beginning of the script *before* any ``include`` declaration.
 
 The option ``addParams`` can be used to extend the module parameters without affecting the external
 scope. For example::
-
 
     include {sayHello} from './some/module' addParams(foo: 'Ciao')
 
@@ -448,19 +449,19 @@ scope. For example::
         sayHello()
     }
 
-
 The above snippet prints::
 
     Ciao world!
 
-
 Finally, the include option ``params`` allows the specification of one or more parameters without
 inheriting any value from the external environment. 
+
 
 .. _module-templates:
 
 Module templates
 -----------------
+
 The module script can be defined in an external :ref:`template <process-template>` file. With DSL2 the template file
 can be placed under the ``templates`` directory where the module script is located.
 
@@ -537,7 +538,6 @@ For example::
         .map{ it.reverse() }
         .view()
 
-
 The same is valid for the result (channel) of a process execution. Therefore a process output can be consumed by
 two or more processes without the need to fork it using the :ref:`operator-into` operator, making the
 writing of workflow scripts more fluent and readable.
@@ -565,8 +565,6 @@ Nextflow processes and operators can be composed using the ``|`` *pipe* operator
     workflow {
        channel.from('Hello','Hola','Ciao') | foo | map { it.toUpperCase() } | view
     }
-
-
 
 The above snippet defines a process named ``foo`` and invokes it passing the content of the
 ``data`` channel. The result is then piped to the :ref:`operator-map` operator which converts each string
@@ -605,7 +603,6 @@ channel(s). For example::
         channel.from('Hello') | map { it.reverse() } | (foo & bar) | mix | view
     }
 
-
 In the above snippet the channel emitting the ``Hello`` string is piped with the :ref:`operator-map`
 which reverses the string value. Then, the result is passed to both ``foo`` and ``bar``
 processes which are executed in parallel. Each process outputs a channel, and the two channels are merged
@@ -613,20 +610,16 @@ into a single channel using the :ref:`operator-mix` operator. Finally the result
 using the :ref:`operator-view` operator.
 
 .. tip::
-  The break-line operator ``\`` can be used to split long pipe concatenations
-  over multiple lines.
-
-
-The above snippet can be written as shown below::
+  The break-line operator ``\`` can be used to split long pipe concatenations over multiple lines.
+  The above snippet can also be written as::
 
     workflow {
-       channel.from('Hello') \
-         | map { it.reverse() } \
-         | (foo & bar) \
-         | mix \
-         | view
+        channel.from('Hello') \
+          | map { it.reverse() } \
+          | (foo & bar) \
+          | mix \
+          | view
     }
-
 
 
 DSL2 migration notes
@@ -681,10 +674,8 @@ DSL2 migration notes
           '''
         }
 
-
 * The use of unqualified value and file elements into output tuples is not allowed anymore. Replace them with a corresponding
   ``val`` or ``path`` qualifier::
-
 
         process foo {
         output:
@@ -710,7 +701,6 @@ DSL2 migration notes
           '''
         }
 
-
 * Operator :ref:`channel-bind1` has been deprecated by DSL2 syntax
 * Operator :ref:`channel-bind2` has been deprecated by DSL2 syntax.
 * Operator :ref:`operator-choice` has been deprecated by DSL2 syntax. Use :ref:`operator-branch` instead.
@@ -725,4 +715,3 @@ DSL2 migration notes
 * Operator :ref:`operator-separate` has been deprecated by DSL2 syntax.
 * Operator :ref:`operator-spread` has been deprecated with DSL2 syntax. Replace it with :ref:`operator-combine`.
 * Operator route has been deprecated by DSL2 syntax.
-

@@ -22,7 +22,7 @@ Resource requests and other job characteristics can be controlled via the follow
 * :ref:`process-memory`
 
 .. warning::
-  This API works well for coarse-grained workloads i.e. long running jobs, but is not ideal for pipelines that spawn many short-lived tasks.
+  This API works well for coarse-grained workloads, i.e. long-running jobs, but is not ideal for pipelines that spawn many short-lived tasks.
 
 
 Requirements
@@ -31,13 +31,13 @@ Requirements
 Nextflow
 --------
 
-The support for Google Cloud requires Nextflow version ``20.01.0`` or later. To install it define the following variables
-in your system environment::
+The support for Google Cloud requires Nextflow version ``20.01.0`` or later.
+
+If using a version of Nextflow prior to ``21.04.0``, you must also define the following environment variables::
 
     export NXF_VER=20.01.0
     export NXF_MODE=google
 
-.. note:: As of version ``21.04.0`` or later the above variables are not required anymore and therefore should not be used.
 
 Credentials
 -----------
@@ -97,7 +97,8 @@ Configuration
 Make sure to have defined in your environment the ``GOOGLE_APPLICATION_CREDENTIALS`` variable.
 See the section `Requirements`_ for details.
 
-.. tip:: Make sure to have enabled Cloud Life Sciences API to use this feature. To learn how to enable it
+.. tip::
+  Make sure to enable the Cloud Life Sciences API beforehand. To learn how to enable it
   follow `this link <https://cloud.google.com/life-sciences/docs/quickstart>`_.
 
 Create a ``nextflow.config`` file in the project root directory. The config must specify the following parameters:
@@ -121,10 +122,9 @@ Example::
         zone = 'europe-west1-b'
     }
 
+.. warning:: Make sure to specify the project ID, not the project name.
 
-.. warning:: Make sure to specify in the above setting the project ID not the project name.
-
-.. Note:: A container image must be specified to deploy the process execution. You can use a different Docker image for
+.. note:: A container image must be specified to deploy the process execution. You can use a different Docker image for
   each process using one or more :ref:`config-process-selectors`.
 
 The following configuration options are available:
@@ -155,6 +155,7 @@ google.storage.maxTransferAttempts             Max number of downloads attempts 
 google.storage.parallelThreadCount             Defines the value for the option ``GSUtil:parallel_thread_count`` used by ``gsutil`` for transfer input and output data (default: ``1``, requires version ``21.06.0-edge`` or later).
 google.storage.downloadMaxComponents           Defines the value for the option ``GSUtil:sliced_object_download_max_components`` used by ``gsutil`` for transfer input and output data (default: ``8``, requires version ``21.06.0-edge`` or later).
 ============================================== =================
+
 
 Process definition
 ------------------
@@ -189,6 +190,7 @@ Examples::
         """
     }
 
+
 Pipeline execution
 ------------------
 
@@ -200,8 +202,10 @@ the ``-work-dir`` command line options. For example::
 
     nextflow run <script or project name> -work-dir gs://my-bucket/some/path
 
-.. tip:: Any input data **not** stored in a Google Storage bucket will automatically be transferred to the
-  pipeline work bucket. Use this feature with caution being careful to avoid unnecessary data transfers.
+.. warning::
+  Any input data **not** stored in a Google Storage bucket will automatically be transferred to the
+  pipeline work bucket. Use this feature with caution, in order to avoid unnecessary data transfers.
+
 
 Preemptible instances
 ---------------------
@@ -217,13 +221,16 @@ to add the following retry strategy to your config file to instruct Nextflow to 
 if the virtual machine was terminated preemptively::
 
     process {
-      errorStrategy = { task.exitStatus==14 ? 'retry' : 'terminate' }
-      maxRetries = 5
+        errorStrategy = { task.exitStatus==14 ? 'retry' : 'terminate' }
+        maxRetries = 5
     }
 
-.. note:: Preemptible instances have a `runtime limit <https://cloud.google.com/compute/docs/instances/preemptible>`_ of 24 hours.
+.. warning::
+  Preemptible instances have a `runtime limit <https://cloud.google.com/compute/docs/instances/preemptible>`_ of 24 hours.
 
-.. tip:: For an exhaustive list of all possible error codes, please refer to the official Google LifeSciences `documentation <https://cloud.google.com/life-sciences/docs/troubleshooting#error_codes>`_.
+.. tip::
+  For an exhaustive list of all error codes, please refer to the official Google Life Sciences `documentation <https://cloud.google.com/life-sciences/docs/troubleshooting#error_codes>`_.
+
 
 Hybrid execution
 ----------------
@@ -254,19 +261,23 @@ specify the local storage for the jobs computed locally::
 
     nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
 
-.. warning:: The Google Storage path needs to contain at least sub-directory. Don't use only the
-  bucket name e.g. ``gs://my-bucket``.
+.. warning::
+  The Google Storage path needs to contain at least one sub-directory, e.g. ``gs://my-bucket/work``
+  rather than only ``gs://my-bucket``.
+
 
 Quotas
 ------
 
 Compute resources in Google Cloud are subject to `resource quotas <https://cloud.google.com/compute/quotas>`_ which may affect your ability to run pipelines at scale. You can request quota increases, and your quotas may automatically increase over time as you use the platform. In particular, GPU quotas are initially set to 0, so you must explicitly request a quota increase in order to use GPUs. Initially you can request an increase to 1 GPU at a time, and after one billing cycle you may be able to increase it further.
 
+
 Limitations
 -----------
 
 * Currently it's not possible to specify a disk type different from the default one assigned
   by the service depending on the chosen instance type.
+
 
 Troubleshooting
 ---------------
@@ -290,4 +301,3 @@ Troubleshooting
 
 * Make sure you are choosing a ``location`` where  `Cloud Life Sciences API is available <https://cloud.google.com/life-sciences/docs/concepts/locations>`_,
   and a ``region`` or ``zone`` where `Compute Engine is available <https://cloud.google.com/compute/docs/regions-zones/>`_.
-

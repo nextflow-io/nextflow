@@ -25,6 +25,7 @@ Contents:
    conda
    amazons3
    tracing
+   metrics
    sharing
    metadata
    mail

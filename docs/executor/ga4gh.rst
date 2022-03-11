@@ -3,8 +3,7 @@
 GA4GH TES
 =========
 
-.. warning:: This is an experimental feature and it may change in a future release. It requires Nextflow
-  version 0.31.0 or later.
+.. warning:: This feature is experimental and may change in a future release.
 
 The `Task Execution Schema <https://github.com/ga4gh/task-execution-schemas>`_ (TES) project
 by the `GA4GH <https://www.ga4gh.org>`_ standardisation initiative is an effort to define a
@@ -27,16 +26,19 @@ image to use, i.e.::
 
     nextflow run rnaseq-nf -with-docker alpine
 
-.. note:: If the variable ``NXF_EXECUTOR_TES_ENDPOINT`` is omitted the default endpoint is ``http://localhost:8000``.
+.. note::
+  If the variable ``NXF_EXECUTOR_TES_ENDPOINT`` is omitted, the default endpoint is ``http://localhost:8000``.
 
-.. tip:: You can use a local `Funnel <https://ohsu-comp-bio.github.io/funnel/>`_ server using the following launch
+.. tip::
+  You can use a local `Funnel <https://ohsu-comp-bio.github.io/funnel/>`_ server using the following launch
   command line::
 
-  ./funnel server --Server.HTTPPort 8000 --LocalStorage.AllowedDirs $HOME run
+    ./funnel server --Server.HTTPPort 8000 --LocalStorage.AllowedDirs $HOME run
 
   (tested with version 0.8.0 on macOS)
 
-.. warning:: Make sure the TES back-end can access the workflow work directory when
+.. warning::
+  Make sure the TES backend can access the Nextflow work directory when
   data is exchanged using a local or shared file system.
 
 **Known Limitations**

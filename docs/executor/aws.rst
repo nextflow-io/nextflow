@@ -44,7 +44,8 @@ Alternatively AWS credentials can be specified in the Nextflow configuration fil
 
 See :ref:`AWS configuration<config-aws>` for more details.
 
-.. note:: Credentials can also be provided by using an IAM Instance Role. The benefit of this approach is that
+.. note::
+  Credentials can also be provided by using an IAM Instance Role. The benefit of this approach is that
   it spares you from managing/distributing AWS keys explicitly.
   Read the `IAM Roles <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html>`_ documentation
   and `this blog post <https://aws.amazon.com/blogs/security/granting-permission-to-launch-ec2-instances-with-iam-roles-passrole-permission/>`_ for more details.
@@ -290,9 +291,10 @@ In the EC2 Dashboard, click the `Launch Instance` button, then choose `AWS Marke
 `ECS` in the search box. In result list select `Amazon ECS-Optimized Amazon Linux 2 AMI`, then continue as usual to
 configure and launch the instance.
 
-.. note:: The selected instance has a bootstrap volume of 8GB and a second EBS volume 30G for computation which is
-  hardly enough for real world genomic workloads. Make sure to specify an amount of storage in the second volume
-  large enough for the needs of your pipeline execution.
+.. note::
+  The selected instance has a bootstrap volume of 8 GB and a second EBS volume of 30 GB for computation, which is
+  hardly enough for real genomic workloads. Make sure to specify a sufficient amount of storage in the second volume
+  for your pipeline.
 
 When the instance is running, SSH into it (or connect with the Session Manager service), install the AWS CLI tool
 or any other tool that may be required (see next sections).
@@ -301,7 +303,8 @@ Once done that, create a new AMI by using the *Create Image* option in the EC2 D
 
 The new AMI ID needs to be specified when creating the Batch Compute Environment.
 
-.. warning:: Any installation must be completed on the EC2 instance BEFORE creating the AMI.
+.. warning::
+  Any installation must be completed on the EC2 instance *before* creating the AMI.
 
 
 .. _aws-cli:
@@ -309,8 +312,9 @@ The new AMI ID needs to be specified when creating the Batch Compute Environment
 AWS CLI installation
 --------------------
 
-.. warning:: The `AWS CLI tool <https://aws.amazon.com/cli>`_ must to be installed in your custom AMI
-  by using a self-contained package manager such as `Conda <https://conda.io>`_.
+.. warning::
+  The `AWS CLI <https://aws.amazon.com/cli>`_ must to be installed in your custom AMI
+  using a self-contained package manager such as `Conda <https://conda.io>`_.
 
 The reason is that when the AWS CLI tool executes using Conda it will use the version of python supplied by Conda.
 If you don't use Conda and install the AWS CLI using something like `pip <https://pypi.org/project/pip/>`_ the ``aws``
@@ -341,12 +345,14 @@ configuration as shown below::
 
 Replace the path above with the one matching the location where ``aws`` tool is installed in your AMI.
 
-.. warning:: The grandparent directory of the ``aws`` tool will be mounted into the container at the same path as the host,
+.. warning::
+  The grandparent directory of the ``aws`` tool will be mounted into the container at the same path as the host,
   e.g. ``/home/ec2-user/miniconda``, which will shadow existing files in the container.
   Ensure you use a path that is not already present in the container.
 
-.. note:: Using a version of Nextflow prior 19.07.x the config setting `executor.awscli` should be used
-  instead of `aws.batch.cliPath`.
+.. note::
+  In versions of Nextflow prior to 19.07.x, the config setting ``executor.awscli`` should be used
+  instead of ``aws.batch.cliPath``.
 
 Docker installation
 -------------------
@@ -387,7 +393,8 @@ To test the installation::
 
     curl -s http://localhost:51678/v1/metadata | python -mjson.tool (test)
 
-.. note:: The ``AmazonEC2ContainerServiceforEC2Role`` policy must be attached to the instance role in order to be able to
+.. note::
+    The ``AmazonEC2ContainerServiceforEC2Role`` policy must be attached to the instance role in order to be able to
     connect the EC2 instance created by the Compute Environment to the ECS container.
 
 
@@ -423,8 +430,8 @@ The pipeline execution must specifies a AWS Storage bucket where jobs intermedia
   nextflow run my-pipeline -bucket-dir s3://my-bucket/some/path
 
 .. warning::
-  The bucket path should include at least a top level directory name e.g. use ``s3://my-bucket/work``
-  not just ``s3://my-bucket``. 
+  The bucket path should include at least a top level directory name, e.g. ``s3://my-bucket/work``
+  rather than only ``s3://my-bucket``. 
 
 Hybrid workloads
 ----------------
