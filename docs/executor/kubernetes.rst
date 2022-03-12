@@ -93,8 +93,8 @@ For debugging purpose it's possible to execute a Nextflow pod and launch an inte
 This command creates a pod, sets up the volume claim(s), configures the Nextflow environment and finally launches a Bash
 login session.  
 
-.. warning:: The pod is automatically destroyed once the shell session terminates. Do not use it to start long-running
-  workflow executions in the background.
+.. warning:: The pod is automatically destroyed once the shell session terminates. Do not use it to launch long-running
+  workflows in the background.
 
 
 Running in a pod
@@ -139,15 +139,14 @@ The process :ref:`process-pod` directive allows the definition of pods specific 
 secrets and config maps when using the :ref:`k8s-executor` executor. See the :ref:`process-pod` directive for more details.
 
 
-Limitation
-==========
+Limitations
+===========
 
-.. note::
-  The ``kuberun`` command does not allow the execution of local Nextflow scripts. It is intended only as
-  a shortcut to simple pipeline deployment into a Kubernetes cluster.
+The ``kuberun`` command does not allow the execution of local Nextflow scripts. It is only intended as
+a convenient way to test the deployment of pipelines to a Kubernetes cluster.
 
-  For stable pipeline deployment, Nextflow needs to be executed as a pod as mentioned in the `Running in a pod`_ section.
-  Consider using a managed service such as `Nextflow Tower <https://tower.nf>`_.
+For production usage, Nextflow should be executed as a pod as mentioned in the `Running in a pod`_ section.
+Consider using a managed service such as `Nextflow Tower <https://tower.nf>`_.
 
 
 Advanced configuration

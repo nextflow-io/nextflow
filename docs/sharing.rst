@@ -55,7 +55,7 @@ it using the `organisation` name defined by the environment variable ``NXF_ORG``
 .. tip::
     To access a private repository, specify the access credentials by using the ``-user`` command
     line option, then the program will ask you to enter the password interactively.
-    Private repositories access credentials can also be defined in the `SCM configuration file`_.
+    Private repository access credentials can also be defined in the `SCM configuration file`_.
 
 
 Handling revisions
@@ -267,7 +267,7 @@ Create a ``github`` entry in the `SCM configuration file`_ specifying your user 
 
     }
 
-.. tip::
+.. note::
     GitHub requires the use of a personal access token (PAT) in place of a password when accessing APIs.
     Learn more about PAT and how to create it at `this link <https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token>`_.
 

@@ -77,7 +77,7 @@ variable substitutions, while strings delimited by ``'`` do not.
 In the above code fragment the ``$db`` variable is replaced by the actual value defined somewhere in the
 pipeline script.
 
-.. warning:: Since Nextflow uses the same Bash syntax for variable substitutions in strings, you need to manage them
+.. warning:: Since Nextflow uses the same Bash syntax for variable substitutions in strings, you must manage them
   carefully depending on whether you want to evaluate a *Nextflow* variable or a *Bash* variable.
 
 When you need to access a system environment variable in your script you have two options. The first choice is as
@@ -337,7 +337,7 @@ commands. The developer can use it to provide a dummy command which is expected 
 of the real one in a quicker manner. This can also be used as an alternative for the *dry-run* feature.
 
 .. tip::
-    The ``stub`` block can be defined before or after the process ``script`` definition.
+    The ``stub`` block can be defined before or after the ``script`` block.
     When the pipeline is executed with the ``-stub-run`` option and a process's ``stub``
     is not defined, the ``script`` block is executed.
 
@@ -360,7 +360,7 @@ The input block follows the syntax shown below::
 An input definition starts with an input `qualifier` and the input `name`, followed by the keyword ``from`` and
 the actual channel over which inputs are received. Finally some input optional attributes can be specified.
 
-.. note:: When the input name is the same as the channel name, the ``from`` part of the declaration can be omitted.
+.. tip:: When the input name is the same as the channel name, the ``from`` part of the declaration can be omitted.
 
 The input qualifier declares the `type` of data to be received. This information is used by Nextflow to apply the
 semantic rules associated to each qualifier and handle it properly depending on the target execution platform
@@ -484,7 +484,7 @@ in a different execution context (i.e. the folder where the job is executed) and
 execution is launched.
 
 .. tip::
-  This allows you to execute the process command multiple times without worrying about the files names changing.
+  This feature allows you to execute the process command multiple times without worrying about the file names changing.
   In other words, `Nextflow` helps you write pipeline tasks that are self-contained and decoupled from the execution
   environment. This is also the reason why you should avoid whenever possible using absolute or relative paths
   when referencing files in your pipeline processes.
@@ -836,19 +836,16 @@ the ``c`` element is discarded. It prints::
     1 and a
     2 and b
 
-.. warning:: A different semantic is applied when using a *Value channel* a.k.a. *Singleton channel*.
-
+A different semantic is applied when using a *value channel* (a.k.a. *singleton channel*).
 This kind of channel is created by the :ref:`Channel.value <channel-value>` factory method or implicitly
 when a process input specifies a simple value in the ``from`` clause.
+By definition, a value channel is bound to a single value and it can be read an unlimited
+number of times without consuming its content.
 
-By definition, a *Value channel* is bound to a single value and it can be read unlimited times without
-consuming its content.
+These properties make that when mixing a value channel with one or more (queue) channels,
+it does not affect the process termination because its content is applied repeatedly.
 
-These properties make that when mixing a *value channel* with one or more (queue) channels,
-it does not affect the process termination which only depends by the other channels and its
-content is applied repeatedly.
-
-To better understand this behavior compare the previous example with the following one::
+To better understand this behavior, compare the previous example with the following one::
 
   process bar {
     echo true
@@ -887,9 +884,10 @@ The output block follows the syntax shown below::
 Output definitions start by an output `qualifier` and the output `name`, followed by the keyword ``into`` and
 one or more channels over which outputs are sent. Finally some optional attributes can be specified.
 
-.. note:: When the output name is the same as the channel name, the ``into`` part of the declaration can be omitted.
+.. tip:: When the output name is the same as the channel name, the ``into`` part of the declaration can be omitted.
 
-.. TODO the channel is implicitly created if does not exist
+.. note:: If an output channel has not been previously declared in the pipeline script, it
+  will be implicitly created by the output declaration itself.
 
 The qualifiers that can be used in the output declaration block are the ones listed in the following table:
 
@@ -970,9 +968,6 @@ Since a file parameter using the same name is declared between the outputs, when
 file is sent over the ``numbers`` channel. A downstream process declaring the same channel as ``input`` will
 be able to receive it.
 
-.. note:: If the channel specified as output has not been previously declared in the pipeline script, it
-  will be implicitly created by the output declaration itself.
-
 .. TODO explain Path object
 
 
@@ -1008,18 +1003,15 @@ It prints::
 
 Some caveats on glob pattern behavior:
 
-* Input files are not included in the list of possible matches.
-* Glob pattern matches against both files and directory paths.
-* When a two stars pattern ``**`` is used to recourse across directories, only file paths are matched
-  i.e. directories are not included in the result list.
+* Input files are not included (unless ``includeInputs`` is ``true``)
+* Directories are included, unless the ``**`` pattern is used to recurse through directories
 
 .. warning::
   Although the input files matching a glob output declaration are not included in the
   resulting output channel, these files may still be transferred from the task scratch directory
-  to the target task work directory. Therefore, to avoid unnecessary file copies it is recommended
-  to avoid the use of loose wildcards when defining output files e.g. ``file '*'`` .
-  Instead, use a prefix or a postfix naming notation to restrict the set of matching files to
-  only the expected ones e.g. ``file 'prefix_*.sorted.bam'``. 
+  to the original task work directory. Therefore, to avoid unnecessary file copies, avoid using
+  loose wildcards when defining output files, e.g. ``file '*'``. Instead, use a prefix or a suffix
+  to restrict the set of matching files to only the expected ones, e.g. ``file 'prefix_*.sorted.bam'``. 
 
 By default all the files matching the specified glob pattern are emitted by the channel as a sole (list) item.
 It is also possible to emit each file as a sole item by adding the ``mode flatten`` attribute in the output file
@@ -1077,10 +1069,10 @@ on the actual value of the ``x`` input.
   The management of output files in Nextflow is often misunderstood.
   With other tools it is generally necessary to organize the output files into some kind of directory
   structure or to guarantee a unique file name scheme, so that result files don't overwrite each other
-  and so they can be referenced univocally by downstream tasks.
+  and so they can be referenced unequivocally by downstream tasks.
 
   With Nextflow, in most cases, you don't need to manage the naming of output files, because each task is executed
-  in its own unique temporary directory, so files produced by different tasks can never override each other.
+  in its own unique directory, so files produced by different tasks can not override each other.
   Also, metadata can be associated with outputs by using the :ref:`tuple output <process-out-tuple>` qualifier, instead of
   including them in the output file name.
 
@@ -1112,9 +1104,9 @@ includeInputs   When ``true`` any input files matching an output file glob patte
 ============== =====================
 
 .. warning::
-    Breaking change: the ``file`` qualifier interprets ``:`` as path separator, therefore ``file 'foo:bar'``
-    captures both files ``foo`` and ``bar``. The ``path`` qualifier interprets it as just a plain file name character,
-    and therefore the output definition ``path 'foo:bar'`` captures the output file with name ``foo:bar``.
+    The ``file`` qualifier interprets ``:`` as a path separator, therefore ``file 'foo:bar'``
+    captures two files named ``foo`` and ``bar``. The ``path`` qualifier, on the other hand, does not,
+    so the output definition ``path 'foo:bar'`` captures a single file named ``foo:bar``.
 
 .. tip::
     The ``path`` qualifier should be preferred over ``file`` to handle process output files
@@ -1321,7 +1313,7 @@ The above examples will request 4 GPUs of type ``nvidia-tesla-k80``.
   This directive is only used by certain executors. Refer to the
   :ref:`executor-page` page to see which executors support this directive.
 
-.. tip::
+.. note::
   The accelerator ``type`` option depends on the target execution platform. Refer to the
   platform-specific documentation for details on the available accelerators:
 
@@ -1457,7 +1449,7 @@ For example::
 Simply replace in the above script ``dockerbox:tag`` with the name of the Docker image you want to use.
 
 .. tip::
-  This is a very useful way to execute your scripts in a reproducible self-contained environment or to run your pipeline in the cloud.
+  Containers are a very useful way to execute your scripts in a reproducible self-contained environment or to run your pipeline in the cloud.
 
 .. note::
   This directive is ignored for processes that are :ref:`executed natively <process-native>`.
@@ -1616,9 +1608,9 @@ returning an error condition. For example::
 
 The number of times a failing process is re-executed is defined by the `maxRetries`_ and `maxErrors`_ directives.
 
-.. note:: More complex strategies depending on the task exit status
-  or other parametric values can be defined using a dynamic ``errorStrategy``
-  directive. See the `Dynamic directives`_ section for details.
+.. tip:: More complex strategies depending on the task exit status
+  or other parametric values can be defined using a dynamic ``errorStrategy``.
+  See the `Dynamic directives`_ section for details.
 
 See also: `maxErrors`_, `maxRetries`_ and `Dynamic computing resources`_.
 
@@ -1985,8 +1977,8 @@ The above example splits the string ``Hola`` into file chunks of a single byte. 
 are published into the ``/data/chunks`` folder.
 
 .. tip::
-  The ``publishDir`` directive can be specified more than once in order to publish the output files
-  to different target directories.
+  The ``publishDir`` directive can be specified more than once in order to publish output files
+  to different target directories based on different rules.
 
 By default files are published to the target folder creating a *symbolic link* for each process output that links
 the file produced into the process working directory. This behavior can be modified using the ``mode`` parameter.
@@ -2025,7 +2017,7 @@ move            Moves the output files into the published directory. **Note**: t
 =============== =================
 
 .. note::
-  The ``mode`` value needs to be specified as a string literal, i.e. enclosed quotes. Multiple parameters
+  The ``mode`` value must be specified as a string literal, i.e. in quotes. Multiple parameters
   need to be separated by a colon character. For example::
 
     process foo {
@@ -2041,8 +2033,8 @@ move            Moves the output files into the published directory. **Note**: t
 
 .. warning::
   Files are copied into the specified directory in an *asynchronous* manner, so they may not be immediately
-  available in the published directory at the end of the process execution. For this reason, files published by a process
-  should not be accessed by other downstream processes.
+  available in the published directory at the end of the process execution. For this reason, downstream processes
+  should not try to access output files through the publish directory, but through channels.
 
 
 .. _process-queue:
@@ -2314,7 +2306,7 @@ All directives can be assigned a dynamic value except the following:
 * `maxForks`_
 
 .. tip::
-  Assigned a string value with one or more variables is always resolved in a dynamic manner, and therefore
+  Assigning a string value with one or more variables is always resolved in a dynamic manner, and therefore
   is equivalent to the above syntax. For example, the above directive can also be written as::
 
     queue "${ entries > 100 ? 'long' : 'short' }"
@@ -2324,9 +2316,7 @@ All directives can be assigned a dynamic value except the following:
 
 .. tip::
   You can retrieve the current value of a dynamic directive in the process script by using the implicit variable ``task``,
-  which holds the directive values defined in the current task.
-
-  For example::
+  which holds the directive values defined in the current task. For example::
 
     process foo {
       queue { entries > 100 ? 'long' : 'short' }

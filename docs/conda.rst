@@ -39,7 +39,7 @@ the path of an existing Conda environment directory.
 You can specify the directory where the Conda environments are stored using the ``conda.cacheDir``
 configuration property (see the :ref:`configuration page <config-conda>` for details).
 When using a computing cluster, make sure to use a shared file system path
-accessible from all computing nodes.
+accessible from all compute nodes.
 
 .. warning:: The Conda environment feature is not supported by executors that use
   remote object storage as a work directory e.g. AWS Batch.
@@ -114,7 +114,7 @@ just listing each package name as a separate line. For example::
     bioconda::bwa=0.7.15
     bioconda::multiqc=1.4
 
-.. warning:: Like before, the extension matters. Make sure the file ends with the ``.txt`` extension.
+.. warning:: Like before, the extension matters. Make sure the dependencies file has a ``.txt`` extension.
 
 
 Use existing Conda environments

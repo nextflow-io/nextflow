@@ -35,8 +35,8 @@ or chaining it with a channel operator such as :ref:`operator-map`, :ref:`operat
 Queue channels are also created by process output declarations using the ``into`` clause.
 
 .. note::
-  The definition implies that the same queue channel cannot be used more than one time as process
-  output and more than one time as process input.
+  The definition implies that a queue channel can only be used once as a process
+  output and once as a process input.
 
 If you need to connect a process output channel to more than one process or operator use the
 :ref:`operator-into` operator to create two (or more) copies of the same channel and use each
@@ -51,7 +51,7 @@ Value channel
 A `value channel` a.k.a. *singleton channel* by definition is bound to a single value and it can be read
 unlimited times without consuming its content.
 
-.. tip:: For this reason a value channel can be used as input by more than one process.
+.. note:: For this reason a value channel can be used as input by more than one process.
 
 A value channel is created using the `value`_ factory method or by operators returning
 a single value, such us :ref:`operator-first`, :ref:`operator-last`, :ref:`operator-collect`,
@@ -103,9 +103,9 @@ The available factory methods are:
 * `value`_
 * `watchPath`_
 
-.. tip::
+.. note::
   As of version 20.07.0 the prefix ``channel.`` has been introduced as an alias of ``Channel.``, therefore factory
-  methods can be used either with the syntaxes ``channel.from()`` and ``Channel.from()``, and so on.
+  methods can be specified either as ``channel.from()`` or ``Channel.from()``, and so on.
 
 
 .. _channel-create:
@@ -114,7 +114,7 @@ create
 ------
 
 .. warning::
-    This method is deprecated and won't be available in DSL2 syntax.
+    This method is deprecated and is no longer available in DSL2 syntax.
 
 Creates a new `channel` by using the ``create`` method, as shown below::
 
@@ -192,9 +192,9 @@ The following example shows how to create a channel from a `range` of numbers or
     strings = Channel.from( 'A'..'Z' )
 
 .. note::
-  Note that when the ``from`` argument is an object implementing the (Java)
+  When the ``from`` argument is an object implementing the (Java)
   `Collection <http://docs.oracle.com/javase/7/docs/api/java/util/Collection.html>`_ interface, the resulting channel
-  emits the collection entries as individual emissions.
+  emits the collection entries as individual items.
 
 Thus the following two declarations produce an identical result even tough in the first case the items are specified
 as multiple arguments while in the second case as a single list object argument::
@@ -322,7 +322,7 @@ checkIfExists   When ``true`` throws an exception of the specified path do not e
 =============== ===================
 
 .. note::
-  More than one path or glob pattern can be specified using a list::
+  Multiple paths or glob patterns can be specified using a list::
 
       Channel.fromPath( ['/some/path/*.fq', '/other/path/*.fastq'] )
 
@@ -375,7 +375,7 @@ checkIfExists   When ``true`` throws an exception of the specified path do not e
 =============== ===================
 
 .. note::
-  More than one glob pattern can be specified using a list::
+  Multiple glob patterns can be specified using a list::
 
       Channel.fromFilePairs( ['/some/data/SRR*_{1,2}.fastq', '/other/data/QFF*_{1,2}.fastq'] )
 
@@ -476,8 +476,9 @@ You can specified more than one of these events by using a comma separated strin
         .subscribe { println "File created or modified: $it" }
 
 .. warning::
-    The ``watchPath`` factory waits endlessly for files that match the specified pattern and event(s).
-    Thus, whenever you use it in your script, the resulting pipeline will never finish.
+    The ``watchPath`` factory waits endlessly for files that match the specified pattern and event(s),
+    which means that it will cause your pipeline to run forever. Consider using the ``until`` operator
+    to close the channel when a certain condition is met (e.g. receiving a file named ``DONE``).
 
 See also: `fromPath`_ factory method.
 

@@ -458,8 +458,7 @@ empty list if no match is found::
   listOfFiles = file('some/path/*.fa')
 
 .. note::
-    Two asterisks (``**``) in a glob pattern works like ``*`` but matches any number of directory components in a
-    file system path.
+    Two asterisks (``**``) in a glob pattern works like ``*`` but also searches through subdirectories.
 
 By default, wildcard characters do not match directories or hidden files. For example, if you want to include hidden
 files in the result list, add the optional parameter ``hidden``::
@@ -522,7 +521,8 @@ Or you can save a byte array data buffer to a file, by simply writing::
 
   myFile.bytes = binaryBuffer
 
-.. warning:: The above methods read and write the ENTIRE file contents at once, in a single variable or buffer. For this
+.. warning::
+  The above methods read and write the **entire** file contents at once, in a single variable or buffer. For this
   reason, when dealing with large files it is recommended that you use a more memory efficient approach, such as
   reading/writing a file line by line or using a fixed size buffer.
 
@@ -545,8 +545,8 @@ This can also be written in a more idiomatic syntax::
         .readLines()
         .each { println it }
 
-.. note::
-    The method ``readLines()`` reads all the file content at once and returns a list containing all the lines. For
+.. warning::
+    The method ``readLines()`` reads the **entire** file at once and returns a list containing all the lines. For
     this reason, do not use it to read big files.
 
 To process a big file, use the method ``eachLine``, which reads only a single line at a time into memory::
@@ -753,7 +753,7 @@ When the source file is a directory, all its content is copied to the target dir
 
 If the target path does not exist, it will be created automatically.
 
-.. tip::
+.. note::
     The ``copyTo`` method mimics the semantics of the Linux command ``cp -r <source> <target>``, with the
     following caveat: while Linux tools often treat paths ending with a slash (e.g. ``/some/path/name/``)
     as directories, and those not (e.g. ``/some/path/name``) as regular files, Nextflow (due to its use of
@@ -789,7 +789,7 @@ If the target directory does not exist, the source is just renamed to the target
 
   /any/dir_b
 
-.. tip::
+.. note::
     The ``moveTo`` method mimics the semantics of the Linux command ``mv <source> <target>``, with the
     same caveat as that given above for ``copyTo``.
 
@@ -814,8 +814,8 @@ operation succeeds, and ``false`` otherwise::
   println result ? "OK" : "Cannot delete: $myFile"
 
 .. note::
-    This method deletes a directory ONLY if it does not contain any files or sub-directories. To
-    delete a directory and ALL its content (i.e. removing all the files and sub-directories it may
+    This method deletes a directory **only** if it does not contain any files or sub-directories. To
+    delete a directory and **all** its contents (i.e. removing all the files and sub-directories it may
     contain), use the method ``deleteDir``.
 
 

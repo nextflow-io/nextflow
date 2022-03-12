@@ -24,7 +24,7 @@ Resource requests and other job characteristics can be controlled via the follow
     SLURM partitions can be considered queues, i.e. Nextflow allows you to set partitions by using the ``queue``
     directive.
 
-.. tip::
+.. note::
     Nextflow does not provide direct support for SLURM's multi-clusters feature. If you need to
     submit workflow executions to a cluster that is not the current one, specify it by setting the
     ``SLURM_CLUSTERS`` variable in the launch environment.

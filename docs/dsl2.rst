@@ -36,7 +36,7 @@ For example::
 The above snippet defines two simple functions, that can be invoked in the workflow script as ``foo()`` which
 returns the ``Hello world`` string and ``bar(10,20)`` which returns the sum of two parameters (``30`` in this case).
 
-.. tip:: Functions implicitly return the result of the last evaluated statement.
+.. note:: Functions implicitly return the result of the last evaluated statement.
 
 The keyword ``return`` can be used to explicitly exit from a function and return the specified value.
 For example::
@@ -229,8 +229,7 @@ Then, the input can be specified as an argument in the workflow invocation state
 
 .. note::
   Workflow inputs are always channels by definition. If a basic data type is provided instead,
-  such as a number, string, list, etc. it is implicitly converted to a :ref:`channel value <channel-type-value>`
-  (ie. non-consumable).
+  such as a number, string, list, etc, it is implicitly converted to a :ref:`value channel <channel-type-value>`.
 
 
 Workflow output
@@ -610,7 +609,7 @@ into a single channel using the :ref:`operator-mix` operator. Finally the result
 using the :ref:`operator-view` operator.
 
 .. tip::
-  The break-line operator ``\`` can be used to split long pipe concatenations over multiple lines.
+  The break-line operator ``\`` can be used to split long statements over multiple lines.
   The above snippet can also be written as::
 
     workflow {

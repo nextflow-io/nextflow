@@ -87,8 +87,8 @@ a channel emitting numbers so that the `odd` values are returned::
     5
 
 .. tip:: In the above example the filter condition is wrapped in curly brackets,
-  instead of round brackets, since it specifies a :ref:`closure <script-closure>` as the operator's argument.
-  This is just a language syntax-sugar for ``filter({ it % 2 == 1 })``
+  instead of parentheses, because it specifies a :ref:`closure <script-closure>` as the operator's argument.
+  In reality it is just syntactic sugar for ``filter({ it % 2 == 1 })``
 
 
 unique
@@ -238,7 +238,7 @@ The ``take`` operator allows you to filter only the first `n` items emitted by a
     3
     Done
 
-.. tip:: By specifying the value ``-1`` the operator takes all values.
+.. tip:: Specifying a size of ``-1`` causes the operator to take all values.
 
 See also `until`_.
 
@@ -401,8 +401,9 @@ It prints the following output::
     a: 10 b: 5
     result = 15
 
-.. note:: In a common usage scenario the first parameter is used as an `accumulator` and
-  the second parameter represents the `i-th` item to be processed.
+.. tip::
+  A common use case for this operator is to use the first paramter as an `accumulator`
+  the second parameter as the `i-th` item to be processed.
 
 Optionally you can specify a `seed` value in order to initialise the accumulator parameter
 as shown below::
@@ -965,14 +966,14 @@ Finally the ``splitFastq`` operator is able to split paired-end read pair FASTQ 
 which emits tuples containing at least two elements that are the files to be splitted. For example::
 
     Channel
-        .fromFilePairs('/my/data/SRR*_{1,2}.fastq', flat:true)
-        .splitFastq(by: 100_000, pe:true, file:true)
+        .fromFilePairs('/my/data/SRR*_{1,2}.fastq', flat: true)
+        .splitFastq(by: 100_000, pe: true, file: true)
         .view()
 
-.. note:: The ``fromFilePairs`` requires the ``flat:true`` option to have the file pairs as separate elements
+.. note:: The ``fromFilePairs`` requires the ``flat: true`` option in order to emit the file pairs as separate elements
   in the produced tuples.
 
-.. warning:: This operator assumes that the order of the paired-end reads correspond with each other and both files contain
+.. note:: This operator assumes that the order of the paired-end reads correspond with each other and both files contain
   the same number of reads.
 
 Available parameters:
@@ -1038,7 +1039,7 @@ The following example shows how to split text files into chunks of 10 lines and 
         .splitText( by: 10 ) { it.toUpperCase() }
         .view()
 
-.. note:: Text chunks returned by the operator ``splitText`` are always terminated by a ``newline`` character.
+.. note:: Text chunks returned by the operator ``splitText`` are always terminated by a ``\n`` newline character.
 
 Available parameters:
 
@@ -1401,7 +1402,7 @@ The following example shows how use a `closure` to collect and sort all sequence
         .view { it.text }
 
 .. warning:: The ``collectFile`` operator needs to store files in a temporary folder that is automatically deleted on 
-    job completion. For performance reasons this folder is located in the machine's local storage,
+    workflow completion. For performance reasons this folder is located in the machine's local storage,
     and it will require as much free space as the data that is being collected. Optionally, a different temporary data
     folder can be specified by using the ``tempDir`` parameter.
 
@@ -1559,10 +1560,7 @@ It shows::
     The above *small* and *large* strings may be printed in any order
     due to the asynchronous execution of the ``view`` operator.
 
-.. tip::
-    A default fallback condition can be specified using ``true`` as the last branch condition. See the example below.
-
-::
+A default fallback condition can be specified using ``true`` as the last branch condition::
 
     Channel
         .from(1,2,3,40,50)
@@ -1590,9 +1588,6 @@ just after the condition expression. For example::
 
 .. tip:: When the ``return`` keyword is omitted, the value of the last expression statement is
   implicitly returned.
-
-.. warning:: The branch evaluation closure must be specified inline, i.e. it *cannot* be assigned to a
-  variable and passed as argument to the operator, as can be done with other operators.
 
 To create a branch criteria as variable that can be passed as an argument to more than one
 ``branch`` operator use the ``branchCriteria`` built-in method as shown below::
@@ -1702,7 +1697,7 @@ into
 ----
 
 .. warning::
-    The ``into`` operator is not available when using Nextflow DSL2 syntax.
+    The ``into`` operator is no longer available in DSL2 syntax.
 
 The ``into`` operator connects a source channel to two or more target channels in such a way the values emitted by
 the source channel are copied to the target channels. For example::
@@ -2182,7 +2177,7 @@ print
 -----
 
 .. warning::
-  The ``print`` operator is deprecated and not supported when using DSL2 syntax. Use `view`_ instead.
+  The ``print`` operator is deprecated and no longer available in DSL2 syntax. Use `view`_ instead.
 
 The ``print`` operator prints the items emitted by a channel to the standard output.
 An optional :ref:`closure <script-closure>` parameter can be specified to customise how items are printed.
@@ -2205,7 +2200,7 @@ println
 -------
 
 .. warning::
-  The ``println`` operator is deprecated and not supported when using DSL2 syntax. Use `view`_ instead.
+  The ``println`` operator is deprecated and no longer available in DSL2 syntax. Use `view`_ instead.
 
 The ``println`` operator prints the items emitted by a channel to the console standard output appending
 a *new line* character to each of them. For example::
@@ -2267,8 +2262,8 @@ It prints::
 
 .. note::
     Both the ``view`` and `print`_ (or `println`_) operators consume the items emitted by the source channel to which they
-    are applied. The main difference between them is that the former returns a newly created channel that is
-    identical to the source channel, while the latter does not. This allows the ``view`` operator to be chained like other operators.
+    are applied. The main difference between them is that ``view`` returns a newly created channel that is
+    identical to the source channel, while ``print`` does not. This allows the ``view`` operator to be chained like other operators.
 
 
 .. _operator-close:

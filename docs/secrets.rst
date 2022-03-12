@@ -55,7 +55,7 @@ Once create the secrets can be used in the pipeline configuration file as implic
 The above above snippet access the secrets ``MY_ACCESS_KEY`` and ``MY_SECRET_KEY`` previously and assign them to
 the corresponding AWS credentials settings.
 
-.. note::
+.. warning::
     Secrets **cannot** be assigned to pipeline parameters. 
 
 

@@ -85,7 +85,7 @@ The ``filter`` option makes it possible to select which entries to include in th
 
   nextflow log goofy_kilby -filter 'name =~ /foo.*/ && status == "FAILED"'
 
-.. warning:: The ``log`` command replaces the deprecated ``history`` command.
+.. note:: The ``log`` command replaces the deprecated ``history`` command.
 
 
 .. _execution-report:
@@ -238,7 +238,7 @@ error_action            The action applied on errof task failure.
 
 .. note::
   These metrics provide an estimation of the resources used by running tasks. They are not an alternative
-  to low-level performance analysis provided by other tools, and they may not be completely accurate, especially for very short-lived tasks
+  to low-level performance analysis tools, and they may not be completely accurate, especially for very short-lived tasks
   (running for less than a few seconds).
 
 Trace report layout and other configuration settings can be specified by using the ``nextflow.config`` configuration file.
@@ -304,7 +304,7 @@ svg           SVG file (*)
 gexf          Graph Exchange XML file (Gephi)
 ============ ====================
 
-.. warning::
+.. note::
   File formats marked with "*" require the `Graphviz <http://www.graphviz.org>`_ tool to be installed.
 
 The DAG produced by Nextflow for the `Unistrap <https://github.com/cbcrg/unistrap/>`_ pipeline:
@@ -346,7 +346,7 @@ trace              A process runtime information as described in the :ref:`trace
 metadata           The workflow metadata including the :ref:`config manifest<config-manifest>`. For a list of all fields, have a look at the bottom message examples. This attribute is only provided for the following events: ``started``, ``completed``.
 ================== ================
 
-.. warning::
+.. note::
   The content of the ``trace`` attribute depends on the `Trace report <trace-report>`_ settings defined in the
   ``nextflow.config`` file. See the :ref:`Trace configuration<config-trace>` section to learn more.
 

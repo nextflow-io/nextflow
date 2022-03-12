@@ -186,7 +186,7 @@ enabled             Turn this flag to ``true`` to enable Charliecloud execution 
 envWhitelist        Comma separated list of environment variable names to be included in the container environment.
 temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created.
 runOptions          This attribute can be used to provide any extra command line options supported by the ``ch-run`` command.
-cacheDir            The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
+cacheDir            The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
 pullTimeout         The amount of time the Charliecloud pull can last, exceeding which the process is terminated (default: ``20 min``).
 ================== ================
 
@@ -208,7 +208,7 @@ Scope `cloud`
 -------------
 
 .. note::
-    The ``cloud`` configuration scope has been retired.
+    The ``cloud`` configuration scope is no longer used. See the platform-specific cloud executors instead.
 
 
 .. _config-conda:
@@ -224,7 +224,7 @@ The following settings are available:
 ================== ================
 Name                Description
 ================== ================
-cacheDir            Defines the path where Conda environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all computing nodes.
+cacheDir            Defines the path where Conda environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.
 createOptions       Defines any extra command line options supported by the ``conda create`` command. For details see: https://docs.conda.io/projects/conda/en/latest/commands/create.html.
 createTimeout       Defines the amount of time the Conda environment creation can last. The creation process is terminated when the timeout is exceeded (default: ``20 min``).
 useMamba            Uses the ``mamba`` binary instead of ``conda`` to create the conda environments. For details see: https://github.com/mamba-org/mamba.
@@ -315,10 +315,10 @@ Simply prefix your variable names with the ``env`` scope or surround them by cur
         GAMMA = "/my/path:$PATH"
    }
 
-.. tip::
-  In the above example, variables like `$HOME` and `$PATH` are evaluated when the workflow is launched. If
-  you want these variables to be evaluated during task execution, escape them with `\$`. This difference is important
-  for variables like `$PATH`, which may be different in the workflow environment versus the task environment.
+.. note::
+  In the above example, variables like ``$HOME`` and ``$PATH`` are evaluated when the workflow is launched. If
+  you want these variables to be evaluated during task execution, escape them with ``\$``. This difference is important
+  for variables like ``$PATH``, which may be different in the workflow environment versus the task environment.
 
 
 .. _config-executor:
@@ -628,7 +628,7 @@ For example::
 .. tip::
   Label and process names do not need to be enclosed with quotes, provided the name
   does not include special characters (``-``, ``!``, etc) and is not a keyword or a built-in type identifier.
-  When in doubt, you can enclose the label names or the process names with single or double quotes.
+  When in doubt, you can enclose the label name or process name with single or double quotes.
 
 
 .. _config-selector-expressions:
@@ -741,7 +741,7 @@ envWhitelist        Comma separated list of environment variable names to be inc
 runOptions          This attribute can be used to provide any extra command line options supported by the ``singularity exec``.
 noHttps             Turn this flag to ``true`` to pull the Singularity image with http protocol (default: ``false``).
 autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
-cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
+cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
 pullTimeout         The amount of time the Singularity pull can last, exceeding which the process is terminated (default: ``20 min``).
 ================== ================
 
@@ -944,10 +944,10 @@ Name                            Description
 NXF_ANSI_LOG                    Enables/disables ANSI console output (default ``true`` when ANSI terminal is detected).
 NXF_ANSI_SUMMARY                Enables/disables ANSI completion summary: `true|false` (default: print summary if execution last more than 1 minute).
 NXF_ASSETS                      Defines the directory where downloaded pipeline repositories are stored (default: ``$NXF_HOME/assets``)
-NXF_CHARLIECLOUD_CACHEDIR       Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
+NXF_CHARLIECLOUD_CACHEDIR       Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 NXF_CLASSPATH                   Allows the extension of the Java runtime classpath with extra JAR files or class folders.
 NXF_CLOUD_DRIVER                Defines the default cloud driver to be used if not specified in the config file or as command line option, either ``aws`` or ``google``.
-NXF_CONDA_CACHEDIR              Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all computing nodes.
+NXF_CONDA_CACHEDIR              Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 NXF_DEBUG                       Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
 NXF_DISABLE_JOBS_CANCELLATION   Disables the cancellation of child jobs on workflow execution termination (requires ``21.12.0-edge`` or later).
 NXF_EXECUTOR                    Defines the default process executor e.g. `sge`
@@ -961,8 +961,8 @@ NXF_ORG                         Default `organization` prefix when looking for a
 NXF_PARAMS_FILE                 Defines the path location of the pipeline parameters file (requires version ``20.10.0`` or later).
 NXF_PID_FILE                    Name of the file where the process PID is saved when Nextflow is launched in background.
 NXF_SCM_FILE                    Defines the path location of the SCM config file (requires version ``20.10.0`` or later).
-NXF_SINGULARITY_CACHEDIR        Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
-NXF_SINGULARITY_LIBRARYDIR      Directory where remote Singularity images are retrieved. It should be a directory accessible to all computing nodes (requires: ``21.09.0-edge`` or later).
+NXF_SINGULARITY_CACHEDIR        Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
+NXF_SINGULARITY_LIBRARYDIR      Directory where remote Singularity images are retrieved. It should be a directory accessible to all compute nodes (requires: ``21.09.0-edge`` or later).
 NXF_TEMP                        Directory where temporary files are stored
 NXF_VER                         Defines what version of Nextflow to use.
 NXF_WORK                        Directory where working files are stored (usually your *scratch* directory)

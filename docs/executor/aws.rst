@@ -44,7 +44,7 @@ Alternatively AWS credentials can be specified in the Nextflow configuration fil
 
 See :ref:`AWS configuration<config-aws>` for more details.
 
-.. note::
+.. tip::
   Credentials can also be provided by using an IAM Instance Role. The benefit of this approach is that
   it spares you from managing/distributing AWS keys explicitly.
   Read the `IAM Roles <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html>`_ documentation
@@ -95,6 +95,7 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
   "ecr:GetLifecyclePolicyPreview"
   "ecr:ListTagsForResource"
   "ecr:DescribeImageScanFindings"
+
 
 S3 policies
 ------------
@@ -176,6 +177,7 @@ the AWS CLI tool to them.
 
 See the sections below to learn how to create a custom AMI and install the AWS CLI tool to it.
 
+
 Get started
 -------------
 
@@ -193,6 +195,7 @@ Get started
 4. Make sure your pipeline processes specifies one or more Docker containers by using the :ref:`process-container` directive.
 
 5. Container images need to be published in a Docker registry such as `Docker Hub <https://hub.docker.com/>`_, `Quay <https://quay.io/>`_ or `ECS Container Registry <https://aws.amazon.com/ecr/>`_ that can be reached by ECS Batch.
+
 
 Configuration
 -------------
@@ -284,6 +287,7 @@ to use in your Compute environments. Typically:
 
 - You need to install additional software, not available in the Docker image used to execute the job
 
+
 Create your custom AMI
 ----------------------
 
@@ -291,7 +295,7 @@ In the EC2 Dashboard, click the `Launch Instance` button, then choose `AWS Marke
 `ECS` in the search box. In result list select `Amazon ECS-Optimized Amazon Linux 2 AMI`, then continue as usual to
 configure and launch the instance.
 
-.. note::
+.. warning::
   The selected instance has a bootstrap volume of 8 GB and a second EBS volume of 30 GB for computation, which is
   hardly enough for real genomic workloads. Make sure to specify a sufficient amount of storage in the second volume
   for your pipeline.
@@ -335,7 +339,8 @@ When complete, verify that the AWS CLI package works correctly::
     $ ./miniconda/bin/aws --version
     aws-cli/1.19.79 Python/3.8.5 Linux/4.14.231-173.361.amzn2.x86_64 botocore/1.20.79
 
-.. note:: The ``aws`` tool will be placed in a directory named ``bin`` in the main installation folder.
+.. warning::
+  The ``aws`` tool will be placed in a directory named ``bin`` in the main installation folder.
   Modifying this directory structure, after the installation, will cause the tool to not work properly.
 
 To configure Nextflow to use this installation, specify the ``cliPath`` parameter in the :ref:`AWS Batch<config-aws-batch>`
@@ -353,6 +358,7 @@ Replace the path above with the one matching the location where ``aws`` tool is 
 .. note::
   In versions of Nextflow prior to 19.07.x, the config setting ``executor.awscli`` should be used
   instead of ``aws.batch.cliPath``.
+
 
 Docker installation
 -------------------
@@ -372,6 +378,7 @@ Then, add the ``ec2-user`` to the docker group so you can execute Docker command
 
 You may have to reboot your instance to provide permissions for the ``ec2-user`` to access the Docker daemon. This has
 to be done BEFORE creating the AMI from the current EC2 instance.
+
 
 Amazon ECS container agent installation
 ---------------------------------------
@@ -417,6 +424,7 @@ directive and specifing, in place of the container image name, the Job definitio
 
   process.container = 'job-definition://your-job-definition-name'
 
+
 Pipeline execution
 ------------------
 
@@ -432,6 +440,7 @@ The pipeline execution must specifies a AWS Storage bucket where jobs intermedia
 .. warning::
   The bucket path should include at least a top level directory name, e.g. ``s3://my-bucket/work``
   rather than only ``s3://my-bucket``. 
+
 
 Hybrid workloads
 ----------------
@@ -462,6 +471,7 @@ For example::
 The above configuration snippet will deploy the execution with AWS Batch only for processes annotated
 with the :ref:`process-label` ``bigTask``, the remaining process with run in the local computer.
 
+
 Volume mounts
 -------------
 
@@ -491,6 +501,7 @@ mounts the path ``/host/path`` in the host environment to the ``/mnt/path`` in t
 *read-only* access mode.
 
 .. note:: This feature requires Nextflow version 19.07.x or later.
+
 
 Troubleshooting
 ---------------

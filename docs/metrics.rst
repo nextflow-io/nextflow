@@ -76,7 +76,7 @@ Memory Usage
 
 The plot has three tabs showing the usage of the physical memory (RAM), the virtual memory (vmem) and the percentage of RAM used by the process with respect to what was set in the ``memory`` directive. The peak usage during the execution of the process is reported for both physical and virtual memories.
 
-.. tip::
+.. note::
   To better understand the memory usage plot, it is important to know that:
 
   - the total amount of memory used by a processs is the `virtual memory (vmem)`. The ``vmem`` contains all memory areas whether they are in the physical memory (RAM), in the Swap space, on the disk or shared with other processes,

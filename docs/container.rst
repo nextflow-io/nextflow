@@ -489,19 +489,19 @@ For example::
     process.container = 'file:///path/to/singularity.img'
     singularity.enabled = true
 
-.. warning:: Note the use of triple ``/`` to specify an **absolute** file path, otherwise the path is interpreted as
- relative to the workflow launch directory.
+.. warning::
+    Use three ``/`` slashes to specify an **absolute** file path, otherwise the path will be interpreted as
+    relative to the workflow launch directory.
 
 To pull images from the Singularity Hub or a third party Docker registry simply prefix the image name
-with the ``shub://``, ``docker://`` or ``docker-daemon://`` pseudo-protocol as required by the Singularity tool. For example::
+with the ``shub://`` or ``docker-daemon://`` pseudo-protocol as required by the Singularity tool. For example::
 
-    process.container = 'docker://quay.io/biocontainers/multiqc:1.3--py35_2'
+    process.container = 'shub://quay.io/biocontainers/multiqc:1.3--py35_2'
     singularity.enabled = true
 
-.. note::
-    You do not need to specify ``docker://`` to pull from a Docker repository.
-    Nextflow will automatically prepend it to your image name when Singularity is enabled.
-    Additionally, the Docker engine will not work with containers specified as ``docker://``.
+You do not need to specify ``docker://`` to pull from a Docker repository.
+Nextflow will automatically prepend it to your image name when Singularity is enabled.
+Additionally, the Docker engine will not work with containers specified as ``docker://``.
 
 Nextflow version 18.10 introduced support for the `Singularity Library <https://cloud.sylabs.io/library/>`_ repository. This feature also requires Singularity 3.0::
 

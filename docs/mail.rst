@@ -172,9 +172,10 @@ It will send a notification mail when the execution completes similar to the one
 
 .. image:: images/workflow-notification-min.png
 
-.. warning:: By default the notification message is sent by using the ``sendmail`` system tool which is assumed to be
-    available in the computer where Nextflow is running. Make sure it's properly installed and configured.
-    Alternatively, provide the SMTP server configuration settings to use the Nextflow
+.. warning::
+    By default the notification message is sent with the ``sendmail`` system tool, which is assumed to be
+    available in the environment where Nextflow is running. Make sure it's properly installed and configured.
+    Alternatively, you can provide the SMTP server configuration settings to use the Nextflow
     built-in mail support, which doesn't require any external system tool.
 
 See the `Mail configuration`_ section to learn about the available mail delivery options and configuration settings.

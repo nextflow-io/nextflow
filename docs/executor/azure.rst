@@ -47,11 +47,11 @@ The Blob storage account `name` and `key` need to be provided in the Nextflow co
 As an alternative to the account key it can also used `Shared Access Token` using the setting ``sasToken`` in place
 of the ``accountKey`` attribute.
 
-.. tip::
+.. note::
     When creating the `Shared Access Token`, make sure to allow the resource types `Container` and `Object` and allow
     the permissions: `Read`, `Write`, `Delete`, `List`, `Add`, `Create`.
 
-.. tip::
+.. note::
     The value of ``sasToken`` is the token stripped by the character ``?`` from the beginning of the token.
 
 Once the Blob Storage credentials are set you can access the files in the blob container like local files prepending
@@ -171,7 +171,7 @@ details about the configuration for the Azure Batch service.
 Pools configuration
 -------------------
 
-When using the ``autoPoolMode`` setting Nextflow automatically creates a `pool` of computing nodes to execute the
+When using the ``autoPoolMode`` setting Nextflow automatically creates a `pool` of compute nodes to execute the
 jobs run by your pipeline. By default it only uses 1 compute node of ``Standard_D4_v3`` type.
 
 The pool is not removed when the pipeline execution terminates, unless the configuration setting ``deletePoolsOnCompletion=true``
@@ -209,7 +209,7 @@ Pool specific settings, e.g. VM type and count, should be provided in the ``auto
 Named pools
 -------------
 
-If you want to have a more precise control on the computing nodes pools used in your pipeline using a different pool
+If you want to have a more precise control on the compute nodes pools used in your pipeline using a different pool
 depending on the task in your pipeline, you can use the Nextflow :ref:`process-queue` directive to specify the *ID* of a
 Azure Batch compute pool that has to be used to run that process' tasks.
 
