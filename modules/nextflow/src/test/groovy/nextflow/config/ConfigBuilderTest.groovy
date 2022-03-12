@@ -29,6 +29,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.trace.WebLogObserver
 import nextflow.util.ConfigHelper
+import spock.lang.Ignore
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -1718,6 +1719,65 @@ class ConfigBuilderTest extends Specification {
 
     }
 
+    def 'should resolve ext config' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file1 = folder.resolve('test.conf')
+        file1.text = '''
+            process {
+                ext { args = "Hello World!" } 
+                cpus = 1 
+                withName:BAR {
+                    ext { args = "Ciao mondo!" } 
+                    cpus = 2
+                }
+            }
+            '''
+
+        when:
+        def cfg1 = new ConfigBuilder().buildConfig0([:], [file1])
+        then:
+        cfg1.process.cpus == 1
+        cfg1.process.ext.args == 'Hello World!'
+        cfg1.process.'withName:BAR'.cpus == 2
+        cfg1.process.'withName:BAR'.ext.args == "Ciao mondo!"
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    // issue 2422 - https://github.com/nextflow-io/nextflow/issues/2422
+    // ideally this should behave as the previous test
+    @Ignore
+    def 'should resolve ext config with properties' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file1 = folder.resolve('test.conf')
+        file1.text = '''
+            process {
+                ext.args = "Hello World!" 
+                cpus = 1 
+                withName:BAR {
+                    ext.args = "Ciao mondo!"
+                    cpus = 2
+                }
+            }
+            '''
+
+        when:
+        def cfg1 = new ConfigBuilder().buildConfig0([:], [file1])
+        then:
+        cfg1.process.cpus == 1
+        cfg1.process.ext.args == 'Hello World!'
+        cfg1.process.'withName:BAR'.cpus == 2
+        cfg1.process.'withName:BAR'.ext.args == "Ciao mondo!"
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should access top params from profile' () {
         given:
         def folder = Files.createTempDirectory('test')
@@ -2050,5 +2110,56 @@ class ConfigBuilderTest extends Specification {
         cleanup:
         base?.deleteDir()
     }
+
+    def 'should merge profiles with conditions' () {
+        given:
+        def folder = Files.createTempDirectory("mergeprofiles")
+        def main = folder.resolve('main.conf')
+        def test = folder.resolve('test.conf')
+        def process = folder.resolve('process.conf')
+
+        main.text = '''
+        params {
+            load_config = null
+            present = true
+        }
+        
+        profiles {
+            test { includeConfig 'test.conf' }
+        }
+        
+        if (params.load_config) {
+            includeConfig 'process.conf'
+        }        
+        '''
+        test.text = '''
+        params {
+            load_config = true
+        }    
+        '''
+
+        process.text = '''
+        process {
+            withName: FOO {
+                ext.args = '--quiet'
+            }
+        }        
+        params{
+            another = true
+        }
+        '''
+
+        when:
+        def cfg = new ConfigBuilder().setProfile('test').buildConfig0([:], [main])
+        then:
+        cfg.process.'withName:FOO'
+        cfg.params.load_config == true
+        cfg.params.present == true
+        cfg.params.another == true
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }
 
