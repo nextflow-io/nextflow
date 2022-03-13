@@ -338,6 +338,11 @@ perJobMemLimit        Specifies Platform LSF *per-job* memory limit mode. See :r
 jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }`` Note: when using this option you need to make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
 cpus                  The maximum number of CPUs made available by the underlying system (only used by the ``local`` executor).
 memory                The maximum amount of memory made available by the underlying system (only used by the ``local`` executor).
+retry.delay           Delay when re-retying failed submit operations (default: ``500ms``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later).
+retry.maxDelay        Max delay when re-retying failed submit operations (default: ``30s``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later).
+retry.jitter          Jitter value when re-retying failed submit operations (default: ``0.25``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later)
+retry.maxAttempts     Max attempts when re-retying failed submit operations (default: ``3``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later)
+retry.reason          Regex pattern that when verified cause a failed submit operation to be re-tried (default: ``Socket timed out``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later)
 ===================== =====================
 
 The executor settings can be defined as shown below::
