@@ -1108,7 +1108,7 @@ class Session implements ISession {
             log.trace "Clean workdir complete"
         }
         catch( Exception e ) {
-            log.warn("Failed to cleanup work dir: $workDir")
+            log.warn("Failed to cleanup work dir: ${workDir.toUriString()}")
         }
         finally {
             db.close()
