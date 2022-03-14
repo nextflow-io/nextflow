@@ -58,7 +58,7 @@ class DirWatcher implements DirListener {
 
     private WatchEvent.Kind<Path>[] watchEvents
 
-    private PathMatcher dirMatcher
+    private List<PathMatcher> dirMatchers
 
     private PathMatcher fileMatcher
 
@@ -92,19 +92,22 @@ class DirWatcher implements DirListener {
         this.skipHidden = skipHidden
         this.base = fs.getPath(folder)
         this.watchEvents = stringToWatchEvents(events)
+        this.dirMatchers = []
         this.fs = fs
 
         this.fileRule = "$syntax:${folder}${pattern}"
         this.fileMatcher = FileHelper.getPathMatcherFor(fileRule, base.fileSystem)
 
-        def p = pattern.indexOf('/')
-        if( p>0 ) {
-            dirRule = "$syntax:${pattern.substring(0,p)}"
-            dirMatcher = FileHelper.getPathMatcherFor(dirRule, base.fileSystem)
+        pattern
+        .findIndexValues { it == '/'}
+        .each { idx ->
+            def prefix = pattern.substring(0, idx as int)
+            dirRule = "$syntax:${prefix}"
+            dirMatchers << FileHelper.getPathMatcherFor(dirRule, base.fileSystem)
         }
-        else if( pattern.contains('**') ) {
+        if( pattern.contains('**') ) {
             dirRule = "$syntax:**"
-            dirMatcher = FileHelper.getPathMatcherFor(dirRule, base.fileSystem)
+            dirMatchers << FileHelper.getPathMatcherFor(dirRule, base.fileSystem)
         }
 
     }
@@ -145,7 +148,7 @@ class DirWatcher implements DirListener {
 
     }
 
-    private void register (Path folder, PathMatcher matcher) {
+    private void register (Path folder, PathMatcher matcher, Boolean emitMatchingFiles = false) {
         assert folder
         assert matcher
 
@@ -154,13 +157,22 @@ class DirWatcher implements DirListener {
             FileVisitResult preVisitDirectory(Path path, BasicFileAttributes attrs) throws IOException
             {
                 def dir = base.relativize(path)
-                if( matcher.matches(dir) ) {
+                def dm = dirMatchers.find { dm -> dm.matches(dir) }
+                if( dm ) {
                     register(path)
                 }
                 else {
                     log.trace "Skip watcher for dir=$dir; matcher-rule=$dirRule"
                 }
-                return FileVisitResult.CONTINUE;
+                return FileVisitResult.CONTINUE
+            }
+            @Override
+            FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException
+            {
+                if ( emitMatchingFiles && watchEvents.contains(ENTRY_CREATE) && fileMatcher.matches(path) ) {
+                    onNext.call(path)
+                }
+                return FileVisitResult.CONTINUE
             }
         })
 
@@ -175,7 +187,8 @@ class DirWatcher implements DirListener {
 
     private void apply0() {
 
-        dirMatcher ? register(base,dirMatcher) : register(base)
+        for (dm in dirMatchers) { register(base,dm) }
+        if ( ! dirMatchers ) { } register(base)
 
         while( !terminated ) {
             // wait for key to be signaled
@@ -183,6 +196,7 @@ class DirWatcher implements DirListener {
                 WatchKey key = watcher.take()
                 if( !key )
                     continue
+
                 def path = watchedPaths.get(key)
                 if( !path ) {
                     log.error "Unknown file watch key: $key"
@@ -207,8 +221,14 @@ class DirWatcher implements DirListener {
                         onNext.call(target)
                     }
 
-                    if( kind == ENTRY_CREATE && dirMatcher && Files.isDirectory(target, LinkOption.NOFOLLOW_LINKS) ) {
-                        register(target, dirMatcher)
+                    if( kind == ENTRY_CREATE && dirMatchers && Files.isDirectory(target, LinkOption.NOFOLLOW_LINKS) ) {
+                        def targetdir = base.relativize(target)
+                        def dm = dirMatchers.find { dm -> dm.matches(targetdir) }
+                        // If we find a new directory created that contains files
+                        // it means that the files were created *before* the watcher
+                        // could be attached. Force those files by setting the
+                        // "emitMatchingFiles" parameter to true
+                        if( dm ) { register(target, dm, true) }
                     }
                 }
 
@@ -217,7 +237,10 @@ class DirWatcher implements DirListener {
                 // the directory is inaccessible so exit the loop.
                 boolean valid = key.reset();
                 if (!valid) {
-                    break;
+                    watchedPaths.remove(key)
+                    if (path == folder) {
+                        break
+                    }
                 }
             }
             catch (ClosedWatchServiceException e ) {
