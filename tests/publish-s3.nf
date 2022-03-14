@@ -1,3 +1,5 @@
+nextflow.enable.dsl=1
+
 process my_process {
     publishDir "s3://nextflow-ci/work/ci-test/publish-s3"
 

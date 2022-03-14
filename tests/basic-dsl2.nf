@@ -1,6 +1,5 @@
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
- 
+
 /* 
  * Command line input parameter 
  */
