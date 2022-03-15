@@ -19,7 +19,7 @@ import static nextflow.extension.Bolts.DATETIME_FORMAT
 @EqualsAndHashCode
 class NextflowMeta {
 
-    private static final Pattern DSL2_DECLARATION = ~/(?m)^\s*(nextflow\.(preview|enable)\.dsl\s*=\s*2)\s*;?\s*$/
+    private static final Pattern DSL_DECLARATION = ~/(?m)^\s*(nextflow\.(preview|enable)\.dsl\s*=\s*(\d))\s*;?\s*$/
 
     private static boolean ignoreWarnDsl2 = System.getenv('NXF_IGNORE_WARN_DSL2')=='true'
 
@@ -28,6 +28,7 @@ class NextflowMeta {
         abstract boolean strict
     }
 
+    @Deprecated
     @Slf4j
     static class Preview implements Flags {
         volatile float dsl
@@ -62,6 +63,7 @@ class NextflowMeta {
      */
     final String timestamp
 
+    @Deprecated
     final Preview preview = new Preview()
 
     final Features enable = new Features()
@@ -107,38 +109,41 @@ class NextflowMeta {
     }
 
     boolean isDsl2() {
-        preview.dsl == 2 || enable.dsl == 2
+        enable.dsl == 2
     }
 
     boolean isDsl2Final() {
         enable.dsl == 2
     }
 
-    void enableDsl2(boolean preview=false) {
-        if( preview )
-            this.preview.dsl = 2
-        else
-            this.enable.dsl = 2
+    void enableDsl2() {
+        this.enable.dsl = 2
     }
 
     void disableDsl2() {
         enable.dsl = 1
-        preview.dsl = 1
     }
 
     boolean isStrictModeEnabled() {
-        preview.strict || enable.strict
+        return enable.strict
     }
 
     void checkDsl2Mode(String script) {
-        final matcher = DSL2_DECLARATION.matcher(script)
+        final matcher = DSL_DECLARATION.matcher(script)
         final mode = matcher.find() ? matcher.group(2) : null
         if( !mode )
             return
-        if( mode == 'enable' )
-            enableDsl2()
+        final ver = matcher.group(3)
+        if( mode == 'enable' ) {
+            if( ver=='2' )
+                enableDsl2()
+            else if( ver=='1' )
+                disableDsl2()
+            else
+                throw new IllegalArgumentException("Unknown nextflow DSL version: ${ver}")
+        }
         else if( mode == 'preview' )
-            enableDsl2(true)
+            throw new IllegalArgumentException("Preview nextflow mode 'preview' is not supported anymore -- Please use `nextflow.enable.dsl=2` instead")
         else
             throw new IllegalArgumentException("Unknown nextflow mode=${matcher.group(1)}")
     }
