@@ -15,7 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+nextflow.enable.dsl=1
+
 process foo {
   errorStrategy { task.exitStatus==1 && task.attempt==1 ? 'retry' : 'ignore' }
 

@@ -63,6 +63,7 @@ subprojects {
      * Creates plugin zip and json meta file in the plugin `build/libs` directory
      */
     task makeZip(type: Jar) {
+        group 'nextflow'
         into('classes') { with jar }
         into('lib') { from configurations.runtimeClasspath }
         manifest.from file('src/resources/META-INF/MANIFEST.MF')
@@ -84,12 +85,14 @@ subprojects {
               }
             """.stripIndent()
         }
+        outputs.file("$buildDir/libs/${project.name}-${project.version}.zip")
     }
 
     /*
      * Copy the plugin dependencies in the subproject `build/target/libs` directory
      */
     task copyPluginLibs(type: Sync) {
+        group 'nextflow'
         from configurations.runtimeClasspath
         into 'build/target/libs'
     }
@@ -97,23 +100,30 @@ subprojects {
     /*
      * Copy the plugin in the project root build/plugins directory
      */
-    task copyPluginZip(type: Copy) {
-        from makeZip
+    task copyPluginZip(type: Copy, dependsOn: project.tasks.findByName('makeZip')) {
+        group 'nextflow'
+        from project.tasks.findByName('makeZip')
         into "$rootProject.buildDir/plugins"
+        outputs.file("$rootProject.buildDir/plugins/${project.name}-${project.version}.zip")
+        doLast {
+            ant.unzip(
+                    src: "$rootProject.buildDir/plugins/${project.name}-${project.version}.zip",
+                    dest: "$rootProject.buildDir/plugins/${project.name}-${project.version}"
+            )
+        }
     }
 
     /*
-     * Unzip the plugin artifact in the project root build/plugins directory
-     */
-    task unzipPlugin(type: Copy, dependsOn: copyPluginZip) {
-        from zipTree("$rootProject.buildDir/plugins/${project.name}-${project.version}.zip")
-        into "$rootProject.buildDir/plugins/${project.name}-${project.version}"
-    }
+    * "install" the plugin the project root build/plugins directory
+    */
+    project.parent.tasks.getByName("assemble").dependsOn << copyPluginZip
+
 
     /*
      * Upload the plugin zip & json meta file to the corresponding GitHub repo
      */
     task uploadPlugin(type: GithubUploader, dependsOn: makeZip) {
+        group 'nextflow'
         assets = providers.provider {["$buildDir/libs/${project.name}-${project.version}.zip",
                                       "$buildDir/libs/${project.name}-${project.version}-meta.json" ]}
         release = providers.provider { project.version }
@@ -173,7 +183,7 @@ classes.dependsOn subprojects.copyPluginLibs
 /*
  * "install" the plugin the project root build/plugins directory
  */
-assemble.dependsOn subprojects.unzipPlugin
+project.parent.tasks.getByName("assemble").dependsOn << assemble
 
 /*
  * Merge and publish the plugins index file

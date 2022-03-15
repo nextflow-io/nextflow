@@ -12,6 +12,7 @@ chmod +x bin/hello.sh
 # create the nextflow config file 
 #
 cat << EOF > nextflow.config
+nextflow.enable.dsl=1
 env.FOO = 'HOLA'
 process.container = 'quay.io/nextflow/bash'
 EOF

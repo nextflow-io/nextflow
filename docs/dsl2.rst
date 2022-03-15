@@ -12,6 +12,16 @@ your workflow script::
 
     nextflow.enable.dsl=2
 
+.. tip::
+  As of version ``22.03.0-edge`` Nextflow defaults to DSL 2 if no version version is specified explicitly.
+  You can restore the previous behavior setting in into your environment the following variable::
+
+    export NXF_DEFAULT_DSL=1
+
+
+.. note::
+  As of version ``22.03.0-edge`` the DSL version specification (either 1 or 2) can also be specified in
+  the Nextflow configuration file using the same notation shown above.
 
 Function
 ========
@@ -482,9 +492,10 @@ With the possibility to keep the template files inside the project L, A and B ca
 A future prject C would do the same, just cloning L (if not available on the system) and including its module script.
 
 Beside promoting sharing modules across pipelines, there are several advantages in keeping the module template under the script path::
-1 - module components are *self-contained*
-2 - module components can be tested independently from the pipeline(s) importing them
-3 - it is possible to create libraries of module components
+
+1. module components are *self-contained*,
+2. module components can be tested independently from the pipeline(s) importing them,
+3. it is possible to create libraries of module components.
 
 Ultimately, having multiple template locations allows a more structured organization within the same project. If a project
 has several module components, and all them use templates, the project could group module scripts and their templates as needed. For example::

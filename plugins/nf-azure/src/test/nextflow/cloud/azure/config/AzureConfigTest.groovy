@@ -197,4 +197,21 @@ class AzureConfigTest extends Specification {
         cfg.batch().pool('myPool5').fileShareRootPath == '/mnt/resource/batch/tasks/fsmounts'
    }
 
+    def 'should get azcopy options' () {
+
+        when:
+        def session = Mock(Session) {
+            getConfig() >> [ azure:
+                                     [azcopy:[
+                                             blobTier: "Hot",
+                                             blockSize: "100" ]] ]
+        }
+
+        and:
+        def cfg = AzConfig.getConfig(session)
+
+        then:
+        cfg.azcopy().blobTier == "Hot"
+        cfg.azcopy().blockSize == "100"
+    }
 }

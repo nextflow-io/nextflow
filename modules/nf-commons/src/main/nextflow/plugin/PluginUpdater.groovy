@@ -245,6 +245,11 @@ class PluginUpdater extends UpdateManager {
             pluginPath = safeDownload(id, version)
         }
 
+        // verify the plugin install path contains the expected manifest path
+        if( !FilesEx.exists(pluginPath.resolve('classes/META-INF/MANIFEST.MF')) ) {
+            log.warn("Plugin '${pluginPath.getFileName()}' installation looks corrupted - Delete the following directory and run nextflow again: $pluginPath")
+        }
+
         // load the plugin from the file system
         PluginWrapper wrapper = pluginManager.loadPluginFromPath(pluginPath)
 

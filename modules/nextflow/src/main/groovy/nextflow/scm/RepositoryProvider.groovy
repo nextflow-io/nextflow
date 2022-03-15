@@ -25,6 +25,8 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
+import nextflow.exception.RateLimitExceededException
+
 /**
  *
  * Base class for a generic source repository provider
@@ -176,7 +178,7 @@ abstract class RepositoryProvider {
                 def limit = connection.getHeaderField('X-RateLimit-Remaining')
                 if( limit == '0' ) {
                     def message = config.auth ? "Check ${name.capitalize()}'s API rate limits for more details" : "Provide your ${name.capitalize()} user name and password to get a higher rate limit"
-                    throw new AbortOperationException("API rate limit exceeded -- $message")
+                    throw new RateLimitExceededException("API rate limit exceeded -- $message")
                 }
                 else {
                     def message = config.auth ? "Check that the ${name.capitalize()} user name and password provided are correct" : "Provide your ${name.capitalize()} user name and password to access this repository"

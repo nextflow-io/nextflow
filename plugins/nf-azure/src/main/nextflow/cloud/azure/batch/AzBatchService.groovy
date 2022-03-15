@@ -16,19 +16,17 @@
 
 package nextflow.cloud.azure.batch
 
-import com.microsoft.azure.batch.protocol.models.AutoUserScope
-import com.microsoft.azure.batch.protocol.models.AutoUserSpecification
-import com.microsoft.azure.batch.protocol.models.AzureFileShareConfiguration
-import com.microsoft.azure.batch.protocol.models.ElevationLevel
-import com.microsoft.azure.batch.protocol.models.MountConfiguration
-import com.microsoft.azure.batch.protocol.models.UserIdentity
-
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
+import java.time.temporal.ChronoUnit
+import java.util.function.Predicate
 
 import com.microsoft.azure.batch.BatchClient
 import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials
+import com.microsoft.azure.batch.protocol.models.AutoUserScope
+import com.microsoft.azure.batch.protocol.models.AutoUserSpecification
+import com.microsoft.azure.batch.protocol.models.AzureFileShareConfiguration
 import com.microsoft.azure.batch.protocol.models.BatchErrorException
 import com.microsoft.azure.batch.protocol.models.CloudJob
 import com.microsoft.azure.batch.protocol.models.CloudPool
@@ -36,7 +34,9 @@ import com.microsoft.azure.batch.protocol.models.CloudTask
 import com.microsoft.azure.batch.protocol.models.ComputeNodeFillType
 import com.microsoft.azure.batch.protocol.models.ContainerConfiguration
 import com.microsoft.azure.batch.protocol.models.ContainerRegistry
+import com.microsoft.azure.batch.protocol.models.ElevationLevel
 import com.microsoft.azure.batch.protocol.models.ImageInformation
+import com.microsoft.azure.batch.protocol.models.MountConfiguration
 import com.microsoft.azure.batch.protocol.models.OutputFile
 import com.microsoft.azure.batch.protocol.models.OutputFileBlobContainerDestination
 import com.microsoft.azure.batch.protocol.models.OutputFileDestination
@@ -50,7 +50,13 @@ import com.microsoft.azure.batch.protocol.models.StartTask
 import com.microsoft.azure.batch.protocol.models.TaskAddParameter
 import com.microsoft.azure.batch.protocol.models.TaskContainerSettings
 import com.microsoft.azure.batch.protocol.models.TaskSchedulingPolicy
+import com.microsoft.azure.batch.protocol.models.UserIdentity
 import com.microsoft.azure.batch.protocol.models.VirtualMachineConfiguration
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedSupplier
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -268,17 +274,17 @@ class AzBatchService implements Closeable {
     }
 
     CloudTask getTask(AzTaskKey key) {
-        return client.taskOperations().getTask(key.jobId, key.taskId)
+        apply(() -> client.taskOperations().getTask(key.jobId, key.taskId))
     }
 
     void terminate(AzTaskKey key) {
-        client.taskOperations().terminateTask(key.jobId, key.taskId)
+        apply(() -> client.taskOperations().terminateTask(key.jobId, key.taskId))
     }
 
     CloudMachineInfo machineInfo(AzTaskKey key) {
         if( !key || !key.jobId )
             throw new IllegalArgumentException("Missing Azure Batch job id")
-        CloudJob job = client.jobOperations().getJob(key.jobId)
+        CloudJob job = apply(() -> client.jobOperations().getJob(key.jobId))
         final poolId = job.poolInfo().poolId()
         final AzVmPoolSpec spec = allPools.get(poolId)
         if( !spec )
@@ -313,7 +319,7 @@ class AzBatchService implements Closeable {
                 .trim()
                 .replaceAll(/[^a-zA-Z0-9-_]+/,'_')
 
-        final key = "job-${Rnd.hex()}-${name}"
+        final String key = "job-${Rnd.hex()}-${name}"
         // Azure batch job max len is 64 characters, however we keep it a bit shorter
         // because the jobId + taskId composition must be less then 100
         final MAX_LEN = 62i
@@ -347,7 +353,7 @@ class AzBatchService implements Closeable {
         }
         final containerOpts = new TaskContainerSettings()
                 .withImageName(container)
-                // mount host certificates otherwise `azcopy fails
+                // mount host certificates otherwise `azcopy` fails
                 .withContainerRunOptions("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro ${volumes} ")
 
         final slots = computeSlots(task, pool)
@@ -361,7 +367,7 @@ class AzBatchService implements Closeable {
                 .withResourceFiles(resourceFileUrls(task,sas))
                 .withOutputFiles(outputFileUrls(task, sas))
                 .withRequiredSlots(slots)
-        client.taskOperations().createTask(jobId, taskToAdd)
+        apply(() -> client.taskOperations().createTask(jobId, taskToAdd))
         return new AzTaskKey(jobId, taskId)
     }
 
@@ -416,7 +422,7 @@ class AzBatchService implements Closeable {
     }
 
     protected ImageInformation getImage(AzPoolOpts opts) {
-        List<ImageInformation> images = client.accountOperations().listSupportedImages()
+        List<ImageInformation> images = apply(() -> client.accountOperations().listSupportedImages())
 
         for (ImageInformation it : images) {
             if( !it.nodeAgentSKUId().equalsIgnoreCase(opts.sku) )
@@ -541,7 +547,7 @@ class AzBatchService implements Closeable {
 
     protected CloudPool getPool(String poolId) {
         try {
-            return client.poolOperations().getPool(poolId)
+            return apply(() -> client.poolOperations().getPool(poolId))
         }
         catch (BatchErrorException e) {
             if( e.response().code() == 404 ) {
@@ -644,7 +650,7 @@ class AzBatchService implements Closeable {
                     .withTargetDedicatedNodes(spec.opts.vmCount)
         }
 
-        client.poolOperations().createPool(poolParams)
+        apply(() -> client.poolOperations().createPool(poolParams))
     }
 
     protected String scaleFormula(AzPoolOpts opts) {
@@ -678,7 +684,7 @@ class AzBatchService implements Closeable {
     }
 
     void deleteTask(AzTaskKey key) {
-        client.taskOperations().deleteTask(key.jobId, key.taskId)
+        apply(() -> client.taskOperations().deleteTask(key.jobId, key.taskId))
     }
 
     protected void cleanupJobs() {
@@ -692,7 +698,7 @@ class AzBatchService implements Closeable {
 
             try {
                 log.trace "Deleting Azure job ${jobId}"
-                deleteJob(jobId)
+                apply(() -> client.jobOperations().deleteJob(jobId))
             }
             catch (Exception e) {
                 log.warn "Unable to delete Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
@@ -700,31 +706,10 @@ class AzBatchService implements Closeable {
         }
     }
 
-    protected void deleteJob(String jobId) {
-        final int DEFAULT_BACK_OFF_BASE = 3
-        final int DEFAULT_BACK_OFF_DELAY = 250
-        final int MAX_ATTEMPTS = 5
-        int attempt=0
-        while( true ) {
-            try {
-                client.jobOperations().deleteJob(jobId)
-                break
-            }
-            catch (BatchErrorException e) {
-                if( e.body().code() != 'TooManyRequests' || attempt++ > MAX_ATTEMPTS)
-                    throw e
-
-                final delay = (Math.pow(DEFAULT_BACK_OFF_BASE, attempt) as long) * DEFAULT_BACK_OFF_DELAY
-                log.debug "Got Azure Client exception while deleting job: $jobId - message=$e.message; waiting for ${delay}ms (attempt=$attempt)"
-                Thread.sleep(delay)
-            }
-        }
-    }
-
     protected void cleanupPools() {
         for( String poolId : allPools.keySet()) {
             try {
-                client.poolOperations().deletePool(poolId)
+                apply(() -> client.poolOperations().deletePool(poolId))
             }
             catch (Exception e) {
                 log.warn "Unable to delete Azure Batch pool ${poolId} - Reason: ${e.message ?: e}"
@@ -752,5 +737,41 @@ class AzBatchService implements Closeable {
         if( config.batch().canCreatePool() && config.batch().deletePoolsOnCompletion ) {
             cleanupPools()
         }
+    }
+
+    /**
+     * Creates a retry policy using the configuration specified by {@link nextflow.cloud.azure.config.AzRetryConfig}
+     *
+     * @param cond A predicate that determines when a retry should be triggered
+     * @return The {@link RetryPolicy} instance
+     */
+    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
+        final cfg = config.retryConfig()
+        final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
+            @Override
+            void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
+                log.debug("Azure TooManyRequests reponse error - attempt: ${event.attemptCount}", event.lastFailure)
+            }
+        }
+        return RetryPolicy.<T>builder()
+                .handleIf(cond)
+                .withBackoff(cfg.delay.toMillis(), cfg.maxDelay.toMillis(), ChronoUnit.MILLIS)
+                .withMaxAttempts(cfg.maxAttempts)
+                .withJitter(cfg.jitter)
+                .onRetry(listener)
+                .build()
+    }
+
+    /**
+     * Carry out the invocation of the specified action using a retry policy
+     * when {@code TooManyRequests} Azure Batch error is returned
+     *
+     * @param action A {@link CheckedSupplier} instance modeling the action to be performed in a safe manner
+     * @return The result of the supplied action
+     */
+    protected <T> T apply(CheckedSupplier<T> action) {
+        final cond = (e -> e instanceof BatchErrorException && e.body().code() == 'TooManyRequests')  as Predicate<? extends Throwable>
+        final policy = retryPolicy(cond)
+        return Failsafe.with(policy).get(action)
     }
 }

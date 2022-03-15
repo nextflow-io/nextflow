@@ -69,6 +69,7 @@ class SqlDataSourceTest extends Specification {
         'jdbc:mysql:some-host'          | 'com.mysql.cj.jdbc.Driver'
         'jdbc:mariadb:other-host'       | 'org.mariadb.jdbc.Driver'
         'jdbc:duckdb:'                  | 'org.duckdb.DuckDBDriver'
+        'jdbc:awsathena:'               | 'com.simba.athena.jdbc.Driver'
     }
 
     def 'should get default config' () {
