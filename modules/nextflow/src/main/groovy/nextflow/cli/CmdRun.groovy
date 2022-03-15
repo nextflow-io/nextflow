@@ -336,10 +336,13 @@ class CmdRun extends CmdBase implements HubOptions {
 
     protected void launchInfo(ConfigMap config, ScriptFile scriptFile) {
         // -- try determine DSL version from config file
-        final dsl = config.navigate('nextflow.enable.dsl', 2)
-        if( dsl==2 )
+        final DSL2 = '2'
+        final DSL1 = '1'
+        final defaultDsl = env.get('NXF_DEFAULT_DSL') ?: DSL2
+        final dsl = config.navigate('nextflow.enable.dsl', defaultDsl) as String
+        if( dsl=='2' )
             NextflowMeta.instance.enableDsl2()
-        else if( dsl==1 )
+        else if( dsl=='1' )
             NextflowMeta.instance.disableDsl2()
         else
             throw new AbortOperationException("Invalid Nextflow DSL value: $dsl")
@@ -348,7 +351,7 @@ class CmdRun extends CmdBase implements HubOptions {
         NextflowMeta.instance.checkDsl2Mode(scriptFile.main.text)
 
         // -- show launch info 
-        final ver = NF.dsl2 ? '2' : '1'
+        final ver = NF.dsl2 ? DSL2 : DSL1
         if( scriptFile.repository )
             log.info "Launching `$scriptFile.repository` [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
         else
