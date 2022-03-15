@@ -15,7 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+nextflow.enable.dsl=1
+
 process foo {
   input:
   file 'a b.txt' from file("$baseDir/data/data'3.txt")
