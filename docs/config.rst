@@ -965,6 +965,7 @@ NXF_ANSI_SUMMARY                Enables/disables ANSI completion summary: `true|
 NXF_SCM_FILE                    Defines the path location of the SCM config file (requires version ``20.10.0`` or later).
 NXF_PARAMS_FILE                 Defines the path location of the pipeline parameters file (requires version ``20.10.0`` or later).
 NXF_DISABLE_JOBS_CANCELLATION   Disables the cancellation of child jobs on workflow execution termination (requires ``21.12.0-edge`` or later).
+NXF_DEFAULT_DSL                 Defines the DSL version version that should be used in not specified otherwise in the script of config file (default: ``2``, requires version ``22.03.0-edge`` or later)
 JAVA_HOME                       Defines the path location of the Java VM installation used to run Nextflow.
 JAVA_CMD                        Defines the path location of the Java binary command used to launch Nextflow.
 HTTP_PROXY                      Defines the HTTP proxy server. As of version ``21.06.0-edge``, proxy authentication is supported providing the credentials in the proxy URL e.g. ``http://user:password@proxy-host.com:port``.

@@ -1,5 +1,4 @@
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 process foo {
   publishDir 'foo', mode: 'copy'

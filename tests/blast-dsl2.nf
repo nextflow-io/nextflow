@@ -1,5 +1,4 @@
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 params.db = "$baseDir/blast-db/tiny"
 params.query = "$baseDir/data/sample.fa"
