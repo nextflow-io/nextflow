@@ -481,17 +481,7 @@ public class S3Path implements Path, TagAwareFile {
 
 	@Override
 	public String toString() {
-		StringBuilder builder = new StringBuilder();
-
-		if (isAbsolute()) {
-			builder.append(PATH_SEPARATOR);
-			builder.append(bucket);
-			builder.append(PATH_SEPARATOR);
-		}
-
-		builder.append(Joiner.on(PATH_SEPARATOR).join(parts));
-
-		return builder.toString();
+		return toUri().toString();
 	}
 
 	@Override
