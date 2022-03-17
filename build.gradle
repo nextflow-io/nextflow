@@ -65,6 +65,15 @@ allprojects {
         }
     }
 
+    compileJava {
+        options.release = 8
+    }
+
+    tasks.withType(GroovyCompile) {
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+    }
+
     idea {
         module.inheritOutputDirs = true
     }
