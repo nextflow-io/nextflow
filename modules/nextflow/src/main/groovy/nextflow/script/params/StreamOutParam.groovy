@@ -19,6 +19,7 @@ package nextflow.script.params
 import groovy.transform.InheritConstructors
 import nextflow.script.TokenVar
 /**
+ * Implements process output stream type parameter
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

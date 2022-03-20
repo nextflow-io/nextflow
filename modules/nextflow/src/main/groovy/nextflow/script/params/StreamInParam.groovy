@@ -19,6 +19,7 @@ package nextflow.script.params
 import groovy.transform.InheritConstructors
 
 /**
+ * Implements process input `stream` type parameter
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
