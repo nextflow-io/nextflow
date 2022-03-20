@@ -44,8 +44,8 @@ class StreamInParamTest extends Specification {
         process.config.getInputs().size() == 1
 
         in1.name == 'x'
-//        in1.inChannel.val == Paths.get('file.x')
-//        in1.index == 0
+        in1.index == 0
+//        in1.inChannel.val == 
 
 
     }

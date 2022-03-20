@@ -76,7 +76,7 @@ import nextflow.file.FileHolder
 import nextflow.file.FilePatternSplitter
 import nextflow.file.FilePorter
 import nextflow.processor.streams.StreamHandle
-import nextflow.processor.streams.StreamRef
+import nextflow.processor.streams.StreamId
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -2008,7 +2008,7 @@ class TaskProcessor {
         // add also output stream
         for( OutParam param : task.outputs.keySet() ) {
             if( param instanceof StreamOutParam ) {
-                final stream = StreamRef.create()
+                final stream = StreamId.create()
                 task.setOutput(param,stream)
                 contextMap.put( param.name, StreamHandle.output(stream) )
             }

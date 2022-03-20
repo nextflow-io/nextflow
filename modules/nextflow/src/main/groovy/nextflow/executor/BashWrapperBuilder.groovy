@@ -172,7 +172,19 @@ class BashWrapperBuilder {
         }
         result.toString()
     }
-    
+
+    protected String makeStreams(List<String> inputStreams, List<String> outputStreams) {
+
+        final result = new ArrayList(10)
+        result << ''
+        if( inputStreams )
+            result.addAll( inputStreams.collect( it -> "until stat $it &>/dev/null; do sleep 1; done") )
+        if( outputStreams )
+            result.addAll( outputStreams.collect( it-> "mkfifo $it") )
+
+        return result.join('\n')
+    }
+
     protected Map<String,String> makeBinding() {
         /*
          * initialise command files
@@ -260,7 +272,7 @@ class BashWrapperBuilder {
         /*
          * staging input files when required
          */
-        final stagingScript = copyStrategy.getStageInputFilesScript(inputFiles)
+        final stagingScript = copyStrategy.getStageInputFilesScript(inputFiles) + makeStreams(inputStreams, outputStreams)
         binding.stage_inputs = stagingScript ? "# stage input files\n${stagingScript}" : null
 
         binding.stdout_file = TaskRun.CMD_OUTFILE

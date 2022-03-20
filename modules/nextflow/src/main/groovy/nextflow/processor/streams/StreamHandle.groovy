@@ -19,6 +19,7 @@ package nextflow.processor.streams
 
 import groovy.transform.CompileStatic
 /**
+ * Model a stream handle for process stream input/output definition
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -26,26 +27,34 @@ import groovy.transform.CompileStatic
 class StreamHandle {
     enum Direction { IN, OUT }
     Direction direction
-    StreamRef stream
+    StreamId streamId
 
-    private StreamHandle(Direction dir, StreamRef ref) {
+    private StreamHandle(Direction dir, StreamId ref) {
         this.direction = dir
-        this.stream = ref
+        this.streamId = ref
     }
 
     static StreamHandle input(ref) {
-        if( ref instanceof StreamRef )
+        if( ref instanceof StreamId )
             return new StreamHandle(Direction.IN, ref)
         throw new IllegalArgumentException("Invalid stream refence: $ref")
     }
 
     static StreamHandle output(ref) {
-        if( ref instanceof StreamRef )
+        if( ref instanceof StreamId )
             return new StreamHandle(Direction.OUT, ref)
         throw new IllegalArgumentException("Invalid stream refence: $ref")
     }
 
+    String name() {
+        // This value is replaced into the command script
+        // as replacement for the stream variable placeholder
+        // it should be a valid linux file name.
+        // For this name should be a corresponding named linux named piped
+        return "/tmp/nf-${streamId.id()}.stream"
+    }
+
     String toString() {
-        return "$stream [$direction]"
+        return name()
     }
 }

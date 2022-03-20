@@ -19,20 +19,23 @@ package nextflow.processor.streams
 import groovy.transform.CompileStatic
 
 /**
+ * Model the identity of a process binary stream
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class StreamRef {
+class StreamId {
 
-    UUID id
+    final private UUID id
 
-    StreamRef() { id = UUID.randomUUID() }
+    UUID id() { return id }
 
-    StreamRef(UUID id) { this.id = id }
+    StreamId() { this(UUID.randomUUID()) }
 
-    static StreamRef create() {
-        new StreamRef()
+    StreamId(UUID id) { this.id = id }
+
+    static StreamId create() {
+        new StreamId()
     }
 
     String toString() {

@@ -19,6 +19,7 @@ package nextflow.script.params
 import static test.TestParser.*
 
 import groovyx.gpars.dataflow.DataflowQueue
+import nextflow.processor.streams.StreamId
 import nextflow.script.TestScriptRunner
 import spock.lang.Specification
 /**
@@ -73,7 +74,7 @@ class StreamOutParamsTest extends Specification {
 
         // when no outputs are specified, the 'stdout' is the default output
         then:
-        runner.result.val == "echo Hello world"
+        runner.result.val instanceof StreamId
     }
 
 }

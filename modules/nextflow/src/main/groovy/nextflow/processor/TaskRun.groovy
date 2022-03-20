@@ -34,6 +34,7 @@ import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
+import nextflow.processor.streams.StreamHandle
 import nextflow.script.BodyDef
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
@@ -45,6 +46,8 @@ import nextflow.script.params.FileOutParam
 import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.StdInParam
+import nextflow.script.params.StreamInParam
+import nextflow.script.params.StreamOutParam
 import nextflow.script.params.ValueOutParam
 /**
  * Models a task instance
@@ -442,7 +445,7 @@ class TaskRun implements Cloneable {
      */
     @Memoized
     List<String> getOutputFilesNames() {
-        def result = []
+        final result = new ArrayList(20)
 
         for( FileOutParam param : getOutputsByType(FileOutParam).keySet() ) {
             result.addAll( param.getFilePatterns(context, workDir) )
@@ -451,6 +454,29 @@ class TaskRun implements Cloneable {
         return result.unique()
     }
 
+    @Memoized
+    List<String> getInputStreamNames() {
+        final result = new ArrayList(20)
+
+        for( StreamInParam param : getOutputsByType(StreamInParam).keySet() ) {
+            StreamHandle handle = context.get(param.name)
+            result.add( handle.name() )
+        }
+
+        return result
+    }
+
+    @Memoized
+    List<String> getOutputStreamNames() {
+        final result = new ArrayList(20)
+
+        for( StreamOutParam param : getOutputsByType(StreamOutParam).keySet() ) {
+            StreamHandle handle = context.get(param.name)
+            result.add( handle.name() )
+        }
+
+        return result
+    }
 
     /**
      * Get the map of *input* objects by the given {@code InParam} type
