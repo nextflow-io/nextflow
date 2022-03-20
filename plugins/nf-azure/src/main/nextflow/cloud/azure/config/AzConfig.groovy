@@ -17,6 +17,7 @@
 package nextflow.cloud.azure.config
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
 
@@ -25,6 +26,7 @@ import nextflow.Session
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class AzConfig {
 
@@ -59,11 +61,18 @@ class AzConfig {
     static AzConfig getConfig(Session session) {
         if( !session )
             throw new IllegalStateException("Missing Nextflow session")
-
+        log.debug "Creating Azure config from session"
         new AzConfig( (Map)session.config.azure ?: Collections.emptyMap()  )
     }
 
+    static AzConfig getConfigFromEnv() {
+        log.debug "Creating Azure config from system env"
+        new AzConfig(Collections.emptyMap())
+    }
+
     static AzConfig getConfig() {
-        getConfig(Global.session as Session)
+        return Global.session
+                ? getConfig(Global.session as Session)
+                : getConfigFromEnv()
     }
 }
