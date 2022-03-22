@@ -1,15 +1,8 @@
 name: Nextflow CI
 # read more here
 # https://help.github.com/en/articles/workflow-syntax-for-github-actions#on
-on:
-  push:
-    branches:
-      - '*'
-    tags-ignore:
-      - '*'
-  pull_request:
-    branches:
-      - '*'
+on: [push, pull_request]
+
 jobs:
   build:
     name: Build Nextflow
