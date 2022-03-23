@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+nextflow.enable.dsl=1
 echo true
 
 cheers = Channel.from 'Bojour', 'Ciao', 'Hello', 'Hola', 'Γεια σου'

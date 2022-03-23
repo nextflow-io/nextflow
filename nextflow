@@ -16,7 +16,7 @@
 #  limitations under the License.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'21.12.1-edge'}
+NXF_VER=${NXF_VER:-'22.02.1-edge'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -157,7 +157,7 @@ function launch_nextflow() {
 }
 
 # check self-install
-if [ "$0" = "bash" ] || [ "$0" = "/bin/bash" ]; then
+if [ "$0" = "bash" ] || [[ "$0" =~ .*/bash ]]; then
     if [ -d nextflow ]; then
         echo 'Please note:'
         echo "- The install procedure needs to create a file named 'nextflow' in this folder, but a directory with this name already exists."
@@ -394,8 +394,16 @@ else
     cli=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
     [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit 1
 
+    # first string between double quotes is the full path to java, also blank spaces are included
+    # remainder string are arguments
+    # we extract first part into `cmd_base`` and remainder into `cmd_tail`` and convert them to array as previous version
+    cmd_pattern='"([^"]*)"(.*)'
+    [[ "${cli[@]}" =~ $cmd_pattern ]]
+    cmd_base=(${BASH_REMATCH[1]})
+    cmd_tail=(${BASH_REMATCH[2]})
+
     if [[ "$JAVA_VER" =~ ^(9|10|11|12|13|14|15|16|17) ]]; then
-      launcher=("${cli[@]:0:1}")
+      launcher="${cmd_base[@]}"
       launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
@@ -412,11 +420,11 @@ else
       launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
       [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
-      launcher+=("${cli[@]:1}")
+      launcher+=("${cmd_tail[@]}")
     else
-      launcher=("${cli[@]:0:1}")
+      launcher="${cmd_base[@]}"
       [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
-      launcher+=("${cli[@]:1}")
+      launcher+=("${cmd_tail[@]}")
     fi
 
     # Don't show errors if the LAUNCH_FILE can't be created

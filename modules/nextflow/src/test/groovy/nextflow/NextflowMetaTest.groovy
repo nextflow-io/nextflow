@@ -50,16 +50,13 @@ class NextflowMetaTest extends Specification {
         where:
         DSL2    | FINAL | SCRIPT
         false   | false | 'hello'
-        false   | false | 'nextflow.preview.dsl=1'
-        and:
-        true    | false | 'nextflow.preview.dsl=2'
-        true    | false | 'nextflow.preview.dsl = 2'
-        true    | false | 'nextflow.preview.dsl =  2;'
-        true    | false | '#!/bin/env nextflow\nnextflow.preview.dsl=2\nprintln foo'
+        false   | false | 'nextflow.enable.dsl=1'
         and:
         true    | true | 'nextflow.enable.dsl=2'
         true    | true | 'nextflow.enable.dsl = 2'
         true    | true | 'nextflow.enable.dsl =  2;'
         true    | true | '#!/bin/env nextflow\nnextflow.enable.dsl=2\nprintln foo'
+        and:
+        false   | false | 'nextflow.enable.dsl = 1'
     }
 }

@@ -1,3 +1,5 @@
+nextflow.enable.dsl=1
+
 process foo {
     output:
     env FOO into ch 

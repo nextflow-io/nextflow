@@ -144,11 +144,11 @@ class CmdRunTest extends Specification {
         cmd.hasParams()
 
         when:
-        cmd = new CmdRun(sysEnv: [NXF_PARAMS_FILE: '/missing/path'])
+        cmd = new CmdRun(sysEnv: [NXF_PARAMS_FILE: '/missing/path.yml'])
         cmd.parsedParams()
         then:
         def e = thrown(AbortOperationException)
-        e.message == 'Specified params file does not exists: /missing/path'
+        e.message == 'Specified params file does not exists: /missing/path.yml'
 
         cleanup:
         folder?.delete()

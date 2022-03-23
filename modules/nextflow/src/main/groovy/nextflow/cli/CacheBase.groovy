@@ -20,7 +20,8 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import nextflow.CacheDB
+import nextflow.cache.CacheDB
+import nextflow.cache.CacheFactory
 import nextflow.exception.AbortOperationException
 import nextflow.util.HistoryFile
 
@@ -69,7 +70,7 @@ trait CacheBase {
     }
 
     CacheDB cacheFor(Record entry) {
-        new CacheDB(entry,basePath)
+        CacheFactory.create(entry.sessionId, entry.runName, basePath)
     }
 
     List<Record> listIds() {

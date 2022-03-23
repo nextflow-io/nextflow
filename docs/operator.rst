@@ -1445,9 +1445,9 @@ The following example shows how use a `closure` to collect and sort all sequence
 
 
 .. warning:: The ``collectFile`` operator needs to store files in a temporary folder that is automatically deleted on 
-  job completion. For performance reasons this folder is located in the machine's local storage,
- and it will require as much free space as are the data you are collecting. Optionally, an alternative temporary data
- folder can be specified by using the ``tempDir`` parameter.
+    job completion. For performance reasons this folder is located in the machine's local storage,
+    and it will require as much free space as are the data you are collecting. Optionally, an alternative temporary data
+    folder can be specified by using the ``tempDir`` parameter.
 
 .. _operator-combine:
 

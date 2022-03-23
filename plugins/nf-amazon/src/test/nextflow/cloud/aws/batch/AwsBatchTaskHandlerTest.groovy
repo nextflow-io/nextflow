@@ -309,6 +309,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         handler.normalizeJobDefinitionName(null) == null
         handler.normalizeJobDefinitionName('foo') == 'nf-foo'
         handler.normalizeJobDefinitionName('foo:1') == 'nf-foo-1'
+        handler.normalizeJobDefinitionName('docker.io/foo/bar:1') == 'nf-docker-io-foo-bar-1'
+        and:
+        handler.normalizeJobDefinitionName('docker.io/some-container-very-long-name-123456789/123456789/123456789/123456789/123456789/123456789/123456789/123456789/123456789/123456789/name:123') == 'nf-docker-io-some-container-very-long-name--35e0fa487af0f525a8c14e7866449d8e'
 
         when:
         handler.normalizeJobDefinitionName('/some/file.img')

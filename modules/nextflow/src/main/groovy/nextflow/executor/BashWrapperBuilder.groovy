@@ -168,7 +168,7 @@ class BashWrapperBuilder {
         result.append('set +u\n')
         for( int i=0; i<names.size(); i++) {
             final key = names[i]
-            result.append "echo $key=\$$key "
+            result.append "echo $key=\${$key[@]} "
             result.append( i==0 ? '> ' : '>> ' )
             result.append(TaskRun.CMD_ENV)
             result.append('\n')
@@ -295,7 +295,7 @@ class BashWrapperBuilder {
 
     protected String getSecretsEnv() {
         return SecretsLoader.isEnabled()
-                ? SecretsLoader.instance.load() .getSecretsEnv()
+                ? SecretsLoader.instance.load() .getSecretsEnv(secretNames)
                 : null
     }
 

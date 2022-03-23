@@ -168,7 +168,6 @@ class ScriptParser {
     ScriptParser parse(String scriptText, GroovyShell interpreter) {
         final String clazzName = computeClassName(scriptText)
         try {
-            NextflowMeta.instance.checkDsl2Mode(scriptText)
             script = (BaseScript)interpreter.parse(scriptText, clazzName)
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(scriptPath)

@@ -62,7 +62,13 @@ class DummySecretsProvider implements SecretsProvider {
     @Override
     void close() throws IOException { }
 
+    @Deprecated
     String getSecretsEnv() {
+        return null
+    }
+
+    @Override
+    String getSecretsEnv(List<String> names) {
         String result = ''
         target.each { k,v -> result += "export $k=$v\n" }
         return result

@@ -16,17 +16,25 @@
  */
 
 package nextflow.executor
-import static nextflow.processor.TaskStatus.COMPLETED
-import static nextflow.processor.TaskStatus.RUNNING
-import static nextflow.processor.TaskStatus.SUBMITTED
+
+import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
+import java.time.temporal.ChronoUnit
+import java.util.function.Predicate
+import java.util.regex.Pattern
 
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.EventListener
+import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedSupplier
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
-import nextflow.exception.ProcessSubmitException
 import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -34,7 +42,6 @@ import nextflow.trace.TraceRecord
 import nextflow.util.CmdLineHelper
 import nextflow.util.Duration
 import nextflow.util.Throttle
-
 /**
  * Handles a job execution in the underlying grid platform
  */
@@ -107,6 +114,92 @@ class GridTaskHandler extends TaskHandler {
         return builder
     }
 
+    @Memoized
+    protected Predicate<? extends Throwable> retryCondition(String reasonPattern) {
+        final pattern = Pattern.compile(reasonPattern)
+        return new Predicate<Throwable>() {
+            @Override
+            boolean test(Throwable failure) {
+                if( failure instanceof ProcessNonZeroExitStatusException ) {
+                    final reason = failure.reason
+                    return reason ? pattern.matcher(reason).find() : false
+                }
+                return false
+            }
+        }
+    }
+
+    protected <T> RetryPolicy<T> retryPolicy() {
+
+        final delay = executor.session.getConfigAttribute("executor.retry.delay", '500ms') as Duration
+        final maxDelay = executor.session.getConfigAttribute("executor.retry.maxDelay", '30s') as Duration
+        final jitter = executor.session.getConfigAttribute("executor.retry.jitter", '0.25') as double
+        final maxAttempts = executor.session.getConfigAttribute("executor.retry.maxAttempts", '3') as int
+        final reason = executor.session.getConfigAttribute("executor.submit.retry.reason", 'Socket timed out') as String
+
+        final listener = new EventListener<ExecutionAttemptedEvent>() {
+            @Override
+            void accept(ExecutionAttemptedEvent event) throws Throwable {
+                final failure = event.getLastFailure()
+                if( failure instanceof ProcessNonZeroExitStatusException ) {
+                    final msg = """\
+                        Failed to submit process '${task.name}'
+                         - attempt : ${event.attemptCount}
+                         - command : ${CmdLineHelper.toLine(failure.command)}
+                         - reason  : $failure.reason
+                        """.stripIndent()
+                    log.warn msg
+
+                } else {
+                    log.debug("Unexpected retry failure: ${failure?.message}", failure)
+                }
+            }
+        }
+
+        return RetryPolicy.<T>builder()
+                .handleIf(retryCondition(reason))
+                .withBackoff(delay.toMillis(), maxDelay.toMillis(), ChronoUnit.MILLIS)
+                .withMaxAttempts(maxAttempts)
+                .withJitter(jitter)
+                .onFailedAttempt(listener)
+                .build()
+    }
+
+    protected <T> T safeExecute(CheckedSupplier<T> action) {
+        final policy = retryPolicy()
+        return Failsafe.with(policy).get(action)
+    }
+
+    protected String processStart(ProcessBuilder builder, String pipeScript) {
+        final process = builder.start()
+
+        try {
+            // -- forward the job launcher script to the command stdin if required
+            if( pipeScript ) {
+                process.out << pipeScript
+                process.out.close()
+            }
+
+            // -- wait the the process completes
+            final result = process.text
+            final exitStatus = process.waitFor()
+
+            if( exitStatus ) {
+                throw new ProcessNonZeroExitStatusException("Failed to submit process to grid scheduler for execution", result, exitStatus, builder.command())
+            }
+
+            // -- return the process stdout
+            return result
+        }
+        finally {
+            // make sure to release all resources
+            process.in.closeQuietly()
+            process.out.closeQuietly()
+            process.err.closeQuietly()
+            process.destroy()
+        }
+    }
+    
     /*
      * {@inheritDocs}
      */
@@ -118,42 +211,20 @@ class GridTaskHandler extends TaskHandler {
         try {
             // -- create the wrapper script
             executor.createBashWrapperBuilder(task).build()
-
             // -- start the execution and notify the event to the monitor
             builder = createProcessBuilder()
-            final process = builder.start()
-
-            try {
-                // -- forward the job launcher script to the command stdin if required
-                if( executor.pipeLauncherScript() ) {
-                    process.out << wrapperFile.text
-                    process.out.close()
-                }
-
-                // -- wait the the process completes
-                result = process.text
-                exitStatus = process.waitFor()
-
-                if( exitStatus ) {
-                    log.debug "Failed to submit process ${task.name} > exit: $exitStatus; workDir: $task.workDir\n$result\n"
-                    throw new ProcessSubmitException("Failed to submit process to grid scheduler for execution")
-                }
-
-                // save the JobId in the
-                this.jobId = executor.parseJobId(result)
-                this.status = SUBMITTED
-                log.debug "[${executor.name.toUpperCase()}] submitted process ${task.name} > jobId: $jobId; workDir: ${task.workDir}"
-            }
-            finally {
-                // make sure to release all resources
-                process.in.closeQuietly()
-                process.out.closeQuietly()
-                process.err.closeQuietly()
-                process.destroy()
-            }
+            // -- forward the job launcher script to the command stdin if required
+            final stdinScript = executor.pipeLauncherScript() ? wrapperFile.text : null
+            // -- execute with a re-triable strategy
+            result = safeExecute( () -> processStart(builder, stdinScript) )
+            // -- save the JobId in the
+            this.jobId = executor.parseJobId(result)
+            this.status = SUBMITTED
+            log.debug "[${executor.name.toUpperCase()}] submitted process ${task.name} > jobId: $jobId; workDir: ${task.workDir}"
 
         }
         catch( Exception e ) {
+            // update task exit status and message
             task.exitStatus = exitStatus
             task.script = builder ? CmdLineHelper.toLine(builder.command()) : null
             task.stdout = result
@@ -395,7 +466,5 @@ class GridTaskHandler extends TaskHandler {
         trace.put('native_id', jobId)
         return trace
     }
-
-
 
 }
