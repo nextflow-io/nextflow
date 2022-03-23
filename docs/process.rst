@@ -2303,6 +2303,7 @@ larger than 100, jobs will be submitted to the ``long`` queue, otherwise the ``s
 All directives can be assigned a dynamic value except the following:
 
 * `executor`_
+* `label`_
 * `maxForks`_
 
 .. tip::
