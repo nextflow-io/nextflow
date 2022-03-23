@@ -83,4 +83,4 @@ process execution environment holding the values defines in the secret store.
     context instead of the command script.
 
 .. note::
-    This feature is only available when using the local or batch scheduler executions e.g. Slurm, Grid Engine, etc.
+    This feature is only available when using the local or batch scheduler executors e.g. Slurm, Grid Engine, etc.
