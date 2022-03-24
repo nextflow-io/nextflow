@@ -56,6 +56,9 @@ class NextflowMetaTest extends Specification {
         true    | true | 'nextflow.enable.dsl = 2'
         true    | true | 'nextflow.enable.dsl =  2;'
         true    | true | '#!/bin/env nextflow\nnextflow.enable.dsl=2\nprintln foo'
+        true    | true | 'nextflow.enable.dsl =  2 // a comment'
+        true    | true | 'nextflow.enable.dsl = 2;// another comment'
+        true    | true | 'nextflow.enable.dsl=2 // another comment'
         and:
         false   | false | 'nextflow.enable.dsl = 1'
     }
