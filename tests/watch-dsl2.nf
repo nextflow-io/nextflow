@@ -1,5 +1,4 @@
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 params.events = 'create'
 params.files = 'examples/data/*.fa'

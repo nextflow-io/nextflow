@@ -1,4 +1,3 @@
-nextflow.enable.dsl=2
 
 process foo {
     input: val x 

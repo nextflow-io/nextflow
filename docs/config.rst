@@ -343,6 +343,11 @@ perJobMemLimit        Specifies Platform LSF *per-job* memory limit mode. See :r
 jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }`` Note: when using this option you need to make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
 cpus                  The maximum number of CPUs made available by the underlying system (only used by the ``local`` executor).
 memory                The maximum amount of memory made available by the underlying system (only used by the ``local`` executor).
+retry.delay           Delay when re-retying failed submit operations (default: ``500ms``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later).
+retry.maxDelay        Max delay when re-retying failed submit operations (default: ``30s``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later).
+retry.jitter          Jitter value when re-retying failed submit operations (default: ``0.25``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later)
+retry.maxAttempts     Max attempts when re-retying failed submit operations (default: ``3``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later)
+retry.reason          Regex pattern that when verified cause a failed submit operation to be re-tried (default: ``Socket timed out``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later)
 ===================== =====================
 
 The executor settings can be defined as shown below::
@@ -949,6 +954,7 @@ NXF_CLASSPATH                   Allows the extension of the Java runtime classpa
 NXF_CLOUD_DRIVER                Defines the default cloud driver to be used if not specified in the config file or as command line option, either ``aws`` or ``google``.
 NXF_CONDA_CACHEDIR              Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 NXF_DEBUG                       Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
+NXF_DEFAULT_DSL                 Defines the DSL version version that should be used in not specified otherwise in the script of config file (default: ``2``, requires version ``22.03.0-edge`` or later)
 NXF_DISABLE_JOBS_CANCELLATION   Disables the cancellation of child jobs on workflow execution termination (requires ``21.12.0-edge`` or later).
 NXF_EXECUTOR                    Defines the default process executor e.g. `sge`
 NXF_GRAB                        Provides extra runtime dependencies downloaded from a Maven repository service.

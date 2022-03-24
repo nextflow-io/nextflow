@@ -90,31 +90,33 @@ Your first script
 Copy the following example into your favourite text editor and save it to a file named ``tutorial.nf`` ::
 
     #!/usr/bin/env nextflow
+    nextflow.enable.dsl=2
 
     params.str = 'Hello world!'
 
     process splitLetters {
-        output:
-        file 'chunk_*' into letters
+      output:
+        path 'chunk_*'
 
-        """
-        printf '${params.str}' | split -b 6 - chunk_
-        """
+      """
+      printf '${params.str}' | split -b 6 - chunk_
+      """
     }
 
     process convertToUpper {
-        input:
-        file x from letters.flatten()
+      input:
+        file x
+      output:
+        stdout
 
-        output:
-        stdout result
-
-        """
-        cat $x | tr '[a-z]' '[A-Z]'
-        """
+      """
+      cat $x | tr '[a-z]' '[A-Z]'
+      """
     }
 
-    result.view { it.trim() }
+    workflow {
+      splitLetters | flatten | convertToUpper | view { it.trim() }
+    }
 
 This script defines two processes. The first splits a string into 6-character chunks, writing each one to a file with the prefix ``chunk_``,
 and the second receives these files and transforms their contents to uppercase letters.

@@ -15,14 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
  /* 
   * Run a process using a S3 file as input 
   */
 
 
-s3file = file('s3://nextflow-ci/nf-test-data/transcriptome.fa')
-s3glob = Channel.fromFilePairs('s3://nextflow-ci/nf-test-data/*_{1,2}.fq')
+s3file = file('s3://rnaseq-nf/data/ggal/transcript.fa')
+s3glob = Channel.fromFilePairs('s3://rnaseq-nf/data/ggal/*_{1,2}.fq')
 
 process foo {
   echo true

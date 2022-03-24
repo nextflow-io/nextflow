@@ -22,7 +22,7 @@
   *
   * See file `$PWD/checks/workflow-oncomplete.nf/.config` for details
   */
-
+nextflow.enable.dsl=1
 echo true
 
 params.command = 'echo'

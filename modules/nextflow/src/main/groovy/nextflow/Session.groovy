@@ -794,10 +794,16 @@ class Session implements ISession {
     }
 
     @PackageScope void checkConfig() {
-        final names = ScriptMeta.allProcessNames()
-        final ver = "dsl${NF.dsl1 ?'1' :'2'}"
-        log.debug "Workflow process names [$ver]: ${names.join(', ')}"
-        validateConfig(names)
+        final enabled = config.navigate('nextflow.enable.configProcessNamesValidation', true) as boolean
+        if( enabled ) {
+            final names = ScriptMeta.allProcessNames()
+            final ver = "dsl${NF.dsl1 ?'1' :'2'}"
+            log.debug "Workflow process names [$ver]: ${names.join(', ')}"
+            validateConfig(names)
+        }
+        else {
+            log.debug "Config process names validation disabled as requested"
+        }
     }
 
     @PackageScope VersionNumber getCurrentVersion() {
@@ -1108,7 +1114,7 @@ class Session implements ISession {
             log.trace "Clean workdir complete"
         }
         catch( Exception e ) {
-            log.warn("Failed to cleanup work dir: $workDir")
+            log.warn("Failed to cleanup work dir: ${workDir.toUriString()}")
         }
         finally {
             db.close()
