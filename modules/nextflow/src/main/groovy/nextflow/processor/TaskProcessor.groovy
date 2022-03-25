@@ -1152,15 +1152,17 @@ class TaskProcessor {
             }
 
             // - the tail of the process stderr
+            message << "\nCommand error:"
             lines = task.dumpStderr(max)
-            if( lines ) {
-                message << "\nCommand error:"
-                for( String it : lines ) {
-                    message << "  ${stripWorkDir(it, task.workDir)}"
-                }
+            if( lines.size() == 0 ) {
+                message << "  (empty)"
             }
+            for( String it : lines ) {
+                message << "  ${stripWorkDir(it, task.workDir)}"
+            }
+            
             // - this is likely a task wrapper issue
-            else if( task.exitStatus != 0 ) {
+            if( task.exitStatus != 0 & lines.size() == 0) {
                 lines = task.dumpLogFile(max)
                 if( lines ) {
                     message << "\nCommand wrapper:"
