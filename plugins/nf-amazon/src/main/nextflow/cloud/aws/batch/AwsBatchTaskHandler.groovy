@@ -17,8 +17,11 @@
 
 package nextflow.cloud.aws.batch
 
+import static AwsContainerOptionsMapper.*
+
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.regex.Pattern
 
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
@@ -49,6 +52,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.container.ContainerNameValidator
+import nextflow.exception.NodeTerminationException
 import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
@@ -62,15 +66,14 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
-
-import static AwsContainerOptionsMapper.createContainerOpts
-
 /**
  * Implements a task handler for AWS Batch jobs
  */
 // note: do not declare this class as `CompileStatic` otherwise the proxy is not get invoked
 @Slf4j
 class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,JobDetail> {
+
+    private static Pattern TERMINATED = ~/^Host EC2 .* terminated.*/
 
     private final Path exitFile
 
@@ -238,15 +241,23 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final job = describeJob(jobId)
         final done = job?.status in ['SUCCEEDED', 'FAILED']
         if( done ) {
-            // finalize the task
-            task.exitStatus = readExitFile()
-            task.stdout = outputFile
-            if( job?.status == 'FAILED' ) {
-                task.error = new ProcessUnrecoverableException(job?.getStatusReason())
-                task.stderr = executor.getJobOutputStream(jobId) ?: errorFile
+            if( TERMINATED.matcher(job.statusReason).find() ) {
+                // kee track of the node termination error
+                task.error = new NodeTerminationException(job.statusReason)
+                // mark the task as ABORTED since thr failure is caused by a node failure
+                task.aborted = true
             }
             else {
-                task.stderr = errorFile
+                // finalize the task
+                task.exitStatus = readExitFile()
+                task.stdout = outputFile
+                if( job?.status == 'FAILED' ) {
+                    task.error = new ProcessUnrecoverableException(job?.getStatusReason())
+                    task.stderr = executor.getJobOutputStream(jobId) ?: errorFile
+                }
+                else {
+                    task.stderr = errorFile
+                }
             }
             status = TaskStatus.COMPLETED
             return true

@@ -36,6 +36,7 @@ import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.exception.NodeTerminationException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
 import nextflow.processor.BatchContext
@@ -726,4 +727,29 @@ class AwsBatchTaskHandlerTest extends Specification {
         trace.machineInfo.priceModel == PriceModel.spot
     }
 
+    def 'should check spot termination' () {
+        given:
+        def JOB_ID = 'job-2'
+        def client = Mock(AWSBatch)
+        def task = new TaskRun()
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.client = client
+        handler.jobId = JOB_ID
+        handler.task = task
+        and:
+        handler.isRunning() >> true
+        handler.describeJob(JOB_ID) >> Mock(JobDetail) {
+            getStatus() >> 'FAILED'
+            getStatusReason() >> "Host EC2 (instance i-0e2d5c2edc932b4e8) terminated."
+        }
+
+        when:
+        def done = handler.checkIfCompleted()
+        then:
+        task.aborted
+        task.error instanceof NodeTerminationException
+        and:
+        done == true
+
+    }
 }
