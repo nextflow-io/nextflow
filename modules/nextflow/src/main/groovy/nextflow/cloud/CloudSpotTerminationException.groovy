@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Deprecated
 @CompileStatic
 class CloudSpotTerminationException extends RuntimeException {
 
