@@ -17,7 +17,9 @@
 
 package nextflow.processor
 
+import nextflow.exception.ProcessStartTimeoutException
 
+import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
@@ -608,13 +610,20 @@ class TaskPollingMonitor implements TaskMonitor {
         }
 
         // check if it is terminated
-        if( handler.checkIfCompleted() ) {
-            log.debug "Task completed > $handler"
+        def timeout=false
+        if( handler.checkIfCompleted() || (timeout=handler.isSubmitTimeout()) ) {
+            log.debug "Task ${timeout ? 'timed-out' : 'completed'} > $handler"
             // decrement forks count
             handler.decProcessForks()
 
             // since completed *remove* the task from the processing queue
             evict(handler)
+
+            // check if submit timeout is reached
+            if( timeout ) {
+                try { handler.kill() } catch( Throwable t ) { log.warn "Unable to cancel task $handler.task.name", t }
+                handler.task.error = new ProcessStartTimeoutException("Task could not start within specified 'maxAwait' time: ${handler.task.config.getMaxAwait()}")
+            }
 
             // finalize the tasks execution
             final fault = handler.task.processor.finalizeTask(handler.task)

@@ -63,6 +63,7 @@ import nextflow.exception.MissingValueException
 import nextflow.exception.ProcessRetryableException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
+import nextflow.exception.ProcessStartTimeoutException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.ShowOnlyExceptionMessage
 import nextflow.exception.UnexpectedException
@@ -1013,8 +1014,10 @@ class TaskProcessor {
                 return RETRY
             }
 
-            final int taskErrCount = task ? ++task.failCount : 0
-            final int procErrCount = ++errorCount
+            final startTimeout = error.cause instanceof ProcessStartTimeoutException
+            final int taskErrCount = !startTimeout && task ? ++task.failCount : 0
+            final int procErrCount = !startTimeout ? ++errorCount : errorCount
+            final int submitRetries = state ? ++task.submitRetry : 0
 
             // -- when is a task level error and the user has chosen to ignore error,
             //    just report and error message and DO NOT stop the execution

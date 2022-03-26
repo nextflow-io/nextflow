@@ -65,6 +65,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'machineType',
             'queue',
             'label',
+            'maxAwait',
             'maxErrors',
             'maxForks',
             'maxRetries',
