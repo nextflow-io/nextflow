@@ -1637,7 +1637,7 @@ class TaskProcessor {
     @Memoized
     Map<String,String> getProcessEnvironment() {
 
-        def result = [:]
+        def result = new LinkedHashMap<String,String>(20)
 
         // add the taskConfig environment entries
         if( session.config.env instanceof Map ) {

@@ -110,7 +110,7 @@ abstract class Executor {
      * @return The executor base bin directory
      */
     Path getBinDir() {
-       session.getBinDir()
+       return session.getBinDir()
     }
 
     @Memoized
