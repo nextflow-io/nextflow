@@ -626,7 +626,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // -- NOTE: make sure the `errorStrategy` is a static value before invoking `getMaxRetries` and `getErrorStrategy`
         //   when the errorStrategy is closure (ie. dynamic evaluated) value, the `task.config.getMaxRetries() && task.config.getErrorStrategy()`
         //   condition should not be evaluated because otherwise the closure value is cached using the wrong task.attempt and task.exitStatus values.
-        final strategy = task.config.getTarget().get('errorStrategy')
+        // -- use of `config.getRawValue('errorStrategy')` instead of `config.getErrorStrategy()` to prevent the resolution
+        //   of values dynamic values i.e. closures
+        final strategy = task.config.getRawValue('errorStrategy')
         final canCheck = strategy == null || strategy instanceof CharSequence
         if( canCheck && task.config.getMaxRetries() && task.config.getErrorStrategy() != ErrorStrategy.RETRY ) {
             def retry = new RetryStrategy().withAttempts( task.config.getMaxRetries()+1 )

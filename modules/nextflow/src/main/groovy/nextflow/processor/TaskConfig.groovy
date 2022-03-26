@@ -131,6 +131,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         return get(name)
     }
 
+    final getRawValue(String key) {
+        return target.get(key)
+    }
+
     def get( String key ) {
         if( cache.containsKey(key) )
             return cache.get(key)
