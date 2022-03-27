@@ -1,5 +1,11 @@
 nf-amazon changelog
 ===================
+1.6.0 - 27 Mar 2022
+- Handle AWS Spot interruption automatically job retry
+- Refactor AWS Batch job unique token generation to prevent
+  "vCPUs and Memory Values Not Overridden" error see
+  https://github.com/nextflow-io/nextflow/issues/2561
+
 1.5.2 - 25 Feb 2022
 - Prevent S3 tagging with empty list
 
