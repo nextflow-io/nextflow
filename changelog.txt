@@ -16,7 +16,7 @@ NEXTFLOW CHANGE-LOG
 - Fix use first config in stack when is into profile #2701 [44bdde8d] <Jorge Aguilera>
 - Fix Allow comments after nextflow.enable.dsl (#2746) [6988638b] <Jorge Aguilera>
 - Fix allow blank spaces in java path (#2690) [a966020e] <Jorge Aguilera>
-- Improve AWS Batch job retry on spot termination [bd8f2e26]
+- Improve AWS Batch job retry on spot termination [bd8f2e26] [72fbda848]
 - Improve error reporting [55466be7]
 - Undeprecate merge operation [1649944b]
 - Bump support for Java 18 [f3a11e4c]
