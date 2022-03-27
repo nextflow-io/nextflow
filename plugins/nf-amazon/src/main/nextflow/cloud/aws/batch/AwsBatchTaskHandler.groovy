@@ -107,6 +107,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     private Map<String,String> environment
 
+    private boolean batchNativeRetry
+
     final static private Map<String,String> jobDefinitions = [:]
 
     /**
@@ -241,7 +243,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final job = describeJob(jobId)
         final done = job?.status in ['SUCCEEDED', 'FAILED']
         if( done ) {
-            if( TERMINATED.matcher(job.statusReason).find() ) {
+            if( !batchNativeRetry && TERMINATED.matcher(job.statusReason).find() ) {
                 // kee track of the node termination error
                 task.error = new NodeTerminationException(job.statusReason)
                 // mark the task as ABORTED since thr failure is caused by a node failure
@@ -633,6 +635,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( canCheck && task.config.getMaxRetries() && task.config.getErrorStrategy() != ErrorStrategy.RETRY ) {
             def retry = new RetryStrategy().withAttempts( task.config.getMaxRetries()+1 )
             result.setRetryStrategy(retry)
+            this.batchNativeRetry = true
         }
 
         // set task timeout
