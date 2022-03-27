@@ -154,11 +154,6 @@ class TaskProcessor {
     protected BaseScript ownerScript
 
     /**
-     * Gpars thread pool
-     */
-    protected PGroup group = Dataflow.retrieveCurrentDFPGroup()
-
-    /**
      * The processor descriptive name
      */
     protected String name
@@ -289,7 +284,7 @@ class TaskProcessor {
         this.config = config
         this.taskBody = taskBody
         this.name = name
-        this.maxForks = config.maxForks as Integer ?: 0
+        this.maxForks = config.maxForks ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
     }
 
@@ -466,6 +461,12 @@ class TaskProcessor {
             }
         }
 
+        /**
+         * The thread pool used by GPars. The thread pool to be used is set in the static
+         * initializer of {@link nextflow.cli.CmdRun} class. See also {@link nextflow.util.CustomPoolFactory}
+         */
+        final PGroup group = Dataflow.retrieveCurrentDFPGroup()
+
         /*
          * When one (or more) {@code each} are declared as input, it is created an extra
          * operator which will receive the inputs from the channel (excepts the values over iterate)
@@ -508,15 +509,6 @@ class TaskProcessor {
             opInputs.add( config.getInputs().getChannels().last() )
         }
 
-
-        /*
-         * define the max forks attribute:
-         * - by default the process execution is parallel using the poolSize value
-         * - otherwise use the value defined by the user via 'taskConfig'
-         */
-        final maxForks = maxForks ?: session.poolSize
-        log.trace "Creating operator > $name -- maxForks: $maxForks"
-
         /*
          * finally create the operator
          */
@@ -526,7 +518,7 @@ class TaskProcessor {
         this.openPorts = createPortsArray(opInputs.size())
         config.getOutputs().setSingleton(singleton)
         def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
-        def params = [inputs: opInputs, maxForks: maxForks, listeners: [interceptor] ]
+        def params = [inputs: opInputs, maxForks: session.poolSize, listeners: [interceptor] ]
         def invoke = new InvokeTaskAdapter(this, opInputs.size())
         session.allOperators << (operator = new DataflowOperator(group, params, invoke))
 
