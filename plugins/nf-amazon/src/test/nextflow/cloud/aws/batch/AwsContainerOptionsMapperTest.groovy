@@ -12,7 +12,7 @@ class AwsContainerOptionsMapperTest extends Specification {
 
         when:
         def map = CmdLineHelper.parseGnuArgs('--env VAR_FOO -e VAR_FOO2=value2 --env VAR_FOO3=value3')
-        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
         then:
         def environment = properties.getEnvironment()
         environment.size() == 3
@@ -25,7 +25,7 @@ class AwsContainerOptionsMapperTest extends Specification {
 
         when:
         def map = CmdLineHelper.parseGnuArgs('--ulimit nofile=1280:2560 --ulimit nproc=16:32')
-        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
         then:
         properties.getUlimits().size() == 2
         properties.getUlimits().get(0).toString() == '{HardLimit: 2560,Name: nofile,SoftLimit: 1280}'
@@ -37,7 +37,7 @@ class AwsContainerOptionsMapperTest extends Specification {
 
         when:
         def map = CmdLineHelper.parseGnuArgs('--user nf-user')
-        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
         then:
         properties.getUser() == 'nf-user'
     }
@@ -46,7 +46,7 @@ class AwsContainerOptionsMapperTest extends Specification {
 
         when:
         def map = CmdLineHelper.parseGnuArgs('--privileged')
-        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
         then:
         properties.getPrivileged()
     }
@@ -55,7 +55,7 @@ class AwsContainerOptionsMapperTest extends Specification {
 
         when:
         def map = CmdLineHelper.parseGnuArgs('--read-only')
-        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
         then:
         properties.getReadonlyRootFilesystem()
     }
@@ -64,7 +64,7 @@ class AwsContainerOptionsMapperTest extends Specification {
 
         when:
         def map = CmdLineHelper.parseGnuArgs('--tmpfs /run:rw,noexec,nosuid,size=64 --tmpfs /app:ro,size=128')
-        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
         then:
         properties.getLinuxParameters().getTmpfs().get(0).toString() == '{ContainerPath: /run,Size: 64,MountOptions: [rw, noexec, nosuid]}'
         properties.getLinuxParameters().getTmpfs().get(1).toString() == '{ContainerPath: /app,Size: 128,MountOptions: [ro]}'
@@ -74,7 +74,7 @@ class AwsContainerOptionsMapperTest extends Specification {
 
         when:
         def map = CmdLineHelper.parseGnuArgs('--memory-swap 2048')
-        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
         then:
         properties.getLinuxParameters().getMaxSwap() == 2048
     }
@@ -83,7 +83,7 @@ class AwsContainerOptionsMapperTest extends Specification {
 
         when:
         def map = CmdLineHelper.parseGnuArgs('--shm-size 12048024')
-        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
         then:
         properties.getLinuxParameters().getSharedMemorySize() == 12048024
     }
@@ -92,7 +92,7 @@ class AwsContainerOptionsMapperTest extends Specification {
 
         when:
         def map = CmdLineHelper.parseGnuArgs('--memory-swappiness 12048024')
-        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
         then:
         properties.getLinuxParameters().getSwappiness() == 12048024
     }
@@ -101,7 +101,7 @@ class AwsContainerOptionsMapperTest extends Specification {
 
         when:
         def map = CmdLineHelper.parseGnuArgs('--init')
-        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
         then:
         properties.getLinuxParameters().getInitProcessEnabled()
     }
@@ -110,7 +110,7 @@ class AwsContainerOptionsMapperTest extends Specification {
 
         when:
         def map = CmdLineHelper.parseGnuArgs('')
-        def properties = AwsContainerOptionsMapper.createContainerOpts(map)
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
         then:
         properties.getLinuxParameters() == null
         properties.getUlimits() == null
