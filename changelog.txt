@@ -1,5 +1,33 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.03.0-edge 27 Mar 2022
+- Add experimental proxy reg [b3836691]
+- Add api to access config raw value [977f6305]
+- Add warning for invalid emit names [0045834c]
+- Add retry policy on grid submit failure #2696 [673f560c]
+- Add config tests #2422 [885993b1]
+- Add ability to disable config names check [814a2605]
+- Add azcopy fine grain config settings [3998a56b]
+- Add binary compatibility with Java 8 [763ec999]
+- Add retry policy to Az Batch operations [991c6175]
+- Make DSL2 default syntax [4e9189ac] [0c80784a]
+- Fix Reduce task command runner script size [6930408b]
+- Fix K8s task retry strategy on node termination [bd093081]
+- Fix use first config in stack when is into profile #2701 [44bdde8d] <Jorge Aguilera>
+- Fix Allow comments after nextflow.enable.dsl (#2746) [6988638b] <Jorge Aguilera>
+- Fix allow blank spaces in java path (#2690) [a966020e] <Jorge Aguilera>
+- Improve AWS Batch job retry on spot termination [bd8f2e26]
+- Improve error reporting [55466be7]
+- Undeprecate merge operation [1649944b]
+- Bump support for Java 18 [f3a11e4c]
+- Prevent invalid use of large maxForks values [5de0c200]
+- Prevent race condition on thread pool creation [3e707a1d]
+- Refactor AWS batch job unique token generation [d64f5a21]
+- Decrese log verbosity [9237d587] [d1a5e5a8]
+- Throw an error if a required secret is missing [8e5129d6]
+- Wait for pod to stop running before shutdown (#2667) [505c5ad6]) <kfrancisdev>
+- Restore AZ tests [858a4568]
+
 22.02.1-edge - 3 Mar 2022
 - Prevent multiple parsing of params file [38bb1f71]
 
