@@ -479,7 +479,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getAwsOptions() >> new AwsOptions()
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
-        result.parameters.'nf-token' == 'fdb5ef295f566138a43252b2ea272282'
+        result.parameters.'nf-token' == 'bfd3cc19ee9bdaea5b7edee94adf04bc'
         !result.containerProperties.mountPoints
 
         when:
@@ -489,7 +489,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getAwsOptions() >> new AwsOptions(cliPath: '/home/conda/bin/aws')
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
-        result.parameters.'nf-token' == '9c56fd073d32e0c29f51f12afdfe4750'
+        result.parameters.'nf-token' == '38d950a380585c53b43d733a10bae3b4'
         result.containerProperties.mountPoints[0].sourceVolume == 'aws-cli'
         result.containerProperties.mountPoints[0].containerPath == '/home/conda'
         result.containerProperties.mountPoints[0].readOnly

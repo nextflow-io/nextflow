@@ -467,7 +467,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         // create the container opts based on task config 
         final containerOpts = task.getConfig().getContainerOptionsMap()
-        final container = createContainerOpts(containerOpts)
+        final container = createContainerProperties(containerOpts)
 
         // container definition
         final _1_cpus = new ResourceRequirement().withType(ResourceType.VCPU).withValue('1')
@@ -503,10 +503,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         // add to this list all values that has to contribute to the
         // job definition unique name creation
-        final tokens = [name, image, awscli, volumes, jobRole]
+        hashingTokens.add(name)
+        hashingTokens.add(container.toString())
         if( containerOpts )
-            tokens.add(containerOpts)
-        hashingTokens.addAll(tokens)
+            hashingTokens.add(containerOpts)
 
         return result
     }
