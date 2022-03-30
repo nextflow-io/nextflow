@@ -55,11 +55,14 @@ class K8sConfig implements Map<String,Object> {
             this.podOptions.volumeClaims.add(new PodVolumeClaim(name, mount, subPath))
         }
 
-        // -- shortcut to pod image pull-policy
-        if( target.pullPolicy )
+        // -- shortcut to pod image pull policy
+        if( target.pullPolicy ) {
+            log.warn "The `pullPolicy` option is deprecated -- Use `imagePullPolicy` instead."
             podOptions.imagePullPolicy = target.pullPolicy.toString()
-        else if( target.imagePullPolicy )
+        }
+        else if( target.imagePullPolicy ) {
             podOptions.imagePullPolicy = target.imagePullPolicy.toString()
+        }
 
         // -- shortcut to pod security context
         if( target.runAsUser != null )

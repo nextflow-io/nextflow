@@ -21,6 +21,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.transform.ToString
+import groovy.util.logging.Slf4j
 
 /**
  * Model K8s pod options such as environment variables,
@@ -28,6 +29,7 @@ import groovy.transform.ToString
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 @ToString(includeNames = true)
 @EqualsAndHashCode(includeFields = true)
@@ -98,8 +100,12 @@ class PodOptions {
         else if( entry.mountPath && entry.volumeClaim ) {
             mountClaims << new PodVolumeClaim(entry)
         }
-        else if( entry.pullPolicy || entry.imagePullPolicy ) {
-            this.imagePullPolicy = entry.pullPolicy ?: entry.imagePullPolicy as String
+        else if( entry.pullPolicy ) {
+            log.warn "The `pullPolicy` option is deprecated -- Use `imagePullPolicy` instead."
+            this.imagePullPolicy = entry.pullPolicy as String
+        }
+        else if( entry.imagePullPolicy ) {
+            this.imagePullPolicy = entry.imagePullPolicy as String
         }
         else if( entry.imagePullSecret || entry.imagePullSecrets ) {
             this.imagePullSecret = entry.imagePullSecret ?: entry.imagePullSecrets

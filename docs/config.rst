@@ -397,7 +397,7 @@ launchDir           Defines the path where the workflow is launched and the user
 workDir             Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default:``<user-dir>/work``).
 projectDir          Defines the path where Nextflow projects are downloaded. This must be a path in a shared K8s persistent volume (default: ``<volume-claim-mount-path>/projects``).
 pod                 Allows the definition of one or more pod configuration options such as environment variables, config maps, secrets, etc. It allows the same settings as the :ref:`process-pod` process directive.
-pullPolicy          Defines the strategy to be used to pull the container image e.g. ``pullPolicy: 'Always'``.
+imagePullPolicy     Defines the strategy to be used to pull the container image e.g. ``imagePullPolicy: 'Always'``.
 runAsUser           Defines the user ID to be used to run the containers. Shortcut for the ``securityContext`` option.
 securityContext     Defines the `security context <https://kubernetes.io/docs/tasks/configure-pod-container/security-context/>`_ for all pods.
 storageClaimName    The name of the persistent volume claim where store workflow result data.

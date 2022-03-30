@@ -185,7 +185,7 @@ class K8sConfigTest extends Specification {
 
 
         when:
-        opts = new K8sConfig(pod: [ [pullPolicy: 'Always'], [env: 'HELLO', value: 'WORLD'] ]).getPodOptions()
+        opts = new K8sConfig(pod: [ [imagePullPolicy: 'Always'], [env: 'HELLO', value: 'WORLD'] ]).getPodOptions()
         then:
         opts.getImagePullPolicy() == 'Always'
         opts.getEnvVars() == [ PodEnv.value('HELLO','WORLD') ] as Set
@@ -332,8 +332,8 @@ class K8sConfigTest extends Specification {
 
     def 'should set the image pull policy' () {
         when:
-        def cfg = new K8sConfig( pullPolicy: 'always' )
+        def cfg = new K8sConfig( imagePullPolicy: 'Always' )
         then:
-        cfg.getPodOptions().getImagePullPolicy() == 'always'
+        cfg.getPodOptions().getImagePullPolicy() == 'Always'
     }
 }

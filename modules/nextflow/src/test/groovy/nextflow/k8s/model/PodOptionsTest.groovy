@@ -37,7 +37,7 @@ class PodOptionsTest extends Specification {
         options.getAutomountServiceAccountToken() == true
     }
 
-    def 'should set pullPolicy' () {
+    def 'should set imagePullPolicy' () {
 
         when:
         def options = new PodOptions()
@@ -45,12 +45,12 @@ class PodOptionsTest extends Specification {
         options.getImagePullPolicy() == null
         
         when:
-        options = new PodOptions([ [pullPolicy:'Always'] ])
+        options = new PodOptions([ [imagePullPolicy: 'Always'] ])
         then:
         options.getImagePullPolicy() == 'Always'
 
         when:
-        options = new PodOptions([ [imagePullPolicy:'latest'] ])
+        options = new PodOptions([ [imagePullPolicy: 'latest'] ])
         then:
         options.getImagePullPolicy() == 'latest'
     }
