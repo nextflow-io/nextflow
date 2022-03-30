@@ -21,6 +21,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
 import groovy.transform.ToString
+import groovy.util.logging.Slf4j
 
 /**
  * Model K8s pod options such as environment variables,
@@ -28,6 +29,7 @@ import groovy.transform.ToString
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 @ToString(includeNames = true)
 @EqualsAndHashCode(includeFields = true)
@@ -108,6 +110,7 @@ class PodOptions {
             this.labels.put(entry.label as String, entry.value as String)
         }
         else if( entry.runAsUser != null ) {
+            log.warn "The `runAsUser` option is deprecated -- Use `securityContext` instead."
             this.securityContext = new PodSecurityContext(entry.runAsUser)
         }
         else if( entry.securityContext instanceof Map ) {

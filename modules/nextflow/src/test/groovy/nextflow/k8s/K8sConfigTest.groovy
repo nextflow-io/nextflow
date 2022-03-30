@@ -285,7 +285,7 @@ class K8sConfigTest extends Specification {
     def 'should create k8s config with one volume claim' () {
 
         when:
-        def cfg = new K8sConfig( pod: [runAsUser: 1000] )
+        def cfg = new K8sConfig( pod: [securityContext: [runAsUser: 1000]] )
         then:
         cfg.getPodOptions().getSecurityContext() == new PodSecurityContext(1000)
         cfg.getPodOptions().getVolumeClaims().size() == 0
@@ -299,12 +299,12 @@ class K8sConfigTest extends Specification {
 
         when:
         cfg = new K8sConfig( pod: [
-                [runAsUser: 1000],
+                [securityContext: [runAsUser: 1000]],
                 [volumeClaim: 'nf-0001', mountPath: '/workspace'],
                 [volumeClaim: 'nf-0002', mountPath: '/data', subPath: '/home']
         ])
         then:
-        cfg.getPodOptions().getSecurityContext() == new PodSecurityContext(1000)
+        cfg.getPodOptions().getSecurityContext() == new PodSecurityContext([runAsUser: 1000])
         cfg.getPodOptions().getVolumeClaims() == [
                     new PodVolumeClaim('nf-0001', '/workspace'),
                     new PodVolumeClaim('nf-0002', '/data', '/home')
@@ -313,15 +313,15 @@ class K8sConfigTest extends Specification {
     }
 
 
-    def 'should set the sec context'( ) {
+    def 'should set the security context'( ) {
 
         given:
-        def ctx = [runAsUser: 500, fsGroup: 200, allowPrivilegeEscalation: true, seLinuxOptions: [level: "s0:c123,c456"]]
-
-        when:
-        def cfg = new K8sConfig( runAsUser: 500 )
-        then:
-        cfg.getPodOptions().getSecurityContext() == new PodSecurityContext(500)
+        def ctx = [
+            runAsUser: 500,
+            fsGroup: 200,
+            allowPrivilegeEscalation: true,
+            seLinuxOptions: [level: "s0:c123,c456"]
+        ]
 
         when:
         cfg = new K8sConfig( securityContext: ctx )

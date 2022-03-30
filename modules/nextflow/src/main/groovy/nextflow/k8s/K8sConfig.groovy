@@ -62,10 +62,13 @@ class K8sConfig implements Map<String,Object> {
             podOptions.imagePullPolicy = target.imagePullPolicy.toString()
 
         // -- shortcut to pod security context
-        if( target.runAsUser != null )
+        if( target.runAsUser != null ) {
+            log.warn "The `runAsUser` option is deprecated -- Use `securityContext` instead."
             podOptions.securityContext = new PodSecurityContext(target.runAsUser)
-        else if( target.securityContext instanceof Map )
+        }
+        else if( target.securityContext instanceof Map ) {
             podOptions.securityContext = new PodSecurityContext(target.securityContext as Map)
+        }
     }
 
     private PodOptions createPodOptions( value ) {
