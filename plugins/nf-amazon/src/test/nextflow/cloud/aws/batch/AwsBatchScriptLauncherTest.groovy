@@ -129,8 +129,8 @@ class AwsBatchScriptLauncherTest extends Specification {
                 nxf_s3_download() {
                     local source=$1
                     local target=$2
-                    local file_name=$(basename $1)
-                    local is_dir=$(/conda/bin/aws --region eu-west-1 s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                    local file_name=$(basename "$1")
+                    local is_dir=$(/conda/bin/aws --region eu-west-1 s3 ls "$source" | grep -F "PRE ${file_name}/" -c)
                     if [[ $is_dir == 1 ]]; then
                         /conda/bin/aws --region eu-west-1 s3 cp --only-show-errors --recursive "$source" "$target"
                     else 
@@ -306,8 +306,8 @@ class AwsBatchScriptLauncherTest extends Specification {
                     nxf_s3_download() {
                         local source=$1
                         local target=$2
-                        local file_name=$(basename $1)
-                        local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                        local file_name=$(basename "$1")
+                        local is_dir=$(aws s3 ls "$source" | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
                         else 
@@ -449,8 +449,8 @@ class AwsBatchScriptLauncherTest extends Specification {
                     nxf_s3_download() {
                         local source=$1
                         local target=$2
-                        local file_name=$(basename $1)
-                        local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                        local file_name=$(basename "$1")
+                        local is_dir=$(aws s3 ls "$source" | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
                         else 
@@ -566,8 +566,8 @@ class AwsBatchScriptLauncherTest extends Specification {
                     nxf_s3_download() {
                         local source=$1
                         local target=$2
-                        local file_name=$(basename $1)
-                        local is_dir=$(aws s3 ls $source | grep -F "PRE ${file_name}/" -c)
+                        local file_name=$(basename "$1")
+                        local is_dir=$(aws s3 ls "$source" | grep -F "PRE ${file_name}/" -c)
                         if [[ $is_dir == 1 ]]; then
                             aws s3 cp --only-show-errors --recursive "$source" "$target"
                         else 
