@@ -161,7 +161,11 @@ class K8sDriverLauncherTest extends Specification {
         spec == [
             apiVersion: 'v1',
             kind: 'Pod',
-            metadata: [name:'foo-boo', namespace:'foo', labels:[app:'nextflow', runName:'foo-boo']],
+            metadata: [
+                name:'foo-boo',
+                namespace:'foo',
+                labels:[app:'nextflow', runName:'foo-boo']
+            ],
             spec: [
                 restartPolicy: 'Never',
                 containers: [
@@ -219,7 +223,11 @@ class K8sDriverLauncherTest extends Specification {
         spec == [
             apiVersion: 'v1',
             kind: 'Pod',
-            metadata: [name:'foo-boo', namespace:'foo', labels:[app:'nextflow', runName:'foo-boo']],
+            metadata: [
+                name:'foo-boo',
+                namespace:'foo',
+                labels:[app:'nextflow', runName:'foo-boo']
+            ],
             spec: [
                 restartPolicy: 'Never',
                 containers: [

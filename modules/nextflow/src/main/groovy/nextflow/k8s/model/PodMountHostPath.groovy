@@ -22,20 +22,20 @@ import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 
 /**
- * Model a K8s pod host mount defintion
+ * Model a K8s hostPath volume defintion
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @EqualsAndHashCode
 @ToString(includeNames = true)
 @CompileStatic
-class PodHostMount {
+class PodMountHostPath {
 
     String hostPath
 
     String mountPath
 
-    PodHostMount(String host, String container) {
+    PodMountHostPath(String host, String container) {
         this.hostPath = host
         this.mountPath = container
     }

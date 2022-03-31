@@ -420,8 +420,8 @@ class PodSpecBuilderTest extends Specification {
                 .withImageName('busybox')
                 .withWorkDir('/path')
                 .withCommand(['echo'])
-                .withHostMount('/tmp','/scratch')
-                .withHostMount('/host/data','/mnt/container')
+                .withHostPath('/tmp','/scratch')
+                .withHostPath('/host/data','/mnt/container')
                 .build()
 
         then:
@@ -608,7 +608,7 @@ class PodSpecBuilderTest extends Specification {
         given:
         def builder = new PodSpecBuilder(imagePullSecret: 'MySecret')
         when:
-        def result = builder.createPullSecret()
+        def result = builder.createImagePullSecret()
         then:
         result.size() == 1 
         result.get(0).name == 'MySecret'

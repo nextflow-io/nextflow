@@ -192,9 +192,9 @@ class K8sTaskHandler extends TaskHandler {
         if( acc )
             builder.withAccelerator(acc)
 
-        final List<String> hostMounts = getContainerMounts()
-        for( String mount : hostMounts ) {
-            builder.withHostMount(mount,mount)
+        final List<String> hostPaths = getContainerMounts()
+        for( String mount : hostPaths ) {
+            builder.withHostPath(mount,mount)
         }
 
         return builder.build()

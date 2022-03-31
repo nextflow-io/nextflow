@@ -40,56 +40,56 @@ class PodSpecBuilder {
 
     String podName
 
+    AcceleratorResource accelerator
+
+    Map affinity
+
+    Map<String,String> annotations = [:]
+
+    boolean automountServiceAccountToken = true
+
+    List<String> command = []
+
+    Integer cpus
+
+    List<PodEnv> envVars = []
+
     String imageName
 
     String imagePullPolicy
 
     String imagePullSecret
 
-    List<String> command = []
-
     Map<String,String> labels = [:]
 
-    Map<String,String> annotations = [:]
-
-    String namespace
-
-    String restart
-
-    List<PodEnv> envVars = []
-
-    String workDir
-
-    Integer cpus
-
     String memory
-
-    String serviceAccount
-
-    boolean automountServiceAccountToken = true
-
-    AcceleratorResource accelerator
 
     Collection<PodMountSecret> secrets = []
 
     Collection<PodMountConfig> configMaps = []
 
-    Collection<PodHostMount> hostMounts = []
+    Collection<PodMountHostPath> hostPaths = []
 
     Collection<PodVolumeClaim> volumeClaims = []
 
-    PodSecurityContext securityContext
+    String namespace
 
     PodNodeSelector nodeSelector
 
-    Map affinity
-
     String priorityClassName
+
+    String restartPolicy
+
+    PodSecurityContext securityContext
+
+    String serviceAccount
+
+    String workDir
 
     /**
      * @return A sequential volume unique identifier
      */
-    static protected String nextVolName() {
+    static protected String nextVolumeName() {
         "vol-${VOLUMES.incrementAndGet()}".toString()
     }
 
@@ -99,33 +99,18 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withImageName(String name) {
-        this.imageName = name
+    PodSpecBuilder withAccelerator(AcceleratorResource acc) {
+        this.accelerator = acc
         return this
     }
 
-    PodSpecBuilder withImagePullPolicy(String policy) {
-        this.imagePullPolicy = policy
+    PodSpecBuilder withAnnotation( String name, String value ) {
+        this.annotations.put(name, value)
         return this
     }
 
-    PodSpecBuilder withWorkDir( String path ) {
-        this.workDir = path
-        return this
-    }
-
-    PodSpecBuilder withWorkDir(Path path ) {
-        this.workDir = path.toString()
-        return this
-    }
-
-    PodSpecBuilder withNamespace(String name) {
-        this.namespace = name
-        return this
-    }
-
-    PodSpecBuilder withServiceAccount(String name) {
-        this.serviceAccount = name
+    PodSpecBuilder withAnnotations(Map annotations) {
+        this.annotations.putAll(annotations)
         return this
     }
 
@@ -140,18 +125,23 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withMemory(String mem) {
-        this.memory = mem
+    PodSpecBuilder withEnv( PodEnv env ) {
+        envVars.add(env)
         return this
     }
 
-    PodSpecBuilder withMemory(MemoryUnit mem)  {
-        this.memory = "${mem.mega}Mi".toString()
+    PodSpecBuilder withEnv( Collection envs ) {
+        envVars.addAll(envs)
         return this
     }
 
-    PodSpecBuilder withAccelerator(AcceleratorResource acc) {
-        this.accelerator = acc
+    PodSpecBuilder withImageName(String name) {
+        this.imageName = name
+        return this
+    }
+
+    PodSpecBuilder withImagePullPolicy(String policy) {
+        this.imagePullPolicy = policy
         return this
     }
 
@@ -165,34 +155,13 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withAnnotation( String name, String value ) {
-        this.annotations.put(name, value)
+    PodSpecBuilder withMemory(String mem) {
+        this.memory = mem
         return this
     }
 
-    PodSpecBuilder withAnnotations(Map annotations) {
-        this.annotations.putAll(annotations)
-        return this
-    }
-
-
-    PodSpecBuilder withEnv( PodEnv env ) {
-        envVars.add(env)
-        return this
-    }
-
-    PodSpecBuilder withEnv( Collection envs ) {
-        envVars.addAll(envs)
-        return this
-    }
-
-    PodSpecBuilder withVolumeClaim( PodVolumeClaim claim ) {
-        volumeClaims.add(claim)
-        return this
-    }
-
-    PodSpecBuilder withVolumeClaims( Collection<PodVolumeClaim> claims ) {
-        volumeClaims.addAll(claims)
+    PodSpecBuilder withMemory(MemoryUnit mem)  {
+        this.memory = "${mem.mega}Mi".toString()
         return this
     }
 
@@ -206,6 +175,16 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withHostPaths( Collection<PodMountHostPath> hostPaths ) {
+        this.hostPaths.addAll(hostPaths)
+        return this
+    }
+
+    PodSpecBuilder withHostPath( String host, String mount ) {
+        this.hostPaths.add( new PodMountHostPath(host, mount))
+        return this
+    }
+
     PodSpecBuilder withSecrets( Collection<PodMountSecret> secrets ) {
         this.secrets.addAll(secrets)
         return this
@@ -216,34 +195,59 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withHostMounts( Collection<PodHostMount> mounts ) {
-        this.hostMounts.addAll(mounts)
+    PodSpecBuilder withVolumeClaim( PodVolumeClaim claim ) {
+        volumeClaims.add(claim)
         return this
     }
 
-    PodSpecBuilder withHostMount( String host, String mount ) {
-        this.hostMounts.add( new PodHostMount(host, mount))
+    PodSpecBuilder withVolumeClaims( Collection<PodVolumeClaim> claims ) {
+        volumeClaims.addAll(claims)
+        return this
+    }
+
+    PodSpecBuilder withNamespace(String name) {
+        this.namespace = name
+        return this
+    }
+
+    PodSpecBuilder withServiceAccount(String name) {
+        this.serviceAccount = name
+        return this
+    }
+
+    PodSpecBuilder withWorkDir( String path ) {
+        this.workDir = path
+        return this
+    }
+
+    PodSpecBuilder withWorkDir(Path path ) {
+        this.workDir = path.toString()
         return this
     }
 
     PodSpecBuilder withPodOptions(PodOptions opts) {
-        // -- pull policy
+        // -- affinity
+        if( opts.affinity )
+            affinity = opts.affinity
+
+        // - annotations
+        if( opts.annotations ) {
+            annotations.putAll( opts.annotations )
+        }
+
+        // -- automount service account token
+        automountServiceAccountToken = opts.automountServiceAccountToken
+
+        // -- environment variables
+        if( opts.getEnvVars() )
+            envVars.addAll( opts.getEnvVars() )
+
+        // -- image pull policy
         if( opts.imagePullPolicy )
             imagePullPolicy = opts.imagePullPolicy
         if( opts.imagePullSecret )
             imagePullSecret = opts.imagePullSecret
-        // -- env vars
-        if( opts.getEnvVars() )
-            envVars.addAll( opts.getEnvVars() )
-        // -- secrets
-        if( opts.getMountSecrets() )
-            secrets.addAll( opts.getMountSecrets() )
-        // -- configMaps
-        if( opts.getMountConfigMaps() )
-            configMaps.addAll( opts.getMountConfigMaps() )
-        // -- volume claims 
-        if( opts.getVolumeClaims() )
-            volumeClaims.addAll( opts.getVolumeClaims() )
+
         // -- labels
         if( opts.labels ) {
             def keys = opts.labels.keySet()
@@ -251,28 +255,34 @@ class PodSpecBuilder {
             if( 'runName' in keys ) throw new IllegalArgumentException("Invalid pod label -- `runName` is a reserved label")
             labels.putAll( opts.labels )
         }
-        // - annotations
-        if( opts.annotations ) {
-            annotations.putAll( opts.annotations )
-        }
-        // -- security context
-        if( opts.securityContext )
-            securityContext = opts.securityContext
+
+        // -- configMaps
+        if( opts.getMountConfigMaps() )
+            configMaps.addAll( opts.getMountConfigMaps() )
+
+        // -- secrets
+        if( opts.getMountSecrets() )
+            secrets.addAll( opts.getMountSecrets() )
+
+        // -- volume claims
+        if( opts.getVolumeClaims() )
+            volumeClaims.addAll( opts.getVolumeClaims() )
+
         // -- node selector
         if( opts.nodeSelector )
             nodeSelector = opts.nodeSelector
-        // -- affinity
-        if( opts.affinity )
-            affinity = opts.affinity
-        // -- automount service account token
-        automountServiceAccountToken = opts.automountServiceAccountToken
+
         // -- priority class name
         priorityClassName = opts.priorityClassName
+
+        // -- security context
+        if( opts.securityContext )
+            securityContext = opts.securityContext
 
         return this
     }
 
-    @PackageScope List<Map> createPullSecret() {
+    @PackageScope List<Map> createImagePullSecret() {
         def result = new ArrayList(1)
         def entry = new LinkedHashMap(1)
         entry.name = imagePullSecret
@@ -281,142 +291,154 @@ class PodSpecBuilder {
     }
 
     Map build() {
-        assert this.podName, 'Missing K8s podName parameter'
-        assert this.imageName, 'Missing K8s imageName parameter'
-        assert this.command, 'Missing K8s command parameter'
+        assert this.podName, 'Missing pod name'
+        assert this.imageName, 'Missing pod container image'
+        assert this.command, 'Missing pod command'
 
-        final restart = this.restart ?: 'Never'
+        final metadata = [
+            name: podName,
+            namespace: this.namespace ?: 'default'
+        ]
 
-        final metadata = new LinkedHashMap<String,Object>()
-        metadata.name = podName
-        metadata.namespace = namespace ?: 'default'
+        final container = [
+            name: this.podName,
+            image: this.imageName,
+            command: this.command
+        ]
 
-        final labels = this.labels ?: [:]
+        final spec = [
+            containers: [ container ],
+            restartPolicy: this.restartPolicy ?: 'Never',
+        ]
+
+        // affinity
+        if( this.affinity )
+            spec.affinity = this.affinity
+
+        // annotations
+        if( this.annotations )
+            metadata.annotations = sanitize0(this.annotations, 'annotation')
+
+        // automount service account token
+        if( ! this.automountServiceAccountToken )
+            spec.automountServiceAccountToken = false
+
+        // environment variables
         final env = []
-        for( PodEnv entry : this.envVars ) {
-            env.add(entry.toSpec())
+        for( PodEnv envVar : this.envVars ) {
+            env.add(envVar.toSpec())
         }
 
+        if ( env )
+            container.env = env
+
+        // image pull policy
+        if( this.imagePullPolicy )
+            container.imagePullPolicy = this.imagePullPolicy
+
+        // image pull secret
+        if( this.imagePullSecret )
+            spec.imagePullSecrets = this.createImagePullSecret()
+
+        // labels
+        final labels = this.labels ?: [:]
+        if( labels )
+            metadata.labels = sanitize0(labels, 'label')
+
+        // node selector
+        if( this.nodeSelector )
+            spec.nodeSelector = this.nodeSelector.toSpec()
+
+        // priority class name
+        if( this.priorityClassName )
+            spec.priorityClassName = this.priorityClassName
+
+        // resources
         final res = [:]
         if( this.cpus )
             res.cpu = this.cpus
         if( this.memory )
             res.memory = this.memory
 
-        final container = [
-                name: this.podName,
-                image: this.imageName,
-                command: this.command
-        ]
-        
-        if( this.workDir )
-            container.put('workingDir', workDir)
+        if( res ) {
+            container.resources = [
+                requests: res,
+                limits: new HashMap<>(res)
+            ]
+        }
 
-        if( imagePullPolicy )
-            container.imagePullPolicy = imagePullPolicy
+        // security context
+        if( this.securityContext )
+            spec.securityContext = this.securityContext.toSpec()
 
-        final spec = [
-                restartPolicy: restart,
-                containers: [ container ],
-        ]
-
-        if( nodeSelector )
-            spec.nodeSelector = nodeSelector.toSpec()
-
-        if( affinity )
-            spec.affinity = affinity
-
+        // service account
         if( this.serviceAccount )
             spec.serviceAccountName = this.serviceAccount
 
-        if( ! this.automountServiceAccountToken )
-            spec.automountServiceAccountToken = false
+        // work dir
+        if( this.workDir )
+            container.workingDir = this.workDir
 
-        if( securityContext )
-            spec.securityContext = securityContext.toSpec()
-
-        if( imagePullSecret )
-            spec.imagePullSecrets = createPullSecret()
-
-        if( priorityClassName )
-            spec.priorityClassName = priorityClassName
-
-        // add labels
-        if( labels )
-            metadata.labels = sanitize0(labels, 'label')
-
-        if( annotations)
-            metadata.annotations = sanitize0(annotations, 'annotation')
-
-        final pod = [
-                apiVersion: 'v1',
-                kind: 'Pod',
-                metadata: metadata,
-                spec: spec
-        ]
-
-        // add environment
-        if( env )
-            container.env = env
-
-        // add resources
-        if( res ) {
-            container.resources = [requests: res, limits: new HashMap<>(res)]
+        // add accelerator resource
+        if( this.accelerator ) {
+            container.resources = addAcceleratorResources(this.accelerator, container.resources as Map)
         }
 
-        // add gpu settings
-        if( accelerator ) {
-            container.resources = addAcceleratorResources(accelerator, container.resources as Map)
-        }
-
-        // add storage definitions ie. volumes and mounts
-        final mounts = []
+        // add volumes
+        final volumeMounts = []
         final volumes = []
         final namesMap = [:]
 
-        // creates a volume name for each unique claim name
+        // create a volume name for each unique volume claim
         for( String claimName : volumeClaims.collect { it.claimName }.unique() ) {
-            final volName = nextVolName()
-            namesMap[claimName] = volName
-            volumes << [name: volName, persistentVolumeClaim: [claimName: claimName]]
+            final volumeName = nextVolumeName()
+            namesMap[claimName] = volumeName
+            volumes << [name: volumeName, persistentVolumeClaim: [claimName: claimName]]
         }
 
         // -- volume claims
         for( PodVolumeClaim entry : volumeClaims ) {
-            //check if we already have a volume for the pvc
+            // check if we already have a volume for the pvc
             final name = namesMap.get(entry.claimName)
             final claim = [name: name, mountPath: entry.mountPath ]
             if( entry.subPath )
                 claim.subPath = entry.subPath
             if( entry.readOnly )
                 claim.readOnly = entry.readOnly
-            mounts << claim
+            volumeMounts << claim
         }
 
         // -- configMap volumes
         for( PodMountConfig entry : configMaps ) {
-            final name = nextVolName()
-            configMapToSpec(name, entry, mounts, volumes)
+            final name = nextVolumeName()
+            configMapToSpec(name, entry, volumeMounts, volumes)
         }
 
-        // host mounts
-        for( PodHostMount entry : hostMounts ) {
-            final name = nextVolName()
-            mounts << [name: name, mountPath: entry.mountPath]
+        // -- hostPath volumes
+        for( PodMountHostPath entry : hostPaths ) {
+            final name = nextVolumeName()
+            volumeMounts << [name: name, mountPath: entry.mountPath]
             volumes << [name: name, hostPath: [path: entry.hostPath]]
         }
 
-        // secret volumes
+        // -- secret volumes
         for( PodMountSecret entry : secrets ) {
-            final name = nextVolName()
-            secretToSpec(name, entry, mounts, volumes)
+            final name = nextVolumeName()
+            secretToSpec(name, entry, volumeMounts, volumes)
         }
 
-
+        if( volumeMounts )
+            container.volumeMounts = volumeMounts
         if( volumes )
             spec.volumes = volumes
-        if( mounts )
-            container.volumeMounts = mounts
+
+        // define top-level pod spec
+        final pod = [
+            apiVersion: 'v1',
+            kind: 'Pod',
+            metadata: metadata,
+            spec: spec
+        ]
 
         return pod
     }
@@ -465,7 +487,7 @@ class PodSpecBuilder {
 
     @PackageScope
     @CompileDynamic
-    static void secretToSpec(String volName, PodMountSecret entry, List mounts, List volumes ) {
+    static void secretToSpec(String volumeName, PodMountSecret entry, List volumeMounts, List volumes ) {
         assert entry
 
         final secret = [secretName: entry.secretName]
@@ -473,13 +495,13 @@ class PodSpecBuilder {
             secret.items = [ [key: entry.secretKey, path: entry.fileName ] ]
         }
 
-        mounts << [name: volName, mountPath: entry.mountPath]
-        volumes << [name: volName, secret: secret ]
+        volumeMounts << [name: volumeName, mountPath: entry.mountPath]
+        volumes << [name: volumeName, secret: secret ]
     }
 
     @PackageScope
     @CompileDynamic
-    static void configMapToSpec(String volName, PodMountConfig entry, List<Map> mounts, List<Map> volumes ) {
+    static void configMapToSpec(String volumeName, PodMountConfig entry, List<Map> volumeMounts, List<Map> volumes ) {
         assert entry
 
         final config = [name: entry.configName]
@@ -487,8 +509,8 @@ class PodSpecBuilder {
             config.items = [ [key: entry.configKey, path: entry.fileName ] ]
         }
 
-        mounts << [name: volName, mountPath: entry.mountPath]
-        volumes << [name: volName, configMap: config ]
+        volumeMounts << [name: volumeName, mountPath: entry.mountPath]
+        volumes << [name: volumeName, configMap: config ]
     }
 
     protected Map sanitize0(Map map, String kind) {

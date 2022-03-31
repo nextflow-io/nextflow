@@ -33,39 +33,39 @@ import groovy.transform.ToString
 @EqualsAndHashCode(includeFields = true)
 class PodOptions {
 
+    private Map affinity
+
+    private Map<String,String> annotations = [:]
+
+    private boolean automountServiceAccountToken
+
+    private Collection<PodEnv> envVars
+
     private String imagePullPolicy
 
     private String imagePullSecret
 
-    private Collection<PodEnv> envVars
+    private Map<String,String> labels = [:]
 
     private Collection<PodMountConfig> mountConfigMaps
 
     private Collection<PodMountSecret> mountSecrets
 
-    private Collection<PodVolumeClaim> mountClaims
-
-    private Map<String,String> labels = [:]
-
-    private Map<String,String> annotations = [:]
+    private Collection<PodVolumeClaim> mountVolumeClaims
 
     private PodNodeSelector nodeSelector
 
-    private Map affinity
+    private String priorityClassName
 
     private PodSecurityContext securityContext
 
-    private boolean automountServiceAccountToken
-
-    private String priorityClassName
-
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
-        envVars = new HashSet<>(size)
-        mountSecrets = new HashSet<>(size)
-        mountConfigMaps = new HashSet<>(size)
-        mountClaims = new HashSet<>(size)
         automountServiceAccountToken = true
+        envVars = new HashSet<>(size)
+        mountConfigMaps = new HashSet<>(size)
+        mountSecrets = new HashSet<>(size)
+        mountVolumeClaims = new HashSet<>(size)
         init(options)
     }
 
@@ -77,8 +77,17 @@ class PodOptions {
     }
 
     @PackageScope void create(Map<String,String> entry) {
-        if( entry.env && entry.value ) {
-            envVars << PodEnv.value(entry.env, entry.value)
+        if( entry.affinity instanceof Map ) {
+            this.affinity = entry.affinity as Map
+        }
+        else if( entry.annotation && entry.value ) {
+            this.annotations.put(entry.annotation as String, entry.value as String)
+        }
+        else if( entry.automountServiceAccountToken instanceof Boolean ) {
+            this.automountServiceAccountToken = entry.automountServiceAccountToken as Boolean
+        }
+        else if( entry.env && entry.config ) {
+            envVars << PodEnv.config(entry.env, entry.config)
         }
         else if( entry.env && entry.fieldPath ) {
             envVars << PodEnv.fieldPath(entry.env, entry.fieldPath)
@@ -86,17 +95,8 @@ class PodOptions {
         else if( entry.env && entry.secret ) {
             envVars << PodEnv.secret(entry.env, entry.secret)
         }
-        else if( entry.env && entry.config ) {
-            envVars << PodEnv.config(entry.env, entry.config)
-        }
-        else if( entry.mountPath && entry.secret ) {
-            mountSecrets <<  new PodMountSecret(entry)
-        }
-        else if( entry.mountPath && entry.config ) {
-            mountConfigMaps << new PodMountConfig(entry)
-        }
-        else if( entry.mountPath && entry.volumeClaim ) {
-            mountClaims << new PodVolumeClaim(entry)
+        else if( entry.env && entry.value ) {
+            envVars << PodEnv.value(entry.env, entry.value)
         }
         else if( entry.pullPolicy || entry.imagePullPolicy ) {
             this.imagePullPolicy = entry.pullPolicy ?: entry.imagePullPolicy as String
@@ -107,57 +107,49 @@ class PodOptions {
         else if( entry.label && entry.value ) {
             this.labels.put(entry.label as String, entry.value as String)
         }
+        else if( entry.mountPath && entry.config ) {
+            mountConfigMaps << new PodMountConfig(entry)
+        }
+        else if( entry.mountPath && entry.secret ) {
+            mountSecrets << new PodMountSecret(entry)
+        }
+        else if( entry.mountPath && entry.volumeClaim ) {
+            mountVolumeClaims << new PodVolumeClaim(entry)
+        }
+        else if( entry.nodeSelector ) {
+            this.nodeSelector = new PodNodeSelector(entry.nodeSelector)
+        }
+        else if( entry.priorityClassName ) {
+            this.priorityClassName = entry.priorityClassName
+        }
         else if( entry.runAsUser != null ) {
             this.securityContext = new PodSecurityContext(entry.runAsUser)
         }
         else if( entry.securityContext instanceof Map ) {
             this.securityContext = new PodSecurityContext(entry.securityContext as Map)
         }
-        else if( entry.nodeSelector ) {
-            this.nodeSelector = new PodNodeSelector(entry.nodeSelector)
-        }
-        else if( entry.affinity instanceof Map ) {
-            this.affinity = entry.affinity as Map
-        }
-        else if( entry.annotation && entry.value ) {
-            this.annotations.put(entry.annotation as String, entry.value as String)
-        }
-        else if( entry.automountServiceAccountToken instanceof Boolean ) {
-            this.automountServiceAccountToken = entry.automountServiceAccountToken as Boolean
-        }
-        else if( entry.priorityClassName ) {
-            this.priorityClassName = entry.priorityClassName
-        }
         else 
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
 
 
-    Collection<PodEnv> getEnvVars() { envVars }
-
-    Collection<PodMountConfig> getMountConfigMaps() { mountConfigMaps }
-
-    Collection<PodMountSecret> getMountSecrets() { mountSecrets }
-
-    Collection<PodVolumeClaim> getVolumeClaims() { mountClaims }
-
-    Map<String,String> getLabels() { labels }
+    Map getAffinity() { affinity }
 
     Map<String,String> getAnnotations() { annotations }
 
-    PodNodeSelector getNodeSelector() { nodeSelector }
+    boolean getAutomountServiceAccountToken() { automountServiceAccountToken }
 
-    PodOptions setNodeSelector( PodNodeSelector sel ) {
-        nodeSelector = sel
+    PodOptions setAutomountServiceAccountToken( boolean mount ) {
+        this.automountServiceAccountToken = mount
         return this
     }
 
-    Map getAffinity() { affinity }
+    Collection<PodEnv> getEnvVars() { envVars }
 
-    PodSecurityContext getSecurityContext() { securityContext }
+    String getImagePullPolicy() { imagePullPolicy }
 
-    PodOptions setSecurityContext( PodSecurityContext ctx ) {
-        this.securityContext = ctx
+    PodOptions setImagePullPolicy( String policy ) {
+        this.imagePullPolicy = policy
         return this
     }
 
@@ -168,28 +160,62 @@ class PodOptions {
         return this
     }
 
-    String getImagePullPolicy() { imagePullPolicy }
+    Map<String,String> getLabels() { labels }
 
-    PodOptions setImagePullPolicy( String policy ) {
-        this.imagePullPolicy = policy
-        return this
-    }
+    Collection<PodMountConfig> getMountConfigMaps() { mountConfigMaps }
 
-    boolean getAutomountServiceAccountToken() { automountServiceAccountToken }
+    Collection<PodMountSecret> getMountSecrets() { mountSecrets }
 
-    PodOptions setAutomountServiceAccountToken( boolean mount ) {
-        this.automountServiceAccountToken = mount
+    Collection<PodVolumeClaim> getVolumeClaims() { mountVolumeClaims }
+
+    PodNodeSelector getNodeSelector() { nodeSelector }
+
+    PodOptions setNodeSelector( PodNodeSelector sel ) {
+        nodeSelector = sel
         return this
     }
 
     String getPriorityClassName() { priorityClassName }
 
+    PodSecurityContext getSecurityContext() { securityContext }
+
+    PodOptions setSecurityContext( PodSecurityContext ctx ) {
+        this.securityContext = ctx
+        return this
+    }
+
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
 
-        // env vars
+        // affinity
+        result.affinity = other.affinity ?: this.affinity
+
+        // annotations
+        result.annotations.putAll(annotations)
+        result.annotations.putAll(other.annotations)
+
+        // automount service account token
+        result.automountServiceAccountToken = other.automountServiceAccountToken & this.automountServiceAccountToken
+
+        // environment variables
         result.envVars.addAll(envVars)
         result.envVars.addAll( other.envVars )
+
+        // image pull policy
+        if (other.imagePullPolicy)
+            result.imagePullPolicy = other.imagePullPolicy
+        else
+            result.imagePullPolicy = imagePullPolicy
+
+        // image pull secret
+        if (other.imagePullSecret)
+            result.imagePullSecret = other.imagePullSecret
+        else
+            result.imagePullSecret = imagePullSecret
+
+        // labels
+        result.labels.putAll(labels)
+        result.labels.putAll(other.labels)
 
         // config maps
         result.mountConfigMaps.addAll( mountConfigMaps )
@@ -203,43 +229,17 @@ class PodOptions {
         result.volumeClaims.addAll( volumeClaims )
         result.volumeClaims.addAll( other.volumeClaims )
 
-        // sec context
+        // node selector
+        result.nodeSelector = other.nodeSelector ?: this.nodeSelector
+
+        // priority class name
+        result.priorityClassName = other.priorityClassName ?: this.priorityClassName
+
+        // security context
         if( other.securityContext )
             result.securityContext = other.securityContext
         else
             result.securityContext = securityContext
-
-        // node selector
-        result.nodeSelector = other.nodeSelector ?: this.nodeSelector
-
-        // affinity
-        result.affinity = other.affinity ?: this.affinity
-
-        // pull policy
-        if (other.imagePullPolicy)
-            result.imagePullPolicy = other.imagePullPolicy
-        else
-            result.imagePullPolicy = imagePullPolicy
-
-        // image secret
-        if (other.imagePullSecret)
-            result.imagePullSecret = other.imagePullSecret
-        else
-            result.imagePullSecret = imagePullSecret
-
-        // labels
-        result.labels.putAll(labels)
-        result.labels.putAll(other.labels)
-
-        // annotations
-        result.annotations.putAll(annotations)
-        result.annotations.putAll(other.annotations)
-
-        // automount service account token
-        result.automountServiceAccountToken = other.automountServiceAccountToken & this.automountServiceAccountToken
-
-        // priority class name
-        result.priorityClassName = other.priorityClassName ?: this.priorityClassName
 
         return result
     }
