@@ -229,6 +229,19 @@ class ScriptMeta {
         return result
     }
 
+    Set<String> getLocalProcessNames() {
+        if( NF.dsl1 )
+            return new HashSet<String>(getDsl1ProcessNames())
+
+        def result = new HashSet(definitions.size() + imports.size())
+        // local definitions
+        for( def item : definitions.values() ) {
+            if( item instanceof ProcessDef )
+                result.add(item.name)
+        }
+        return result
+    }
+
     Set<String> getLocalWorkflowNames() {
         def result = new HashSet(definitions.size())
         for( def item : definitions.values() ) {
