@@ -86,6 +86,8 @@ class PodSpecBuilder {
 
     String workDir
 
+    List<Map> tolerations = []
+
     /**
      * @return A sequential volume unique identifier
      */
@@ -279,6 +281,10 @@ class PodSpecBuilder {
         if( opts.securityContext )
             securityContext = opts.securityContext
 
+        // -- tolerations
+        if( opts.tolerations )
+            tolerations.addAll(opts.tolerations)
+
         return this
     }
 
@@ -374,6 +380,10 @@ class PodSpecBuilder {
         // service account
         if( this.serviceAccount )
             spec.serviceAccountName = this.serviceAccount
+
+        // tolerations
+        if( this.tolerations )
+            spec.tolerations = this.tolerations
 
         // work dir
         if( this.workDir )

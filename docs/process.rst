@@ -2021,6 +2021,7 @@ The ``pod`` directive allows the definition of the following options:
 ``priorityClassName: <V>``                        Specifies the `priority class name <https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/>`_ for pods.
 ``runAsUser: <UID>``                              Specifies the user ID to be used to run the container. Shortcut for the ``securityContext`` option.
 ``securityContext: <V>``                          Specifies the pod security context. See `Kubernetes security context <https://kubernetes.io/docs/tasks/configure-pod-container/security-context/>`_ for details.
+``toleration: <V>``                               Specifies a toleration for a node taint. See `Taints and Tolerations <https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/>`_ for details.
 ================================================= =================================================
 
 When defined in the Nextflow configuration file, a pod setting can be defined using the canonical
@@ -2036,6 +2037,7 @@ When more than one setting needs to be provides they must be enclosed in a list 
     pod = [ [env: 'FOO', value: 'bar'], [secret: 'my-secret/key1', mountPath: '/etc/file.txt'] ]
   }
 
+Some settings, including environment variables, configs, secrets, volume claims, and tolerations, can be specified multiple times for different values.
 
 .. _process-publishDir:
 
