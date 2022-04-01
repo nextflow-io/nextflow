@@ -25,6 +25,7 @@ import java.util.regex.Pattern
 
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
+import com.amazonaws.services.batch.model.AttemptContainerDetail
 import com.amazonaws.services.batch.model.ClientException
 import com.amazonaws.services.batch.model.ContainerOverrides
 import com.amazonaws.services.batch.model.ContainerProperties
@@ -232,6 +233,18 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return result
     }
 
+    protected String errReason(JobDetail job){
+        if(!job)
+            return "(unknown)"
+        final result = new ArrayList(2)
+        if( job.statusReason )
+            result.add(job.statusReason)
+        final AttemptContainerDetail container = job.attempts ? job.attempts[-1].container : null
+        if( container?.reason )
+            result.add(container.reason)
+        return result.join(' - ')
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -254,7 +267,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 task.exitStatus = readExitFile()
                 task.stdout = outputFile
                 if( job?.status == 'FAILED' ) {
-                    task.error = new ProcessUnrecoverableException(job?.getStatusReason())
+                    task.error = new ProcessUnrecoverableException(errReason(job))
                     task.stderr = executor.getJobOutputStream(jobId) ?: errorFile
                 }
                 else {
