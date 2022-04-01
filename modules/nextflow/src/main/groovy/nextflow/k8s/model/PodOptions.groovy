@@ -210,16 +210,10 @@ class PodOptions {
         result.envVars.addAll( other.envVars )
 
         // image pull policy
-        if (other.imagePullPolicy)
-            result.imagePullPolicy = other.imagePullPolicy
-        else
-            result.imagePullPolicy = imagePullPolicy
+        result.imagePullPolicy = other.imagePullPolicy ?: this.imagePullPolicy
 
         // image pull secret
-        if (other.imagePullSecret)
-            result.imagePullSecret = other.imagePullSecret
-        else
-            result.imagePullSecret = imagePullSecret
+        result.imagePullSecret = other.imagePullSecret ?: this.imagePullSecret
 
         // labels
         result.labels.putAll(labels)
@@ -244,10 +238,7 @@ class PodOptions {
         result.priorityClassName = other.priorityClassName ?: this.priorityClassName
 
         // security context
-        if( other.securityContext )
-            result.securityContext = other.securityContext
-        else
-            result.securityContext = securityContext
+        result.securityContext = other.securityContext ?: this.securityContext
 
         // tolerations
         result.tolerations = other.tolerations ?: this.tolerations
