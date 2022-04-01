@@ -17,11 +17,10 @@
 
 package nextflow.cloud.aws.batch
 
-import static AwsContainerOptionsMapper.*
+import static nextflow.cloud.aws.batch.AwsContainerOptionsMapper.*
 
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.regex.Pattern
 
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
@@ -33,6 +32,7 @@ import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
 import com.amazonaws.services.batch.model.DescribeJobsRequest
 import com.amazonaws.services.batch.model.DescribeJobsResult
+import com.amazonaws.services.batch.model.EvaluateOnExit
 import com.amazonaws.services.batch.model.Host
 import com.amazonaws.services.batch.model.JobDefinition
 import com.amazonaws.services.batch.model.JobDefinitionType
@@ -53,14 +53,12 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.container.ContainerNameValidator
-import nextflow.exception.NodeTerminationException
 import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
-import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -73,8 +71,6 @@ import nextflow.util.CacheHelper
 // note: do not declare this class as `CompileStatic` otherwise the proxy is not get invoked
 @Slf4j
 class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,JobDetail> {
-
-    private static Pattern TERMINATED = ~/^Host EC2 .* terminated.*/
 
     private final Path exitFile
 
@@ -107,8 +103,6 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     private CloudMachineInfo machineInfo
 
     private Map<String,String> environment
-
-    private boolean batchNativeRetry
 
     final static private Map<String,String> jobDefinitions = [:]
 
@@ -256,23 +250,15 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final job = describeJob(jobId)
         final done = job?.status in ['SUCCEEDED', 'FAILED']
         if( done ) {
-            if( !batchNativeRetry && TERMINATED.matcher(job.statusReason).find() ) {
-                // kee track of the node termination error
-                task.error = new NodeTerminationException(job.statusReason)
-                // mark the task as ABORTED since thr failure is caused by a node failure
-                task.aborted = true
+            // finalize the task
+            task.exitStatus = readExitFile()
+            task.stdout = outputFile
+            if( job?.status == 'FAILED' ) {
+                task.error = new ProcessUnrecoverableException(errReason(job))
+                task.stderr = executor.getJobOutputStream(jobId) ?: errorFile
             }
             else {
-                // finalize the task
-                task.exitStatus = readExitFile()
-                task.stdout = outputFile
-                if( job?.status == 'FAILED' ) {
-                    task.error = new ProcessUnrecoverableException(errReason(job))
-                    task.stderr = executor.getJobOutputStream(jobId) ?: errorFile
-                }
-                else {
-                    task.stderr = errorFile
-                }
+                task.stderr = errorFile
             }
             status = TaskStatus.COMPLETED
             return true
@@ -620,6 +606,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return ['bash','-o','pipefail','-c', cmd.toString() ]
     }
 
+    protected maxSpotAttempts() {
+        return executor.awsOptions.maxSpotAttempts
+    }
+
     /**
      * Create a new Batch job request for the given NF {@link TaskRun}
      *
@@ -636,19 +626,16 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         result.setJobQueue(getJobQueue(task))
         result.setJobDefinition(getJobDefinition(task))
 
-        // -- NF uses `maxRetries` *only* if `retry` error strategy is specified
-        //    otherwise delegates the the retry to AWS Batch
-        // -- NOTE: make sure the `errorStrategy` is a static value before invoking `getMaxRetries` and `getErrorStrategy`
-        //   when the errorStrategy is closure (ie. dynamic evaluated) value, the `task.config.getMaxRetries() && task.config.getErrorStrategy()`
-        //   condition should not be evaluated because otherwise the closure value is cached using the wrong task.attempt and task.exitStatus values.
-        // -- use of `config.getRawValue('errorStrategy')` instead of `config.getErrorStrategy()` to prevent the resolution
-        //   of values dynamic values i.e. closures
-        final strategy = task.config.getRawValue('errorStrategy')
-        final canCheck = strategy == null || strategy instanceof CharSequence
-        if( canCheck && task.config.getMaxRetries() && task.config.getErrorStrategy() != ErrorStrategy.RETRY ) {
-            def retry = new RetryStrategy().withAttempts( task.config.getMaxRetries()+1 )
+        /*
+         * retry on spot reclaim
+         * https://aws.amazon.com/blogs/compute/introducing-retry-strategies-for-aws-batch/
+         */
+        final attempts = maxSpotAttempts()
+        if( attempts>0 ) {
+            final retry = new RetryStrategy()
+                    .withAttempts( attempts )
+                    .withEvaluateOnExit( new EvaluateOnExit().withOnReason('Host EC2*').withAction('RETRY') )
             result.setRetryStrategy(retry)
-            this.batchNativeRetry = true
         }
 
         // set task timeout
