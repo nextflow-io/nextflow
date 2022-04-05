@@ -292,6 +292,7 @@ Extension     File format
 ============ ====================
 dot           Graphviz DOT file
 html          HTML file
+mmd           Mermaid diagram
 pdf           PDF file (*)
 png           PNG file (*)
 svg           SVG file (*)
