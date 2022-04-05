@@ -387,7 +387,9 @@ class K8sClient {
 
             try {
                 return makeRequestCall( method, path, body )
-            } catch ( SocketException e ) {
+            } catch ( K8sResponseException | SocketException e ) {
+                if ( e instanceof K8sResponseException && e.response.code != 500 )
+                    throw e
                 log.error "[K8s] API request threw socket exception: $e.message for $method $path ${body ? '\n'+prettyPrint(body).indent() : ''}"
                 if ( trial < maxTrials ) log.info( "[K8s] Try API request again, remaining trials: ${ maxTrials - trial }" )
                 else throw e
