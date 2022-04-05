@@ -253,8 +253,20 @@ Name            Description
 Process implicit variables
 --------------------------
 
-In the process definition scope it's available the ``task`` implicit variable which allow accessing
-the current task configuration directives. For examples::
+The following variables are implicitly defined in the ``task`` object of each process:
+
+=============== ========================
+Name            Description
+=============== ========================
+``attempt``     The current task attempt
+``cacheable``   Whether the task can be cached
+``index``       The task index (corresponds to ``task_id`` in the execution trace)
+``process``     The process name
+``shell``       The shell command used to execute the task (e.g. ``["/bin/bash", "-ue"]``)
+=============== ========================
+
+The ``task`` object also contains the values of all process directives for the given task,
+which allows you to access these settings at runtime. For examples::
 
     process foo {
       script:
