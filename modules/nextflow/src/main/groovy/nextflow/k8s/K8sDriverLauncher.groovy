@@ -159,6 +159,8 @@ class K8sDriverLauncher {
     }
 
     protected void waitPodEnd() {
+        if( background )
+            return
         final currentState = k8sClient.podState(runName)
         if (currentState && currentState?.running instanceof Map) {
             final name = runName
@@ -174,7 +176,7 @@ class K8sDriverLauncher {
                 }
             }
             catch( Exception e ) {
-                log.warn "Catch exception waiting for pod to stop running"
+                log.warn "Caught exception waiting for pod to stop running"
             }
         }
     }
