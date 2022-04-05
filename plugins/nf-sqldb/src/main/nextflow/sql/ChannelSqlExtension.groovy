@@ -26,7 +26,7 @@ import nextflow.util.CheckHelper
 @Scoped('sql')
 class ChannelSqlExtension extends ChannelExtensionPoint {
 
-    private static final Map QUERY_PARAMS = [db: CharSequence, header: Boolean]
+    private static final Map QUERY_PARAMS = [db: CharSequence, emitColumns: Boolean]
 
     private static final Map INSERT_PARAMS = [
             db: CharSequence,
@@ -61,7 +61,7 @@ class ChannelSqlExtension extends ChannelExtensionPoint {
                 .withDataSource(dataSource)
                 .withStatement(query)
                 .withTarget(channel)
-                .withHeaders( (opts?.header ?: false) as boolean )
+                .withEmitColumns( (opts?.emitColumns ?: false) as boolean )
         if(NF.dsl2) {
             session.addIgniter {-> handler.perform(true) }
         }

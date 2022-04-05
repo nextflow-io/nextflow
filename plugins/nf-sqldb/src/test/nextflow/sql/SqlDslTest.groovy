@@ -113,7 +113,7 @@ class SqlDslTest extends BaseSpec {
         def SCRIPT = '''
             def table = 'FOO'
             def sql = "select * from $table"
-            channel.sql.fromQuery(sql, db: "test", header:true) 
+            channel.sql.fromQuery(sql, db: "test", emitColumns:true) 
             '''
         and:
         def result = new MockScriptRunner(config).setScript(SCRIPT).execute()

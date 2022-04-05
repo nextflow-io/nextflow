@@ -81,7 +81,7 @@ class QueryHandlerTest extends Specification {
         new QueryHandler()
                 .withTarget(result)
                 .withStatement(query)
-                .withHeaders(true)
+                .withEmitColumns(true)
                 .perform()
 
         then:
