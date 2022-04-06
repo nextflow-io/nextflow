@@ -1162,7 +1162,7 @@ class TaskProcessor {
             }
             
             // - this is likely a task wrapper issue
-            if( task.exitStatus != 0 & lines.size() == 0) {
+            if( task.exitStatus != 0 && lines.size() == 0) {
                 lines = task.dumpLogFile(max)
                 if( lines ) {
                     message << "\nCommand wrapper:"
