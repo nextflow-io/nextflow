@@ -79,6 +79,14 @@ abstract class BaseScript extends Script implements ExecutionContext {
     TaskProcessor getTaskProcessor() { taskProcessor }
 
     /**
+     * Enable disable task 'debug' configuration property
+     * @param value
+     */
+    protected void debug(boolean value = true) {
+        session.getConfig().process.debug = value
+    }
+
+    /**
      * Enable disable task 'echo' configuration property
      * @param value
      */
@@ -87,7 +95,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( NF.dsl2Final )
             throw new DeprecationException(msg)
         log.warn(msg)
-        session.getConfig().process.echo = value
+        session.getConfig().process.debug = value
     }
 
     private void setup() {

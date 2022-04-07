@@ -55,6 +55,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'containerOptions',
             'cleanup',
             'clusterOptions',
+            'debug',
             'disk',
             'echo',
             'errorStrategy',
@@ -100,7 +101,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      */
     @PackageScope
     static final Map<String,Object> DEFAULT_CONFIG = [
-            echo: false,
+            debug: false,
             cacheable: true,
             shell: BashWrapperBuilder.BASH,
             maxRetries: 0,
@@ -492,10 +493,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     }
 
     /*
-     * note: without this method definition {@link BaseScript#echo} will be invoked
+     * note: without this method definition {@link BaseScript#debug} will be invoked
      */
-    ProcessConfig echo( value ) {
-        configProperties.echo = value
+    ProcessConfig debug( value ) {
+        configProperties.debug = value
         return this
     }
 
