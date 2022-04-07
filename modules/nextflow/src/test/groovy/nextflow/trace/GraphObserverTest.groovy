@@ -25,6 +25,7 @@ import nextflow.dag.CytoscapeHtmlRenderer
 import nextflow.dag.DAG
 import nextflow.dag.DotRenderer
 import nextflow.dag.GraphvizRenderer
+import nextflow.dag.MermaidRenderer
 import spock.lang.Requires
 import spock.lang.Specification
 import test.TestHelper
@@ -224,6 +225,13 @@ class GraphObserverTest extends Specification {
         observer.name == 'TheGraph'
         observer.format == 'html'
         observer.createRender() instanceof CytoscapeHtmlRenderer
+
+        when:
+        observer = new GraphObserver(Paths.get('/path/to/TheGraph.mmd'))
+        then:
+        observer.name == 'TheGraph'
+        observer.format == 'mmd'
+        observer.createRender() instanceof MermaidRenderer
 
         when:
         observer = new GraphObserver(Paths.get('/path/to/TheGraph.SVG'))

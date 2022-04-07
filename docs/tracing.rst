@@ -292,6 +292,7 @@ Extension     File format
 ============ ====================
 dot           Graphviz DOT file
 html          HTML file
+mmd           Mermaid diagram
 pdf           PDF file (*)
 png           PNG file (*)
 svg           SVG file (*)
@@ -304,6 +305,50 @@ gexf          Graph Exchange XML file (Gephi)
 The DAG produced by Nextflow for the `Shootstrap <https://github.com/cbcrg/shootstrap/>`_ pipeline:
 
 .. image:: images/dag.png
+
+Beginning in version 22.04, Nextflow can render the DAG as a `Mermaid <https://mermaid-js.github.io/>`_ diagram.
+Mermaid diagrams are particularly useful because they can be embedded in `GitHub Flavored Markdown <https://github.blog/2022-02-14-include-diagrams-markdown-files-mermaid/>`_
+without having to render them yourself. You can customize the diagram with CSS, and you can even add links!
+Visit the `Mermaid documentation <https://mermaid-js.github.io/mermaid/#/flowchart?id=styling-and-classes>`_ for details.
+
+Here is the Mermaid diagram produced by Nextflow for the above example::
+
+    flowchart TD
+        p0((Channel.fromPath))
+        p1([ifEmpty])
+        p2[get_shuffle_replicates]
+        p3[get_msa_replicates]
+        p4[get_msa_trees]
+        p5([collectFile])
+        p6([first])
+        p7[get_stable_msa_trees]
+        p8(( ))
+        p9[get_seqboot_replicates]
+        p10[get_replicate_trees]
+        p11([collectFile])
+        p12([max])
+        p13[get_shootstrap_tree]
+        p14(( ))
+        p0 --> p1
+        p1 -->|file_names| p2
+        p2 -->|shuffle_replicates| p3
+        p3 -->|msa_replicates| p4
+        p3 -->|msa_replicates2| p9
+        p4 -->|msa_trees| p7
+        p4 -->|msa_trees2| p5
+        p5 --> p6
+        p6 --> p7
+        p7 -->|stable_trees| p8
+        p7 -->|most_stable_tree| p12
+        p9 -->|replicates| p10
+        p10 -->|trees| p11
+        p11 --> p13
+        p12 --> p13
+        p13 -->|shootstrap_tree| p14
+
+And the final image produced with the `Mermaid Live Editor <https://mermaid-js.github.io/mermaid-live-editor/edit>`_ (using the ``default`` theme):
+
+.. image:: images/dag-mermaid.png
 
 .. _weblog-service:
 

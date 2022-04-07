@@ -29,6 +29,7 @@ import nextflow.dag.DagRenderer
 import nextflow.dag.DotRenderer
 import nextflow.dag.GexfRenderer
 import nextflow.dag.GraphvizRenderer
+import nextflow.dag.MermaidRenderer
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 /**
@@ -90,6 +91,9 @@ class GraphObserver implements TraceObserver {
 
         else if( format == 'gexf' )
             new GexfRenderer(name)
+
+        else if( format == 'mmd' )
+            new MermaidRenderer()
 
         else
             new GraphvizRenderer(name, format)
