@@ -492,10 +492,21 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         outputs
     }
 
-    /*
-     * note: without this method definition {@link BaseScript#debug} will be invoked
+    /**
+     * Implements the process {@code debug} directive.
      */
     ProcessConfig debug( value ) {
+        configProperties.debug = value
+        return this
+    }
+
+    /**
+     * Implements the process {@code echo} directive for backwards compatibility.
+     *
+     * note: without this method definition {@link BaseScript#echo} will be invoked
+     */
+    ProcessConfig echo( value ) {
+        log.warn('The `echo` directive has been renamed to `debug`')
         configProperties.debug = value
         return this
     }

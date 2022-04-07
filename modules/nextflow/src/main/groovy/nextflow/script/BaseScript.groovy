@@ -78,26 +78,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
     @PackageScope
     TaskProcessor getTaskProcessor() { taskProcessor }
 
-    /**
-     * Enable disable task 'debug' configuration property
-     * @param value
-     */
-    protected void debug(boolean value = true) {
-        session.getConfig().process.debug = value
-    }
-
-    /**
-     * Enable disable task 'echo' configuration property
-     * @param value
-     */
-    protected void echo(boolean value = true) {
-        final msg = "The use of `echo` method has been deprecated"
-        if( NF.dsl2Final )
-            throw new DeprecationException(msg)
-        log.warn(msg)
-        session.getConfig().process.debug = value
-    }
-
     private void setup() {
         binding.owner = this
         session = binding.getSession()
