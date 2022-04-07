@@ -59,8 +59,6 @@ class PodOptions {
 
     private PodSecurityContext securityContext
 
-    private List<Map> tolerations
-
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         automountServiceAccountToken = true
@@ -68,7 +66,6 @@ class PodOptions {
         mountConfigMaps = new HashSet<>(size)
         mountSecrets = new HashSet<>(size)
         mountVolumeClaims = new HashSet<>(size)
-        tolerations = new ArrayList<Map>(size)
         init(options)
     }
 
@@ -131,9 +128,6 @@ class PodOptions {
         else if( entry.securityContext instanceof Map ) {
             this.securityContext = new PodSecurityContext(entry.securityContext as Map)
         }
-        else if( entry.toleration instanceof Map ) {
-            tolerations << (entry.toleration as Map)
-        }
         else 
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -190,8 +184,6 @@ class PodOptions {
         return this
     }
 
-    List<Map> getTolerations() { tolerations }
-
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
 
@@ -239,9 +231,6 @@ class PodOptions {
 
         // security context
         result.securityContext = other.securityContext ?: this.securityContext
-
-        // tolerations
-        result.tolerations = other.tolerations ?: this.tolerations
 
         return result
     }
