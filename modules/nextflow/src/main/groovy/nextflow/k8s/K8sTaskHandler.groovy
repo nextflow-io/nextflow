@@ -17,7 +17,6 @@
 
 package nextflow.k8s
 
-import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -161,7 +160,7 @@ class K8sTaskHandler extends TaskHandler {
     protected Map newSubmitRequest0(TaskRun task, String imageName) {
 
         final fixOwnership = builder.fixOwnership()
-        final cmd = new ArrayList(new ArrayList(BashWrapperBuilder.BASH)) << TaskRun.CMD_RUN
+        final cmd = new ArrayList(BashWrapperBuilder.BASH) << "bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
         final taskCfg = task.getConfig()
 
         final clientConfig = client.config
@@ -344,33 +343,12 @@ class K8sTaskHandler extends TaskHandler {
                 task.stderr = errorFile
             }
             status = TaskStatus.COMPLETED
-            savePodLogOnError(task)
             deletePodIfSuccessful(task)
             updateTimestamps(state.terminated as Map)
             return true
         }
 
         return false
-    }
-
-    protected void savePodLogOnError(TaskRun task) {
-        if( task.isSuccess() )
-            return
-
-        if( errorFile && !errorFile.empty() )
-            return
-
-        final session = executor.getSession()
-        if( session.isAborted() || session.isCancelled() || session.isTerminated() )
-            return
-
-        try {
-            final stream = client.podLog(podName)
-            Files.copy(stream, task.workDir.resolve(TaskRun.CMD_LOG))
-        }
-        catch( Exception e ) {
-            log.warn "Failed to copy log for pod $podName", e
-        }
     }
 
     protected int readExitFile() {
@@ -412,7 +390,7 @@ class K8sTaskHandler extends TaskHandler {
             return
 
         if( !task.isSuccess() ) {
-            // do not delete successfully executed pods for debugging purpose
+            // do not delete failed pods for debugging purpose
             return
         }
 

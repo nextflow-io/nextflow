@@ -17,7 +17,6 @@
 
 package nextflow.k8s
 
-import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.Session
@@ -87,7 +86,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-123',
                                      image:'debian:latest',
-                                     command:['/bin/bash', '-ue','.command.run'],
+                                     command:['/bin/bash', '-ue', 'bash .command.run 2>&1 | tee .command.log'],
                                      workingDir:'/some/work/dir']
                             ]
                     ]
@@ -117,7 +116,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-foo',
                                      image:'debian:latest',
-                                     command:['/bin/bash', '-ue','.command.run'],
+                                     command:['/bin/bash', '-ue', 'bash .command.run 2>&1 | tee .command.log'],
                                      workingDir:'/some/work/dir',
                                      resources:[ requests: [cpu:1], limits:[cpu:1] ],
                                      env: [  [name:'NXF_OWNER', value:'501:502'] ]
@@ -149,7 +148,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-abc',
                                      image:'user/alpine:1.0',
-                                     command:['/bin/bash', '-ue', '.command.run'],
+                                     command:['/bin/bash', '-ue', 'bash .command.run 2>&1 | tee .command.log'],
                                      workingDir:'/some/work/dir',
                                      resources:[ requests: [cpu:4, memory:'16384Mi'], limits:[cpu:4, memory:'16384Mi'] ]
                                     ]
@@ -196,7 +195,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-123',
                                      image:'debian:latest',
-                                     command:['/bin/bash', '-ue','.command.run'],
+                                     command:['/bin/bash', '-ue', 'bash .command.run 2>&1 | tee .command.log'],
                                      workingDir:'/some/work/dir',
                                      resources:[requests:[cpu:1], limits:[cpu:1]]
                                     ]
@@ -247,7 +246,7 @@ class K8sTaskHandlerTest extends Specification {
                     [
                         name: 'nf-123',
                         image: 'debian:latest',
-                        command: ['/bin/bash', '-ue','.command.run'],
+                        command: ['/bin/bash', '-ue', 'bash .command.run 2>&1 | tee .command.log'],
                         workingDir: '/some/work/dir',
                         env: [[name:'FOO', value:'bar']],
                         volumeMounts: [
@@ -308,7 +307,7 @@ class K8sTaskHandlerTest extends Specification {
                     [
                         name: 'nf-123',
                         image: 'debian:latest',
-                        command: ['/bin/bash', '-ue', '.command.run'],
+                        command: ['/bin/bash', '-ue', 'bash .command.run 2>&1 | tee .command.log'],
                         workingDir: '/some/work/dir',
                         volumeMounts: [
                             [name:'vol-1', mountPath:'/work'],
@@ -349,7 +348,7 @@ class K8sTaskHandlerTest extends Specification {
                     [
                         name: 'nf-123',
                         image: 'debian:latest',
-                        command: ['/bin/bash', '-ue', '.command.run'],
+                        command: ['/bin/bash', '-ue', 'bash .command.run 2>&1 | tee .command.log'],
                         workingDir: '/some/work/dir',
                         volumeMounts: [
                             [name:'vol-3', mountPath:'/tmp'],
@@ -474,7 +473,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.updateTimestamps(termState)
         1 * handler.readExitFile() >> EXIT_STATUS
         1 * handler.deletePodIfSuccessful(task) >> null
-        1 * handler.savePodLogOnError(task) >> null
         handler.task.exitStatus == EXIT_STATUS
         handler.task.@stdout == OUT_FILE
         handler.task.@stderr == ERR_FILE
@@ -690,46 +688,6 @@ class K8sTaskHandlerTest extends Specification {
 
     }
 
-
-    def 'should save pod log' () {
-
-        given:
-        def folder = Files.createTempDirectory('test')
-        def POD_NAME = 'the-pod-name'
-        def POD_MESSAGE = 'Hello world!'
-        def POD_LOG = new ByteArrayInputStream(new String(POD_MESSAGE).bytes)
-        def session = Mock(Session)
-        def task = Mock(TaskRun)
-        def executor = Mock(K8sExecutor)
-        def client = Mock(K8sClient)
-
-        def handler = Spy(K8sTaskHandler)
-        handler.executor = executor
-        handler.client = client
-        handler.podName = POD_NAME
-
-        when:
-        handler.savePodLogOnError(task)
-        then:
-        task.isSuccess() >> true
-        0 * client.podLog(_)
-
-        when:
-        handler.savePodLogOnError(task)
-        then:
-        task.isSuccess() >> false
-        task.getWorkDir() >> folder
-        executor.getSession() >> session
-        session.isTerminated() >> false
-        session.isCancelled() >> false
-        session.isAborted() >> false
-        1 * client.podLog(POD_NAME) >> POD_LOG
-
-        folder.resolve( TaskRun.CMD_LOG ).text == POD_MESSAGE
-        cleanup:
-        folder?.deleteDir()
-
-    }
 
     def 'should merge pod options' () {
 
