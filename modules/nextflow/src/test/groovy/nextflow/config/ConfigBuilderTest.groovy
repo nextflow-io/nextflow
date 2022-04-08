@@ -1817,7 +1817,7 @@ class ConfigBuilderTest extends Specification {
 
     // issue 2422 - https://github.com/nextflow-io/nextflow/issues/2422
     // ideally this should behave as the previous test
-    @Ignore
+    //@Ignore
     def 'should resolve ext config with properties' () {
 
         given:
@@ -1830,6 +1830,12 @@ class ConfigBuilderTest extends Specification {
                 withName:BAR {
                     ext.args = "Ciao mondo!"
                     cpus = 2
+                    withName:FOO {
+                        ext.args = "Hola caracola!"
+                        ext {
+                            args2 = 'Hola mundo!'
+                        }
+                    }
                 }
             }
             '''
@@ -1841,6 +1847,8 @@ class ConfigBuilderTest extends Specification {
         cfg1.process.ext.args == 'Hello World!'
         cfg1.process.'withName:BAR'.cpus == 2
         cfg1.process.'withName:BAR'.ext.args == "Ciao mondo!"
+        cfg1.process.'withName:BAR'.'withName:FOO'.ext.args == "Hola caracola!"
+        cfg1.process.'withName:BAR'.'withName:FOO'.ext.args2 == "Hola mundo!"
 
         cleanup:
         folder?.deleteDir()

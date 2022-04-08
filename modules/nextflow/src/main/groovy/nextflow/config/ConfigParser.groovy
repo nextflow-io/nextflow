@@ -337,6 +337,9 @@ class ConfigParser {
             def result
             if (current.config.get(name)) {
                 result = current.config.get(name)
+            } else if (current.scope.entrySet().find{ it.key==profileStack.last.toString()} ) {
+                result = current.scope.entrySet().find{ it.key==profileStack.last.toString()}.value[name]
+            } else if (current.scope[name]) {
             } else if (current.scope.get(name)) {
                 result = current.scope[name]
             } else {
