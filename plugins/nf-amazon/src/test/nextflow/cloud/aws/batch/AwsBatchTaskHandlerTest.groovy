@@ -25,6 +25,7 @@ import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
 import com.amazonaws.services.batch.model.DescribeJobsRequest
 import com.amazonaws.services.batch.model.DescribeJobsResult
+import com.amazonaws.services.batch.model.EvaluateOnExit
 import com.amazonaws.services.batch.model.JobDefinition
 import com.amazonaws.services.batch.model.JobDetail
 import com.amazonaws.services.batch.model.KeyValuePair
@@ -83,6 +84,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def req = handler.newSubmitRequest(task)
         then:
+        1 * handler.maxSpotAttempts() >> 5
         1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
@@ -97,11 +99,12 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
         req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws s3 cp --only-show-errors .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()]
-        req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
+        req.getRetryStrategy() == new RetryStrategy().withAttempts(5).withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnReason('Host EC2*') )
 
         when:
         req = handler.newSubmitRequest(task)
         then:
+        1 * handler.maxSpotAttempts() >> 0
         1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', region: 'eu-west-1') }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
@@ -134,6 +137,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', region: 'eu-west-1') }
         and:
+        1 * handler.maxSpotAttempts() >> 0
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         and:
@@ -159,6 +163,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getConfig() >> new TaskConfig()
         handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
         and:
+        1 * handler.maxSpotAttempts() >> 0
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         and:
@@ -175,6 +180,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getConfig() >> new TaskConfig(time: '5 sec')
         handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
         and:
+        1 * handler.maxSpotAttempts() >> 0
         1 * handler.getJobQueue(task) >> 'queue2'
         1 * handler.getJobDefinition(task) >> 'job-def:2'
         and:
@@ -192,6 +198,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getConfig() >> new TaskConfig(time: '1 hour')
         handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
         and:
+        1 * handler.maxSpotAttempts() >> 0
         1 * handler.getJobQueue(task) >> 'queue3'
         1 * handler.getJobDefinition(task) >> 'job-def:3'
         and:
@@ -220,6 +227,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', retryMode: 'adaptive', maxTransferAttempts: 10) }
         and:
+        1 * handler.maxSpotAttempts() >> 3
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.wrapperFile >> Paths.get('/bucket/test/.command.run')
@@ -229,7 +237,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
         // no error `retry` error strategy is defined by NF, use `maxRetries` to se Batch attempts
-        req.getRetryStrategy() == new RetryStrategy().withAttempts(3)
+        req.getRetryStrategy() == new RetryStrategy().withAttempts(3).withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnReason('Host EC2*') )
         req.getContainerOverrides().getEnvironment() == [VAR_RETRY_MODE, VAR_MAX_ATTEMPTS, VAR_METADATA_ATTEMPTS]
     }
 
@@ -478,7 +486,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getAwsOptions() >> new AwsOptions()
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
-        result.parameters.'nf-token' == 'fdb5ef295f566138a43252b2ea272282'
+        result.parameters.'nf-token' == 'bfd3cc19ee9bdaea5b7edee94adf04bc'
         !result.containerProperties.mountPoints
 
         when:
@@ -488,7 +496,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * handler.getAwsOptions() >> new AwsOptions(cliPath: '/home/conda/bin/aws')
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
-        result.parameters.'nf-token' == '9c56fd073d32e0c29f51f12afdfe4750'
+        result.parameters.'nf-token' == '38d950a380585c53b43d733a10bae3b4'
         result.containerProperties.mountPoints[0].sourceVolume == 'aws-cli'
         result.containerProperties.mountPoints[0].containerPath == '/home/conda'
         result.containerProperties.mountPoints[0].readOnly
