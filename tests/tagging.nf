@@ -18,7 +18,7 @@
 nextflow.enable.dsl=1
 
 process foo {
-  echo true
+  debug true
   tag { barcode }
 
   input:

@@ -1377,8 +1377,8 @@ class TaskProcessor {
                 throw new IllegalStateException("Unknown bind output parameter type: ${param}")
         }
 
-        // -- finally prints out the task output when 'echo' is true
-        if( task.config.echo ) {
+        // -- finally prints out the task output when 'debug' is true
+        if( task.config.debug ) {
             task.echoStdout(session)
         }
     }
