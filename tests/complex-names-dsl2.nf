@@ -28,7 +28,7 @@ process foo {
 }
 
 process bar {
-  echo true
+  debug true
   container 'debian:latest'
   input: 
   path '*'

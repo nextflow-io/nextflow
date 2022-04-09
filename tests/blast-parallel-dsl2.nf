@@ -40,7 +40,7 @@ process extract {
  * Aligns a T-Coffee MSA and print it 
  */
 process align {
-    echo true
+    debug true
 
     input:
     path all_seq

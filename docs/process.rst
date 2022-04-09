@@ -871,7 +871,7 @@ cause the process execution to stop even if there are other values in other chan
 For example::
 
   process foo {
-    echo true
+    debug true
     input:
     val x from Channel.from(1,2)
     val y from Channel.from('a','b','c')
@@ -904,7 +904,7 @@ content is applied repeatedly.
 To better understand this behavior compare the previous example with the following one::
 
   process bar {
-    echo true
+    debug true
     input:
     val x from Channel.value(1)
     val y from Channel.from('a','b','c')
@@ -1339,6 +1339,7 @@ The directives are:
 * `container`_
 * `containerOptions`_
 * `clusterOptions`_
+* `debug`_
 * `disk`_
 * `echo`_
 * `errorStrategy`_
@@ -1576,6 +1577,31 @@ out of the box by Nextflow.
   :ref:`executor-page` page to see which executors support this directive.
 
 
+.. _process-debug:
+
+debug
+-----
+
+By default the ``stdout`` produced by the commands executed in all processes is ignored.
+Setting the ``debug`` directive to ``true`` you can forward the process `stdout` to the current top
+running process `stdout` file, showing it in the shell terminal.
+
+For example::
+
+    process sayHello {
+      debug true
+
+      script:
+      "echo Hello"
+    }
+
+::
+
+    Hello
+
+Without specifying ``debug true`` you won't see the ``Hello`` string printed out when executing the above example.
+
+
 .. _process-disk:
 
 disk
@@ -1616,25 +1642,7 @@ See also: `cpus`_, `memory`_ `time`_, `queue`_ and `Dynamic computing resources`
 echo
 ----
 
-By default the `stdout` produced by the commands executed in all processes is ignored.
-Setting the ``echo`` directive to ``true`` you can forward the process `stdout` to the current top
-running process `stdout` file, showing it in the shell terminal.
-
-For example::
-
-    process sayHello {
-      echo true
-
-      script:
-      "echo Hello"
-    }
-
-::
-
-    Hello
-
-Without specifying ``echo true`` you won't see the ``Hello`` string printed out when executing the above example.
-
+As of version 22.04.0, ``echo`` has been deprecated and replaced by ``debug``.
 
 .. _process-error-strategy:
 

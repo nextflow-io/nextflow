@@ -101,7 +101,7 @@ class FunctionalTests extends Specification {
              process {
                 dummyField = 99
                 executor = 'nope'
-                echo = true
+                debug = true
                 shell = 'zsh'
                 maxForks = 10
                 environment = [a:1, b:2,c:3]
@@ -114,7 +114,7 @@ class FunctionalTests extends Specification {
         def script = '''
 
             process taskHello {
-                echo true
+                debug true
                 maxForks 11
                 'echo hello'
             }
@@ -128,7 +128,7 @@ class FunctionalTests extends Specification {
         then:
         processor instanceof TaskProcessor
         processor.getName() == 'taskHello'
-        processor.config.echo == true
+        processor.config.debug == true
         processor.config.shell == 'zsh'
         processor.config.maxForks == 11
         processor.config.dummyField == 99

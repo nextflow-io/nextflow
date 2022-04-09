@@ -1,7 +1,7 @@
     shapes = Channel.from('circle','square', 'triangle' )
 
     process combine {
-      echo true
+      debug true
       input:
       val shape from shapes
       each color from 'red','blue'

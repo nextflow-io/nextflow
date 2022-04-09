@@ -30,7 +30,7 @@ process foo {
 baz.view { "Hello $it" }
 
 process bar1 {
-  echo true
+  debug true
   input:
   file x from A
 
@@ -40,7 +40,7 @@ process bar1 {
 }
 
 process bar2 {
-  echo true
+  debug true
   input:
   file x from B
 
@@ -50,7 +50,7 @@ process bar2 {
 }
 
 process bar3 {
-  echo true
+  debug true
   input:
   file x from C
 

@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 nextflow.enable.dsl=1
-echo true
 
 process foo {
+    debug true
     time { 1.h * task.attempt }
     memory { 1.GB * task.attempt }
     errorStrategy { task.exitStatus == 5 && task.attempt<3 ? 'retry' : 'terminate' }

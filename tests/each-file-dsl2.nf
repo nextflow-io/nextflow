@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
 process foo {
-  echo true
+  debug true
   tag "$x"
 
   input:

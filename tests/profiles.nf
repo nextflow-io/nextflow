@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 nextflow.enable.dsl=1
-echo true
 
 process foo {
-
-	"""
+  debug true
+  """
 	echo cpus: ${task.cpus} memory: ${task.memory}
-	"""
+  """
 }

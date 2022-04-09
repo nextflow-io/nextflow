@@ -172,15 +172,15 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('-x', '1', 'script.nf', '--long', 'v1', '--more', 'v2', '--flag') == ['-x','1','script.nf','--long=v1','--more=v2','--flag=true']
 
         launcher.normalizeArgs('-x', '1', '-process.alpha','2', '3') == ['-x', '1', '-process.alpha=2', '3']
-        launcher.normalizeArgs('-x', '1', '-process.echo') == ['-x', '1', '-process.echo=true']
-        launcher.normalizeArgs('-x', '1', '-process.echo', '-with-docker', 'ubuntu' ) == ['-x', '1', '-process.echo=true', '-with-docker','ubuntu']
-        launcher.normalizeArgs('-x', '1', '-process.echo', '-123') == ['-x', '1', '-process.echo=-123' ]
+        launcher.normalizeArgs('-x', '1', '-process.debug') == ['-x', '1', '-process.debug=true']
+        launcher.normalizeArgs('-x', '1', '-process.debug', '-with-docker', 'ubuntu' ) == ['-x', '1', '-process.debug=true', '-with-docker','ubuntu']
+        launcher.normalizeArgs('-x', '1', '-process.debug', '-123') == ['-x', '1', '-process.debug=-123' ]
 
         launcher.normalizeArgs('-x', '1', '-cluster.alpha','2', '3') == ['-x', '1', '-cluster.alpha=2', '3']
-        launcher.normalizeArgs('-x', '1', '-cluster.echo') == ['-x', '1', '-cluster.echo=true']
+        launcher.normalizeArgs('-x', '1', '-cluster.debug') == ['-x', '1', '-cluster.debug=true']
 
         launcher.normalizeArgs('-x', '1', '-executor.alpha','2', '3') == ['-x', '1', '-executor.alpha=2', '3']
-        launcher.normalizeArgs('-x', '1', '-executor.echo') == ['-x', '1', '-executor.echo=true']
+        launcher.normalizeArgs('-x', '1', '-executor.debug') == ['-x', '1', '-executor.debug=true']
 
         launcher.normalizeArgs('-x', '1', '-that.alpha','2', '3') == ['-x', '1', '-that.alpha','2', '3']
 

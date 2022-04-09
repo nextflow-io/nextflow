@@ -3,7 +3,7 @@
 params.chunkSize = 1
 
 process foo {
-    echo true
+    debug true
 
     input:
     stdin()

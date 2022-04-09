@@ -20,7 +20,7 @@ nextflow.enable.dsl=1
 seqs = Channel.fromPath("$baseDir/data/p{1,2,3}.fa")
 
 process foo {
-    echo true
+    debug true
 
     input:
     file 'dir1/link_*.fasta' from seqs.toList()

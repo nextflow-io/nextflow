@@ -34,7 +34,7 @@ process split {
 
 
 process printTwo {
-    echo true
+    debug true
 
     input:
     file 'chunk' from splits
@@ -49,7 +49,7 @@ process printTwo {
 }
 
 process printLast {
-    echo true
+    debug true
 
     input:
     file 'chunk' from two_chunks

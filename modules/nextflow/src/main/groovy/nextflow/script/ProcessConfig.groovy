@@ -55,8 +55,9 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'containerOptions',
             'cleanup',
             'clusterOptions',
+            'debug',
             'disk',
-            'echo',
+            'echo', // deprecated
             'errorStrategy',
             'executor',
             'ext',
@@ -100,7 +101,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      */
     @PackageScope
     static final Map<String,Object> DEFAULT_CONFIG = [
-            echo: false,
+            debug: false,
             cacheable: true,
             shell: BashWrapperBuilder.BASH,
             maxRetries: 0,
@@ -491,11 +492,22 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         outputs
     }
 
-    /*
+    /**
+     * Implements the process {@code debug} directive.
+     */
+    ProcessConfig debug( value ) {
+        configProperties.debug = value
+        return this
+    }
+
+    /**
+     * Implements the process {@code echo} directive for backwards compatibility.
+     *
      * note: without this method definition {@link BaseScript#echo} will be invoked
      */
     ProcessConfig echo( value ) {
-        configProperties.echo = value
+        log.warn1('The `echo` directive has been deprecated - use to `debug` instead')
+        configProperties.debug = value
         return this
     }
 

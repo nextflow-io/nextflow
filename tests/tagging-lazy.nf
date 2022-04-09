@@ -20,7 +20,7 @@ nextflow.enable.dsl=1
 params.ext = 'fastq'
 
 process foo {
-  echo true
+  debug true
   tag "${barcode}.${params.ext}"
 
   input:

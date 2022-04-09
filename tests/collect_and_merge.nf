@@ -21,7 +21,7 @@ nextflow.enable.dsl=1
  * fake alignment step producing a BAM and BAI files
  */
 process algn {
-  echo true
+  debug true
 
   input:
   each barcode from 'alpha', 'gamma'
@@ -65,8 +65,7 @@ aggregation = algn_files
  */
 
 process merge {
-
-  echo true
+  debug true
 
   input:
   set barcode, seq_id, file(bam: 'bam?'), file(bai: 'bai?') from aggregation

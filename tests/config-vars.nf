@@ -23,11 +23,9 @@ nextflow.enable.dsl=1
  *
  * author Emilio Palumbo
  */
-echo true
 
 process foo {
- 
-  echo true
+  debug true
  
   script:
   t = task.ext.out.join(',')
@@ -38,8 +36,7 @@ process foo {
 }
 
 process bar {
- 
-  echo true
+  debug true
  
   shell:
   t = task.ext.out.join(',')

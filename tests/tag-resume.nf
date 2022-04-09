@@ -18,7 +18,7 @@
 nextflow.enable.dsl=1
 
 process test {
-  echo true
+  debug true
 
   script:
   """

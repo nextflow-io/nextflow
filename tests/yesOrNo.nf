@@ -18,7 +18,7 @@
 nextflow.enable.dsl=1
 
 process yesOrNo {
-    echo true
+    debug true
 
     input:
     val x from 1,2

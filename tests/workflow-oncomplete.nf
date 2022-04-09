@@ -23,13 +23,13 @@
   * See file `$PWD/checks/workflow-oncomplete.nf/.config` for details
   */
 nextflow.enable.dsl=1
-echo true
 
 params.command = 'echo'
 cheers = Channel.from 'Bojour', 'Ciao', 'Hello', 'Hola', 'Γεια σου'
 
 process sayHello {
-  input: 
+  debug true
+  input:
   val x from cheers
   
   """

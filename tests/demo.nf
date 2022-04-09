@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 nextflow.enable.dsl=1
-echo true
 
 cheers = Channel.from 'Bojour', 'Ciao', 'Hello', 'Hola', 'Γεια σου'
 
 process sayHello {
+  debug true
   input:
   val x from cheers
 

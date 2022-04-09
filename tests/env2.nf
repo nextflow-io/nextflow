@@ -20,7 +20,7 @@ nextflow.enable.dsl=1
 str = Channel.from('hello', 'hola', 'bonjour', 'ciao')
 
 process printEnv {
-    echo true
+    debug true
 
     input:
     env HELLO from str

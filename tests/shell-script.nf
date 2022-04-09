@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 nextflow.enable.dsl=1
-echo true
 params.data = 'zzz'
 
 process foo {
+  debug true
   input:
     each x from ('alpha','omega')
 

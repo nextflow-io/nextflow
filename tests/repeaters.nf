@@ -16,14 +16,13 @@
  * limitations under the License.
  */
 nextflow.enable.dsl=1
-echo true
 
 list1 = [1,2]
 list2 = ['Hola', 'Ciao']
 list3 = ['alpha','beta','delta']
 
 process hola {
-
+    debug true
     input:
     val x from list1
     each y from list2
@@ -36,7 +35,7 @@ process hola {
 }
 
 process foo {
-    echo true
+    debug true
 
     input:
     each v from Channel.from([["a","b"],["c","d"]])
