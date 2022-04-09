@@ -67,6 +67,7 @@ class QueryHandler implements QueryOp {
     private DataflowWriteChannel target
     private String statement
     private SqlDataSource dataSource
+    private boolean emitColumns = false
 
     @Override
     QueryOp withStatement(String stm) {
@@ -83,6 +84,12 @@ class QueryHandler implements QueryOp {
     @Override
     QueryOp withDataSource(SqlDataSource datasource) {
         this.dataSource = datasource
+        return this
+    }
+
+    @Override
+    QueryOp withEmitColumns(boolean emitColumns) {
+        this.emitColumns = emitColumns
         return this
     }
 
@@ -138,6 +145,15 @@ class QueryHandler implements QueryOp {
         try {
             final meta = rs.getMetaData()
             final cols = meta.getColumnCount()
+
+            if( emitColumns ){
+                def item = new ArrayList(cols)
+                for( int i=0; i<cols; i++) {
+                    item[i] = meta.getColumnName(i+1)
+                }
+                // emit the value
+                target.bind(item)
+            }
 
             while( rs.next() ) {
                 def item = new ArrayList(cols)

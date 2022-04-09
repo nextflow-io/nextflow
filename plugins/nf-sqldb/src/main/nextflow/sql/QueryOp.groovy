@@ -30,7 +30,7 @@ interface QueryOp {
     QueryOp withStatement(String stm)
     QueryOp withTarget(DataflowWriteChannel channel)
     QueryOp withDataSource(SqlDataSource ds)
-
+    QueryOp withEmitColumns(boolean headers)
     void perform()
     void perform(boolean async)
 }

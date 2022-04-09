@@ -72,6 +72,13 @@ a tuple for each row in the corresponding result set. For example:
 ch = channel.sql.fromQuery('select alpha, delta, omega from SAMPLE', db: 'foo')
 ```
 
+The following options are available:
+
+| Operator option 	| Description 	                |
+|---	            |---	                        |
+| `db`              | The database handle. It must must a `sql.db` name defined in the `nextflow.config` file.
+| `emitColumns      | When `true` the column names in the select statement are emitted as first tuple in the resulting channel.
+
 ### sqlInsert
 
 The `sqlInsert` operator provided by this plugin allows populating a database table with the data emitted

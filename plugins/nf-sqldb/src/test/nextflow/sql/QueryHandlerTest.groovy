@@ -62,4 +62,35 @@ class QueryHandlerTest extends Specification {
         cleanup:
         folder.deleteDir()
     }
+
+    def 'should emit header when perform query' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        folder.resolve('test.csv').text  = '''\
+        FOO,BAR
+        1,hello
+        2,ciao
+        3,hola
+        4,bonjour
+        '''.stripIndent()
+
+        when:
+        def result = new DataflowQueue()
+        def query = "SELECT * FROM CSVREAD('${folder.resolve('test.csv')}') where FOO > 2;"
+        new QueryHandler()
+                .withTarget(result)
+                .withStatement(query)
+                .withEmitColumns(true)
+                .perform()
+
+        then:
+        result.val == ['FOO','BAR']
+        result.val == ['3','hola']
+        result.val == ['4','bonjour']
+        result.val == Channel.STOP
+
+        cleanup:
+        folder.deleteDir()
+    }
 }
