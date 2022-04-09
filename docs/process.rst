@@ -1582,7 +1582,7 @@ out of the box by Nextflow.
 debug
 -----
 
-By default the `stdout` produced by the commands executed in all processes is ignored.
+By default the ``stdout`` produced by the commands executed in all processes is ignored.
 Setting the ``debug`` directive to ``true`` you can forward the process `stdout` to the current top
 running process `stdout` file, showing it in the shell terminal.
 
@@ -1642,8 +1642,7 @@ See also: `cpus`_, `memory`_ `time`_, `queue`_ and `Dynamic computing resources`
 echo
 ----
 
-As of Nextflow version 22.04.0, ``echo`` has been renamed to ``debug``.
-
+As of version 22.04.0, ``echo`` has been deprecated and replaced by ``debug``.
 
 .. _process-error-strategy:
 
