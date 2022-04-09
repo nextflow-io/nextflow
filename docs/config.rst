@@ -163,6 +163,7 @@ volumes                     One or more container mounts. Mounts can be specifie
 delayBetweenAttempts        Delay between download attempts from S3 (default `10 sec`).
 maxParallelTransfers        Max parallel upload/download transfer operations *per job* (default: ``4``).
 maxTransferAttempts         Max number of downloads attempts from S3 (default: `1`).
+maxSpotAttempts             Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: ``5``, requires ``22.04.0`` or later)
 =========================== ================
 
 

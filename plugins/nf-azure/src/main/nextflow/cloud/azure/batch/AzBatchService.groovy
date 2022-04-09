@@ -304,9 +304,7 @@ class AzBatchService implements Closeable {
         final jobId = makeJobId(task)
         final poolInfo = new PoolInformation()
             .withPoolId(poolId)
-        client
-            .jobOperations()
-            .createJob(jobId, poolInfo)
+        apply(() -> client .jobOperations() .createJob(jobId, poolInfo))
         // add to the map
         allJobIds[mapKey] = jobId
         return jobId
@@ -437,7 +435,7 @@ class AzBatchService implements Closeable {
                 return it
         }
 
-        throw new IllegalStateException("Cannot find a matching VM image with publister=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification")
+        throw new IllegalStateException("Cannot find a matching VM image with publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification")
     }
 
     protected AzVmPoolSpec specFromPoolConfig(String poolId) {

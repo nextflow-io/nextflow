@@ -17,11 +17,14 @@
 
 package nextflow.cloud.aws.batch
 
+import static nextflow.cloud.aws.batch.AwsContainerOptionsMapper.*
+
 import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
+import com.amazonaws.services.batch.model.AttemptContainerDetail
 import com.amazonaws.services.batch.model.ClientException
 import com.amazonaws.services.batch.model.ContainerOverrides
 import com.amazonaws.services.batch.model.ContainerProperties
@@ -29,6 +32,7 @@ import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
 import com.amazonaws.services.batch.model.DescribeJobsRequest
 import com.amazonaws.services.batch.model.DescribeJobsResult
+import com.amazonaws.services.batch.model.EvaluateOnExit
 import com.amazonaws.services.batch.model.Host
 import com.amazonaws.services.batch.model.JobDefinition
 import com.amazonaws.services.batch.model.JobDefinitionType
@@ -55,16 +59,12 @@ import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
-import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
-
-import static AwsContainerOptionsMapper.createContainerOpts
-
 /**
  * Implements a task handler for AWS Batch jobs
  */
@@ -227,6 +227,18 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return result
     }
 
+    protected String errReason(JobDetail job){
+        if(!job)
+            return "(unknown)"
+        final result = new ArrayList(2)
+        if( job.statusReason )
+            result.add(job.statusReason)
+        final AttemptContainerDetail container = job.attempts ? job.attempts[-1].container : null
+        if( container?.reason )
+            result.add(container.reason)
+        return result.join(' - ')
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -242,7 +254,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             task.exitStatus = readExitFile()
             task.stdout = outputFile
             if( job?.status == 'FAILED' ) {
-                task.error = new ProcessUnrecoverableException(job?.getStatusReason())
+                task.error = new ProcessUnrecoverableException(errReason(job))
                 task.stderr = executor.getJobOutputStream(jobId) ?: errorFile
             }
             else {
@@ -456,7 +468,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         // create the container opts based on task config 
         final containerOpts = task.getConfig().getContainerOptionsMap()
-        final container = createContainerOpts(containerOpts)
+        final container = createContainerProperties(containerOpts)
 
         // container definition
         final _1_cpus = new ResourceRequirement().withType(ResourceType.VCPU).withValue('1')
@@ -492,10 +504,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         // add to this list all values that has to contribute to the
         // job definition unique name creation
-        final tokens = [name, image, awscli, volumes, jobRole]
+        hashingTokens.add(name)
+        hashingTokens.add(container.toString())
         if( containerOpts )
-            tokens.add(containerOpts)
-        hashingTokens.addAll(tokens)
+            hashingTokens.add(containerOpts)
 
         return result
     }
@@ -594,6 +606,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return ['bash','-o','pipefail','-c', cmd.toString() ]
     }
 
+    protected maxSpotAttempts() {
+        return executor.awsOptions.maxSpotAttempts
+    }
+
     /**
      * Create a new Batch job request for the given NF {@link TaskRun}
      *
@@ -610,15 +626,15 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         result.setJobQueue(getJobQueue(task))
         result.setJobDefinition(getJobDefinition(task))
 
-        // -- NF uses `maxRetries` *only* if `retry` error strategy is specified
-        //    otherwise delegates the the retry to AWS Batch
-        // -- NOTE: make sure the `errorStrategy` is a static value before invoking `getMaxRetries` and `getErrorStrategy`
-        //   when the errorStrategy is closure (ie. dynamic evaluated) value, the `task.config.getMaxRetries() && task.config.getErrorStrategy()`
-        //   condition should not be evaluated because otherwise the closure value is cached using the wrong task.attempt and task.exitStatus values.
-        final strategy = task.config.getTarget().get('errorStrategy')
-        final canCheck = strategy == null || strategy instanceof CharSequence
-        if( canCheck && task.config.getMaxRetries() && task.config.getErrorStrategy() != ErrorStrategy.RETRY ) {
-            def retry = new RetryStrategy().withAttempts( task.config.getMaxRetries()+1 )
+        /*
+         * retry on spot reclaim
+         * https://aws.amazon.com/blogs/compute/introducing-retry-strategies-for-aws-batch/
+         */
+        final attempts = maxSpotAttempts()
+        if( attempts>0 ) {
+            final retry = new RetryStrategy()
+                    .withAttempts( attempts )
+                    .withEvaluateOnExit( new EvaluateOnExit().withOnReason('Host EC2*').withAction('RETRY') )
             result.setRetryStrategy(retry)
         }
 
