@@ -57,7 +57,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'clusterOptions',
             'debug',
             'disk',
-            'echo',
+            'echo', // deprecated
             'errorStrategy',
             'executor',
             'ext',

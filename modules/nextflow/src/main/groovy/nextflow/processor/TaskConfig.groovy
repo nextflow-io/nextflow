@@ -187,8 +187,10 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     boolean getDebug() {
-        def value = get('debug')
-        toBool(value)
+        // check both `debug` and `echo` for backward
+        // compatibility until `echo` is not removed
+        def value = get('debug') || get('echo')
+        return toBool(value)
     }
 
     private static boolean toBool( value )  {
