@@ -26,7 +26,7 @@ s3file = file('s3://rnaseq-nf/data/ggal/transcript.fa')
 s3glob = Channel.fromFilePairs('s3://rnaseq-nf/data/ggal/*_{1,2}.fq')
 
 process foo {
-  echo true
+  debug true
   input:
   file(obj) from s3file
 
