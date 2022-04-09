@@ -25,12 +25,13 @@ import nextflow.sql.config.SqlDataSource
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface QueryOp {
+interface QueryOp<T extends QueryOp> {
 
     QueryOp withStatement(String stm)
     QueryOp withTarget(DataflowWriteChannel channel)
     QueryOp withDataSource(SqlDataSource ds)
-    QueryOp withEmitColumns(boolean headers)
-    void perform()
-    void perform(boolean async)
+    QueryOp withOpts(Map options)
+
+    T perform()
+    T perform(boolean async)
 }
