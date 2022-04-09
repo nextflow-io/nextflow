@@ -1,17 +1,63 @@
 # Google Batch
 
+### Get started 
 
-* Logging: https://github.com/googleapis/java-logging
+0. Setup access token 
 
+```
+export GOOGLE_ACCESS_TOKEN=$(gcloud auth print-access-token)
+```
 
-### Usage 
+1. Create this config file 
 
+```
+cat <<EOT > google.config
+params.transcriptome = 'gs://rnaseq-nf/data/ggal/transcript.fa'
+params.reads = 'gs://rnaseq-nf/data/ggal/gut_{1,2}.fq'
+params.multiqc = 'gs://rnaseq-nf/multiqc'
+process.executor = 'google-batch'
+workDir = 'gs://rnaseq-nf/scratch'
+google.region  = 'us-central1'
+EOT
+```
+    
+2. Compile 
+
+```
+make compile
+```
+
+3. Run it 
+
+```
+./launch.sh run pditommaso/hello -c google.config 
+```
+
+### Config 
 
 export ProjectID=my-nf-project-261815
 export BatchAPI=batch.googleapis.com/v1alpha1
 export Location=us-central1
-alias gcurl='curl --header "Content-Type: application/json" --header "Authorization: Bearer $(gcloud auth print-access-token)"'
+export GOOGLE_ACCESS_TOKEN=$(gcloud auth print-access-token)
+alias gcurl='curl --header "Content-Type: application/json" --header "Authorization: Bearer $GOOGLE_ACCESS_TOKEN"'
 
+#### List jobs 
+
+» gcurl https://${BatchAPI}/projects/${ProjectID}/locations/${Location}/jobs | jq .jobs[].name -r
+  
+#### Delete a job 
+
+» gcurl -X DELETE https://${BatchAPI}/$JOB_NAME
+
+#### Delete all jobs
+
+for x in $(gcurl  https://${BatchAPI}/projects/${ProjectID}/locations/${Location}/jobs | jq .jobs[].name -r); do 
+  echo "Delete job $x"
+  gcurl -X DELETE https://${BatchAPI}/$x
+  sleep 0.5
+done
+
+#### Submit a job 
 
 » gcurl --data @run.json https://${BatchAPI}/projects/${ProjectID}/locations/${Location}/jobs?job_id=c10
 {
@@ -61,7 +107,7 @@ alias gcurl='curl --header "Content-Type: application/json" --header "Authorizat
   }
 }
 
-» gcurl https://${BatchAPI}/projects/${ProjectID}/locations/${Location}/jobs/container-425
+» gcurl --data @run.json https://${BatchAPI}/projects/${ProjectID}/locations/${Location}/jobs?job_id=c10
 {
   "name": "projects/my-nf-project-261815/locations/us-central1/jobs/container06",
   "uid": "j-23a3f19a-d06a-4206-9c38-62e0a237da7b",
@@ -118,3 +164,8 @@ alias gcurl='curl --header "Content-Type: application/json" --header "Authorizat
 
 
 » CLOUDSDK_PYTHON_SITEPACKAGES=1 gcloud beta logging tail projects/my-nf-project-261815/logs/batch_task_logs
+   
+
+### Misc 
+
+* Logging: https://github.com/googleapis/java-logging
