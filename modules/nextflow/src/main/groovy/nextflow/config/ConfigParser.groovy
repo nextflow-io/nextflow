@@ -334,7 +334,7 @@ class ConfigParser {
         }
         mc.getProperty = { String name ->
             def current = stack.last
-            def result
+            def result = null
             if (current.config.get(name)) {
                 result = current.config.get(name)
             } else if (current.scope.entrySet().find{ it.key==profileStack.last.toString()} ) {
@@ -342,7 +342,23 @@ class ConfigParser {
             } else if (current.scope[name]) {
             } else if (current.scope.get(name)) {
                 result = current.scope[name]
-            } else {
+            }
+            //check if present in deepest config except params who is global
+            if ( result == null && profileStack.size() && name!='params' && profileStack.last()!='params') {
+                if( current.scope.containsKey(profileStack.last())){
+                    result = current.scope[profileStack.last()][name]
+                }
+                //check if refers a top, a.k.a global, variable
+                if( result == null && stack.first.scope.containsKey(name)){
+                    result = stack.first.scope[name]
+                }
+            }
+            // check if present in current config
+            if ( result == null && current.scope.containsKey(name)) {
+                result = current.scope[name]
+            }
+            // if not found, create it
+            if( result == null ){
                 try {
                     result = InvokerHelper.getProperty(this, name)
                 } catch (GroovyRuntimeException e) {
