@@ -506,7 +506,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      * note: without this method definition {@link BaseScript#echo} will be invoked
      */
     ProcessConfig echo( value ) {
-        log.warn('The `echo` directive has been renamed to `debug`')
+        log.warn1('The `echo` directive has been deprecated - use to `debug` instead')
         configProperties.debug = value
         return this
     }
