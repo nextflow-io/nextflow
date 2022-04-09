@@ -9,6 +9,7 @@ package nextflow.cloud.google.batch.model
 
 
 import groovy.transform.CompileStatic
+import groovy.transform.ToString
 import nextflow.cloud.google.batch.json.JsonHelper
 /**
  * Model a Google Batch task submit request
@@ -16,6 +17,7 @@ import nextflow.cloud.google.batch.json.JsonHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
+@ToString(includeNames = true, ignoreNulls = true, includePackage = false)
 class BatchJob {
 
     List<TaskGroup> taskGroups = []

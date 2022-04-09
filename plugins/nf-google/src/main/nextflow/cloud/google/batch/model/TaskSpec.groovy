@@ -8,14 +8,16 @@
 package nextflow.cloud.google.batch.model
 
 import groovy.transform.CompileStatic
+import groovy.transform.ToString
 import nextflow.util.Duration
 
 /**
- * Model a Bath Task Spec
+ * Model a Google Batch Task specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
+@ToString(includeNames = true, ignoreNulls = true, includePackage = false)
 class TaskSpec {
     List<TaskRunnable> runnables = []
     List<TaskVolume> volumes = []
@@ -56,7 +58,6 @@ class TaskSpec {
         this.environment = env
         return this
     }
-
 
     TaskSpec withMaxRunDuration(Duration duration) {
         this.maxRunDuration = duration ? "${duration.toSeconds()}s" : null

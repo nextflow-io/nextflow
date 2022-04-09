@@ -82,7 +82,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
          * create submit request
          */
         final req = newSubmitRequest(task)
-        log.trace "[GOOGLE BATCH] new job request > $req"
+        log.debug "[GOOGLE BATCH] new job request > $req"
         final resp = client.submitJob(jobId, req)
         this.status = TaskStatus.SUBMITTED
         log.debug "[GOOGLE BATCH] submitted > job=$jobId; work-dir=${task.getWorkDirStr()}; resp=$resp"
@@ -106,8 +106,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
         final cmd = "trap \"{ cp ${TaskRun.CMD_LOG} ${launcher.workDirMount}/${TaskRun.CMD_LOG}; }\" ERR; exec bash ${launcher.workDirMount}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
         final container = new TaskContainer()
                 .withImageUri(task.container)
-                .withEntrypoint('/bin/bash')
-                .withCommands(['-o','pipefail','-c', cmd.toString()])
+                .withCommands(['/bin/bash','-o','pipefail','-c', cmd.toString()])
                 // note: container must mount the base work directory
                 .withVolumes(launcher.getContainerMounts())
 

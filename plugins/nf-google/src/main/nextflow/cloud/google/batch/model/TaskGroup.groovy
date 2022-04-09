@@ -8,12 +8,15 @@
 package nextflow.cloud.google.batch.model
 
 import groovy.transform.CompileStatic
+import groovy.transform.ToString
+
 /**
  * Model a Batch Task Group
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
+@ToString(includeNames = true, ignoreNulls = true, includePackage = false)
 class TaskGroup {
     TaskSpec taskSpec
     Map<String,String> labels
