@@ -259,10 +259,11 @@ The following variables are implicitly defined in the ``task`` object of each pr
 Name            Description
 =============== ========================
 ``attempt``     The current task attempt
-``cacheable``   Whether the task can be cached
+``hash``        The task unique hash Id
 ``index``       The task index (corresponds to ``task_id`` in the execution trace)
-``process``     The process name
-``shell``       The shell command used to execute the task (e.g. ``["/bin/bash", "-ue"]``)
+``name``        The current task name
+``process``     The current process name
+``workDir``     The task unique directory. NOTE: This is only available for processes that run native code via the ``exec:`` statement. 
 =============== ========================
 
 The ``task`` object also contains the values of all process directives for the given task,
