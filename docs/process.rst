@@ -2029,6 +2029,7 @@ The ``pod`` directive allows the definition of the following options:
 ``affinity: <V>``                                 Specifies affinity for which nodes the process should run on. See `Kubernetes affinity <https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity>`_ for details.
 ``automountServiceAccountToken: <V>``             Specifies whether to `automount service account token <https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/>`_ into process pods. If ``V`` is true, service account token is automounted into task pods (default).
 ``priorityClassName: <V>``                        Specifies the `priority class name <https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/>`_ for pods.
+``toleration: <V>``                               Specifies a toleration for a node taint. See `Taints and Tolerations <https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/>`_ for details.
 ================================================= =================================================
 
 When defined in the Nextflow configuration file, a pod setting can be defined using the canonical
@@ -2044,6 +2045,7 @@ When more than one setting needs to be provides they must be enclosed in a list 
     pod = [ [env: 'FOO', value: 'bar'], [secret: 'my-secret/key1', mountPath: '/etc/file.txt'] ]
   }
 
+Some settings, including environment variables, configs, secrets, volume claims, and tolerations, can be specified multiple times for different values.
 
 .. _process-publishDir:
 

@@ -59,6 +59,8 @@ class PodOptions {
 
     private String priorityClassName
 
+    private List<Map> tolerations
+
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         envVars = new HashSet<>(size)
@@ -66,6 +68,7 @@ class PodOptions {
         mountConfigMaps = new HashSet<>(size)
         mountClaims = new HashSet<>(size)
         automountServiceAccountToken = true
+        tolerations = new ArrayList<Map>(size)
         init(options)
     }
 
@@ -128,6 +131,9 @@ class PodOptions {
         else if( entry.priorityClassName ) {
             this.priorityClassName = entry.priorityClassName
         }
+        else if( entry.toleration instanceof Map ) {
+            tolerations << (entry.toleration as Map)
+        }
         else 
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -183,6 +189,8 @@ class PodOptions {
     }
 
     String getPriorityClassName() { priorityClassName }
+
+    List<Map> getTolerations() { tolerations }
 
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
@@ -240,6 +248,9 @@ class PodOptions {
 
         // priority class name
         result.priorityClassName = other.priorityClassName ?: this.priorityClassName
+
+        // tolerations
+        result.tolerations = other.tolerations ?: this.tolerations
 
         return result
     }
