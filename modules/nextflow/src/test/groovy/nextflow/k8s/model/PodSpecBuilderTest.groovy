@@ -532,34 +532,47 @@ class PodSpecBuilderTest extends Specification {
 
         given:
         def opts = Mock(PodOptions)
-        def builder = new PodSpecBuilder(podName: 'foo', imageName: 'image', command: ['echo'], labels: [runName: 'crazy_john'], annotations: [evict: 'false'])
+        def builder = new PodSpecBuilder([
+            podName: 'foo',
+            imageName: 'image',
+            command: ['echo'],
+            labels: [runName: 'crazy_john'],
+            annotations: [evict: 'false']
+        ])
 
         def affinity = [
             nodeAffinity: [
                 requiredDuringSchedulingIgnoredDuringExecution: [
                     nodeSelectorTerms: [
-                        [key: "foo", operator: "In", values: ["bar", "baz"]]
+                        [key: 'foo', operator: 'In', values: ['bar', 'baz']]
                     ]
                 ]
             ]
         ]
 
+        def tolerations = [[
+            key: 'example-key',
+            operator: 'Exists',
+            effect: 'NoSchedule'
+        ]]
+
         when:
         def spec = builder.withPodOptions(opts).build()
         then:
+        _ * opts.getAffinity() >> affinity
+        _ * opts.getAnnotations() >> [OMEGA:'zzz', SIGMA:'www']
+        _ * opts.getAutomountServiceAccountToken() >> false
+        2 * opts.getEnvVars() >> [ PodEnv.value('HELLO','WORLD') ]
         2 * opts.getImagePullPolicy() >> 'always'
         2 * opts.getImagePullSecret() >> 'myPullSecret'
+        _ * opts.getLabels() >> [ALPHA: 'xxx', GAMMA: 'yyy']
         2 * opts.getVolumeClaims() >> [ new PodVolumeClaim('pvc1', '/work') ]
         2 * opts.getMountConfigMaps() >> [ new PodMountConfig('data', '/home/user') ]
         2 * opts.getMountSecrets() >> [ new PodMountSecret('blah', '/etc/secret.txt') ]
-        2 * opts.getEnvVars() >> [ PodEnv.value('HELLO','WORLD') ]
-        _ * opts.getLabels() >> [ALPHA: 'xxx', GAMMA: 'yyy']
-        _ * opts.getAnnotations() >> [OMEGA:'zzz', SIGMA:'www']
-        _ * opts.getSecurityContext() >> new PodSecurityContext(1000)
         _ * opts.getNodeSelector() >> new PodNodeSelector(gpu:true, queue: 'fast')
-        _ * opts.getAffinity() >> affinity
-        _ * opts.getAutomountServiceAccountToken() >> false
         _ * opts.getPriorityClassName() >> 'high-priority'
+        _ * opts.getSecurityContext() >> new PodSecurityContext(1000)
+        _ * opts.getTolerations() >> tolerations
 
         spec == [
             apiVersion: 'v1',
@@ -571,28 +584,27 @@ class PodSpecBuilderTest extends Specification {
                 annotations: [evict: 'false', OMEGA:'zzz', SIGMA:'www']
             ],
             spec: [
-                restartPolicy:'Never',
-                securityContext: [ runAsUser: 1000 ],
-                imagePullSecrets: [[ name: 'myPullSecret' ]],
-                nodeSelector: [gpu: 'true', queue: 'fast'],
                 affinity: affinity,
                 automountServiceAccountToken: false,
+                imagePullSecrets: [[ name: 'myPullSecret' ]],
+                nodeSelector: [gpu: 'true', queue: 'fast'],
                 priorityClassName: 'high-priority',
-                
-                containers:[
-                    [
-                        name:'foo',
-                        image:'image',
-                        imagePullPolicy: 'always',
-                        command:['echo'],
-                        env:[[name:'HELLO', value:'WORLD']],
-                        volumeMounts:[
-                            [name:'vol-1', mountPath:'/work'],
-                            [name:'vol-2', mountPath:'/home/user'],
-                            [name:'vol-3', mountPath:'/etc/secret.txt']
-                        ],
-                    ]
-                ],
+                restartPolicy:'Never',
+                securityContext: [ runAsUser: 1000 ],
+                tolerations: tolerations,
+
+                containers:[[
+                    name:'foo',
+                    image:'image',
+                    imagePullPolicy: 'always',
+                    command:['echo'],
+                    env:[[name:'HELLO', value:'WORLD']],
+                    volumeMounts:[
+                        [name:'vol-1', mountPath:'/work'],
+                        [name:'vol-2', mountPath:'/home/user'],
+                        [name:'vol-3', mountPath:'/etc/secret.txt']
+                    ],
+                ]],
                 volumes:[
                     [name:'vol-1', persistentVolumeClaim:[claimName:'pvc1']],
                     [name:'vol-2', configMap:[name:'data']],
