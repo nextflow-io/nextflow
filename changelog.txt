@@ -1,5 +1,18 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.03.1-edhe 6 Apr 2022 
+- Fix default dsl env detection [b9a09bf6]
+- Handle K8s timeout error - 500 status code (#2756) [89a1a46b] <xhejtman>
+- Honour background option for kuberun command [b1b0ddd9] <kfrancisdev>
+- Add Aws Batch native retry on spot reclaim [cd95e297]
+- Improve Aws Batch error reporting [00443510]
+- Add missing workflow err report [fa687789]
+- Use local nextflow when packing docker image (#2757) [40271b08] <xhejtman>
+- Add retry policy Azure create job [792820a2]
+- Fix log message in nf-azure [80a0e937] <Manuele Simi>
+- Prevent build on tag [5b660c73]
+- Fix missing linux/amd64 platform on docker build [05f117d7]
+
 22.03.0-edge 27 Mar 2022
 - Add experimental proxy reg [b3836691]
 - Add api to access config raw value [977f6305]

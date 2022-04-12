@@ -1353,7 +1353,7 @@ Viewing the contents of a downloaded pipeline. ::
    cheers = Channel.from 'Bonjour', 'Ciao', 'Hello', 'Hola'
 
     process sayHello {
-      echo true
+      debug true
       input:
         val x from cheers
       script:
@@ -1388,7 +1388,7 @@ Viewing the contents of a downloaded pipeline without omitting the header. ::
    cheers = Channel.from 'Bonjour', 'Ciao', 'Hello', 'Hola'
 
     process sayHello {
-      echo true
+      debug true
       input:
         val x from cheers
       script:

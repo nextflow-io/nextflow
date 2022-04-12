@@ -18,7 +18,7 @@
 nextflow.enable.dsl=1
 
 process foo {
-  echo true
+  debug true
   errorStrategy 'finish'
   input:  each x from 1,2,3
   output: stdout into results

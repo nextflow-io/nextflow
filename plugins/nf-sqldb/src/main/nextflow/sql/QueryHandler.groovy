@@ -18,6 +18,7 @@
 package nextflow.sql
 
 import java.sql.Connection
+import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Statement
 import java.util.concurrent.CompletableFuture
@@ -30,7 +31,6 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 import nextflow.sql.config.SqlDataSource
-
 /**
  * Implement the logic for query a DB in async manner
  *
@@ -38,7 +38,7 @@ import nextflow.sql.config.SqlDataSource
  */
 @Slf4j
 @CompileStatic
-class QueryHandler implements QueryOp {
+class QueryHandler implements QueryOp<QueryHandler> {
 
     private static Map<String,Class<?>> type_mapping = [:]
 
@@ -67,6 +67,10 @@ class QueryHandler implements QueryOp {
     private DataflowWriteChannel target
     private String statement
     private SqlDataSource dataSource
+    private boolean emitColumns = false
+    private Integer batchSize
+    private long batchDelayMillis = 100
+    private int queryCount
 
     @Override
     QueryOp withStatement(String stm) {
@@ -86,13 +90,32 @@ class QueryHandler implements QueryOp {
         return this
     }
 
+    QueryOp withOpts(Map opts) {
+        if( opts.emitColumns )
+            this.emitColumns = opts.emitColumns as boolean
+        if( opts.batchSize )
+            this.batchSize = opts.batchSize as Integer
+        if( opts.batchDelay )
+            this.batchDelayMillis = opts.batchDelay as long
+        return this
+    }
+
+    int batchSize() {
+        return batchSize
+    }
+
+    int queryCount() {
+        return queryCount
+    }
+
     @Override
-    void perform(boolean async=false) {
+    QueryHandler perform(boolean async=false) {
         final conn = connect(dataSource ?: SqlDataSource.DEFAULT)
         if( async )
             queryAsync(conn)
         else
-            query0(conn)
+            queryExec(conn)
+        return this
     }
 
     protected Connection connect(SqlDataSource ds) {
@@ -110,7 +133,7 @@ class QueryHandler implements QueryOp {
     }
 
     protected queryAsync(Connection conn) {
-        def future = CompletableFuture.runAsync ({ query0(conn) })
+        def future = CompletableFuture.runAsync ({ queryExec(conn) })
         future.exceptionally(this.&handlerException)
     }
 
@@ -121,11 +144,22 @@ class QueryHandler implements QueryOp {
         session?.abort(error)
     }
 
+    protected void queryExec(Connection conn) {
+        if( batchSize ) {
+            query1(conn)
+        }
+        else {
+            query0(conn)
+        }
+    }
+
     protected void query0(Connection conn) {
         try {
             try (Statement stm = conn.createStatement()) {
                 try( def rs = stm.executeQuery(normalize(statement)) ) {
-                    emitRows0(rs)
+                    if( emitColumns )
+                        emitColumns(rs)
+                    emitRowsAndClose(rs)
                 }
             }
         }
@@ -134,19 +168,81 @@ class QueryHandler implements QueryOp {
         }
     }
 
-    protected emitRows0(ResultSet rs) {
+    protected void query1(Connection conn) {
         try {
-            final meta = rs.getMetaData()
-            final cols = meta.getColumnCount()
+            // create the query adding the `offset` and `limit` params
+            final query = makePaginationStm(statement)
+            // create the prepared statement
+            try (PreparedStatement stm = conn.prepareStatement(query)) {
+                int count = 0
+                int len = 0
+                do {
+                    final offset = (count++) * batchSize
+                    final limit = batchSize
 
-            while( rs.next() ) {
-                def item = new ArrayList(cols)
-                for( int i=0; i<cols; i++) {
-                    item[i] = rs.getObject(i+1)
+                    stm.setInt(1, limit)
+                    stm.setInt(2, offset)
+                    queryCount++
+                    try ( def rs = stm.executeQuery() ) {
+                        if( emitColumns && count==1 )
+                            emitColumns(rs)
+                        len = emitRows(rs)
+                        sleep(batchDelayMillis)
+                    }
                 }
-                // emit the value
-                target.bind(item)
+                while( len==batchSize )
             }
+            finally {
+                // close the channel
+                target.bind(Channel.STOP)
+            }
+        }
+        finally {
+            conn.close()
+        }
+    }
+
+    protected String makePaginationStm(String sql) {
+        if( sql.toUpperCase().contains('LIMIT') )
+                throw new IllegalArgumentException("Sql query should not include the LIMIT statement when pageSize is specified: $sql")
+        if( sql.toUpperCase().contains('OFFSET') )
+            throw new IllegalArgumentException("Sql query should not include the OFFSET statement when pageSize is specified: $sql")
+
+        return sql.stripEnd(' ;') + " LIMIT ? OFFSET ?;"
+    }
+
+    protected emitColumns(ResultSet rs) {
+        final meta = rs.getMetaData()
+        final cols = meta.getColumnCount()
+
+        def item = new ArrayList(cols)
+        for( int i=0; i<cols; i++) {
+            item[i] = meta.getColumnName(i+1)
+        }
+        // emit the value
+        target.bind(item)
+    }
+
+    protected int emitRows(ResultSet rs) {
+        final meta = rs.getMetaData()
+        final cols = meta.getColumnCount()
+
+        int count=0
+        while( rs.next() ) {
+            count++
+            def item = new ArrayList(cols)
+            for( int i=0; i<cols; i++) {
+                item[i] = rs.getObject(i+1)
+            }
+            // emit the value
+            target.bind(item)
+        }
+        return count
+    }
+
+    protected int emitRowsAndClose(ResultSet rs) {
+        try {
+            emitRows(rs)
         }
         finally {
             // close the channel

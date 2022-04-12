@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 nextflow.enable.dsl=1
-echo true
 
 process sayhello {
-
-    """
+  debug true
+  """
     echo 'Hello world!'
-    """
+  """
 }
