@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,8 +55,9 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'containerOptions',
             'cleanup',
             'clusterOptions',
+            'debug',
             'disk',
-            'echo',
+            'echo', // deprecated
             'errorStrategy',
             'executor',
             'ext',
@@ -76,7 +77,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'storeDir',
             'tag',
             'time',
-            'validExitStatus',
             // input-output qualifiers
             'file',
             'set',
@@ -101,10 +101,9 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      */
     @PackageScope
     static final Map<String,Object> DEFAULT_CONFIG = [
-            echo: false,
+            debug: false,
             cacheable: true,
             shell: BashWrapperBuilder.BASH,
-            validExitStatus: [0],
             maxRetries: 0,
             maxErrors: -1,
             errorStrategy: ErrorStrategy.TERMINATE
@@ -298,8 +297,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     BaseScript getOwnerScript() { ownerScript }
 
     TaskConfig createTaskConfig() {
-        if(configProperties.validExitStatus != DEFAULT_CONFIG.validExitStatus)
-            log.warn1 "Directive 'validExitStatus' has been deprecated -- Check process '$processName'"
         return new TaskConfig(configProperties)
     }
 
@@ -495,11 +492,22 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         outputs
     }
 
-    /*
+    /**
+     * Implements the process {@code debug} directive.
+     */
+    ProcessConfig debug( value ) {
+        configProperties.debug = value
+        return this
+    }
+
+    /**
+     * Implements the process {@code echo} directive for backwards compatibility.
+     *
      * note: without this method definition {@link BaseScript#echo} will be invoked
      */
     ProcessConfig echo( value ) {
-        configProperties.echo = value
+        log.warn1('The `echo` directive has been deprecated - use to `debug` instead')
+        configProperties.debug = value
         return this
     }
 

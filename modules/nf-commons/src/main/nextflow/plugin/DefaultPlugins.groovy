@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,9 +27,11 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class DefaultPlugins {
 
+    public static final DefaultPlugins INSTANCE = new DefaultPlugins()
+
     private Map<String,PluginSpec> plugins = new HashMap<>(20)
 
-    DefaultPlugins() {
+    protected DefaultPlugins() {
         final meta = this.class.getResourceAsStream('/META-INF/plugins-info.txt')?.text
         plugins = parseMeta(meta)
     }
@@ -63,4 +65,12 @@ class DefaultPlugins {
         return new ArrayList(plugins.values())
     }
 
+    String toSortedString(String divisor=',') {
+        getPlugins().sort().join(divisor)
+    }
+
+    @Override
+    String toString() {
+        return "DefaultPlugins${getPlugins()}"
+    }
 }

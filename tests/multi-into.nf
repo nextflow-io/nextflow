@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+nextflow.enable.dsl=1
+
 process foo {
   output:
   file 'x' into A,B,C
@@ -29,7 +30,7 @@ process foo {
 baz.view { "Hello $it" }
 
 process bar1 {
-  echo true
+  debug true
   input:
   file x from A
 
@@ -39,7 +40,7 @@ process bar1 {
 }
 
 process bar2 {
-  echo true
+  debug true
   input:
   file x from B
 
@@ -49,7 +50,7 @@ process bar2 {
 }
 
 process bar3 {
-  echo true
+  debug true
   input:
   file x from C
 

@@ -1,3 +1,5 @@
+nextflow.enable.dsl=1
+
 process foo {
   publishDir 'foo', mode: 'copy'
   container 'debian:latest'
@@ -26,7 +28,7 @@ process foo {
 }
 
 process bar {
-  echo true
+  debug true
   container 'debian:latest'
   input: 
   file '*' from ch1.mix(ch2,ch3,ch4,ch5,ch6).collect()

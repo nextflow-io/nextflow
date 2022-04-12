@@ -4,6 +4,8 @@
 Apache Ignite
 *************
 
+.. danger::
+  This feature has been phased out and is no longer supported as of version 22.01.x.
 
 Nextflow can be be deployed in a *cluster* mode by using `Apache Ignite <https://ignite.apache.org/>`_, an in-memory data-grid
 and clustering platform.
@@ -17,7 +19,7 @@ Cluster daemon
 --------------
 
 In order to setup a cluster you will need to run a cluster daemon on each node within your cluster.
-If you want to support the :ref:`Docker integration <docker-page>` feature provided by Nextflow, the Docker engine has
+If you want to support the :ref:`Docker integration <container-docker>` provided by Nextflow, the Docker engine has
 to be installed and must run in each node.
 
 In its simplest form just launch the Nextflow daemon in each cluster node as shown below::

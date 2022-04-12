@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,15 +49,14 @@ class InvokeTaskAdapter extends Closure {
     }
 
     @Override
-    Object call(final Object arguments) {
-        processor.invokeTask(arguments)
+    Object call(final Object... args) {
+        processor.invokeTask(args)
         return null
     }
 
     @Override
-    Object call(final Object... args) {
-        processor.invokeTask(args as List)
-        return null
+    Object call(final Object arguments) {
+        throw new UnsupportedOperationException()
     }
 
     @Override

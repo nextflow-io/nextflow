@@ -28,19 +28,18 @@ and ultimately the pipeline execution flow itself, is implicitly defined by thes
 
 A Nextflow script looks like this::
 
+    // Declare syntax version
+    nextflow.enable.dsl=2
     // Script parameters
     params.query = "/some/data/sample.fa"
     params.db = "/some/path/pdb"
 
-    db = file(params.db)
-    query_ch = Channel.fromPath(params.query)
-
     process blastSearch {
-        input:
-        file query from query_ch
-
-        output:
-        file "top_hits.txt" into top_hits_ch
+      input:
+        path query
+        path db
+      output:
+        path "top_hits.txt"
 
         """
         blastp -db $db -query $query -outfmt 6 > blast_result
@@ -49,18 +48,21 @@ A Nextflow script looks like this::
     }
 
     process extractTopHits {
-        input:
-        file top_hits from top_hits_ch
+      input:
+        path top_hits
 
-        output:
-        file "sequences.txt" into sequences_ch
+      output:
+        path "sequences.txt"
 
         """
         blastdbcmd -db $db -entry_batch $top_hits > sequences.txt
         """
     }
 
-
+    workflow {
+       def query_ch = Channel.fromPath(params.query)
+       blastSearch(query_ch, params.db) | extractTopHits | view
+    }
 
 The above example defines two processes. Their execution order is not determined by the fact that the ``blastSearch``
 process comes before ``extractTopHits`` in the script (it could also be written the other way around).

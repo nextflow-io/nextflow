@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 /*
  * Show how get data from the 'stdin' virtual file
@@ -26,7 +27,6 @@
  * line parameter '--chunkSize' (--chunk-size is a synonym for the same)
  */
 
-
 params.chunkSize = 1
 
 Channel
@@ -35,7 +35,7 @@ Channel
     .set{ sequences }
 
 process foo {
-    echo true
+    debug true
 
     input:
     stdin sequences

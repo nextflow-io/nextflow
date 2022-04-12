@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 str = Channel.from('hello', 'hola', 'bonjour', 'ciao')
 
 process printEnv {
-    echo true
+    debug true
 
     input:
     env HELLO from str

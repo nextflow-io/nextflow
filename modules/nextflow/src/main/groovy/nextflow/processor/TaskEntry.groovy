@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +22,7 @@ import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import nextflow.trace.TraceRecord
 /**
- * Model a task entry persisted in the {@link nextflow.CacheDB}
+ * Model a task entry persisted in the {@link nextflow.cache.CacheDB}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

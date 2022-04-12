@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,6 +69,7 @@ class SqlDataSourceTest extends Specification {
         'jdbc:mysql:some-host'          | 'com.mysql.cj.jdbc.Driver'
         'jdbc:mariadb:other-host'       | 'org.mariadb.jdbc.Driver'
         'jdbc:duckdb:'                  | 'org.duckdb.DuckDBDriver'
+        'jdbc:awsathena:'               | 'com.simba.athena.jdbc.Driver'
     }
 
     def 'should get default config' () {

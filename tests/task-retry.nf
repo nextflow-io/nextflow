@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-echo true
+nextflow.enable.dsl=1
 
 process foo {
+    debug true
     time { 1.h * task.attempt }
     memory { 1.GB * task.attempt }
     errorStrategy { task.exitStatus == 5 && task.attempt<3 ? 'retry' : 'terminate' }

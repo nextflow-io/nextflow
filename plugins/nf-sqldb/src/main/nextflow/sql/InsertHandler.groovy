@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,7 +58,10 @@ class InsertHandler implements Closeable {
         this.columns = cols0(this.opts.columns)
         this.sqlStatement = this.opts.statement
         this.batchSize = this.opts.batch ? this.opts.batch as int : DEFAULT_BATCH_SIZE
+        this.batchSize = this.opts.batchSize ? this.opts.batchSize as int : DEFAULT_BATCH_SIZE
         this.setupStatement = this.opts.setup
+        if( this.opts.batch )
+            log.warn "The option 'batch' for the 'sqlInsert' operator has been deprecated - Use 'batchSize' instead"
         if( batchSize<1 )
             throw new IllegalArgumentException("SQL batch option must be greater than zero: $batchSize")
     }

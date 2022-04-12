@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -635,7 +635,7 @@ class Launcher {
      */
     static void main(String... args)  {
 
-        final launcher = DripMain.LAUNCHER ?: new Launcher()
+        final launcher = new Launcher()
         final status = launcher .command(args) .run()
         if( status )
             System.exit(status)

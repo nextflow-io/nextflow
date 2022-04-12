@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,8 @@
 package nextflow.cli
 import java.nio.file.Files
 
-import nextflow.CacheDB
+import nextflow.cache.CacheDB
+import nextflow.cache.DefaultCacheStore
 import nextflow.executor.CachedTaskHandler
 import nextflow.script.ProcessConfig
 import nextflow.processor.TaskContext
@@ -52,7 +53,8 @@ class CmdLogTest extends Specification {
         final runName = 'test_1'
 
         // -- the session object
-        def cache = new CacheDB(uuid, runName, folder)
+        def store = new DefaultCacheStore(uuid, runName, folder)
+        def cache = new CacheDB(store)
 
         // -- the processor mock
         def proc = Mock(TaskProcessor)
@@ -120,7 +122,8 @@ class CmdLogTest extends Specification {
         final runName = 'test_1'
 
         // -- the session object
-        def cache = new CacheDB(uuid, runName, folder)
+        def store = new DefaultCacheStore(uuid, runName, folder)
+        def cache = new CacheDB(store)
 
         // -- the processor mock
         def proc = Mock(TaskProcessor)
@@ -173,7 +176,6 @@ class CmdLogTest extends Specification {
                 .findResults { line -> !line.contains('DEBUG') ? line : null }
                 .join('\n')
         then:
-        stdout.readLines().size() == 2
         stdout.readLines().contains( "$folder/aaa" .toString())
         stdout.readLines().contains( "$folder/ccc" .toString())
 

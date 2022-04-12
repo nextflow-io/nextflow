@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,8 +59,20 @@ allprojects {
     apply plugin: 'groovy'
     apply plugin: 'java-library'
 
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(11)
+        }
+    }
+
+    compileJava {
+        options.release = 8
+    }
+
+    tasks.withType(GroovyCompile) {
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+    }
 
     idea {
         module.inheritOutputDirs = true
@@ -88,8 +100,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:1.11'
-        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.9"
-        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.9"
+        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.10"
+        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.10"
     }
 
     test {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,6 +51,7 @@ class DataflowMathExtensionTest extends Specification {
         Channel.from("hello","hi","hey").max { it.size() } .val == "hello"
         Channel.from("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
         Channel.from("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
+        // this may fail randomly - the cause should be investigated
         Channel.from("hello","hi","hey").max (makeComparator {{ a,b -> a.size()<=>b.size() }}) .val == "hello"
 
     }

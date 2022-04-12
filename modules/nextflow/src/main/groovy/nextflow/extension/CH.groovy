@@ -70,7 +70,7 @@ class CH {
     static void broadcast() {
         // connect all dataflow queue variables to associated broadcast channel 
         for( DataflowQueue queue : bridges.keySet() ) {
-            log.debug "Bridging dataflow queue=$queue"
+            log.trace "Bridging dataflow queue=$queue"
             def broadcast = bridges.get(queue)
             queue.into(broadcast)
         }

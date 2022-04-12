@@ -1,5 +1,146 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.03.1-edhe 6 Apr 2022 
+- Fix default dsl env detection [b9a09bf6]
+- Handle K8s timeout error - 500 status code (#2756) [89a1a46b] <xhejtman>
+- Honour background option for kuberun command [b1b0ddd9] <kfrancisdev>
+- Add Aws Batch native retry on spot reclaim [cd95e297]
+- Improve Aws Batch error reporting [00443510]
+- Add missing workflow err report [fa687789]
+- Use local nextflow when packing docker image (#2757) [40271b08] <xhejtman>
+- Add retry policy Azure create job [792820a2]
+- Fix log message in nf-azure [80a0e937] <Manuele Simi>
+- Prevent build on tag [5b660c73]
+- Fix missing linux/amd64 platform on docker build [05f117d7]
+
+22.03.0-edge 27 Mar 2022
+- Add experimental proxy reg [b3836691]
+- Add api to access config raw value [977f6305]
+- Add warning for invalid emit names [0045834c]
+- Add retry policy on grid submit failure #2696 [673f560c]
+- Add config tests #2422 [885993b1]
+- Add ability to disable config names check [814a2605]
+- Add azcopy fine grain config settings [3998a56b]
+- Add binary compatibility with Java 8 [763ec999]
+- Add retry policy to Az Batch operations [991c6175]
+- Make DSL2 default syntax [4e9189ac] [0c80784a]
+- Fix Reduce task command runner script size [6930408b]
+- Fix K8s task retry strategy on node termination [bd093081]
+- Fix use first config in stack when is into profile #2701 [44bdde8d] <Jorge Aguilera>
+- Fix Allow comments after nextflow.enable.dsl (#2746) [6988638b] <Jorge Aguilera>
+- Fix allow blank spaces in java path (#2690) [a966020e] <Jorge Aguilera>
+- Improve AWS Batch job retry on spot termination [bd8f2e26] [72fbda848]
+- Improve error reporting [55466be7]
+- Undeprecate merge operation [1649944b]
+- Bump support for Java 18 [f3a11e4c]
+- Prevent invalid use of large maxForks values [5de0c200]
+- Prevent race condition on thread pool creation [3e707a1d]
+- Refactor AWS batch job unique token generation [d64f5a21]
+- Decrese log verbosity [9237d587] [d1a5e5a8]
+- Throw an error if a required secret is missing [8e5129d6]
+- Wait for pod to stop running before shutdown (#2667) [505c5ad6]) <kfrancisdev>
+- Restore AZ tests [858a4568]
+
+22.02.1-edge - 3 Mar 2022
+- Prevent multiple parsing of params file [38bb1f71]
+
+22.02.0-edge - 25 Feb 2022
+- Fix Prevent S3 tagging with empty list [ae7db466]
+- Fix Azure repos tests [856aacf0]
+- Fix isse on includeConfig resolution #2675 [6591a9e1]
+- Fix NPE when accessing not existing Git file [6c79f8fd]
+- Fix Batch Job name exceed max allowed size [e8b70ca3]
+- Fix detect and skip bom mark in files (#2645) [02b06ba3] <Jorge Aguilera>
+- Feature: Abort session if publish fails (#2643) [79b3836b] <Jorge Aguilera>
+- Fix report overwrite cannot be disabled [202b5c9c] #2647 
+- Fix match bash interpreter irrespective the path [c2d2b9b2]
+- Fix build warning + plugins assemble (#2634) [00dd143a] <Jorge Aguilera>
+- Fix CITATION.cff and add automatic validation of your citation metadata [15698a45] <Faruk D>
+- Bump nf-amazon@1.5.1 [a4496bb2]
+- Bump nf-amazon@1.5.2 [e51139bb]
+
+22.01.0-edge - 7 Feb 2022
+- Add support for Tower reports (#2523) [de3d76349] <Jordi Deu-Pons>
+- Add RateLimitExceededException when GitHub api limit is reached [ff123c605]
+- Add fetch tags and branches to local git provider [e1de8e0ac]
+- Add K8s priorityClassName pod option, updated tests (#2585) [51650f8c4] <Ben Sherman>
+- Add securityContext pod option to docs (#2584) [19f16f0da] <Ben Sherman>
+- Add automountServiceAccountToken option for k8s executor (#2562) [1b5908e4c] <xhejtman>
+- Add warn about AWS CLI grandparent path in container (#2565) [67073b0c5] <Simon Li>
+- Add affinity option to pod directive (#2522) [640cbed48](3 weeks ago) <Ben Sherman>
+- Add ability to specify memory/cpu resources for the control pod (#2559) [13f3e036d] <xhejtman>
+- Add `-entry` parameter to pass in k8s executor (#2525) [a96233af6] <xhejtman>
+- Add AWS Athena JDBC driver for nf-sqldb plugin (#2500) [462575f05] <Abhinav Sharma>
+- Fix process output 'env' as array (#2624) [0a246dc2c] <Jorge Aguilera>
+- Fix make date format to change independent from system locale [d1e5f6e76] <Jorge Aguilera>
+- Fix double access of params file [459ebab7b] <Paolo Di Tommaso>
+- Fix Use account SAS token instead of service SAS token (#2576) [d5125975d] <Florian De Temmerman>
+- Fix upload of nested directory outputs on azure (#2578) [85ad55225] [744447155] <Florian De Temmerman>
+- Fix Docs Typo (#2556) [942be46f6] <Kibubu>
+- Fix NXF_PARAMS_FILE is not recognised #2549 [62f5fe1d9]
+- Fix failing tests (4 weeks ago) <Paolo Di Tommaso>
+- Fix Unable to use output path with nested properties [ceceb0784]
+- Fix Nextflow couldn't parse generated nextflow.config under some circumstances (#2496) [2dfbbc63c] <Fabian Lehmann>
+- Fix invalid use of `var` keyword [8418cc8d6]
+- Improve k8s executor throwing NodeTerminationException on node shutdown (#2590) [084c8d6ca] <Patrick Hüther>
+- Improve docs on `include` statements (#2520) [9c140cee3] <Alexander Toenges>
+- Improve core plugins info & logging [dfa544ac9]
+- Improve Secrets handling [1c0ad4679] [329502d19] [[26b4be906]]
+- Improve DSL2 documentation [048b026f2] [e2e8b5557] <Manuele Simi>
+- Improve documentation (#2600) [787a1fd84] <Ben Sherman>
+- Allow disabling history file unique check [c3677c311]
+- Make S3 parallel download as default [b490f146d] [03dae9d6e]
+- Run Azure integration tests only with Java 11 [0890ceeb3]
+- Prepare for Java >= 11 build [8c0566fc3] [5ba16dd18] [405b67365]
+- Use Standard_A3 instance type for Azure tests [67e7d3ab3] [b97b0010c]
+- Refactor cache store using plugins [54bf7a61d]
+- Update google cloud docs (#2594) [dfa867953] <Ben Sherman>
+- Update the azure docs for registry [96baf288e] <Abhinav Sharma>
+- Update copyright info [807a816a5]
+- Remove gradle logs about tasks dependencies (#2618) [cae44e00b] <Jorge Aguilera>
+- Remove Tika deps for nf-amazon module [95620d42b]
+- Remove deprecated validExitStatuas directive [b3117e789] [2188d51a0]
+- Remove support for Apache Ignite [d4dc1cfe1] [64d2773fd]
+- Bump nf-amazon@1.5.0 as default plugin
+- Bump Gradle 7.3.3 [f00bfb0d3]
+- Bump nf-amazon@1.5.0 [40f90aa92] [[2bc16732e]]
+
+21.12.1-edge - 22 Dec 2021
+- Add tags attribute to publishDir directive [e78a997b5]
+- Add ability to disable running jobs cancellation [a13af9a3c]
+- Add ability to define containerProperties with using AWS Batch #2471 [ac7f1e71e] <Manuele Simi>
+- Add NXF_JVM_ARGS env variable [7afb2deed]
+- Improve paths validation [0849d583f]
+- Include S3FS provider into nf-amazon plugin [3a7bf8c7a]
+- Fix error reporting on missing script file #1951 [e1a0b240a]
+- Fix singularity docs #2493 [c66cb3ba7] <Jose Espinosa-Carrasco>
+- Fix cross compilation error cause by ByteBuffer [74916100f]
+- Fix File staging race condition + beta AWS parallel downloader [b7c262de3]
+- Fix enableAIAcaIssuers launcher flag [cd780aabd]
+- Fix task index sequence generation [3447e735b]
+- Fix Changes process directives invalidates tasks cache [967c1adff]
+- Fix Interrupted download of staged files cause execution to fail #1552 [847789fad]
+- Fix plugins start/stop for fs command [88d8be1f4]
+- Fix for nested params with the same name #2485 [02de4147c] <Jay Carey>
+- Fix race condition on plugin autoload status [ab00a50f5]
+- Fix failing test with Java 17 [1c6183c92] [4daf8d0a1]
+- Note on Azure Batch inactive pools #2483 [7fc116067] <Manuele Simi>
+- Remove drip launcher [909f95279]
+- Update azure test image [de9d5ee8c]
+- Update logging library [a957db646]
+- Bump nf-google@1.1.4 [93193a3f3]
+- Bump version 21.12.0-edge [9cb7ee81f]
+- Bump AWS sdk 1.12.129 [bd7ba1706]
+- Bump logback 1.2.9 [29f260717]
+- Bump Jsoup 1.14.3 [5776c0391]
+- Bump corretto:17.0.1 [f7e047ea4]
+
+21.12.0-edge - 22 Dec 2021 [SKIPPED]
+
+21.10.6 - 21 Dec 2021 
+- Bump Slf4j 1.7.32
+- Bump Logback 1.2.9
+
 21.10.5 - 8 Dec 2021
 - Fix race condition on plugin autoload status [73a0893ce]
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -764,7 +764,7 @@ class FileHelper {
         }
 
         if( !matcher ) {
-            Bolts.debug1(log, "Path matcher not defined by '${fileSystem.class.simpleName}' file system -- using default default strategy")
+            log.trace("Path matcher not defined by '${fileSystem.class.simpleName}' file system -- using default default strategy")
             matcher = getDefaultPathMatcher(syntaxAndPattern)
         }
 
