@@ -1,8 +1,7 @@
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 process blastThemAll {
-    echo true
+    debug true
 
     input:
     path x

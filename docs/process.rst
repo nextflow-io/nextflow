@@ -890,7 +890,7 @@ cause the process execution to stop even if there are other values in other chan
 For example::
 
   process foo {
-    echo true
+    debug true
     input:
     val x from Channel.from(1,2)
     val y from Channel.from('a','b','c')
@@ -923,7 +923,7 @@ content is applied repeatedly.
 To better understand this behavior compare the previous example with the following one::
 
   process bar {
-    echo true
+    debug true
     input:
     val x from Channel.value(1)
     val y from Channel.from('a','b','c')
@@ -1358,6 +1358,7 @@ The directives are:
 * `container`_
 * `containerOptions`_
 * `clusterOptions`_
+* `debug`_
 * `disk`_
 * `echo`_
 * `errorStrategy`_
@@ -1595,6 +1596,31 @@ out of the box by Nextflow.
   :ref:`executor-page` page to see which executors support this directive.
 
 
+.. _process-debug:
+
+debug
+-----
+
+By default the ``stdout`` produced by the commands executed in all processes is ignored.
+Setting the ``debug`` directive to ``true`` you can forward the process `stdout` to the current top
+running process `stdout` file, showing it in the shell terminal.
+
+For example::
+
+    process sayHello {
+      debug true
+
+      script:
+      "echo Hello"
+    }
+
+::
+
+    Hello
+
+Without specifying ``debug true`` you won't see the ``Hello`` string printed out when executing the above example.
+
+
 .. _process-disk:
 
 disk
@@ -1635,25 +1661,7 @@ See also: `cpus`_, `memory`_ `time`_, `queue`_ and `Dynamic computing resources`
 echo
 ----
 
-By default the `stdout` produced by the commands executed in all processes is ignored.
-Setting the ``echo`` directive to ``true`` you can forward the process `stdout` to the current top
-running process `stdout` file, showing it in the shell terminal.
-
-For example::
-
-    process sayHello {
-      echo true
-
-      script:
-      "echo Hello"
-    }
-
-::
-
-    Hello
-
-Without specifying ``echo true`` you won't see the ``Hello`` string printed out when executing the above example.
-
+As of version 22.04.0, ``echo`` has been deprecated and replaced by ``debug``.
 
 .. _process-error-strategy:
 
@@ -2040,6 +2048,7 @@ The ``pod`` directive allows the definition of the following options:
 ``affinity: <V>``                                 Specifies affinity for which nodes the process should run on. See `Kubernetes affinity <https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity>`_ for details.
 ``automountServiceAccountToken: <V>``             Specifies whether to `automount service account token <https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/>`_ into process pods. If ``V`` is true, service account token is automounted into task pods (default).
 ``priorityClassName: <V>``                        Specifies the `priority class name <https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/>`_ for pods.
+``toleration: <V>``                               Specifies a toleration for a node taint. See `Taints and Tolerations <https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/>`_ for details.
 ================================================= =================================================
 
 When defined in the Nextflow configuration file, a pod setting can be defined using the canonical
@@ -2055,6 +2064,7 @@ When more than one setting needs to be provides they must be enclosed in a list 
     pod = [ [env: 'FOO', value: 'bar'], [secret: 'my-secret/key1', mountPath: '/etc/file.txt'] ]
   }
 
+Some settings, including environment variables, configs, secrets, volume claims, and tolerations, can be specified multiple times for different values.
 
 .. _process-publishDir:
 
@@ -2101,6 +2111,7 @@ saveAs          A closure which, given the name of the file being published, ret
                 This is useful when the process has multiple output files, but you want to publish only some of them.
 enabled         Enable or disable the publish rule depending on the boolean value specified (default: ``true``).
 tags            Allow to associate tags with the target file e.g. ``tag: [FOO: 'Hello world']`` (EXPERIMENTAL, currently only supported by files stored on AWS S3, requires version ``21.12.0-edge`` or later).
+failOnError     When ``true`` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: ``false``)
 =============== =================
 
 Table of publish modes:

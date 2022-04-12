@@ -15,12 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 Channel.fromPath("$baseDir/data/p{1,2,3}.fa").set { data_ch }
 
 
 process foo {
-  echo true
+  debug true
 
   tag "$x"
 

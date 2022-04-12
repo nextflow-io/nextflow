@@ -67,6 +67,7 @@ class DummySecretsProvider implements SecretsProvider {
         return null
     }
 
+    @Override
     String getSecretsEnv(List<String> names) {
         String result = ''
         target.each { k,v -> result += "export $k=$v\n" }

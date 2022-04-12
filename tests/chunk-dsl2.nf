@@ -1,18 +1,15 @@
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 params.chunkSize = 1
 
-
 process foo {
-    echo true
+    debug true
 
     input:
     stdin()
 
     "cat -"
 }
-
 
 workflow {
     Channel.from(stdin) \

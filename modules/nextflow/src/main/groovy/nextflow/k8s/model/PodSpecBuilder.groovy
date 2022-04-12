@@ -86,6 +86,8 @@ class PodSpecBuilder {
 
     String priorityClassName
 
+    List<Map> tolerations = []
+
     /**
      * @return A sequential volume unique identifier
      */
@@ -268,6 +270,9 @@ class PodSpecBuilder {
         automountServiceAccountToken = opts.automountServiceAccountToken
         // -- priority class name
         priorityClassName = opts.priorityClassName
+        // -- tolerations
+        if( opts.tolerations )
+            tolerations.addAll(opts.tolerations)
 
         return this
     }
@@ -340,6 +345,10 @@ class PodSpecBuilder {
 
         if( priorityClassName )
             spec.priorityClassName = priorityClassName
+
+        // tolerations
+        if( this.tolerations )
+            spec.tolerations = this.tolerations
 
         // add labels
         if( labels )

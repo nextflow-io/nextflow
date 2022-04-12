@@ -15,12 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
-echo true
 items = [0,1,2,3,4]
 decode = ['zero','one','two','three','fourth']
 
 process foo {
+    debug true
     tag "${decode[x]}"
 
     input:
@@ -37,6 +38,7 @@ process foo {
 
 
 process bar {
+    debug true
     tag "${decode[x]}"
 
     input:

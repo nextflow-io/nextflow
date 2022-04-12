@@ -21,6 +21,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.exception.NodeTerminationException
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
@@ -575,6 +576,26 @@ class K8sTaskHandlerTest extends Specification {
         state == STATE3
     }
 
+    def 'should return nodeTermination state' () {
+        given:
+        def POD_NAME = 'pod-xyz'
+        def client = Mock(K8sClient)
+        def handler = Spy(K8sTaskHandler)
+        handler.client = client
+        handler.podName = POD_NAME
+        
+        when:
+        def state = handler.getState()
+        then:
+        1 * client.podState(POD_NAME) >> { throw new NodeTerminationException("Node shutdown happened") }
+        then:
+        state.terminated.startedAt
+        state.terminated.finishedAt
+        and:
+        state.nodeTermination instanceof NodeTerminationException
+        state.nodeTermination.message == "Node shutdown happened"
+    }
+
     def 'should return container mounts' () {
 
         given:
@@ -798,4 +819,6 @@ class K8sTaskHandlerTest extends Specification {
         handler.startTimeMillis == 10
         handler.completeTimeMillis == 20
     }
+
+
 }

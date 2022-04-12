@@ -15,11 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 seqs = Channel.fromPath("$baseDir/data/p{1,2,3}.fa")
 
 process foo {
-    echo true
+    debug true
 
     input:
     file 'dir1/link_*.fasta' from seqs.toList()

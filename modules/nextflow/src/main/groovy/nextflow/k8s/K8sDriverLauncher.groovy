@@ -142,6 +142,7 @@ class K8sDriverLauncher {
             printK8sPodOutput()
         else
             log.debug "Nextflow driver launched in background mode -- pod: $runName"
+        waitPodEnd()
     }
 
     int shutdown() {
@@ -157,6 +158,29 @@ class K8sDriverLauncher {
         return exitCode
     }
 
+    protected void waitPodEnd() {
+        if( background )
+            return
+        final currentState = k8sClient.podState(runName)
+        if (currentState && currentState?.running instanceof Map) {
+            final name = runName
+            println "Pod running: $name ... waiting for pod to stop running"
+            try {
+                while( true ) {
+                    sleep 10000
+                    final state = k8sClient.podState(name)
+                    if ( state && !(state?.running instanceof Map) )  {
+                        println "Pod $name has changed from running state $state"
+                        break
+                    }
+                }
+            }
+            catch( Exception e ) {
+                log.warn "Caught exception waiting for pod to stop running"
+            }
+        }
+    }
+    
     protected boolean isWaitTimedOut(long time) {
         System.currentTimeMillis()-time > 90_000
     }
