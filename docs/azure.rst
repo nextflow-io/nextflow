@@ -346,6 +346,8 @@ The following configuration options are available:
 ============================================== =================
 Name                                           Description
 ============================================== =================
+azure.azcopy.blockSize                          The block size (in MiB) when uploading to Azure Storage, and downloading from Azure Storage.
+azure.azcopy.blobTier                           The blob tier to be used while uploading to Azure Storage
 azure.storage.accountName                       The blob storage account name
 azure.storage.accountKey                        The blob storage account key
 azure.storage.sasToken                          The blob storage shared access signature token. This can be provided as an alternative to the ``accountKey`` setting.
