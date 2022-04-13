@@ -369,8 +369,7 @@ class AssetManager {
         if( !config )
             throw new AbortOperationException("Unknown repository configuration provider: $providerName")
 
-        RepositoryProvider .create(config, project)
-
+        return RepositoryFactory.create(config, project)
     }
 
     AssetManager setLocalPath(File path) {

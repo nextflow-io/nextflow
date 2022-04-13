@@ -17,7 +17,6 @@
 
 package nextflow.scm
 
-
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -26,10 +25,8 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.exception.RateLimitExceededException
-import nextflow.plugin.Plugins
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
-
 /**
  *
  * Base class for a generic source repository provider
@@ -270,54 +267,6 @@ abstract class RepositoryProvider {
         }
         catch( IOException e ) {
             throw new AbortOperationException("Cannot find `$project` -- Make sure exists a ${name.capitalize()} repository at this address `${getRepositoryUrl()}`", e)
-        }
-    }
-    /**
-     * Factory method
-     *
-     * @param provider
-     * @return
-     */
-    static RepositoryProvider create( ProviderConfig config, String project ) {
-        switch(config.platform) {
-            case 'github':
-                return new GithubRepositoryProvider(project, config)
-
-            case 'bitbucket':
-                return new BitbucketRepositoryProvider(project, config)
-
-            case 'bitbucketserver':
-                return new BitbucketServerRepositoryProvider(project, config)
-
-            case 'gitlab':
-                return new GitlabRepositoryProvider(project, config)
-
-            case 'gitea':
-                return new GiteaRepositoryProvider(project, config)
-
-            case 'azurerepos':
-                return new AzureRepositoryProvider(project, config)
-
-            case 'codecommit':
-                Plugins.startIfMissing('nf-amazon')
-                return loadCodeCommitProvider(project, config)
-
-            case 'file':
-                // remove the 'local' prefix for the file provider
-                def localName = project.tokenize('/').last()
-                return new LocalRepositoryProvider(localName, config)
-        }
-
-        throw new AbortOperationException("Unknown project repository platform: ${config.platform}")
-    }
-
-    static private RepositoryProvider loadCodeCommitProvider(String project, ProviderConfig config) {
-        try {
-            final clazz = Class.forName('nextflow.cloud.aws.codecommit.AwsCodeCommitRepositoryProvider')
-            (RepositoryProvider) clazz.newInstance(project, config)
-        }
-        catch (ClassNotFoundException e) {
-            throw new IllegalArgumentException("Unable to load AWS CodeCommit provider - Make sure nf-amazon plugins was included")
         }
     }
 
