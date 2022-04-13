@@ -557,7 +557,19 @@ class ConfigBuilder {
 
         // -- override 'process' parameters defined on the cmd line
         cmdRun.process.each { name, value ->
-            config.process[name] = parseValue(value)
+            String[] keys = name.split('\\.')
+            if( keys.length == 1 ) {
+                config.process[name] = parseValue(value)
+                return
+            }
+            def iter = config.process
+            for(String key : keys.dropRight(1)){
+                if( !iter.containsKey(key)) {
+                    iter[key] = [:]
+                }
+                iter = iter[key]
+            }
+            iter[keys.last()] = parseValue(value)
         }
 
         // -- apply the conda environment

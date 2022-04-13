@@ -17,6 +17,8 @@
 
 package nextflow.config
 
+import nextflow.util.Duration
+
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -2161,5 +2163,39 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should overwrite specific process when cli arguments' () {
+        given:
+        def folder = Files.createTempDirectory("mergeprocess")
+        def main = folder.resolve('main.conf')
+
+        main.text = '''
+        process {
+
+            time = '5m'
+
+            withName:FOO {
+                cpus = 2
+                memory = '5G'
+                time = '1m'
+            }
+        
+        }
+        
+        '''
+
+
+        when:
+        def cfg = new ConfigBuilder().setOptions(new CliOptions(config:[main.toFile().absolutePath]))
+                .setCmdRun(new CmdRun(process: ['time':'1h', 'withName:FOO.time':'66m'])).buildConfigObject()
+        then:
+        cfg.process.time == Duration.of('1h')
+        cfg.process.'withName:FOO'
+        cfg.process.'withName:FOO'.cpus == 2
+        cfg.process.'withName:FOO'.memory == '5G'
+        cfg.process.'withName:FOO'.time == Duration.of('1h 6m')
+
+        cleanup:
+        folder?.deleteDir()
+    }
 }
 
