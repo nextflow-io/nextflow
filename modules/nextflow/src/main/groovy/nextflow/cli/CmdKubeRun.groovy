@@ -53,6 +53,12 @@ class CmdKubeRun extends CmdRun {
     @Parameter(names = '-head-memory', description = 'Specify amount of memory requested for the Nextflow pod')
     String headMemory
 
+    @Parameter(names= '-remoteConfig', description = 'Add the specified file from the K8s cluster to configuration set', hidden = true )
+    List<String> runRemoteConfig
+
+    @Parameter(names=['-remoteProfile'], description = 'Choose a configuration profile in the remoteConfig')
+    String remoteProfile
+
 
     @Override
     String getName() { 'kuberun' }
