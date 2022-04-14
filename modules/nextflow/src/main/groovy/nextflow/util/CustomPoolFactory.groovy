@@ -17,6 +17,7 @@
 
 package nextflow.util
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovyx.gpars.scheduler.Pool
 import groovyx.gpars.scheduler.ResizeablePool
 import groovyx.gpars.util.PoolFactory
@@ -36,8 +37,9 @@ class CustomPoolFactory implements PoolFactory {
 
     public final String NXF_QUEUE_SIZE = 'nxf.pool.queueSize'
 
+    @Memoized
     @Override
-    Pool createPool() {
+    synchronized Pool createPool() {
 
         def type = property(NXF_POOL_TYPE, 'default')
         switch (type) {

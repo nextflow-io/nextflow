@@ -159,6 +159,8 @@ class K8sDriverLauncher {
     }
 
     protected void waitPodEnd() {
+        if( background )
+            return
         final currentState = k8sClient.podState(runName)
         if (currentState && currentState?.running instanceof Map) {
             final name = runName
@@ -174,7 +176,7 @@ class K8sDriverLauncher {
                 }
             }
             catch( Exception e ) {
-                log.warn "Catch exception waiting for pod to stop running"
+                log.warn "Caught exception waiting for pod to stop running"
             }
         }
     }
@@ -246,7 +248,7 @@ class K8sDriverLauncher {
                 .setProfile(cmd.profile)
                 .setCmdRun(cmd)
 
-        if( !interactive && !pipelineName.startsWith('/') ) {
+        if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.runRemoteConfig ) {
             // -- check and parse project remote config
             final pipelineConfig = new AssetManager(pipelineName, cmd) .getConfigFile()
             builder.setUserConfigFiles(pipelineConfig)
@@ -460,6 +462,12 @@ class K8sDriverLauncher {
         if( paramsFile ) {
             result << "-params-file $paramsFile"
         }
+
+        if ( cmd.runRemoteConfig )
+            cmd.runRemoteConfig.forEach { result << "-config $it" }
+
+        if ( cmd.remoteProfile )
+            result << "-profile ${cmd.remoteProfile}"
 
         if( cmd.process?.executor )
             abort('process.executor')

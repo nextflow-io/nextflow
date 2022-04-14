@@ -64,7 +64,7 @@ all_seq = sequences.collectFile(name:'all_seq')
  * Aligns a T-Coffee MSA and print it 
  */
 process align {
-    echo true
+    debug true
 
     input:
     file all_seq

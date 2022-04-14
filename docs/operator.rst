@@ -1129,9 +1129,6 @@ failOnMismatch  An error is reported when a channel emits a value for which ther
 merge
 -----
 
-.. warning::
-    This operator is deprecated and will be removed in a future release.
-
 The ``merge`` operator lets you join items emitted by two (or more) channels into a new channel.
 
 For example the following code merges two channels together, one which emits a series of odd integers
@@ -1159,6 +1156,13 @@ An option closure can be provide to customise the items emitted by the resulting
         .merge( evens ) { a, b -> tuple(b*b, a) }
         .view()
 
+.. danger::
+    When this operator is used to *merge* the outputs of two processes, keep in mind that the resulting merged channel
+    will have non-deterministic behavior and may cause your pipeline execution to not resume properly.
+    Because each process is executed in parallel and produces its outputs independently, there is no guarantee
+    that they will be executed in the same order. Therefore the content of the resulting merged channel
+    may have a different order on each run and may cause the resume to not work
+    properly. For a better alternative use the `join`_ operator instead.
 
 .. _operator-mix:
 

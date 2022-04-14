@@ -21,11 +21,10 @@ nextflow.enable.dsl=1
  * Shows how manipulate the script execution environment
  */
 
-
 config.env [ 'HELLO_1' ]  = '1'
 
 process printEnv {
-    echo true
+    debug true
 
     input:
     env HELLO_2 from '2'

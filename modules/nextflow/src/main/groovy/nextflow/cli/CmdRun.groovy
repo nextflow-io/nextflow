@@ -338,7 +338,7 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- try determine DSL version from config file
         final DSL2 = '2'
         final DSL1 = '1'
-        final defaultDsl = env.get('NXF_DEFAULT_DSL') ?: DSL2
+        final defaultDsl = sysEnv.get('NXF_DEFAULT_DSL') ?: DSL2
         final dsl = config.navigate('nextflow.enable.dsl', defaultDsl) as String
         if( dsl=='2' )
             NextflowMeta.instance.enableDsl2()

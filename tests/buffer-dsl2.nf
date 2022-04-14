@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
 process blastThemAll {
-    echo true
+    debug true
 
     input:
     path x

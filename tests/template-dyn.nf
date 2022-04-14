@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 nextflow.enable.dsl=1
-echo true
 
 list = 'alpha,delta,gamma'.tokenize(',')
 
 process foo {
+  debug true
   input:
   each x from list
 
@@ -31,6 +31,7 @@ process foo {
 
 
 process bar {
+  debug true
   input:
   each x from list
 
