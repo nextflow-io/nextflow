@@ -25,24 +25,12 @@ you have modified.
 Sphinx can be installed either with
 
 ```
-pip install -U sphinx==3.5.4
-```
-
-or
-
-```
-conda install sphinx==3.5.4
+pip install -U sphinx==3.5.4 sphinx_press_theme
 ```
 
 ### Theme 
 
-Nextflow documentation uses the [Read The Docs theme for Sphinx](https://github.com/readthedocs/sphinx_rtd_theme) theme. 
-
-In order to build the document install the Read The Docs theme using the command: 
-
-```
-pip install sphinx_rtd_theme
-```
+Nextflow documentation uses the [Press theme for Sphinx](https://github.com/schettino72/sphinx_press_theme) theme. 
 
 ### License
 

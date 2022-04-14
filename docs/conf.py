@@ -12,7 +12,7 @@
 # serve to show the default.
 
 import sys, os
-import sphinx_rtd_theme
+#import sphinx_rtd_theme
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -28,7 +28,7 @@ import sphinx_rtd_theme
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
   'sphinx.ext.mathjax',
-  'sphinx_rtd_theme',
+#  'sphinx_rtd_theme',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -99,7 +99,8 @@ pygments_style = 'sphinx'
 #sys.path.append(os.path.abspath('_themes'))
 #html_theme_path = ['_themes']
 
-html_theme = "sphinx_rtd_theme"
+html_theme = "press"
+# html_theme = "sphinx_rtd_theme"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
