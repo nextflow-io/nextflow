@@ -22,16 +22,10 @@ you have modified.
 
 ### Dependencies
 
-Sphinx can be installed either with
+Sphinx can be installed with:
 
 ```
-pip install -U sphinx==3.5.4
-```
-
-or
-
-```
-conda install sphinx==3.5.4
+pip install sphinx==3.5.4 sphinx-reredirects
 ```
 
 ### Theme 

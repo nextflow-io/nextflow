@@ -28,6 +28,7 @@ import sphinx_rtd_theme
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
   'sphinx.ext.mathjax',
+  'sphinx_reredirects',
   'sphinx_rtd_theme',
 ]
 
@@ -89,6 +90,17 @@ pygments_style = 'sphinx'
 
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
+
+# List of redirects for outdated bookmarks.
+redirects = {
+  'executor.html': 'executor/index.html',
+  'awscloud.html': 'cloud/aws.html',
+  'amazons3.html': 'cloud/aws.html#amazon-s3',
+  'azurecloud.html': 'cloud/azure.html',
+  'google.html': 'cloud/google.html',
+  'ignite.html': 'executor/ignite.html',
+  'kubernetes.html': 'executor/kubernetes.html',
+}
 
 
 # -- Options for HTML output ---------------------------------------------------
