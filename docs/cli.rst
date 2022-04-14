@@ -796,7 +796,7 @@ The ``kuberun`` command builds upon the ``run`` command and offers a deep integr
 the Kubernetes execution environment. This command deploys the Nextflow runtime as a Kubernetes 
 pod and assumes that you've already installed the ``kubectl`` CLI. The ``kuberun`` command 
 does not allow the execution of **local** Nextflow scripts. For more information please refer 
-the :ref:`k8s-page` section.
+the :ref:`k8s-executor` section.
 
 
 **Options**

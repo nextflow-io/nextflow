@@ -9,13 +9,14 @@ Requirements
 
 Nextflow
 --------
-The support for Google Cloud requires Nextflow version ``20.01.0`` or later. To install it define the following variables
-in your system environment::
+
+The support for Google Cloud requires Nextflow version ``20.01.0`` or later.
+
+For versions of Nextflow prior to ``21.04.0``, you must also define the following environment variables::
 
     export NXF_VER=20.01.0
     export NXF_MODE=google
 
-.. note:: As of version ``21.04.0`` or later the above variables are not required anymore and therefore should not be used.
 
 Credentials
 -----------
@@ -40,7 +41,6 @@ credentials for that VM.
 
 See the `Application Default Credentials <https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http>`_ documentation for how to enable other use cases.
 
-
 Finally, the ``GOOGLE_APPLICATION_CREDENTIALS`` environment variable can be used to specify location
 of the Google credentials file.
 
@@ -58,23 +58,17 @@ credentials file just downloaded::
 
     export GOOGLE_APPLICATION_CREDENTIALS=/path/your/file/creds.json
 
+
 .. _google-lifesciences:
 
 Cloud Life Sciences
 ===================
 
-`Cloud Life Sciences <https://cloud.google.com/life-sciences/>`_ is a managed computing service that allows the execution of
-containerized workloads in the Google Cloud Platform infrastructure.
+`Google Cloud Life Sciences <https://cloud.google.com/life-sciences/>`_ is a managed computing service that allows the execution of
+containerized workloads in the Google Cloud Platform.
 
-Nextflow provides built-in support for Cloud Life Sciences API which allows the seamless deployment of a Nextflow pipeline
-in the cloud, offloading the process executions through the Google Cloud service.
+Read the :ref:`Google Life Sciences executor <google-lifesciences-executor>` page to learn about the ``google-lifesciences`` executor in Nextflow.
 
-.. note::
-  This features requires Nextflow ``20.01.0-edge`` or later.
-
-.. warning::
-  This API works well for coarse-grained workloads i.e. long running jobs. It's not suggested the use
-  this feature for pipelines spawning many short lived tasks.
 
 .. _google-lifesciences-config:
 
@@ -84,15 +78,16 @@ Configuration
 Make sure to have defined in your environment the ``GOOGLE_APPLICATION_CREDENTIALS`` variable.
 See the section `Requirements`_ for details.
 
-.. tip:: Make sure to have enabled Cloud Life Sciences API to use this feature. To learn how to enable it
+.. note::
+  Make sure to enable the Cloud Life Sciences API beforehand. To learn how to enable it
   follow `this link <https://cloud.google.com/life-sciences/docs/quickstart>`_.
 
 Create a ``nextflow.config`` file in the project root directory. The config must specify the following parameters:
 
 * Google Life Sciences as Nextflow executor i.e. ``process.executor = 'google-lifesciences'``.
 * The Docker container images to be used to run pipeline tasks e.g. ``process.container = 'biocontainers/salmon:0.8.2--1'``.
-* The Google Cloud `project` ID to run in e.g. ``google.project = 'rare-lattice-222412'``.
-* The Google Cloud `region` or `zone`. This is where the Compute Engine VMs will be started.
+* The Google Cloud ``project`` ID to run in e.g. ``google.project = 'rare-lattice-222412'``.
+* The Google Cloud ``region`` or `zone`. This is where the Compute Engine VMs will be started.
   You need to specify either one, **not** both. Multiple regions or zones can be specified by
   separating them with a comma e.g. ``google.zone = 'us-central1-f,us-central-1-b'``.
 
@@ -108,11 +103,12 @@ Example::
         zone = 'europe-west1-b'
     }
 
+.. warning::
+  Make sure to specify the project ID, not the project name.
 
-.. warning:: Make sure to specify in the above setting the project ID not the project name.
-
-.. Note:: A container image must be specified to deploy the process execution. You can use a different Docker image for
-  each process using one or more :ref:`config-process-selectors`.
+.. note::
+  A container image must be specified to deploy the process execution. You can specify a different Docker image for
+  each process by using :ref:`config-process-selectors`.
 
 The following configuration options are available:
 
@@ -135,7 +131,7 @@ google.lifeSciences.serviceAccountEmail        Define the Google service account
 google.lifeSciences.subnetwork                 Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL. Requires version ``21.03.0-edge`` or later.
 google.lifeSciences.sshDaemon                  When ``true`` runs SSH daemon in the VM carrying out the job to which it's possible to connect for debugging purposes (default: ``false``).
 google.lifeSciences.sshImage                   The container image used to run the SSH daemon (default: ``gcr.io/cloud-genomics-pipelines/tools``).
-google.lifeSciences.keepAliveOnFailure         When ``true`` and a task complete with an unexpected exit status the associated computing node is kept up for 1 hour. This options implies ``sshDaemon=true`` (default: ``false``, requires Nextflow version ``21.06.0-edge`` or later).
+google.lifeSciences.keepAliveOnFailure         When ``true`` and a task complete with an unexpected exit status the associated compute node is kept up for 1 hour. This options implies ``sshDaemon=true`` (default: ``false``, requires Nextflow version ``21.06.0-edge`` or later).
 google.storage.delayBetweenAttempts            Delay between download attempts from Google Storage (default `10 sec`, requires version ``21.06.0-edge`` or later).
 google.storage.maxParallelTransfers            Max parallel upload/download transfer operations *per job* (default: ``4``, requires version ``21.06.0-edge`` or later).
 google.storage.maxTransferAttempts             Max number of downloads attempts from Google Storage (default: `1`, requires version ``21.06.0-edge`` or later).
@@ -146,6 +142,7 @@ google.storage.downloadMaxComponents           Defines the value for the option 
 
 Process definition
 ------------------
+
 Processes can be defined as usual and by default the ``cpus`` and ``memory`` directives are used to instantiate a custom
 machine type with the specified compute resources.  If ``memory`` is not specified, 1GB of memory is allocated per cpu.
 A persistent disk will be created with size corresponding to the ``disk`` directive.  If ``disk`` is not specified, the
@@ -176,7 +173,6 @@ Examples::
         """
     }
 
-.. note:: This feature requires Nextflow 19.07.0 or later.
 
 Pipeline execution
 ------------------
@@ -189,9 +185,10 @@ the ``-work-dir`` command line options. For example::
 
     nextflow run <script or project name> -work-dir gs://my-bucket/some/path
 
+.. warning::
+  Any input data **not** stored in a Google Storage bucket will automatically be transferred to the
+  pipeline work bucket. Use this feature with caution, in order to avoid unnecessary data transfers.
 
-.. tip:: Any input data **not** stored in a Google Storage bucket will automatically be transferred to the
-  pipeline work bucket. Use this feature with caution being careful to avoid unnecessary data transfers.
 
 Preemptible instances
 ---------------------
@@ -207,13 +204,16 @@ to add the following retry strategy to your config file to instruct Nextflow to 
 if the virtual machine was terminated preemptively::
 
     process {
-      errorStrategy = { task.exitStatus==14 ? 'retry' : 'terminate' }
-      maxRetries = 5
+        errorStrategy = { task.exitStatus==14 ? 'retry' : 'terminate' }
+        maxRetries = 5
     }
 
-.. note:: Preemptible instances have a `runtime limit <https://cloud.google.com/compute/docs/instances/preemptible>`_ of 24 hours.
+.. warning::
+  Preemptible instances have a `runtime limit <https://cloud.google.com/compute/docs/instances/preemptible>`_ of 24 hours.
 
-.. tip:: For an exhaustive list of all possible error codes, please refer to the official Google LifeSciences `documentation <https://cloud.google.com/life-sciences/docs/troubleshooting#error_codes>`_.
+.. note::
+  For an exhaustive list of all error codes, please refer to the official Google Life Sciences `documentation <https://cloud.google.com/life-sciences/docs/troubleshooting#error_codes>`_.
+
 
 Hybrid execution
 ----------------
@@ -225,7 +225,6 @@ some other jobs are offloaded to Google Pipelines service.
 To enable this feature use one or more :ref:`config-process-selectors` in your Nextflow configuration file to apply
 the Google Pipelines *executor* only to a subset of processes in your workflow.
 For example::
-
 
     process {
         withLabel: bigTask {
@@ -239,27 +238,24 @@ For example::
         zone = 'europe-west1-b'
     }
 
-
 Then deploy the workflow execution using the ``-bucket-dir`` to specify a Google Storage path
 for the jobs computed by the Google Pipeline service and, optionally, the ``-work-dir`` to
 specify the local storage for the jobs computed locally::
 
     nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
 
-.. warning:: The Google Storage path needs to contain at least sub-directory. Don't use only the
-  bucket name e.g. ``gs://my-bucket``.
+.. warning::
+  The Google Storage path needs to contain at least one sub-directory, e.g. ``gs://my-bucket/work``
+  rather than only ``gs://my-bucket``.
 
-Quotas
-------
-
-Compute resources in Google Cloud are subject to `resource quotas <https://cloud.google.com/compute/quotas>`_ which may affect your ability to run pipelines at scale. You can request quota increases, and your quotas may automatically increase over time as you use the platform. In particular, GPU quotas are initially set to 0, so you must explicitly request a quota increase in order to use GPUs. Initially you can request an increase to 1 GPU at a time, and after one billing cycle you may be able to increase it further.
 
 Limitations
 -----------
 
+* Compute resources in Google Cloud are subject to `resource quotas <https://cloud.google.com/compute/quotas>`_, which may affect your ability to run pipelines at scale. You can request quota increases, and your quotas may automatically increase over time as you use the platform. In particular, GPU quotas are initially set to 0, so you must explicitly request a quota increase in order to use GPUs. Initially you can request an increase to 1 GPU at a time, and after one billing cycle you may be able to increase it further.
+
 * Currently it's not possible to specify a disk type different from the default one assigned
   by the service depending on the chosen instance type.
-
 
 
 Troubleshooting
@@ -282,6 +278,5 @@ Troubleshooting
 
 * Enable the optional SSH daemon in the job VM using the option ``google.lifeSciences.sshDaemon = true``
 
-* Make sure you are choosing a `location` where  `Cloud Life Sciences API is available <https://cloud.google.com/life-sciences/docs/concepts/locations>`_,
-  and a `region` or `zone` where `Compute Engine is available <https://cloud.google.com/compute/docs/regions-zones/>`_.
-
+* Make sure you are choosing a ``location`` where  `Cloud Life Sciences API is available <https://cloud.google.com/life-sciences/docs/concepts/locations>`_,
+  and a ``region`` or ``zone`` where `Compute Engine is available <https://cloud.google.com/compute/docs/regions-zones/>`_.

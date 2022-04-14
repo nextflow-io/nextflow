@@ -1,11 +1,11 @@
 .. _aws-page:
 
-************
-Amazon Cloud
-************
+*******************
+Amazon Web Services
+*******************
 
 AWS security credentials
-=========================
+========================
 
 Nextflow uses the `AWS security credentials <https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html>`_
 to make programmatic calls to AWS services.
@@ -20,18 +20,35 @@ If ``AWS_ACCESS_KEY_ID`` and ``AWS_SECRET_ACCESS_KEY`` are not defined in the en
 retrieve credentials from your ``~/.aws/credentials`` or ``~/.aws/config`` files. The ``default`` profile can be
 overridden via the environmental variable ``AWS_PROFILE`` (or ``AWS_DEFAULT_PROFILE``).
 
-Alternatively AWS credentials can be specified in the Nextflow configuration file.
+Alternatively, AWS credentials can be specified by using the ``aws`` section in the ``nextflow.config`` configuration
+file as shown below::
+
+  aws {
+    accessKey = '<Your AWS access key>'
+    secretKey = '<Your AWS secret key>'
+    region = '<AWS region identifier>'
+  }
+
+If the access credentials are not found in the above file, Nextflow looks for AWS credentials in the following order:
+
+    #. the ``nextflow.config`` file in the pipeline execution directory
+    #. the environment variables ``AWS_ACCESS_KEY_ID`` and ``AWS_SECRET_ACCESS_KEY``
+    #. the environment variables ``AWS_ACCESS_KEY`` and ``AWS_SECRET_KEY``
+    #. the ``default`` profile in the AWS credentials file located at ``~/.aws/credentials``
+    #. the ``default`` profile in the AWS client configuration file located at ``~/.aws/config``
+    #. the temporary AWS credentials provided by an IAM instance role. See `IAM Roles <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html>`_ documentation for details.
 
 See :ref:`AWS configuration<config-aws>` for more details.
 
-.. note:: Credentials can also be provided by using an IAM Instance Role. The benefit of this approach is that
+.. tip::
+  Credentials can also be provided by using an IAM Instance Role. The benefit of this approach is that
   it spares you from managing/distributing AWS keys explicitly.
   Read the `IAM Roles <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html>`_ documentation
   and `this blog post <https://aws.amazon.com/blogs/security/granting-permission-to-launch-ec2-instances-with-iam-roles-passrole-permission/>`_ for more details.
 
 
 AWS IAM policies
-=================
+================
 
 `IAM policies <https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html>`_ are the mechanism used by AWS to
 defines permissions for IAM identities. In order to access certain AWS services, the proper policies must be
@@ -39,7 +56,7 @@ attached to the identity associated to the AWS credentials.
 
 Minimal permissions policies to be attached to the AWS account used by Nextflow are:
 
-- To interface AWS Batch::
+- To interface with AWS Batch::
 
   "batch:DescribeJobQueues"
   "batch:CancelJob"
@@ -51,7 +68,7 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
   "batch:RegisterJobDefinition"
   "batch:DescribeJobDefinitions"
 
-- To be able to see the `EC2 <https://aws.amazon.com/ec2/>`_ instances::
+- To view `EC2 <https://aws.amazon.com/ec2/>`_ instances::
 
   "ecs:DescribeTasks"
   "ec2:DescribeInstances"
@@ -60,7 +77,7 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
   "ecs:DescribeContainerInstances"
   "ec2:DescribeInstanceStatus"
 
-- To pull container images stored in the `ECR <https://aws.amazon.com/ecr/>`_ repositories::
+- To pull container images from `ECR <https://aws.amazon.com/ecr/>`_ repositories::
 
   "ecr:GetAuthorizationToken"
   "ecr:BatchCheckLayerAvailability"
@@ -75,57 +92,92 @@ Minimal permissions policies to be attached to the AWS account used by Nextflow 
   "ecr:ListTagsForResource"
   "ecr:DescribeImageScanFindings"
 
-S3 policies
-------------
-Nextflow requires policies also to access `S3 buckets <https://aws.amazon.com/s3/>`_ in order to:
 
-1. use the workdir
-2. pull input data
-3. publish results
+S3 policies
+-----------
+
+Nextflow also requires policies to access `S3 buckets <https://aws.amazon.com/s3/>`_ in order to use the work directory, pull input data, and publish results.
 
 Depending on the pipeline configuration, the above actions can be done all in a single bucket but, more likely, spread across multiple
 buckets. Once the list of buckets used by the pipeline is identified, there are two alternative ways to give Nextflow access to these buckets:
 
-1. grant access to all buckets by attaching the policy ``"s3:*"`` to the AIM identity. This works only if buckets do not set their own access policies (see point 2);
-2. for a more fine grained control, assign to each bucket the following policy (replace the placeholders with the actual values)::
+1. Grant access to all buckets by attaching the policy ``"s3:*"`` to the AIM identity. This works only if buckets do not set their own access policies (see point 2);
+2. For more fine grained control, assign to each bucket the following policy (replace the placeholders with the actual values)::
 
-	{
-    "Version": "2012-10-17",
-    "Id": "<my policy id>",
-    "Statement": [
-        {
-            "Sid": "<my statement id>",
-            "Effect": "Allow",
-            "Principal": {
-                "AWS": "<ARN of the nextflow identity>"
+    {
+        "Version": "2012-10-17",
+        "Id": "<my policy id>",
+        "Statement": [
+            {
+                "Sid": "<my statement id>",
+                "Effect": "Allow",
+                "Principal": {
+                    "AWS": "<ARN of the nextflow identity>"
+                },
+                "Action": [
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "s3:DeleteObject"
+                ],
+                "Resource": "arn:aws:s3:::<bucket name>/*"
             },
-            "Action": [
-                "s3:GetObject",
-                "s3:PutObject",
-                "s3:DeleteObject"
-            ],
-            "Resource": "arn:aws:s3:::<bucket name>/*"
-        },
-        {
-            "Sid": "AllowSSLRequestsOnly",
-            "Effect": "Deny",
-            "Principal": "*",
-            "Action": "s3:*",
-            "Resource": [
-                "arn:aws:s3:::<bucket name>",
-                "arn:aws:s3:::<bucket name>/*"
-            ],
-            "Condition": {
-                "Bool": {
-                    "aws:SecureTransport": "false"
+            {
+                "Sid": "AllowSSLRequestsOnly",
+                "Effect": "Deny",
+                "Principal": "*",
+                "Action": "s3:*",
+                "Resource": [
+                    "arn:aws:s3:::<bucket name>",
+                    "arn:aws:s3:::<bucket name>/*"
+                ],
+                "Condition": {
+                    "Bool": {
+                        "aws:SecureTransport": "false"
+                    }
                 }
             }
-        }
-    ]
-	}
+        ]
+    }
 
 See the `bucket policy documentation <https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-policy.html>`_
 for additional details.
+
+
+.. _aws-s3:
+
+Amazon S3
+=========
+
+Nextflow includes support for Amazon S3 storage. Files stored in a S3 bucket can be accessed
+transparently in your pipeline script like any other file in the local file system.
+
+S3 paths
+--------
+
+In order to access a S3 file you only need to prefix the file path with the ``s3`` schema and the `bucket` name
+where it is stored.
+
+For example if you need to access the file ``/data/sequences.fa`` stored in a bucket with name ``my-bucket``,
+that file can be accessed using the following fully qualified path::
+
+    s3://my-bucket/data/sequences.fa
+
+The usual file operations can be applied on a path handle created using the above notation. For example the content
+of a S3 file can be printed as shown below::
+
+    println file('s3://my-bucket/data/sequences.fa').text
+
+See the :ref:`script-file-io` section to learn more about available file operations.
+
+China regions
+-------------
+
+To use an AWS China region, make sure to specify the corresponding AWS API S3 endpoint in the Nextflow configuration
+file as shown below::
+
+    aws.client.endpoint = "https://s3.cn-north-1.amazonaws.com.cn"
+
+Read more about AWS API endpoints in the `AWS documentation <https://docs.aws.amazon.com/general/latest/gr/s3.html>`_
 
 
 .. _aws-batch:
@@ -133,21 +185,16 @@ for additional details.
 AWS Batch
 =========
 
-.. note::
-    Requires Nextflow version `0.26.0` or later.
-
 `AWS Batch <https://aws.amazon.com/batch/>`_ is a managed computing service that allows the execution of containerised
 workloads in the Amazon cloud infrastructure. It dynamically provisions the optimal quantity and type of compute
 resources (e.g., CPU or memory optimized compute resources) based on the volume and specific resource requirements
 of the jobs submitted.
 
-Nextflow provides a built-in support for AWS Batch which allows the seamless deployment of a Nextflow pipeline
-in the cloud offloading the process executions as Batch jobs.
+Read the :ref:`AWS Batch executor <awsbatch-executor>` page to learn about the ``awsbatch`` executor in Nextflow.
 
-.. _aws-batch-config:
 
 AWS CLI
---------
+-------
 
 Nextflow requires to access the `AWS command line tool <https://aws.amazon.com/cli/>`_ (``aws``) from the container in
 which the job runs in order to stage the required input files and to copy back the resulting output files in the S3 storage.
@@ -163,8 +210,9 @@ the AWS CLI tool to them.
 
 See the sections below to learn how to create a custom AMI and install the AWS CLI tool to it.
 
+
 Get started
--------------
+-----------
 
 1. In the AWS Console, create a `Compute environment <http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html>`_ (CE) in your AWS Batch Service.
 
@@ -179,15 +227,18 @@ Get started
 
 4. Make sure your pipeline processes specifies one or more Docker containers by using the :ref:`process-container` directive.
 
-5. Container images need to be published in a Docker registry such as `Docker Hub <https://hub.docker.com/>`_, `Quay <https://quay.io/>`_ or `ECS Container Registry <https://aws.amazon.com/ecr/>`_ that can be reached by ECS Batch.
+5. Container images need to be published in a Docker registry such as `Docker Hub <https://hub.docker.com/>`_, `Quay <https://quay.io/>`_ or `Elastic Container Registry <https://aws.amazon.com/ecr/>`_ that can be reached by ECS Batch.
+
+
+.. _aws-batch-config:
 
 Configuration
 -------------
 
 When configuring your pipeline:
 
-1. import the `nf-amazon` plugin
-2. specify the AWS Batch :ref:`executor<awsbatch-executor>`
+1. import the ``nf-amazon`` plugin
+2. specify the ``awsbatch`` executor
 3. specify one or more AWS Batch queues for the execution by using the :ref:`process-queue` directive
 4. specify the AWS job container properties by using the :ref:`process-containerOptions` directive.
 
@@ -212,7 +263,7 @@ An example ``nextflow.config`` file is shown below::
         region = 'us-east-1'
     }
 
-Different queues bound to the same or different Compute environments can be configured according to each process' requirements.
+Different queues bound to the same or different Compute Environments can be configured according to each process' requirements.
 
 
 Container Options
@@ -254,7 +305,7 @@ Few examples::
 
   containerOptions '--ulimit nofile=1280:2560 --ulimit nproc=16:32 --privileged'
 
-Check the `AWS doc <https://docs.aws.amazon.com/batch/latest/APIReference/API_ContainerProperties.html>`_ for further details.
+Check the `AWS documentation <https://docs.aws.amazon.com/batch/latest/APIReference/API_ContainerProperties.html>`_ for further details.
 
 
 Custom AMI
@@ -271,6 +322,7 @@ to use in your Compute environments. Typically:
 
 - You need to install additional software, not available in the Docker image used to execute the job
 
+
 Create your custom AMI
 ----------------------
 
@@ -278,9 +330,10 @@ In the EC2 Dashboard, click the `Launch Instance` button, then choose `AWS Marke
 `ECS` in the search box. In result list select `Amazon ECS-Optimized Amazon Linux 2 AMI`, then continue as usual to
 configure and launch the instance.
 
-.. note:: The selected instance has a bootstrap volume of 8GB and a second EBS volume 30G for computation which is
-  hardly enough for real world genomic workloads. Make sure to specify an amount of storage in the second volume
-  large enough for the needs of your pipeline execution.
+.. warning::
+  The selected instance has a bootstrap volume of 8 GB and a second EBS volume of 30 GB for computation, which is
+  hardly enough for real genomic workloads. Make sure to specify a sufficient amount of storage in the second volume
+  for your pipeline.
 
 When the instance is running, SSH into it (or connect with the Session Manager service), install the AWS CLI tool
 or any other tool that may be required (see next sections).
@@ -289,15 +342,18 @@ Once done that, create a new AMI by using the *Create Image* option in the EC2 D
 
 The new AMI ID needs to be specified when creating the Batch Compute Environment.
 
-.. warning:: Any installation must be completed on the EC2 instance BEFORE creating the AMI.
+.. warning::
+  Any installation must be completed on the EC2 instance *before* creating the AMI.
+
 
 .. _aws-cli:
 
 AWS CLI installation
 --------------------
 
-.. warning:: The `AWS CLI tool <https://aws.amazon.com/cli>`_ must to be installed in your custom AMI
-  by using a self-contained package manager such as `Conda <https://conda.io>`_.
+.. warning::
+  The `AWS CLI <https://aws.amazon.com/cli>`_ must to be installed in your custom AMI
+  using a self-contained package manager such as `Conda <https://conda.io>`_.
 
 The reason is that when the AWS CLI tool executes using Conda it will use the version of python supplied by Conda.
 If you don't use Conda and install the AWS CLI using something like `pip <https://pypi.org/project/pip/>`_ the ``aws``
@@ -318,7 +374,8 @@ When complete, verify that the AWS CLI package works correctly::
     $ ./miniconda/bin/aws --version
     aws-cli/1.19.79 Python/3.8.5 Linux/4.14.231-173.361.amzn2.x86_64 botocore/1.20.79
 
-.. note:: The ``aws`` tool will be placed in a directory named ``bin`` in the main installation folder.
+.. warning::
+  The ``aws`` tool will be placed in a directory named ``bin`` in the main installation folder.
   Modifying this directory structure, after the installation, will cause the tool to not work properly.
 
 To configure Nextflow to use this installation, specify the ``cliPath`` parameter in the :ref:`AWS Batch<config-aws-batch>`
@@ -328,15 +385,19 @@ configuration as shown below::
 
 Replace the path above with the one matching the location where ``aws`` tool is installed in your AMI.
 
-.. warning:: The grandparent directory of the ``aws`` tool will be mounted into the container at the same path as the host,
+.. warning::
+  The grandparent directory of the ``aws`` tool will be mounted into the container at the same path as the host,
   e.g. ``/home/ec2-user/miniconda``, which will shadow existing files in the container.
   Ensure you use a path that is not already present in the container.
 
-.. note:: Using a version of Nextflow prior 19.07.x the config setting `executor.awscli` should be used
-  instead of `aws.batch.cliPath`.
+.. note::
+  In versions of Nextflow prior to 19.07.x, the config setting ``executor.awscli`` should be used
+  instead of ``aws.batch.cliPath``.
+
 
 Docker installation
----------------------------------------
+-------------------
+
 Docker is required by Nextflow to execute tasks on AWS Batch. `Amazon ECS-Optimized Amazon Linux 2 AMI` has Docker installed,
 however if you create your AMI starting from a different AMI that does not have Docker installed, you need to do it manually.
 
@@ -354,8 +415,10 @@ Then, add the ``ec2-user`` to the docker group so you can execute Docker command
 You may have to reboot your instance to provide permissions for the ``ec2-user`` to access the Docker daemon. This has
 to be done BEFORE creating the AMI from the current EC2 instance.
 
+
 Amazon ECS container agent installation
 ---------------------------------------
+
 The `ECS container agent <https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_agent.html>`_ is a component
 of Amazon Elastic Container Service (Amazon ECS) and is responsible for managing containers on behalf of Amazon ECS.
 AWS Batch uses Amazon ECS to execute containerized jobs and therefore requires the agent to be installed on compute
@@ -374,7 +437,8 @@ To test the installation::
 
     curl -s http://localhost:51678/v1/metadata | python -mjson.tool (test)
 
-.. note:: The ``AmazonEC2ContainerServiceforEC2Role`` policy must be attached to the instance role in order to be able to
+.. note::
+    The ``AmazonEC2ContainerServiceforEC2Role`` policy must be attached to the instance role in order to be able to
     connect the EC2 instance created by the Compute Environment to the ECS container.
 
 
@@ -397,6 +461,7 @@ directive and specifing, in place of the container image name, the Job definitio
 
   process.container = 'job-definition://your-job-definition-name'
 
+
 Pipeline execution
 ------------------
 
@@ -410,8 +475,9 @@ The pipeline execution must specifies a AWS Storage bucket where jobs intermedia
   nextflow run my-pipeline -bucket-dir s3://my-bucket/some/path
 
 .. warning::
-  The bucket path should include at least a top level directory name e.g. use ``s3://my-bucket/work``
-  not just ``s3://my-bucket``. 
+  The bucket path should include at least a top level directory name, e.g. ``s3://my-bucket/work``
+  rather than only ``s3://my-bucket``. 
+
 
 Hybrid workloads
 ----------------
@@ -425,22 +491,23 @@ the AWS Batch :ref:`configuration <aws-batch-config>` only to a subset of proces
 For example::
 
   aws {
-      region = 'eu-west-1'
-      batch {
-        cliPath = '/home/ec2-user/miniconda/bin/aws'
-      }
+    region = 'eu-west-1'
+    batch {
+      cliPath = '/home/ec2-user/miniconda/bin/aws'
+    }
   }
 
   process {
-      withLabel: bigTask {
-        executor = 'awsbatch'
-        queue = 'my-batch-queue'
-        container = 'my/image:tag'
+    withLabel: bigTask {
+      executor = 'awsbatch'
+      queue = 'my-batch-queue'
+      container = 'my/image:tag'
     }
   }
 
 The above configuration snippet will deploy the execution with AWS Batch only for processes annotated
 with the :ref:`process-label` ``bigTask``, the remaining process with run in the local computer.
+
 
 Volume mounts
 -------------
@@ -450,7 +517,7 @@ User provided container volume mounts can be provided as shown below::
   aws {
     region = 'eu-west-1'
     batch {
-        volumes = '/tmp'
+      volumes = '/tmp'
     }
   }
 
@@ -461,7 +528,7 @@ or to specify *read-only* option. For example::
   aws {
     region = 'eu-west-1'
     batch {
-        volumes = ['/tmp', '/host/path:/mnt/path:ro']
+      volumes = ['/tmp', '/host/path:/mnt/path:ro']
     }
   }
 
@@ -471,6 +538,7 @@ mounts the path ``/host/path`` in the host environment to the ``/mnt/path`` in t
 *read-only* access mode.
 
 .. note:: This feature requires Nextflow version 19.07.x or later.
+
 
 Troubleshooting
 ---------------
@@ -516,4 +584,4 @@ resolutions and tips to investigate and work around the issue.
 Advanced configuration
 ======================
 
-Read :ref:`AWS Batch configuration<config-aws-batch>` section to learn more about advanced Batch configuration options.
+Read the :ref:`AWS Batch configuration<config-aws-batch>` section to learn more about advanced configuration options for AWS Batch and S3.
