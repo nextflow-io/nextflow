@@ -106,6 +106,26 @@ class AwsContainerOptionsMapperTest extends Specification {
         properties.getLinuxParameters().getInitProcessEnabled()
     }
 
+    def 'should set log driver and options'() {
+
+        when:
+        def map = CmdLineHelper.parseGnuArgs('--log-driver awslogs --log-opt awslogs-region=us-east-1 awslogs-group=/aws/batch/my-batch-env-name')
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
+        then:
+        properties.getLogConfiguration().getLogDriver() == "awslogs"
+        properties.getLogConfiguration().getOptions().get("awslogs-region").toString() ==  "us-east-1"
+        properties.getLogConfiguration().getOptions().get("awslogs-group").toString() ==  "/aws/batch/my-batch-env-name"
+    }
+
+    def 'should set no log configuration when missing log-driver'() {
+
+        when:
+        def map = CmdLineHelper.parseGnuArgs('--log-opt awslogs-region=us-east-1 awslogs-group=/aws/batch/my-batch-env-name')
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
+        then:
+        properties.getLogConfiguration() == null
+    }
+
     def 'should set no params'() {
 
         when:

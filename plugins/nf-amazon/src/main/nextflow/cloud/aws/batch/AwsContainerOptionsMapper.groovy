@@ -3,6 +3,7 @@ package nextflow.cloud.aws.batch
 import com.amazonaws.services.batch.model.ContainerProperties
 import com.amazonaws.services.batch.model.KeyValuePair
 import com.amazonaws.services.batch.model.LinuxParameters
+import com.amazonaws.services.batch.model.LogConfiguration
 import com.amazonaws.services.batch.model.Tmpfs
 import com.amazonaws.services.batch.model.Ulimit
 import groovy.transform.CompileStatic
@@ -35,6 +36,9 @@ class AwsContainerOptionsMapper {
             LinuxParameters params = checkLinuxParameters(options)
             if ( params != null )
                 containerProperties.setLinuxParameters(params)
+            LogConfiguration config = checkLogConfiguration(options)
+            if ( config != null )
+                containerProperties.setLogConfiguration(config)
         }
         return containerProperties
     }
@@ -133,6 +137,26 @@ class AwsContainerOptionsMapper {
         }
 
         return atLeastOneSet ? params : null
+    }
+
+    protected static LogConfiguration checkLogConfiguration(CmdLineOptionMap options) {
+        final config = new LogConfiguration()
+        boolean atLeastOneSet = false
+
+        // log-driver
+        def value = findOptionWithSingleValue(options, 'log-driver')
+        if ( value ) {
+            config.setLogDriver(value)
+            atLeastOneSet = true
+        }
+
+        // log options, e.g --log-opt awslogs-region=us-east-1 awslogs-group=/aws/batch/my-batch-env-name'
+        findOptionWithMultipleValues(options, 'log-opt').each { ovalue ->
+            final tokens = ovalue.tokenize('=')
+            config.addOptionsEntry(tokens[0],tokens.size() == 2 ? tokens[1] : null)
+        }
+
+        return atLeastOneSet ? config : null
     }
 
     /**
