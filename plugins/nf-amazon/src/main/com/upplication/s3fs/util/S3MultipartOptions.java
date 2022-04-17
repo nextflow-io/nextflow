@@ -30,7 +30,7 @@ public class S3MultipartOptions<V extends S3MultipartOptions> {
 
     private static final Logger log = LoggerFactory.getLogger(S3MultipartOptions.class);
 
-    public static final int DEFAULT_CHUNK_SIZE = 100 << 20;
+    public static final int DEFAULT_CHUNK_SIZE = 20 << 20;  // 20 MB
 
     /**
      * Upload chunk max size
