@@ -84,7 +84,7 @@ abstract class AzPathIterator<T> implements Iterator<Path> {
 
     @Override
     void remove() {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'remove' is not supported by AzPathIterator")
     }
 
     /**
