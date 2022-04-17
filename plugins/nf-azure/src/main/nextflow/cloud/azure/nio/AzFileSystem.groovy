@@ -118,7 +118,7 @@ class AzFileSystem extends FileSystem {
 
     @Override
     Iterable<FileStore> getFileStores() {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'getFileStores' is not supported by AzFileSystem")
     }
 
     @Override
@@ -170,17 +170,17 @@ class AzFileSystem extends FileSystem {
 
     @Override
     PathMatcher getPathMatcher(String syntaxAndPattern) {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'getPathMatcher' is not supported by AzFileSystem")
     }
 
     @Override
     UserPrincipalLookupService getUserPrincipalLookupService() {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'getUserPrincipalLookupService' is not supported by AzFileSystem")
     }
 
     @Override
     WatchService newWatchService() throws IOException {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'newWatchService' is not supported by AzFileSystem")
     }
 
     @PackageScope
@@ -294,7 +294,7 @@ class AzFileSystem extends FileSystem {
     @PackageScope
     void createDirectory(AzPath path) {
         if( isReadOnly() )
-            throw new UnsupportedOperationException('Operation not support in root path')
+            throw new UnsupportedOperationException("Operation 'createDirectory' not supported in root path")
 
         if( !path.containerName )
             throw new IllegalArgumentException("Missing Azure storage blob container name")
