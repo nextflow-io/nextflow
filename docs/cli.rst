@@ -847,6 +847,10 @@ the :ref:`k8s-page` section.
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -qs, -queue-size          |             | Max number of processes that can be executed in parallel by each executor.     |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
+| -remoteConfig             |             | Add the specified file from the K8s cluster to configuration set.              |
++---------------------------+-------------+--------------------------------------------------------------------------------+
+| -remoteProfile            |             | Choose a configuration profile in the remoteConfig.                            |
++---------------------------+-------------+--------------------------------------------------------------------------------+
 | -resume                   |             | Execute the script using the cached results, useful to continue executions that|
 |                           |             | was stopped by an error.                                                       |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
@@ -1349,7 +1353,7 @@ Viewing the contents of a downloaded pipeline. ::
    cheers = Channel.from 'Bonjour', 'Ciao', 'Hello', 'Hola'
 
     process sayHello {
-      echo true
+      debug true
       input:
         val x from cheers
       script:
@@ -1384,7 +1388,7 @@ Viewing the contents of a downloaded pipeline without omitting the header. ::
    cheers = Channel.from 'Bonjour', 'Ciao', 'Hello', 'Hola'
 
     process sayHello {
-      echo true
+      debug true
       input:
         val x from cheers
       script:

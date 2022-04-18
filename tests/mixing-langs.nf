@@ -45,7 +45,7 @@ process perlTask {
  * A Python script task which parses the output of the previous script
  */
 process pyTask {
-    echo true
+    debug true
 
     input:
     stdin randNums

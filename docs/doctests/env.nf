@@ -1,5 +1,5 @@
 process env {
-  echo true
+  debug true
 
   'echo $MYPATH'
 
