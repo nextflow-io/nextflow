@@ -47,7 +47,7 @@ class BatchConfig {
             log.debug "Google auth via application DEFAULT"
             result = GoogleCredentials.getApplicationDefault()
         }
-        result.createScoped('https://www.googleapis.com/auth/cloud-platform')
+        return result.createScoped("https://www.googleapis.com/auth/cloud-platform")
     }
 
     @Override
