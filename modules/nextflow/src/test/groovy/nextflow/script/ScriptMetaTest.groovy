@@ -1,8 +1,12 @@
 package nextflow.script
 
+import java.nio.file.Files
+
 import groovy.transform.InheritConstructors
+import nextflow.NextflowMeta
 import nextflow.exception.DuplicateModuleIncludeException
 import test.Dsl2Spec
+import test.MockScriptRunner
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -144,5 +148,92 @@ class ScriptMetaTest extends Dsl2Spec {
         1 * meta.getComponent('foo') >> comp1
 
         thrown(DuplicateModuleIncludeException)
+    }
+
+
+    def 'should invoke a workflow from main' () {
+        given:
+        NextflowMeta.instance.enableDsl2()
+        and:
+        def folder = Files.createTempDirectory('test')
+        def DIR1 = folder.resolve('modules/module1'); DIR1.mkdirs()
+        def DIR2 = folder.resolve('modules/module2'); DIR2.mkdirs()
+        and:
+        DIR1.resolve('bin').mkdir()
+        DIR1.resolve('bin').resolve('foo.sh').text = 'echo foo'
+        def MODULE1 = DIR1.resolve('m1.nf')
+        MODULE1.text = '''
+        process foo {
+          input: val data 
+          output: val result
+          exec:
+            result = "$data mundo"
+        }     
+        '''
+
+        and:
+        DIR2.resolve('bin').mkdir()
+        DIR2.resolve('bin').resolve('alpha.sh').text = 'echo alpha'
+        DIR2.resolve('bin').resolve('delta.sh').text = 'echo delta'
+        def MODULE2 = DIR2.resolve('m2.nf')
+        MODULE2.text = '''
+        process bar {
+            input: val data 
+            output: val result
+            exec: 
+              result = data.toUpperCase()
+        }   
+        '''
+
+        and:
+        def SCRIPT = folder.resolve('main.nf')
+        SCRIPT.text = """
+        include { foo } from "${MODULE1}"
+        include { bar } from "${MODULE2}"
+
+        workflow alpha {
+            take: data
+            main: foo(data)
+                  bar(foo.output)
+            emit: bar.out      
+        }
+   
+        workflow {
+            main: alpha('Hello')
+            emit: alpha.out 
+        }
+        """
+
+        and:
+        def runner = new MockScriptRunner()
+        runner.setScript(SCRIPT).execute()
+
+        when:
+        def result = ScriptMeta.allAssets(runner.session)
+        then:
+        result.size() == 3
+        and:
+        with(result.find { it.name == 'main' }) {
+            module == false
+            name == 'main'
+            scriptFile == 'main.nf'
+        }
+        and:
+        with(result.find { it.name == 'module1' }) {
+            module == true
+            name == 'module1'
+            scriptFile == 'modules/module1/m1.nf'
+            binFiles == [ 'modules/module1/bin/foo.sh' ]
+        }
+        and:
+        with(result.find { it.name == 'module2' }) {
+            module == true
+            name == 'module2'
+            scriptFile == 'modules/module2/m2.nf'
+            binFiles == [ 'modules/module2/bin/alpha.sh', 'modules/module2/bin/delta.sh' ]
+        }
+
+        cleanup:
+        NextflowMeta.instance.disableDsl2()
     }
 }

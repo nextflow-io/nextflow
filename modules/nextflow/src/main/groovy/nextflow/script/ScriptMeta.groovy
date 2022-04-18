@@ -19,12 +19,14 @@ package nextflow.script
 
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
+import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
+import nextflow.Session
 import nextflow.exception.DuplicateModuleIncludeException
 import nextflow.exception.MissingModuleComponentException
 /**
@@ -287,4 +289,33 @@ class ScriptMeta {
         }
     }
 
+    static List allAssets(Session session) {
+        final base = session.getBaseDir()
+        final result = []
+
+        for( ScriptMeta meta : REGISTRY.values() ) {
+            // create module
+            final entry = new LinkedHashMap()
+            final script = meta.getScriptPath().normalize()
+            entry.module = meta.isModule()
+            entry.scriptFile =  base.relativize(script.normalize()).toString()
+
+            // look for `bin/` directory in each module path
+            final moduleBin = script.resolveSibling('bin')
+            if( Files.isDirectory(moduleBin) ) {
+                entry.name = script.parent.getName()
+                // collect bin files
+                def files = new ArrayList(20)
+                moduleBin.traverse {files.add( base.relativize(it.normalize()).toString() ) }
+                entry.binFiles = files
+            }
+            else {
+                entry.name = script.getBaseName()
+            }
+            // add to results
+            result.add( entry )
+        }
+
+        return result
+    }
 }
