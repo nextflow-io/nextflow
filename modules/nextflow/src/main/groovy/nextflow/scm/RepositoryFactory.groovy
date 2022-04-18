@@ -70,10 +70,6 @@ class RepositoryFactory implements ExtensionPoint {
     }
 
     static RepositoryProvider create( ProviderConfig config, String project ) {
-        // force amazon plugin loading if `codecommit` is specified
-        if(config.platform == 'codecommit') {
-            Plugins.startIfMissing('nf-amazon')
-        }
         // scan for available plugins
         final all = Plugins.getPriorityExtensions(RepositoryFactory)
         final result = all.findResult( it -> it.newInstance(config, project) )

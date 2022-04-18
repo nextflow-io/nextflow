@@ -20,3 +20,10 @@ nextflow.util.DefaultSerializers
 nextflow.secret.LocalSecretsProvider
 nextflow.cache.DefaultCacheFactory
 nextflow.scm.RepositoryFactory
+
+# Scm configurations
+nextflow.scm.config.AzureRepoConfig
+nextflow.scm.config.BitBucketConfig
+nextflow.scm.config.GiteaConfig
+nextflow.scm.config.GithubConfig
+nextflow.scm.config.GitlabConfig

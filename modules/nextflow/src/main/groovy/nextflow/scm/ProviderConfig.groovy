@@ -17,6 +17,9 @@
 
 package nextflow.scm
 
+import nextflow.plugin.Plugins
+import nextflow.scm.config.ScmConfig
+
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -41,6 +44,13 @@ class ProviderConfig {
     @PackageScope
     static Path DEFAULT_SCM_FILE = Const.APP_HOME_DIR.resolve('scm')
 
+    private static final List<String> DEFAULT_SCMS = [
+            'github',
+            'gitlab',
+            'gitea',
+            'bitbucket',
+            'azurerepos']
+
     @PackageScope
     static Map<String,String> env = new HashMap<>(System.getenv())
 
@@ -63,43 +73,10 @@ class ProviderConfig {
         this.name = name
         this.attr = new HashMap(values)
 
-        // init defaults
-        switch( name ) {
-            case 'github':
-                attr.platform = name
-                if( !attr.server ) attr.server = 'https://github.com'
-                if( !attr.endpoint ) attr.endpoint = 'https://api.github.com'
-                break
-
-            case 'gitlab':
-                attr.platform = name
-                if( !attr.server ) attr.server = 'https://gitlab.com'
-                break
-
-            case 'gitea':
-                attr.platform = name
-                if( !attr.server ) attr.server = 'https://try.gitea.io'
-                if( !attr.endpoint ) attr.endpoint = attr.server.toString().stripEnd('/') + '/api/v1'
-                break
-
-            case 'bitbucket':
-                attr.platform = name
-                if( !attr.server ) attr.server = 'https://bitbucket.org'
-                break
-
-            case 'azurerepos':
-                attr.platform = name
-                if( !attr.server ) attr.server = 'https://dev.azure.com'
-                if( !attr.endpoint ) attr.endpoint = 'https://dev.azure.com'
-                break
-
-            case 'codecommit':
-                attr.platform = name
-                // this config is ignored when accessing repositories - the actual server/domain is
-                // determined by the configured or specified AWS region.
-                // it is required here for compatibility for provider server/domain processing
-                attr.server = "https://git-codecommit.[a-z1-9-]+.amazonaws.com/v1"
-                break
+        def configs = Plugins.getExtensions(ScmConfig)
+        def config = configs.find { it.name == name}
+        if( config ){
+            config.enrichConfiguration(this.attr)
         }
 
         if( attr.path )
@@ -333,23 +310,9 @@ class ProviderConfig {
     }
 
     static private void addDefaults(List<ProviderConfig> result) {
-        if( !result.find{ it.name == 'github' })
-            result << new ProviderConfig('github')
-
-        if( !result.find{ it.name == 'gitlab' })
-            result << new ProviderConfig('gitlab')
-
-        if( !result.find{ it.name == 'gitea' })
-            result << new ProviderConfig('gitea')
-
-        if( !result.find{ it.name == 'bitbucket' })
-            result << new ProviderConfig('bitbucket')
-
-        if( !result.find{ it.name == 'azurerepos' })
-            result << new ProviderConfig('azurerepos')
-
-        if( !result.find{ it.name == 'codecommit' })
-            result << new ProviderConfig('codecommit')
+        result.addAll( DEFAULT_SCMS.collect{
+            new ProviderConfig(it)
+        })
     }
 
 }

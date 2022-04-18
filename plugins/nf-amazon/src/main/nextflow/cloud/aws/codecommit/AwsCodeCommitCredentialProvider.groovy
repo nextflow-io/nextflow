@@ -191,12 +191,12 @@ final class AwsCodeCommitCredentialProvider extends CredentialsProvider {
                     return true
                 }
             }
+            return false
         }
-        catch (Throwable t) {
+        catch (Throwable ignored) {
             // ignore all, we can't handle it
+            return false
         }
-
-        return false
     }
 
     /**
