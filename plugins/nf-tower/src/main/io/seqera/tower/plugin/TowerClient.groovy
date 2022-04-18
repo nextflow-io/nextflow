@@ -11,6 +11,7 @@
 
 package io.seqera.tower.plugin
 
+
 import java.nio.file.Path
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -30,6 +31,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
+import nextflow.script.ScriptMeta
 import nextflow.trace.ResourcesAggregator
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
@@ -37,7 +39,6 @@ import nextflow.util.Duration
 import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
-
 /**
  * Send out messages via HTTP to a configured URL on different workflow
  * execution events.
@@ -599,6 +600,7 @@ class TowerClient implements TraceObserver {
         result.workflow = workflow
         result.processNames = new ArrayList(processNames)
         result.towerLaunch = towerLaunch
+        result.modules = ScriptMeta.allAssets(session)
         result.instant = Instant.now().toEpochMilli()
         return result
     }
