@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,6 +36,8 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
+import nextflow.cache.CacheDB
+import nextflow.cache.CacheFactory
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.dag.DAG
@@ -67,11 +69,11 @@ import nextflow.trace.TraceObserverFactory
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.Barrier
-import nextflow.util.BlockingThreadExecutorFactory
 import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
+import nextflow.util.ThreadPoolBuilder
 import nextflow.util.VersionNumber
 import sun.misc.Signal
 import sun.misc.SignalHandler
@@ -246,6 +248,8 @@ class Session implements ISession {
 
     boolean ansiLog
 
+    boolean disableJobsCancellation
+
     AnsiLogObserver ansiLogObserver
 
     FilePorter getFilePorter() { filePorter }
@@ -375,7 +379,7 @@ class Session implements ISession {
         binding.setParams( (Map)config.params )
         binding.setArgs( new ScriptRunner.ArgsList(args) )
 
-        cache = new CacheDB(uniqueId,runName).open()
+        cache = CacheFactory.create(uniqueId,runName).open()
 
         return this
     }
@@ -790,10 +794,16 @@ class Session implements ISession {
     }
 
     @PackageScope void checkConfig() {
-        final names = ScriptMeta.allProcessNames()
-        final ver = "dsl${NF.dsl1 ?'1' :'2'}"
-        log.debug "Workflow process names [$ver]: ${names.join(', ')}"
-        validateConfig(names)
+        final enabled = config.navigate('nextflow.enable.configProcessNamesValidation', true) as boolean
+        if( enabled ) {
+            final names = ScriptMeta.allProcessNames()
+            final ver = "dsl${NF.dsl1 ?'1' :'2'}"
+            log.debug "Workflow process names [$ver]: ${names.join(', ')}"
+            validateConfig(names)
+        }
+        else {
+            log.debug "Config process names validation disabled as requested"
+        }
     }
 
     @PackageScope VersionNumber getCurrentVersion() {
@@ -1019,6 +1029,18 @@ class Session implements ISession {
         observers.each { trace -> trace.onFlowCreate(this) }
     }
 
+    void notifyFilePublish(Path destination) {
+        def copy = new ArrayList<TraceObserver>(observers)
+        for( TraceObserver observer : copy  ) {
+            try {
+                observer.onFilePublish(destination)
+            }
+            catch( Exception e ) {
+                log.error "Failed to invoke observer on file publish: $observer", e
+            }
+        }
+    }
+
     void notifyFlowComplete() {
         def copy = new ArrayList<TraceObserver>(observers)
         for( TraceObserver observer : copy  ) {
@@ -1081,7 +1103,7 @@ class Session implements ISession {
         CacheDB db = null
         try {
             log.trace "Cleaning-up workdir"
-            db = new CacheDB(uniqueId, runName).openForRead()
+            db = CacheFactory.create(uniqueId, runName).openForRead()
             db.eachRecord { HashCode hash, TraceRecord record ->
                 def deleted = db.removeTaskEntry(hash)
                 if( deleted ) {
@@ -1092,7 +1114,7 @@ class Session implements ISession {
             log.trace "Clean workdir complete"
         }
         catch( Exception e ) {
-            log.warn("Failed to cleanup work dir: $workDir")
+            log.warn("Failed to cleanup work dir: ${workDir.toUriString()}")
         }
         finally {
             db.close()
@@ -1309,15 +1331,41 @@ class Session implements ISession {
     @Memoized // <-- this guarantees that the same executor is used across different publish dir in the same session
     @CompileStatic
     synchronized ExecutorService getFileTransferThreadPool() {
-        final factory = new BlockingThreadExecutorFactory()
+        final DEFAULT_MIN_THREAD = Math.min(Runtime.runtime.availableProcessors(), 4)
+        final DEFAULT_MAX_THREAD = DEFAULT_MIN_THREAD
+        final DEFAULT_QUEUE = 10_000
+        final DEFAULT_KEEP_ALIVE =  Duration.of('60sec')
+        final DEFAULT_MAX_AWAIT = Duration.of('12 hour')
+
+        def minThreads = config.navigate("threadPool.FileTransfer.minThreads", DEFAULT_MIN_THREAD) as Integer
+        def maxThreads = config.navigate("threadPool.FileTransfer.maxThreads", DEFAULT_MAX_THREAD) as Integer
+        def maxQueueSize = config.navigate("threadPool.FileTransfer.maxQueueSize", DEFAULT_QUEUE) as Integer
+        def keepAlive = config.navigate("threadPool.FileTransfer.keepAlive", DEFAULT_KEEP_ALIVE) as Duration
+        def maxAwait = config.navigate("threadPool.FileTransfer.maxAwait", DEFAULT_MAX_AWAIT) as Duration
+        def allowThreadTimeout = config.navigate("threadPool.FileTransfer.allowThreadTimeout", false) as Boolean
+
+        if( minThreads>maxThreads ) {
+            log.debug("FileTransfer minThreads ($minThreads) cannot be greater than maxThreads ($maxThreads) - Setting minThreads to $maxThreads")
+            minThreads = maxThreads
+        }
+
+        final pool = new ThreadPoolBuilder()
                 .withName('FileTransfer')
-                .withMaxThreads( Runtime.runtime.availableProcessors()*3 )
-        final pool = factory.create()
+                .withMinSize(minThreads)
+                .withMaxSize(maxThreads)
+                .withQueueSize(maxQueueSize)
+                .withKeepAliveTime(keepAlive)
+                .withAllowCoreThreadTimeout(allowThreadTimeout)
+                .build()
 
         this.onShutdown {
-            final max = factory.maxAwait.millis
+            final max = maxAwait.millis
             final t0 = System.currentTimeMillis()
             // start shutdown process
+            if( aborted ) {
+                pool.shutdownNow()
+                return
+            }
             pool.shutdown()
             // wait for ongoing file transfer to complete
             int count=0

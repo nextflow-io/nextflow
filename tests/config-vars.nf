@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 /*
  * Verify that variable defined in the configuration file
@@ -23,11 +24,8 @@
  * author Emilio Palumbo
  */
 
-echo true
-
 process foo {
- 
-  echo true
+  debug true
  
   script:
   t = task.ext.out.join(',')
@@ -38,8 +36,7 @@ process foo {
 }
 
 process bar {
- 
-  echo true
+  debug true
  
   shell:
   t = task.ext.out.join(',')

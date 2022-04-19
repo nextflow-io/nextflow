@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -192,13 +192,6 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         and:
         req.entryPoint == '/bin/foo'
 
-        when:
-        req = handler.createPipelineRequest()
-        then:
-        task.getConfig() >> new TaskConfig(containerOptions: [entrypoint:null])
-        and:
-        req.entryPoint == null
-
     }
 
     def 'should create pipeline request/2' () {
@@ -259,13 +252,6 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         task.getConfig() >> new TaskConfig(containerOptions: [entrypoint:'/bin/foo'])
         and:
         req.entryPoint == '/bin/foo'
-
-        when:
-        req = handler.createPipelineRequest()
-        then:
-        task.getConfig() >> new TaskConfig(containerOptions: [entrypoint:null])
-        and:
-        req.entryPoint == null
 
     }
 

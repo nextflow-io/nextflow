@@ -1,3 +1,5 @@
+nextflow.enable.dsl=1
+
 process stress_1cpu {
   """
   stress -c 1 -t 5

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -127,7 +127,11 @@ class TaskProcessor {
 
     final private static Pattern QUESTION_MARK = ~/(\?+)/
 
-    final private boolean invalidateCacheOnTaskDirectiveChange = System.getenv("NXF_ENABLE_CACHE_INVALIDATION_ON_TASK_DIRECTIVE_CHANGE")=='true'
+    @Memoized
+    static boolean getInvalidateCacheOnTaskDirectiveChange() {
+        final value = System.getenv("NXF_ENABLE_CACHE_INVALIDATION_ON_TASK_DIRECTIVE_CHANGE")
+        return value==null || value =='true'
+    }
 
     /**
      * Keeps track of the task instance executed by the current thread
@@ -148,11 +152,6 @@ class TaskProcessor {
      * The script object which defines this task
      */
     protected BaseScript ownerScript
-
-    /**
-     * Gpars thread pool
-     */
-    protected PGroup group = Dataflow.retrieveCurrentDFPGroup()
 
     /**
      * The processor descriptive name
@@ -285,7 +284,7 @@ class TaskProcessor {
         this.config = config
         this.taskBody = taskBody
         this.name = name
-        this.maxForks = config.maxForks as Integer ?: 0
+        this.maxForks = config.maxForks ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
     }
 
@@ -462,6 +461,12 @@ class TaskProcessor {
             }
         }
 
+        /**
+         * The thread pool used by GPars. The thread pool to be used is set in the static
+         * initializer of {@link nextflow.cli.CmdRun} class. See also {@link nextflow.util.CustomPoolFactory}
+         */
+        final PGroup group = Dataflow.retrieveCurrentDFPGroup()
+
         /*
          * When one (or more) {@code each} are declared as input, it is created an extra
          * operator which will receive the inputs from the channel (excepts the values over iterate)
@@ -504,15 +509,6 @@ class TaskProcessor {
             opInputs.add( config.getInputs().getChannels().last() )
         }
 
-
-        /*
-         * define the max forks attribute:
-         * - by default the process execution is parallel using the poolSize value
-         * - otherwise use the value defined by the user via 'taskConfig'
-         */
-        final maxForks = maxForks ?: session.poolSize
-        log.trace "Creating operator > $name -- maxForks: $maxForks"
-
         /*
          * finally create the operator
          */
@@ -522,7 +518,7 @@ class TaskProcessor {
         this.openPorts = createPortsArray(opInputs.size())
         config.getOutputs().setSingleton(singleton)
         def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
-        def params = [inputs: opInputs, maxForks: maxForks, listeners: [interceptor] ]
+        def params = [inputs: opInputs, maxForks: session.poolSize, listeners: [interceptor] ]
         def invoke = new InvokeTaskAdapter(this, opInputs.size())
         session.allOperators << (operator = new DataflowOperator(group, params, invoke))
 
@@ -554,17 +550,21 @@ class TaskProcessor {
     /**
      * The processor execution body
      *
-     * @param processor
-     * @param values
+     * @param args
+     *      The args array is expected to be composed by two elements:
+     *      the first must be an object object of type {@link TaskStartParams},
+     *      the second is the list of task input messages as received by the process
      */
-    final protected void invokeTask( def args ) {
+    final protected void invokeTask( Object[] args ) {
+        assert args.size()==2
+        final params = (TaskStartParams) args[0]
+        final values = (List) args[1]
 
         // create and initialize the task instance to be executed
-        final List values = args instanceof List ? args : [args]
-        log.trace "Invoking task > $name"
+        log.trace "Invoking task > $name with params=$params; values=$values"
 
         // -- create the task run instance
-        final task = createTaskRun()
+        final task = createTaskRun(params)
         // -- set the task instance as the current in this thread
         currentTask.set(task)
 
@@ -684,13 +684,10 @@ class TaskProcessor {
      * @return The new newly created {@code TaskRun}
      */
 
-    final protected TaskRun createTaskRun() {
-        log.trace "Creating a new task > $name"
-
-        def index = indexCount.incrementAndGet()
-        def task = new TaskRun(
-                id: TaskId.next(),
-                index: index,
+    final protected TaskRun createTaskRun(TaskStartParams params) {
+        final task = new TaskRun(
+                id: params.id,
+                index: params.index,
                 processor: this,
                 type: scriptType,
                 config: config.createTaskConfig(),
@@ -826,14 +823,13 @@ class TaskProcessor {
 
 
         try {
-            final exit = task.config.getValidExitStatus()[0]
             // -- expose task exit status to make accessible as output value
-            task.config.exitStatus = exit
+            task.config.exitStatus = TaskConfig.EXIT_ZERO
             // -- check if all output resources are available
             collectOutputs(task)
             log.info "[skipping] Stored process > ${task.name}"
             // set the exit code in to the task object
-            task.exitStatus = exit
+            task.exitStatus = TaskConfig.EXIT_ZERO
             task.cached = true
             session.notifyTaskCached(new StoredTaskHandler(task))
 
@@ -974,8 +970,8 @@ class TaskProcessor {
             if( error instanceof Error ) throw error
 
             // -- retry without increasing the error counts
-            if( task && (error instanceof NodeTerminationException || error.cause instanceof CloudSpotTerminationException) ) {
-                if( error instanceof NodeTerminationException )
+            if( task && (error.cause instanceof NodeTerminationException || error.cause instanceof CloudSpotTerminationException) ) {
+                if( error.cause instanceof NodeTerminationException )
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
                 else
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
@@ -1381,8 +1377,8 @@ class TaskProcessor {
                 throw new IllegalStateException("Unknown bind output parameter type: ${param}")
         }
 
-        // -- finally prints out the task output when 'echo' is true
-        if( task.config.echo ) {
+        // -- finally prints out the task output when 'debug' is true
+        if( task.config.debug ) {
             task.echoStdout(session)
         }
     }
@@ -1633,7 +1629,7 @@ class TaskProcessor {
     @Memoized
     Map<String,String> getProcessEnvironment() {
 
-        def result = [:]
+        def result = new LinkedHashMap<String,String>(20)
 
         // add the taskConfig environment entries
         if( session.config.env instanceof Map ) {
@@ -1693,7 +1689,7 @@ class TaskProcessor {
         if( obj instanceof Path )
             return obj
 
-        if( obj == null )
+        if( !obj == null )
             throw new ProcessUnrecoverableException("Path value cannot be null")
         
         if( !(obj instanceof CharSequence) )
@@ -1706,8 +1702,10 @@ class TaskProcessor {
             return FileHelper.asPath(str)
         if( FileHelper.getUrlProtocol(str) )
             return FileHelper.asPath(str)
-
-        throw new ProcessUnrecoverableException("Not a valid path value: $str")
+        if( !str )
+            throw new ProcessUnrecoverableException("Path value cannot be empty")
+        
+        throw new ProcessUnrecoverableException("Not a valid path value: '$str'")
     }
 
     protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, FilePorter.Batch batch ) {
@@ -2284,7 +2282,13 @@ class TaskProcessor {
             log.trace "<${name}> Before run -- messages: ${messages}"
             // the counter must be incremented here, otherwise it won't be consistent
             state.update { StateObj it -> it.incSubmitted() }
-            return messages;
+            // task index must be created here to guarantee consistent ordering
+            // with the sequence of messages arrival since this method is executed in a thread safe manner
+            final params = new TaskStartParams(TaskId.next(), indexCount.incrementAndGet())
+            final result = new ArrayList(2)
+            result[0] = params
+            result[1] = messages
+            return result
         }
 
 

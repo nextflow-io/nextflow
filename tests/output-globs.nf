@@ -1,4 +1,3 @@
-nextflow.enable.dsl=2
 
 def CMD =  """
     mkdir -p a/a b/b c/c

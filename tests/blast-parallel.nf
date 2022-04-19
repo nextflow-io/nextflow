@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 params.db = "$baseDir/blast-db/tiny"
 params.query = "$baseDir/data/sample.fa"
@@ -63,7 +64,7 @@ all_seq = sequences.collectFile(name:'all_seq')
  * Aligns a T-Coffee MSA and print it 
  */
 process align {
-    echo true
+    debug true
 
     input:
     file all_seq

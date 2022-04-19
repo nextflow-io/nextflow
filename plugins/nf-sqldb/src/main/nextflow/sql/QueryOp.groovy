@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,12 +25,13 @@ import nextflow.sql.config.SqlDataSource
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface QueryOp {
+interface QueryOp<T extends QueryOp> {
 
     QueryOp withStatement(String stm)
     QueryOp withTarget(DataflowWriteChannel channel)
     QueryOp withDataSource(SqlDataSource ds)
+    QueryOp withOpts(Map options)
 
-    void perform()
-    void perform(boolean async)
+    T perform()
+    T perform(boolean async)
 }

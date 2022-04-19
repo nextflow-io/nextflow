@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -585,7 +585,10 @@ class TaskRun implements Cloneable {
 
         final cfg = getContainerConfig()
         final handler = new ContainerHandler(cfg)
-        handler.normalizeImageName(imageName)
+        final result = handler.normalizeImageName(imageName)
+
+        final proxy = System.getenv('NXF_PROXY_REG')
+        return proxy ? ContainerHandler.proxyReg(proxy, result) : result
     }
 
     /**
@@ -626,7 +629,7 @@ class TaskRun implements Cloneable {
         if( status == Integer.MAX_VALUE )
             return false
 
-        return status in config.getValidExitStatus()
+        return status == TaskConfig.EXIT_ZERO
     }
 
     /**

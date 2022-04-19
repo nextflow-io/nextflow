@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -101,11 +101,10 @@ class FunctionalTests extends Specification {
              process {
                 dummyField = 99
                 executor = 'nope'
-                echo = true
+                debug = true
                 shell = 'zsh'
                 maxForks = 10
                 environment = [a:1, b:2,c:3]
-                validExitStatus = [0,11,22,33]
             }
             '''
         def cfg = new ConfigSlurper().parse(configStr)
@@ -115,7 +114,7 @@ class FunctionalTests extends Specification {
         def script = '''
 
             process taskHello {
-                echo true
+                debug true
                 maxForks 11
                 'echo hello'
             }
@@ -129,12 +128,11 @@ class FunctionalTests extends Specification {
         then:
         processor instanceof TaskProcessor
         processor.getName() == 'taskHello'
-        processor.config.echo == true
+        processor.config.debug == true
         processor.config.shell == 'zsh'
         processor.config.maxForks == 11
         processor.config.dummyField == 99
         processor.config.environment.entrySet() == [a:1,b:2,c:3].entrySet()
-        processor.config.validExitStatus == [0,11,22,33]
 
     }
 
@@ -176,7 +174,7 @@ class FunctionalTests extends Specification {
                     alpha = "aaa"
                     delta = "ddd"
                 }
-                $foo {
+                withName: foo {
                     ext {
                         beta = "BBB"
                         delta = "DDD"

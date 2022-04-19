@@ -6,7 +6,7 @@ Processes
 
 In Nextflow a `process` is the basic processing `primitive` to execute a user script.
 
-The process definition starts with keyword the ``process``, followed by process name and finally the process `body`
+The process definition starts with the keyword ``process``, followed by process name and finally the process `body`
 delimited by curly brackets. The process body must contain a string which represents the command or, more generally,
 a script that is executed by it. A basic process looks like the following example::
 
@@ -871,7 +871,7 @@ cause the process execution to stop even if there are other values in other chan
 For example::
 
   process foo {
-    echo true
+    debug true
     input:
     val x from Channel.from(1,2)
     val y from Channel.from('a','b','c')
@@ -904,7 +904,7 @@ content is applied repeatedly.
 To better understand this behavior compare the previous example with the following one::
 
   process bar {
-    echo true
+    debug true
     input:
     val x from Channel.value(1)
     val y from Channel.from('a','b','c')
@@ -1339,6 +1339,7 @@ The directives are:
 * `container`_
 * `containerOptions`_
 * `clusterOptions`_
+* `debug`_
 * `disk`_
 * `echo`_
 * `errorStrategy`_
@@ -1361,9 +1362,9 @@ The directives are:
 * `storeDir`_
 * `tag`_
 * `time`_
-* `validExitStatus`_
 
 
+.. _process-accelerator:
 
 accelerator
 -----------
@@ -1380,23 +1381,29 @@ e.g. *GPU* processor. For example::
         """
     }
 
+The above examples will request 4 GPUs of type ``nvidia-tesla-k80``.
 
-The above examples will request 4 GPUs of type `nvidia-tesla-k80`.
+.. note:: This directive is only used by certain executors. Refer to the
+  :ref:`executor-page` page to see which executors support this directive.
+
+.. tip:: The accelerator ``type`` option depends on the target execution platform. Refer to the target
+  platform documentation for details on the available accelerators:
+
+  - `AWS <https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_>`_
+  - `Google Cloud <https://cloud.google.com/compute/docs/gpus/>`_
+  - `Kubernetes <https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus>`_
 
 
-.. note:: This directive is only supported by :ref:`awsbatch-executor`, :ref:`google-lifesciences-executor` and :ref:`k8s-executor` executors.
-
-.. tip:: The accelerator ``type`` option value depends by the target execution platform. Refer to the target
-  platform documentation for details on the available accelerators. `AWS <https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_>`_
-  `Google <https://cloud.google.com/compute/docs/gpus/>`_
-  `Kubernetes <https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus>`_.
-
+.. _process-afterScript:
 
 afterScript
 -----------
 
 The ``afterScript`` directive allows you to execute a custom (Bash) snippet immediately *after* the main process has run.
 This may be useful to clean up your staging area.
+
+
+.. _process-beforeScript:
 
 beforeScript
 ------------
@@ -1415,6 +1422,7 @@ For example::
       """
 
     }
+
 
 .. _process-cache:
 
@@ -1471,13 +1479,13 @@ For example::
     '''
   }
 
-
 Multiple packages can be specified separating them with a blank space eg. ``bwa=0.7.15 fastqc=0.11.5``.
 The name of the channel from where a specific package needs to be downloaded can be specified using the usual
 Conda notation i.e. prefixing the package with the channel name as shown here ``bioconda::bwa=0.7.15``.
 
 The ``conda`` directory also allows the specification of a Conda environment file
 path or the path of an existing environment directory. See the :ref:`conda-page` page for further details.
+
 
 .. _process-container:
 
@@ -1491,7 +1499,6 @@ It requires the Docker daemon to be running in machine where the pipeline is exe
 
 For example::
 
-
     process runThisInDocker {
 
       container 'dockerbox:tag'
@@ -1501,7 +1508,6 @@ For example::
       """
 
     }
-
 
 Simply replace in the above script ``dockerbox:tag`` with the Docker image name you want to use.
 
@@ -1519,7 +1525,6 @@ The ``containerOptions`` directive allows you to specify any container execution
 container engine (ie. Docker, Singularity, etc). This can be useful to provide container settings
 only for a specific process e.g. mount a custom path::
 
-
   process runThisWithDocker {
 
       container 'busybox:latest'
@@ -1532,8 +1537,8 @@ only for a specific process e.g. mount a custom path::
       '''
   }
 
+.. warning:: This feature is not supported by the :ref:`k8s-executor` or :ref:`azurebatch-executor` executors.
 
-.. warning:: This feature is not supported by :ref:`awsbatch-executor` and :ref:`k8s-executor` executors.
 
 .. _process-cpus:
 
@@ -1553,11 +1558,11 @@ For example::
       """
     }
 
-
 This directive is required for tasks that execute multi-process or multi-threaded commands/tools and it is meant
 to reserve enough CPUs when a pipeline task is executed through a cluster resource manager.
 
 See also: `penv`_, `memory`_, `time`_, `queue`_, `maxForks`_
+
 
 .. _process-clusterOptions:
 
@@ -1568,9 +1573,34 @@ The ``clusterOptions`` directive allows the usage of any `native` configuration 
 You can use it to request non-standard resources or use settings that are specific to your cluster and not supported
 out of the box by Nextflow.
 
-.. note:: This directive is taken in account only when using a grid based executor:
-  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`, :ref:`pbspro-executor`,
-  :ref:`moab-executor` and :ref:`condor-executor` executors.
+.. note:: This directive is only used by grid executors. Refer to the
+  :ref:`executor-page` page to see which executors support this directive.
+
+
+.. _process-debug:
+
+debug
+-----
+
+By default the ``stdout`` produced by the commands executed in all processes is ignored.
+Setting the ``debug`` directive to ``true`` you can forward the process `stdout` to the current top
+running process `stdout` file, showing it in the shell terminal.
+
+For example::
+
+    process sayHello {
+      debug true
+
+      script:
+      "echo Hello"
+    }
+
+::
+
+    Hello
+
+Without specifying ``debug true`` you won't see the ``Hello`` string printed out when executing the above example.
+
 
 .. _process-disk:
 
@@ -1601,37 +1631,20 @@ GB      Gigabytes
 TB      Terabytes
 ======= =============
 
-.. note:: This directive currently is taken in account only by the :ref:`ignite-executor`
-  and the :ref:`condor-executor` executors.
+.. note:: This directive is only used by certain executors. Refer to the
+  :ref:`executor-page` page to see which executors support this directive.
 
 See also: `cpus`_, `memory`_ `time`_, `queue`_ and `Dynamic computing resources`_.
+
 
 .. _process-echo:
 
 echo
 ----
 
-By default the `stdout` produced by the commands executed in all processes is ignored.
-Setting the ``echo`` directive to ``true`` you can forward the process `stdout` to the current top
-running process `stdout` file, showing it in the shell terminal.
+As of version 22.04.0, ``echo`` has been deprecated and replaced by ``debug``.
 
-For example::
-
-    process sayHello {
-      echo true
-
-      script:
-      "echo Hello"
-    }
-
-::
-
-    Hello
-
-Without specifying ``echo true`` you won't see the ``Hello`` string printed out when executing the above example.
-
-
-.. _process-page-error-strategy:
+.. _process-error-strategy:
 
 errorStrategy
 -------------
@@ -1651,7 +1664,6 @@ Name            Executor
 ``retry``       Re-submit for execution a process returning an error condition.
 ============== ==================
 
-
 When setting the ``errorStrategy`` directive to ``ignore`` the process doesn't stop on an error condition,
 it just reports a message notifying you of the error event.
 
@@ -1664,10 +1676,9 @@ For example::
        <your command string here>
     }
 
-.. tip:: By definition a command script fails when it ends with a non-zero exit status. To change this behavior
-  see `validExitStatus`_.
+.. tip:: By definition a command script fails when it ends with a non-zero exit status.
 
-The ``retry`` `error strategy`, allows you to re-submit for execution a process
+The ``retry`` error strategy allows you to re-submit for execution a process
 returning an error condition. For example::
 
     process retryIfFail {
@@ -1677,7 +1688,6 @@ returning an error condition. For example::
        <your command string here>
     }
 
-
 The number of times a failing process is re-executed is defined by the `maxRetries`_ and `maxErrors`_ directives.
 
 .. note:: More complex strategies depending on the task exit status
@@ -1685,6 +1695,7 @@ The number of times a failing process is re-executed is defined by the `maxRetri
   directive. See the `Dynamic directives`_ section for details.
 
 See also: `maxErrors`_, `maxRetries`_ and `Dynamic computing resources`_.
+
 
 .. _process-executor:
 
@@ -1697,27 +1708,29 @@ defined globally in the ``nextflow.config`` file.
 The ``executor`` directive allows you to configure what executor has to be used by the process, overriding the default
 configuration. The following values can be used:
 
-=====================  ==================
-Name                   Executor
-=====================  ==================
-``local``              The process is executed in the computer where `Nextflow` is launched.
-``sge``                The process is executed using the Sun Grid Engine / `Open Grid Engine <http://gridscheduler.sourceforge.net/>`_.
-``uge``                The process is executed using the `Univa Grid Engine <https://en.wikipedia.org/wiki/Univa_Grid_Engine/>`_ job scheduler.
-``lsf``                The process is executed using the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
-``slurm``              The process is executed using the SLURM job scheduler.
-``pbs``                The process is executed using the `PBS/Torque <http://en.wikipedia.org/wiki/Portable_Batch_System>`_ job scheduler.
-``pbspro``             The process is executed using the `PBS Pro <https://www.pbsworks.com/>`_ job scheduler.
-``moab``               The process is executed using the `Moab <http://www.adaptivecomputing.com/moab-hpc-basic-edition/>`_ job scheduler.
-``condor``             The process is executed using the `HTCondor <https://research.cs.wisc.edu/htcondor/>`_ job scheduler.
-``nqsii``              The process is executed using the `NQSII <https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster>`_ job scheduler.
-``ignite``             The process is executed using the `Apache Ignite <https://ignite.apache.org/>`_ cluster.
-``k8s``                The process is executed using the `Kubernetes <https://kubernetes.io/>`_ cluster.
-``awsbatch``           The process is executed using the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
-``google-pipelines``   The process is executed using the `Google Genomics Pipelines <https://cloud.google.com/genomics/>`_ service.
-=====================  ==================
+========================  ==================
+Name                      Executor
+========================  ==================
+``awsbatch``              The process is executed using the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
+``azurebatch``            The process is executed using the `Azure Batch <https://azure.microsoft.com/en-us/services/batch/>`_ service.
+``condor``                The process is executed using the `HTCondor <https://research.cs.wisc.edu/htcondor/>`_ job scheduler.
+``google-lifesciences``   The process is executed using the `Google Genomics Pipelines <https://cloud.google.com/life-sciences>`_ service.
+``ignite``                The process is executed using the `Apache Ignite <https://ignite.apache.org/>`_ cluster.
+``k8s``                   The process is executed using the `Kubernetes <https://kubernetes.io/>`_ cluster.
+``local``                 The process is executed in the computer where `Nextflow` is launched.
+``lsf``                   The process is executed using the `Platform LSF <http://en.wikipedia.org/wiki/Platform_LSF>`_ job scheduler.
+``moab``                  The process is executed using the `Moab <http://www.adaptivecomputing.com/moab-hpc-basic-edition/>`_ job scheduler.
+``nqsii``                 The process is executed using the `NQSII <https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster>`_ job scheduler.
+``oge``                   Alias for the ``sge`` executor.
+``pbs``                   The process is executed using the `PBS/Torque <http://en.wikipedia.org/wiki/Portable_Batch_System>`_ job scheduler.
+``pbspro``                The process is executed using the `PBS Pro <https://www.pbsworks.com/>`_ job scheduler.
+``sge``                   The process is executed using the Sun Grid Engine / `Open Grid Engine <http://gridscheduler.sourceforge.net/>`_.
+``slurm``                 The process is executed using the SLURM job scheduler.
+``tes``                   The process is executed using the `GA4GH TES <https://github.com/ga4gh/task-execution-schemas>`_ service.
+``uge``                   Alias for the ``sge`` executor.
+========================  ==================
 
 The following example shows how to set the process's executor::
-
 
    process doSomething {
 
@@ -1728,9 +1741,9 @@ The following example shows how to set the process's executor::
 
    }
 
+.. note:: Each executor supports additional directives and ``executor`` configuration options. Refer to the
+  :ref:`executor-page` page to see what each executor supports.
 
-.. note:: Each executor provides its own set of configuration options that can set be in the `directive` declarations block.
-   See :ref:`executor-page` section to read about specific executor directives.
 
 .. _process-ext:
 
@@ -1758,13 +1771,42 @@ This can be defined in the ``nextflow.config`` file as shown below::
     process.ext.version = '2.5.3'
 
 
+.. _process-label:
+
+label
+-----
+
+The ``label`` directive allows the annotation of processes with mnemonic identifier of your choice.
+For example::
+
+  process bigTask {
+
+    label 'big_mem'
+
+    '''
+    <task script>
+    '''
+  }
+
+The same label can be applied to more than a process and multiple labels can be applied to the same
+process using the ``label`` directive more than one time.
+
+.. note:: A label must consist of alphanumeric characters or ``_``, must start with an alphabetic character
+  and must end with an alphanumeric character.
+
+Labels are useful to organise workflow processes in separate groups which can be referenced
+in the configuration file to select and configure subset of processes having similar computing requirements.
+
+See the :ref:`config-process-selectors` documentation for details.
+
+
 .. _process-machineType:
 
 machineType
 -----------
 
 The ``machineType`` can be used to specify a predefined Google Compute Platform `machine type <https://cloud.google.com/compute/docs/machine-types>`_
-when running using the :ref:`Google Pipeline <google-pipelines>` executor.
+when running using the :ref:`Google Life Sciences <google-lifesciences-executor>` executor.
 
 This directive is optional and if specified overrides the cpus and memory directives::
 
@@ -1779,6 +1821,7 @@ This directive is optional and if specified overrides the cpus and memory direct
 .. note:: This feature requires Nextflow 19.07.0 or later.
     
 See also: `cpus`_ and `memory`_.
+
 
 .. _process-maxErrors:
 
@@ -1802,6 +1845,7 @@ By default this directive is disabled, you can set it as shown in the example be
 
 See also: `errorStrategy`_ and `maxRetries`_.
 
+
 .. _process-maxForks:
 
 maxForks
@@ -1822,6 +1866,7 @@ If you want to execute a process in a sequential manner, set this directive to o
 
     }
 
+
 .. _process-maxRetries:
 
 maxRetries
@@ -1839,7 +1884,6 @@ only one retry is allowed, you can increase this value as shown below::
         echo 'do this as that .. '
         """
     }
-
 
 .. note:: There is a subtle but important difference between ``maxRetries`` and the ``maxErrors`` directive.
     The latter defines the total number of errors that are allowed during the process execution (the same process can
@@ -1865,7 +1909,6 @@ The ``memory`` directive allows you to define how much memory the process is all
         your task script here
         """
     }
-
 
 The following memory unit suffix can be used when specifying the memory value:
 
@@ -1943,9 +1986,8 @@ The ``penv`` directive  allows you to define the `parallel environment` to be us
 This configuration depends on the parallel environment provided by your grid engine installation. Refer to your
 cluster documentation or contact your admin to learn more about this.
 
-.. note:: This setting is available when using the :ref:`sge-executor` executor.
-
 See also: `cpus`_, `memory`_, `time`_
+
 
 .. _process-pod:
 
@@ -1981,8 +2023,13 @@ The ``pod`` directive allows the definition of the following options:
 ``volumeClaim: <V>, mountPath: </absolute/path>`` Mounts a `Persistent volume claim <https://kubernetes.io/docs/concepts/storage/persistent-volumes/>`_ with name ``V`` to the specified path location. Use the optional `subPath` parameter to mount a directory inside the referenced volume instead of its root. The volume may be mounted with `readOnly: true`, but is read/write by default.
 ``imagePullPolicy: <V>``                          Specifies the strategy to be used to pull the container image e.g. ``imagePullPolicy: 'Always'``.
 ``imagePullSecret: <V>``                          Specifies the secret name to access a private container image registry. See `Kubernetes documentation <https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod>`_ for details.
-``runAsUser: <UID>``                              Specifies the user ID to be used to run the container.
-``nodeSelector: <V>``                             Specifies which node the process will run on. See `Kubernetes nodeSelector <https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector>`_ for details.
+``runAsUser: <UID>``                              Specifies the user ID to be used to run the container. Shortcut for the ``securityContext`` option.
+``securityContext: <V>``                          Specifies the pod security context. See `Kubernetes security context <https://kubernetes.io/docs/tasks/configure-pod-container/security-context/>`_ for details.
+``nodeSelector: <V>``                             Specifies which node the process will run on. See `Kubernetes nodeSelector <https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector>`_ for details.
+``affinity: <V>``                                 Specifies affinity for which nodes the process should run on. See `Kubernetes affinity <https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity>`_ for details.
+``automountServiceAccountToken: <V>``             Specifies whether to `automount service account token <https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/>`_ into process pods. If ``V`` is true, service account token is automounted into task pods (default).
+``priorityClassName: <V>``                        Specifies the `priority class name <https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/>`_ for pods.
+``toleration: <V>``                               Specifies a toleration for a node taint. See `Taints and Tolerations <https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/>`_ for details.
 ================================================= =================================================
 
 When defined in the Nextflow configuration file, a pod setting can be defined using the canonical
@@ -1998,6 +2045,7 @@ When more than one setting needs to be provides they must be enclosed in a list 
     pod = [ [env: 'FOO', value: 'bar'], [secret: 'my-secret/key1', mountPath: '/etc/file.txt'] ]
   }
 
+Some settings, including environment variables, configs, secrets, volume claims, and tolerations, can be specified multiple times for different values.
 
 .. _process-publishDir:
 
@@ -2005,7 +2053,6 @@ publishDir
 ----------
 
 The ``publishDir`` directive allows you to publish the process output files to a specified folder. For example::
-
 
     process foo {
 
@@ -2018,7 +2065,6 @@ The ``publishDir`` directive allows you to publish the process output files to a
         printf 'Hola' | split -b 1 - chunk_
         '''
     }
-
 
 The above example splits the string ``Hola`` into file chunks of a single byte. When complete the ``chunk_*`` output files
 are published into the ``/data/chunks`` folder.
@@ -2045,6 +2091,8 @@ saveAs          A closure which, given the name of the file being published, ret
                 Return the value ``null`` from the closure to *not* publish a file.
                 This is useful when the process has multiple output files, but you want to publish only some of them.
 enabled         Enable or disable the publish rule depending on the boolean value specified (default: ``true``).
+tags            Allow to associate tags with the target file e.g. ``tag: [FOO: 'Hello world']`` (EXPERIMENTAL, currently only supported by files stored on AWS S3, requires version ``21.12.0-edge`` or later).
+failOnError     When ``true`` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: ``false``)
 =============== =================
 
 Table of publish modes:
@@ -2077,7 +2125,6 @@ move            Moves the output files into the published directory. **Note**: t
         '''
     }
 
-
 .. warning:: Files are copied into the specified directory in an *asynchronous* manner, thus they may not be immediately
   available in the published directory at the end of the process execution. For this reason files published by a process
   must not be accessed by other downstream processes.
@@ -2101,7 +2148,6 @@ in your pipeline. For example::
         """
     }
 
-
 Multiple queues can be specified by separating their names with a comma for example::
 
     process grid_job {
@@ -2114,39 +2160,8 @@ Multiple queues can be specified by separating their names with a comma for exam
         """
     }
 
-
-.. note:: This directive is taken in account only by the following executors: :ref:`sge-executor`, :ref:`lsf-executor`,
-  :ref:`slurm-executor` and :ref:`pbs-executor` executors.
-
-
-.. _process-label:
-
-label
------
-
-The ``label`` directive allows the annotation of processes with mnemonic identifier of your choice.
-For example::
-
-  process bigTask {
-
-    label 'big_mem'
-
-    '''
-    <task script>
-    '''
-  }
-
-
-The same label can be applied to more than a process and multiple labels can be applied to the same
-process using the ``label`` directive more than one time.
-
-.. note:: A label must consist of alphanumeric characters or ``_``, must start with an alphabetic character
-  and must end with an alphanumeric character.
-
-Labels are useful to organise workflow processes in separate groups which can be referenced
-in the configuration file to select and configure subset of processes having similar computing requirements.
-
-See the :ref:`config-process-selectors` documentation for details.
+.. note:: This directive is only used by certain executors. Refer to the
+  :ref:`executor-page` page to see which executors support this directive.
 
 
 .. _process-scratch:
@@ -2173,7 +2188,6 @@ In its basic form simply specify ``true`` at the directive value, as shown below
     <task script>
     '''
   }
-
 
 By doing this, it tries to execute the script in the directory defined by the variable ``$TMPDIR`` in the execution node.
 If this variable does not exist, it will create a new temporary directory by using the Linux command ``mktemp``.
@@ -2206,6 +2220,7 @@ $YOUR_VAR   Creates a scratch folder in the directory defined by the ``$YOUR_VAR
 /my/tmp     Creates a scratch folder in the specified directory.
 ram-disk    Creates a scratch folder in the RAM disk ``/dev/shm/`` (experimental).
 =========== ==================
+
 
 .. _process-storeDir:
 
@@ -2246,13 +2261,13 @@ for each species specified by an input parameter::
 
   }
 
-
 .. warning:: The ``storeDir`` directive is meant for long term process caching and should not be used to
     output the files produced by a process to a specific folder or organise result data in `semantic` directory structure.
     In these cases you may use the `publishDir`_ directive instead.
 
 .. note:: The use of AWS S3 path is supported however it requires the installation of the `AWS CLI tool <https://aws.amazon.com/cli/>`_
   (i.e. ``aws``) in the target computing node.
+
 
 .. _process-stageInMode:
 
@@ -2316,7 +2331,6 @@ The above snippet will print a log similar to the following one, where process n
     [d2/1c6175] Submitted process > foo (gamma)
     [1c/3ef220] Submitted process > foo (omega)
 
-
 See also :ref:`Trace execution report <trace-report>`
 
 
@@ -2336,8 +2350,6 @@ The ``time`` directive allows you to define how long a process is allowed to run
         """
     }
 
-
-
 The following time unit suffixes can be used when specifying the duration value:
 
 +---------------------------------+--------------+
@@ -2356,42 +2368,10 @@ The following time unit suffixes can be used when specifying the duration value:
 
 Multiple units can be used in a single declaration, for example: ``'1day 6hours 3minutes 30seconds'``
 
-.. note:: This directive is taken in account only when using one of the following grid based executors:
-  :ref:`sge-executor`, :ref:`lsf-executor`, :ref:`slurm-executor`, :ref:`pbs-executor`,
-  :ref:`condor-executor` and :ref:`awsbatch-executor` executors.
+.. note:: This directive is only used by certain executors. Refer to the
+  :ref:`executor-page` page to see which executors support this directive.
 
 See also: `cpus`_, `memory`_, `queue`_ and `Dynamic computing resources`_.
-
-
-.. _process-validExitStatus:
-
-validExitStatus
----------------
-
-.. warning::
-    This feature has been deprecated and will be removed in a future release.
-
-A process is terminated when the executed command returns an error exit status. By default any error status
-other than ``0`` is interpreted as an error condition.
-
-The ``validExitStatus`` directive allows you to fine control which error status will represent a successful command execution.
-You can specify a single value or multiple values as shown in the following example::
-
-
-    process returnOk {
-        validExitStatus 0,1,2
-
-         script:
-         """
-         echo Hello
-         exit 1
-         """
-    }
-
-
-In the above example, although the command script ends with a ``1`` exit status, the process
-will not return an error condition because the value ``1`` is declared as a `valid` status in
-the ``validExitStatus`` directive.
 
 
 Dynamic directives

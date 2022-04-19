@@ -10,7 +10,7 @@ Requirements
 ============
 
 `Nextflow` can be used on any POSIX compatible system (Linux, OS X, etc).
-It requires Bash 3.2 (or later) and `Java 8 (or later, up to 17) <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_ to be installed.
+It requires Bash 3.2 (or later) and `Java 11 (or later, up to 18) <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_ to be installed.
 
 For the execution in a cluster of computers the use a shared file system is required to allow
 the sharing of tasks input/output files.
@@ -47,8 +47,9 @@ It only needs two easy steps:
 
 .. note::
     To avoid downloading the dependencies, you could also use the ``nextflow-VERSION-all`` distribution available from Github for every `Nextflow` release version.
-   #. Go to the `Github releases page <https://github.com/nextflow-io/nextflow/releases>`__ and unfold the `Assets` section for a release.
-   #. Copy the URL of the ``nextflow-VERSION-all`` asset and issue the download command on your terminal. ``wget -qO- ASSET-URL``. It will create the completely self-contained ``nextflow-VERSION-all`` executable file in the current directory.
+
+    #. Go to the `Github releases page <https://github.com/nextflow-io/nextflow/releases>`__ and unfold the `Assets` section for a release.
+    #. Copy the URL of the ``nextflow-VERSION-all`` asset and issue the download command on your terminal. ``wget -qO- ASSET-URL``. It will create the completely self-contained ``nextflow-VERSION-all`` executable file in the current directory.
 
 Updates
 =======
@@ -86,34 +87,33 @@ Your first script
 Copy the following example into your favourite text editor and save it to a file named ``tutorial.nf`` ::
 
     #!/usr/bin/env nextflow
+    nextflow.enable.dsl=2
 
     params.str = 'Hello world!'
 
     process splitLetters {
+      output:
+        path 'chunk_*'
 
-        output:
-        file 'chunk_*' into letters
-
-        """
+      """
         printf '${params.str}' | split -b 6 - chunk_
-        """
+      """
     }
-
 
     process convertToUpper {
+      input:
+        file x
+      output:
+        stdout
 
-        input:
-        file x from letters.flatten()
-
-        output:
-        stdout result
-
-        """
+      """
         cat $x | tr '[a-z]' '[A-Z]'
-        """
+      """
     }
 
-    result.view { it.trim() }
+    workflow {
+      splitLetters | flatten | convertToUpper | view { it.trim() }
+    }
 
 
 This script defines two processes. The first splits a string into 6-character chunks, writing each one to a file with the prefix ``chunk_``,

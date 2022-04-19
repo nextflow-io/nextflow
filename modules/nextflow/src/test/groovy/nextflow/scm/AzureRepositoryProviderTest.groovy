@@ -1,5 +1,6 @@
 /*
- * Copyright 2013-2018, Centre for Genomic Regulation (CRG)
+ * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,8 +87,8 @@ class AzureRepositoryProviderTest extends Specification {
 
         when:
         // uses repo at
-        //  https://paolo0758@dev.azure.com/paolo0758/nf-azure-repo/_git/nf-azure-repo
-        def repo = new AzureRepositoryProvider('paolo0758/nf-azure-repo', config)
+        //  https://pditommaso.visualstudio.com/nf-azure-repo/_git/nf-azure-repo
+        def repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
         def result = repo.readText('main.nf')
         then:
         result == 'println "Hello from Azure repos!"'
@@ -103,8 +104,8 @@ class AzureRepositoryProviderTest extends Specification {
 
         when:
         // uses repo at
-        //  https://paolo0758@dev.azure.com/paolo0758/nf-azure-repo/_git/nf-azure-repo
-        def repo = new AzureRepositoryProvider('paolo0758/nf-azure-repo', config)
+        //  https://pditommaso.visualstudio.com/nf-azure-repo/_git/nf-azure-repo
+        def repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
         def result = repo.getTags()
         then:
         result == [
@@ -122,8 +123,8 @@ class AzureRepositoryProviderTest extends Specification {
 
         when:
         // uses repo at
-        //  https://paolo0758@dev.azure.com/paolo0758/nf-azure-repo/_git/nf-azure-repo
-        def repo = new AzureRepositoryProvider('paolo0758/nf-azure-repo', config)
+        //  https://pditommaso.visualstudio.com/nf-azure-repo/_git/nf-azure-repo
+        def repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
         def result = repo.getBranches()
         then:
         result == [

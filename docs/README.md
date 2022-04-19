@@ -12,7 +12,7 @@ Once you have edited the documentation files verify the your changes are correct
 using the command below to generate the HTML files:
 
 ```
-make html
+make clean html
 ```
 
 
@@ -25,21 +25,24 @@ you have modified.
 Sphinx can be installed either with
 
 ```
-pip install -U Sphinx
+pip install -U sphinx==3.5.4
 ```
 
 or
 
 ```
-conda install sphinx
+conda install sphinx==3.5.4
 ```
 
 ### Theme 
 
-Docs uses the [sphinx_rtd_theme](https://github.com/readthedocs/sphinx_rtd_theme) theme. 
+Nextflow documentation uses the [Read The Docs theme for Sphinx](https://github.com/readthedocs/sphinx_rtd_theme) theme. 
 
-To update it, clone the bove repo, then copy `sphinx_rtd_theme/sphinx_rtd_theme` directory 
-into `docs/_themes`.  
+In order to build the document install the Read The Docs theme using the command: 
+
+```
+pip install sphinx_rtd_theme
+```
 
 ### License
 

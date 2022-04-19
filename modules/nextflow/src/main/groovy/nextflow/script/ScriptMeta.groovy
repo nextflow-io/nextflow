@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -223,6 +223,19 @@ class ScriptMeta {
         }
         // processes from imports
         for( def item: imports.values() ) {
+            if( item instanceof ProcessDef )
+                result.add(item.name)
+        }
+        return result
+    }
+
+    Set<String> getLocalProcessNames() {
+        if( NF.dsl1 )
+            return new HashSet<String>(getDsl1ProcessNames())
+
+        def result = new HashSet(definitions.size() + imports.size())
+        // local definitions
+        for( def item : definitions.values() ) {
             if( item instanceof ProcessDef )
                 result.add(item.name)
         }

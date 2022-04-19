@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,9 @@
  */
 
 package nextflow.processor
+
+import nextflow.NF
+import nextflow.exception.ProcessException
 
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
@@ -37,6 +40,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
+import nextflow.file.TagAwareFile
 import nextflow.util.PathTrie
 /**
  * Implements the {@code publishDir} directory. It create links or copies the output
@@ -84,6 +88,16 @@ class PublishDir {
      */
     boolean enabled = true
 
+    /**
+     * Trow an exception in case publish fails
+     */
+    boolean failOnError = false
+
+    /**
+     * Tags to be associated to the target file
+     */
+    private def tags
+
     private PathMatcher matcher
 
     private FileSystem sourceFileSystem
@@ -120,6 +134,17 @@ class PublishDir {
         this.mode = mode
     }
 
+    static @PackageScope Map<String,String> resolveTags( tags ) {
+        def result = tags instanceof Closure
+                ? tags.call()
+                : tags
+
+        if( result instanceof Map<String,String> )
+            return result
+
+        throw new IllegalArgumentException("Invalid publishDir tags attribute: $tags")
+    }
+
     @PackageScope boolean checkNull(String str) {
         ( str =~ /\bnull\b/  ).find()
     }
@@ -152,10 +177,16 @@ class PublishDir {
             result.overwrite = Boolean.parseBoolean(params.overwrite.toString())
 
         if( params.saveAs )
-            result.saveAs = params.saveAs
+            result.saveAs = (Closure) params.saveAs
 
         if( params.enabled != null )
             result.enabled = Boolean.parseBoolean(params.enabled.toString())
+
+        if( params.failOnError != null )
+            result.failOnError = Boolean.parseBoolean(params.failOnError.toString())
+
+        if( params.tags != null )
+            result.tags = params.tags
 
         return result
     }
@@ -217,9 +248,11 @@ class PublishDir {
         this.sourceFileSystem = sourceDir ? sourceDir.fileSystem : null
         apply0(files)
     }
+
     /**
      * Apply the publishing process to the specified {@link TaskRun} instance
      *
+     * @param files Set of output files
      * @param task The task whose output need to be published
      */
     @CompileStatic
@@ -258,6 +291,12 @@ class PublishDir {
         }
 
         final destination = resolveDestination(target)
+
+        // apply tags
+        if( this.tags!=null && destination instanceof TagAwareFile ) {
+            destination.setTags( resolveTags(this.tags) )
+        }
+
         if( inProcess ) {
             safeProcessFile(source, destination)
         }
@@ -293,6 +332,10 @@ class PublishDir {
         }
         catch( Throwable e ) {
             log.warn "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- See log file for details", e
+            if( NF.strictMode || failOnError){
+                final session = Global.session as Session
+                session?.abort(e)
+            }
         }
     }
 
@@ -319,6 +362,8 @@ class PublishDir {
             FileHelper.deletePath(destination)
             processFileImpl(source, destination)
         }
+
+        notifyFilePublish(destination)
     }
 
     private String real0(Path p) {
@@ -441,6 +486,13 @@ class PublishDir {
 
         if( !mode ) {
             mode = stageInMode=='rellink' ? Mode.RELLINK : Mode.SYMLINK
+        }
+    }
+
+    protected void notifyFilePublish(Path destination) {
+        final sess = Global.session
+        if (sess instanceof Session) {
+            sess.notifyFilePublish(destination)
         }
     }
 

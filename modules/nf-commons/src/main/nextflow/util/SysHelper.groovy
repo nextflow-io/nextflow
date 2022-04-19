@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@
  */
 
 package nextflow.util
+
+
 import java.lang.management.ManagementFactory
 import java.text.SimpleDateFormat
 
@@ -63,7 +65,7 @@ class SysHelper {
      *      The formatted date string
      */
     static String fmtDate(Date date, TimeZone tz=null) {
-        def formatter=new SimpleDateFormat(DATE_FORMAT)
+        def formatter=new SimpleDateFormat(DATE_FORMAT, Locale.ENGLISH)
         if(tz) formatter.setTimeZone(tz)
         formatter.format(date)
     }

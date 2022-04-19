@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,8 @@ import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
+
+import java.nio.file.Path
 
 /**
  * Defines the defaults method for application flow observer
@@ -120,4 +122,13 @@ trait TraceObserver {
      *      The associated {@link TraceRecord} fot the current task.
      */
     void onFlowError(TaskHandler handler, TraceRecord trace){}
+
+    /**
+     * Method that is invoke when an output file is published
+     * into a `publishDir` folder.
+     *
+     * @param destination
+     *      The destination path at `publishDir` folder.
+     */
+    void onFilePublish(Path destination){}
 }

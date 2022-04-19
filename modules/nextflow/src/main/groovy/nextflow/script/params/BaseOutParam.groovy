@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,7 @@ import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.script.ProcessConfig
 import nextflow.script.TokenVar
+import nextflow.util.ConfigHelper
 
 /**
  * Model a process generic output parameter
@@ -215,6 +216,14 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     BaseOutParam setEmit( value ) {
         if( isNestedParam() )
             throw new IllegalArgumentException("Output `emit` option it not allowed in tuple components")
+        if( !value )
+            throw new IllegalArgumentException("Missing output `emit` name")
+        if( !ConfigHelper.isValidIdentifier(value) ) {
+            final msg = "Output emit '$value' is not valid a name -- Make sure it starts with an alphabetic or underscore character and it does not contain any blank, dot or other special characters"
+            if( NF.strictMode )
+                throw new IllegalArgumentException(msg)
+            log.warn(msg)
+        }
         this.channelEmitName = value
         return this
     }

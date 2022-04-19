@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@
  */
 
 package nextflow.processor
+
+import nextflow.util.CmdLineOptionMap
 
 import static nextflow.processor.TaskProcessor.*
 
@@ -41,7 +43,7 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TaskConfig extends LazyMap implements Cloneable {
 
-    static private final List<Integer> EXIT_ZERO = [0]
+    static public final EXIT_ZERO = 0
 
     private transient Map cache = new LinkedHashMap(20)
 
@@ -129,6 +131,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         return get(name)
     }
 
+    final getRawValue(String key) {
+        return target.get(key)
+    }
+
     def get( String key ) {
         if( cache.containsKey(key) )
             return cache.get(key)
@@ -180,9 +186,11 @@ class TaskConfig extends LazyMap implements Cloneable {
         return false
     }
 
-    boolean getEcho() {
-        def value = get('echo')
-        toBool(value)
+    boolean getDebug() {
+        // check both `debug` and `echo` for backward
+        // compatibility until `echo` is not removed
+        def value = get('debug') || get('echo')
+        return toBool(value)
     }
 
     private static boolean toBool( value )  {
@@ -191,17 +199,6 @@ class TaskConfig extends LazyMap implements Cloneable {
         }
 
         return value != null && value.toString().toLowerCase() in Const.BOOL_YES
-    }
-
-    List<Integer> getValidExitStatus() {
-        def result = get('validExitStatus')
-        if( result instanceof List<Integer> )
-            return result as List<Integer>
-
-        if( result != null )
-            return [result as Integer]
-
-        return EXIT_ZERO
     }
 
     ErrorStrategy getErrorStrategy() {
@@ -412,9 +409,15 @@ class TaskConfig extends LazyMap implements Cloneable {
         return opts instanceof CharSequence ? opts.toString() : null
     }
 
-    Map getContainerOptionsMap() {
+    CmdLineOptionMap getContainerOptionsMap() {
         def opts = get('containerOptions')
-        return opts instanceof Map ? opts : Collections.emptyMap()
+        if( opts instanceof Map )
+            return CmdLineOptionMap.fromMap(opts)
+        if( opts instanceof CharSequence )
+            return CmdLineHelper.parseGnuArgs(opts.toString())
+        if( opts!=null )
+            throw new IllegalArgumentException("Invalid `containerOptions` directive value: $opts [${opts.getClass().getName()}]")
+        return CmdLineOptionMap.emptyOption()
     }
 
     /**

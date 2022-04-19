@@ -24,7 +24,6 @@ tests_other
 other
 docs/_build/
 ./*.txt
-cache/
 errors/
 misc/
 cloud/my-*
@@ -36,3 +35,4 @@ gradle.properties
 .dockerignore
 .launch.classpath
 plugins-prod
+sandbox

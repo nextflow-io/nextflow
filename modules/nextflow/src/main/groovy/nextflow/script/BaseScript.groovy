@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.Session
+import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskProcessor
 /**
  * Any user defined script will extends this class, it provides the base execution context
@@ -183,6 +184,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( !entryFlow ) {
             if( meta.getLocalWorkflowNames() )
                 log.warn "No entry workflow specified"
+            if( meta.getLocalProcessNames() )
+                throw new AbortOperationException("Missing workflow definition - DSL2 requires at least a workflow block in the main script")
             return result
         }
 

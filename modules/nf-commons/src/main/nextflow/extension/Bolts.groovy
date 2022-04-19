@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,6 @@
  */
 
 package nextflow.extension
-
 
 import java.nio.file.Path
 import java.text.DateFormat
@@ -66,7 +65,7 @@ class Bolts {
         return new ThreadLocal<DateFormat>() {
             @Override
             protected DateFormat initialValue() {
-                def result = new SimpleDateFormat(fmt)
+                def result = new SimpleDateFormat(fmt, Locale.ENGLISH)
                 if(tz) result.setTimeZone(tz)
                 return result
             }
@@ -87,7 +86,7 @@ class Bolts {
     }
 
     static String format(OffsetDateTime self, String format) {
-        return self.format(DateTimeFormatter.ofPattern(format))
+        return self.format(DateTimeFormatter.ofPattern(format).withLocale(Locale.ENGLISH))
     }
 
     /**
@@ -925,4 +924,29 @@ class Bolts {
         }
         return (T)result
     }
+
+    static Map deepMerge(Map target, Map source) {
+        final result = cloneMap0(target)
+        for (Object name : source.keySet()) {
+            // to prevent side-effects with ConfigObject object (which creates a value on-fly
+            // when getting it, always use `containsKey` before
+            if( result.containsKey(name) && result.get(name) instanceof Map && source.containsKey(name) && source.get(name) instanceof Map  ) {
+                result.put(name, deepMerge( (Map)result.get(name), (Map)source.get(name)))
+            }
+            else {
+                result.put(name, source.get(name))
+            }
+        }
+        return result
+    }
+
+    static private Map cloneMap0(Map map) {
+        if( map instanceof ConfigObject )
+            return ((ConfigObject)map).clone()
+        if( map instanceof LinkedHashMap )
+            return new LinkedHashMap<>(map)
+        else
+            return new HashMap<>(map)
+    }
+    
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -86,7 +86,16 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
     /**
      * @return {@code true} to signal containers are managed directly the AWS Batch service
      */
+    @Override
     final boolean isContainerNative() {
+        return true
+    }
+
+    /**
+     * @return {@code true} whenever the secrets handling is managed by the executing platform itself
+     */
+    @Override
+    final boolean isSecretNative() {
         return true
     }
 

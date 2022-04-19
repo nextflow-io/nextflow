@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,15 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-echo true
+nextflow.enable.dsl=1
 
 list1 = [1,2]
 list2 = ['Hola', 'Ciao']
 list3 = ['alpha','beta','delta']
 
 process hola {
-
+    debug true
     input:
     val x from list1
     each y from list2
@@ -36,7 +35,7 @@ process hola {
 }
 
 process foo {
-    echo true
+    debug true
 
     input:
     each v from Channel.from([["a","b"],["c","d"]])

@@ -80,7 +80,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
 
     @Override
     String getBeforeStartScript() {
-        AzBashLib.script(maxParallelTransfers, maxTransferAttempts, delayBetweenAttempts)
+        AzBashLib.script(config.azcopy(), maxParallelTransfers, maxTransferAttempts, delayBetweenAttempts)
     }
 
     @Override
