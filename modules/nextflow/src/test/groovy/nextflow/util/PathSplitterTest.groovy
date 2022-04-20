@@ -47,8 +47,8 @@ class PathSplitterTest extends Specification {
         and:
         'file:/foo'                     | new PathSplitter('file:/foo', null)
         'file:/foo/x/y/z'               | new PathSplitter('file:/foo', ['x','y','z'])
-        'file://foo'                    | new PathSplitter('file:/foo', null)
-        'file://foo/x/y/z'              | new PathSplitter('file:/foo', ['x','y','z'])
+        'file:///foo'                   | new PathSplitter('file:///foo', null)
+        'file:///foo/x/y/z'             | new PathSplitter('file:///foo', ['x','y','z'])
         and:
         's3://my-bucket'                | new PathSplitter('s3://my-bucket')
         's3://my-bucket/'               | new PathSplitter('s3://my-bucket/')

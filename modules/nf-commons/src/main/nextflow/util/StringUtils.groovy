@@ -22,12 +22,12 @@ import java.util.regex.Pattern
 
 import com.google.common.net.InetAddresses
 import groovy.transform.CompileStatic
+
 /**
  * String helper routines
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Deprecated
 @CompileStatic
 class StringUtils {
 
@@ -37,24 +37,23 @@ class StringUtils {
     /**
      * Deprecated. Use {@link nextflow.file.FileHelper#getUrlProtocol(java.lang.String)} instead
      */
+    @Deprecated
     static String getUrlProtocol(String str) {
         final m = URL_PROTOCOL.matcher(str)
         return m.matches() ? m.group(1) : null
     }
 
     static final private Pattern BASE_URL = ~/(?i)((?:[a-z][a-zA-Z0-9]*)?:\/\/[^:|\/]+(?::\d*)?)(?:$|\/.*)/
-    static final private Pattern FILE_URL = ~/(?i)((?:file)?:\/\/[^:|\/]+(?::\d*)?)(?:$|\/.*)/
 
+    /**
+     * Deprecated. Use {@link nextflow.file.FileHelper#baseUrl(java.lang.String)} instead
+     */
+    @Deprecated
     static String baseUrl(String url) {
         if( !url )
             return null
         final m = BASE_URL.matcher(url)
-        if( m.matches() )
-            return m.group(1).toLowerCase()
-        final n = FILE_URL.matcher(url)
-        if( n.matches() )
-            return n.group(1).toLowerCase()
-        return false
+        return m.matches() ? m.group(1).toLowerCase() : null
     }
 
     static private Pattern multilinePattern = ~/"?(password|token|secret|license)"?\s?[:=]\s?"?(\w+)"?/

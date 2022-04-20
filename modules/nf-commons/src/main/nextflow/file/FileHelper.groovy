@@ -62,7 +62,8 @@ class FileHelper {
     static Map<String,String> env = System.getenv()
 
     static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z][a-zA-Z0-9]*):\\/\\/.+/
-    static final public Pattern BASE_URL = ~/(?i)((?:[a-z][a-zA-Z0-9]*)?:\/\/[^:|\/]+(?::\d*)?)(?:$|\/.*)/
+
+    static final private Pattern BASE_URL = ~/(?i)((?:[a-z][a-zA-Z0-9]*)?:\/\/[^:|\/]+(?::\d*)?)(?:$|\/.*)/
 
     static final private Path localTempBasePath
 
@@ -238,6 +239,34 @@ class FileHelper {
         return !(path.getFileSystem().provider().scheme in UNSUPPORTED_GLOB_WILDCARDS)
     }
 
+    static Path toCanonicalPath(value) {
+        if( value==null )
+            return null
+
+        Path result = null
+        if( value instanceof String || value instanceof GString ) {
+            result = asPath(value.toString())
+        }
+        else if( value instanceof Path ) {
+            result = (Path)value
+        }
+        else {
+            throw new IllegalArgumentException("Unexpected path value: '$value' [${value.getClass().getName()}]")
+        }
+
+        if( result.fileSystem != FileSystems.default ) {
+            // remove file paths are expected to be absolute by de
+            return result
+        }
+
+        Path base
+        if( !result.isAbsolute() && (base=fileBaseDir()) ) {
+            result = base.resolve(result.toString())
+        }
+
+        return result.toAbsolutePath().normalize()
+    }
+
     /**
      * Given an hierarchical file URI path returns a {@link Path} object
      * eventually creating the associated file system if required.
@@ -262,6 +291,10 @@ class FileHelper {
             return Paths.get(str)
         }
 
+        return asPath0(str)
+    }
+
+    static private Path asPath0(String str) {
         def result = FileSystemPathFactory.parse(str)
         if( result )
             return result
@@ -1107,52 +1140,34 @@ class FileHelper {
         return m.matches() ? m.group(1) : null
     }
 
-    static String concatPath(String left, String right) {
-        // when starting with a `\` the right right is an absolute right
-        if( right.startsWith('/') )
-            return right
-
-        final scheme = getUrlProtocol(right)
-        if( scheme==null ) {
-            return addEndingSlash(left) + right
-        }
-        // it's assumed right starting with a protocol are absolute
-        return right
-    }
-
-    static String addEndingSlash(String path) {
-        if( !path )
+    static Path fileBaseDir() {
+        if( env==null || !env.NXF_FILE_BASE_DIR )
             return null
+        final base = env.NXF_FILE_BASE_DIR
+        if( base.startsWith('/') )
+            return Paths.get(base)
+        final scheme = getUrlProtocol(base)
+        if( !scheme )
+            throw new IllegalArgumentException("Invalid NXF_FILE_BASE_DIR environment value - It must be an absolute path or a valid path URI - Offending value: '$base'")
+        return asPath0(base)
+    }
 
-        // normalise thr path stripping  the ending slash
-        while( path.endsWith('/') ) {
-            final len = path.length()
-            if( path=='/' )
-                break
-            if( len>3 && path.substring(len-3) == '://' )
-                break
-            if( path=='file:/' )
-                break
-            path = path.substring(0,path.length()-1)
+    static String baseUrl(String url) {
+        if( !url )
+            return null
+        final m = BASE_URL.matcher(url)
+        if( m.matches() )
+            return m.group(1).toLowerCase()
+        if( url.startsWith('file:///')) {
+            return 'file:///'
         }
-
-        // add the slash if needed
-        return path=='/' || path.endsWith('://')
-                ? path
-                : path + '/'
+        if( url.startsWith('file://')) {
+            return url.length()>7 ? url.substring(7).tokenize('/')[0] : null
+        }
+        if( url.startsWith('file:/')) {
+            return 'file:/'
+        }
+        return null
     }
 
-    static String relPath(String path) {
-        if( env==null || !env.NXF_FILE_BASE_DIR )
-            return path
-        return concatPath(env.NXF_FILE_BASE_DIR, path)
-    }
-
-    static Path relPath(Path path) {
-        if( env==null || !env.NXF_FILE_BASE_DIR )
-            return path
-        return path.isAbsolute()
-                ? path
-                : FileHelper.asPath(env.NXF_FILE_BASE_DIR).resolve( path.toString() )
-    }
 }
