@@ -65,6 +65,8 @@ class AwsOptions implements CloudTransferOptions {
 
     int maxSpotAttempts
 
+    Boolean debug
+
     volatile Boolean fetchInstanceType
 
     /**
@@ -92,6 +94,7 @@ class AwsOptions implements CloudTransferOptions {
 
     AwsOptions(Session session) {
         cliPath = getCliPath0(session)
+        debug = session.config.navigate('aws.client.debug') as Boolean
         storageClass = session.config.navigate('aws.client.uploadStorageClass') as String
         storageEncryption = session.config.navigate('aws.client.storageEncryption') as String
         maxParallelTransfers = session.config.navigate('aws.batch.maxParallelTransfers', MAX_TRANSFER) as int

@@ -123,6 +123,54 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     }
 
+    def 'should create an aws submit request with opts'() {
+
+        given:
+        def task = Mock(TaskRun)
+        task.getName() >> 'batch-task'
+        task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4, maxRetries: 2, errorStrategy: 'retry')
+
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        1 * handler.maxSpotAttempts() >> 5
+        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', storageEncryption: 'AES256') }
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+        1 * handler.getEnvironmentVars() >> []
+        1 * handler.wrapperFile >> Paths.get('/bucket/test/.command.run')
+        1 * handler.getLogFile() >> Paths.get('/bucket/test/.command.log')
+
+        req.getJobName() == 'batchtask'
+        req.getJobQueue() == 'queue1'
+        req.getJobDefinition() == 'job-def:1'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
+        req.getContainerOverrides().getCommand().join(' ') == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws s3 cp --only-show-errors --sse AES256 .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws s3 cp --only-show-errors --sse AES256 s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()].join(' ')
+
+        when:
+        def req2 = handler.newSubmitRequest(task)
+        then:
+        1 * handler.maxSpotAttempts() >> 5
+        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', storageEncryption: 'AES256', debug: true) }
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+        1 * handler.getEnvironmentVars() >> []
+        1 * handler.wrapperFile >> Paths.get('/bucket/test/.command.run')
+        1 * handler.getLogFile() >> Paths.get('/bucket/test/.command.log')
+
+        req2.getJobName() == 'batchtask'
+        req2.getJobQueue() == 'queue1'
+        req2.getJobDefinition() == 'job-def:1'
+        req2.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
+        req2.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
+        req2.getContainerOverrides().getCommand().join(' ') == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws s3 cp --only-show-errors --sse AES256 --debug .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws s3 cp --only-show-errors --sse AES256 --debug s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()].join(' ')
+
+
+    }
+
 
     def 'should set accelerator' () {
         given:

@@ -45,7 +45,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
         return this
     }
 
-    S3BashLib withDebug(boolean  value) {
+    S3BashLib withDebug(Boolean  value) {
         this.debug = value ? '--debug ' : ''
         return this
     }
@@ -115,6 +115,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
                 .withStorageClass(opts.storageClass )
                 .withStorageEncryption( opts.storageEncryption )
                 .withRetryMode( opts.retryMode )
+                .withDebug( opts.debug )
     }
 
     static String script(AwsOptions opts) {
