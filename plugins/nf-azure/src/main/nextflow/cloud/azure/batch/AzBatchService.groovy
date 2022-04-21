@@ -349,10 +349,14 @@ class AzBatchService implements Closeable {
         config.storage().getFileShares().each {
             volumes += " -v ${mountPath}/${it.key}:${it.value.mountPath}:rw"
         }
+        // container settings
+        def opts = "-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro ${volumes} "
+        if( task.config.getContainerOptions() )
+            opts += "${task.config.getContainerOptions()} "
         final containerOpts = new TaskContainerSettings()
                 .withImageName(container)
                 // mount host certificates otherwise `azcopy` fails
-                .withContainerRunOptions("-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro ${volumes} ")
+                .withContainerRunOptions(opts)
 
         final slots = computeSlots(task, pool)
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
