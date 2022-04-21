@@ -38,8 +38,9 @@ class BatchClient {
     protected BatchClient() {}
 
     protected String getToken() {
-        if( System.getenv('GOOGLE_ACCESS_TOKEN') ) {
-            return System.getenv('GOOGLE_ACCESS_TOKEN')
+        // only for debugging purpose
+        if( System.getenv('_GOOGLE_ACCESS_TOKEN') ) {
+            return System.getenv('_GOOGLE_ACCESS_TOKEN')
         }
         // use native API
         credentials.refreshIfExpired()
