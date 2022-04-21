@@ -115,6 +115,7 @@ Advanced client configuration options can be set by using the ``client`` attribu
 =========================== ================
 Name                        Description
 =========================== ================
+anonymous                   Allow the access of public S3 buckets without the need to provide AWS credentials. Any service that does not accept unsigned requests will return a service access error.
 s3Acl                       Allow the setting of a predefined bucket permissions also known as *canned ACL*. Permitted values are ``Private``, ``PublicRead``, ``PublicReadWrite``, ``AuthenticatedRead``, ``LogDeliveryWrite``, ``BucketOwnerRead``, ``BucketOwnerFullControl`` and ``AwsExecRead``. See `Amazon docs <https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl>`_ for details.
 connectionTimeout           The amount of time to wait (in milliseconds) when initially establishing a connection before giving up and timing out.
 endpoint                    The AWS S3 API entry point e.g. `s3-us-west-1.amazonaws.com`.
@@ -132,10 +133,10 @@ socketTimeout               The amount of time to wait (in milliseconds) for dat
 storageEncryption           The S3 server side encryption to be used when saving objects on S3 (currently only AES256 is supported)
 userAgent                   The HTTP user agent header passed with all HTTP requests.
 uploadMaxThreads            The maximum number of threads used for multipart upload.
-uploadChunkSize             The size of a single part in a multipart upload (default: `10 MB`).
+uploadChunkSize             The size of a single part in a multipart upload (default: `20 MB`).
 uploadStorageClass          The S3 storage class applied to stored objects, one of [`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`] (default: `STANDARD`).
 uploadMaxAttempts           The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
-uploadRetrySleep            The time to wait after a failed upload attempt to retry the part upload (default: `100ms`).
+uploadRetrySleep            The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
 =========================== ================
 
 For example::
