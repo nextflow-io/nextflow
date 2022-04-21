@@ -103,12 +103,13 @@ class GoogleBatchTaskHandler extends TaskHandler {
             spec.withMaxRunDuration(task.config.getTime() )
 
         // task spec
-        final cmd = "trap \"{ cp ${TaskRun.CMD_LOG} ${launcher.workDirMount}/${TaskRun.CMD_LOG}; }\" ERR; exec bash ${launcher.workDirMount}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
+        final cmd = "trap \"{ cp ${TaskRun.CMD_LOG} ${launcher.workDirMount}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${launcher.workDirMount}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
         final container = new TaskContainer()
                 .withImageUri(task.container)
                 .withCommands(['/bin/bash','-o','pipefail','-c', cmd.toString()])
                 // note: container must mount the base work directory
                 .withVolumes(launcher.getContainerMounts())
+                .withOptions(task.config.getContainerOptions())
 
         spec.addRunnable(new TaskRunnable(container: container))
                 .withVolumes(launcher.getTaskVolumes())

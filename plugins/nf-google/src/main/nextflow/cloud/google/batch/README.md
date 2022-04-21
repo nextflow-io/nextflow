@@ -113,6 +113,11 @@ curl --header "Content-Type: application/json" \
 
 curl --header "Content-Type: application/json" \
     --header "Authorization: Bearer $GOOGLE_ACCESS_TOKEN" \
+    https://batch.googleapis.com/v1alpha1/projects/${ProjectID}/locations/${Location}/jobs/nf-65de8a72-1650572558926
+
+
+curl --header "Content-Type: application/json" \
+    --header "Authorization: Bearer $GOOGLE_ACCESS_TOKEN" \
     https://batch.googleapis.com/v1alpha1/projects/${ProjectID}/locations/${Location}/jobs?job_id=SOME_TASK_ID \
     --data @run.json
 
