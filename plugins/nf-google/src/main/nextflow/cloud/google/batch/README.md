@@ -2,11 +2,15 @@
 
 ### Get started 
 
-0. Setup access token 
+0. Setup creds 
 
 ```
-export GOOGLE_ACCESS_TOKEN=$(gcloud auth print-access-token)
+unset GOOGLE_APPLICATION_CREDENTIAL
+unset GOOGLE_ACCESS_TOKEN
+export SUPPRESS_GCLOUD_CREDS_WARNING=true
+gcloud auth application-default login
 ```
+
 
 1. Create this config file 
 
@@ -15,9 +19,13 @@ cat <<EOT > google.config
 params.transcriptome = 'gs://rnaseq-nf/data/ggal/transcript.fa'
 params.reads = 'gs://rnaseq-nf/data/ggal/gut_{1,2}.fq'
 params.multiqc = 'gs://rnaseq-nf/multiqc'
+params.outdir = 'gs://rnaseq-nf/results/rnaseq'
+
 process.executor = 'google-batch'
+process.container = 'quay.io/nextflow/rnaseq-nf:v1.1'
 workDir = 'gs://rnaseq-nf/scratch'
-google.region  = 'us-central1'
+
+google.project = 'my-nf-project-261815'
 EOT
 ```
     
