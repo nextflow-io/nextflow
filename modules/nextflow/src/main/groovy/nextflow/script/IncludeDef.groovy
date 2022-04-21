@@ -17,6 +17,9 @@
 
 package nextflow.script
 
+import nextflow.extension.ChannelExtensionDelegate
+import nextflow.plugin.Plugins
+
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -108,6 +111,10 @@ class IncludeDef {
      */
     void load0(ScriptBinding.ParamsMap ownerParams) {
         checkValidPath(path)
+        if( path.toString().startsWith('plugin/')){
+            loadPlugin0(ownerParams)
+            return
+        }
         // -- resolve the concrete against the current script
         final moduleFile = realModulePath(path)
         // -- load the module
@@ -186,10 +193,18 @@ class IncludeDef {
             throw new IllegalModulePath("Remote modules are not allowed -- Offending module: ${path.toUriString()}")
 
         final str = path.toString()
-        if( !str.startsWith('/') && !str.startsWith('./') && !str.startsWith('../') )
+        if( !str.startsWith('/') && !str.startsWith('./') && !str.startsWith('../') && !str.startsWith('plugin/') )
             throw new IllegalModulePath("Module path must start with / or ./ prefix -- Offending module: $str")
 
     }
 
+    @PackageScope
+    void loadPlugin0(ScriptBinding.ParamsMap ownerParams){
+        final pluginId = path.toString().split('/').last()
+        log.info "starting plugin $pluginId"
+        Plugins.startIfMissing(pluginId)
+        Map<String, String> alias = this.modules.collectEntries {[it.name, it.alias ?: it.name]}
+        ChannelExtensionDelegate.INSTANCE().loadChannelExtensionInPlugin(pluginId, alias)
+    }
 
 }

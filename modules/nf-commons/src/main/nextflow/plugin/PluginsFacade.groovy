@@ -232,6 +232,23 @@ class PluginsFacade implements PluginStateListener {
     }
 
     /**
+     * Return a list of extension matching the requested interface type in a plugin
+     *
+     * @param type
+     *      The request extension interface
+     * @return
+     *      The list of extensions matching the requested interface.
+     */
+    def <T> List<T> getExtensions(Class<T> type, String pluginId) {
+        if( manager ) {
+            return manager.getExtensions(type, pluginId)
+        }
+        else {
+            return List.of()
+        }
+    }
+
+    /**
      * Return a list of extension matching the requested type
      * ordered by a priority value. The element at the beginning
      * of the list (index 0) has higher priority

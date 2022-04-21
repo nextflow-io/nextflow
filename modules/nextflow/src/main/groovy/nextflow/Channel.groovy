@@ -17,6 +17,8 @@
 
 package nextflow
 
+import nextflow.extension.ChannelExtensionDelegate
+
 import static nextflow.util.CheckHelper.*
 
 import java.nio.file.FileSystem
@@ -66,9 +68,11 @@ class Channel  {
     private static CompletableFuture fromPath0Future
 
     static private Session getSession() { Global.session as Session }
-    
 
-    /**
+    static def $static_methodMissing(String name, Object args) {
+        ChannelExtensionDelegate.INSTANCE().invokeFactoryExtensionMethod(name, args as Object[])
+    }
+/**
      * Create an new channel
      *
      * @return The channel instance

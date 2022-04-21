@@ -36,5 +36,7 @@ dependencies {
 
     /* testImplementation inherited from top gradle build file */
     testImplementation(testFixtures(project(":nextflow")))
+    testImplementation("org.codehaus.groovy:groovy-sql:3.0.10")
+    testImplementation('com.h2database:h2:1.4.200')
 }
 

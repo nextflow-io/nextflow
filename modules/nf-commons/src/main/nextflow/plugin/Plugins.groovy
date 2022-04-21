@@ -64,6 +64,11 @@ class Plugins {
         return allExtensions ? allExtensions.first() : null
     }
 
+    static <T> List<T> getExtensionsInPluginId(Class<T> type, String pluginId) {
+        final allExtensions = INSTANCE.getExtensions(type, pluginId)
+        return allExtensions
+    }
+
     static void pull(List<String> ids) {
         INSTANCE.pullPlugins(ids)
     }

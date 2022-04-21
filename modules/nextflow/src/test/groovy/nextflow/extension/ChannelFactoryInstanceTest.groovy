@@ -107,6 +107,33 @@ class ChannelFactoryInstanceTest extends Specification {
         ChannelExtensionDelegate.reset()
     }
 
+    def 'should invoke alias in custom plugin factory' () {
+        given:
+        def ext1 = new Ext1(); def ext2 = new Ext2()
+        new ChannelExtensionDelegate().install().loadChannelExtension(ext1, ['alpha':'thisIsAnAliasToAlpha'])
+        and:
+        def SCRIPT = '''
+        Channel.thisIsAnAliasToAlpha(['one','two','three'])
+        '''
+
+        when:
+        def runner = new MockScriptRunner()
+        def result = runner.setScript(SCRIPT).execute()
+        then:
+        result.val == 'one'
+        result.val == 'two'
+        result.val == 'three'
+        result.val == Channel.STOP
+        and:
+        ext1.initCount == 1
+        ext1.initSession instanceof Session
+        and:
+        ext2.initCount == 0
+        ext2.initSession == null
+
+        cleanup:
+        ChannelExtensionDelegate.reset()
+    }
 
     def 'should invoke multiple extensions' () {
         given:

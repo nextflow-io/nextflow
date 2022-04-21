@@ -71,7 +71,7 @@ class ChannelFactoryInstance implements ChannelFactory {
     @Override
     Object invokeExtensionMethod(String method, Object[] args) {
         def result = invoke0(method,args)
-        NodeMarker.addSourceNode("channel.${this.scope}.${method}", result)
+        NodeMarker.addSourceNode(scope ? "channel.${this.scope}.${method}" : "channel.${method}", result)
         return result
     }
 
@@ -92,7 +92,7 @@ class ChannelFactoryInstance implements ChannelFactory {
         @Override
         String getMessage() {
             return "No signature of method: " +
-                    "Channel.${this.scope}.${method}" +
+                    (scope ? "Channel.${this.scope}.${method}" : "Channel.${method}" )+
                     "() is applicable for argument types: (" +
                     InvokerHelper.toTypeString(arguments, 60) +
                     ") values: " +

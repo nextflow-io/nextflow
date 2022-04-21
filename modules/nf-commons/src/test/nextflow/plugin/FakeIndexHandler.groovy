@@ -24,6 +24,17 @@ class FakeIndexHandler implements HttpHandler {
             ]
           },
           {
+            "id": "nf-sqldb",
+            "releases": [
+              {
+                "version": "0.4.0",
+                "url": "http://localhost:9900/download/1.0.0/nf-sqldb-0.4.0.zip",
+                "date": "2021-01-04T17:49:04.62+01:00",
+                "sha512sum": "0b03065725c9e75525d5d07e63c461df61e00aaf9f0ffafcf45161ae3648f751c32b7ded64b0c8fda68016910f7b230051a6cc9a5864fbc486ea9b0c953c40ba"
+              }
+            ]
+          },
+          {
             "id": "nf-amazon",
             "releases": [
               {
@@ -60,6 +71,7 @@ class FakeIndexHandler implements HttpHandler {
 '''
 
     File zip = new File('src/testResources/nf-console-1.0.0.zip')
+    File zipDb = new File('src/testResources/nf-sqldb-0.4.0.zip')
 
     @Override
     void handle(HttpExchange request) throws IOException {
@@ -70,6 +82,9 @@ class FakeIndexHandler implements HttpHandler {
         }
         else if( path.endsWith(zip.name)) {
             replyWithZip(request, zip)
+        }
+        else if( path.endsWith(zipDb.name)) {
+            replyWithZip(request, zipDb)
         }
         else {
             new IllegalArgumentException("Invalid request: $path")
