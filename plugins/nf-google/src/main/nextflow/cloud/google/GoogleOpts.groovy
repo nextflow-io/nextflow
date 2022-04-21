@@ -32,18 +32,18 @@ import nextflow.exception.AbortOperationException
 @CompileStatic
 class GoogleOpts {
 
+    static final String DEFAULT_LOCATION = 'us-central1'
+
     static Map<String,String> env = System.getenv()
 
     private String projectId
-    private List<String> zones
-    private List<String> regions
     private String location
     private File credsFile
     private boolean enableRequesterPaysBuckets
 
     String getProjectId() { projectId }
     File getCredsFile() { credsFile }
-    String getLocation() { location }
+    String getLocation() { location ?: DEFAULT_LOCATION }
     boolean getEnableRequesterPaysBuckets() { enableRequesterPaysBuckets }
 
     @Memoized
@@ -60,21 +60,11 @@ class GoogleOpts {
     protected static GoogleOpts fromSession0(Map config) {
         final result = new GoogleOpts()
         result.projectId = config.navigate("google.project") as String
-
-        //check if we have one of the mutual exclusive zone or region specified
-        if(!config.navigate("google.zone") && !config.navigate("google.region")){
-            throw new AbortOperationException("Missing configuration value 'google.zone' or 'google.region'")
-        }
-
-        //check if we have one of the mutual exclusive zone or region specified
-        if(config.navigate("google.zone") && config.navigate("google.region")){
-            throw new AbortOperationException("You can't specify both 'google.zone' and 'google.region' configuration parameters -- Please remove one of them from your configuration")
-        }
-
-        result.zones = (config.navigate("google.zone") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
-        result.regions = (config.navigate("google.region") as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
-        result.location = config.navigate("google.location") as String ?: fallbackToRegionOrZone(result.regions, result.zones)
+        result.location = config.navigate("google.location") as String
         result.enableRequesterPaysBuckets = config.navigate('google.enableRequesterPaysBuckets') as boolean
+
+        if( result.enableRequesterPaysBuckets && !result.projectId )
+            throw new IllegalArgumentException("Config option 'google.enableRequesterPaysBuckets' cannot be honoured because the Google project Id has not been specified - Provide it by adding the option 'google.project' in the nextflow.config file")
 
         return result
     }
@@ -126,20 +116,4 @@ class GoogleOpts {
         return config
     }
 
-    static String fallbackToRegionOrZone(List<String> regions, List<String> zones) {
-        if( regions ) {
-            return bestLocationForRegion(regions[0])
-        }
-        if( zones ) {
-            def norm = zones
-                    .collect { int p = zones[0].lastIndexOf('-'); p!=-1 ? it.substring(0,p) : it }
-                    .unique()
-            return bestLocationForRegion(norm[0])
-        }
-        throw new AbortOperationException("Missing Google region or zone information")
-    }
-
-    static String bestLocationForRegion(String region) {
-        region.startsWith('europe-') ? 'europe-west2' : 'us-central1'
-    }
 }
