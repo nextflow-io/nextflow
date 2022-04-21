@@ -11,6 +11,14 @@ export SUPPRESS_GCLOUD_CREDS_WARNING=true
 gcloud auth application-default login
 ```
 
+- OR - use the GOOGLE_APPLICATION_CREDENTIAL file making sure that the service account has the right permissions 
+
+```
+gcloud projects \
+  add-iam-policy-binding my-nf-project-261815  \
+  --member serviceAccount:770252724889-compute@developer.gserviceaccount.com \
+  --role roles/batch.jobsAdmin
+```
 
 1. Create this config file 
 
