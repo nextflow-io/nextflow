@@ -1,9 +1,6 @@
 set -e
 
-#
-# run normal mode
-#
-$NXF_RUN | tee .stdout
+$NXF_RUN -process.scratch true -process.stageOutMode move | tee .stdout
 sort .stdout > .stdoutSorted
 
 diff -u .stdoutSorted .expected || false
