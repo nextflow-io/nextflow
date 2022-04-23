@@ -381,7 +381,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptRuntimeException)
-        err.message == "Access to 'foo.out' is undefined since process doesn't declare any output"
+        err.message == "Access to 'foo.out' is undefined since the process 'foo' has not been invoked before accessing the output attribute"
     }
 
     def 'should report error accessing undefined out/b' () {
@@ -403,7 +403,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptRuntimeException)
-        err.message == "Access to 'foo.out' is undefined since process doesn't declare any output"
+        err.message == "Access to 'foo.out' is undefined since the process 'foo' has not been invoked before accessing the output attribute"
     }
 
     def 'should report error accessing undefined out/c' () {
@@ -425,7 +425,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptRuntimeException)
-        err.message == "Access to 'flow1.out' is undefined since workflow doesn't declare any output"
+        err.message == "Access to 'flow1.out' is undefined since the workflow 'flow1' doesn't declare any output"
     }
 
     def 'should report error accessing undefined out/d' () {
@@ -454,6 +454,26 @@ class ScriptDslTest extends Dsl2Spec {
         err.message == "Process `bar` declares 1 input channel but 0 were specified"
     }
 
+    def 'should report error accessing undefined out/e' () {
+        when:
+        dsl_eval('''
+        process foo {
+          /echo foo/
+        }
+        
+        workflow flow1 {
+            foo()
+        }
+        
+        workflow {
+          flow1.out.view()
+        }
+        ''')
+
+        then:
+        def err = thrown(ScriptRuntimeException)
+        err.message == "Access to 'flow1.out' is undefined since the workflow 'flow1' has not been invoked before accessing the output attribute"
+    }
 
     def 'should report unsupported error' () {
         when:
