@@ -149,11 +149,10 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     ProcessConfig getProcessConfig() { processConfig }
 
     ChannelOut getOut() {
-        if(!output)
-            throw new ScriptRuntimeException(
-                "Access to '${processName}.out' is undefined since process '$processName' doesn't declare any output " +
-                        "or it was not executed (review your script is calling it with '$processName()')"
-            )
+        if( output==null )
+            throw new ScriptRuntimeException("Access to '${processName}.out' is undefined since the process '$processName' has not been invoked before accessing the output attribute")
+        if( output.size()==0 )
+            throw new ScriptRuntimeException("Access to '${processName}.out' is undefined since the process '$processName' doesn't declare any output")
         return output
     }
 
