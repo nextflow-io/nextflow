@@ -496,7 +496,7 @@ For example::
 To pull images from the Singularity Hub or a third party Docker registry simply prefix the image name
 with the ``shub://``, ``docker://`` or ``docker-daemon://`` pseudo-protocol as required by the Singularity tool. For example::
 
-    process.container = 'shub://quay.io/biocontainers/multiqc:1.3--py35_2'
+    process.container = 'docker://quay.io/biocontainers/multiqc:1.3--py35_2'
     singularity.enabled = true
 
 You do not need to specify ``docker://`` to pull from a Docker repository.
