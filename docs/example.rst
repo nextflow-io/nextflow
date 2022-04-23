@@ -25,7 +25,6 @@ The process that follows, receives these files and it simply `reverses` their co
     </style>
     <script src="https://gist.github.com/pditommaso/92fea4525cd66c286904.js"></script>
 
-
 In more detail:
 
 * line 1: The script starts with a `shebang <http://en.wikipedia.org/wiki/Shebang_(Unix)>`_ declaration. This allows you
@@ -42,11 +41,11 @@ In more detail:
 
 * lines 8-20: The process that splits the provided file.
 
-* line 10: Opens the `input` declaration block. The lines following this clause are interpreted as input definitions.
+* line 10: Opens the ``input`` declaration block. The lines following this clause are interpreted as input definitions.
 
 * line 11: Defines the process input file. This file is received from the variable ``sequences`` and will be named ``input.fa``.
 
-* line 13: Opens the `output` declaration block. Lines following this clause are interpreted as output definitions.
+* line 13: Opens the ``output`` declaration block. Lines following this clause are interpreted as output definitions.
 
 * line 14: Defines that the process output files whose names match the pattern ``seq_*``. These files are sent over the
   channel ``records``.
@@ -56,11 +55,11 @@ In more detail:
 * lines 22-33: Defines the second process, that receives the splits produced by the previous process and reverses their
   content.
 
-* line 24: Opens the `input` declaration block. Lines following this clause are interpreted as input definitions.
+* line 24: Opens the ``input`` declaration block. Lines following this clause are interpreted as input definitions.
 
 * line 25: Defines the process input file. This file is received through the channel ``records``.
 
-* line 27: Opens the `output` declaration block. Lines following this clause are interpreted as output definitions.
+* line 27: Opens the ``output`` declaration block. Lines following this clause are interpreted as output definitions.
 
 * line 28: The `standard output` of the executed script is declared as the process output. This output is sent over the
   channel ``result``.
@@ -69,28 +68,25 @@ In more detail:
 
 * line 35: Prints a `result` each time a new item is received on the ``result`` channel.
 
+.. tip::
+  The above example can manage only a single file at a time. If you want to execute it for multiple files,
+  you will need to launch it several times.
 
-.. tip:: The above example can manage only a single file at a time. If you want to execute it for two (or more) different files
-   you will need to launch it several times.
-
-   It is possible to modify it in such a way that it can handle any number of input files, as shown below.
-
+  It is possible to modify it in such a way that it can handle any number of input files, as shown below.
 
 In order to make the above script able to handle any number of files simply replace `line 3` with the following line::
 
   sequences = Channel.fromPath(params.in)
 
-
 By doing this the ``sequences`` variable is assigned to the channel created by the :ref:`channel-path` method. This
 channel emits all the files that match the pattern specified by the parameter ``params.in``.
 
-Given that you saved the script to a file named ``example.nf`` and you have a list of `FASTA` files in a folder
+Given that you saved the script to a file named ``example.nf`` and you have a list of ``FASTA`` files in a folder
 named ``dataset/``, you can execute it by entering this command::
 
   nextflow example.nf --in 'dataset/*.fa'
 
-
-.. warning:: Make sure you enclose the ``dataset/*.fa`` parameter value in single-quotation characters,
+.. warning:: Make sure you enclose the ``dataset/*.fa`` parameter value in quotes,
   otherwise the Bash environment will expand the ``*`` symbol to the actual file names and the example won't work.
 
 More examples

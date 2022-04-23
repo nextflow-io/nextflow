@@ -13,12 +13,14 @@ A channel has two major properties:
 
 #. Receiving data is a blocking operation which stops the receiving process until the message has arrived.
 
+
 .. _channel-types:
 
 Channel types
 =============
 
 Nextflow distinguish two different kinds of channels: `queue channels` and `value channels`.
+
 
 .. _channel-type-queue:
 
@@ -32,12 +34,14 @@ or chaining it with a channel operator such as :ref:`operator-map`, :ref:`operat
 
 Queue channels are also created by process output declarations using the ``into`` clause.
 
-.. note:: The definition implies that the same queue channel cannot be used more than one time as process
- output and more than one time as process input.
+.. note::
+  The definition implies that a queue channel can only be used once as a process
+  output and once as a process input.
 
 If you need to connect a process output channel to more than one process or operator use the
 :ref:`operator-into` operator to create two (or more) copies of the same channel and use each
 of them to connect a separate process.
+
 
 .. _channel-type-value:
 
@@ -47,14 +51,14 @@ Value channel
 A `value channel` a.k.a. *singleton channel* by definition is bound to a single value and it can be read
 unlimited times without consuming its content.
 
-.. tip:: For this reason a value channel can be used as input by more than one process.
+.. note:: For this reason a value channel can be used as input by more than one process.
 
 A value channel is created using the `value`_ factory method or by operators returning
 a single value, such us :ref:`operator-first`, :ref:`operator-last`, :ref:`operator-collect`,
 :ref:`operator-count`, :ref:`operator-min`, :ref:`operator-max`, :ref:`operator-reduce`, :ref:`operator-sum`.
 
-
-.. note:: A value channel is implicitly created by a process when an input specifies a simple value
+.. note::
+  A value channel is implicitly created by a process when an input specifies a simple value
   in the ``from`` clause.
   Moreover, a value channel is also implicitly created as output for a process whose
   inputs are only value channels.
@@ -64,6 +68,7 @@ For example::
     process foo {
       input:
       val x from 1
+
       output:
       file 'x.txt' into result
 
@@ -76,6 +81,7 @@ The process in the above snippet declares a single input which implicitly is a v
 Therefore also the ``result`` output is a value channel that can be read by more than one process.
 
 See also: :ref:`process-understand-how-multiple-input-channels-work`.
+
 
 .. _channel-factory:
 
@@ -97,9 +103,10 @@ The available factory methods are:
 * `value`_
 * `watchPath`_
 
-.. tip::
+.. note::
   As of version 20.07.0 the prefix ``channel.`` has been introduced as an alias of ``Channel.``, therefore factory
-  methods can be used either with the syntaxes ``channel.from()`` and ``Channel.from()``, and so on.
+  methods can be specified either as ``channel.from()`` or ``Channel.from()``, and so on.
+
 
 .. _channel-create:
 
@@ -107,7 +114,7 @@ create
 ------
 
 .. warning::
-    This method is deprecated and won't be available in DSL2 syntax.
+    This method is deprecated and is no longer available in DSL2 syntax.
 
 Creates a new `channel` by using the ``create`` method, as shown below::
 
@@ -133,11 +140,7 @@ specified as a parameter in the ``of`` method. Thus the second line prints the f
     value: 5
     value: 7
 
-
-.. tip::
-    Range of values are expanded accordingly.
-
-::
+Ranges of values are expanded accordingly::
 
     Channel
         .of(1..23, 'X', 'Y')
@@ -159,14 +162,15 @@ Prints::
 
 See also: `fromList`_ factory method.
 
+
 .. _channel-from:
 
 from
 ----
 
 .. warning::
-  This method is deprecated and should only be used for backward compatibility in legacy code.
-  Use `of`_ or `fromList`_ instead.
+    This method is deprecated and should only be used for backward compatibility in legacy code.
+    Use `of`_ or `fromList`_ instead.
 
 The ``from`` method allows you to create a channel emitting any sequence of values that are specified as the method argument,
 for example::
@@ -182,17 +186,15 @@ specified as a parameter in the ``from`` method. Thus the second line will print
     value: 5
     value: 7
 
-
 The following example shows how to create a channel from a `range` of numbers or strings::
 
     zeroToNine = Channel.from( 0..9 )
     strings = Channel.from( 'A'..'Z' )
 
-
-
-.. note:: Note that when the ``from`` argument is an object implementing the (Java)
+.. note::
+  When the ``from`` argument is an object implementing the (Java)
   `Collection <http://docs.oracle.com/javase/7/docs/api/java/util/Collection.html>`_ interface, the resulting channel
-  emits the collection entries as individual emissions.
+  emits the collection entries as individual items.
 
 Thus the following two declarations produce an identical result even tough in the first case the items are specified
 as multiple arguments while in the second case as a single list object argument::
@@ -200,12 +202,10 @@ as multiple arguments while in the second case as a single list object argument:
     Channel.from( 1, 3, 5, 7, 9 )
     Channel.from( [1, 3, 5, 7, 9] )
 
-
 But when more than one argument is provided, they are always managed as `single` emissions. Thus, the following example
 creates a channel emitting three entries each of which is a list containing two elements::
 
     Channel.from( [1, 2], [5,6], [7,9] )
-
 
 
 .. _channel-value:
@@ -213,14 +213,12 @@ creates a channel emitting three entries each of which is a list containing two 
 value
 -----
 
-The `value` factory method is used to create a *value* channel. An optional not ``null`` argument
+The ``value`` factory method is used to create a *value* channel. An optional not ``null`` argument
 can be specified to bind the channel to a specific value. For example::
-
 
     expl1 = Channel.value()
     expl2 = Channel.value( 'Hello there' )
     expl3 = Channel.value( [1,2,3,4,5] )
-
 
 The first line in the example creates an 'empty' variable. The second line creates a channel and binds a string to it.
 Finally the last one creates a channel and binds a list object to it that will be emitted as a sole emission.
@@ -245,11 +243,11 @@ Prints::
     value: c
     value: d
 
-
 See also: `of`_ factory method.
 
 .. note::
-  This feature requires Nextflow version 19.10.0 of later.
+  This feature requires Nextflow version 19.10.0 or later.
+
 
 .. _channel-path:
 
@@ -261,16 +259,16 @@ as an argument. For example::
 
     myFileChannel = Channel.fromPath( '/data/some/bigfile.txt' )
 
-The above line creates a channel and binds to it a `Path <http://docs.oracle.com/javase/7/docs/api/java/nio/file/Path.html>`_
-item referring the specified file.
+The above line creates a channel and binds it to a `Path <http://docs.oracle.com/javase/7/docs/api/java/nio/file/Path.html>`_
+object for the specified file.
 
-.. note:: It does not check the file existence.
+.. note::
+    ``fromPath`` does not check whether the file exists.
 
 Whenever the ``fromPath`` argument contains a ``*`` or ``?`` wildcard character it is interpreted as a `glob`_ path matcher.
 For example::
 
     myFileChannel = Channel.fromPath( '/data/big/*.txt' )
-
 
 This example creates a channel and emits as many ``Path`` items as there are files with ``txt`` extension in the ``/data/big`` folder.
 
@@ -287,14 +285,14 @@ The first line returns a channel emitting the files ending with the suffix ``.fa
 in all its sub-folders. While the second one only emits the files which have the same suffix in `any` sub-folder in the ``data`` path.
 Finally the last example emits two files: ``data/file_1.fq`` and ``data/file_2.fq``.
 
-.. note:: As in Linux Bash the ``*`` wildcard does not match against hidden files (i.e. files whose name start with a ``.`` character).
+.. note::
+    As in Linux Bash, the ``*`` wildcard does not catch hidden files (i.e. files whose name starts with a ``.`` character).
 
 In order to include hidden files, you need to start your pattern with a period character or specify the ``hidden: true`` option. For example::
 
     expl1 = Channel.fromPath( '/path/.*' )
     expl2 = Channel.fromPath( '/path/.*.fa' )
     expl3 = Channel.fromPath( '/path/*', hidden: true )
-
 
 The first example returns all hidden files in the specified path. The second one returns all hidden files
 ending with the ``.fa`` suffix. Finally the last example returns all files (hidden and non-hidden) in that path.
@@ -305,12 +303,11 @@ it won't return directory paths.
 You may use the parameter ``type`` specifying the value ``file``, ``dir`` or ``any`` in order to define what kind of paths
 you want. For example::
 
-        myFileChannel = Channel.fromPath( '/path/*b', type: 'dir' )
-        myFileChannel = Channel.fromPath( '/path/a*', type: 'any' )
+    myFileChannel = Channel.fromPath( '/path/*b', type: 'dir' )
+    myFileChannel = Channel.fromPath( '/path/a*', type: 'any' )
 
 The first example will return all `directory` paths ending with the ``b`` suffix, while the second will return any file
 and directory starting with a ``a`` prefix.
-
 
 =============== ===================
 Name            Description
@@ -324,11 +321,11 @@ relative        When ``true`` returned paths are relative to the top-most common
 checkIfExists   When ``true`` throws an exception of the specified path do not exist in the file system (default: ``false``)
 =============== ===================
 
-.. note:: More than one path or glob pattern can be specified using a list as argument::
+.. note::
+  Multiple paths or glob patterns can be specified using a list::
 
       Channel.fromPath( ['/some/path/*.fq', '/other/path/*.fastq'] )
 
-  (requires version 0.31.x or later)
 
 .. _channel-filepairs:
 
@@ -352,9 +349,8 @@ It will produce an output similar to the following::
     [SRR493370, [/my/data/SRR493370_1.fastq, /my/data/SRR493370_2.fastq]]
     [SRR493371, [/my/data/SRR493371_1.fastq, /my/data/SRR493371_2.fastq]]
 
-
 .. note::
-    The glob pattern must contain at least a star wildcard character.
+    The glob pattern must contain at least one ``*`` wildcard character.
 
 Alternatively it is possible to implement a custom file pair grouping strategy providing a closure which,
 given the current file as parameter, returns the grouping key.
@@ -363,7 +359,6 @@ For example::
     Channel
         .fromFilePairs('/some/data/*', size: -1) { file -> file.extension }
         .view { ext, files -> "Files with the extension $ext are $files" }
-
 
 Table of optional parameters available:
 
@@ -379,11 +374,10 @@ flat            When ``true`` the matching files are produced as sole elements i
 checkIfExists   When ``true`` throws an exception of the specified path do not exist in the file system (default: ``false``)
 =============== ===================
 
-.. note:: More than one glob pattern can be specified using a list as argument::
+.. note::
+  Multiple glob patterns can be specified using a list::
 
       Channel.fromFilePairs( ['/some/data/SRR*_{1,2}.fastq', '/other/data/QFF*_{1,2}.fastq'] )
-
-  (requires version 0.31.x or later)
 
 
 .. _channel-fromsra:
@@ -397,7 +391,6 @@ the FASTQ files matching the specified criteria i.e project or accession number(
     Channel
         .fromSRA('SRP043510')
         .view()
-
 
 It returns::
 
@@ -422,11 +415,12 @@ Multiple accession IDs can be specified using a list object::
     [ERR908506, [ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908506/ERR908506_1.fastq.gz, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908506/ERR908506_2.fastq.gz]]
     [ERR908505, [ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908505/ERR908505_1.fastq.gz, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908505/ERR908505_2.fastq.gz]]
 
+.. note::
+  Each read pair is implicitly managed and returned as a list of files.
 
-.. note:: Read pairs are implicitly managed are returned as a list of files.
-
-.. tip:: Behind the scene it's uses the NCBI `ESearch <https://www.ncbi.nlm.nih.gov/books/NBK25499/#chapter4.ESearch>`_
-  API, therefore the ``fromSRA`` method allows the usage of any query term supported by this API.
+.. tip::
+  This method uses the NCBI `ESearch <https://www.ncbi.nlm.nih.gov/books/NBK25499/#chapter4.ESearch>`_
+  API behind the scenes, therefore it allows the use of any query term supported by this API.
 
 Table of optional parameters available:
 
@@ -439,7 +433,6 @@ max             Maximum number of entries that can be retried (default: unlimite
 protocol        Allow choosing the protocol for the resulting remote URLs. Available choices: ``ftp``, ``http``, ``https`` (default: ``ftp``).
 =============== ===================
 
-
 To access the NCBI search service the `NCBI API keys <https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities>`_
 should be provided either:
 
@@ -447,6 +440,7 @@ should be provided either:
 * Exporting the ``NCBI_API_KEY`` variable in your environment e.g. ``export NCBI_API_KEY=0123456789abcdef``.
 
 .. note:: This feature requires Nextflow version 19.04.0 or later.
+
 
 .. _channel-watch:
 
@@ -464,7 +458,6 @@ For example::
         .watchPath( '/path/*.fa' )
         .subscribe { println "Fasta file: $it" }
 
-
 By default it watches only for new files created in the specified folder. Optionally, it is possible to provide a
 second argument that specifies what event(s) to watch. The supported events are:
 
@@ -478,13 +471,14 @@ Name        Description
 
 You can specified more than one of these events by using a comma separated string as shown below::
 
-     Channel
+    Channel
         .watchPath( '/path/*.fa', 'create,modify' )
         .subscribe { println "File created or modified: $it" }
 
-
-.. warning:: The ``watchPath`` factory waits endlessly for files that match the specified pattern and event(s).
-  Thus, whenever you use it in your script, the resulting pipeline will never finish.
+.. warning::
+    The ``watchPath`` factory waits endlessly for files that match the specified pattern and event(s),
+    which means that it will cause your pipeline to run forever. Consider using the ``until`` operator
+    to close the channel when a certain condition is met (e.g. receiving a file named ``DONE``).
 
 See also: `fromPath`_ factory method.
 
@@ -523,12 +517,11 @@ For example::
 operator <<
 -----------
 
-The operator ``<<`` is just a syntax sugar for the `bind` method. Thus, the following example produce
+The operator ``<<`` is just a syntax sugar for the ``bind`` method. Thus, the following example produce
 an identical result as the previous one::
 
     myChannel = Channel.create()
     myChannel << 'Hello world'
-
 
 
 Observing events
@@ -556,9 +549,8 @@ The emitted value is passed implicitly to the specified function. For example::
     Got: beta
     Got: delta
 
-
-.. note:: Formally the user defined function is a ``Closure`` as defined by the Groovy programming language on which
-  the `Nextflow` scripts are based.
+.. note::
+  In Groovy, the language on which Nextflow is based, the user defined function is called a "closure".
 
 If needed the closure parameter can be defined explicitly, using a name other than ``it`` and, optionally,
 specifying the expected value type, as shown in the following example::
@@ -567,7 +559,7 @@ specifying the expected value type, as shown in the following example::
         .from( 'alpha', 'beta', 'lambda' )
         .subscribe { String str ->
             println "Got: ${str}; len: ${str.size()}"
-         }
+        }
 
 ::
 
@@ -592,7 +584,6 @@ The ``subscribe`` method may accept one or more of the following event handlers:
   ``onNext`` event. It will not make further calls to ``onNext`` or ``onComplete``.
   The ``onError`` method takes as its parameter the ``Throwable`` that caused the error.
 
-
 For example::
 
     Channel
@@ -605,7 +596,5 @@ For example::
     2
     3
     Done
-
-
 
 .. _glob: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob

@@ -24,7 +24,7 @@ making use of user namespaces in the Linux kernel. Charliecloud is able to pull 
     This feature requires Nextflow version ``21.03.0-edge`` or later and Charliecloud ``v0.22`` or later.
 
 .. warning::
-    This is an incubating feature. The use in production environment is not recommended.
+    This feature is experimental. Using it in a production environment is not recommended.
 
 Prerequisites
 -------------
@@ -44,9 +44,10 @@ Every time your script launches a process execution, Nextflow will run it into a
 specified container image. In practice Nextflow will automatically wrap your processes and run them by executing the ``ch-run``
 command with the container you have provided.
 
-.. note:: A container image can contain any tool or piece of software you may need to carry out a process execution. Moreover the
-  container is run in such a way that the process result files are created in the hosting file system, thus
-  it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
+.. note::
+    A container image can contain any tool or piece of software you may need to carry out a process execution. Moreover, the
+    container is run in such a way that the process result files are created in the host file system, thus
+    it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
 
 If you want to avoid entering the Container image as a command line parameter, you can define it in the Nextflow configuration
 file. For example you can add the following lines in the ``nextflow.config`` file::
@@ -55,16 +56,16 @@ file. For example you can add the following lines in the ``nextflow.config`` fil
     charliecloud.enabled = true
 
 .. warning::
-    If an absolute is provided, the container needs to be in the Charliecloud flat directory format.
-    See section below for compatibility with Docker registries.
+    If an absolute path is provided, the container needs to be in the Charliecloud flat directory format.
+    See the section below on compatibility with Docker registries.
 
 Read the :ref:`config-page` page to learn more about the ``nextflow.config`` file and how to use it to configure
 your pipeline execution.
 
 .. warning::
-    Nextflow automatically manages the file system mounts each time a container is launched depending on the process
-    input files. Note, however, that when a process input is a *symbolic link* file, the linked file **must** be stored
-    in the same folder where the symlink is located, or any its sub-folder. Otherwise the process execution will fail because the
+    Nextflow automatically manages the file system mounts whenever a container is launched depending on the process
+    input files. However, when a process input is a *symbolic link*, the linked file **must** be stored
+    in the same folder where the symlink is located, or a sub-folder of it. Otherwise the process execution will fail because the
     launched container won't be able to access the linked file.
 
 Charliecloud & Docker Hub
@@ -145,9 +146,10 @@ Every time your script launches a process execution, Nextflow will run it into a
 specified image. In practice Nextflow will automatically wrap your processes and run them by executing the ``docker run``
 command with the image you have provided.
 
-.. note:: A Docker image can contain any tool or piece of software you may need to carry out a process execution. Moreover the
-  container is run in such a way that the process result files are created in the hosting file system, thus
-  it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
+.. note::
+    A Docker image can contain any tool or piece of software you may need to carry out a process execution. Moreover, the
+    container is run in such a way that the process result files are created in the host file system, thus
+    it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
 
 If you want to avoid entering the Docker image as a command line parameter, you can define it in the Nextflow configuration
 file. For example you can add the following lines in the ``nextflow.config`` file::
@@ -161,9 +163,9 @@ Read the :ref:`config-page` page to learn more about the ``nextflow.config`` fil
 your pipeline execution.
 
 .. warning::
-    Nextflow automatically manages the file system mounts each time a container is launched depending on the process
-    input files. Note, however, that when a process input is a *symbolic link* file, the linked file **must** be stored
-    in the same folder where the symlink is located, or any its sub-folder. Otherwise the process execution will fail because the
+    Nextflow automatically manages the file system mounts whenever a container is launched depending on the process
+    input files. However, when a process input is a *symbolic link*, the linked file **must** be stored
+    in the same folder where the symlink is located, or a sub-folder of it. Otherwise the process execution will fail because the
     launched container won't be able to access the linked file.
 
 Multiple containers
@@ -224,7 +226,7 @@ Podman
     This feature requires Nextflow version ``20.01.0`` or later.
 
 .. warning::
-    This is an incubating feature. The use in production environment is not recommended.
+    This feature is experimental. Using it in a production environment is not recommended.
 
 Prerequisites
 -------------
@@ -245,9 +247,10 @@ Every time your script launches a process execution, Nextflow will run it into a
 specified image. In practice Nextflow will automatically wrap your processes and run them by executing the ``podman run``
 command with the image you have provided.
 
-.. note:: A OCI container image can contain any tool or piece of software you may need to carry out a process execution. Moreover the
-  container is run in such a way that the process result files are created in the hosting file system, thus
-  it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
+.. note::
+    An OCI container image can contain any tool or piece of software you may need to carry out a process execution. Moreover, the
+    container is run in such a way that the process result files are created in the host file system, thus
+    it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
 
 If you want to avoid entering the Podman image as a command line parameter, you can define it in the Nextflow configuration
 file. For example you can add the following lines in the ``nextflow.config`` file::
@@ -261,9 +264,9 @@ Read the :ref:`config-page` page to learn more about the ``nextflow.config`` fil
 your pipeline execution.
 
 .. warning::
-    Nextflow automatically manages the file system mounts each time a container is launched depending on the process
-    input files. Note, however, that when a process input is a *symbolic link* file, the linked file **must** be stored
-    in the same folder where the symlink is located, or any its sub-folder. Otherwise the process execution will fail because the
+    Nextflow automatically manages the file system mounts whenever a container is launched depending on the process
+    input files. However, when a process input is a *symbolic link*, the linked file **must** be stored
+    in the same folder where the symlink is located, or a sub-folder of it. Otherwise the process execution will fail because the
     launched container won't be able to access the linked file.
 
 Multiple containers
@@ -347,7 +350,7 @@ The integration for Shifter, at this time, requires you to set up the following 
 
 and it will always try to search the Docker Hub registry for the images.
 
-.. note:: if you do not specify an image tag it will fetch the 'latest' tag by default.
+.. note:: if you do not specify an image tag, the ``latest`` tag will be fetched by default.
 
 Multiple containers
 -------------------
@@ -419,9 +422,10 @@ Every time your script launches a process execution, Nextflow will run it into a
 specified image. In practice Nextflow will automatically wrap your processes and launch them by running the
 ``singularity exec`` command with the image you have provided.
 
-.. note:: A Singularity image can contain any tool or piece of software you may need to carry out a process execution.
-  Moreover the container is run in such a way that the process result files are created in the hosting file system, thus
-  it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
+.. note::
+    A Singularity image can contain any tool or piece of software you may need to carry out a process execution.
+    Moreover, the container is run in such a way that the process result files are created in the host file system, thus
+    it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
 
 If you want to avoid entering the Singularity image as a command line parameter, you can define it in the Nextflow
 configuration file. For example you can add the following lines in the ``nextflow.config`` file::
@@ -435,13 +439,13 @@ Read the :ref:`config-page` page to learn more about the ``nextflow.config`` fil
 your pipeline execution.
 
 .. note::
-   Unlike Docker, Nextflow does not mount automatically host paths in the container when using Singularity.
-   It expects they are configure and mounted system wide by the Singularity runtime. If your Singularity installation
-   allows `user defined bind points` read the :ref:`Singularity configuration <config-singularity>` section to learn
-   how to enable Nextflow auto mounts.
+    Unlike Docker, Nextflow does not automatically mount host paths in the container when using Singularity.
+    It expects that the paths are configure and mounted system wide by the Singularity runtime. If your Singularity installation
+    allows user defined bind points, read the :ref:`Singularity configuration <config-singularity>` section to learn
+    how to enable Nextflow auto mounts.
 
 .. warning::
-    When a process input is a *symbolic link* file, make sure the linked file **is** stored in a host folder that is
+    When a process input is a *symbolic link* file, make sure the linked file is stored in a host folder that is
     accessible from a bind path defined in your Singularity installation. Otherwise the process execution will fail
     because the launched container won't be able to access the linked file.
 
@@ -473,7 +477,7 @@ Singularity & Docker Hub
 Nextflow is able to transparently pull remote container images stored in the `Singularity-Hub <https://singularity-hub.org/>`_,
 `Singularity Library <https://cloud.sylabs.io/library/>`_, or any Docker compatible registry.
 
-.. note:: This feature requires you have installed Singularity 2.3.x or higher
+.. note:: This feature requires Singularity 2.3.x or higher
 
 By default when a container name is specified, Nextflow checks if an image file with that name exists in the local file
 system. If that image file exists, it's used to execute the container. If a matching file does not exist,
@@ -485,41 +489,46 @@ For example::
     process.container = 'file:///path/to/singularity.img'
     singularity.enabled = true
 
-.. warning:: Note the use of triple ``/`` to specify an **absolute** file path, otherwise the path is interpreted as
- relative to the workflow launching directory.
+.. warning::
+    Use three ``/`` slashes to specify an **absolute** file path, otherwise the path will be interpreted as
+    relative to the workflow launch directory.
 
 To pull images from the Singularity Hub or a third party Docker registry simply prefix the image name
 with the ``shub://``, ``docker://`` or ``docker-daemon://`` pseudo-protocol as required by the Singularity tool. For example::
 
     process.container = 'docker://quay.io/biocontainers/multiqc:1.3--py35_2'
     singularity.enabled = true
-    
-.. note:: As of Nextflow v0.27 you no longer need to specify `docker://` to pull from a Docker repository. Nextflow will automatically add it to your image name when Singularity is enabled. Additionally, the Docker engine will not work with containers specified as `docker://`. 
+
+You do not need to specify ``docker://`` to pull from a Docker repository.
+Nextflow will automatically prepend it to your image name when Singularity is enabled.
+Additionally, the Docker engine will not work with containers specified as ``docker://``.
 
 Nextflow version 18.10 introduced support for the `Singularity Library <https://cloud.sylabs.io/library/>`_ repository. This feature also requires Singularity 3.0::
-   
-   process.container = 'library://library/default/alpine:3.8'
+
+    process.container = 'library://library/default/alpine:3.8'
 
 The pseudo-protocol allows you to import Singularity using a local Docker installation instead of downloading
 the container image from the Docker registry. It requires Nextflow 19.04.0 or later and Singularity 3.0.3 or later.
 
-.. note:: This feature requires the availability of the ``singularity`` tool in the computer
-  where the workflow execution is launched (other than the computing nodes).
+.. note::
+    This feature requires the ``singularity`` tool to be installed
+    where the workflow execution is launched (as opposed to the compute nodes).
 
 Nextflow caches those images in the ``singularity`` directory in the pipeline work directory by default. However it is
-suggest to provide a centralised caching directory by using either the ``NXF_SINGULARITY_CACHEDIR`` environment variable
+suggested to provide a centralised cache directory by using either the ``NXF_SINGULARITY_CACHEDIR`` environment variable
 or the ``singularity.cacheDir`` setting in the Nextflow config file.
 
-As of version ``21.09.0-edge``, when looking for a Singularity image file, Nextflow before checks the *library* directory,
-if the image file is not found, the *cache* directory is used as usual. The library directory can be defined either using
+As of version ``21.09.0-edge``, when looking for a Singularity image file, Nextflow first checks the *library* directory,
+and if the image file is not found, the *cache* directory is used as usual. The library directory can be defined either using
 the ``NXF_SINGULARITY_LIBRARYDIR`` environment variable or the ``singularity.libraryDir`` configuration setting (the
 latter overrides the former).
 
-.. warning:: When using a computing cluster the Singularity cache directory must be a shared folder accessible
-  to all computing nodes.
+.. warning::
+    When using a compute cluster, the Singularity cache directory must reside in a shared filesystem accessible to all compute nodes.
 
-.. error::  When pulling Docker images Singularity may be unable to determine the container size if the image was
-  stored by using an old Docker format, resulting in a pipeline execution error. See the Singularity documentation for details.
+.. danger:: 
+    When pulling Docker images, Singularity may be unable to determine the container size if the image was
+    stored using an old Docker format, resulting in a pipeline execution error. See the Singularity documentation for details.
 
 Advanced settings
 -----------------
