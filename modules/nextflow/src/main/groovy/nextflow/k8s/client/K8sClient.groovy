@@ -301,40 +301,12 @@ class K8sClient {
         return podName
     }
 
-    K8sResponseJson getStatus(String name, Boolean isJob) {
-        // get status of job
-        if ( isJob == true ) {
-            assert name
-            String podName = jobToPodName(name)
-            final action = "/api/v1/namespaces/$config.namespace/pods/$podName/status"
-            final resp = get(action)
-            trace('GET', action, resp.text)
-            return new K8sResponseJson(resp.text)
-        }
-
-        // get status of pod
-        if ( isJob == false ) {
-            assert name
-            final action = "/api/v1/namespaces/$config.namespace/pods/$name/status"
-            final resp = get(action)
-            trace('GET', action, resp.text)
-            return new K8sResponseJson(resp.text)
-        }
-    }
-
-    protected K8sResponseJson jobStatus0(String name) {
-        try {
-            return getStatus(name, true)
-        }
-        catch (K8sResponseException err) {
-            if( err.response.code == 404 && isKindPods(err.response)  ) {
-                // this may happen when K8s node is shutdown and the pod is evicted
-                // therefore process exception is thrown so that the failure
-                // can be managed by the nextflow as re-triable execution
-                throw new NodeTerminationException("Unable to find pod $name - The pod may be evicted by a node shutdown event")
-            }
-            throw err
-        }
+    K8sResponseJson getStatus(String name) {
+        assert name
+        final action = "/api/v1/namespaces/$config.namespace/pods/$name/status"
+        final resp = get(action)
+        trace('GET', action, resp.text)
+        return new K8sResponseJson(resp.text)
     }
 
     /*
@@ -343,7 +315,7 @@ class K8sClient {
 
     protected K8sResponseJson podStatus0(String name) {
         try {
-            return getStatus(name, false)
+            return getStatus(name)
         }
         catch (K8sResponseException err) {
             if( err.response.code == 404 && isKindPods(err.response)  ) {
@@ -389,10 +361,15 @@ class K8sClient {
      */
     Map jobState( String jobName ) {
         assert jobName
+        String podName = jobToPodName(jobName)
 
-        final K8sResponseJson resp = jobStatus0(jobName)
+        if( !podName) {
+            log.warn1("Job $jobName does not have pod. Not yet scheduled?")
+            return Collections.emptyMap()
+        }
+
+        final K8sResponseJson resp = podStatus0(podName)
         final status = resp.status as Map
-        log.debug "GET ${status}"
         final containerStatuses = status?.containerStatuses as List<Map>
 
         if( containerStatuses?.size()>0 ) {
@@ -411,7 +388,7 @@ class K8sClient {
             return state
         }
 
-        if( status?.active == 1 ){  //phase == 'Pending'
+        if( status?.phase == 'Pending' ){
             if( status.conditions instanceof List ) {
                 final allConditions = status.conditions as List<Map>
                 final cond = allConditions.find { cond -> cond.type == 'PodScheduled' }
@@ -427,7 +404,7 @@ class K8sClient {
         }
 
         if( status?.phase == 'Failed' ) {
-            def msg = "K8s job '$jobName' execution failed"
+            def msg = "K8s jod '$jobName' execution failed"
             if( status.reason ) msg += " - reason: ${status.reason}"
             if( status.message ) msg += " - message: ${status.message}"
             final err = status.reason == 'Shutdown'
