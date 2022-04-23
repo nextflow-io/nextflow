@@ -54,7 +54,7 @@ class IncludeDef {
     @Deprecated
     IncludeDef( String module ) {
         final msg = "Anonymous module inclusion is deprecated -- Replace `include '${module}'` with `include { MODULE_NAME } from '${module}'`"
-        if( NF.isDsl2Final() )
+        if( NF.isDsl2() )
             throw new DeprecationException(msg)
         log.warn msg
         this.path = module
@@ -65,7 +65,7 @@ class IncludeDef {
     IncludeDef(TokenVar token, String alias=null) {
         def component = token.name; if(alias) component += " as $alias"
         def msg = "Unwrapped module inclusion is deprecated -- Replace `include $component from './MODULE/PATH'` with `include { $component } from './MODULE/PATH'`"
-        if( NF.isDsl2Final() )
+        if( NF.isDsl2() )
             throw new DeprecationException(msg)
         log.warn msg
 
