@@ -1,6 +1,32 @@
 NEXTFLOW CHANGE-LOG
 ===================
-22.03.1-edhe 6 Apr 2022 
+22.04.0 - 23 Apr 2022
+- Improve error reporting (#2658) [e6ef017d] <Jorge Aguilera>
+- Document params-file and improve self-update (#2673) [1e008f47] <Abhinav Sharma>
+- Add support for AWS S3 anonymous credentials (#2810) [ae7ba35a]
+- Add tolerations K8s pod option (#2763) [7f7cdadc] <Ben Sherman>
+- Add support for batched queries to nf-sqldb plugin [3a9dad8b]
+- Add `emitColumns` option fromQuery operator [6a6a6eac]
+- Add mermaid DAG renderer [653f1e57]
+- Fix missing SSE flag on AWS Batch job submit (#2809) [4b3e946d]
+- Fix Task execution is not evicted on unexpected execution error (#2787) [05ea0c86] <Fabian Lehmann>
+- Document params-file and improve self-update  (#2673) [1e008f47] <Abhinav Sharma>
+- Improve deprecation message (#2788) [720a84d7] <Fabian Lehmann>
+- General docs improvements (#2800) [88acd26b] <Ben Sherman>
+- Decrease Aws upload chunk size to 20 MB [086138fb]
+- Improve error reporting (#2658) [e6ef017d] <Jorge Aguilera>
+- Improve err reporting for Azure Batch [798bae1f]
+- Rename echo directive to debug (#2776) [8f906aa5] <Ben Sherman>
+- Remove embedded Read The Docs theme [728d545f] <Paolo Di Tommaso>
+- Use a remote config in kuberun (#2781) [5485b699] <Fabian Lehmann>
+- Start Github Actions also for edited PRs (#2796) [78f5c10f] <Fabian Lehmann>
+- Deprecate isDsl2Final method [0f63f1a7]
+- Document task object [1c83e21e] <Ben Sherman>
+- Bump nf-sqldb@0.4.0 [a137e93a]
+- Bump nf-amazon@1.7.1 [912b9bb2]
+- Bump moment.js version2.29.2 [a229c1ed]
+
+22.03.1-edge - 6 Apr 2022 
 - Fix default dsl env detection [b9a09bf6]
 - Handle K8s timeout error - 500 status code (#2756) [89a1a46b] <xhejtman>
 - Honour background option for kuberun command [b1b0ddd9] <kfrancisdev>
@@ -13,7 +39,7 @@ NEXTFLOW CHANGE-LOG
 - Prevent build on tag [5b660c73]
 - Fix missing linux/amd64 platform on docker build [05f117d7]
 
-22.03.0-edge 27 Mar 2022
+22.03.0-edge - 27 Mar 2022
 - Add experimental proxy reg [b3836691]
 - Add api to access config raw value [977f6305]
 - Add warning for invalid emit names [0045834c]
