@@ -84,6 +84,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AnonymousAWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.services.s3.S3ClientOptions;
@@ -863,7 +864,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
 		AmazonS3Client client;
 		ClientConfiguration config = createClientConfig(props);
 
-		if (accessKey == null && secretKey == null) {
+		final boolean anonymous = "true".equals(props.getProperty("anonymous"));
+		if( anonymous ) {
+			log.debug("Creating AWS S3 client with anonymous credentials");
+			client = new AmazonS3Client(new com.amazonaws.services.s3.AmazonS3Client(new AnonymousAWSCredentials(), config));
+		}
+		else if (accessKey == null && secretKey == null) {
 			client = new AmazonS3Client(new com.amazonaws.services.s3.AmazonS3Client(config));
 		}
 		else {
