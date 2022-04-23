@@ -432,7 +432,7 @@ specified in the input declaration. For example::
 
     process blastThemAll {
       input:
-      file query_file from proteins
+      path query_file from proteins
 
       "blastp -query ${query_file} -db nr"
     }
@@ -447,7 +447,7 @@ Thus, the above example could be written as shown below::
 
     process blastThemAll {
       input:
-      file proteins
+      path proteins
 
       "blastp -query $proteins -db nr"
     }
@@ -461,12 +461,12 @@ with the actual provided file. In this case you can specify its name by specifyi
 input file parameter declaration, as shown in the following example::
 
     input:
-        file query_file name 'query.fa' from proteins
+        path query_file name 'query.fa' from proteins
 
 Or alternatively using a shorter syntax::
 
     input:
-        file 'query.fa' from proteins
+        path 'query.fa' from proteins
 
 Using this, the previous example can be re-written as shown below::
 
@@ -474,7 +474,7 @@ Using this, the previous example can be re-written as shown below::
 
     process blastThemAll {
       input:
-      file 'query.fa' from proteins
+      path 'query.fa' from proteins
 
       "blastp -query query.fa -db nr"
     }
@@ -508,7 +508,7 @@ the file name will be appended by a numerical suffix representing its ordinal po
 
     process blastThemAll {
         input:
-        file 'seq' from fasta
+        path 'seq' from fasta
 
         "echo seq*"
     }
@@ -544,7 +544,7 @@ The following fragment shows how a wildcard can be used in the input file declar
 
     process blastThemAll {
         input:
-        file 'seq?.fa' from fasta
+        path 'seq?.fa' from fasta
 
         "cat seq1.fa seq2.fa seq3.fa"
     }
@@ -564,7 +564,7 @@ are allowed to use other input values as variables in the file name string. For 
   process simpleCount {
     input:
     val x from species
-    file "${x}.fa" from genomes
+    path "${x}.fa" from genomes
 
     """
     cat ${x}.fa | grep '>'
@@ -703,7 +703,7 @@ is associated to a corresponding element with the ``tuple`` definition. For exam
 
     process tupleExample {
         input:
-        tuple val(x), file('latin.txt') from values
+        tuple val(x), path('latin.txt') from values
 
         """
         echo Processing $x
@@ -714,34 +714,7 @@ is associated to a corresponding element with the ``tuple`` definition. For exam
 In the above example the ``tuple`` parameter is used to define the value ``x`` and the file ``latin.txt``,
 which will receive a value from the same channel.
 
-In the ``tuple`` declaration items can be defined by using the following qualifiers: ``val``, ``env``, ``file`` and ``stdin``.
-
-A shorter notation can be used by applying the following substitution rules:
-
-============== =======
-long            short
-============== =======
-val(x)          x
-file(x)         (not supported)
-file('name')    'name'
-file(x:'name')  x:'name'
-stdin           '-'
-env(x)          (not supported)
-============== =======
-
-Thus the previous example could be rewritten as follows::
-
-    values = Channel.of( [1, 'alpha'], [2, 'beta'], [3, 'delta'] )
-
-    process tupleExample {
-        input:
-        tuple x, 'latin.txt' from values
-
-        """
-        echo Processing $x
-        cat - latin.txt > copy
-        """
-    }
+In the ``tuple`` declaration items can be defined by using the following qualifiers: ``val``, ``env``, ``path`` and ``stdin``.
 
 File names can be defined in *dynamic* manner as explained in the `Dynamic input file names`_ section.
 
@@ -757,7 +730,7 @@ every time a new data is received. For example::
 
   process alignSequences {
     input:
-    file seq from sequences
+    path seq from sequences
     each mode from methods
 
     """
@@ -777,9 +750,9 @@ Input repeaters can be applied to files as well. For example::
 
     process alignSequences {
       input:
-      file seq from sequences
+      path seq from sequences
       each mode from methods
-      each file(lib) from libraries
+      each path(lib) from libraries
 
       """
       t_coffee -in $seq -mode $mode -lib $lib > result
@@ -929,7 +902,7 @@ value expressions. For example::
 
     process foo {
       input:
-      file fasta from 'dummy'
+      path fasta from 'dummy'
 
       output:
       val x into var_channel
@@ -952,7 +925,7 @@ For example::
 
     process randomNum {
       output:
-      file 'result.txt' into numbers
+      path 'result.txt' into numbers
 
       '''
       echo $RANDOM > result.txt
@@ -966,8 +939,6 @@ Since a file parameter using the same name is declared between the outputs, when
 file is sent over the ``numbers`` channel. A downstream process declaring the same channel as ``input`` will
 be able to receive it.
 
-.. TODO explain Path object
-
 
 Multiple output files
 ---------------------
@@ -977,7 +948,7 @@ This allows you to *capture* multiple files into a list object and output them a
 
     process splitLetters {
         output:
-        file 'chunk_*' into letters
+        path 'chunk_*' into letters
 
         '''
         printf 'Hola' | split -b 1 - chunk_
@@ -1019,18 +990,16 @@ By using the ``mode`` attribute the previous example can be re-written as shown 
 
     process splitLetters {
         output:
-        file 'chunk_*' into letters mode flatten
+        path 'chunk_*' into letters
 
         '''
         printf 'Hola' | split -b 1 - chunk_
         '''
     }
 
-    letters .subscribe { println "File: ${it.name} => ${it.text}" }
-
-.. warning::
-    The option ``mode`` is deprecated as of version 19.10.0. Use the :ref:`operator-collect` operator
-    in the downstream process instead.
+    letters
+        .flatten()
+        .subscribe { println "File: ${it.name} => ${it.text}" }
 
 Read more about glob syntax at the following link `What is a glob?`_
 
@@ -1050,10 +1019,10 @@ For example::
   process align {
     input:
     val x from species
-    file seq from sequences
+    path seq from sequences
 
     output:
-    file "${x}.aln" into genomes
+    path "${x}.aln" into genomes
 
     """
     t_coffee -in $seq > ${x}.aln
@@ -1177,10 +1146,10 @@ example::
     process blast {
       input:
         val species from query_ch
-        file query from species_ch
+        path query from species_ch
 
       output:
-        tuple val(species), file('result') into blastOuts
+        tuple val(species), path('result') into blastOuts
 
       script:
         """
@@ -1191,14 +1160,7 @@ example::
 In the above example a ``blast`` task is executed for each pair of ``species`` and ``query`` that are received.
 When the task completes a new tuple containing the value for ``species`` and the file ``result`` is sent to the ``blastOuts`` channel.
 
-A ``tuple`` declaration can contain any combination of the following qualifiers, previously described: ``val``, ``file`` and ``stdout``.
-
-.. tip::
-  Variable identifiers are interpreted as ``val``s, whereas string literals are interpreted as ``file``s by default,
-  thus the above output ``tuple`` can be rewritten using a short notation as shown below::
-
-    output:
-        tuple species, 'result' into blastOuts
+A ``tuple`` declaration can contain any combination of the following qualifiers, previously described: ``val``, ``path``, ``env`` and ``stdout``.
 
 File names can be defined in a dynamic manner as explained in the :ref:`process-dynoutname` section.
 
@@ -1206,12 +1168,12 @@ File names can be defined in a dynamic manner as explained in the :ref:`process-
 Optional Output
 ---------------
 
-In most cases a process is expected to generate output that is added to the output channel.  However, there are situations where it is valid for a process to `not` generate output. In these cases ``optional true`` may be added to the output declaration, which tells Nextflow not to fail the process if the declared output is not created.
+In most cases a process is expected to generate output that is added to the output channel. However, there are situations where it is valid for a process to `not` generate output. In these cases ``optional true`` may be added to the output declaration, which tells Nextflow not to fail the process if the declared output is not created.
 
 ::
 
     output:
-        file("output.txt") optional true into outChannel
+        path("output.txt") optional true into outChannel
 
 In this example, the process is normally expected to generate an ``output.txt`` file, but in the cases where the file is legitimately missing, the process does not fail. ``outChannel`` is only populated by those processes that do generate ``output.txt``. 
 
@@ -1226,7 +1188,7 @@ It is useful to enable/disable the process execution depending on the state of v
 
     process find {
       input:
-      file proteins
+      path proteins
       val type from dbtype
 
       when:
@@ -1468,7 +1430,7 @@ only for a specific process e.g. mount a custom path::
       containerOptions '--volume /data/db:/db'
 
       output:
-      file 'output.txt'
+      path 'output.txt'
 
       '''
       your_command --data /db > output.txt
@@ -1680,8 +1642,8 @@ advanced configuration options. For example::
       container "biocontainers/star:${task.ext.version}"
 
       input:
-      file genome from genome_file
-      set sampleId, file(reads) from reads_ch
+      path genome from genome_file
+      tuple val(sampleId), path(reads) from reads_ch
 
       """
       STAR --genomeDir $genome --readFilesIn $reads
@@ -1975,7 +1937,7 @@ The ``publishDir`` directive allows you to publish the process output files to a
         publishDir '/data/chunks'
 
         output:
-        file 'chunk_*' into letters
+        path 'chunk_*' into letters
 
         '''
         printf 'Hola' | split -b 1 - chunk_
@@ -2036,7 +1998,7 @@ move            Moves the output files into the published directory. **Note**: t
         publishDir '/data/chunks', mode: 'copy', overwrite: false
 
         output:
-        file 'chunk_*' into letters
+        path 'chunk_*' into letters
 
         '''
         printf 'Hola' | split -b 1 - chunk_
@@ -2098,7 +2060,7 @@ In its basic form simply specify ``true`` at the directive value, as shown below
     scratch true
 
     output:
-    file 'data_out'
+    path 'data_out'
 
     '''
     <task script>
@@ -2163,10 +2125,10 @@ for each species specified by an input parameter::
     storeDir '/db/genomes'
 
     input:
-    file species from genomes
+    path species from genomes
 
     output:
-    file "${dbName}.*" into blastDb
+    path "${dbName}.*" into blastDb
 
     script:
     dbName = species.baseName
@@ -2301,7 +2263,7 @@ In order to be defined in a dynamic manner, the directive's value needs to be ex
       queue { entries > 100 ? 'long' : 'short' }
 
       input:
-      set entries, file(x) from data
+      tuple val(entries), path('data.txt') from data
 
       script:
       """
@@ -2335,7 +2297,7 @@ All directives can be assigned a dynamic value except the following:
       queue { entries > 100 ? 'long' : 'short' }
 
       input:
-      set entries, file(x) from data
+      tuple val(entries), path('data.txt') from data
 
       script:
       """
