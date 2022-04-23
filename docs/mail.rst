@@ -31,7 +31,6 @@ therefore this is equivalent to write::
 
         sendMail(mail)
 
-
 The following parameters can be specified:
 
 ================== ================
@@ -74,11 +73,13 @@ An second version of the ``sendMail`` allows a more idiomatic syntax::
 
 The same attributes listed in the table in the previous section are allowed.
 
-.. note:: When it terminates with a string expression it's implicitly interpreted as the mail body content, therefore
-  the ``body`` parameter can be omitted as shown above.
+.. tip::
+    A string expression at the end is implicitly interpreted as the mail body content, therefore
+    the ``body`` parameter can be omitted as shown above.
 
-.. tip:: To send an `alternative` mail message that includes either text and HTML content use both the ``text`` and ``body`` attributes.
-  The first must be used for the plain text content, while the second for the rich HTML message.
+.. tip::
+    To send an email that includes text and HTML content, use both the ``text`` and ``body`` attributes.
+    The first is used for the plain text content, while the second is used for the rich HTML content.
 
 .. _mail-attachments:
 
@@ -95,7 +96,7 @@ Name                Description
 ================== ================
 contentId           Defines the `Content-ID` header field for the attachment.
 disposition         Defines the `Content-Disposition` header field for the attachment.
-fileName            Defines the `filename` parameter of the "Content-Disposition" header field.
+fileName            Defines the ``filename`` parameter of the "Content-Disposition" header field.
 description         Defines the `Content-Description` header field for the attachment.
 ================== ================
 
@@ -153,7 +154,6 @@ to notify the completion of a workflow completion. For example::
         sendMail(to: 'you@gmail.com', subject: 'My pipeline execution', body: msg)
     }
 
-
 This is useful to send a custom notification message. Note however that Nextflow includes a built-in notification mechanism
 which is the most convenient way to notify the completion of a workflow execution in most cases. Read the following
 section to learn about it.
@@ -172,10 +172,10 @@ It will send a notification mail when the execution completes similar to the one
 
 .. image:: images/workflow-notification-min.png
 
-
-.. warning:: By default the notification message is sent by using the ``sendmail`` system tool which is assumed to be
-    available in the computer where Nextflow is running. Make sure it's properly installed and configured.
-    Alternatively provide the SMTP server configuration settings to use the Nextflow
+.. warning::
+    By default the notification message is sent with the ``sendmail`` system tool, which is assumed to be
+    available in the environment where Nextflow is running. Make sure it's properly installed and configured.
+    Alternatively, you can provide the SMTP server configuration settings to use the Nextflow
     built-in mail support, which doesn't require any external system tool.
 
 See the `Mail configuration`_ section to learn about the available mail delivery options and configuration settings.
