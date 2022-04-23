@@ -1185,6 +1185,12 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
     $ nextflow run nextflow-io/hello -with-tower
  
 
+- Invoke the nextflow pipeline execution with a custom parameters ``YAML/JSON`` file. 
+The parameters which are specified through this mechanism are merged with the resolved configuration (base configuration and profiles) and only the common fields are overwritten by the ``YAML/JSON`` file.::
+
+    $ nextflow run main.nf -params-file pipeline_params.yml
+ 
+
 --------------------
 self-update   
 --------------------
@@ -1199,7 +1205,7 @@ Update the nextflow runtime to the latest available version.
 
 **Description**
 
-The ``self-update`` command directs the ``nextflow`` cli to update itself to the latest stable release.
+The ``self-update`` command directs the ``nextflow`` cli to update itself to the latest stable release. 
 
 **Examples**
 
