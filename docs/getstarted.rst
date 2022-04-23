@@ -1,28 +1,29 @@
-.. _getstart-page:
+.. _getstarted-page:
 
 *******************
 Get started
 *******************
 
-.. _getstart-requirement:
+.. _getstarted-requirement:
 
 Requirements
 ============
 
-`Nextflow` can be used on any POSIX compatible system (Linux, OS X, etc).
+Nextflow can be used on any POSIX compatible system (Linux, OS X, etc).
 It requires Bash 3.2 (or later) and `Java 11 (or later, up to 18) <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_ to be installed.
 
-For the execution in a cluster of computers the use a shared file system is required to allow
+For the execution in a cluster of computers, the use of a shared file system is required to allow
 the sharing of tasks input/output files.
 
-Windows system is supported through `WSL <https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux>`_.
+Nextflow can also be run on Windows through `WSL <https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux>`_.
 
-.. _getstart-install:
+
+.. _getstarted-install:
 
 Installation
 ============
 
-`Nextflow` is distributed as a self-installing package, which means that it does not require any special installation procedure.
+Nextflow is distributed as a self-installing package, which means that it does not require any special installation procedure.
 
 It only needs two easy steps:
 
@@ -38,18 +39,20 @@ It only needs two easy steps:
 #.  Optionally, move the ``nextflow`` file to a directory accessible by your ``$PATH`` variable
     (this is only required to avoid remembering and typing the full path to ``nextflow`` each time you need to run it).
 
-.. tip:: Set ``export CAPSULE_LOG=none`` to make the dependency installation logs less verbose.
+.. tip::
+    Set ``export CAPSULE_LOG=none`` to make the dependency installation logs less verbose.
 
 .. tip::
-    If you don't have ``curl`` nor ``wget``, you can also download the Nextflow launcher script from the
-    `project releases page <https://github.com/nextflow-io/nextflow/releases/latest>`_ on GitHub . Once downloaded
-    continue the installation from the point 2 in the above guide.
+    If you don't have ``curl`` or ``wget``, you can also download the Nextflow launcher script from the
+    `project releases page <https://github.com/nextflow-io/nextflow/releases/latest>`_ on GitHub, in lieu of step 1.
 
-.. note::
-    To avoid downloading the dependencies, you could also use the ``nextflow-VERSION-all`` distribution available from Github for every `Nextflow` release version.
+.. tip::
+    To avoid downloading the dependencies, you can also use the ``nextflow-VERSION-all`` distribution available for every Nextflow release on Github.
 
-    #. Go to the `Github releases page <https://github.com/nextflow-io/nextflow/releases>`__ and unfold the `Assets` section for a release.
-    #. Copy the URL of the ``nextflow-VERSION-all`` asset and issue the download command on your terminal. ``wget -qO- ASSET-URL``. It will create the completely self-contained ``nextflow-VERSION-all`` executable file in the current directory.
+    #. Go to the `Github releases page <https://github.com/nextflow-io/nextflow/releases>`__ and expand the `Assets` section for a specific release.
+    #. Copy the URL of the ``nextflow-VERSION-all`` asset and enter the download command in your terminal, e.g. ``wget -qO- ASSET-URL``.
+       It will create the completely self-contained ``nextflow-VERSION-all`` executable file in the current directory.
+
 
 Updates
 =======
@@ -58,28 +61,28 @@ Having Nextflow installed in your computer you can update to the latest version 
 
     nextflow self-update
 
-
 .. tip::
-  You can temporary switch or stick to a specific version of Nextflow just prefixing the ``nextflow`` command
-  with the ``NXF_VER`` environment variable. For example::
+    You can temporarily switch to a specific version of Nextflow by prefixing the ``nextflow`` command
+    with the ``NXF_VER`` environment variable. For example::
 
-    NXF_VER=20.04.0 nextflow run hello
+        NXF_VER=20.04.0 nextflow run hello
+
 
 Stable & Edge releases
 ======================
 
 A *stable* version of Nextflow is released on a six-months basic schedule, in the 1st and 3rd quarter of every year.
 
-Along with the stable release, an `edge` version is released on a monthly basis. This version is useful to test and
+Along with the stable release, an ``edge`` version is released on a monthly basis. This version is useful to test and
 use most recent updates and experimental features.
 
-To use the latest `edge` release run the following snippet in your shell terminal::
+To use the latest ``edge`` release run the following snippet in your shell terminal::
 
     export NXF_EDGE=1
     nextflow self-update
 
 
-.. _getstart-first:
+.. _getstarted-first:
 
 Your first script
 ==================
@@ -96,7 +99,7 @@ Copy the following example into your favourite text editor and save it to a file
         path 'chunk_*'
 
       """
-        printf '${params.str}' | split -b 6 - chunk_
+      printf '${params.str}' | split -b 6 - chunk_
       """
     }
 
@@ -107,7 +110,7 @@ Copy the following example into your favourite text editor and save it to a file
         stdout
 
       """
-        cat $x | tr '[a-z]' '[A-Z]'
+      cat $x | tr '[a-z]' '[A-Z]'
       """
     }
 
@@ -115,13 +118,10 @@ Copy the following example into your favourite text editor and save it to a file
       splitLetters | flatten | convertToUpper | view { it.trim() }
     }
 
-
 This script defines two processes. The first splits a string into 6-character chunks, writing each one to a file with the prefix ``chunk_``,
 and the second receives these files and transforms their contents to uppercase letters.
 The resulting strings are emitted on the ``result`` channel and the final output is printed by the
 ``view`` operator.
-
-
 
 Execute the script by entering the following command in your terminal::
 
@@ -136,7 +136,6 @@ It will output something similar to the text shown below::
     HELLO
     WORLD!
 
-
 You can see that the first process is executed once, and the second twice. Finally the result string is printed.
 
 It's worth noting that the process ``convertToUpper`` is executed in parallel, so there's no guarantee that the instance
@@ -147,13 +146,13 @@ Thus, it is perfectly possible that you will get the final result printed out in
     WORLD!
     HELLO
 
+.. tip::
+    The hexadecimal string, e.g. ``22/7548fa``, is the unique hash of a task, and the prefix of the directory
+    where the task is executed. You can inspect a task's files by changing to the directory ``$PWD/work`` and
+    using this string to find the specific task directory.
 
 
-.. tip:: The hexadecimal numbers, like ``22/7548fa``, identify the unique process execution. These numbers are
-  also the prefix of the directories where each process is executed. You can inspect the files produced by them
-  changing to the directory ``$PWD/work`` and using these numbers to find the process-specific execution path.
-
-.. _getstart-resume:
+.. _getstarted-resume:
 
 Modify and resume
 -----------------
@@ -168,7 +167,6 @@ For the sake of this tutorial, modify the ``convertToUpper`` process in the prev
 process script with the string ``rev $x``, so that the process looks like this::
 
     process convertToUpper {
-
         input:
         file x from letters
 
@@ -184,7 +182,6 @@ Then save the file with the same name, and execute it by adding the ``-resume`` 
 
     nextflow run tutorial.nf -resume
 
-
 It will print output similar to this::
 
     N E X T F L O W  ~  version 19.04.0
@@ -194,27 +191,27 @@ It will print output similar to this::
     olleH
     !dlrow
 
-
 You will see that the execution of the process ``splitLetters`` is actually skipped (the process ID is the same), and
 its results are retrieved from the cache. The second process is executed as expected, printing the reversed strings.
 
+.. tip::
+    The pipeline results are cached by default in the directory ``$PWD/work``. Depending on your script, this folder
+    can take up a lot of disk space. It's a good idea to clean this folder periodically, as long as you know you won't
+    need to resume any pipeline runs.
 
-.. tip:: The pipeline results are cached by default in the directory ``$PWD/work``. Depending on your script, this folder
-  can take of lot of disk space. If you are sure you won't resume your pipeline execution, clean this folder periodically.
 
-.. _getstart-params:
+.. _getstarted-params:
 
 Pipeline parameters
 --------------------
 
 Pipeline parameters are simply declared by prepending to a variable name the prefix ``params``, separated by dot character.
-Their value can be specified on the command line by prefixing the parameter name with a double `dash` character, i.e. ``--paramName``
+Their value can be specified on the command line by prefixing the parameter name with a double dash character, i.e. ``--paramName``
 
 For the sake of this tutorial, you can try to execute the previous example specifying a different input
 string parameter, as shown below::
 
   nextflow run tutorial.nf --str 'Bonjour le monde'
-
 
 The string specified on the command line will override the default value of the parameter. The output
 will look like this::
@@ -227,9 +224,8 @@ will look like this::
     edno
     uojnoB
 
-
 .. tip::
-    As of version 20.11.0-edge any ``.`` (dot) character in a parameter name is interpreted as the delimiter
-    or nested scope e.g. ``--foo.bar Hello`` will be accessible from the script as `params.foo.bar`.
-    If you want to have a parameter name including a ``.`` (dot) character escape it using the back-slash character e.g.
-    ``--foo\.bar Hello``
+    As of version 20.11.0-edge, any ``.`` (dot) character in a parameter name is interpreted as the delimiter
+    of a nested scope. For example, ``--foo.bar Hello`` will be interpreted as `params.foo.bar`.
+    If you want to have a parameter name that contains a ``.`` (dot) character, escape it using the back-slash character, e.g.
+    ``--foo\.bar Hello``.
