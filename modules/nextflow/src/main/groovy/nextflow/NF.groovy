@@ -51,6 +51,7 @@ class NF {
         NextflowMeta.instance.isDsl2()
     }
 
+    @Deprecated
     static boolean isDsl2Final() {
         NextflowMeta.instance.isDsl2Final()
     }

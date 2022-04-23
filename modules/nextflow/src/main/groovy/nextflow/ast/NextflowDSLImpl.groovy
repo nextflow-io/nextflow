@@ -917,7 +917,7 @@ class NextflowDSLImpl implements ASTTransformation {
                     }
                 }
             }
-            else if( (varX=isVariableX(stm.expression)) && (varX.name=='stdin' || varX.name=='stdout') && NF.isDsl2Final() ) {
+            else if( (varX=isVariableX(stm.expression)) && (varX.name=='stdin' || varX.name=='stdout') && NF.isDsl2() ) {
                 final name = varX.name=='stdin' ? '_in_stdin' : '_out_stdout'
                 final call = new MethodCallExpression( new VariableExpression('this'), name, new ArgumentListExpression()  )
                 // remove replace the old one with the new one

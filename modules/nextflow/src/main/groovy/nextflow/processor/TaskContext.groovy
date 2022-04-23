@@ -315,7 +315,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
             return path
 
         // make from the module dir
-        def module = NF.isDsl2Final() ? ScriptMeta.get(this.script)?.getModuleDir() : null
+        def module = NF.isDsl2() ? ScriptMeta.get(this.script)?.getModuleDir() : null
         if( module ) {
             def target = module.resolve('templates').resolve(path)
             if (Files.exists(target))

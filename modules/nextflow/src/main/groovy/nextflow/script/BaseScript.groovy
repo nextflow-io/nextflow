@@ -66,7 +66,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
      */
     protected Map getConfig() {
         final msg = "The access of `config` object is deprecated"
-        if( NF.dsl2Final )
+        if( NF.dsl2 )
             throw new DeprecationException(msg)
         log.warn(msg)
         session.getConfig()
@@ -84,7 +84,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
      */
     protected void echo(boolean value = true) {
         final msg = "The use of `echo` method has been deprecated"
-        if( NF.dsl2Final )
+        if( NF.dsl2 )
             throw new DeprecationException(msg)
         log.warn(msg)
         session.getConfig().process.echo = value

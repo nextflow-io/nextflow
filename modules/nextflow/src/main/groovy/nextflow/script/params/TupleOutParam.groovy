@@ -52,7 +52,7 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
 
         for( def item : obj ) {
             if( item instanceof TokenVar ) {
-                if( NF.dsl2Final )
+                if( NF.dsl2 )
                     throw new DeprecationException("Unqualified output value declaration has been deprecated - replace `tuple ${item.name},..` with `tuple val(${item.name}),..`")
                 create(ValueOutParam).bind(item)
             }
@@ -63,7 +63,7 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
                 create(EnvOutParam).bind(item.val)
             }
             else if( item instanceof GString ) {
-                if( NF.dsl2Final )
+                if( NF.dsl2 )
                     throw new DeprecationException("Unqualified output path declaration has been deprecated - replace `tuple \"$item\",..` with `tuple path(\"$item\"),..`")
                 create(FileOutParam).bind(item)
             }
@@ -71,7 +71,7 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
                 create(StdOutParam).bind('-')
             }
             else if( item instanceof String ) {
-                if( NF.dsl2Final )
+                if( NF.dsl2 )
                     throw new DeprecationException("Unqualified output path declaration has been deprecated - replace `tuple '$item',..` with `tuple path('$item'),..`")
                 create(FileOutParam).bind(item)
             }
