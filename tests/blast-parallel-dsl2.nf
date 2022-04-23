@@ -1,5 +1,4 @@
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 params.db = "$baseDir/blast-db/tiny"
 params.query = "$baseDir/data/sample.fa"
@@ -41,7 +40,7 @@ process extract {
  * Aligns a T-Coffee MSA and print it 
  */
 process align {
-    echo true
+    debug true
 
     input:
     path all_seq

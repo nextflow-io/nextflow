@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 params.in = "$baseDir/data/sample.fa"
 SPLIT = (System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit')
@@ -33,7 +34,7 @@ process split {
 
 
 process printTwo {
-    echo true
+    debug true
 
     input:
     file 'chunk' from splits
@@ -48,7 +49,7 @@ process printTwo {
 }
 
 process printLast {
-    echo true
+    debug true
 
     input:
     file 'chunk' from two_chunks

@@ -17,7 +17,7 @@ version ?= none
 
 build: dist/docker
 	cp ../nextflow .
-	docker build --output=type=docker --progress=plain --tag nextflow/nextflow:${version} .
+	docker build --platform linux/amd64 --output=type=docker --progress=plain --tag nextflow/nextflow:${version} .
 
 release: build
 	docker tag nextflow/nextflow:${version} nextflow/nextflow:latest

@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.Session
+import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskProcessor
 /**
  * Any user defined script will extends this class, it provides the base execution context
@@ -65,7 +66,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
      */
     protected Map getConfig() {
         final msg = "The access of `config` object is deprecated"
-        if( NF.dsl2Final )
+        if( NF.dsl2 )
             throw new DeprecationException(msg)
         log.warn(msg)
         session.getConfig()
@@ -83,7 +84,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
      */
     protected void echo(boolean value = true) {
         final msg = "The use of `echo` method has been deprecated"
-        if( NF.dsl2Final )
+        if( NF.dsl2 )
             throw new DeprecationException(msg)
         log.warn(msg)
         session.getConfig().process.echo = value
@@ -183,6 +184,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( !entryFlow ) {
             if( meta.getLocalWorkflowNames() )
                 log.warn "No entry workflow specified"
+            if( meta.getLocalProcessNames() )
+                throw new AbortOperationException("Missing workflow definition - DSL2 requires at least a workflow block in the main script")
             return result
         }
 

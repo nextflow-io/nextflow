@@ -142,6 +142,7 @@ class K8sDriverLauncher {
             printK8sPodOutput()
         else
             log.debug "Nextflow driver launched in background mode -- pod: $runName"
+        waitPodEnd()
     }
 
     int shutdown() {
@@ -157,6 +158,29 @@ class K8sDriverLauncher {
         return exitCode
     }
 
+    protected void waitPodEnd() {
+        if( background )
+            return
+        final currentState = k8sClient.podState(runName)
+        if (currentState && currentState?.running instanceof Map) {
+            final name = runName
+            println "Pod running: $name ... waiting for pod to stop running"
+            try {
+                while( true ) {
+                    sleep 10000
+                    final state = k8sClient.podState(name)
+                    if ( state && !(state?.running instanceof Map) )  {
+                        println "Pod $name has changed from running state $state"
+                        break
+                    }
+                }
+            }
+            catch( Exception e ) {
+                log.warn "Caught exception waiting for pod to stop running"
+            }
+        }
+    }
+    
     protected boolean isWaitTimedOut(long time) {
         System.currentTimeMillis()-time > 90_000
     }
@@ -224,7 +248,7 @@ class K8sDriverLauncher {
                 .setProfile(cmd.profile)
                 .setCmdRun(cmd)
 
-        if( !interactive && !pipelineName.startsWith('/') ) {
+        if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.runRemoteConfig ) {
             // -- check and parse project remote config
             final pipelineConfig = new AssetManager(pipelineName, cmd) .getConfigFile()
             builder.setUserConfigFiles(pipelineConfig)
@@ -438,6 +462,12 @@ class K8sDriverLauncher {
         if( paramsFile ) {
             result << "-params-file $paramsFile"
         }
+
+        if ( cmd.runRemoteConfig )
+            cmd.runRemoteConfig.forEach { result << "-config $it" }
+
+        if ( cmd.remoteProfile )
+            result << "-profile ${cmd.remoteProfile}"
 
         if( cmd.process?.executor )
             abort('process.executor')

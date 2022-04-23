@@ -322,6 +322,8 @@ class ConfigParser {
         LinkedList stack = new LinkedList()
         LinkedList profileStack = new LinkedList()
         stack << [config: config, scope: [:]]
+        boolean withinProfile = false
+
         def pushStack = { co ->
             stack << [config: co, scope: stack.last.scope.clone()]
         }
@@ -346,9 +348,9 @@ class ConfigParser {
                 }
             }
             if( name=='params' && result instanceof Map && paramVars ) {
-                result.putAll(Bolts.deepMerge(result, paramVars, true))
+                result.putAll(Bolts.deepMerge(result, paramVars))
             }
-            result
+            return result
         }
 
         ConfigObject overrides = new ConfigObject()
@@ -360,6 +362,9 @@ class ConfigParser {
 
                 if (name in conditionValues.keySet()) {
                     try {
+                        if( name == 'profiles' ){
+                            withinProfile=true
+                        }
                         currentConditionalBlock.push(name)
                         conditionalBlocks.push([:])
                         args[0].call()
@@ -368,6 +373,9 @@ class ConfigParser {
                         for (entry in conditionalBlocks.pop().entrySet()) {
                             def c = stack.last.config
                             (c != config? c : overrides).merge(entry.value)
+                        }
+                        if( name == 'profiles' ){
+                            withinProfile=false
                         }
                     }
                 } else if (currentConditionalBlock.size() > 0) {
@@ -402,7 +410,7 @@ class ConfigParser {
                     assignName.call(name, dsl.plugins)
                 }
                 else {
-                    def current = stack.last
+                    def current = withinProfile ? stack.first : stack.last
                     def co
                     if (current.config.get(name) instanceof ConfigObject) {
                         co = current.config.get(name)
@@ -420,6 +428,12 @@ class ConfigParser {
                     args[0].call()
                     stack.removeLast()
                     profileStack.removeLast()
+
+                    if (current.scope.get(name) instanceof ConfigObject) {
+                        current.scope.get(name).merge(co)
+                    } else {
+                        current.scope.put(name,co)
+                    }
                 }
             } else if (args.length == 2 && args[1] instanceof Closure) {
                 try {

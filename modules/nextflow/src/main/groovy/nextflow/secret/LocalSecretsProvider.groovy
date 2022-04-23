@@ -29,8 +29,8 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.CacheHelper
-
 /**
  * Implements a secrets store that saves secrets into a JSON file save into the
  * nextflow home. The file can be relocated using the env variable {@code NXF_SECRETS_FILE}.
@@ -162,6 +162,15 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
     String getSecretsEnv(List<String> secretNames) {
         if( !secretNames )
             return null
+        // find out if any required secret is missing
+        final missing = secretNames - this.listSecretsNames()
+        if( missing ) {
+            final names = missing.collect(it -> "'$it'").join(', ')
+            final msg = missing.size()==1
+                    ? "Required secret is missing: $names"
+                    : "Required secrets are missing: $names"
+            throw new ProcessUnrecoverableException(msg)
+        }
         final filter = secretNames.collect(it -> "-e '$it=.*'").join(' ')
         final tmp = makeTempSecretsFile()
         // mac does not allow source an anonymous pipe

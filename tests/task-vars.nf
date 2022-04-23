@@ -15,10 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 process printVars {
 
-    echo true
+    debug true
     cpus 2
     penv 'mpi'
     time '1 day'

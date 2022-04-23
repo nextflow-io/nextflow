@@ -1,5 +1,4 @@
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 /*
  * Defines pipeline parameters in order to specify the refence genomes

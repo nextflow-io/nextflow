@@ -17,22 +17,18 @@
 
 package nextflow.extension
 
-import org.apache.commons.lang.LocaleUtils
-import spock.lang.Ignore
-
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
-import spock.lang.Specification
-import spock.lang.Unroll
-
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.text.SimpleDateFormat
-
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import spock.lang.Ignore
+import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -376,31 +372,42 @@ class BoltsTest extends Specification {
         map.bar.x == 2
     }
 
-    def 'should deep merge map and overwrite values when `replaceValues` is true'() {
+    def 'should deep merge map and overwrite values'() {
         given:
-        Map origMap = [foo: 1, bar: [x: 2, y: 3]]
-        Map newMap = [bar: [x: 4, z: 5]]
+        def origMap = [foo: 1, bar: [x: 2, y: 3]]
+        and:
+        def newMap = [bar: [x: 4, z: 5]]
 
         when:
-        def merge = Bolts.deepMerge(origMap, newMap, true)
+        def merge = Bolts.deepMerge(origMap, newMap)
 
         then:
+        merge.foo == 1 
         merge.bar.x == 4
         merge.bar.y == 3
         merge.bar.z == 5
     }
 
-    def 'should deep merge map and not overwrite values when `replaceValues` is false'() {
+    def 'should deep merge config object and overwrite values'() {
         given:
-        Map origMap = [foo: 1, bar: [x: 2, y: 3]]
-        Map newMap = [bar: [x: 4, z: 5]]
+        def bar = new ConfigObject(); bar.putAll([x: 2, y: 3])
+        def cfg = new ConfigObject(); cfg.putAll( [foo: 1, bar: bar] )
+        and:
+        def map = [bar: [x: 4, z: 5]]
 
         when:
-        def merge = Bolts.deepMerge(origMap, newMap, false)
+        def result = Bolts.deepMerge(cfg, map)
 
         then:
-        merge.bar.x == 2
-        merge.bar.y == 3
-        merge.bar.z == 5
+        result.foo == 1
+        result.bar.x == 4
+        result.bar.y == 3
+        result.bar.z == 5
+        and:
+        result instanceof ConfigObject
+        result.bar instanceof ConfigObject
+        and:
+        !result.is( cfg )
     }
+
 }

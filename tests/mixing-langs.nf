@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+nextflow.enable.dsl=1
 
 params.range = 100
 
@@ -45,7 +45,7 @@ process perlTask {
  * A Python script task which parses the output of the previous script
  */
 process pyTask {
-    echo true
+    debug true
 
     input:
     stdin randNums

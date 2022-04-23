@@ -22,6 +22,7 @@ import static nextflow.util.ConfigHelper.*
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
@@ -322,9 +323,17 @@ class ConfigBuilder {
     }
 
     protected Map configVars() {
+        // this is needed to make sure to re-use the same
+        // instance of the config vars across different instances of the ConfigBuilder
+        // and prevent multiple parsing of the same params file (which can even be remote resource)
+        return cacheableConfigVars(baseDir)
+    }
+
+    @Memoized
+    static private Map cacheableConfigVars(Path base) {
         final binding = new HashMap(10)
-        binding.put('baseDir', baseDir)
-        binding.put('projectDir', baseDir)
+        binding.put('baseDir', base)
+        binding.put('projectDir', base)
         binding.put('launchDir', Paths.get('.').toRealPath())
         if( SecretsLoader.isEnabled() )
             binding.put('secrets', new SecretsContext())
@@ -654,6 +663,16 @@ class ConfigBuilder {
                 config.tower = [:]
             config.tower.enabled = true
             config.tower.endpoint = cmdRun.withTower
+        }
+
+        // -- nextflow setting
+        if( cmdRun.dsl1 || cmdRun.dsl2 ) {
+            if( config.nextflow !instanceof Map )
+                config.nextflow = [:]
+            if( cmdRun.dsl1 )
+                config.nextflow.enable.dsl = 1
+            if( cmdRun.dsl2 )
+                config.nextflow.enable.dsl = 2
         }
 
         // -- add the command line parameters to the 'taskConfig' object

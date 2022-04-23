@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-echo true
+nextflow.enable.dsl=1
 
 process alpha {
+    debug true
     /
     echo alpha memry: ${task.memory}
     echo alpha queue: ${task.queue}
@@ -26,6 +26,7 @@ process alpha {
 }
 
 process beta {
+    debug true
     label 'small'
 
     /
@@ -35,6 +36,7 @@ process beta {
 }
 
 process delta {
+    debug true
     label 'big'
 
     /
@@ -44,6 +46,7 @@ process delta {
 }
 
 process gamma {
+    debug true
     label 'big'
     memory 40.MB
     queue 'foo'

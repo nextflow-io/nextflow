@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 Channel
     .fromPath("$baseDir/data/p?.fa")
@@ -25,7 +26,7 @@ Channel
 
 
 process blastThemAll {
-    echo true
+    debug true
 
     input:
     file x from proteins

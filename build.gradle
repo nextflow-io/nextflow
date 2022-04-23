@@ -65,6 +65,15 @@ allprojects {
         }
     }
 
+    compileJava {
+        options.release = 8
+    }
+
+    tasks.withType(GroovyCompile) {
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+    }
+
     idea {
         module.inheritOutputDirs = true
     }
@@ -91,8 +100,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:1.11'
-        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.9"
-        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.9"
+        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.10"
+        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.10"
     }
 
     test {

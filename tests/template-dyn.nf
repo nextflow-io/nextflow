@@ -15,12 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-echo true
+nextflow.enable.dsl=1
 
 list = 'alpha,delta,gamma'.tokenize(',')
 
 process foo {
+  debug true
   input:
   each x from list
 
@@ -31,6 +31,7 @@ process foo {
 
 
 process bar {
+  debug true
   input:
   each x from list
 
