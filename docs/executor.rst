@@ -35,7 +35,6 @@ Resource requests and other job characteristics can be controlled via the follow
 
 * :ref:`process-accelerator`
 * :ref:`process-cpus`
-* :ref:`process-disk`
 * :ref:`process-memory`
 * :ref:`process-queue`
 
