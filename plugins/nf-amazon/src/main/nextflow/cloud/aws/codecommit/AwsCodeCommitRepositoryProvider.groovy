@@ -31,6 +31,9 @@ import nextflow.exception.AbortOperationException
 import nextflow.scm.ProviderConfig
 import nextflow.scm.RepositoryProvider
 import org.eclipse.jgit.transport.CredentialsProvider
+
+import java.util.regex.Matcher
+
 /**
  * Implements a repository provider for AWS CodeCommit
  *
@@ -42,14 +45,14 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
 
     private AmazonClientFactory clientFactory
 
-    AwsCodeCommitRepositoryProvider(String project, ProviderConfig config=null, AWSCodeCommitClient client=null) {
+    AwsCodeCommitRepositoryProvider(String project, String url, ProviderConfig config=null,  AWSCodeCommitClient client=null) {
 
         this.project = project  // expect: "codecommit:[region]://<repository>"
         this.config = config ?: new ProviderConfig('codecommit')
-        this.region = getRepositoryRegion()
+        this.region = getRepositoryRegion(url)
         this.repositoryName = getRepositoryName()
         this.profile = getRepositoryProfile()
-        this.clientFactory = AmazonClientFactory.instance()
+        this.clientFactory = AmazonClientFactory.instance([region:region])
         this.client = client ?: clientFactory.getCodeCommitClient()
 
     }
@@ -72,6 +75,7 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
         def result = project
                 .replaceAll("codecommit:.*?//", "")
                 .replaceAll(".*?@", "")
+                .replaceAll("repos/", "")
         log.debug "project name: $result"
         return result
     }
@@ -92,15 +96,14 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
         return result
     }
 
-    private String getRepositoryRegion() {
+    private String getRepositoryRegion(String url) {
         def region = Global.getAwsRegion()
 
         // use the repository region if specified
-        def result = project
-                .replaceAll("codecommit:[:]*", "")
-                .replaceAll("[:]*//.*", "")
-        if ( result != "" ) {
-            region = result
+        def pattern = /codecommit(:{2}|.)(?<region>[a-z1-9-]+)(:|.)/
+        def matcher = url =~ pattern
+        if(matcher.find()){
+           region = matcher.group("region")
         }
 
         log.debug "AWS CodeCommit project region: $region"

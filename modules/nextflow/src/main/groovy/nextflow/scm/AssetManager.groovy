@@ -127,7 +127,7 @@ class AssetManager {
         this.project = resolveName(pipelineName)
         this.localPath = checkProjectDir(project)
         this.hub = checkHubProvider(cliOpts)
-        this.provider = createHubProvider(hub)
+        this.provider = createHubProvider(hub, pipelineName)
         setupCredentials(cliOpts)
         validateProjectDir()
 
@@ -305,7 +305,8 @@ class AssetManager {
     @PackageScope
     String resolveNameFromGitUrl( String repository ) {
 
-        if( repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/')) {
+        final List<String> gitProtocols = ['http://', 'https://', 'file:/', 'codecommit::']
+        if( gitProtocols.find {repository.startsWith(it)} ) {
             try {
                 def url = new GitUrl(repository)
 
@@ -363,13 +364,13 @@ class AssetManager {
      * @return
      */
     @PackageScope
-    RepositoryProvider createHubProvider(String providerName) {
+    RepositoryProvider createHubProvider(String providerName, String url=null) {
 
         final config = providerConfigs.find { it.name == providerName }
         if( !config )
             throw new AbortOperationException("Unknown repository configuration provider: $providerName")
 
-        return RepositoryFactory.create(config, project)
+        return RepositoryFactory.create(config, project, url)
     }
 
     AssetManager setLocalPath(File path) {

@@ -38,7 +38,7 @@ class RepositoryFactory implements ExtensionPoint {
      *      An instance of a {@link RepositoryProvider} that matches the specified config
      *      or {@code null} if no match is found
      */
-    protected RepositoryProvider newInstance(ProviderConfig config, String project) {
+    RepositoryProvider newInstance(ProviderConfig config, String project, String url) {
 
         switch(config.platform) {
             case 'github':
@@ -69,10 +69,10 @@ class RepositoryFactory implements ExtensionPoint {
         }
     }
 
-    static RepositoryProvider create( ProviderConfig config, String project ) {
+    static RepositoryProvider create( ProviderConfig config, String project, String url) {
         // scan for available plugins
-        final all = Plugins.getPriorityExtensions(RepositoryFactory)
-        final result = all.findResult( it -> it.newInstance(config, project) )
+        final all = Plugins.getExtensions(RepositoryFactory)
+        final result = all.findResult( it -> it.newInstance(config, project, url) )
         if( !result ) {
             throw new AbortOperationException("Unknown project repository platform: ${config.platform}")
         }

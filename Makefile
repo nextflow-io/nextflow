@@ -55,6 +55,14 @@ install:
 	BUILD_PACK=1 ./gradlew installLauncher publishToMavenLocal -Dmaven.repo.local=${HOME}/.nextflow/capsule/deps/
 
 #
+# install compiled plugins artifacts in Maven local dir
+#
+installPlugins:
+	BUILD_PACK=1 ./gradlew plugins:assemble
+	mkdir -p ${HOME}/.nextflow/plugins
+	cp -R build/plugins/* ${HOME}/.nextflow/plugins
+
+#
 # Show dependencies try `make deps config=runtime`, `make deps config=google`
 #
 deps:

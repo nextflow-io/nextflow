@@ -86,11 +86,15 @@ class AmazonClientFactory {
 
     @Memoized
     static AmazonClientFactory instance(ISession session) {
-        return new AmazonClientFactory(session.config)
+        return new AmazonClientFactory(session?.config ?: [:])
     }
 
     static AmazonClientFactory instance() {
         return instance(Global.session)
+    }
+
+    static AmazonClientFactory instance(Map config) {
+        return new AmazonClientFactory(config)
     }
 
     /**

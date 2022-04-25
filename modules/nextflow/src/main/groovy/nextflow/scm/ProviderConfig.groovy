@@ -44,13 +44,6 @@ class ProviderConfig {
     @PackageScope
     static Path DEFAULT_SCM_FILE = Const.APP_HOME_DIR.resolve('scm')
 
-    private static final List<String> DEFAULT_SCMS = [
-            'github',
-            'gitlab',
-            'gitea',
-            'bitbucket',
-            'azurerepos']
-
     @PackageScope
     static Map<String,String> env = new HashMap<>(System.getenv())
 
@@ -310,9 +303,10 @@ class ProviderConfig {
     }
 
     static private void addDefaults(List<ProviderConfig> result) {
-        result.addAll( DEFAULT_SCMS.collect{
-            new ProviderConfig(it)
-        })
+        def factories = Plugins.getExtensions(ProviderConfigFactory) ?:[ProviderConfigFactory.INSTANCE]
+        factories.each { factory->
+            result.addAll( factory.allProviderConfigs())
+        }
     }
 
 }

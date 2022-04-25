@@ -30,25 +30,25 @@ class RepositoryProviderTest extends Specification {
         def provider
 
         when:
-        provider = RepositoryFactory.create(new ProviderConfig('github'),'project/x')
+        provider = RepositoryFactory.create(new ProviderConfig('github'),'project/x', null)
         then:
         provider instanceof GithubRepositoryProvider
         provider.endpointUrl == 'https://api.github.com/repos/project/x'
 
         when:
-        provider = RepositoryFactory.create(new ProviderConfig('gitlab'),'project/y')
+        provider = RepositoryFactory.create(new ProviderConfig('gitlab'),'project/y', null)
         then:
         provider instanceof GitlabRepositoryProvider
         provider.endpointUrl == 'https://gitlab.com/api/v4/projects/project%2Fy'
 
         when:
-        provider = RepositoryFactory.create(new ProviderConfig('bitbucket'),'project/z')
+        provider = RepositoryFactory.create(new ProviderConfig('bitbucket'),'project/z', null)
         then:
         provider instanceof BitbucketRepositoryProvider
         provider.endpointUrl == 'https://bitbucket.org/api/2.0/repositories/project/z'
 
         when:
-        provider = RepositoryFactory.create(new ProviderConfig('local', [path:'/user/data']),'local/w')
+        provider = RepositoryFactory.create(new ProviderConfig('local', [path:'/user/data']),'local/w', null)
         then:
         provider.endpointUrl == 'file:/user/data/w'
     }

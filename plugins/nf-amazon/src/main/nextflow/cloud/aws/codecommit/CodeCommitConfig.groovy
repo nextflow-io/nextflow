@@ -1,4 +1,4 @@
-package nextflow.cloud.aws.scm
+package nextflow.cloud.aws.codecommit
 
 import nextflow.scm.config.ScmConfig
 import org.pf4j.Extension
