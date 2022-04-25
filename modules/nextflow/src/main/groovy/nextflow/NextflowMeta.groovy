@@ -108,10 +108,22 @@ class NextflowMeta {
         fmt.parse(str)
     }
 
+    /**
+     * Determine if the workflow script uses DSL2 mode
+     * 
+     * {@code true} when the workflow script uses DSL2 syntax, {@code false} otherwise.
+     */
     boolean isDsl2() {
         enable.dsl == 2
     }
 
+    /**
+     * As of the removal of DSL2 preview mode, the semantic of this method
+     * is identical to {@link #isDsl2()}.
+     * @return
+     *  {@code true} when the workflow script uses DSL2 syntax, {@code false} otherwise.
+     */
+    @Deprecated
     boolean isDsl2Final() {
         enable.dsl == 2
     }
