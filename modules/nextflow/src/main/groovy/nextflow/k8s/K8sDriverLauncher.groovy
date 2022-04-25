@@ -50,7 +50,7 @@ import org.codehaus.groovy.runtime.MethodClosure
 @Slf4j
 class K8sDriverLauncher {
 
-    private String deploymentName = "Pod"
+    private String resourceType = "Pod"
     /**
      * Container image to be used for the Nextflow driver pod
      */
@@ -175,7 +175,7 @@ class K8sDriverLauncher {
             currentState = k8sClient.podState(runName)
         if (currentState && currentState?.running instanceof Map) {
             final name = runName
-            println "$this.deploymentName running: $name ... waiting for $this.deploymentName to stop running"
+            println "$this.resourceType running: $name ... waiting for $this.resourceType to stop running"
             try {
                 while( true ) {
                     sleep 10000
@@ -185,13 +185,13 @@ class K8sDriverLauncher {
                     else
                         state = k8sClient.podState(name)
                     if ( state && !(state?.running instanceof Map) )  {
-                        println "$this.deploymentName $name has changed from running state $state"
+                        println "$this.resourceType $name has changed from running state $state"
                         break
                     }
                 }
             }
             catch( Exception e ) {
-                log.warn "Caught exception waiting for $this.deploymentName to stop running"
+                log.warn "Caught exception waiting for $this.resourceType to stop running"
             }
         }
     }
@@ -201,7 +201,7 @@ class K8sDriverLauncher {
     }
 
     protected int waitJobTermination() {
-        log.debug "Wait for $this.deploymentName termination name=$runName"
+        log.debug "Wait for $this.resourceType termination name=$runName"
         final rnd = new Random()
         final time = System.currentTimeMillis()
         Map state = null
@@ -216,11 +216,11 @@ class K8sDriverLauncher {
                     return state.terminated.exitCode as int
 
                 else if( isWaitTimedOut(time) )
-                    throw new IllegalStateException('Timeout waiting for $this.deploymentName terminated state='+state)
+                    throw new IllegalStateException('Timeout waiting for $this.resourceType terminated state='+state)
             }
         }
         catch( Exception e ) {
-            log.warn "Unable to fetch $this.deploymentName exit status -- $this.deploymentName=$runName state=$state"
+            log.warn "Unable to fetch $this.resourceType exit status -- $this.resourceType=$runName state=$state"
             return 127
         }
     }
@@ -237,7 +237,7 @@ class K8sDriverLauncher {
 
     protected void waitJobStart() {
         final name = runName
-        print "$this.deploymentName submitted: $name .. waiting to start"
+        print "$this.resourceType submitted: $name .. waiting to start"
         while( true ) {
             sleep 1000
             Map state
@@ -250,7 +250,7 @@ class K8sDriverLauncher {
             }
         }
         print "\33[2K\r"
-        println "$this.deploymentName started: $name"
+        println "$this.resourceType started: $name"
     }
 
     /**
@@ -540,7 +540,7 @@ class K8sDriverLauncher {
                     .withCpus(headCpus)
 
         if ( k8sConfig.getJob()) {
-            this.deploymentName = "Job"
+            this.resourceType = "Job"
             new JobSpecBuilder()
                 .withJobName(runName)
                 .withNamespace(k8sClient.config.namespace)
@@ -571,9 +571,9 @@ class K8sDriverLauncher {
 
     protected Path yamlDebugPath() {
         boolean debug = config.k8s.debug?.yaml?.toString() == 'true'
-        final result = debug ? Paths.get(".nextflow.${this.deploymentName}.yaml") : null
+        final result = debug ? Paths.get(".nextflow.${this.resourceType}.yaml") : null
         if( result )
-            log.info "Launcher $this.deploymentName spec file: $result"
+            log.info "Launcher $this.resourceType spec file: $result"
         return result
     }
 
