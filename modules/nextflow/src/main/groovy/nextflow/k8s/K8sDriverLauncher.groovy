@@ -165,7 +165,7 @@ class K8sDriverLauncher {
         return exitCode
     }
 
-    protected void waitPodEnd() {
+    protected void waitJobEnd() {
         if( background )
             return
         def currentState
