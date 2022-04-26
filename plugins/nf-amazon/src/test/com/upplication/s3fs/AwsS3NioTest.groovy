@@ -289,6 +289,53 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         if( bucketName ) deleteBucket(bucketName)
     }
 
+    def 'move local file to a bucket' () {
+        given:
+        def TEXT = "Hello world!"
+
+        when:
+        def bucketName = createBucket()
+        def target = Paths.get(new URI("s3:///$bucketName/target/file.txt"))
+
+        and:
+        final source = Files.createTempFile('foo',null); source.text = TEXT
+
+        and:
+        Files.move(source, target)
+        then:
+        !Files.exists(source)
+        existsPath(target)
+        readObject(target) == TEXT
+
+        cleanup:
+        if( bucketName ) deleteBucket(bucketName)
+    }
+
+    def 'move a remote file to local' () {
+        given:
+        def TEXT = "Hello world!"
+
+        when:
+        def bucketName = createBucket()
+        def target = Files.createTempFile('foo',null)
+
+        and:
+        final objectName = "$bucketName/source/file.txt"
+        final source = Paths.get(new URI("s3:///$objectName"))
+        createObject(objectName, TEXT)
+
+        and:
+        Files.move(source, target, StandardCopyOption.REPLACE_EXISTING)
+        then:
+        !existsPath(source)
+        Files.exists(target)
+        target.text == TEXT
+
+        cleanup:
+        if( bucketName ) deleteBucket(bucketName)
+        if( target ) Files.deleteIfExists(target)
+    }
+
     @Ignore //FIXME
     def 'should create a directory' () {
 
