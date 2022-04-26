@@ -65,6 +65,7 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
@@ -608,9 +609,13 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
 
 	@Override
-	public void move(Path source, Path target, CopyOption... options)
-			throws IOException {
-		throw new UnsupportedOperationException();
+	public void move(Path source, Path target, CopyOption... options) throws IOException {
+		for( CopyOption it : options ) {
+			if( it==StandardCopyOption.ATOMIC_MOVE )
+				throw new IllegalArgumentException("Atomic move not supported by S3 file system provider");
+		}
+		copy(source,target,options);
+		delete(source);
 	}
 
 	@Override
@@ -692,59 +697,69 @@ public class S3FileSystemProvider extends FileSystemProvider {
 	}
 
 	@Override
-	public <V extends FileAttributeView> V getFileAttributeView(Path path,
-			Class<V> type, LinkOption... options) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public <A extends BasicFileAttributes> A readAttributes(Path path,
-			Class<A> type, LinkOption... options) throws IOException {
+	public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
 		Preconditions.checkArgument(path instanceof S3Path,
 				"path must be an instance of %s", S3Path.class.getName());
 		S3Path s3Path = (S3Path) path;
-
-		if (type == BasicFileAttributes.class) {
-
-			S3ObjectSummary objectSummary = s3ObjectSummaryLookup.lookup(s3Path);
-
-			// parse the data to BasicFileAttributes.
-			FileTime lastModifiedTime = null;
-			if( objectSummary.getLastModified() != null ) {
-				lastModifiedTime = FileTime.from(objectSummary.getLastModified().getTime(), TimeUnit.MILLISECONDS);
+		if (type.isAssignableFrom(BasicFileAttributeView.class)) {
+			try {
+				return (V) new S3FileAttributesView(readAttr0(s3Path));
 			}
-
-			long size =  objectSummary.getSize();
-			boolean directory = false;
-			boolean regularFile = false;
-			String key = objectSummary.getKey();
-            // check if is a directory and exists the key of this directory at amazon s3
-			if (objectSummary.getKey().equals(s3Path.getKey() + "/") && objectSummary.getKey().endsWith("/")) {
-				directory = true;
+			catch (IOException e) {
+				throw new RuntimeException("Unable read attributes for file: " + s3Path.toUri(), e);
 			}
-			// is a directory but not exists at amazon s3
-			else if ((!objectSummary.getKey().equals(s3Path.getKey()) || "".equals(s3Path.getKey())) && objectSummary.getKey().startsWith(s3Path.getKey())){
-				directory = true;
-				// no metadata, we fake one
-				size = 0;
-                // delete extra part
-                key = s3Path.getKey() + "/";
-			}
-			// is a file:
-			else {
-                regularFile = true;
-			}
-
-			return type.cast(new S3FileAttributes(key, lastModifiedTime, size, directory, regularFile));
 		}
+		throw new UnsupportedOperationException("Not a valid S3 file system provider file attribute view: " + type.getName());
+	}
 
+
+	@Override
+	public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
+		Preconditions.checkArgument(path instanceof S3Path,
+				"path must be an instance of %s", S3Path.class.getName());
+		S3Path s3Path = (S3Path) path;
+		if (type.isAssignableFrom(BasicFileAttributes.class)) {
+			return (A) readAttr0(s3Path);
+		}
 		// not support attribute class
 		throw new UnsupportedOperationException(format("only %s supported", BasicFileAttributes.class));
 	}
 
+	private S3FileAttributes readAttr0(S3Path s3Path) throws IOException {
+		S3ObjectSummary objectSummary = s3ObjectSummaryLookup.lookup(s3Path);
+
+		// parse the data to BasicFileAttributes.
+		FileTime lastModifiedTime = null;
+		if( objectSummary.getLastModified() != null ) {
+			lastModifiedTime = FileTime.from(objectSummary.getLastModified().getTime(), TimeUnit.MILLISECONDS);
+		}
+
+		long size =  objectSummary.getSize();
+		boolean directory = false;
+		boolean regularFile = false;
+		String key = objectSummary.getKey();
+		// check if is a directory and exists the key of this directory at amazon s3
+		if (objectSummary.getKey().equals(s3Path.getKey() + "/") && objectSummary.getKey().endsWith("/")) {
+			directory = true;
+		}
+		// is a directory but not exists at amazon s3
+		else if ((!objectSummary.getKey().equals(s3Path.getKey()) || "".equals(s3Path.getKey())) && objectSummary.getKey().startsWith(s3Path.getKey())){
+			directory = true;
+			// no metadata, we fake one
+			size = 0;
+			// delete extra part
+			key = s3Path.getKey() + "/";
+		}
+		// is a file:
+		else {
+			regularFile = true;
+		}
+
+		return new S3FileAttributes(key, lastModifiedTime, size, directory, regularFile);
+	}
+
 	@Override
-	public Map<String, Object> readAttributes(Path path, String attributes,
-			LinkOption... options) throws IOException {
+	public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
 		throw new UnsupportedOperationException();
 	}
 
