@@ -338,8 +338,16 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- try determine DSL version from config file
         final DSL2 = '2'
         final DSL1 = '1'
+        boolean userDefined = false
         final defaultDsl = sysEnv.get('NXF_DEFAULT_DSL') ?: DSL2
-        final dsl = config.navigate('nextflow.enable.dsl', defaultDsl) as String
+        String value = config.navigate('nextflow.enable.dsl') as String
+        final dsl
+        if ( value ) {
+            userDefined = true
+            dsl = value
+        } else {
+            dsl = defaultDsl
+        }
         if( dsl=='2' )
             NextflowMeta.instance.enableDsl2()
         else if( dsl=='1' )
@@ -348,7 +356,7 @@ class CmdRun extends CmdBase implements HubOptions {
             throw new AbortOperationException("Invalid Nextflow DSL value: $dsl")
 
         // -- script can still override the DSL version
-        NextflowMeta.instance.checkDsl2Mode(scriptFile.main.text)
+        NextflowMeta.instance.checkDsl2Mode(scriptFile.main.text, userDefined)
 
         // -- show launch info 
         final ver = NF.dsl2 ? DSL2 : DSL1

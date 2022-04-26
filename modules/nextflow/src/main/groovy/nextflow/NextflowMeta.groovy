@@ -17,6 +17,7 @@ import static nextflow.extension.Bolts.DATETIME_FORMAT
 @Singleton(strict = false)
 @ToString(includeNames = true)
 @EqualsAndHashCode
+@Slf4j
 class NextflowMeta {
 
     private static final Pattern DSL_DECLARATION = ~/(?m)^\s*(nextflow\.(preview|enable)\.dsl\s*=\s*(\d))\s*(;?\s*)?(;?\/{2}.*)?$/
@@ -140,12 +141,33 @@ class NextflowMeta {
         return enable.strict
     }
 
-    void checkDsl2Mode(String script) {
+    void checkDsl2Mode(String script, boolean userDefined = true ) {
         final matcher = DSL_DECLARATION.matcher(script)
-        final mode = matcher.find() ? matcher.group(2) : null
-        if( !mode )
-            return
-        final ver = matcher.group(3)
+        String mode = matcher.find() ? matcher.group(2) : null
+        String ver
+        if( !mode ) {
+            if( !userDefined ){
+                final Pattern DSL2_DETECTION_PATTERN = ~/(\n|\r|\s)+workflow(\n|\r|\s)*\{(\n|\r|.)*\}/
+                mode = 'enable'
+                if ( DSL2_DETECTION_PATTERN.matcher( script ).find() ) {
+                    ver = '2'
+                } else {
+                    ver = '1'
+                    log.warn( """
+                    ======================================================================
+                    =                               WARNING                              =
+                    =  You have not defined a DSL version: automatically detected DSL1.  =
+                    =        If DSL1 is wrong, define the DSL version explicitly.        =
+                    = Therefore, call the script with -dsl2 or add nextflow.enable.dsl=2 =
+                    ======================================================================
+                    """.stripIndent())
+                }
+            } else {
+                return
+            }
+        } else {
+            ver = matcher.group(3)
+        }
         if( mode == 'enable' ) {
             if( ver=='2' )
                 enableDsl2()
