@@ -411,9 +411,12 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.unstage_outputs == '''\
                 IFS=$'\\n'
-                for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
+                pathes=`ls -1d test.bam test.bai | sort | uniq`
+                set -f
+                for name in $pathes; do
                     nxf_fs_copy "$name" /work/dir || true
                 done
+                set +f
                 unset IFS
                 '''.stripIndent().rightTrim()
 
@@ -428,9 +431,12 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.unstage_outputs == '''\
                 IFS=$'\\n'
-                for name in $(eval "ls -1d test.bam test.bai" | sort | uniq); do
+                pathes=`ls -1d test.bam test.bai | sort | uniq`
+                set -f
+                for name in $pathes; do
                     nxf_fs_move "$name" /another/dir || true
                 done
+                set +f
                 unset IFS
                 '''.stripIndent().rightTrim()
     }

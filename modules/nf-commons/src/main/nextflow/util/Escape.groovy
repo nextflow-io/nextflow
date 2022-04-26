@@ -55,7 +55,11 @@ class Escape {
         replace(WILDCARDS, str)
     }
 
-    static String path(String val) {
+    static String path(String val, boolean glob = false) {
+        List<String> SPECIAL_CHARS = Escape.SPECIAL_CHARS
+        if ( glob ){
+            SPECIAL_CHARS = SPECIAL_CHARS.findAll {it != '\\' }
+        }
         replace(SPECIAL_CHARS, val, true)
     }
 
