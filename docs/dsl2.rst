@@ -720,7 +720,6 @@ DSL2 migration notes
 * Operator ``fork`` has been renamed to :ref:`operator-multimap`.
 * Operator ``groupBy`` has been deprecated by DSL2 syntax. Replace it with :ref:`operator-grouptuple`
 * Operator ``print`` and ``println`` have been deprecated by DSL2 syntax. Use :ref:`operator-view` instead.
-* Operator :ref:`operator-merge` has been deprecated by DSL2 syntax. Use :ref:`operator-join` instead.
 * Operator :ref:`operator-separate` has been deprecated by DSL2 syntax.
 * Operator :ref:`operator-spread` has been deprecated with DSL2 syntax. Replace it with :ref:`operator-combine`.
 * Operator route has been deprecated by DSL2 syntax.
