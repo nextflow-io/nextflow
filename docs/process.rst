@@ -249,12 +249,16 @@ the latter and making process scripts more readable and easy to maintain. For ex
 
     process myTask {
         input:
-        val str from 'Hello', 'Hola', 'Bonjour'
+        val str
 
         shell:
         '''
         echo User $USER says !{str}
         '''
+    }
+
+    workflow {
+      channel.of('Hello', 'Hola', 'Bonjour') | myTask
     }
 
 In the above trivial example the ``$USER`` variable is managed by the Bash interpreter, while ``!{str}`` is handled
@@ -283,14 +287,16 @@ This means that instead of specifying the process command to be executed as a st
 define it by providing one or more language statements, as you would do in the rest of the pipeline script.
 Simply starting the script definition block with the ``exec:`` keyword, for example::
 
-    x = Channel.from( 'a', 'b', 'c')
-
     process simpleSum {
         input:
         val x
 
         exec:
         println "Hello Mr. $x"
+    }
+
+    workflow {
+      channel.of('a', 'b', 'c') | simpleSum
     }
 
 Will display::
@@ -355,16 +361,11 @@ input block at a time and it must contain one or more input declarations.
 The input block follows the syntax shown below::
 
     input:
-      <input qualifier> <input name> [from <source channel>] [attributes]
+      <input qualifier> <input name>
 
-An input definition starts with an input `qualifier` and the input `name`, followed by the keyword ``from`` and
-the actual channel over which inputs are received. Finally some input optional attributes can be specified.
-
-.. tip:: When the input name is the same as the channel name, the ``from`` part of the declaration can be omitted.
-
-The input qualifier declares the `type` of data to be received. This information is used by Nextflow to apply the
-semantic rules associated to each qualifier and handle it properly depending on the target execution platform
-(grid, cloud, etc).
+An input definition starts with an input `qualifier` and the input `name`. The input qualifier declares the `type`
+of data to be received. This information is used by Nextflow to apply the semantic rules associated to each qualifier
+and handle it properly depending on the target execution platform (grid, cloud, etc).
 
 The qualifiers available are the ones listed in the following table:
 
@@ -374,7 +375,7 @@ Qualifier   Semantic
 val         Lets you access the received input value by its name in the process script.
 env         Lets you use the received value to set an environment variable named
             as the specified input name.
-file        Lets you handle the received value as a file, staging it properly in the execution context.
+file        Lets you handle the received value as a file, staging it properly in the execution context. DEPRECATED.
 path        Lets you handle the received value as a path, staging the file properly in the execution context.
 stdin       Lets you forward the received value to the process ``stdin`` special file.
 tuple       Lets you handle a group of input values having one of the above qualifiers.
@@ -388,13 +389,16 @@ Input of generic values
 The ``val`` qualifier allows you to receive data of any type as input. It can be accessed in the process script
 by using the specified input name, as shown in the following example::
 
-    num = Channel.from( 1, 2, 3 )
-
     process basicExample {
       input:
-      val x from num
+      val x
 
       "echo process job $x"
+    }
+
+    workflow {
+      def num = channel.of(1,2,3)
+      basicExample(num)
     }
 
 In the above example the process is executed three times, each time a value is received from the channel ``num``
@@ -408,49 +412,43 @@ and used to process the script. Thus, it results in an output similar to the one
   since the process is executed in a parallel manner, there is no guarantee that they are processed in the
   same order as they are received. In fact, in the above example, the value ``3`` is processed before the others.
 
-When the ``val`` has the same name as the channel from where the data is received, the ``from`` part can be omitted.
-Thus the above example can be written as shown below::
-
-    num = Channel.from( 1, 2, 3 )
+.. note::
+  When the process declares exactly one input, the pipeline style notation can be used to provide inputs to the process,
+  instead of passing it as a parameter. Both methods have the identical semantics.
 
     process basicExample {
       input:
-      val num
+      val x
 
-      "echo process job $num"
+      "echo process job $x"
+    }
+
+    workflow {
+      channel.of(1,2,3) | basicExample
     }
 
 
 Input of files
 --------------
 
-The ``file`` qualifier allows the handling of file values in the process execution context. This means that
+The ``path`` qualifier allows the handling of file values in the process execution context. This means that
 Nextflow will stage it in the process execution directory, and it can be access in the script by using the name
 specified in the input declaration. For example::
 
-    proteins = Channel.fromPath( '/some/path/*.fa' )
-
     process blastThemAll {
       input:
-      path query_file from proteins
+      path query_file
 
       "blastp -query ${query_file} -db nr"
     }
 
+    workflow {
+      def proteins = channel.fromPath( '/some/path/*.fa' )
+      blastThemAll(proteins)
+    }
+
 In the above example all the files ending with the suffix ``.fa`` are sent over the channel ``proteins``.
 Then, these files are received by the process which will execute a `BLAST` query on each of them.
-
-When the file input name is the same as the channel name, the ``from`` part of the input declaration can be omitted.
-Thus, the above example could be written as shown below::
-
-    proteins = Channel.fromPath( '/some/path/*.fa' )
-
-    process blastThemAll {
-      input:
-      path proteins
-
-      "blastp -query $proteins -db nr"
-    }
 
 It's worth noting that in the above examples, the name of the file in the file-system is not touched, you can
 access the file even without knowing its name because you can reference it in the process script by using the
@@ -461,7 +459,7 @@ with the actual provided file. In this case you can specify its name by specifyi
 input file parameter declaration, as shown in the following example::
 
     input:
-        path query_file name 'query.fa' from proteins
+        path query_file name 'query.fa'
 
 Or alternatively using a shorter syntax::
 
@@ -470,13 +468,16 @@ Or alternatively using a shorter syntax::
 
 Using this, the previous example can be re-written as shown below::
 
-    proteins = Channel.fromPath( '/some/path/*.fa' )
-
     process blastThemAll {
       input:
       path 'query.fa' from proteins
 
       "blastp -query query.fa -db nr"
+    }
+
+    workflow {
+      def proteins = Channel.fromPath( '/some/path/*.fa' )
+      blastThemAll(proteins)
     }
 
 What happens in this example is that each file, that the process receives, is staged with the name ``query.fa``
@@ -488,8 +489,6 @@ execution is launched.
   In other words, `Nextflow` helps you write pipeline tasks that are self-contained and decoupled from the execution
   environment. This is also the reason why you should avoid whenever possible using absolute or relative paths
   when referencing files in your pipeline processes.
-
-.. TODO describe that file can handle channels containing any data type not only file
 
 
 Multiple input files
@@ -504,13 +503,16 @@ usual square brackets notation.
 When a target file name is defined in the input parameter and a collection of files is received by the process,
 the file name will be appended by a numerical suffix representing its ordinal position in the list. For example::
 
-    fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(size:3)
-
     process blastThemAll {
         input:
         path 'seq' from fasta
 
         "echo seq*"
+    }
+
+    workflow {
+      def fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(size:3)
+      blastThemAll(fasta)
     }
 
 Will output::
@@ -540,13 +542,16 @@ Cardinality   Name pattern     Staged file names
 
 The following fragment shows how a wildcard can be used in the input file declaration::
 
-    fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(size:3)
-
     process blastThemAll {
         input:
         path 'seq?.fa' from fasta
 
         "cat seq1.fa seq2.fa seq3.fa"
+    }
+
+    workflow {
+      def fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(size:3)
+      blastThemAll(fasta)
     }
 
 .. note:: Rewriting input file names according to a named pattern is an extra feature and not at all obligatory.
@@ -564,7 +569,7 @@ are allowed to use other input values as variables in the file name string. For 
   process simpleCount {
     input:
     val x from species
-    path "${x}.fa" from genomes
+    path "${x}.fa"
 
     """
     cat ${x}.fa | grep '>'
