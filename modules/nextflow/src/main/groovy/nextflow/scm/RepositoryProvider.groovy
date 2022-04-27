@@ -21,10 +21,12 @@ import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.exception.RateLimitExceededException
+import nextflow.plugin.Plugins
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 /**
@@ -270,4 +272,23 @@ abstract class RepositoryProvider {
         }
     }
 
+    static private Map<String,String> PLUGINS_MAP = ['git-codecommit':'nf-amazon']
+
+    @PackageScope
+    static void loadRequiredPlugins(String pipelineName){
+        def plugins = PLUGINS_MAP.findResults{
+            if( pipelineName.indexOf(it.key) != -1){
+                log.debug "Starting plugin '$it.value' required to handle $pipelineName repo"
+                return it.value
+            }
+            null
+        }
+        final tmp = [plugins: plugins]
+        Plugins.setup( tmp )
+    }
+
+    @PackageScope
+    static void unloadRequiredPlugins(String pipelineName){
+        Plugins.stop()
+    }
 }

@@ -17,6 +17,7 @@
 
 package nextflow.scm
 
+import groovy.util.logging.Slf4j
 import nextflow.plugin.Plugins
 import nextflow.scm.config.ScmConfig
 

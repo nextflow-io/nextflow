@@ -122,6 +122,8 @@ class AssetManager {
     @PackageScope
     AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null ) {
 
+        RepositoryProvider.loadRequiredPlugins(pipelineName)
+
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
         this.project = resolveName(pipelineName)
@@ -130,6 +132,8 @@ class AssetManager {
         this.provider = createHubProvider(hub, pipelineName)
         setupCredentials(cliOpts)
         validateProjectDir()
+
+        RepositoryProvider.unloadRequiredPlugins(pipelineName)
 
         return this
     }
