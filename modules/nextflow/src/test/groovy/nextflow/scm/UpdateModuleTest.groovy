@@ -44,7 +44,7 @@ class UpdateModuleTest extends Specification {
         new File(dir, 'file1.txt').text = 'Hello'
         new File(dir, 'file2.log').text = 'World'
         repo.add().addFilepattern('.').call()
-        repo.commit().setAll(true).setMessage('First commit').call()
+        repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
         repo.close()
 
         // create module b
