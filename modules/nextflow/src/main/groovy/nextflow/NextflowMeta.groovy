@@ -141,19 +141,21 @@ class NextflowMeta {
         return enable.strict
     }
 
-    void checkDsl2Mode(String script, boolean userDefined = true ) {
-        final matcher = DSL_DECLARATION.matcher(script)
-        String mode = matcher.find() ? matcher.group(2) : null
-        String ver
-        if( !mode ) {
-            if( !userDefined ){
-                final Pattern DSL2_DETECTION_PATTERN = ~/(\n|\r|\s)+workflow(\n|\r|\s)*\{(\n|\r|.)*\}/
-                mode = 'enable'
-                if ( DSL2_DETECTION_PATTERN.matcher( script ).find() ) {
-                    ver = '2'
-                } else {
-                    ver = '1'
-                    log.warn( """
+    void setDSL( String version ){
+        if( version == '2' )
+            enableDsl2()
+        else if( version == '1' )
+            disableDsl2()
+        else
+            throw new IllegalArgumentException("Unknown nextflow DSL version: ${version}")
+    }
+
+    String detectDSL( String script ) {
+        final Pattern DSL2_DETECTION_PATTERN = ~/(\n|\r|\s)+workflow(\n|\r|\s)*\{(\n|\r|.)*\}/
+        if (DSL2_DETECTION_PATTERN.matcher(script).find()) {
+            return '2'
+        } else {
+            log.warn("""
                     ======================================================================
                     =                               WARNING                              =
                     =  You have not defined a DSL version: automatically detected DSL1.  =
@@ -162,24 +164,26 @@ class NextflowMeta {
                     = Check documentation: https://www.nextflow.io/docs/latest/dsl2.html =
                     ======================================================================
                     """.stripIndent())
-                }
-            } else {
+            return '1'
+        }
+    }
+
+    void checkDsl2Mode(String script, boolean userDefined = true ) {
+        final matcher = DSL_DECLARATION.matcher(script)
+        String mode = matcher.find() ? matcher.group(2) : null
+        String ver
+        if( !mode ) {
+            if ( userDefined ) {
                 return
             }
-        } else {
+            ver = detectDSL( script )
+        } else if( mode == 'enable' ) {
             ver = matcher.group(3)
-        }
-        if( mode == 'enable' ) {
-            if( ver=='2' )
-                enableDsl2()
-            else if( ver=='1' )
-                disableDsl2()
-            else
-                throw new IllegalArgumentException("Unknown nextflow DSL version: ${ver}")
-        }
-        else if( mode == 'preview' )
+        } else if( mode == 'preview' ) {
             throw new IllegalArgumentException("Preview nextflow mode 'preview' is not supported anymore -- Please use `nextflow.enable.dsl=2` instead")
-        else
+        } else {
             throw new IllegalArgumentException("Unknown nextflow mode=${matcher.group(1)}")
+        }
+        setDSL( ver )
     }
 }

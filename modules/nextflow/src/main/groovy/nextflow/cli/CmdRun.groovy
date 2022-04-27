@@ -348,12 +348,7 @@ class CmdRun extends CmdBase implements HubOptions {
         } else {
             dsl = defaultDsl
         }
-        if( dsl=='2' )
-            NextflowMeta.instance.enableDsl2()
-        else if( dsl=='1' )
-            NextflowMeta.instance.disableDsl2()
-        else
-            throw new AbortOperationException("Invalid Nextflow DSL value: $dsl")
+        NextflowMeta.instance.setDSL( dsl )
 
         // -- script can still override the DSL version
         NextflowMeta.instance.checkDsl2Mode(scriptFile.main.text, userDefined)
