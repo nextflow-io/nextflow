@@ -412,7 +412,7 @@ class FileHelper {
         process.destroy()
 
         if( status ) {
-            log.debug "Can't check if specified path is NFS ($status): $path\n${Bolts.indent(text,'  ')}"
+            log.debug "Can't check if specified path is NFS ($status): ${FilesEx.toUriString(path)}\n${Bolts.indent(text,'  ')}"
             return null
         }
 
