@@ -159,6 +159,7 @@ class NextflowMeta {
                     =  You have not defined a DSL version: automatically detected DSL1.  =
                     =        If DSL1 is wrong, define the DSL version explicitly.        =
                     = Therefore, call the script with -dsl2 or add nextflow.enable.dsl=2 =
+                    = Check documentation: https://www.nextflow.io/docs/latest/dsl2.html =
                     ======================================================================
                     """.stripIndent())
                 }
