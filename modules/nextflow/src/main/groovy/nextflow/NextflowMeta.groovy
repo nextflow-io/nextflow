@@ -179,6 +179,9 @@ class NextflowMeta {
             ver = detectDSL( script )
         } else if( mode == 'enable' ) {
             ver = matcher.group(3)
+            if( userDefined && this.enable.dsl != ver as Float ) {
+                log.info("DSL $ver definition in the script overwrites DSL ${this.enable.dsl as int} from the config")
+            }
         } else if( mode == 'preview' ) {
             throw new IllegalArgumentException("Preview nextflow mode 'preview' is not supported anymore -- Please use `nextflow.enable.dsl=2` instead")
         } else {
