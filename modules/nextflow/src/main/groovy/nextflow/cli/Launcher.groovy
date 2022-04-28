@@ -479,7 +479,8 @@ class Launcher {
             // launch the command
             command?.run()
 
-            log.trace "Exit\n" + dumpThreads()
+            if( log.isTraceEnabled())
+                log.trace "Exit\n" + dumpThreads()
             return 0
         }
 
