@@ -234,6 +234,7 @@ workdir                 The directory path where the task was executed.
 script                  The task command script.
 scratch                 The value of the process ``scratch`` directive.
 error_action            The action applied on errof task failure.
+node                    The node on which the task was executed. Supported only for the Kubernetes executor.
 ======================= ===============
 
 .. note::
