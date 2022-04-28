@@ -154,7 +154,7 @@ class K8sConfig implements Map<String,Object> {
 
     String getNamespace() { target.namespace }
 
-    boolean getJob() { target.job }
+    boolean getJob() { target.useJobs }
 
     String getServiceAccount() { target.serviceAccount }
 
