@@ -69,6 +69,10 @@ class Channel  {
 
     static private Session getSession() { Global.session as Session }
 
+    /*
+    Static variant of methodMissing method
+    see https://groovy-lang.org/metaprogramming.html#_static_methodmissing
+     */
     static def $static_methodMissing(String name, Object args) {
         ChannelExtensionDelegate.INSTANCE().invokeFactoryExtensionMethod(name, args as Object[])
     }

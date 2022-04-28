@@ -206,11 +206,6 @@ class ScriptBinding extends WorkflowBinding {
     }
 
 
-    @CompileDynamic
-    Object invokeDynamicMethod(String name, Object args) {
-        this.getClass().getMethods().find{ it.name ==name}.invoke(this, args)
-    }
-
     /**
      * Holds parameter immutable values
      */

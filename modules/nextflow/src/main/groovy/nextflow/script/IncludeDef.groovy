@@ -111,6 +111,7 @@ class IncludeDef {
      */
     void load0(ScriptBinding.ParamsMap ownerParams) {
         checkValidPath(path)
+        // `plugin` is a reserved word in this context to import methods from Extensions instead from modules
         if( path.toString().startsWith('plugin/')){
             loadPlugin0(ownerParams)
             return
@@ -191,6 +192,9 @@ class IncludeDef {
 
         if( path instanceof Path && path.scheme != 'file' )
             throw new IllegalModulePath("Remote modules are not allowed -- Offending module: ${path.toUriString()}")
+
+
+        // Valid paths are: file format to import methods from modules or `plugin` keyword to import methods from plugin
 
         final str = path.toString()
         if( !str.startsWith('/') && !str.startsWith('./') && !str.startsWith('../') && !str.startsWith('plugin/') )

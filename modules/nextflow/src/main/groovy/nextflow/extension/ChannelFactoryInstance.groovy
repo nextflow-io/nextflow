@@ -71,7 +71,7 @@ class ChannelFactoryInstance implements ChannelFactory {
     @Override
     Object invokeExtensionMethod(String method, Object[] args) {
         def result = invoke0(method,args)
-        NodeMarker.addSourceNode(scope ? "channel.${this.scope}.${method}" : "channel.${method}", result)
+        NodeMarker.addSourceNode("channel.${method}", result)
         return result
     }
 

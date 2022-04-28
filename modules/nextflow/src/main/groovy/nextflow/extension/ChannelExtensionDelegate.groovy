@@ -47,8 +47,14 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
 
     final private Map<String, ChannelFactory> channelFactories = new HashMap<>()
 
+    /**
+     * Map of methods names with extension
+     */
     final private Map<String,Object> operatorExtensions = new HashMap<>()
 
+    /**
+     * Map of alias methods with the real method and the extension who implement it
+     */
     final private Map<String,Tuple2<String,Object>> aliasOperatorExtensions = new HashMap<>()
 
     final private Map<String,Tuple2<String,ChannelFactoryInstance>> aliasFactoryExtensions = new HashMap<>()
@@ -197,6 +203,14 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
         return false
     }
 
+    /*
+    ChannelExtensionDelegate maintains a Map  where the key is the alias, and the value is a tuple with the real method
+    and the class how implements it, so basically:
+    - if we are calling the invokeExtensionMethod with a method not registered as a plugin we call the method as usual
+    - if we are invoking an alias method, we retrieve the implementation and the real method from the map
+
+    as it's a tuple we maintain the alias into the first value (v1) and the extension in the second value (v2)
+     */
     Object invokeExtensionMethod(Object channel, String method, Object[] args) {
         final target = aliasOperatorExtensions.get(method)?.v2 ?: operatorExtensions.get(method)
         method = aliasOperatorExtensions.get(method)?.v1 ?: method
