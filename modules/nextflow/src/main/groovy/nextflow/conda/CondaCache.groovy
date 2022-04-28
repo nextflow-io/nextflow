@@ -62,6 +62,8 @@ class CondaCache {
 
     private boolean useMamba 
 
+    private boolean useMicromamba 
+
     private Path configCacheDir0
 
     @PackageScope String getCreateOptions() { createOptions }
@@ -73,7 +75,9 @@ class CondaCache {
     @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
 
     @PackageScope String getBinaryName() {
-        useMamba ? "mamba" : "conda"
+        if (useMamba) return "mamba"
+        else if (useMicromamba) return "micromamba"
+        else return "conda"
     }
 
     /** Only for debugging purpose - do not use */
@@ -99,6 +103,9 @@ class CondaCache {
 
         if( config.useMamba )
             useMamba = config.useMamba as boolean
+
+        if( config.useMicromamba )
+            useMicromamba = config.useMicromamba as boolean
 
     }
 
@@ -252,9 +259,19 @@ class CondaCache {
         log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
         final opts = createOptions ? "$createOptions " : ''
+
         def cmd
         if( isYamlFilePath(condaEnv) ) {
             cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+        }
+        else if (binaryName == "micromamba") {
+            if( isTextFilePath(condaEnv) ) {
+                cmd = "${binaryName} create $opts --yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+            }
+
+            else {
+                cmd = "${binaryName} create $opts --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
+            }
         }
         else if( isTextFilePath(condaEnv) ) {
 
