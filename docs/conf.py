@@ -114,6 +114,9 @@ html_context = {
     "conf_py_path": "/docs/"
 }
 
+# Nextflow theme
+html_css_files = ['theme.css']
+
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
 
