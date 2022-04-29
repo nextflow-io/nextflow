@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Microsoft Corp
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,41 +12,42 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
-package nextflow.cloud.azure.nio
 
-import java.nio.file.attribute.BasicFileAttributeView
-import java.nio.file.attribute.BasicFileAttributes
-import java.nio.file.attribute.FileTime
+package com.upplication.s3fs;
 
-import com.azure.storage.blob.BlobClient
+import java.io.IOException;
+import java.nio.file.attribute.BasicFileAttributeView;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
 
 /**
- * Implements {@link BasicFileAttributeView} for Azure storage blob
+ * Implements {@link BasicFileAttributeView} for S3 file storage
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class AzFileAttributesView implements BasicFileAttributeView {
+public class S3FileAttributesView implements BasicFileAttributeView  {
 
-    private BlobClient client
+    private S3FileAttributes target;
 
-    AzFileAttributesView( BlobClient client )  {
-        this.client = client
+    S3FileAttributesView(S3FileAttributes target) {
+        this.target = target;
     }
 
     @Override
-    String name() {
-        return 'basic'
+    public String name() {
+        return "basic";
     }
 
     @Override
-    BasicFileAttributes readAttributes() throws IOException {
-        return new AzFileAttributes(client)
+    public BasicFileAttributes readAttributes() throws IOException {
+        return target;
     }
 
     /**
      * This API is implemented is not supported but instead of throwing an exception just do nothing
-     * to not break the method {@link java.nio.file.CopyMoveHelper#copyToForeignTarget(java.nio.file.Path, java.nio.file.Path, java.nio.file.CopyOption...)}
+     * to not break the method {@code java.nio.file.CopyMoveHelper#copyToForeignTarget(java.nio.file.Path, java.nio.file.Path, java.nio.file.CopyOption...)}
      *
      * @param lastModifiedTime
      * @param lastAccessTime
@@ -54,8 +55,7 @@ class AzFileAttributesView implements BasicFileAttributeView {
      * @throws IOException
      */
     @Override
-    void setTimes(FileTime lastModifiedTime, FileTime lastAccessTime, FileTime createTime) throws IOException {
-        // TBD
+    public void setTimes(FileTime lastModifiedTime, FileTime lastAccessTime, FileTime createTime) throws IOException {
+        // not supported
     }
-
 }
