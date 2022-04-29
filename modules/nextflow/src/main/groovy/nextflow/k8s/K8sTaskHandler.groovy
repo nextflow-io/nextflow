@@ -304,7 +304,7 @@ class K8sTaskHandler extends TaskHandler {
             // include `terminated` state to allow the handler status to progress
             if (state && (state.running != null || state.terminated)) {
                 status = TaskStatus.RUNNING
-                if ( !runsOnNode ) runsOnNode = client.getNodeOfPod( podName )
+                determineNode()
                 return true
             }
         }
@@ -362,7 +362,7 @@ class K8sTaskHandler extends TaskHandler {
             savePodLogOnError(task)
             deletePodIfSuccessful(task)
             updateTimestamps(state.terminated as Map)
-            if ( !runsOnNode ) runsOnNode = client.getNodeOfPod( podName )
+            determineNode()
             return true
         }
 
@@ -440,6 +440,14 @@ class K8sTaskHandler extends TaskHandler {
         }
     }
 
+    private void determineNode(){
+        try {
+            if ( !runsOnNode )
+                runsOnNode = client.getNodeOfPod( podName )
+        } catch ( Exception e ){
+            log.warn ("Unable to fetch pod: $podName its node -- see the log file for details", e)
+        }
+    }
 
     TraceRecord getTraceRecord() {
         final result = super.getTraceRecord()
