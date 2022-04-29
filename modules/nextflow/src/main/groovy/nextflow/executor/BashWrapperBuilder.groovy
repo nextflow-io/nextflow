@@ -144,7 +144,7 @@ class BashWrapperBuilder {
     }
 
     protected boolean fixOwnership() {
-        systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
+        systemOsName == 'Linux' && containerConfig?['fixOwnership'] && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
     }
 
     protected isMacOS() {
@@ -555,15 +555,15 @@ class BashWrapperBuilder {
         builder.params(containerConfig)
 
         // extra rule for the 'auto' temp dir temp dir
-        def temp = containerConfig.temp?.toString()
+        def temp = containerConfig['temp']?.toString()
         if( temp == 'auto' || temp == 'true' ) {
             builder.setTemp( changeDir ? '$NXF_SCRATCH' : '$(nxf_mktemp)' )
         }
 
         if( containerConfig.containsKey('kill') )
-            builder.params(kill: containerConfig.kill)
+            builder.params(kill: containerConfig['kill'])
 
-        if( containerConfig.writableInputMounts==false )
+        if( containerConfig['writableInputMounts']==false )
             builder.params(readOnlyInputs: true)
 
         builder.params(entry: '/bin/bash')

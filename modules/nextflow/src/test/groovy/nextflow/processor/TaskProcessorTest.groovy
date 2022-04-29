@@ -720,8 +720,8 @@ class TaskProcessorTest extends Specification {
         }
         and:
         def processor = Spy(TaskProcessor)
-        processor.session = session
-        processor.config = Mock(ProcessConfig)
+        processor.setProperty('session', session)
+        processor.setProperty('config', Mock(ProcessConfig))
 
         when:
         def uuid1 = processor.createTaskHashKey(task)
@@ -806,7 +806,7 @@ class TaskProcessorTest extends Specification {
     def 'should get task directive vars' () {
         given:
         def processor = Spy(TaskProcessor)
-        processor.config = Mock(ProcessConfig)
+        processor.setProperty('config', Mock(ProcessConfig))
         and:
         def task = Mock(TaskRun)
         and:

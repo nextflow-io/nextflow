@@ -60,8 +60,8 @@ class LsfExecutorTest extends Specification {
                    '-J', 'foo']
 
         when:
-        executor.memUnit = 'GB'
-        executor.usageUnit = 'GB'
+        executor.setProperty('memUnit', 'GB')
+        executor.setProperty('usageUnit', 'GB')
         result = executor.getDirectives(task, [])
         then:
         1 * executor.getJobNameFor(task) >> 'foo'
@@ -82,8 +82,8 @@ class LsfExecutorTest extends Specification {
         task.workDir >> WORK_DIR
 
         when:
-        executor.usageUnit = 'KB'
-        executor.perJobMemLimit = true
+        executor.setProperty('usageUnit',  'KB')
+        executor.setProperty('perJobMemLimit', true)
         def result = executor.getDirectives(task, [])
         then:
         1 * executor.getJobNameFor(task) >> 'foo'
@@ -97,8 +97,8 @@ class LsfExecutorTest extends Specification {
                    '-J', 'foo']
 
         when:
-        executor.perJobMemLimit = true
-        executor.perTaskReserve = true
+        executor.setProperty('perJobMemLimit', true)
+        executor.setProperty('perTaskReserve', true)
         result = executor.getDirectives(task, [])
         then:
         1 * executor.getJobNameFor(task) >> 'foo'
@@ -386,8 +386,8 @@ class LsfExecutorTest extends Specification {
         // LSF executor
         def executor = Spy(LsfExecutor)
         executor.session = new Session()
-        executor.memUnit = 'MB'
-        executor.usageUnit = 'MB'
+        executor.setProperty('memUnit', 'MB')
+        executor.setProperty('usageUnit', 'MB')
 
         // mock process
         def proc = Mock(TaskProcessor)

@@ -185,7 +185,7 @@ class ContainerHandlerTest extends Specification {
         def handler = Spy(ContainerHandler,constructorArgs:[[engine: 'singularity', enabled: true]])
 
         when:
-        handler.baseDir = Paths.get('/abs/path/')
+        handler.setProperty('baseDir', Paths.get('/abs/path/'))
         def result = handler.normalizeImageName(IMAGE)
 
         then:

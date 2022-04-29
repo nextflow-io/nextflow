@@ -333,7 +333,7 @@ class AzBatchService implements Closeable {
         if( !sas )
             throw new IllegalArgumentException("Missing Azure Blob storage SAS token")
 
-        final container = task.config.container as String
+        final container = (task.config as Map).container as String
         if( !container )
             throw new IllegalArgumentException("Missing container image for process: $task.name")
         final taskId = "nf-${task.hash.toString()}"
@@ -501,7 +501,7 @@ class AzBatchService implements Closeable {
         String poolId = null
         if( !config.batch().autoPoolMode ) {
             // the process queue is used as poolId
-            poolId = task.config.queue as String
+            poolId = (task.config as Map).queue as String
             if( !poolId ) {
                 throw new IllegalArgumentException("No Azure Batch pool was specified for task '${task.name}' - Either specify the pool name using the 'queue' diretive or enable the 'autoPoolMode' option")
             }

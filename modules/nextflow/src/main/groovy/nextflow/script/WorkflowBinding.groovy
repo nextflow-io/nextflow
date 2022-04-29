@@ -76,7 +76,7 @@ class WorkflowBinding extends Binding  {
         if( component instanceof FunctionDef )
             return // OK
         if( component instanceof ChainableDef && !ExecutionStack.withinWorkflow() ) {
-            throw new IllegalInvocationException(component)
+            throw new IllegalInvocationException(component as ComponentDef) //need to review this
         }
     }
 

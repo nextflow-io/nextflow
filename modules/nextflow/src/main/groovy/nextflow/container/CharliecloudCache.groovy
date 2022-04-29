@@ -114,10 +114,10 @@ class CharliecloudCache {
     @PackageScope
     Path getCacheDir() {
 
-        if( config.pullTimeout )
-            pullTimeout = config.pullTimeout as Duration
+        if( config['pullTimeout'] )
+            pullTimeout = config['pullTimeout'] as Duration
 
-        def str = config.cacheDir as String
+        def str = config['cacheDir'] as String
         if( str )
             return checkDir(str)
 

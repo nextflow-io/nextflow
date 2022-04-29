@@ -465,7 +465,7 @@ class AssetManager {
 
         if( text ) try {
             def config = new ConfigParser().setIgnoreIncludes(true).parse(text)
-            result = (ConfigObject)config.manifest
+            result = (ConfigObject)(config['manifest'])
         }
         catch( Exception e ) {
             throw new AbortOperationException("Project config file is malformed -- Cause: ${e.message ?: e}", e)

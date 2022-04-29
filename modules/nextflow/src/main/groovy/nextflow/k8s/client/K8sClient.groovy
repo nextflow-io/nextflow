@@ -205,7 +205,7 @@ class K8sClient {
             return podStatus(name)
         }
         catch (K8sResponseException err) {
-            if( err.response.code == 404 && isKindPods(err.response)  ) {
+            if( err.response['code'] == 404 && isKindPods(err.response)  ) {
                 // this may happen when K8s node is shutdown and the pod is evicted
                 // therefore process exception is thrown so that the failure
                 // can be managed by the nextflow as re-triable execution
@@ -216,8 +216,8 @@ class K8sClient {
     }
 
     protected boolean isKindPods(K8sResponseJson resp) {
-        if( resp.details instanceof Map ) {
-            final details = (Map) resp.details
+        if( resp['details'] instanceof Map ) {
+            final details = (Map) resp['details']
             return details.kind == 'pods'
         }
         return false
@@ -250,7 +250,7 @@ class K8sClient {
         assert podName
 
         final K8sResponseJson resp = podStatus0(podName)
-        final status = resp.status as Map
+        final status = resp['status'] as Map
         final containerStatuses = status?.containerStatuses as List<Map>
 
         if( containerStatuses?.size()>0 ) {
@@ -316,7 +316,7 @@ class K8sClient {
             final cause = new K8sResponseException(resp)
             throw new PodUnschedulableException(message, cause)
         }
-        final status = resp.status as Map
+        final status = resp['status'] as Map
         if( status?.phase == 'Failed' ) {
             def message = "K8s pod in Failed state"
             final cause = new K8sResponseException(resp)
@@ -387,14 +387,17 @@ class K8sClient {
 
             try {
                 return makeRequestCall( method, path, body )
-            } catch ( K8sResponseException | SocketException e ) {
-                if ( e instanceof K8sResponseException && e.response.code != 500 )
+            } catch ( Exception /*| SocketException rewrote as groovy 4 seems doesnt like*/ e ) {
+                if ( e instanceof K8sResponseException && e.response['code'] != 500 )
                     throw e
-                log.error "[K8s] API request threw socket exception: $e.message for $method $path ${body ? '\n'+prettyPrint(body).indent() : ''}"
-                if ( trial < maxTrials ) log.info( "[K8s] Try API request again, remaining trials: ${ maxTrials - trial }" )
-                else throw e
-                final long delay = (Math.pow(3, trial - 1) as long) * 250
-                sleep( delay )
+                if( e instanceof SocketException ) {
+                    log.error "[K8s] API request threw socket exception: $e.message for $method $path ${body ? '\n' + prettyPrint(body).indent() : ''}"
+                    if (trial < maxTrials) log.info("[K8s] Try API request again, remaining trials: ${maxTrials - trial}")
+                    else throw e
+                    final long delay = (Math.pow(3, trial - 1) as long) * 250
+                    sleep(delay)
+                }
+                throw e
             }
         }
     }

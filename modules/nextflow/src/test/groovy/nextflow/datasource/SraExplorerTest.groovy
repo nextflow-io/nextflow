@@ -145,7 +145,7 @@ class SraExplorerTest extends Specification {
         result == [f1, f2]
 
         when:
-        slurper.protocol = 'http'
+        slurper.setProperty('protocol', 'http')
         and:
         result = slurper.getFastqUrl('SRR1448774')
         then:

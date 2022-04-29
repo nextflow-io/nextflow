@@ -156,7 +156,7 @@ class GoogleLifeSciencesHelper {
     }
 
     protected List<Action> createActions(GoogleLifeSciencesSubmitRequest req) {
-        def result = []
+        def result = [] as List<Action>
         if( config.sshDaemon || config.keepAliveOnFailure ) 
             result.add(createSshDaemonAction(req))
         result.add(createStagingAction(req))

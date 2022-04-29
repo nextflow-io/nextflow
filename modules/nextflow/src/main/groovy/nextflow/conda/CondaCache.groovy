@@ -60,7 +60,7 @@ class CondaCache {
 
     private String createOptions
 
-    private boolean useMamba 
+    private boolean useMamba
 
     private Path configCacheDir0
 
@@ -88,17 +88,17 @@ class CondaCache {
     CondaCache(CondaConfig config) {
         this.config = config
 
-        if( config.createTimeout )
-            createTimeout = config.createTimeout as Duration
+        if( config['createTimeout'] )
+            createTimeout = config['createTimeout'] as Duration
 
-        if( config.createOptions )
-            createOptions = config.createOptions
+        if( config['createOptions'] )
+            createOptions = config['createOptions']
 
-        if( config.cacheDir )
-            configCacheDir0 = (config.cacheDir as Path).toAbsolutePath()
+        if( config['cacheDir'] )
+            configCacheDir0 = (config['cacheDir'] as Path).toAbsolutePath()
 
-        if( config.useMamba )
-            useMamba = config.useMamba as boolean
+        if( config['useMamba'] )
+            useMamba = config['useMamba'] as boolean
 
     }
 

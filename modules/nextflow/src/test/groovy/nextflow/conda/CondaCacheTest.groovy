@@ -207,7 +207,7 @@ class CondaCacheTest extends Specification {
         def cache = Spy(CondaCache)
 
         when:
-        cache.useMamba = true
+        cache.setProperty('useMamba', true)
         // the prefix directory exists ==> no mamba command is executed
         def result = cache.createLocalCondaEnv(ENV)
         then:
@@ -218,7 +218,7 @@ class CondaCacheTest extends Specification {
 
         when:
         PREFIX.deleteDir()
-        cache.useMamba = true
+        cache.setProperty('useMamba', true)
         result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
@@ -235,7 +235,7 @@ class CondaCacheTest extends Specification {
         def cache = Spy(CondaCache)
 
         when:
-        cache.createOptions = '--this --that'
+        cache.setProperty('createOptions', '--this --that')
         def result = cache.createLocalCondaEnv0(ENV,PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
@@ -252,8 +252,8 @@ def 'should create conda env with options - using mamba' () {
         def cache = Spy(CondaCache)
 
         when:
-        cache.createOptions = '--this --that'
-        cache.useMamba = true
+        cache.setProperty('createOptions', '--this --that')
+        cache.setProperty('useMamba', true)
         def result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
@@ -289,7 +289,7 @@ def 'should create conda env with options - using mamba' () {
         def cache = Spy(CondaCache)
 
         when:
-        cache.createOptions = '--this --that'
+        cache.setProperty('createOptions', '--this --that')
         def result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)

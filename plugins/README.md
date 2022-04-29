@@ -19,8 +19,8 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.4.1'
 
     testImplementation project(':nextflow')
-    testImplementation "org.codehaus.groovy:groovy:3.0.5"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.5"
+    testImplementation "org.apache.groovy:groovy:4.0.2"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.2"
 }
 ``` 
 

@@ -406,8 +406,8 @@ class PodSpecBuilder {
         }
 
         // add storage definitions ie. volumes and mounts
-        final mounts = []
-        final volumes = []
+        final mounts = [] as List<Map>
+        final volumes = []as List<Map>
         final namesMap = [:]
 
         // creates a volume name for each unique claim name

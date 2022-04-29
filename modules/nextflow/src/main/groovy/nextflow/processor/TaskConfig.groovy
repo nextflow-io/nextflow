@@ -294,7 +294,7 @@ class TaskConfig extends LazyMap implements Cloneable {
         def value = get('module')
 
         if( value instanceof List ) {
-            def result = []
+            def result = [] as List<String>
             for( String name : value ) {
                 result.addAll( name.tokenize(':') )
             }

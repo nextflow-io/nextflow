@@ -200,7 +200,7 @@ class Launcher {
     @PackageScope
     List<String> normalizeArgs( String ... args ) {
 
-        def normalized = []
+        def normalized = [] as List<String>
         int i=0
         while( true ) {
             if( i==args.size() ) { break }
@@ -210,7 +210,7 @@ class Launcher {
 
             // when the first argument is a file, it's supposed to be a script to be executed
             if( i==1 && !allCommands.find { it.name == current } && new File(current).isFile()  ) {
-                normalized.add(0,CmdRun.NAME)
+                normalized.add(0,CmdRun.NAME.toString())
             }
 
             else if( current == '-resume' ) {

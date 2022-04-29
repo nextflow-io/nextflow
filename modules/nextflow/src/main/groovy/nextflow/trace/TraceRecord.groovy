@@ -237,7 +237,7 @@ class TraceRecord implements Serializable {
     }
 
 
-    @PackageScope
+    //@PackageScope
     Map<String,Object> store
 
     @Memoized
@@ -393,8 +393,8 @@ class TraceRecord implements Serializable {
     }
 
     CharSequence renderJson(StringBuilder result = new StringBuilder()) {
-        def fields = []
-        def formats = []
+        def fields = [] as List<String>
+        def formats = [] as List<String>
         FIELDS.each { name, type -> fields << name; formats << type }
         renderJson(result, fields, formats)
     }

@@ -69,11 +69,11 @@ trait CacheBase {
 
     }
 
-    CacheDB cacheFor(Record entry) {
+    CacheDB cacheFor(HistoryFile.Record entry) {
         CacheFactory.create(entry.sessionId, entry.runName, basePath)
     }
 
-    List<Record> listIds() {
+    List<HistoryFile.Record> listIds() {
 
         if( but ) {
             return history.findBut(but)
@@ -91,7 +91,7 @@ trait CacheBase {
         if( !args )
             return history.findByIdOrName('last')
 
-        def result = []
+        def result = [] as List<HistoryFile.Record>
         for( String name : args ) {
             result.addAll(history.findByIdOrName(name))
         }

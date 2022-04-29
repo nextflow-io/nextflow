@@ -224,7 +224,7 @@ abstract class FileCollector implements Closeable {
     private List<Path> saveTo0(Path target) {
         target.createDirIfNotExists()
 
-        def result = []
+        def result = [] as List<Path>
         saveFile { String name ->
             Path newFile = target.resolve(name)
             result << newFile

@@ -17,6 +17,10 @@
 
 package nextflow.util
 
+import ch.qos.logback.core.encoder.Encoder
+import ch.qos.logback.core.spi.FilterAttachable
+import ch.qos.logback.core.spi.LifeCycle
+
 import static nextflow.Const.*
 
 import java.lang.reflect.Field
@@ -245,8 +249,8 @@ class LoggerHelper {
             result.setContext(loggerContext)
             if( result instanceof ConsoleAppender )
                 result.setEncoder( new LayoutWrappingEncoder( layout: new PrettyConsoleLayout() ) )
-            result.addFilter(filter)
-            result.start()
+            (result as FilterAttachable).addFilter(filter)
+            (result as LifeCycle).start()
         }
 
         return result
@@ -288,7 +292,7 @@ class LoggerHelper {
             rollingPolicy.start()
 
             result.rollingPolicy = rollingPolicy
-            result.encoder = createEncoder()
+            result.encoder = createEncoder() as Encoder
             result.setContext(loggerContext)
             result.setTriggeringPolicy(new RollOnStartupPolicy())
             result.triggeringPolicy.start()
@@ -303,7 +307,7 @@ class LoggerHelper {
         FileAppender result = logFileName ? new FileAppender() : null
         if( result ) {
             result.file = logFileName
-            result.encoder = createEncoder()
+            result.encoder = createEncoder() as Encoder
             result.setContext(loggerContext)
             result.bufferSize = FileSize.valueOf('64KB')
             result.start()

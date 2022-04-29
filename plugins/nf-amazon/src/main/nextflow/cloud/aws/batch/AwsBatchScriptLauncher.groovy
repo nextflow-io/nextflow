@@ -48,6 +48,6 @@ class AwsBatchScriptLauncher extends BashWrapperBuilder {
 
     @Override
     protected boolean fixOwnership() {
-        return containerConfig?.fixOwnership
+        return (containerConfig as Map)?.fixOwnership
     }
 }

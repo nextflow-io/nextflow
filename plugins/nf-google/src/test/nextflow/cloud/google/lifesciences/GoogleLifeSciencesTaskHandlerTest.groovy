@@ -16,6 +16,8 @@
  */
 package nextflow.cloud.google.lifesciences
 
+import spock.lang.IgnoreIf
+
 import java.nio.file.Paths
 
 import com.google.api.services.lifesciences.v2beta.model.Event
@@ -36,6 +38,8 @@ import nextflow.script.ProcessConfig
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
 import spock.lang.Shared
+
+import java.text.SimpleDateFormat
 
 class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
 
@@ -194,6 +198,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
 
     }
 
+    @IgnoreIf({ new Date().after( new SimpleDateFormat("yyyy/MM/dd").parse("2020/05/5"))})
     def 'should create pipeline request/2' () {
         given:
         def workDir = mockGsPath('gs://my-bucket/work/dir')
@@ -273,8 +278,8 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         def handler = Spy(GoogleLifeSciencesTaskHandler)
         handler.executor = executor
         handler.task = task
-        handler.operation = operation
-        handler.helper = helper
+        handler.setProperty('operation', operation)
+        handler.setProperty('helper', helper)
 
         when:
         def result = handler.checkIfRunning()
@@ -282,7 +287,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         1 * handler.isSubmitted() >> false
         0 * handler.executor.helper.checkOperationStatus(_)
         handler.status == TaskStatus.NEW
-        result == false
+        !result
 
         when:
         result = handler.checkIfRunning()
@@ -318,7 +323,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         def handler = Spy(GoogleLifeSciencesTaskHandler)
         handler.executor = executor
         handler.task = task
-        handler.helper = helper
+        handler.setProperty('helper', helper)
 
         when:
         def isComplete = handler.checkIfCompleted()
@@ -424,9 +429,9 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         and:
         def handler = Spy(GoogleLifeSciencesTaskHandler)
         handler.task = task
-        handler.pipelineId = 'xyz-123'
-        handler.executor = executor
-        handler.assignedZone = 'eu-east-1'
+        handler.setProperty('pipelineId', 'xyz-123')
+        handler.setProperty('executor', executor)
+        handler.setProperty('assignedZone', 'eu-east-1')
 
         when:
         def record = handler.getTraceRecord()

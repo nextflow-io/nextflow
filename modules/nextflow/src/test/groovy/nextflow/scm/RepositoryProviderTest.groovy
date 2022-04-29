@@ -58,7 +58,7 @@ class RepositoryProviderTest extends Specification {
         given:
         def config = Mock(ProviderConfig)
         def provider = Spy(RepositoryProvider)
-        provider.config = config
+        provider.setProperty('config', config)
 
         when:
         provider.setCredentials('pditommaso', 'secret1')

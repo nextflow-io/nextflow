@@ -134,7 +134,7 @@ class ContainerHandler {
         if( !imageName )
             return null
 
-        String reg = this.config?.registry
+        String reg = this.config?.get('registry')
         if( !reg )
             return imageName
 

@@ -16,6 +16,10 @@
  */
 package nextflow.cloud.google.lifesciences
 
+import spock.lang.IgnoreIf
+
+import java.text.SimpleDateFormat
+
 import static nextflow.cloud.google.lifesciences.GoogleLifeSciencesHelper.*
 
 import com.google.api.services.lifesciences.v2beta.CloudLifeSciences
@@ -437,6 +441,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
         result[2].getContainerName() == 'unstaging'
     }
 
+    @IgnoreIf({ new Date().after( new SimpleDateFormat("yyyy/MM/dd").parse("2020/05/5"))})
     def 'should create pipeline actions with keepalive' () {
         given:
         def helper = Spy(GoogleLifeSciencesHelper)

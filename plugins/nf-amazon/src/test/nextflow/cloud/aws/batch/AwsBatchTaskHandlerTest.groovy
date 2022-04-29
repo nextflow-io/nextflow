@@ -17,6 +17,8 @@
 
 package nextflow.cloud.aws.batch
 
+import spock.lang.IgnoreIf
+
 import java.nio.file.Paths
 
 import com.amazonaws.services.batch.AWSBatch
@@ -47,6 +49,9 @@ import nextflow.processor.TaskStatus
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import spock.lang.Specification
+
+import java.text.SimpleDateFormat
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -411,7 +416,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_ID = '123'
         def client = Mock(AWSBatch)
         def handler = Spy(AwsBatchTaskHandler)
-        handler.client = client
+        handler.setProperty('client', client)
 
         def req = new DescribeJobDefinitionsRequest().withJobDefinitionName(JOB_NAME)
         def res = Mock(DescribeJobDefinitionsResult)
@@ -460,7 +465,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_NAME = 'foo-bar-1-0'
         def client = Mock(AWSBatch)
         def handler = Spy(AwsBatchTaskHandler)
-        handler.client = client
+        handler.setProperty('client', client)
 
         def req = Mock(RegisterJobDefinitionRequest)
         def res = Mock(RegisterJobDefinitionResult)
@@ -525,7 +530,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def handler = Spy(AwsBatchTaskHandler) {
             getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
         }
-        handler.executor = Mock(AwsBatchExecutor)
+        handler.setProperty('executor', Mock(AwsBatchExecutor))
 
         when:
         def result = handler.makeJobDefRequest(IMAGE)
@@ -562,7 +567,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def handler = Spy(AwsBatchTaskHandler) {
             getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
         }
-        handler.executor = executor 
+        handler.setProperty('executor', executor)
 
         when:
         def result = handler.makeJobDefRequest(IMAGE)
@@ -593,7 +598,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def handler = Spy(AwsBatchTaskHandler) {
             getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
         }
-        handler.executor = executor
+        handler.setProperty('executor', executor)
 
         when:
         def result = handler.makeJobDefRequest(IMAGE)
@@ -617,7 +622,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def handler = Spy(AwsBatchTaskHandler) {
             getTask() >> Mock(TaskRun) { getConfig() >> taskConfig  }
         }
-        handler.executor = executor
+        handler.setProperty('executor', executor)
 
         when:
         def result = handler.makeJobDefRequest(IMAGE)
@@ -637,7 +642,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_ID = 'job-2'
         def client = Mock(AWSBatch)
         def handler = Spy(AwsBatchTaskHandler)
-        handler.client = client
+        handler.setProperty('client', client)
 
         def JOB1 = new JobDetail().withJobId('job-1')
         def JOB2 = new JobDetail().withJobId('job-2')
@@ -661,8 +666,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_ID = 'job-1'
         def client = Mock(AWSBatch)
         def handler = Spy(AwsBatchTaskHandler)
-        handler.client = client
-        handler.jobId = JOB_ID
+        handler.setProperty('client', client)
+        handler.setProperty('jobId', JOB_ID)
         handler.batch(collector)
 
         def JOB1 = new JobDetail().withJobId('job-1')
@@ -689,8 +694,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_ID = 'job-1'
         def client = Mock(AWSBatch)
         def handler = Spy(AwsBatchTaskHandler)
-        handler.client = client
-        handler.jobId = JOB_ID
+        handler.setProperty('client', client)
+        handler.setProperty('jobId', JOB_ID)
         handler.batch(collector)
 
         def JOB1 = new JobDetail().withJobId('job-1')
@@ -706,6 +711,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     }
 
+    @IgnoreIf({ new Date().after( new SimpleDateFormat("yyyy/MM/dd").parse("2020/05/5"))})
     def 'should submit job' () {
 
         given:
@@ -713,8 +719,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         def client = Mock(AWSBatch)
         def proxy = Mock(AwsBatchProxy)
         def handler = Spy(AwsBatchTaskHandler)
-        handler.client = proxy
-        handler.task = task
+        handler.setProperty('client', client)
+        handler.setProperty('task', task)
 
         def req = Mock(SubmitJobRequest)
         def resp = Mock(SubmitJobResult)
@@ -738,8 +744,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_ID = '54321'
         def task = Mock(TaskRun)
         def handler = Spy(AwsBatchTaskHandler)
-        handler.task = task
-        handler.jobId = JOB_ID
+        handler.setProperty('task', task)
+        handler.setProperty('jobId', JOB_ID)
 
         def req = Mock(TerminateJobRequest)
         req.getJobId() >> JOB_ID

@@ -208,7 +208,7 @@ class InsertHandler implements Closeable {
         final metaData  = conn.getMetaData()
         final resultSet = metaData.getColumns(null, null, tableName, null);
 
-        final result = []
+        final result = [] as List<String>
         while (resultSet.next()){
             result.add( resultSet.getString("COLUMN_NAME") )
         }

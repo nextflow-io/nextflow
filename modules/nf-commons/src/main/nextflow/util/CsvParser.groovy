@@ -74,7 +74,7 @@ class CsvParser {
     }
 
     List<String> parse( String line ) {
-        def result = []
+        def result = [] as List<String>
         while( line != null ) {
             if( !line ) {
                 result.add(empty)
