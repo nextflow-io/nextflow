@@ -580,7 +580,7 @@ class K8sDriverLauncher {
         initScript += '[ -f /etc/nextflow/scm ] && ln -s /etc/nextflow/scm $NXF_HOME/scm; '
         initScript += '[ -f /etc/nextflow/nextflow.config ] && cp /etc/nextflow/nextflow.config $PWD/nextflow.config; '
         if( headPreScript ) 
-            initScript += "[ -f '$headPreScript' ] && $headPreScript; "
+            initScript += "[ -f '$headPreScript' ] && '$headPreScript'; "
         configMap['init.sh'] = initScript
 
         // nextflow config file
