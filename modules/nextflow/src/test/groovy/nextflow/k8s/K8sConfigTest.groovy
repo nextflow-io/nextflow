@@ -330,10 +330,25 @@ class K8sConfigTest extends Specification {
 
     }
 
+    def 'should set env and sec context' () {
+        given:
+        def ctx = [
+                [env: 'NXF_FUSION_BUCKETS', value: 's3://nextflow-ci'],
+                [securityContext: [privileged: true]]]
+
+        when:
+        def cfg = new K8sConfig( pod: ctx )
+        then:
+        cfg.getPodOptions().getEnvVars().first() == PodEnv.value('NXF_FUSION_BUCKETS', 's3://nextflow-ci')
+        cfg.getPodOptions().getSecurityContext().toSpec() == [privileged:true]
+
+    }
+
     def 'should set the image pull policy' () {
         when:
         def cfg = new K8sConfig( pullPolicy: 'always' )
         then:
         cfg.getPodOptions().getImagePullPolicy() == 'always'
     }
+
 }

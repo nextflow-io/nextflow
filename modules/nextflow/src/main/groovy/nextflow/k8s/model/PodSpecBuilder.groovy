@@ -48,6 +48,8 @@ class PodSpecBuilder {
 
     List<String> command = []
 
+    List<String> args = new ArrayList<>()
+
     Map<String,String> labels = [:]
 
     Map<String,String> annotations = [:]
@@ -88,6 +90,8 @@ class PodSpecBuilder {
 
     List<Map> tolerations = []
 
+    boolean privileged
+    
     /**
      * @return A sequential volume unique identifier
      */
@@ -228,6 +232,11 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withPrivileged(boolean value) {
+        this.privileged = value
+        return this
+    }
+
     PodSpecBuilder withPodOptions(PodOptions opts) {
         // -- pull policy
         if( opts.imagePullPolicy )
@@ -273,6 +282,8 @@ class PodSpecBuilder {
         // -- tolerations
         if( opts.tolerations )
             tolerations.addAll(opts.tolerations)
+        // -- privileged
+        privileged = opts.privileged
 
         return this
     }
@@ -319,6 +330,12 @@ class PodSpecBuilder {
 
         if( imagePullPolicy )
             container.imagePullPolicy = imagePullPolicy
+
+        if( privileged ) {
+            // note: privileged flag needs to be defined in the *container* securityContext
+            // not the 'spec' securityContext (see below)
+            container.securityContext = [ privileged: true ]
+        }
 
         final spec = [
                 restartPolicy: restart,
