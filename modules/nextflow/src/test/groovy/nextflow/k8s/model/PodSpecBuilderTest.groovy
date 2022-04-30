@@ -59,6 +59,62 @@ class PodSpecBuilderTest extends Specification {
 
     }
 
+    def 'should create pod spec with args' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withWorkDir('/some/work/dir')
+                .withArgs(['echo', 'hello'])
+                .build()
+
+        then:
+        spec ==  [ apiVersion: 'v1',
+                   kind: 'Pod',
+                   metadata: [name:'foo', namespace:'default'],
+                   spec: [
+                           restartPolicy:'Never',
+                           containers:[
+                                   [name:'foo',
+                                    image:'busybox',
+                                    args:['echo', 'hello'],
+                                    workingDir:'/some/work/dir'
+                                   ]
+                           ]
+                   ]
+        ]
+
+    }
+
+    def 'should create pod spec with args string' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withWorkDir('/some/work/dir')
+                .withArgs('echo foo')
+                .build()
+
+        then:
+        spec ==  [ apiVersion: 'v1',
+                   kind: 'Pod',
+                   metadata: [name:'foo', namespace:'default'],
+                   spec: [
+                           restartPolicy:'Never',
+                           containers:[
+                                   [name:'foo',
+                                    image:'busybox',
+                                    args:['/bin/bash', '-c', 'echo foo'],
+                                    workingDir:'/some/work/dir'
+                                   ]
+                           ]
+                   ]
+        ]
+
+    }
+
     def 'should create pod spec with privileged' () {
 
         when:
