@@ -19,7 +19,6 @@ package nextflow.extension
 
 import java.lang.reflect.Modifier
 
-import groovy.runtime.metaclass.ChannelFactory
 import groovy.runtime.metaclass.DelegatingPlugin
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -29,7 +28,6 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
 import nextflow.plugin.Plugins
-import nextflow.plugin.Scoped
 import nextflow.script.ChannelOut
 /**
  * Manage channel extensions and dispatch method invocations
@@ -45,16 +43,8 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
 
     private Session getSession() { Global.getSession() as Session }
 
-    final private Map<String, ChannelFactory> channelFactories = new HashMap<>()
-
-    /**
-     * Map of methods names with extension
-     */
     final private Map<String,Object> operatorExtensions = new HashMap<>()
 
-    /**
-     * Map of alias methods with the real method and the extension who implement it
-     */
     final private Map<String,Tuple2<String,Object>> aliasOperatorExtensions = new HashMap<>()
 
     final private Map<String,Tuple2<String,ChannelFactoryInstance>> aliasFactoryExtensions = new HashMap<>()
@@ -77,10 +67,7 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
         // add default operators
         final defaultOps = loadDefaultOperators()
         log.trace "Dataflow default extension methods: ${defaultOps.sort().join(',')}"
-        final customOps = loadCustomOperators()
-        if( customOps )
-            log.debug "Dataflow custom extension methods: ${customOps.sort().join(',')}"
-        OPERATOR_NAMES = Collections.unmodifiableSet(defaultOps + customOps)
+        OPERATOR_NAMES = Collections.unmodifiableSet(defaultOps)
         // configure as global instance
         return instance = this
     }
@@ -99,7 +86,7 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
         return instance = this
     }
 
-    void loadChannelExtension(ChannelExtensionPoint ext, Map<String, String> methodAlias){
+    ChannelExtensionDelegate loadChannelExtension(ChannelExtensionPoint ext, Map<String, String> methodAlias){
         final declaredOperators = getDeclaredExtensionMethods0(ext.getClass())
         final declaredFactories = getDeclaredFactoryExtensionMethods0(ext.getClass())
         methodAlias.each {entry ->
@@ -121,38 +108,15 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
                 OPERATOR_NAMES = Collections.unmodifiableSet(OPERATOR_NAMES + [alias])
                 aliasOperatorExtensions.put(alias, new Tuple2(it, ext))
             }else if( declaredFactories.contains(it) ){
-                ChannelFactoryInstance factoryInstance = new ChannelFactoryInstance(null, ext)
+                ChannelFactoryInstance factoryInstance = new ChannelFactoryInstance(ext)
                 aliasFactoryExtensions.put(alias, new Tuple2(it, factoryInstance))
             }else{
                 throw new IllegalStateException("Operator '$it' it isn't defined by plugin ${existing.getClass().getName()}")
             }
         }
+        return instance = this
     }
 
-    private Set<String> loadCustomOperators() {
-        final extensions = findChannelExtensionPoints0()
-        final allNames = new HashSet()
-        for( ChannelExtensionPoint ext : extensions ) {
-            // find out the extension method names for the extension obj
-            final names = getDeclaredExtensionMethods0(ext.getClass())
-            // check if exists already and add it
-            for( String it : names ) {
-                final existing = operatorExtensions.get(it)
-                if( existing.is(OperatorEx.instance) ) {
-                    throw new IllegalStateException("Operator '$it' is already defined as a built-in operator - Offending plugin class: $ext")
-                }
-                else if( existing != null ) {
-                    throw new IllegalStateException("Operator '$it' conflict - it's defined by plugin ${existing.getClass().getName()} and ${ext.getClass().getName()}")
-                }
-                else {
-                    allNames.add(it)
-                    operatorExtensions.put(it, ext)
-                }
-            }
-        }
-
-        return allNames
-    }
 
     static private Set<String> getDeclaredExtensionMethods0(Class clazz) {
         def result = new HashSet<String>(30)
@@ -203,14 +167,6 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
         return false
     }
 
-    /*
-    ChannelExtensionDelegate maintains a Map  where the key is the alias, and the value is a tuple with the real method
-    and the class how implements it, so basically:
-    - if we are calling the invokeExtensionMethod with a method not registered as a plugin we call the method as usual
-    - if we are invoking an alias method, we retrieve the implementation and the real method from the map
-
-    as it's a tuple we maintain the alias into the first value (v1) and the extension in the second value (v2)
-     */
     Object invokeExtensionMethod(Object channel, String method, Object[] args) {
         final target = aliasOperatorExtensions.get(method)?.v2 ?: operatorExtensions.get(method)
         method = aliasOperatorExtensions.get(method)?.v1 ?: method
@@ -229,39 +185,6 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
         }
     }
 
-    ChannelFactory getChannelFactory(String factoryScope) {
-        if( channelFactories.containsKey(factoryScope) )
-            return channelFactories.get(factoryScope)
-
-        synchronized (channelFactories) {
-            final result = createFactoryInstance0(factoryScope)
-            channelFactories.put(factoryScope, result)
-            return result
-        }
-    }
-
-    /**
-     * Create a {@link ChannelFactoryInstance} object for the given scope
-     *
-     * @param scope
-     * @return The {@link ChannelFactoryInstance} instance holding the extensions matching the specified scope
-     */
-    protected ChannelFactoryInstance createFactoryInstance0(String scope) {
-        final all = findChannelExtensionPoints0()
-        log.trace "Loading channel factory extensions: $all"
-        for( ChannelExtensionPoint it : all ) {
-            final annot = it.getClass().getAnnotation(Scoped)
-            if( annot && annot.value()==scope )
-                return new ChannelFactoryInstance(scope, it)
-        }
-        return null
-    }
-
-    protected List<ChannelExtensionPoint> findChannelExtensionPoints0() {
-        if( channelExtensionPoints==null )
-            channelExtensionPoints = Plugins.getScopedExtensions(ChannelExtensionPoint).toList()
-        return channelExtensionPoints
-    }
 
     protected Optional<ChannelExtensionPoint> findChannelExtensionPointInPluginId(String pluginId) {
         Optional.ofNullable(Plugins.getExtensionsInPluginId(ChannelExtensionPoint, pluginId)?.first())

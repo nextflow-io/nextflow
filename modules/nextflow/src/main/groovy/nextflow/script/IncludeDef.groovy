@@ -42,6 +42,8 @@ import nextflow.exception.IllegalModulePath
 @EqualsAndHashCode
 class IncludeDef {
 
+    static final private String PLUGIN_PREFIX = 'plugin/'
+
     @Canonical
     static class Module {
         String name
@@ -111,9 +113,8 @@ class IncludeDef {
      */
     void load0(ScriptBinding.ParamsMap ownerParams) {
         checkValidPath(path)
-        // `plugin` is a reserved word in this context to import methods from Extensions instead from modules
-        if( path.toString().startsWith('plugin/')){
-            loadPlugin0(ownerParams)
+        if( path.toString().startsWith(PLUGIN_PREFIX) ) {
+            loadPlugin0(path.toString().substring(PLUGIN_PREFIX.length()))
             return
         }
         // -- resolve the concrete against the current script
@@ -193,9 +194,6 @@ class IncludeDef {
         if( path instanceof Path && path.scheme != 'file' )
             throw new IllegalModulePath("Remote modules are not allowed -- Offending module: ${path.toUriString()}")
 
-
-        // Valid paths are: file format to import methods from modules or `plugin` keyword to import methods from plugin
-
         final str = path.toString()
         if( !str.startsWith('/') && !str.startsWith('./') && !str.startsWith('../') && !str.startsWith('plugin/') )
             throw new IllegalModulePath("Module path must start with / or ./ prefix -- Offending module: $str")
@@ -203,10 +201,15 @@ class IncludeDef {
     }
 
     @PackageScope
-    void loadPlugin0(ScriptBinding.ParamsMap ownerParams){
-        final pluginId = path.toString().split('/').last()
-        log.info "starting plugin $pluginId"
+    void loadPlugin0(String pluginId){
+        log.debug "Including plugin $pluginId"
+        if( pluginId.startsWith('/') )
+            throw new IllegalArgumentException("Invalid plugin id: $pluginId - should not star with slash character")
+        if( pluginId.contains('@') )
+            throw new IllegalArgumentException("Invalid plugin id: $pluginId - should not contain version specification")
         Plugins.startIfMissing(pluginId)
+        if( !Plugins.isStarted(pluginId) )
+            throw new IllegalArgumentException("Invalid plugin id: $pluginId - plugin failed to start")
         Map<String, String> alias = this.modules.collectEntries {[it.name, it.alias ?: it.name]}
         ChannelExtensionDelegate.INSTANCE().loadChannelExtensionInPlugin(pluginId, alias)
     }

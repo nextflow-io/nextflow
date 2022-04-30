@@ -21,7 +21,6 @@ import java.io.File;
 import java.nio.file.Path;
 
 import groovy.lang.MetaClass;
-import nextflow.Channel;
 import nextflow.file.FileHelper;
 
 /**
@@ -64,21 +63,6 @@ public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass
         }
 
         return delegate.invokeMethod(obj, methodName, args);
-    }
-
-    /**
-     * Interceptor to retrieve channel's properties requests to the right extension
-     * @param object An instance of the class returned by the getTheClass() method
-     * @param property The name of the property to retrieve the value for
-     * @return
-     */
-    @Override
-    public Object getProperty(Object object, String property) {
-        // check if the property name is
-        ChannelFactory ext = Channel.class.equals(object) && plugin!=null
-                ? plugin.getChannelFactory(property)
-                : null;
-        return ext != null ? ext : delegate.getProperty(object, property);
     }
 
 }

@@ -22,7 +22,6 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.Session
-import nextflow.plugin.Scoped
 import spock.lang.Specification
 import test.MockScriptRunner
 /**
@@ -31,7 +30,6 @@ import test.MockScriptRunner
  */
 class ChannelFactoryInstanceTest extends Specification {
 
-    @Scoped('foo')
     class Ext1 extends ChannelExtensionPoint {
 
         int initCount
@@ -62,7 +60,6 @@ class ChannelFactoryInstanceTest extends Specification {
         }
     }
 
-    @Scoped('bar')
     class Ext2 extends ChannelExtensionPoint {
         int initCount
         Session initSession
@@ -82,10 +79,10 @@ class ChannelFactoryInstanceTest extends Specification {
     def 'should invoke custom plugin factory' () {
         given:
         def ext1 = new Ext1(); def ext2 = new Ext2()
-        new ChannelExtensionDelegate(channelExtensionPoints: [ext1, ext2]).install()
+        new ChannelExtensionDelegate().install().loadChannelExtension(ext1, ['alpha':'alpha'])
         and:
         def SCRIPT = '''
-        Channel.foo.alpha(['one','two','three'])
+        Channel.alpha(['one','two','three'])
         '''
 
         when:
@@ -138,11 +135,14 @@ class ChannelFactoryInstanceTest extends Specification {
     def 'should invoke multiple extensions' () {
         given:
         def ext1 = new Ext1(); def ext2 = new Ext2()
-        new ChannelExtensionDelegate(channelExtensionPoints: [ext1, ext2]).install()
+        new ChannelExtensionDelegate()
+                .install()
+                .loadChannelExtension(ext1, ['alpha':'alpha'])
+                .loadChannelExtension(ext2, ['omega':'omega'])
         and:
         def SCRIPT = '''
-            def ch1 = channel.foo.alpha([1,2,3])
-            def ch2 = channel.bar.omega(['X','Y','Z'])
+            def ch1 = channel.alpha([1,2,3])
+            def ch2 = channel.omega(['X','Y','Z'])
             
             process sayHello {
               input:
@@ -177,7 +177,7 @@ class ChannelFactoryInstanceTest extends Specification {
     def 'should invoke operator extension' () {
         given:
         def ext1 = new Ext1();
-        new ChannelExtensionDelegate(channelExtensionPoints: [ext1]).install()
+        new ChannelExtensionDelegate().install().loadChannelExtension(ext1, ['plusOne':'plusOne'])
         and:
         def SCRIPT = '''
             channel

@@ -409,12 +409,4 @@ class ScriptBinding extends WorkflowBinding {
 
     }
 
-    /*
-    ChannelExtensionSpec importPluginExtensions(@DelegatesTo(ChannelExtensionSpec) Closure closure){
-        ChannelExtensionSpec spec = new ChannelExtensionSpec()
-        Closure clone = closure.rehydrate(spec, this, this)
-        clone.resolveStrategy = Closure.DELEGATE_ONLY
-        clone()
-        spec
-    }*/
 }

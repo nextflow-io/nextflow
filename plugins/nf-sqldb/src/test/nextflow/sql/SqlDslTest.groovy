@@ -19,9 +19,11 @@ package nextflow.sql
 
 import groovy.sql.Sql
 import nextflow.Channel
+import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.extension.ChannelExtensionDelegate
 import nextflow.plugin.Plugins
+import spock.lang.Shared
 import spock.lang.Stepwise
 import spock.lang.Timeout
 import test.BaseSpec
@@ -36,7 +38,13 @@ import test.MockScriptRunner
 class SqlDslTest extends BaseSpec {
 
     def setup () {
-        ChannelExtensionDelegate.reloadExtensionPoints()
+        new ChannelExtensionDelegate()
+                .install()
+                .loadChannelExtension(new ChannelSqlExtension(), ['fromQuery':'fromQuery', sqlInsert:'sqlInsert'])
+    }
+
+    def cleanup() {
+        ChannelExtensionDelegate.reset()
     }
 
     def 'should perform a query and create a channel' () {
@@ -55,7 +63,7 @@ class SqlDslTest extends BaseSpec {
         def SCRIPT = '''
             def table = 'FOO'
             def sql = "select * from $table"
-            channel.sql.fromQuery(sql, db: "test") 
+            channel.fromQuery(sql, db: "test") 
             '''
         and:
         def result = new MockScriptRunner(config).setScript(SCRIPT).execute()
@@ -145,7 +153,7 @@ class SqlDslTest extends BaseSpec {
         def SCRIPT = '''
             def table = 'FOO'
             def sql = "select * from $table"
-            channel.sql.fromQuery(sql, db: "test", emitColumns:true) 
+            channel.fromQuery(sql, db: "test", emitColumns:true) 
             '''
         and:
         def result = new MockScriptRunner(config).setScript(SCRIPT).execute()

@@ -50,6 +50,7 @@ import nextflow.file.FilePatternSplitter
 import nextflow.file.PathVisitor
 import nextflow.util.CheckHelper
 import nextflow.util.Duration
+import org.codehaus.groovy.runtime.InvokerHelper
 import org.codehaus.groovy.runtime.NullObject
 /**
  * Channel factory object
@@ -69,14 +70,18 @@ class Channel  {
 
     static private Session getSession() { Global.session as Session }
 
-    /*
-    Static variant of methodMissing method
-    see https://groovy-lang.org/metaprogramming.html#_static_methodmissing
+    /**
+     * Allow the dynamic loading of plugin provided channel extension methods
+     *
+     * @param name The name of the method
+     * @param args The method arguments
+     * @return The method return value
      */
     static def $static_methodMissing(String name, Object args) {
-        ChannelExtensionDelegate.INSTANCE().invokeFactoryExtensionMethod(name, args as Object[])
+        ChannelExtensionDelegate.INSTANCE().invokeFactoryExtensionMethod(name, InvokerHelper.asArray(args))
     }
-/**
+
+    /**
      * Create an new channel
      *
      * @return The channel instance
