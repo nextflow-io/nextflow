@@ -249,6 +249,71 @@ class K8sDriverLauncherTest extends Specification {
 
     }
 
+    def 'should use user provided head-cpu and head-memory' () {
+
+        given:
+        def pod = Mock(PodOptions)
+        pod.getVolumeClaims() >> [ new PodVolumeClaim('pvc-1', '/mnt/path/data') ]
+        pod.getMountConfigMaps() >> [ new PodMountConfig('cfg-2', '/mnt/path/cfg') ]
+        pod.getAutomountServiceAccountToken() >> true
+
+        def k8s = Mock(K8sConfig)
+        k8s.getLaunchDir() >> '/the/user/dir'
+        k8s.getWorkDir() >> '/the/work/dir'
+        k8s.getProjectDir() >> '/the/project/dir'
+        k8s.getPodOptions() >> pod
+
+        def driver = Spy(K8sDriverLauncher)
+        driver.runName = 'foo-boo'
+        driver.k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
+        driver.k8sConfig = k8s
+        driver.podImage = 'foo/bar'
+        driver.headCpus = '2'
+        driver.headMemory = '200Mi'
+
+        when:
+        def spec = driver.makeLauncherSpec()
+        then:
+        driver.getLaunchCli() >> 'nextflow run foo'
+
+        spec == [
+            apiVersion: 'v1',
+            kind: 'Pod',
+            metadata: [name:'foo-boo', namespace:'foo', labels:[app:'nextflow', runName:'foo-boo']],
+            spec: [
+                restartPolicy: 'Never',
+                containers: [
+                    [
+                        name: 'foo-boo',
+                        image: 'foo/bar',
+                        command: ['/bin/bash', '-c', "source /etc/nextflow/init.sh; nextflow run foo"],
+                        env: [
+                            [name:'NXF_WORK', value:'/the/work/dir'],
+                            [name:'NXF_ASSETS', value:'/the/project/dir'],
+                            [name:'NXF_EXECUTOR', value:'k8s'],
+                            [name:'NXF_ANSI_LOG', value: 'false']
+                        ],
+                        resources: [
+                            requests: [cpu: '2', memory: '200Mi'],
+                            limits: [cpu: '2', memory: '200Mi']
+                        ],
+                        volumeMounts: [
+                            [name:'vol-1', mountPath:'/mnt/path/data'],
+                            [name:'vol-2', mountPath:'/mnt/path/cfg']
+                        ]
+                    ]
+                ],
+                serviceAccountName: 'bar',
+                volumes: [
+                    [name:'vol-1', persistentVolumeClaim:[claimName:'pvc-1']],
+                    [name:'vol-2', configMap:[name:'cfg-2'] ]
+                ]
+            ]
+        ]
+
+    }
+
+
     def 'should create config map' () {
 
         given:
@@ -294,6 +359,54 @@ class K8sDriverLauncherTest extends Specification {
         cleanup:
         folder?.deleteDir()
     }
+
+    def 'should create config map with pre-script' () {
+
+        given:
+        def folder = Files.createTempDirectory('foo')
+
+        def params = folder.resolve('params.json')
+        params.text = 'bla-bla'
+        def driver = Spy(K8sDriverLauncher)
+        driver.headPreScript = '/bin/foo.sh'
+        def NXF_CONFIG = [foo: 'bar'].toConfigObject()
+
+        def SCM_FILE = folder.resolve('scm')
+        SCM_FILE.text = "hello = 'world'\n"
+
+
+        def EXPECTED = [:]
+        EXPECTED['init.sh'] == ''
+
+        def POD_OPTIONS = new PodOptions()
+
+        def K8S_CONFIG = Mock(K8sConfig)
+        K8S_CONFIG.getLaunchDir() >> '/launch/dir'
+        K8S_CONFIG.getPodOptions() >> POD_OPTIONS
+
+        when:
+        driver.config = NXF_CONFIG
+        driver.k8sConfig = K8S_CONFIG
+        driver.cmd = new CmdKubeRun(paramsFile: params.toString())
+
+        driver.createK8sConfigMap()
+        then:
+        1 * driver.getScmFile() >> SCM_FILE
+        1 * driver.makeConfigMapName(_ as Map) >> 'nf-config-123'
+        1 * driver.tryCreateConfigMap('nf-config-123', _ as Map) >> {  name, cfg ->
+            assert cfg.'init.sh' == "mkdir -p '/launch/dir'; if [ -d '/launch/dir' ]; then cd '/launch/dir'; else echo 'Cannot create directory: /launch/dir'; exit 1; fi; [ -f /etc/nextflow/scm ] && ln -s /etc/nextflow/scm \$NXF_HOME/scm; [ -f /etc/nextflow/nextflow.config ] && cp /etc/nextflow/nextflow.config \$PWD/nextflow.config; [ -f '/bin/foo.sh' ] && '/bin/foo.sh'; "
+            assert cfg.'nextflow.config' == "foo = 'bar'\n"
+            assert cfg.'scm' == "hello = 'world'\n"
+            assert cfg.'params.json' == 'bla-bla'
+            return null
+        }
+
+        POD_OPTIONS.getMountConfigMaps() == [ new PodMountConfig('nf-config-123', '/etc/nextflow') ] as Set
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 
     def 'should make config' () {
         given:
