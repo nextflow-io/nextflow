@@ -114,6 +114,20 @@ class K8sConfig implements Map<String,Object> {
     }
 
     /**
+     * Whenever the pod should honour the entrypoint defined by the image (default: false)
+     *
+     *  @return  When {@code false} the launcher script is run by using pod `command` attributes which
+     *      overrides the entrypoint point defined by the image.
+     *
+     *      When {@code true} the launcher is run via the pod `args` attribute, without altering the
+     *      container entrypoint (it does however require to have a bash shell as the image entrypoint)
+     *
+     */
+    boolean preserveContainerEntrypoint() {
+        return target.preserveContainerEntrypoint
+    }
+
+    /**
      * @return the path where the workflow is launched and the user data is stored
      */
     String getLaunchDir() {

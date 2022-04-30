@@ -136,8 +136,16 @@ class PodSpecBuilder {
     }
 
     PodSpecBuilder withCommand( cmd ) {
+        if( cmd==null ) return this
         assert cmd instanceof List || cmd instanceof CharSequence, "Missing or invalid K8s command parameter: $cmd"
         this.command = cmd instanceof List ? cmd : ['/bin/bash','-c', cmd.toString()]
+        return this
+    }
+
+    PodSpecBuilder withArgs( args ) {
+        if( args==null ) return this
+        assert args instanceof List || args instanceof CharSequence, "Missing or invalid K8s args parameter: $args"
+        this.args = args instanceof List ? args : ['/bin/bash','-c', args.toString()]
         return this
     }
 
@@ -299,7 +307,7 @@ class PodSpecBuilder {
     Map build() {
         assert this.podName, 'Missing K8s podName parameter'
         assert this.imageName, 'Missing K8s imageName parameter'
-        assert this.command, 'Missing K8s command parameter'
+        assert this.command || this.args, 'Missing K8s command parameter'
 
         final restart = this.restart ?: 'Never'
 
@@ -319,12 +327,12 @@ class PodSpecBuilder {
         if( this.memory )
             res.memory = this.memory
 
-        final container = [
-                name: this.podName,
-                image: this.imageName,
-                command: this.command
-        ]
-        
+        final container = [ name: this.podName, image: this.imageName ]
+        if( this.command )
+            container.command = this.command
+        if( this.args )
+            container.args = args
+
         if( this.workDir )
             container.put('workingDir', workDir)
 

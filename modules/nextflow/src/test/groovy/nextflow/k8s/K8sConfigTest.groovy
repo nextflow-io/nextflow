@@ -351,4 +351,17 @@ class K8sConfigTest extends Specification {
         cfg.getPodOptions().getImagePullPolicy() == 'always'
     }
 
+    def 'should set preserve entrypoint setting'( ) {
+
+        when:
+        def cfg = new K8sConfig([:])
+        then:
+        !cfg.preserveContainerEntrypoint()
+
+        when:
+        cfg = new K8sConfig( preserveContainerEntrypoint: true )
+        then:
+        cfg.preserveContainerEntrypoint()
+
+    }
 }
