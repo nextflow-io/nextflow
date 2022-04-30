@@ -454,4 +454,16 @@ class PodOptionsTest extends Specification {
         then:
         opts.getPriorityClassName() == 'high-priority'
     }
+
+    def 'should set pod privileged' () {
+        when:
+        def opts = new PodOptions([:])
+        then:
+        !opts.getPrivileged()
+
+        when:
+        opts = new PodOptions([[privileged: true]])
+        then:
+        opts.getPrivileged()
+    }
 }

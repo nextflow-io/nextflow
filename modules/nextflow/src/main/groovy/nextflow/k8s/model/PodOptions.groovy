@@ -61,6 +61,8 @@ class PodOptions {
 
     private List<Map> tolerations
 
+    private Boolean privileged
+    
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         envVars = new HashSet<>(size)
@@ -134,7 +136,10 @@ class PodOptions {
         else if( entry.toleration instanceof Map ) {
             tolerations << (entry.toleration as Map)
         }
-        else 
+        else if( entry.privileged instanceof Boolean ) {
+            this.privileged = entry.privileged as Boolean
+        }
+        else
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
 
@@ -192,6 +197,8 @@ class PodOptions {
 
     List<Map> getTolerations() { tolerations }
 
+    Boolean getPrivileged() { privileged }
+    
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
 
@@ -251,6 +258,9 @@ class PodOptions {
 
         // tolerations
         result.tolerations = other.tolerations ?: this.tolerations
+
+        //  privileged execution
+        result.privileged = other.privileged!=null ? other.privileged : this.privileged
 
         return result
     }
