@@ -38,6 +38,7 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
+import nextflow.util.Escape
 import nextflow.util.PathTrie
 /**
  * Implements the {@link TaskHandler} interface for Kubernetes jobs
@@ -158,23 +159,34 @@ class K8sTaskHandler extends TaskHandler {
         }
     }
 
+    protected boolean preserveContainerEntrypoint() {
+        return executor.getK8sConfig().preserveContainerEntrypoint()
+    }
+
     protected Map newSubmitRequest0(TaskRun task, String imageName) {
 
         final fixOwnership = builder.fixOwnership()
-        final cmd = new ArrayList(new ArrayList(BashWrapperBuilder.BASH)) << TaskRun.CMD_RUN
+        final launcher = new ArrayList(new ArrayList(BashWrapperBuilder.BASH)) << "${Escape.path(task.workDir)}/${TaskRun.CMD_RUN}".toString()
         final taskCfg = task.getConfig()
 
         final clientConfig = client.config
         final builder = new PodSpecBuilder()
             .withImageName(imageName)
             .withPodName(getSyntheticPodName(task))
-            .withCommand(cmd)
-            .withWorkDir(task.workDir)
             .withNamespace(clientConfig.namespace)
             .withServiceAccount(clientConfig.serviceAccount)
             .withLabels(getLabels(task))
             .withAnnotations(getAnnotations())
             .withPodOptions(getPodOptions())
+
+        // when `preserveEntrypoint` is true the launcher is run via `args` instead of `command`
+        // to not override the container entrypoint
+        if( preserveContainerEntrypoint() ) {
+            builder.withArgs(launcher)
+        }
+        else {
+            builder.withCommand(launcher)
+        }
 
         // note: task environment is managed by the task bash wrapper
         // do not add here -- see also #680
