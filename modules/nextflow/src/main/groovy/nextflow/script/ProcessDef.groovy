@@ -28,7 +28,6 @@ import nextflow.script.params.BaseOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.InputsList
 import nextflow.script.params.OutputsList
-
 /**
  * Models a nextflow process definition
  *
@@ -194,8 +193,14 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
                 throw new ScriptRuntimeException("Process `$processName` inputs and outputs do not have the same cardinality - Feedback loop is not supported"  )
 
             for(int i=0; i<declaredOutputs.size(); i++ ) {
-                final ch = feedbackChannels ? feedbackChannels[i] : CH.create(singleton)
-                (declaredOutputs[i] as BaseOutParam).setInto(ch)
+                final param = (declaredOutputs[i] as BaseOutParam)
+                final topicName = param.channelTopicName
+                if( topicName && feedbackChannels )
+                    throw new IllegalArgumentException("Output topic conflict with recursion feature - check process '$name' should not declared any outout 'topic'" )
+                final ch = feedbackChannels
+                        ? feedbackChannels[i]
+                        : ( topicName ? CH.topicWriter(topicName) : CH.create(singleton) )
+                param.setInto(ch)
             }
         }
 

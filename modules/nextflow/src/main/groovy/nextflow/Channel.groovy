@@ -121,6 +121,10 @@ class Channel  {
         return CH.queue()
     }
 
+    static DataflowWriteChannel topic(String name) {
+        return CH.topic(name)
+    }
+
     /**
      * Create a empty channel i.e. only emits a STOP signal
      *

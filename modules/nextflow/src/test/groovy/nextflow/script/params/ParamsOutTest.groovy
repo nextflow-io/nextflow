@@ -811,7 +811,7 @@ class ParamsOutTest extends Dsl2Spec {
 
             process hola {
               output:
-              path "${x}_name", emit: aaa
+              path "${x}_name", emit: aaa, topic: 'foo'
               path "${x}_${y}.fa", emit: bbb 
               path "simple.txt", emit: ccc 
               path "data/sub/dir/file:${x}.fa", emit: ddd 
@@ -840,6 +840,7 @@ class ParamsOutTest extends Dsl2Spec {
         out0.isDynamic()
         out0.isPathQualifier()
         out0.channelEmitName == 'aaa'
+        out0.channelTopicName == 'foo'
 
         out1.name == null
         out1.getFilePatterns(ctx,null) == ['hola_99.fa']

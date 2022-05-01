@@ -1,5 +1,7 @@
 package nextflow.extension
 
+import static nextflow.Channel.empty
+
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -30,7 +32,15 @@ class CH {
         return (Session) Global.session
     }
 
-    static private Map<DataflowQueue, DataflowBroadcast> bridges = new HashMap<>(10)
+    static class Topic {
+        String name
+        DataflowBroadcast broadcaster = new DataflowBroadcast()
+        List<DataflowWriteChannel> writers = new ArrayList<>(10)
+    }
+
+    static final private List<Topic> allTopics = new ArrayList<>(10)
+
+    static final private Map<DataflowQueue, DataflowBroadcast> bridges = new HashMap<>(10)
 
     static DataflowReadChannel getReadChannel(channel) {
         if (channel instanceof DataflowQueue)
@@ -74,6 +84,18 @@ class CH {
             def broadcast = bridges.get(queue)
             queue.into(broadcast)
         }
+
+        // connect all topics
+        for( Topic topic : allTopics ) {
+            if( topic.writers ) {
+                def ch = new ArrayList(topic.writers)
+                if( ch.size()==1 ) ch.add(empty())
+                new MixOp(ch.collect(it -> getReadChannel(it))).withTarget(topic.broadcaster).apply()
+            }
+            else {
+                topic.broadcaster.bind(Channel.STOP)
+            }
+        }
     }
 
     static void init() { bridges.clear() }
@@ -102,6 +124,35 @@ class CH {
             return new DataflowBroadcast()
 
         return new DataflowQueue()
+    }
+
+    static DataflowBroadcast topic(String name) {
+        if( !NF.isDsl2() )
+            throw new IllegalStateException("Channel 'topic' is only available with DSL2")
+        synchronized (allTopics) {
+            def topic = allTopics.find(it -> it.name == name)
+            if( topic!=null )
+                return topic.broadcaster
+            // create a new topic
+            topic = new Topic(name:name)
+            allTopics.add(topic)
+            return topic.broadcaster
+        }
+    }
+
+    static DataflowWriteChannel topicWriter(String name) {
+        if( !NF.isDsl2() )
+            throw new IllegalStateException("Channel 'topic' is only available with DSL2")
+        synchronized (allTopics) {
+            def topic = allTopics.find(it -> it.name == name)
+            if( topic==null ) {
+                topic = new Topic(name:name)
+                allTopics.add(topic)
+            }
+            def result = CH.create()
+            topic.writers.add(result)
+            return result
+        }
     }
 
     static boolean isChannel(obj) {
