@@ -765,7 +765,7 @@ class PodSpecBuilderTest extends Specification {
         def builder = new PodSpecBuilder()
 
         expect:
-        builder.sanitize0('foo',label, 'label') == str
+        builder.sanitize0('label', 'foo', label) == str
 
         where:
         label           | str

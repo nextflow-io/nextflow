@@ -377,10 +377,10 @@ class PodSpecBuilder {
 
         // add labels
         if( labels )
-            metadata.labels = sanitize0(labels, 'label')
+            metadata.labels = sanitize0('label', labels)
 
-        if( annotations)
-            metadata.annotations = sanitize0(annotations, 'annotation')
+        if( annotations )
+            metadata.annotations = sanitize0('annotation', annotations)
 
         final pod = [
                 apiVersion: 'v1',
@@ -525,24 +525,27 @@ class PodSpecBuilder {
         volumes << [name: volName, configMap: config ]
     }
 
-    protected Map sanitize0(Map map, String kind) {
+    protected Map sanitize0(String kind, Map map) {
         final result = new HashMap(map.size())
-        for( Map.Entry entry : map )
-            result.put(entry.key, sanitize0(entry.key, entry.value, kind))
+        for( Map.Entry entry : map ) {
+            final key = sanitize0(kind, entry.key)
+            final value = (kind == 'label')
+                ? sanitize0(kind, entry.value)
+                : entry.value
+
+            result.put(key, value)
+        }
         return result
     }
 
     /**
-     * Valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.',
-     * and must start and end with an alphanumeric character.
-     *
-     * @param value
-     * @return
+     * Sanitize a string value to contain only alphanumeric characters, '-', '_' or '.',
+     * and to start and end with an alphanumeric character.
      */
-    protected String sanitize0( key, value, String kind ) {
+    protected String sanitize0(String kind, String value) {
         def str = String.valueOf(value)
         if( str.length() > 63 ) {
-            log.debug "K8s $kind exceeds allowed size: 63 -- offending name=$key value=$str"
+            log.debug "K8s $kind exceeds allowed size: 63 -- offending str=$str"
             str = str.substring(0,63)
         }
         str = str.replaceAll(/[^a-zA-Z0-9\.\_\-]+/, '_')
