@@ -1,124 +1,16 @@
 
 /* navbar -- logo */
 
-.wy-side-nav-search {
-    /* background-color: #2980b9; */
-    background-color: rgba(39, 174, 96, 0.6);
-}
-
 .wy-side-nav-search a:before {
     display: block;
-    content: url(https://github.com/nextflow-io/trademark/raw/master/nextflow2014_no-bg.png);
+    content: url(https://github.com/nextflow-io/trademark/raw/master/nextflow2014_black_white.png);
     visibility: visible;
     transform: scale(.43);
     transform-origin: left;
-    margin: -30px 0 -60px 0;
+    margin: -30px 0 -50px 0;
 }
 
 .wy-side-nav-search a {
     visibility: hidden;
 }
 
-
-/* navbar -- top */
-
-.wy-nav-top {
-    /* background-color: #2980b9; */
-    background-color: rgb(39, 174, 96);
-}
-
-
-/* navbar -- vertical */
-
-.wy-menu-vertical a:active {
-    /* background-color: #2980b9; */
-    background-color: rgb(39, 174, 96);
-}
-
-
-/* main content -- code blocks */
-
-.wy-nav-content .highlight {
-    background-color: rgba(0, 0, 0, 0.05);
-}
-
-
-/* main content -- links */
-
-.wy-nav-content a.fa,
-.wy-nav-content a:before,
-.wy-nav-content .admonition a,
-.wy-nav-content footer a {
-    color: rgb(39, 174, 96);
-}
-
-.wy-nav-content a.reference {
-    color: rgb(39, 174, 96);
-    text-decoration: underline;
-}
-
-
-/* admonitions -- danger, error */
-
-.rst-content .danger,
-.rst-content .error {
-    /* background: #fdf3f2 */
-    background: hsl(5, 76%, 94%)
-}
-
-.rst-content .danger .admonition-title,
-.rst-content .error .admonition-title {
-    /* background: #f29f97 */
-    background: hsl(5, 76%, 64%)
-}
-
-
-/* admonitions -- todo, attention, caution, warning */
-
-.rst-content .admonition-todo,
-.rst-content .attention,
-.rst-content .caution,
-.rst-content .warning {
-    /* background: #ffedcc */
-    background: hsl(28, 76%, 94%)
-}
-
-.rst-content .admonition-todo .admonition-title,
-.rst-content .attention .admonition-title,
-.rst-content .caution .admonition-title,
-.rst-content .warning .admonition-title {
-    /* background: #f0b37e */
-    background: hsl(28, 76%, 64%)
-}
-
-
-/* admonitions -- note, seealso */
-
-.rst-content .note,
-.rst-content .seealso {
-    /* background: #e7f2fa */
-    background: hsl(205, 76%, 94%)
-}
-
-.rst-content .note .admonition-title,
-.rst-content .seealso .admonition-title {
-    /* background: #6ab0de */
-    background: hsl(205, 76%, 54%)
-}
-
-
-/* admonitions -- hint, important, tip */
-
-.rst-content .hint,
-.rst-content .important,
-.rst-content .tip {
-    /* background: #dbfaf4 */
-    background: hsl(145, 76%, 94%)
-}
-
-.rst-content .hint .admonition-title,
-.rst-content .important .admonition-title,
-.rst-content .tip .admonition-title {
-    /* background: #1abc9c */
-    background: hsl(145, 76%, 44%)
-}
