@@ -377,10 +377,10 @@ class PodSpecBuilder {
 
         // add labels
         if( labels )
-            metadata.labels = sanitize0('label', labels)
+            metadata.labels = sanitize('label', labels)
 
         if( annotations )
-            metadata.annotations = sanitize0('annotation', annotations)
+            metadata.annotations = sanitize('annotation', annotations)
 
         final pod = [
                 apiVersion: 'v1',
@@ -525,7 +525,7 @@ class PodSpecBuilder {
         volumes << [name: volName, configMap: config ]
     }
 
-    protected Map sanitize0(String kind, Map map) {
+    protected Map sanitize(String kind, Map map) {
         final result = new HashMap(map.size())
         for( Map.Entry entry : map ) {
             final key = sanitize0(kind, entry.key)
@@ -542,7 +542,7 @@ class PodSpecBuilder {
      * Sanitize a string value to contain only alphanumeric characters, '-', '_' or '.',
      * and to start and end with an alphanumeric character.
      */
-    protected String sanitize0(String kind, String value) {
+    protected String sanitize0(String kind, value) {
         def str = String.valueOf(value)
         if( str.length() > 63 ) {
             log.debug "K8s $kind exceeds allowed size: 63 -- offending str=$str"
