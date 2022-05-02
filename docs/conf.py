@@ -96,9 +96,6 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 
-#sys.path.append(os.path.abspath('_themes'))
-#html_theme_path = ['_themes']
-
 html_theme = "sphinx_rtd_theme"
 
 # Theme options are theme-specific and customize the look and feel of a theme
@@ -108,6 +105,17 @@ html_theme_options = {
   'display_version': False,
   "analytics_id": "UA-364526-10"
 }
+
+html_context = {
+    "display_github": True,
+    "github_user": "nextflow-io",
+    "github_repo": "nextflow",
+    "github_version": "master",
+    "conf_py_path": "/docs/"
+}
+
+# Nextflow theme
+html_css_files = ['theme.css']
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
