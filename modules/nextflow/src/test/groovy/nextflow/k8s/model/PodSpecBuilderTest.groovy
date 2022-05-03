@@ -765,7 +765,7 @@ class PodSpecBuilderTest extends Specification {
         def builder = new PodSpecBuilder()
 
         expect:
-        builder.sanitize0('foo',label, 'label') == str
+        builder.sanitize0(label, PodSpecBuilder.MetaType.LABEL) == str
 
         where:
         label           | str
@@ -783,5 +783,33 @@ class PodSpecBuilderTest extends Specification {
         'HELLO 123'     | 'HELLO_123'
         '123hello'      | '123hello'
         'x2345678901234567890123456789012345678901234567890123456789012345' | 'x23456789012345678901234567890123456789012345678901234567890123'
+    }
+
+    @Unroll
+    def 'should sanitize k8s label map' () {
+        given:
+        def builder = new PodSpecBuilder()
+
+        expect:
+        builder.sanitize(KEY_VALUE, PodSpecBuilder.MetaType.LABEL) == EXPECTED
+
+        where:
+        KEY_VALUE               | EXPECTED
+        [foo:'bar']             | [foo:'bar']
+        ['key 1':'value 2']     | [key_1:'value_2']
+    }
+
+    @Unroll
+    def 'should sanitize k8s annotation key' () {
+        given:
+        def builder = new PodSpecBuilder()
+
+        expect:
+        builder.sanitize(KEY_VALUE, PodSpecBuilder.MetaType.ANNOTATION) == EXPECTED
+
+        where:
+        KEY_VALUE               | EXPECTED
+        [foo:'bar']             | [foo:'bar']
+        ['key 1':'value 2']     | [key_1:'value 2']
     }
 }
