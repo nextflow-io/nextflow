@@ -36,6 +36,8 @@ import groovy.util.logging.Slf4j
 @Slf4j
 class PodSpecBuilder {
 
+    static enum MetaType { LABEL, ANNOTATION }
+
     static @PackageScope AtomicInteger VOLUMES = new AtomicInteger()
 
     String podName
@@ -377,10 +379,10 @@ class PodSpecBuilder {
 
         // add labels
         if( labels )
-            metadata.labels = sanitize('label', labels)
+            metadata.labels = sanitize(labels, MetaType.LABEL)
 
         if( annotations )
-            metadata.annotations = sanitize('annotation', annotations)
+            metadata.annotations = sanitize(annotations, MetaType.ANNOTATION)
 
         final pod = [
                 apiVersion: 'v1',
@@ -525,12 +527,12 @@ class PodSpecBuilder {
         volumes << [name: volName, configMap: config ]
     }
 
-    protected Map sanitize(String kind, Map map) {
+    protected Map sanitize(Map map, MetaType kind) {
         final result = new HashMap(map.size())
         for( Map.Entry entry : map ) {
-            final key = sanitize0(kind, entry.key)
-            final value = (kind == 'label')
-                ? sanitize0(kind, entry.value)
+            final key = sanitize0(entry.key, kind)
+            final value = (kind == MetaType.LABEL)
+                ? sanitize0(entry.value, kind)
                 : entry.value
 
             result.put(key, value)
@@ -542,7 +544,7 @@ class PodSpecBuilder {
      * Sanitize a string value to contain only alphanumeric characters, '-', '_' or '.',
      * and to start and end with an alphanumeric character.
      */
-    protected String sanitize0(String kind, value) {
+    protected String sanitize0(value, MetaType kind) {
         def str = String.valueOf(value)
         if( str.length() > 63 ) {
             log.debug "K8s $kind exceeds allowed size: 63 -- offending str=$str"
