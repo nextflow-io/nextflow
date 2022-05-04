@@ -19,7 +19,7 @@ package nextflow.sql
 
 import groovy.sql.Sql
 import nextflow.Channel
-import nextflow.extension.ChannelExtensionDelegate
+import nextflow.extension.ChannelExtensionProvider
 import spock.lang.Timeout
 import test.BaseSpec
 import test.MockScriptRunner
@@ -32,13 +32,13 @@ import test.MockScriptRunner
 class SqlDslTest extends BaseSpec {
 
     def setup () {
-        new ChannelExtensionDelegate()
+        new ChannelExtensionProvider()
                 .install()
                 .loadPluginExtensionMethods(new ChannelSqlExtension(), ['fromQuery':'fromQuery', sqlInsert:'sqlInsert'])
     }
 
     def cleanup() {
-        ChannelExtensionDelegate.reset()
+        ChannelExtensionProvider.reset()
     }
 
     def 'should perform a query and create a channel' () {

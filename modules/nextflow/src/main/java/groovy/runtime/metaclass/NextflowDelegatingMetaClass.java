@@ -32,7 +32,7 @@ import nextflow.file.FileHelper;
  */
 public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass {
 
-    static public DelegatingPlugin plugin;
+    static public ExtensionProvider provider;
 
     public NextflowDelegatingMetaClass(MetaClass delegate) {
         super(delegate);
@@ -55,8 +55,8 @@ public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass
             if( obj instanceof Path )
                 return FileHelper.empty((Path)obj);
         }
-        else if( plugin!=null && plugin.isExtensionMethod(obj,methodName) ) {
-            return plugin.invokeExtensionMethod(obj, methodName, args);
+        else if( provider !=null && provider.isExtensionMethod(obj,methodName) ) {
+            return provider.invokeExtensionMethod(obj, methodName, args);
         }
         else if( obj instanceof ChannelFactory ) {
             return ((ChannelFactory) obj).invokeExtensionMethod(methodName, args);
