@@ -79,7 +79,7 @@ class ChannelFactoryInstanceTest extends Specification {
     def 'should invoke custom plugin factory' () {
         given:
         def ext1 = new Ext1(); def ext2 = new Ext2()
-        new ChannelExtensionDelegate().install().loadPluginExtensionMethods(ext1, ['alpha':'alpha'])
+        new ChannelExtensionProvider().install().loadPluginExtensionMethods(ext1, ['alpha':'alpha'])
         and:
         def SCRIPT = '''
         Channel.alpha(['one','two','three'])
@@ -101,13 +101,13 @@ class ChannelFactoryInstanceTest extends Specification {
         ext2.initSession == null
 
         cleanup:
-        ChannelExtensionDelegate.reset()
+        ChannelExtensionProvider.reset()
     }
 
     def 'should invoke alias in custom plugin factory' () {
         given:
         def ext1 = new Ext1(); def ext2 = new Ext2()
-        new ChannelExtensionDelegate().install().loadPluginExtensionMethods(ext1, ['alpha':'thisIsAnAliasToAlpha'])
+        new ChannelExtensionProvider().install().loadPluginExtensionMethods(ext1, ['alpha':'thisIsAnAliasToAlpha'])
         and:
         def SCRIPT = '''
         Channel.thisIsAnAliasToAlpha(['one','two','three'])
@@ -129,13 +129,13 @@ class ChannelFactoryInstanceTest extends Specification {
         ext2.initSession == null
 
         cleanup:
-        ChannelExtensionDelegate.reset()
+        ChannelExtensionProvider.reset()
     }
 
     def 'should invoke multiple extensions' () {
         given:
         def ext1 = new Ext1(); def ext2 = new Ext2()
-        new ChannelExtensionDelegate()
+        new ChannelExtensionProvider()
                 .install()
                 .loadPluginExtensionMethods(ext1, ['alpha':'alpha'])
                 .loadPluginExtensionMethods(ext2, ['omega':'omega'])
@@ -171,13 +171,13 @@ class ChannelFactoryInstanceTest extends Specification {
         ext2.initSession instanceof Session
 
         cleanup:
-        ChannelExtensionDelegate.reset()
+        ChannelExtensionProvider.reset()
     }
 
     def 'should invoke operator extension' () {
         given:
         def ext1 = new Ext1();
-        new ChannelExtensionDelegate().install().loadPluginExtensionMethods(ext1, ['plusOne':'plusOne'])
+        new ChannelExtensionProvider().install().loadPluginExtensionMethods(ext1, ['plusOne':'plusOne'])
         and:
         def SCRIPT = '''
             channel
@@ -198,7 +198,7 @@ class ChannelFactoryInstanceTest extends Specification {
         ext1.initSession instanceof Session
 
         cleanup:
-        ChannelExtensionDelegate.reset()
+        ChannelExtensionProvider.reset()
     }
 
 }

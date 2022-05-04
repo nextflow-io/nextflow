@@ -17,7 +17,7 @@
 
 package nextflow
 
-import nextflow.extension.ChannelExtensionDelegate
+import nextflow.extension.ChannelExtensionProvider
 
 import static nextflow.util.CheckHelper.*
 
@@ -78,7 +78,7 @@ class Channel  {
      * @return The method return value
      */
     static def $static_methodMissing(String name, Object args) {
-        ChannelExtensionDelegate.INSTANCE().invokeFactoryExtensionMethod(name, InvokerHelper.asArray(args))
+        ChannelExtensionProvider.INSTANCE().invokeFactoryExtensionMethod(name, InvokerHelper.asArray(args))
     }
 
     /**

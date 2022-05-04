@@ -2,7 +2,7 @@ package nextflow.plugin
 
 import com.sun.net.httpserver.HttpServer
 import nextflow.Channel
-import nextflow.extension.ChannelExtensionDelegate
+import nextflow.extension.ChannelExtensionProvider
 import test.Dsl2Spec
 import test.MockScriptRunner
 
@@ -44,7 +44,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         cleanup:
         folder?.deleteDir()
         server?.stop(0)
-        ChannelExtensionDelegate.reset()
+        ChannelExtensionProvider.reset()
         Plugins.stop()
 
         where:
@@ -99,7 +99,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         folder?.deleteDir()
         server?.stop(0)
         Plugins.stop()
-        ChannelExtensionDelegate.reset()
+        ChannelExtensionProvider.reset()
 
         where:
         SCRIPT_TEXT << ['''
@@ -157,7 +157,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         folder?.deleteDir()
         server?.stop(0)
         Plugins.stop()
-        ChannelExtensionDelegate.reset()
+        ChannelExtensionProvider.reset()
     }
 
     def 'should execute custom factory as alias extension' () {
@@ -199,7 +199,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         folder?.deleteDir()
         server?.stop(0)
         Plugins.stop()
-        ChannelExtensionDelegate.reset()
+        ChannelExtensionProvider.reset()
     }
 
 }

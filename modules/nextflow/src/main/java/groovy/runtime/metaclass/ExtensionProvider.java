@@ -25,7 +25,7 @@ import java.util.Set;
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public interface DelegatingPlugin {
+public interface ExtensionProvider {
 
     boolean isExtensionMethod(Object obj, String name);
 

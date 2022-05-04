@@ -27,18 +27,18 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ChannelExtensionDelegateTest extends Specification {
+class ChannelExtensionProviderTest extends Specification {
 
     def 'should check dataflow read channel' () {
         expect:
-        ChannelExtensionDelegate.isReadChannel(DataflowVariable.class)
-        ChannelExtensionDelegate.isReadChannel(DataflowQueue.class)
-        !ChannelExtensionDelegate.isReadChannel(DataflowBroadcast.class)
+        ChannelExtensionProvider.isReadChannel(DataflowVariable.class)
+        ChannelExtensionProvider.isReadChannel(DataflowQueue.class)
+        !ChannelExtensionProvider.isReadChannel(DataflowBroadcast.class)
     }
 
     def 'should check extension method' () {
         given:
-        def ext = ChannelExtensionDelegate.INSTANCE()
+        def ext = ChannelExtensionProvider.INSTANCE()
         expect:
         ext.isExtensionMethod(new DataflowVariable(), 'map')
         ext.isExtensionMethod(new DataflowVariable(), 'flatMap')
@@ -47,7 +47,7 @@ class ChannelExtensionDelegateTest extends Specification {
 
     def 'should invoke ext method' () {
         given:
-        def ext = ChannelExtensionDelegate.INSTANCE()
+        def ext = ChannelExtensionProvider.INSTANCE()
         def ch = new DataflowQueue(); ch<<1<<2<<3
 
         when:

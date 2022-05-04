@@ -21,7 +21,7 @@ import groovy.transform.MapConstructor
 
 import java.lang.reflect.Modifier
 
-import groovy.runtime.metaclass.DelegatingPlugin
+import groovy.runtime.metaclass.ExtensionProvider
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
@@ -39,9 +39,9 @@ import nextflow.script.ChannelOut
  */
 @Slf4j
 @CompileStatic
-class ChannelExtensionDelegate implements DelegatingPlugin {
+class ChannelExtensionProvider implements ExtensionProvider {
 
-    private static ChannelExtensionDelegate instance
+    private static ChannelExtensionProvider instance
 
     private Session getSession() { Global.getSession() as Session }
 
@@ -63,17 +63,17 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
 
     private Set<String> OPERATOR_NAMES
 
-    static ChannelExtensionDelegate INSTANCE() {
+    static ChannelExtensionProvider INSTANCE() {
         if( instance != null )
             return instance
-        return instance = new ChannelExtensionDelegate().install()
+        return instance = new ChannelExtensionProvider().install()
     }
 
     static void reset() {
         instance = null
     }
 
-    ChannelExtensionDelegate install() {
+    ChannelExtensionProvider install() {
         // add default operators
         final defaultOps = loadDefaultOperators()
         log.trace "Dataflow default extension methods: ${defaultOps.sort().join(',')}"
@@ -103,7 +103,7 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
      * @return
      *      The class itself to allow method chaining
      */
-    ChannelExtensionDelegate loadPluginExtensionMethods(String pluginId, Map<String, String> includedNames){
+    ChannelExtensionProvider loadPluginExtensionMethods(String pluginId, Map<String, String> includedNames){
         final ext= findPluginExtensionMethods(pluginId)
         if( ext ) {
             loadPluginExtensionMethods(ext, includedNames)
@@ -111,7 +111,7 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
         return instance = this
     }
 
-    protected ChannelExtensionDelegate loadPluginExtensionMethods(ChannelExtensionPoint ext, Map<String, String> includedNames){
+    protected ChannelExtensionProvider loadPluginExtensionMethods(ChannelExtensionPoint ext, Map<String, String> includedNames){
         // find all operators defined in the plugin
         final definedOperators= getDeclaredExtensionMethods0(ext.getClass())
         // final all factories defined in the plugin
