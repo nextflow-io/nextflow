@@ -45,9 +45,19 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
 
     private Session getSession() { Global.getSession() as Session }
 
+    /**
+     * Hold all available operator extensions. The key represent the name of operator how it's expected
+     * to be invoked (it can be the alias name). The value is an object holding the real method name
+     * and the target object on which it operator will be invoked
+     */
     final private Map<String,PluginExtensionMethod> operatorExtensions = new HashMap<>()
 
-    final private Map<String,PluginExtensionMethod> aliasFactoryExtensions = new HashMap<>()
+    /**
+     * Hold all available factory extensions. The key represent the name of operator how it's expected
+     * to be invoked (it can be the alias name). The value is an object holding the real method name
+     * and the target object on which it operator will be invoked
+     */
+    final private Map<String,PluginExtensionMethod> factoryExtensions = new HashMap<>()
 
     private List<ChannelExtensionPoint> channelExtensionPoints
 
@@ -72,6 +82,10 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
         return instance = this
     }
 
+    /**
+     * Load all operators defined by nextflow
+     * @return The set of operator names
+     */
     private Set<String> loadDefaultOperators() {
         final result = getDeclaredExtensionMethods0(OperatorEx.class)
         for( String it : result )
@@ -79,39 +93,55 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
         return result
     }
 
-    ChannelExtensionDelegate loadChannelExtensionInPlugin(String pluginId, Map<String, String> methodAlias){
-        findChannelExtensionPointInPluginId(pluginId).ifPresent({ ext ->
-            loadChannelExtension(ext, methodAlias)
-        })
+    /**
+     * Load all extension method declared by the specified plugin Id
+     *
+     * @param pluginId The Id of the plugin from where the extension methods need to be loaded
+     * @param includedNames The map of extension method as provided in the `include` declaration.
+     *      The key represent the real method name and the value the name alias the method needs to
+     *      be referenced in the script. If the alias is not provided the key == value.
+     * @return
+     *      The class itself to allow method chaining
+     */
+    ChannelExtensionDelegate loadPluginExtensionMethods(String pluginId, Map<String, String> includedNames){
+        final ext= findPluginExtensionMethods(pluginId)
+        if( ext ) {
+            loadPluginExtensionMethods(ext, includedNames)
+        }
         return instance = this
     }
 
-    ChannelExtensionDelegate loadChannelExtension(ChannelExtensionPoint ext, Map<String, String> methodAlias){
-        final declaredOperators = getDeclaredExtensionMethods0(ext.getClass())
-        final declaredFactories = getDeclaredFactoryExtensionMethods0(ext.getClass())
-        methodAlias.each {entry ->
-            String it = entry.key
-            String alias = entry.value
-            final reference = operatorExtensions.get(alias)
+    protected ChannelExtensionDelegate loadPluginExtensionMethods(ChannelExtensionPoint ext, Map<String, String> includedNames){
+        // find all operators defined in the plugin
+        final definedOperators= getDeclaredExtensionMethods0(ext.getClass())
+        // final all factories defined in the plugin
+        final definedFactories= getDeclaredFactoryExtensionMethods0(ext.getClass())
+        for(Map.Entry<String,String> entry : includedNames ) {
+            String realName = entry.key
+            String aliasName = entry.value
+            final reference = operatorExtensions.get(aliasName)
             if( reference ){
-                throw new IllegalStateException("Operator '$alias' conflict - it's defined by plugin ${reference.target.class.name}")
+                throw new IllegalStateException("Operator '$aliasName' conflict - it's defined by plugin ${reference.target.class.name}")
             }
-            Object existing = operatorExtensions.get(alias)
+            Object existing = operatorExtensions.get(aliasName)
             if (existing.is(OperatorEx.instance)) {
-                throw new IllegalStateException("Operator '$it' is already defined as a built-in operator - Offending plugin class: $ext")
-            } else if (existing != null) {
+                throw new IllegalStateException("Operator '$realName' is already defined as a built-in operator - Offending plugin class: $ext")
+            }
+            else if (existing != null) {
                 if( existing.getClass().getName() != ext.getClass().getName() ) {
-                    throw new IllegalStateException("Operator '$it' conflict - it's defined by plugin ${existing.getClass().getName()} and ${ext.getClass().getName()}")
+                    throw new IllegalStateException("Operator '$realName' conflict - it's defined by plugin ${existing.getClass().getName()} and ${ext.getClass().getName()}")
                 }
             }
-            if( declaredOperators.contains(it)) {
-                OPERATOR_NAMES = Collections.unmodifiableSet(OPERATOR_NAMES + [alias])
-                operatorExtensions.put(alias, new PluginExtensionMethod(method:it, target:  ext))
-            }else if( declaredFactories.contains(it) ){
+            if( definedOperators.contains(realName) ) {
+                OPERATOR_NAMES = Collections.unmodifiableSet(OPERATOR_NAMES + [aliasName])
+                operatorExtensions.put(aliasName, new PluginExtensionMethod(method:realName, target:ext))
+            }
+            else if( definedFactories.contains(realName) ){
                 ChannelFactoryInstance factoryInstance = new ChannelFactoryInstance(ext)
-                aliasFactoryExtensions.put(alias, new PluginExtensionMethod(method:it, target:factoryInstance))
-            }else{
-                throw new IllegalStateException("Operator '$it' it isn't defined by plugin ${existing.getClass().getName()}")
+                factoryExtensions.put(aliasName, new PluginExtensionMethod(method:realName, target:factoryInstance))
+            }
+            else{
+                throw new IllegalStateException("Operator '$realName' it isn't defined by plugin ${existing.getClass().getName()}")
             }
         }
         return instance = this
@@ -178,15 +208,15 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
     }
 
     def invokeFactoryExtensionMethod(String name, Object[] args){
-        if( aliasFactoryExtensions.containsKey(name) ){
-            def reference = aliasFactoryExtensions.get(name)
+        if( factoryExtensions.containsKey(name) ){
+            def reference = factoryExtensions.get(name)
             def factory = (ChannelFactoryInstance)reference.target
             return factory.invokeExtensionMethod(reference.method, args)
         }
     }
 
-    protected Optional<ChannelExtensionPoint> findChannelExtensionPointInPluginId(String pluginId) {
-        Optional.ofNullable(Plugins.getExtensionsInPluginId(ChannelExtensionPoint, pluginId)?.first())
+    protected ChannelExtensionPoint findPluginExtensionMethods(String pluginId) {
+        Plugins.getExtensionsInPluginId(ChannelExtensionPoint, pluginId)?.first()
     }
 
     @Deprecated

@@ -202,16 +202,16 @@ class IncludeDef {
 
     @PackageScope
     void loadPlugin0(String pluginId){
-        log.debug "Including plugin $pluginId"
         if( pluginId.startsWith('/') )
-            throw new IllegalArgumentException("Invalid plugin id: $pluginId - should not star with slash character")
+            throw new IllegalArgumentException("Plugin Id in the 'include' declaration cannot start with a slash character - offending value: '$pluginId'")
         if( pluginId.contains('@') )
-            throw new IllegalArgumentException("Invalid plugin id: $pluginId - should not contain version specification")
+            throw new IllegalArgumentException("Plugin Id in the 'include' declaration cannot contain a specific version requirement - offending value: '$pluginId'")
         Plugins.startIfMissing(pluginId)
         if( !Plugins.isStarted(pluginId) )
-            throw new IllegalArgumentException("Invalid plugin id: $pluginId - plugin failed to start")
-        Map<String, String> alias = this.modules.collectEntries {[it.name, it.alias ?: it.name]}
-        ChannelExtensionDelegate.INSTANCE().loadChannelExtensionInPlugin(pluginId, alias)
+            throw new IllegalArgumentException("Unable start plugin with Id '$pluginId'")
+        final Map<String,String> declaredNames = this.modules.collectEntries {[it.name, it.alias ?: it.name]}
+        log.debug "Load included plugin extensions with names: $declaredNames; plugin Id: $pluginId"
+        ChannelExtensionDelegate.INSTANCE().loadPluginExtensionMethods(pluginId, declaredNames)
     }
 
 }

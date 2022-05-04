@@ -12,7 +12,7 @@ import java.nio.file.Files
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
  */
-class IncludePluginExtensionsTest extends Dsl2Spec {
+class PluginExtensionMethodsTest extends Dsl2Spec {
 
     def 'should execute custom operator extension' () {
         given:

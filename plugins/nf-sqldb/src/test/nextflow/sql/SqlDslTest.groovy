@@ -19,15 +19,9 @@ package nextflow.sql
 
 import groovy.sql.Sql
 import nextflow.Channel
-import nextflow.NextflowMeta
-import nextflow.Session
 import nextflow.extension.ChannelExtensionDelegate
-import nextflow.plugin.Plugins
-import spock.lang.Shared
-import spock.lang.Stepwise
 import spock.lang.Timeout
 import test.BaseSpec
-import test.Dsl2Spec
 import test.MockScriptRunner
 
 /**
@@ -40,7 +34,7 @@ class SqlDslTest extends BaseSpec {
     def setup () {
         new ChannelExtensionDelegate()
                 .install()
-                .loadChannelExtension(new ChannelSqlExtension(), ['fromQuery':'fromQuery', sqlInsert:'sqlInsert'])
+                .loadPluginExtensionMethods(new ChannelSqlExtension(), ['fromQuery':'fromQuery', sqlInsert:'sqlInsert'])
     }
 
     def cleanup() {
