@@ -45,9 +45,9 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
 
     private Session getSession() { Global.getSession() as Session }
 
-    final private Map<String,InstanceReferenceMethod> operatorExtensions = new HashMap<>()
+    final private Map<String,PluginExtensionMethod> operatorExtensions = new HashMap<>()
 
-    final private Map<String,InstanceReferenceMethod> aliasFactoryExtensions = new HashMap<>()
+    final private Map<String,PluginExtensionMethod> aliasFactoryExtensions = new HashMap<>()
 
     private List<ChannelExtensionPoint> channelExtensionPoints
 
@@ -75,7 +75,7 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
     private Set<String> loadDefaultOperators() {
         final result = getDeclaredExtensionMethods0(OperatorEx.class)
         for( String it : result )
-            operatorExtensions.put(it, new InstanceReferenceMethod(method: it, instance: OperatorEx.instance))
+            operatorExtensions.put(it, new PluginExtensionMethod(method: it, target: OperatorEx.instance))
         return result
     }
 
@@ -94,7 +94,7 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
             String alias = entry.value
             final reference = operatorExtensions.get(alias)
             if( reference ){
-                throw new IllegalStateException("Operator '$alias' conflict - it's defined by plugin ${reference.instance.class.name}")
+                throw new IllegalStateException("Operator '$alias' conflict - it's defined by plugin ${reference.target.class.name}")
             }
             Object existing = operatorExtensions.get(alias)
             if (existing.is(OperatorEx.instance)) {
@@ -106,10 +106,10 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
             }
             if( declaredOperators.contains(it)) {
                 OPERATOR_NAMES = Collections.unmodifiableSet(OPERATOR_NAMES + [alias])
-                operatorExtensions.put(alias, new InstanceReferenceMethod(method:it, instance:  ext))
+                operatorExtensions.put(alias, new PluginExtensionMethod(method:it, target:  ext))
             }else if( declaredFactories.contains(it) ){
                 ChannelFactoryInstance factoryInstance = new ChannelFactoryInstance(ext)
-                aliasFactoryExtensions.put(alias, new InstanceReferenceMethod(method:it, instance:factoryInstance))
+                aliasFactoryExtensions.put(alias, new PluginExtensionMethod(method:it, target:factoryInstance))
             }else{
                 throw new IllegalStateException("Operator '$it' it isn't defined by plugin ${existing.getClass().getName()}")
             }
@@ -172,24 +172,24 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
         if( target==null )
             throw new IllegalStateException("Missing target class for operator '$method'")
         method = operatorExtensions.get(method)?.method
-        if( target.instance instanceof ChannelExtensionPoint )
-            ((ChannelExtensionPoint)target.instance).checkInit(getSession())
-        new OpCall(target.instance,channel,method,args).call()
+        if( target.target instanceof ChannelExtensionPoint )
+            ((ChannelExtensionPoint)target.target).checkInit(getSession())
+        new OpCall(target.target,channel,method,args).call()
     }
 
     def invokeFactoryExtensionMethod(String name, Object[] args){
         if( aliasFactoryExtensions.containsKey(name) ){
             def reference = aliasFactoryExtensions.get(name)
-            def factory = (ChannelFactoryInstance)reference.instance
+            def factory = (ChannelFactoryInstance)reference.target
             return factory.invokeExtensionMethod(reference.method, args)
         }
     }
-
 
     protected Optional<ChannelExtensionPoint> findChannelExtensionPointInPluginId(String pluginId) {
         Optional.ofNullable(Plugins.getExtensionsInPluginId(ChannelExtensionPoint, pluginId)?.first())
     }
 
+    @Deprecated
     static void reloadExtensionPoints() {
         if( !instance )
             return
@@ -198,9 +198,19 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
         instance.install()
     }
 
+    /**
+     * Hold a reference to a extension method provided by a Nextflow plugin
+     */
     @MapConstructor
-    class InstanceReferenceMethod {
+    class PluginExtensionMethod {
+        /**
+         * The name of the method that needs to be invoked
+         */
         String method
-        Object instance
+
+        /**
+         * The target object on which the method is going to be invoked
+         */
+        Object target
     }
 }
