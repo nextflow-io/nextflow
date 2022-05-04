@@ -452,7 +452,7 @@ class K8sTaskHandler extends TaskHandler {
     TraceRecord getTraceRecord() {
         final result = super.getTraceRecord()
         result.put('native_id', podName)
-        result.put( 'node', runsOnNode )
+        result.put( 'hostname', runsOnNode )
         return result
     }
 
