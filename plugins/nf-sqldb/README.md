@@ -11,6 +11,7 @@ provides out-of-the-box support for the following databases:
 * [PostgreSQL](https://www.postgresql.org/)
 * [SQLite](https://www.sqlite.org/index.html)
 * [DuckDB](https://duckdb.org/)
+* [AWS Athena](https://aws.amazon.com/athena/)
                     
 NOTE: THIS IS A PREVIEW TECHNOLOGY, FEATURES AND CONFIGURATION SETTINGS CAN CHANGE IN FUTURE RELEASES.
 
