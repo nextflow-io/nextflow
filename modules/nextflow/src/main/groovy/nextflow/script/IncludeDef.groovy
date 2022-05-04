@@ -17,7 +17,7 @@
 
 package nextflow.script
 
-import nextflow.extension.ChannelExtensionDelegate
+import nextflow.extension.ChannelExtensionProvider
 import nextflow.plugin.Plugins
 
 import java.nio.file.NoSuchFileException
@@ -211,7 +211,7 @@ class IncludeDef {
             throw new IllegalArgumentException("Unable start plugin with Id '$pluginId'")
         final Map<String,String> declaredNames = this.modules.collectEntries {[it.name, it.alias ?: it.name]}
         log.debug "Load included plugin extensions with names: $declaredNames; plugin Id: $pluginId"
-        ChannelExtensionDelegate.INSTANCE().loadPluginExtensionMethods(pluginId, declaredNames)
+        ChannelExtensionProvider.INSTANCE().loadPluginExtensionMethods(pluginId, declaredNames)
     }
 
 }
