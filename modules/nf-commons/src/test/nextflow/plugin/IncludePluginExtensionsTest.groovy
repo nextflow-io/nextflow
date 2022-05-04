@@ -1,16 +1,12 @@
 package nextflow.plugin
 
 import com.sun.net.httpserver.HttpServer
-import groovy.sql.Sql
 import nextflow.Channel
 import nextflow.extension.ChannelExtensionDelegate
-import spock.lang.Specification
-import spock.lang.Unroll
 import test.Dsl2Spec
 import test.MockScriptRunner
 
 import java.nio.file.Files
-import java.nio.file.Paths
 
 /**
  *
@@ -32,33 +28,18 @@ class IncludePluginExtensionsTest extends Dsl2Spec {
         Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
 
         and:
-        def JDBC_URL = 'jdbc:h2:file:' + folder + '/test_' + Random.newInstance().nextInt(1_000_000)
-        def sql = Sql.newInstance(JDBC_URL, 'sa', null)
-        sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
-        sql.close()
-        def config = [sql: [db: [test: [url: JDBC_URL]]]]
-
-        and:
         def SCRIPT = folder.resolve('main.nf')
 
         SCRIPT.text = SCRIPT_TEXT
 
         when:
-        Plugins.setup([plugins: ['nf-sqldb@0.4.0']])
+        Plugins.setup([plugins: ['nf-hello@0.2.0']])
 
-        def result = new MockScriptRunner(config).setScript(SCRIPT).execute()
+        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
-        result.val == 100
-        result.val == 200
-        result.val == 300
+        result.val == 'Bye bye folks'
         result.val == Channel.STOP
-
-        and:
-        def rows =  Sql.newInstance(JDBC_URL, 'sa', null).rows("select id from FOO;")
-        and:
-        rows.size() == 3
-        rows.id == [100, 200, 300]
 
         cleanup:
         folder?.deleteDir()
@@ -68,21 +49,21 @@ class IncludePluginExtensionsTest extends Dsl2Spec {
 
         where:
         SCRIPT_TEXT << ['''
-            include { sqlInsert } from 'plugin/nf-sqldb'
+            include { goodbye } from 'plugin/nf-hello'
 
             channel
-              .of(100,200,300)
-              .sqlInsert(into:"FOO", columns:'id', db:"test")            
+              .of('Bye bye folks')
+              .goodbye()            
             ''', '''
 
             include { 
-                fromQuery;
-                sqlInsert; 
-            } from 'plugin/nf-sqldb'
+                reverse;
+                goodbye; 
+            } from 'plugin/nf-hello'
 
             channel
-              .of(100,200,300)
-              .sqlInsert(into:"FOO", columns:'id', db:"test")            
+              .of('Bye bye folks')
+              .goodbye()             
             '''
         ]
     }
@@ -100,31 +81,18 @@ class IncludePluginExtensionsTest extends Dsl2Spec {
         Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
 
         and:
-        def JDBC_URL = 'jdbc:h2:file:' + folder + '/test_' + Random.newInstance().nextInt(1_000_000)
-        def sql = Sql.newInstance(JDBC_URL, 'sa', null)
-        and:
-        sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
-        sql.execute("insert into FOO (id, alpha, omega) values (1, 'hola', 10) ")
-        sql.execute("insert into FOO (id, alpha, omega) values (2, 'ciao', 20) ")
-        sql.execute("insert into FOO (id, alpha, omega) values (3, 'hello', 30) ")
-        sql.close()
-        def config = [sql: [db: [test: [url: JDBC_URL]]]]
-        and:
         def SCRIPT = folder.resolve('main.nf')
 
         SCRIPT.text = SCRIPT_TEXT
 
         when:
-        Plugins.setup([plugins: ['nf-sqldb@0.4.0']])
+        Plugins.setup([plugins: ['nf-hello@0.2.0']])
 
-        def result = new MockScriptRunner(config).setScript(SCRIPT).execute()
+        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
         result
-        result.val == ['ID', 'ALPHA', 'OMEGA']
-        result.val == [1, 'hola', 10]
-        result.val == [2, 'ciao', 20]
-        result.val == [3, 'hello', 30]
+        result.val == 'a string'.reverse()
         result.val == Channel.STOP
 
         cleanup:
@@ -135,19 +103,15 @@ class IncludePluginExtensionsTest extends Dsl2Spec {
 
         where:
         SCRIPT_TEXT << ['''
-            include { fromQuery } from 'plugin/nf-sqldb'
-    
-            def table = 'FOO'
-            def sql = "select * from $table"            
-            channel.fromQuery(sql, db: "test", emitColumns:true)            
+            include { reverse } from 'plugin/nf-hello'                
+
+            channel.reverse('a string')            
             ''','''
 
-            include { fromQuery;  } from 'plugin/nf-sqldb'
-            include { sqlInsert } from 'plugin/nf-sqldb'
-    
-            def table = 'FOO'
-            def sql = "select * from $table"            
-            channel.fromQuery(sql, db: "test", emitColumns:true)            
+            include { reverse;  } from 'plugin/nf-hello'
+            include { goodbye } from 'plugin/nf-hello'
+                
+            channel.reverse('a string')            
             '''
         ]
     }
@@ -165,22 +129,12 @@ class IncludePluginExtensionsTest extends Dsl2Spec {
         Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
 
         and:
-        def JDBC_URL = 'jdbc:h2:file:' + folder + '/test_' + Random.newInstance().nextInt(1_000_000)
-        def sql = Sql.newInstance(JDBC_URL, 'sa', null)
-        and:
-        sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
-        sql.close()
-
-        and:
-        def config = [sql: [db: [test: [url: JDBC_URL]]]]
-
-        and:
         def SCRIPT_TEXT = '''
-            include { sqlInsert as insertInto } from 'plugin/nf-sqldb'
+            include { goodbye as myFunction } from 'plugin/nf-hello'
 
             channel
               .of(100,200,300)
-              .insertInto(into:"FOO", columns:'id', db:"test")            
+              .myFunction()            
             '''
 
         and:
@@ -189,20 +143,15 @@ class IncludePluginExtensionsTest extends Dsl2Spec {
         SCRIPT.text = SCRIPT_TEXT
 
         when:
-        Plugins.setup([plugins: ['nf-sqldb@0.4.0']])
+        Plugins.setup([plugins: ['nf-hello@0.2.0']])
 
-        def result = new MockScriptRunner(config).setScript(SCRIPT).execute()
+        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
         result.val == 100
         result.val == 200
         result.val == 300
         result.val == Channel.STOP
-        and:
-        def rows =  Sql.newInstance(JDBC_URL, 'sa', null).rows("select id from FOO;")
-        and:
-        rows.size() == 3
-        rows.id == [100, 200, 300]
 
         cleanup:
         folder?.deleteDir()
@@ -224,26 +173,11 @@ class IncludePluginExtensionsTest extends Dsl2Spec {
         Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
 
         and:
-        def JDBC_URL = 'jdbc:h2:file:' + folder + '/test_' + Random.newInstance().nextInt(1_000_000)
-        def sql = Sql.newInstance(JDBC_URL, 'sa', null)
-        and:
-        sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
-        sql.execute("insert into FOO (id, alpha, omega) values (1, 'hola', 10) ")
-        sql.execute("insert into FOO (id, alpha, omega) values (2, 'ciao', 20) ")
-        sql.execute("insert into FOO (id, alpha, omega) values (3, 'hello', 30) ")
-        sql.close()
-
-        and:
-        def config = [sql: [db: [test: [url: JDBC_URL]]]]
-
-        and:
         def SCRIPT_TEXT = '''
             nextflow.enable.dsl=2
-            include { fromQuery as sqlQuery } from 'plugin/nf-sqldb'
-
-            def table = 'FOO'
-            def sql = "select * from $table"            
-            channel.sqlQuery(sql, db: "test", emitColumns:true)            
+            include { reverse as myFunction } from 'plugin/nf-hello'
+         
+            channel.myFunction('reverse this string')            
             '''
 
         and:
@@ -252,16 +186,13 @@ class IncludePluginExtensionsTest extends Dsl2Spec {
         SCRIPT.text = SCRIPT_TEXT
 
         when:
-        Plugins.setup([plugins: ['nf-sqldb@0.4.0']])
+        Plugins.setup([plugins: ['nf-hello@0.2.0']])
 
-        def result = new MockScriptRunner(config).setScript(SCRIPT).execute()
+        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
         result
-        result.val == ['ID', 'ALPHA', 'OMEGA']
-        result.val == [1, 'hola', 10]
-        result.val == [2, 'ciao', 20]
-        result.val == [3, 'hello', 30]
+        result.val == 'reverse this string'.reverse()
         result.val == Channel.STOP
 
         cleanup:
