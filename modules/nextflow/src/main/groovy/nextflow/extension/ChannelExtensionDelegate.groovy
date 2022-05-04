@@ -147,7 +147,6 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
         return instance = this
     }
 
-
     static private Set<String> getDeclaredExtensionMethods0(Class clazz) {
         def result = new HashSet<String>(30)
         def methods = clazz.getDeclaredMethods()

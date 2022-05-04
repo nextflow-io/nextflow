@@ -17,7 +17,6 @@
 
 package nextflow.script
 
-import groovy.transform.CompileDynamic
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -204,7 +203,6 @@ class ScriptBinding extends WorkflowBinding {
     String getVariableName(value) {
         super.getVariables().find { entry -> entry.value?.is(value) }?.getKey()
     }
-
 
     /**
      * Holds parameter immutable values
