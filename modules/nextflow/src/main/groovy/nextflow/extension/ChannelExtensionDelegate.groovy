@@ -172,8 +172,8 @@ class ChannelExtensionDelegate implements DelegatingPlugin {
         if( target==null )
             throw new IllegalStateException("Missing target class for operator '$method'")
         method = operatorExtensions.get(method)?.method
-        if( target instanceof ChannelExtensionPoint )
-            target.checkInit(getSession())
+        if( target.instance instanceof ChannelExtensionPoint )
+            ((ChannelExtensionPoint)target.instance).checkInit(getSession())
         new OpCall(target.instance,channel,method,args).call()
     }
 
