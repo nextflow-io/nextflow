@@ -212,7 +212,7 @@ class PublishDir {
         /*
          * iterate over the file parameter and publish each single file
          */
-        for( Path value : dedupPaths(files) ) {
+        for( Path value : sortWithIndexesAtEnd( dedupPaths(files) ) ) {
             apply1(value, inProcess)
         }
     }
@@ -239,6 +239,21 @@ class PublishDir {
             result.add( FileHelper.asPath(it) )
         }
         return result
+    }
+
+    /**
+     * Sort a Path list, copy the common bioinformatics indexes (bai, csi, idx...) at the
+     * end so we don't have clock conflict.
+     * see https://github.com/nextflow-io/nextflow/issues/1489
+     * @param paths A collection of files
+     * @return sorted path with indexes at the end of the list
+     */
+    private static List<Path> sortWithIndexesAtEnd(final List<Path> paths) {
+        /* common indexes suffixes */
+        final List<String> indexes = [".bai",".crai",".csi",".idx",".tbi"];
+        /* order paths using presence of suffix above */
+        Closure<Integer> has_index = {Path p -> indexes.any{it->p.name.endsWith(it)} ? 1:0}
+	return paths.sort(true, has_index);
     }
 
     void apply( Set<Path> files, Path sourceDir ) {
