@@ -1,6 +1,5 @@
 package nextflow.extension
 
-
 import groovy.runtime.metaclass.ChannelFactory
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -9,7 +8,6 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 import nextflow.dag.NodeMarker
-import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Object holding a set of {@link ChannelExtensionPoint} instances
  * for a given scope.
@@ -25,18 +23,11 @@ import org.codehaus.groovy.runtime.InvokerHelper
 class ChannelFactoryInstance implements ChannelFactory {
 
     /**
-     * The scope of implemented by this channel factory holder. For example
-     * having extension `Channel.foo.something()` the scope is `foo` 
-     */
-    private String scope
-
-    /**
      * The set of channel extensions held by this scope
      */
     private ChannelExtensionPoint target
 
-    ChannelFactoryInstance(String scope, ChannelExtensionPoint extensionClass) {
-        this.scope = scope
+    ChannelFactoryInstance(ChannelExtensionPoint extensionClass) {
         this.target = extensionClass
     }
 
@@ -58,7 +49,7 @@ class ChannelFactoryInstance implements ChannelFactory {
             // finally invoke it
             return method.invoke(target, args)
         }
-        throw new MissingFactoryMethodException(this.scope, methodName, args)
+        throw new MissingMethodException(methodName, Channel, args)
     }
 
     /**
@@ -71,36 +62,8 @@ class ChannelFactoryInstance implements ChannelFactory {
     @Override
     Object invokeExtensionMethod(String method, Object[] args) {
         def result = invoke0(method,args)
-        NodeMarker.addSourceNode("channel.${this.scope}.${method}", result)
+        NodeMarker.addSourceNode("channel.${method}", result)
         return result
     }
 
-
-
-    /**
-     * Customized missing method  extension
-     */
-    static class MissingFactoryMethodException extends MissingMethodException {
-
-        private String scope
-
-        MissingFactoryMethodException(String scope, String method, Object[] args) {
-            super(method, Channel, args)
-            this.scope = scope
-        }
-
-        @Override
-        String getMessage() {
-            return "No signature of method: " +
-                    "Channel.${this.scope}.${method}" +
-                    "() is applicable for argument types: (" +
-                    InvokerHelper.toTypeString(arguments, 60) +
-                    ") values: " +
-                    InvokerHelper.toArrayString(arguments, 60, true)
-        }
-
-        String toString() {
-            return getMessage()
-        }
-    }
 }
