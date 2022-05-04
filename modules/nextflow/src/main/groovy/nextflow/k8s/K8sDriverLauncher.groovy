@@ -17,6 +17,8 @@
 
 package nextflow.k8s
 
+import groovy.transform.MapConstructor
+
 import java.lang.reflect.Field
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -47,6 +49,7 @@ import org.codehaus.groovy.runtime.MethodClosure
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@MapConstructor(includeFields = true)
 class K8sDriverLauncher {
 
     /**
@@ -54,12 +57,12 @@ class K8sDriverLauncher {
      */
     private String podImage
 
-    /** 
+    /**
      * Request CPUs to be used for the Nextflow driver pod
      */
     private int headCpus
 
-    /** 
+    /**
      * Request memory to be used for the Nextflow driver pod
      */
     private String headMemory
@@ -545,6 +548,26 @@ class K8sDriverLauncher {
 
     protected Path getScmFile() {
         ProviderConfig.getScmConfigPath()
+    }
+
+    String getPodImage() {
+        return podImage
+    }
+
+    int getHeadCpus() {
+        return headCpus
+    }
+
+    String getHeadMemory() {
+        return headMemory
+    }
+
+    String getRunName() {
+        return runName
+    }
+
+    CmdKubeRun getCmd() {
+        return cmd
     }
 
     protected String getPipelineName() {

@@ -191,8 +191,7 @@ class BashWrapperBuilderTest extends Specification {
 
     def 'should create container env' () {
         given:
-        def bash = Spy(BashWrapperBuilder)
-        bash.setProperty('bean', Mock(TaskBean))
+        def bash = Spy(BashWrapperBuilder, constructorArgs: [[bean:Mock(TaskBean)]])
 
         when:
         def builder = bash.createContainerBuilder(null)
@@ -222,8 +221,8 @@ class BashWrapperBuilderTest extends Specification {
 
     def 'should add resolved inputs'() {
         given:
-        def bash = Spy(BashWrapperBuilder)
-        bash.setProperty('bean', Mock(TaskBean))
+        def bash = Spy(BashWrapperBuilder, constructorArgs:[bean:Mock(TaskBean)])
+
         bash.getContainerConfig() >> [engine: 'docker']
 
         def BUILDER = Mock(DockerBuilder)
@@ -836,9 +835,7 @@ class BashWrapperBuilderTest extends Specification {
         def bean = Mock(TaskBean)
         def copy = Mock(ScriptFileCopyStrategy)
         bean.workDir >> Paths.get('/work/dir')
-        def builder = Spy(BashWrapperBuilder)
-        builder.setProperty('bean', bean)
-        builder.copyStrategy = copy
+        def builder = Spy(BashWrapperBuilder, constructorArgs: [bean:bean, copyStrategy:copy])
 
         when:
         def binding = builder.makeBinding()

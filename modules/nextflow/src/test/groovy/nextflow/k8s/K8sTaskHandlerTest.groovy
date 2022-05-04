@@ -164,9 +164,7 @@ class K8sTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(K8sTaskHandler)
-        handler.setProperty('builder', builder)
-        handler.setProperty('client', client)
+        def handler = Spy(K8sTaskHandler, constructorArgs: [builder:builder, client:client, task:task])
         Map result
 
         when:
@@ -275,10 +273,8 @@ class K8sTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(K8sTaskHandler)
+        def handler = Spy(K8sTaskHandler, constructorArgs: [builder:builder, client:client, task:task])
         def config = Mock(ClientConfig)
-        handler.setProperty('builder', builder)
-        handler.setProperty('client', client)
         Map result
 
         when:
@@ -323,10 +319,8 @@ class K8sTaskHandlerTest extends Specification {
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
         def config = Mock(TaskConfig)
-        def handler = Spy(K8sTaskHandler)
+        def handler = Spy(K8sTaskHandler, constructorArgs: [builder:builder, client:client, task:task])
         def podOptions = Mock(PodOptions)
-        handler.setProperty('builder', builder)
-        handler.setProperty('client', client)
         podOptions.automountServiceAccountToken >> true
         Map result
 
@@ -382,9 +376,7 @@ class K8sTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(K8sTaskHandler)
-        handler.setProperty('builder', builder)
-        handler.setProperty('client', client)
+        def handler = Spy(K8sTaskHandler, constructorArgs: [builder:builder, client:client, task:task])
         Map result
 
         def podOptions = Mock(PodOptions)
@@ -481,9 +473,7 @@ class K8sTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(K8sTaskHandler)
-        handler.setProperty('client', client)
-        handler.setProperty('task', task)
+        def handler = Spy(K8sTaskHandler, constructorArgs: [builder:builder, client:client, task:task])
 
         def POD_NAME = 'new-pod-id'
         def REQUEST =  [foo: 'bar']

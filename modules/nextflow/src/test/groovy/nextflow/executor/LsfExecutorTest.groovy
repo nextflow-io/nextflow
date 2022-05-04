@@ -55,14 +55,20 @@ class LsfExecutorTest extends Specification {
         _ * task.config >> new TaskConfig(memory: '10MB')
         then:
         result == ['-o', '/work/dir/.command.log',
-                   '-M', '10240', 
+                   '-M', '10240',
                    '-R', 'select[mem>=10240] rusage[mem=10]',
                    '-J', 'foo']
+    }
+
+    def testMemDirectiveMemUnit2() {
+        given:
+        def WORK_DIR = Paths.get('/work/dir')
+        def executor = Spy(LsfExecutor, constructorArgs:[[memUnit:'GB', usageUnit:'GB']]) as LsfExecutor
+        def task = Mock(TaskRun)
+        task.workDir >> WORK_DIR
 
         when:
-        executor.setProperty('memUnit', 'GB')
-        executor.setProperty('usageUnit', 'GB')
-        result = executor.getDirectives(task, [])
+        def result = executor.getDirectives(task, [])
         then:
         1 * executor.getJobNameFor(task) >> 'foo'
         _ * task.config >> new TaskConfig(memory: '100GB')
@@ -77,13 +83,11 @@ class LsfExecutorTest extends Specification {
     def testReserveMemPerTask() {
         given:
         def WORK_DIR = Paths.get('/work/dir')
-        def executor = Spy(LsfExecutor)
+        def executor = Spy(LsfExecutor, constructorArgs: [usageUnit:'KB', perJobMemLimit:true])
         def task = Mock(TaskRun)
         task.workDir >> WORK_DIR
 
         when:
-        executor.setProperty('usageUnit',  'KB')
-        executor.setProperty('perJobMemLimit', true)
         def result = executor.getDirectives(task, [])
         then:
         1 * executor.getJobNameFor(task) >> 'foo'
@@ -91,15 +95,21 @@ class LsfExecutorTest extends Specification {
         then:
         result == ['-o', '/work/dir/.command.log',
                    '-n', '2',
-                   '-R', 'span[hosts=1]', 
+                   '-R', 'span[hosts=1]',
                    '-M', '10240',
                    '-R', 'select[mem>=10240] rusage[mem=10240]',
                    '-J', 'foo']
+    }
+
+    def testReserveMemPerTask2() {
+        given:
+        def WORK_DIR = Paths.get('/work/dir')
+        def executor = Spy(LsfExecutor, constructorArgs: [perTaskReserve:true, perJobMemLimit: true, usageUnit:'KB'])
+        def task = Mock(TaskRun)
+        task.workDir >> WORK_DIR
 
         when:
-        executor.setProperty('perJobMemLimit', true)
-        executor.setProperty('perTaskReserve', true)
-        result = executor.getDirectives(task, [])
+        def result = executor.getDirectives(task, [])
         then:
         1 * executor.getJobNameFor(task) >> 'foo'
         _ * task.config >> new TaskConfig(memory: '10MB', cpus: 2)
@@ -384,10 +394,8 @@ class LsfExecutorTest extends Specification {
 
         setup:
         // LSF executor
-        def executor = Spy(LsfExecutor)
+        def executor = Spy(LsfExecutor, constructorArgs: [[memUnit: 'MB', usageUnit: 'MB']])
         executor.session = new Session()
-        executor.setProperty('memUnit', 'MB')
-        executor.setProperty('usageUnit', 'MB')
 
         // mock process
         def proc = Mock(TaskProcessor)

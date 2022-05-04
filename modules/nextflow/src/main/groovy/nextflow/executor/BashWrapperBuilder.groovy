@@ -110,7 +110,10 @@ class BashWrapperBuilder {
     }
 
     /** only for testing -- do not use */
-    protected BashWrapperBuilder() { }
+    protected BashWrapperBuilder(Map<String,Object>prp=[:]) {
+        this.bean = prp.bean as TaskBean
+        this.copyStrategy = prp.copyStrategy as ScriptFileCopyStrategy
+    }
 
     /**
      * @return The bash script fragment to change to the 'scratch' directory if it has been specified in the task configuration
@@ -144,7 +147,7 @@ class BashWrapperBuilder {
     }
 
     protected boolean fixOwnership() {
-        systemOsName == 'Linux' && containerConfig?['fixOwnership'] && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
+        systemOsName == 'Linux' && containerConfig?['fixOwnership'] && runWithContainer && containerConfig?.engine == 'docker' // <-- note: only for docker (shifter is not affected)
     }
 
     protected isMacOS() {

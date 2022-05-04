@@ -17,8 +17,6 @@
 
 package nextflow.cloud.aws.batch
 
-import spock.lang.IgnoreIf
-
 import java.nio.file.Paths
 
 import com.amazonaws.services.batch.AWSBatch
@@ -49,8 +47,6 @@ import nextflow.processor.TaskStatus
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import spock.lang.Specification
-
-import java.text.SimpleDateFormat
 
 /**
  *
@@ -415,8 +411,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_NAME = 'foo-bar-1-0'
         def JOB_ID = '123'
         def client = Mock(AWSBatch)
-        def handler = Spy(AwsBatchTaskHandler)
-        handler.setProperty('client', client)
+        def handler = Spy(AwsBatchTaskHandler, constructorArgs:[client])
 
         def req = new DescribeJobDefinitionsRequest().withJobDefinitionName(JOB_NAME)
         def res = Mock(DescribeJobDefinitionsResult)
@@ -464,8 +459,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         given:
         def JOB_NAME = 'foo-bar-1-0'
         def client = Mock(AWSBatch)
-        def handler = Spy(AwsBatchTaskHandler)
-        handler.setProperty('client', client)
+        def handler = Spy(AwsBatchTaskHandler, constructorArgs:[client])
 
         def req = Mock(RegisterJobDefinitionRequest)
         def res = Mock(RegisterJobDefinitionResult)
@@ -711,16 +705,12 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     }
 
-    @IgnoreIf({ new Date().after( new SimpleDateFormat("yyyy/MM/dd").parse("2020/05/5"))})
     def 'should submit job' () {
 
         given:
         def task = Mock(TaskRun)
         def client = Mock(AWSBatch)
-        def proxy = Mock(AwsBatchProxy)
-        def handler = Spy(AwsBatchTaskHandler)
-        handler.setProperty('client', client)
-        handler.setProperty('task', task)
+        def handler = Spy(AwsBatchTaskHandler, constructorArgs: [client, task])
 
         def req = Mock(SubmitJobRequest)
         def resp = Mock(SubmitJobResult)
@@ -730,7 +720,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * handler.buildTaskWrapper() >> null
         1 * handler.newSubmitRequest(task) >> req
-        1 * handler.bypassProxy(proxy) >> client
+        1 * handler.bypassProxy(_) >> client
         1 * client.submitJob(req) >> resp
         1 * resp.getJobId() >> '12345'
 

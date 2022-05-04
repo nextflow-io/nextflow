@@ -204,10 +204,9 @@ class CondaCacheTest extends Specification {
         given:
         def ENV = 'bwa=1.1.1'
         def PREFIX = Files.createTempDirectory('foo')
-        def cache = Spy(CondaCache)
+        def cache = Spy(CondaCache, constructorArgs: [new CondaConfig(useMamba:true)])
 
         when:
-        cache.setProperty('useMamba', true)
         // the prefix directory exists ==> no mamba command is executed
         def result = cache.createLocalCondaEnv(ENV)
         then:
@@ -218,7 +217,7 @@ class CondaCacheTest extends Specification {
 
         when:
         PREFIX.deleteDir()
-        cache.setProperty('useMamba', true)
+
         result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
@@ -232,10 +231,9 @@ class CondaCacheTest extends Specification {
         given:
         def ENV = 'bwa=1.1.1'
         def PREFIX = Paths.get('/foo/bar')
-        def cache = Spy(CondaCache)
+        def cache = Spy(CondaCache, constructorArgs: [new CondaConfig(createOptions:'--this --that')])
 
         when:
-        cache.setProperty('createOptions', '--this --that')
         def result = cache.createLocalCondaEnv0(ENV,PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
@@ -249,11 +247,9 @@ def 'should create conda env with options - using mamba' () {
         given:
         def ENV = 'bwa=1.1.1'
         def PREFIX = Paths.get('/foo/bar')
-        def cache = Spy(CondaCache)
+        def cache = Spy(CondaCache, constructorArgs: [new CondaConfig(useMamba:true, createOptions:'--this --that')])
 
         when:
-        cache.setProperty('createOptions', '--this --that')
-        cache.setProperty('useMamba', true)
         def result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
@@ -286,10 +282,9 @@ def 'should create conda env with options - using mamba' () {
         given:
         def ENV = 'foo.txt'
         def PREFIX = Paths.get('/conda/envs/my-env')
-        def cache = Spy(CondaCache)
+        def cache = Spy(CondaCache, constructorArgs: [new CondaConfig(createOptions:'--this --that')])
 
         when:
-        cache.setProperty('createOptions', '--this --that')
         def result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
