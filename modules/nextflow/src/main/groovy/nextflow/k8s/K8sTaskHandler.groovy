@@ -232,6 +232,7 @@ class K8sTaskHandler extends TaskHandler {
         result.taskName = task.getName()
         result.processName = task.getProcessor().getName()
         result.sessionId = "uuid-${executor.getSession().uniqueId}" as String
+        result.putAll(task.config?.getStickers() ?: Collections.emptyMap() as Map<String,String>)
         return result
     }
 

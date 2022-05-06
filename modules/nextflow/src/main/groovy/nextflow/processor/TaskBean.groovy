@@ -101,6 +101,8 @@ class TaskBean implements Serializable, Cloneable {
 
     List<String> secretNames
 
+    Map<String,String> stickers
+
     @PackageScope
     TaskBean() {
         shell = BashWrapperBuilder.BASH
@@ -151,6 +153,7 @@ class TaskBean implements Serializable, Cloneable {
         this.stageInMode = task.config.stageInMode
         this.stageOutMode = task.config.stageOutMode
 
+        this.stickers = task.config.getStickers()
     }
 
     @Override

@@ -702,8 +702,37 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
+    /**
+     * Implements the process {@code label} directive.
+     *
+     * Note this directive  can be specified (invoked) more than one time in
+     * the process context.
+     *
+     * @param map
+     *      The map to be attached to the process.
+     * @return
+     *      The {@link ProcessConfig} instance itself.
+     */
+    ProcessConfig label(Map<String, Object> map) {
+        if( !map ) return this
+
+        // -- get the current sticker, it must be a Map
+        def allStickers = (List)configProperties.get('sticker')
+        if( !allStickers ) {
+            allStickers = [:]
+        }
+        // -- merge duplicates
+        allStickers += map
+        configProperties.put('sticker', allStickers)
+        return this
+    }
+
     List<String> getLabels() {
         (List<String>) configProperties.get('label') ?: Collections.<String>emptyList()
+    }
+
+    Map<String,Object> getStickers() {
+        (configProperties.get('sticker') ?: Collections.emptyMap()) as Map<String, Object>
     }
 
     ProcessConfig secret(String name) {

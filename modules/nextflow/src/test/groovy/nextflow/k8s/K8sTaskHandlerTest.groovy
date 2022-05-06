@@ -742,6 +742,44 @@ class K8sTaskHandlerTest extends Specification {
         labels.sessionId == "uuid-${uuid.toString()}".toString()
     }
 
+    def 'should return labels map if stickers' () {
+        given:
+        def uuid = UUID.randomUUID()
+        def task = Mock(TaskRun){
+            getConfig() >> {
+                new TaskConfig([sticker:[a:'b']])
+            }
+        }
+        def exec = Mock(K8sExecutor)
+        def proc = Mock(TaskProcessor)
+        def sess = Mock(Session)
+        def handler = Spy(K8sTaskHandler)
+        handler.executor = exec
+
+        when:
+        def labels = handler.getLabels(task)
+        then:
+        handler.getRunName() >> 'pedantic-joe'
+        task.getName() >> 'hello-world-1'
+        task.getProcessor() >> proc
+        proc.getName() >> 'hello-proc'
+        exec.getSession() >> sess
+        sess.getUniqueId() >> uuid
+        exec.getK8sConfig() >> [pod: [
+                [label: 'foo', value: 'bar'],
+                [label: 'app', value: 'nextflow'],
+                [label: 'x', value: 'hello_world']
+        ]]
+
+        labels.app == 'nextflow'
+        labels.foo == 'bar'
+        labels.x == 'hello_world'
+        labels.processName == 'hello-proc'
+        labels.taskName ==  'hello-world-1'
+        labels.sessionId instanceof String
+        labels.sessionId == "uuid-${uuid.toString()}".toString()
+        labels.a == 'b'
+    }
 
     def 'should delete pod if complete' () {
 

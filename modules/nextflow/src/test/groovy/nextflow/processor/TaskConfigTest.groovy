@@ -590,4 +590,20 @@ class TaskConfigTest extends Specification {
         process.createTaskConfig().getSecret() == ['alpha', 'omega']
 
     }
+
+    def 'should configure stickers options'()  {
+
+        given:
+        def script = Mock(BaseScript)
+
+        when:
+        def process = new ProcessConfig(script)
+        process.label region: 'eu-west-1', organization: 'A'
+
+        then:
+        process.get('sticker') == [region: 'eu-west-1', organization: 'A']
+
+        process.createTaskConfig().getStickers() == [region: 'eu-west-1', organization: 'A']
+
+    }
 }

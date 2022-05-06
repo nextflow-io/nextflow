@@ -1683,6 +1683,19 @@ in the configuration file to select and configure subset of processes having sim
 
 See the :ref:`config-process-selectors` documentation for details.
 
+The ``label`` directive can be also expressed as a Map<key-value>:
+
+  process bigTask {
+    label region : 'eu-west-1'
+    label organization: 'MyOrganization'
+    label department: 'a department', group: 'a group'
+
+    '''
+    <task script>
+    '''
+  }
+
+These labels will be used to tag the process when pipeline is running in AWS, Google or K8s
 
 .. _process-machineType:
 

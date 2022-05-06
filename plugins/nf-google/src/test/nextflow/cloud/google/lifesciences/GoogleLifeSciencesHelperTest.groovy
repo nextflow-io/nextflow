@@ -476,7 +476,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
         and:
 
         def pipeline = new Pipeline()
-        def req = new GoogleLifeSciencesSubmitRequest(location: 'LOC-1', project: 'PRJ-X', taskName: 'foo')
+        def req = new GoogleLifeSciencesSubmitRequest(location: 'LOC-1', project: 'PRJ-X', taskName: 'foo', stickers: [a:'b'])
 
         when:
         def result = helper.submitPipeline(req)
@@ -488,7 +488,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
         1 * helper.createMainAction(req) >> main
         1 * helper.createResources(req) >> res
         1 * helper.createPipeline([stage, main, unstage], res) >> pipeline
-        1 * helper.runPipeline('PRJ-X','LOC-1', pipeline, [taskName: 'foo']) >> operation
+        1 * helper.runPipeline('PRJ-X','LOC-1', pipeline, [taskName: 'foo', a:'b']) >> operation
         and:
         result == operation
     }

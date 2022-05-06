@@ -368,6 +368,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         resolveJobDefinition(container)
     }
 
+    protected Map<String, String> getStickers(TaskRun task){
+        task.config?.getStickers() ?: Collections.emptyMap() as Map<String,String>
+    }
+
     /**
      * Maps a docker container image to a Batch job definition name
      *
@@ -629,7 +633,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         result.setJobName(normalizeJobName(task.name))
         result.setJobQueue(getJobQueue(task))
         result.setJobDefinition(getJobDefinition(task))
-
+        result.setTags(getStickers(task))
         /*
          * retry on spot reclaim
          * https://aws.amazon.com/blogs/compute/introducing-retry-strategies-for-aws-batch/

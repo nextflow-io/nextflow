@@ -352,6 +352,7 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
         req.subnetwork = executor.config.subnetwork
         req.serviceAccountEmail = executor.config.serviceAccountEmail
         req.keepAliveOnFailure = executor.config.keepAliveOnFailure
+        req.stickers = task.config?.getStickers()  ?: Collections.emptyMap() as Map<String,String>
         return req
     }
 
