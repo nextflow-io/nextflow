@@ -56,9 +56,9 @@ class K8sDriverLauncherTest extends Specification {
         1 * driver.makeK8sClient(K8S_CONFIG) >> K8S_CLIENT
         1 * K8S_CONFIG.checkStorageAndPaths(K8S_CLIENT)
         1 * driver.createK8sConfigMap() >> null
-        1 * driver.createK8sLauncherPod() >> null
-        1 * driver.waitPodStart() >> null
-        1 * driver.printK8sPodOutput() >> null
+        1 * driver.createK8sLauncherJob() >> null
+        1 * driver.waitJobStart() >> null
+        1 * driver.printK8sJobOutput() >> null
 
         driver.pipelineName == NAME
         driver.interactive == false
@@ -148,11 +148,10 @@ class K8sDriverLauncherTest extends Specification {
         k8s.getProjectDir() >> '/the/project/dir'
         k8s.getPodOptions() >> pod
 
-        and:
         def driver = Spy(K8sDriverLauncher)
-        driver.@runName = 'foo-boo'
-        driver.@k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
-        driver.@k8sConfig = k8s
+        driver.runName = 'foo-boo'
+        driver.k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
+        driver.k8sConfig = k8s
 
         when:
         def spec = driver.makeLauncherSpec()
@@ -206,12 +205,11 @@ class K8sDriverLauncherTest extends Specification {
         k8s.getProjectDir() >> '/the/project/dir'
         k8s.getPodOptions() >> pod
 
-        and:
         def driver = Spy(K8sDriverLauncher)
-        driver.@runName = 'foo-boo'
-        driver.@k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
-        driver.@k8sConfig = k8s
-        driver.@podImage = 'foo/bar'
+        driver.runName = 'foo-boo'
+        driver.k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
+        driver.k8sConfig = k8s
+        driver.podImage = 'foo/bar'
 
         when:
         def spec = driver.makeLauncherSpec()
@@ -265,14 +263,13 @@ class K8sDriverLauncherTest extends Specification {
         k8s.getProjectDir() >> '/the/project/dir'
         k8s.getPodOptions() >> pod
 
-        and:
         def driver = Spy(K8sDriverLauncher)
-        driver.@runName = 'foo-boo'
-        driver.@k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
-        driver.@k8sConfig = k8s
-        driver.@podImage = 'foo/bar'
-        driver.@headCpus = 2
-        driver.@headMemory = '200Mi'
+        driver.runName = 'foo-boo'
+        driver.k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
+        driver.k8sConfig = k8s
+        driver.podImage = 'foo/bar'
+        driver.headCpus = '2'
+        driver.headMemory = '200Mi'
 
         when:
         def spec = driver.makeLauncherSpec()
@@ -297,8 +294,8 @@ class K8sDriverLauncherTest extends Specification {
                             [name:'NXF_ANSI_LOG', value: 'false']
                         ],
                         resources: [
-                            requests: [cpu: 2, memory: '200Mi'],
-                            limits: [cpu: 2, memory: '200Mi']
+                            requests: [cpu: '2', memory: '200Mi'],
+                            limits: [cpu: '2', memory: '200Mi']
                         ],
                         volumeMounts: [
                             [name:'vol-1', mountPath:'/mnt/path/data'],
@@ -341,9 +338,9 @@ class K8sDriverLauncherTest extends Specification {
         K8S_CONFIG.getPodOptions() >> POD_OPTIONS
 
         when:
-        driver.@config = NXF_CONFIG
-        driver.@k8sConfig = K8S_CONFIG
-        driver.@cmd = new CmdKubeRun(paramsFile: params.toString())
+        driver.config = NXF_CONFIG
+        driver.k8sConfig = K8S_CONFIG
+        driver.cmd = new CmdKubeRun(paramsFile: params.toString())
 
         driver.createK8sConfigMap()
         then:
@@ -371,7 +368,7 @@ class K8sDriverLauncherTest extends Specification {
         def params = folder.resolve('params.json')
         params.text = 'bla-bla'
         def driver = Spy(K8sDriverLauncher)
-        driver.@headPreScript = '/bin/foo.sh'
+        driver.headPreScript = '/bin/foo.sh'
         def NXF_CONFIG = [foo: 'bar'].toConfigObject()
 
         def SCM_FILE = folder.resolve('scm')
@@ -388,9 +385,9 @@ class K8sDriverLauncherTest extends Specification {
         K8S_CONFIG.getPodOptions() >> POD_OPTIONS
 
         when:
-        driver.@config = NXF_CONFIG
-        driver.@k8sConfig = K8S_CONFIG
-        driver.@cmd = new CmdKubeRun(paramsFile: params.toString())
+        driver.config = NXF_CONFIG
+        driver.k8sConfig = K8S_CONFIG
+        driver.cmd = new CmdKubeRun(paramsFile: params.toString())
 
         driver.createK8sConfigMap()
         then:
@@ -422,7 +419,7 @@ class K8sDriverLauncherTest extends Specification {
         CFG_WITH_MOUNTS.k8s.storageMountPath = '/foo'
 
         when:
-        driver.@cmd = new CmdKubeRun()
+        driver.cmd = new CmdKubeRun()
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_EMPTY
@@ -432,7 +429,7 @@ class K8sDriverLauncherTest extends Specification {
         config.k8s.storageClaimName == null
 
         when:
-        driver.@cmd = new CmdKubeRun()
+        driver.cmd = new CmdKubeRun()
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
@@ -445,7 +442,7 @@ class K8sDriverLauncherTest extends Specification {
         new K8sConfig(config.k8s).getPodOptions() == new PodOptions([ [volumeClaim:'pvc', mountPath: '/foo'] ])
 
         when:
-        driver.@cmd = new CmdKubeRun(volMounts: ['pvc-1:/this','pvc-2:/that'] )
+        driver.cmd = new CmdKubeRun(volMounts: ['pvc-1:/this','pvc-2:/that'] )
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_EMPTY
@@ -463,7 +460,7 @@ class K8sDriverLauncherTest extends Specification {
 
 
         when:
-        driver.@cmd = new CmdKubeRun(volMounts: ['xyz:/this'] )
+        driver.cmd = new CmdKubeRun(volMounts: ['xyz:/this'] )
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
@@ -471,6 +468,7 @@ class K8sDriverLauncherTest extends Specification {
         config.k8s.storageClaimName == 'xyz'
         config.k8s.storageMountPath == '/this'
         config.k8s.pod == null
+        and:
         and:
         new K8sConfig(config.k8s).getStorageClaimName() == 'xyz'
         new K8sConfig(config.k8s).getStorageMountPath() == '/this'
@@ -480,7 +478,7 @@ class K8sDriverLauncherTest extends Specification {
 
 
         when:
-        driver.@cmd = new CmdKubeRun(volMounts: ['xyz', 'bar:/mnt/bar'] )
+        driver.cmd = new CmdKubeRun(volMounts: ['xyz', 'bar:/mnt/bar'] )
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
@@ -509,14 +507,14 @@ class K8sDriverLauncherTest extends Specification {
         CFG_WITH_MOUNTS.k8s.volumeClaims = [ pvc: [mountPath:'/foo'] ]
 
         when:
-        driver.@cmd = new CmdKubeRun()
+        driver.cmd = new CmdKubeRun()
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_EMPTY
         config.process.executor == 'k8s'
 
         when:
-        driver.@cmd = new CmdKubeRun()
+        driver.cmd = new CmdKubeRun()
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
@@ -525,7 +523,7 @@ class K8sDriverLauncherTest extends Specification {
         config.k8s.storageMountPath == '/foo'
 
         when:
-        driver.@cmd = new CmdKubeRun(volMounts: ['pvc-1:/this','pvc-2:/that'] )
+        driver.cmd = new CmdKubeRun(volMounts: ['pvc-1:/this','pvc-2:/that'] )
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_EMPTY
@@ -536,7 +534,7 @@ class K8sDriverLauncherTest extends Specification {
 
 
         when:
-        driver.@cmd = new CmdKubeRun(volMounts: ['xyz:/this'] )
+        driver.cmd = new CmdKubeRun(volMounts: ['xyz:/this'] )
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
@@ -558,18 +556,20 @@ class K8sDriverLauncherTest extends Specification {
         def POD_NAME = 'pod-x'
         def client = Mock(K8sClient)
         def driver = Spy(K8sDriverLauncher)
-        driver.@k8sClient = client
-        driver.@runName = POD_NAME
+        driver.k8sClient = client
+        driver.runName = POD_NAME
+        driver.k8sConfig = Mock(K8sConfig)
 
         when:
-        def status = driver.waitPodTermination()
+        def status = driver.waitJobTermination()
         then:
         1 * client.podState(POD_NAME) >> [terminated: [exitCode: 99]]
+        1 * driver.k8sConfig.getJob() >> [:]
         then:
         status == 99
 
         when:
-        status = driver.waitPodTermination()
+        status = driver.waitJobTermination()
         then:
         1 * client.podState(POD_NAME) >> [:]
         then:
@@ -578,7 +578,7 @@ class K8sDriverLauncherTest extends Specification {
         status == 99
 
         when:
-        status = driver.waitPodTermination()
+        status = driver.waitJobTermination()
         then:
         1 * client.podState(POD_NAME) >> [:]
         1 * driver.isWaitTimedOut(_) >> true
@@ -592,13 +592,13 @@ class K8sDriverLauncherTest extends Specification {
         def POD_NAME = 'pod-x'
         def config = Mock(K8sConfig)
         def driver = Spy(K8sDriverLauncher)
-        driver.@k8sConfig = config
-        driver.@runName = POD_NAME
+        driver.k8sConfig = config
+        driver.runName = POD_NAME
 
         when:
         driver.shutdown()
         then:
-        1 * driver.waitPodTermination() >> 0
+        1 * driver.waitJobTermination() >> 0
         then:
         1 * config.getCleanup(true) >> true
         1 * driver.deleteConfigMap() >> null
@@ -606,7 +606,7 @@ class K8sDriverLauncherTest extends Specification {
         when:
         driver.shutdown()
         then:
-        1 * driver.waitPodTermination() >> 1
+        1 * driver.waitJobTermination() >> 1
         then:
         1 * config.getCleanup(false) >> true
         1 * driver.deleteConfigMap() >> null
@@ -614,7 +614,7 @@ class K8sDriverLauncherTest extends Specification {
         when:
         driver.shutdown()
         then:
-        1 * driver.waitPodTermination() >> 1
+        1 * driver.waitJobTermination() >> 1
         then:
         1 * config.getCleanup(false) >> false
         0 * driver.deleteConfigMap() >> null

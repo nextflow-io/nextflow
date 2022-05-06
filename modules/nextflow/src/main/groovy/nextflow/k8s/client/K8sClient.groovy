@@ -301,7 +301,7 @@ class K8sClient {
         return podName
     }
 
-    K8sResponseJson getStatus(String name) {
+    K8sResponseJson podStatus(String name) {
         assert name
         final action = "/api/v1/namespaces/$config.namespace/pods/$name/status"
         final resp = get(action)
@@ -315,7 +315,7 @@ class K8sClient {
 
     protected K8sResponseJson podStatus0(String name) {
         try {
-            return getStatus(name)
+            return podStatus(name)
         }
         catch (K8sResponseException err) {
             if( err.response.code == 404 && isKindPods(err.response)  ) {

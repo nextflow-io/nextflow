@@ -617,6 +617,7 @@ class PodSpecBuilderTest extends Specification {
         def opts = Mock(PodOptions)
         def builder = new PodSpecBuilder([
             podName: 'foo',
+            containerName: 'foo',
             imageName: 'image',
             command: ['echo'],
             labels: [runName: 'crazy_john'],
