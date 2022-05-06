@@ -672,6 +672,26 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return LABEL_REGEXP.matcher(left).matches() && LABEL_REGEXP.matcher(right).matches()
     }
 
+    protected boolean isStickerSyntax(String lbl){
+        def p = lbl.count('=')
+        if( p != 1)
+            return false
+        String[] fields = lbl.split('=')
+        def left = fields[0]
+        def right = fields[1]
+        return LABEL_REGEXP.matcher(left).matches()
+    }
+
+    protected Map<String,String> parseAsMap(String lbl){
+        def p = lbl.count('=')
+        if( p != 1)
+            return Collections.emptyMap() as Map<String,String>
+        String[] fields = lbl.split('=')
+        def left = fields[0]
+        def right = fields[1]
+        Map.of(left, right)
+    }
+
     /**
      * Implements the process {@code label} directive.
      *
@@ -685,6 +705,12 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      */
     ProcessConfig label(String lbl) {
         if( !lbl ) return this
+
+        if( isStickerSyntax(lbl) ){
+            Map<String,Object> map = parseAsMap(lbl)
+            return label(map)
+        }
+
         // -- check that label has a valid syntax
         if( !isValidLabel(lbl) )
             throw new IllegalConfigException("Not a valid process label: $lbl -- Label must consist of alphanumeric characters or '_', must start with an alphabetic character and must end with an alphanumeric character")
@@ -717,7 +743,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         if( !map ) return this
 
         // -- get the current sticker, it must be a Map
-        def allStickers = (List)configProperties.get('sticker')
+        def allStickers = (Map)configProperties.get('sticker')
         if( !allStickers ) {
             allStickers = [:]
         }
