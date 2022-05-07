@@ -335,6 +335,13 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     protected void launchInfo(ConfigMap config, ScriptFile scriptFile) {
+        // -- determine strict mode
+        final defStrict = sysEnv.get('NXF_ENABLE_STRICT') ?: false
+        final strictMode = config.navigate('nextflow.enable.strict', defStrict)
+        if( strictMode ) {
+            log.debug "Enabling nextflow strict mode"
+            NextflowMeta.instance.strictMode(true)
+        }
         // -- try determine DSL version from config file
         final DSL2 = '2'
         final DSL1 = '1'
