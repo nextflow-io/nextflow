@@ -44,9 +44,10 @@ class LsfExecutorTest extends Specification {
     def testMemDirectiveMemUnit() {
         given:
         def WORK_DIR = Paths.get('/work/dir')
-        def executor = Spy(LsfExecutor)
         def task = Mock(TaskRun)
         task.workDir >> WORK_DIR
+        and:
+        def executor = Spy(LsfExecutor)
 
         when:
         def result = executor.getDirectives(task, [])
@@ -59,10 +60,18 @@ class LsfExecutorTest extends Specification {
                    '-R', 'select[mem>=10240] rusage[mem=10]',
                    '-J', 'foo']
 
+    }
+
+    def testMemDirectiveMemUnitWithUsage () {
+        given:
+        def WORK_DIR = Paths.get('/work/dir')
+        def task = Mock(TaskRun)
+        task.workDir >> WORK_DIR
+        and:
+        def executor = Spy( new LsfExecutor(memUnit: 'GB', usageUnit: 'GB') )
+
         when:
-        executor.memUnit = 'GB'
-        executor.usageUnit = 'GB'
-        result = executor.getDirectives(task, [])
+        def result = executor.getDirectives(task, [])
         then:
         1 * executor.getJobNameFor(task) >> 'foo'
         _ * task.config >> new TaskConfig(memory: '100GB')
@@ -71,19 +80,17 @@ class LsfExecutorTest extends Specification {
                    '-M', '100',
                    '-R', 'select[mem>=100] rusage[mem=100]',
                    '-J', 'foo']
-
     }
 
     def testReserveMemPerTask() {
         given:
         def WORK_DIR = Paths.get('/work/dir')
-        def executor = Spy(LsfExecutor)
         def task = Mock(TaskRun)
         task.workDir >> WORK_DIR
+        and:
+        def executor = Spy( new LsfExecutor(usageUnit: 'KB', perJobMemLimit: true))
 
         when:
-        executor.usageUnit = 'KB'
-        executor.perJobMemLimit = true
         def result = executor.getDirectives(task, [])
         then:
         1 * executor.getJobNameFor(task) >> 'foo'
@@ -96,10 +103,18 @@ class LsfExecutorTest extends Specification {
                    '-R', 'select[mem>=10240] rusage[mem=10240]',
                    '-J', 'foo']
 
+    }
+
+    def testReserveMemPerTask2() {
+        given:
+        def WORK_DIR = Paths.get('/work/dir')
+        def task = Mock(TaskRun)
+        task.workDir >> WORK_DIR
+        and:
+        def executor = Spy( new LsfExecutor(usageUnit: 'KB', perJobMemLimit: true, perTaskReserve: true))
+
         when:
-        executor.perJobMemLimit = true
-        executor.perTaskReserve = true
-        result = executor.getDirectives(task, [])
+        def result = executor.getDirectives(task, [])
         then:
         1 * executor.getJobNameFor(task) >> 'foo'
         _ * task.config >> new TaskConfig(memory: '10MB', cpus: 2)
@@ -111,18 +126,13 @@ class LsfExecutorTest extends Specification {
                    '-R', 'select[mem>=10240] rusage[mem=5120]',
                    '-J', 'foo']
 
-
     }
-
 
     def testHeaders() {
 
         setup:
         // LSF executor
-        def executor = [:] as LsfExecutor
-        executor.memUnit = 'MB'
-        executor.usageUnit = 'MB'
-        executor.session = new Session()
+        def executor = new LsfExecutor(memUnit: 'MB', usageUnit: 'MB', session: new Session())
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -288,8 +298,7 @@ class LsfExecutorTest extends Specification {
         given:
         def config = new TaskConfig(clusterOptions: [], disk: '10GB')
         def WORKDIR = Paths.get('/my/work')
-        def lsf = [:] as LsfExecutor
-        lsf.memUnit = 'MB'
+        def lsf = new LsfExecutor(memUnit: 'MB')
         def task = Mock(TaskRun)
 
         when:
@@ -323,9 +332,8 @@ class LsfExecutorTest extends Specification {
 
         when:
         // LSF executor
-        def executor = [:] as LsfExecutor
-        executor.session = new Session()
-        executor.memUnit = 'MB'
+        def sess = new Session()
+        def executor = new LsfExecutor(session: sess, memUnit: 'MB')
 
         then:
         executor.getHeaders(task) == '''
@@ -362,9 +370,8 @@ class LsfExecutorTest extends Specification {
 
         when:
         // LSF executor
-        def executor = [:] as LsfExecutor
-        executor.memUnit = 'MB'
-        executor.session = new Session([executor: [perJobMemLimit: true]])
+        def sess = new Session([executor: [perJobMemLimit: true]])
+        def executor = new LsfExecutor(memUnit: 'MB', session: sess)
         executor.register()
 
         then:
@@ -382,13 +389,10 @@ class LsfExecutorTest extends Specification {
 
     def testWorkDirWithBlanks() {
 
-        setup:
+        given:
         // LSF executor
-        def executor = Spy(LsfExecutor)
-        executor.session = new Session()
-        executor.memUnit = 'MB'
-        executor.usageUnit = 'MB'
-
+        def executor = Spy(new LsfExecutor(memUnit: 'MB', usageUnit: 'MB', session: new Session()))
+        and:
         // mock process
         def proc = Mock(TaskProcessor)
         // process name
