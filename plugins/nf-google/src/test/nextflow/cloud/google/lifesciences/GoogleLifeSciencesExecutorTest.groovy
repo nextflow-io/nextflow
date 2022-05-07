@@ -58,7 +58,7 @@ class GoogleLifeSciencesExecutorTest extends GoogleSpecification {
         and:
         def executor = Spy(GoogleLifeSciencesExecutor)
         executor.session = session
-        executor.env = ENV()
+        executor.@env = ENV()
 
         when:
         executor.register()
@@ -82,7 +82,7 @@ class GoogleLifeSciencesExecutorTest extends GoogleSpecification {
         and:
         def executor = Spy(GoogleLifeSciencesExecutor)
         executor.session = session
-        executor.env = ENV()
+        executor.@env = ENV()
 
         when:
         executor.register()
@@ -106,7 +106,7 @@ class GoogleLifeSciencesExecutorTest extends GoogleSpecification {
         and:
         def executor = Spy(GoogleLifeSciencesExecutor)
         executor.session = session
-        executor.env = ENV()
+        executor.@env = ENV()
 
         when:
         executor.register()
