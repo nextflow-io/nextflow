@@ -588,7 +588,7 @@ class AssetManager {
      * @param revision The revision to download
      * @result A message representing the operation result
      */
-    def download(String revision=null) {
+    String download(String revision=null) {
         assert project
 
         /*
@@ -607,20 +607,22 @@ class AssetManager {
             if( provider.hasCredentials() )
                 clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
 
-            if( revision ) {
-                clone.setBranch(revision)
-            }
-
             clone
                 .setURI(cloneURL)
                 .setDirectory(localPath)
                 .setCloneSubmodules(manifest.recurseSubmodules)
                 .call()
 
+            if( revision ) {
+                // use an explicit checkout command *after* the clone instead of cloning a specific branch
+                // because the clone command does not allow the use of SHA commit id (only branch and tag names)
+                try { git.checkout() .setName(revision) .call() }
+                catch ( RefNotFoundException e ) { checkoutRemoteBranch(revision) }
+            }
+
             // return status message
             return "downloaded from ${cloneURL}"
         }
-
 
         log.debug "Pull pipeline $project  -- Using local path: $localPath"
 
@@ -641,7 +643,7 @@ class AssetManager {
              */
             catch ( RefNotFoundException e ) {
                 def ref = checkoutRemoteBranch(revision)
-                return "checkout-out at ${ref.getObjectId()}"
+                return "checkout-out at ${ref.getObjectId().name()}"
             }
         }
 
