@@ -44,7 +44,7 @@ class LocalRepositoryProviderTest extends Specification {
         this.repo = init.setDirectory( dir ).call()
         new File(dir, 'main.nf').text = 'main script'
         repo.add().addFilepattern('main.nf').call()
-        repo.commit().setMessage('First commit').call()
+        repo.commit().setSign(false).setMessage('First commit').call()
     }
 
     def cleanup() {
@@ -131,7 +131,7 @@ class LocalRepositoryProviderTest extends Specification {
         // add new file
         new File(dir, 'foo.nf').text = 'foo script'
         repo.add().addFilepattern('foo.nf').call()
-        repo.commit().setMessage('Second commit').call()
+        repo.commit().setSign(false).setMessage('Second commit').call()
         def ref2 = repo.tag().setName('tag_2').setMessage('Second tag').call()
 
         and:
@@ -157,7 +157,7 @@ class LocalRepositoryProviderTest extends Specification {
         // add new file
         new File(dir, 'foo.nf').text = 'foo script'
         repo.add().addFilepattern('foo.nf').call()
-        repo.commit().setMessage('Second commit').call()
+        repo.commit().setSign(false).setMessage('Second commit').call()
         def ref2 = repo.branchCreate().setName('branch_2').call()
 
         and:
