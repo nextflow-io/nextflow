@@ -140,6 +140,10 @@ class NextflowMeta {
         return enable.strict
     }
 
+    void strictMode(boolean mode) {
+        enable.strict = mode
+    }
+
     void checkDsl2Mode(String script) {
         final matcher = DSL_DECLARATION.matcher(script)
         final mode = matcher.find() ? matcher.group(2) : null
