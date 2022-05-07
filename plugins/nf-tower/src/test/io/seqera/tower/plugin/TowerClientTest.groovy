@@ -65,9 +65,9 @@ class TowerClientTest extends Specification {
         def meta = Mock(WorkflowMetadata)
 
         def tower = Spy(TowerClient)
-        tower.runName = session.runName
-        tower.workflowId = '12ef'
-        tower.terminated = true
+        tower.@runName = session.runName
+        tower.@workflowId = '12ef'
+        tower.@terminated = true
 
         when:
         def map = tower.makeCompleteReq(session)
@@ -181,8 +181,8 @@ class TowerClientTest extends Specification {
         def PROGRESS = Mock(WorkflowProgress) { getRunning()>>1; getSucceeded()>>2; getFailed()>>3 }
         def client = Mock(SimpleHttpClient)
         def observer = Spy(TowerClient)
-        observer.httpClient = client
-        observer.workflowId = 'xyz-123'
+        observer.@httpClient = client
+        observer.@workflowId = 'xyz-123'
         
         def nowTs = System.currentTimeMillis()
         def submitTs = nowTs-2000

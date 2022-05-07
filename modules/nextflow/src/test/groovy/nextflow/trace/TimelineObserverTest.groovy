@@ -64,10 +64,11 @@ class TimelineObserverTest extends Specification {
         r3.process = 'beta'
         r3.peak_rss = 70_000_000
 
+        and:
         def observer = Spy(TimelineObserver)
-        observer.beginMillis = 1000
-        observer.startMillis = 1000
-        observer.endMillis = 3500
+        observer.@beginMillis = 1000
+        observer.@startMillis = 1000
+        observer.@endMillis = 3500
         observer.@records['1'] = r1
         observer.@records['2'] = r2
         observer.@records['3'] = r3

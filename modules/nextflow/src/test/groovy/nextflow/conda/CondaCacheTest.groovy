@@ -204,10 +204,9 @@ class CondaCacheTest extends Specification {
         given:
         def ENV = 'bwa=1.1.1'
         def PREFIX = Files.createTempDirectory('foo')
-        def cache = Spy(CondaCache)
+        def cache = Spy(new CondaCache(useMamba: true))
 
         when:
-        cache.useMamba = true
         // the prefix directory exists ==> no mamba command is executed
         def result = cache.createLocalCondaEnv(ENV)
         then:
@@ -218,7 +217,6 @@ class CondaCacheTest extends Specification {
 
         when:
         PREFIX.deleteDir()
-        cache.useMamba = true
         result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
@@ -232,10 +230,10 @@ class CondaCacheTest extends Specification {
         given:
         def ENV = 'bwa=1.1.1'
         def PREFIX = Paths.get('/foo/bar')
-        def cache = Spy(CondaCache)
+        and:
+        def cache = Spy(new CondaCache(createOptions: '--this --that'))
 
         when:
-        cache.createOptions = '--this --that'
         def result = cache.createLocalCondaEnv0(ENV,PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
@@ -249,11 +247,10 @@ def 'should create conda env with options - using mamba' () {
         given:
         def ENV = 'bwa=1.1.1'
         def PREFIX = Paths.get('/foo/bar')
-        def cache = Spy(CondaCache)
+        and:
+        def cache = Spy(new CondaCache(useMamba: true, createOptions: '--this --that'))
 
         when:
-        cache.createOptions = '--this --that'
-        cache.useMamba = true
         def result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
@@ -286,10 +283,10 @@ def 'should create conda env with options - using mamba' () {
         given:
         def ENV = 'foo.txt'
         def PREFIX = Paths.get('/conda/envs/my-env')
-        def cache = Spy(CondaCache)
+        and:
+        def cache = Spy(new CondaCache(createOptions: '--this --that'))
 
         when:
-        cache.createOptions = '--this --that'
         def result = cache.createLocalCondaEnv0(ENV, PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
