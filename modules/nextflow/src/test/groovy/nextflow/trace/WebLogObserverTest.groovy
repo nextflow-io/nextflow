@@ -77,11 +77,11 @@ class WebLogObserverTest extends Specification {
         given:
         def observer = Spy(WebLogObserver)
         def CLIENT = Mock(SimpleHttpClient)
-        observer.endpoint = 'http://foo.com'
-        observer.httpClient = CLIENT
-        observer.runName = 'foo'
-        observer.runId = 'xyz'
-        observer.generator = new JsonGenerator.Options().build()
+        observer.@endpoint = 'http://foo.com'
+        observer.@httpClient = CLIENT
+        observer.@runName = 'foo'
+        observer.@runId = 'xyz'
+        observer.@generator = new JsonGenerator.Options().build()
         def TRACE = new TraceRecord([hash: '4a4a4a', process: 'bar'])
 
         when:
