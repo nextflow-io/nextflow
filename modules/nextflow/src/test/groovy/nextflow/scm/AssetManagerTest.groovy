@@ -445,7 +445,7 @@ class AssetManagerTest extends Specification {
         def init = Git.init()
         def repo = init.setDirectory( dir.toFile() ).call()
         repo.add().addFilepattern('.').call()
-        def commit = repo.commit().setAll(true).setMessage('First commit').call()
+        def commit = repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
         repo.close()
 
         // append fake remote data
