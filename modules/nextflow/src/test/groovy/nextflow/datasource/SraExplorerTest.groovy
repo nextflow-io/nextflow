@@ -17,15 +17,13 @@
 
 package nextflow.datasource
 
-import nextflow.extension.FilesEx
-import spock.lang.IgnoreIf
-import spock.lang.Requires
-import spock.lang.Specification
-
 import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.Const
+import spock.lang.IgnoreIf
+import spock.lang.Requires
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -145,24 +143,15 @@ class SraExplorerTest extends Specification {
         1 * slurper.readRunFastqs('ERR908503') >> RESP2
         result == [f1, f2]
 
-    }
-
-    def 'should get http url' () {
-        given:
-        def RESP1 = '''
-                run_accession\tfastq_ftp
-                SRR1448774\tftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz
-                '''.stripIndent()
-        and:
-        def slurper = Spy(new SraExplorer(protocol: 'http'))
-
         when:
-        def result = slurper.getFastqUrl('SRR1448774')
+        slurper.@protocol = 'http'
+        and:
+        result = slurper.getFastqUrl('SRR1448774')
         then:
         1 * slurper.readRunFastqs('SRR1448774') >> RESP1
+        and:
         // should return http url
-        result instanceof Path
-        FilesEx.toUriString(result) == 'http://ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz'
+        result == ('http://ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz' as Path)
     }
 
     def 'should return http files for accession id' () {
