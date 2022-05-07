@@ -42,7 +42,7 @@ dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:1.7.10'
     compileOnly 'org.pf4j:pf4j:3.4.1'
-    compileOnly "org.slf4j:log4j-over-slf4j:1.7.32"
+    compileOnly "org.slf4j:log4j-over-slf4j:1.7.36"
     api("org.codehaus.groovy:groovy-sql:3.0.10") { transitive = false }
     api 'com.h2database:h2:1.4.200'
     api 'mysql:mysql-connector-java:8.0.22'
