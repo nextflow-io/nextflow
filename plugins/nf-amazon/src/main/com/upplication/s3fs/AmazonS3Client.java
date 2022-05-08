@@ -79,6 +79,8 @@ import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.SSEAlgorithm;
+import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.Tag;
 import com.upplication.s3fs.util.S3MultipartOptions;
 import org.slf4j.Logger;
@@ -95,6 +97,10 @@ public class AmazonS3Client {
 	private AmazonS3 client;
 
 	private CannedAccessControlList cannedAcl;
+
+	private String kmsKeyId;
+
+	private SSEAlgorithm storageEncryption;
 
 	public AmazonS3Client(AmazonS3 client){
 		this.client = client;
@@ -152,11 +158,19 @@ public class AmazonS3Client {
 	public PutObjectResult putObject(String bucket, String keyName, InputStream inputStream, ObjectMetadata metadata, List<Tag> tags) {
 		PutObjectRequest req = new PutObjectRequest(bucket, keyName, inputStream, metadata);
 		if( cannedAcl != null ) {
-			log.trace("Setting canned ACL={}; bucket={}; tags={} and stream", cannedAcl, bucket, tags);
 			req.withCannedAcl(cannedAcl);
 		}
 		if( tags != null && tags.size()>0 ) {
 			req.setTagging(new ObjectTagging(tags));
+		}
+		if( kmsKeyId != null ) {
+			req.withSSEAwsKeyManagementParams( new SSEAwsKeyManagementParams(kmsKeyId) );
+		}
+		if( storageEncryption!=null ) {
+			metadata.setSSEAlgorithm(storageEncryption.toString());
+		}
+		if( log.isTraceEnabled() ) {
+			log.trace("S3 PutObject request {}", req);
 		}
 		return client.putObject(req);
 	}
@@ -166,24 +180,27 @@ public class AmazonS3Client {
 	public void deleteObject(String bucket, String key) {
 		client.deleteObject(bucket, key);
 	}
-	/**
-	 * @see com.amazonaws.services.s3.AmazonS3Client#copyObject(String, String, String, String)
-	 */
-	public CopyObjectResult copyObject(String sourceBucketName, String sourceKey, String destinationBucketName, String destinationKey) {
-		CopyObjectRequest req = new CopyObjectRequest(sourceBucketName, sourceKey, destinationBucketName, destinationKey);
-		if( cannedAcl != null ) {
-			log.trace("Setting canned ACL={}; sourceBucketName={}; sourceKey={}; destinationBucketName={}; destinationKey={}", cannedAcl, sourceBucketName, sourceKey, destinationBucketName, destinationKey);
-			req.withCannedAccessControlList(cannedAcl);
-		}
-		return client.copyObject(req);
-	}
+
 	/**
 	 * @see com.amazonaws.services.s3.AmazonS3Client#copyObject(CopyObjectRequest)
 	 */
-	public CopyObjectResult copyObject(CopyObjectRequest req) {
+	public CopyObjectResult copyObject(CopyObjectRequest req, List<Tag> tags) {
+		if( tags !=null && tags.size()>0 ) {
+			req.setNewObjectTagging(new ObjectTagging(tags));
+		}
 		if( cannedAcl != null ) {
-			log.trace("Setting canned ACL={}; req={}", cannedAcl, req);
 			req.withCannedAccessControlList(cannedAcl);
+		}
+		if( storageEncryption != null ) {
+			ObjectMetadata meta = req.getNewObjectMetadata();
+			meta.setSSEAlgorithm(storageEncryption.toString());
+			req.setNewObjectMetadata(meta);
+		}
+		if( kmsKeyId !=null ) {
+			req.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(kmsKeyId));
+		}
+		if( log.isTraceEnabled() ) {
+			log.trace("S3 CopyObject request {}", req);
 		}
 		return client.copyObject(req);
 	}
@@ -212,6 +229,20 @@ public class AmazonS3Client {
 			return;
 		this.cannedAcl = CannedAccessControlList.valueOf(acl);
 		log.debug("Setting S3 canned ACL={} [{}]", this.cannedAcl, acl);
+	}
+
+	public void setKmsKeyId(String kmsKeyId) {
+		if( kmsKeyId==null )
+			return;
+		this.kmsKeyId = kmsKeyId;
+		log.debug("Setting S3 SSE kms Id={}", kmsKeyId);
+	}
+
+	public void setStorageEncryption(String alg) {
+		if( alg == null )
+			return;
+		this.storageEncryption = SSEAlgorithm.fromString(alg);
+		log.debug("Setting S3 SSE storage encryption algorithm={}", alg);
 	}
 
 	public CannedAccessControlList getCannedAcl() {
@@ -254,7 +285,7 @@ public class AmazonS3Client {
         return client.listNextBatchOfObjects(objectListing);
     }
 
-	public void multipartCopyObject(S3Path s3Source, S3Path s3Target, Long objectSize, S3MultipartOptions opts, ObjectMetadata targetObjectMetadata, List<Tag> tags ) {
+	public void multipartCopyObject(S3Path s3Source, S3Path s3Target, Long objectSize, S3MultipartOptions opts, List<Tag> tags ) {
 
 		final String sourceBucketName = s3Source.getBucket();
 		final String sourceObjectKey = s3Source.getKey();
@@ -262,15 +293,17 @@ public class AmazonS3Client {
 		final String targetObjectKey = s3Target.getKey();
 
 		// Step 2: Initialize
-		InitiateMultipartUploadRequest initiateRequest =
-				new InitiateMultipartUploadRequest(targetBucketName, targetObjectKey);
+		InitiateMultipartUploadRequest initiateRequest = new InitiateMultipartUploadRequest(targetBucketName, targetObjectKey);
 		if( cannedAcl!=null ) {
-			log.trace("Setting canned ACL={}; initiateMultipartUpload targetBucketName={}, targetObjectKey={}", cannedAcl, targetBucketName, targetObjectKey);
 			initiateRequest.withCannedACL(cannedAcl);
 		}
-		if( targetObjectMetadata!=null ) {
-			log.trace("Setting multipart upload target object metadata: targetBucketName={}, targetObjectKey={}, metadata={}", targetBucketName, targetObjectKey, targetObjectMetadata);
-			initiateRequest.withObjectMetadata(targetObjectMetadata);
+		if( storageEncryption!=null ) {
+			ObjectMetadata meta = new ObjectMetadata();
+			meta.setSSEAlgorithm(storageEncryption.toString());
+			initiateRequest.withObjectMetadata(meta);
+		}
+		if( kmsKeyId != null ) {
+			initiateRequest.setSSEAwsKeyManagementParams( new SSEAwsKeyManagementParams(kmsKeyId) );
 		}
 
 		if( tags != null && tags.size()>0 ) {

@@ -29,6 +29,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
 
     private String storageClass = 'STANDARD'
     private String storageEncryption = ''
+    private String storageKmsKeyId = ''
     private String debug = ''
     private String cli = 'aws'
     private String retryMode
@@ -62,6 +63,12 @@ class S3BashLib extends BashFunLib<S3BashLib> {
         return this
     }
 
+    S3BashLib withStorageKmsKeyId(String value) {
+        if( value )
+            this.storageKmsKeyId = value ? "--sse-kms-key-id $value " : ''
+        return this
+    }
+
     protected String retryEnv() {
         if( !retryMode )
             return ''
@@ -79,11 +86,11 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             local name=\$1
             local s3path=\$2
             if [[ "\$name" == - ]]; then
-              $cli s3 cp --only-show-errors $debug$storageEncryption--storage-class $storageClass - "\$s3path"
+              $cli s3 cp --only-show-errors ${debug}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass - "\$s3path"
             elif [[ -d "\$name" ]]; then
-              $cli s3 cp --only-show-errors --recursive $debug$storageEncryption--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli s3 cp --only-show-errors --recursive ${debug}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass "\$name" "\$s3path/\$name"
             else
-              $cli s3 cp --only-show-errors $debug$storageEncryption--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli s3 cp --only-show-errors ${debug}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass "\$name" "\$s3path/\$name"
             fi
         }
         
@@ -114,6 +121,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
                 .withCliPath( opts.awsCli )
                 .withStorageClass(opts.storageClass )
                 .withStorageEncryption( opts.storageEncryption )
+                .withStorageKmsKeyId( opts.storageKmsKeyId )
                 .withRetryMode( opts.retryMode )
                 .withDebug( opts.debug )
     }

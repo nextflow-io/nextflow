@@ -48,12 +48,14 @@ import com.amazonaws.services.s3.model.ObjectTagging;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectId;
+import com.amazonaws.services.s3.model.SSEAlgorithm;
+import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.Tag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.util.Base64;
 import com.upplication.s3fs.util.ByteBufferInputStream;
-import com.upplication.s3fs.util.S3UploadRequest;
+import com.upplication.s3fs.util.S3MultipartOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static java.util.Objects.requireNonNull;
@@ -112,12 +114,11 @@ public final class S3OutputStream extends OutputStream {
     /**
      * Amazon S3 storage class to apply to the newly created S3 object, if any.
      */
-    private final StorageClass storageClass;
+    private StorageClass storageClass;
 
-    /**
-     * Metadata that will be attached to the stored S3 object.
-     */
-    private final ObjectMetadata metadata;
+    private SSEAlgorithm storageEncryption;
+
+    private String kmsKeyId;
 
     /**
      * Indicates if the stream has been closed.
@@ -142,7 +143,7 @@ public final class S3OutputStream extends OutputStream {
     /**
      * Holds upload request metadata
      */
-    private final S3UploadRequest request;
+    private final S3MultipartOptions request;
 
     /**
      * Instead of allocate a new buffer for each chunks recycle them, putting
@@ -179,31 +180,15 @@ public final class S3OutputStream extends OutputStream {
     private List<Tag> tags;
 
     /**
-     * Creates a s3 uploader output stream
-     * @param s3 The S3 client
-     * @param objectId The S3 object ID to upload
-     */
-    public S3OutputStream(final AmazonS3 s3, S3ObjectId objectId ) {
-        this(s3, new S3UploadRequest().setObjectId(objectId));
-    }
-
-    /**
      * Creates a new {@code S3OutputStream} that writes data directly into the S3 object with the given {@code objectId}.
      * No special object metadata or storage class will be attached to the object.
      *
-     * @param   s3        Amazon S3 API implementation to use
-     * @param   request   An instance of {@link S3UploadRequest}
-     *
-     * @throws  NullPointerException  if at least one parameter is {@code null}
      */
-    public S3OutputStream(final AmazonS3 s3, S3UploadRequest request) {
+    public S3OutputStream(final AmazonS3 s3, S3ObjectId objectId, S3MultipartOptions request) {
         this.s3 = requireNonNull(s3);
-        this.objectId = requireNonNull(request.getObjectId());
-        this.metadata = request.getMetadata() != null ? request.getMetadata() : new ObjectMetadata();
-        this.storageClass = request.getStorageClass();
+        this.objectId = requireNonNull(objectId);
         this.request = request;
         this.chunkSize = request.getChunkSize();
-        this.tags = request.getTags();
     }
 
     private ByteBuffer expandBuffer(ByteBuffer byteBuffer) {
@@ -220,8 +205,31 @@ public final class S3OutputStream extends OutputStream {
         return expanded;
     }
 
-    public void setCannedAcl(CannedAccessControlList acl) {
+    public S3OutputStream setCannedAcl(CannedAccessControlList acl) {
         this.cannedAcl = acl;
+        return this;
+    }
+
+    public S3OutputStream setTags(List<Tag> tags) {
+        this.tags = tags;
+        return this;
+    }
+
+    public S3OutputStream setStorageClass(String storageClass) {
+        if( storageClass!=null )
+            this.storageClass = StorageClass.fromValue(storageClass);
+        return this;
+    }
+
+    public S3OutputStream setStorageEncryption(String storageEncryption) {
+        if( storageEncryption!=null )
+            this.storageEncryption = SSEAlgorithm.fromString(storageEncryption);
+        return this;
+    }
+
+    public S3OutputStream setKmsKeyId(String kmsKeyId) {
+        this.kmsKeyId = kmsKeyId;
+        return this;
     }
 
     /**
@@ -235,7 +243,6 @@ public final class S3OutputStream extends OutputStream {
             throw new IllegalStateException("Cannot find a MD5 algorithm provider",e);
         }
     }
-
 
     /**
      * Writes a byte into the uploader buffer. When it is full starts the upload process
@@ -409,15 +416,28 @@ public final class S3OutputStream extends OutputStream {
      */
     private InitiateMultipartUploadResult initiateMultipartUpload() throws IOException {
         final InitiateMultipartUploadRequest request = //
-                new InitiateMultipartUploadRequest(objectId.getBucket(), objectId.getKey(), metadata);
+                new InitiateMultipartUploadRequest(objectId.getBucket(), objectId.getKey());
 
         if (storageClass != null) {
             request.setStorageClass(storageClass);
         }
 
         if( cannedAcl != null ) {
-            log.debug("Setting canned ACL={}; initiateMultipartUpload bucket={}, key={}", cannedAcl, objectId.getBucket(), objectId.getKey());
             request.withCannedACL(cannedAcl);
+        }
+
+        if( kmsKeyId !=null ) {
+            request.withSSEAwsKeyManagementParams( new SSEAwsKeyManagementParams(kmsKeyId) );
+        }
+
+        if( storageEncryption != null ) {
+            final ObjectMetadata metadata = new ObjectMetadata();
+            metadata.setSSEAlgorithm(storageEncryption.toString());
+            request.setObjectMetadata(metadata);
+        }
+
+        if( log.isTraceEnabled() ) {
+            log.trace("S3 initiateMultipartUpload {}", request);
         }
 
         try {
@@ -564,13 +584,12 @@ public final class S3OutputStream extends OutputStream {
      */
     private void putObject(final InputStream content, final long contentLength, byte[] checksum) throws IOException {
 
-        final ObjectMetadata meta = metadata.clone();
+        final ObjectMetadata meta = new ObjectMetadata();
         meta.setContentLength(contentLength);
         meta.setContentMD5( Base64.encodeAsString(checksum) );
 
         final PutObjectRequest request = new PutObjectRequest(objectId.getBucket(), objectId.getKey(), content, meta);
         if( cannedAcl!=null ) {
-            log.trace("Setting canned ACL={} for stream", cannedAcl);
             request.withCannedAcl(cannedAcl);
         }
 
@@ -581,7 +600,19 @@ public final class S3OutputStream extends OutputStream {
         if( tags!=null && tags.size()>0 ) {
             request.setTagging( new ObjectTagging(tags) );
         }
-        
+
+        if( kmsKeyId !=null ) {
+            request.withSSEAwsKeyManagementParams( new SSEAwsKeyManagementParams(kmsKeyId) );
+        }
+
+        if( storageEncryption != null ) {
+            meta.setSSEAlgorithm( storageEncryption.toString() );
+        }
+
+        if( log.isTraceEnabled() ) {
+            log.trace("S3 putObject {}", request);
+        }
+
         try {
             s3.putObject(request);
         } catch (final AmazonClientException e) {
