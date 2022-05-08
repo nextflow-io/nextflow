@@ -17,9 +17,6 @@
 
 package nextflow.processor
 
-import nextflow.NF
-import nextflow.exception.ProcessException
-
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -37,6 +34,7 @@ import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Global
+import nextflow.NF
 import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
@@ -97,6 +95,11 @@ class PublishDir {
      * Tags to be associated to the target file
      */
     private def tags
+
+    /**
+     * The content type of the file. Currently only supported by AWS S3
+     */
+    private contentType
 
     private PathMatcher matcher
 
@@ -187,6 +190,11 @@ class PublishDir {
 
         if( params.tags != null )
             result.tags = params.tags
+
+        if( params.contentType instanceof Boolean )
+            result.contentType = params.contentType
+        else if( params.contentType )
+            result.contentType = params.contentType as String
 
         return result
     }
@@ -295,6 +303,13 @@ class PublishDir {
         // apply tags
         if( this.tags!=null && destination instanceof TagAwareFile ) {
             destination.setTags( resolveTags(this.tags) )
+        }
+        // apply content type
+        if( this.contentType && destination instanceof TagAwareFile ) {
+            final String type = this.contentType instanceof Boolean
+                    ? Files.probeContentType(source)
+                    : this.contentType.toString()
+            destination.setContentType(type)
         }
 
         if( inProcess ) {

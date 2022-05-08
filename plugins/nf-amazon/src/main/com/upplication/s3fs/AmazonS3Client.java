@@ -41,7 +41,6 @@
 
 package com.upplication.s3fs;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -140,22 +139,11 @@ public class AmazonS3Client {
 	public S3Object getObject(String bucketName, String key) {
 		return client.getObject(bucketName, key);
 	}
-	/**
-	 * @see com.amazonaws.services.s3.AmazonS3Client#putObject(String, String, File)
-	 */
-	public PutObjectResult putObject(String bucket, String key, File file) {
-		PutObjectRequest req = new PutObjectRequest(bucket, key, file);
-		if( cannedAcl != null ) {
-			log.trace("Setting canned ACL={}; bucket={}; key={}", cannedAcl, bucket, key);
-			req.withCannedAcl(cannedAcl);
-		}
-		return client.putObject(req);
-	}
-	
+
 	/**
 	 * @see com.amazonaws.services.s3.AmazonS3Client#putObject(String, String, java.io.InputStream, ObjectMetadata)
 	 */
-	public PutObjectResult putObject(String bucket, String keyName, InputStream inputStream, ObjectMetadata metadata, List<Tag> tags) {
+	public PutObjectResult putObject(String bucket, String keyName, InputStream inputStream, ObjectMetadata metadata, List<Tag> tags, String contentType) {
 		PutObjectRequest req = new PutObjectRequest(bucket, keyName, inputStream, metadata);
 		if( cannedAcl != null ) {
 			req.withCannedAcl(cannedAcl);
@@ -168,6 +156,9 @@ public class AmazonS3Client {
 		}
 		if( storageEncryption!=null ) {
 			metadata.setSSEAlgorithm(storageEncryption.toString());
+		}
+		if( contentType!=null ) {
+			metadata.setContentType(contentType);
 		}
 		if( log.isTraceEnabled() ) {
 			log.trace("S3 PutObject request {}", req);
@@ -184,7 +175,8 @@ public class AmazonS3Client {
 	/**
 	 * @see com.amazonaws.services.s3.AmazonS3Client#copyObject(CopyObjectRequest)
 	 */
-	public CopyObjectResult copyObject(CopyObjectRequest req, List<Tag> tags) {
+	public CopyObjectResult copyObject(CopyObjectRequest req, List<Tag> tags, String contentType) {
+		ObjectMetadata meta = req.getNewObjectMetadata();
 		if( tags !=null && tags.size()>0 ) {
 			req.setNewObjectTagging(new ObjectTagging(tags));
 		}
@@ -192,12 +184,15 @@ public class AmazonS3Client {
 			req.withCannedAccessControlList(cannedAcl);
 		}
 		if( storageEncryption != null ) {
-			ObjectMetadata meta = req.getNewObjectMetadata();
 			meta.setSSEAlgorithm(storageEncryption.toString());
 			req.setNewObjectMetadata(meta);
 		}
 		if( kmsKeyId !=null ) {
 			req.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(kmsKeyId));
+		}
+		if( contentType!=null ) {
+			meta.setContentType(contentType);
+			req.setNewObjectMetadata(meta);
 		}
 		if( log.isTraceEnabled() ) {
 			log.trace("S3 CopyObject request {}", req);
@@ -285,12 +280,13 @@ public class AmazonS3Client {
         return client.listNextBatchOfObjects(objectListing);
     }
 
-	public void multipartCopyObject(S3Path s3Source, S3Path s3Target, Long objectSize, S3MultipartOptions opts, List<Tag> tags ) {
+	public void multipartCopyObject(S3Path s3Source, S3Path s3Target, Long objectSize, S3MultipartOptions opts, List<Tag> tags, String contentType ) {
 
 		final String sourceBucketName = s3Source.getBucket();
 		final String sourceObjectKey = s3Source.getKey();
 		final String targetBucketName = s3Target.getBucket();
 		final String targetObjectKey = s3Target.getKey();
+	  	final ObjectMetadata meta = new ObjectMetadata();
 
 		// Step 2: Initialize
 		InitiateMultipartUploadRequest initiateRequest = new InitiateMultipartUploadRequest(targetBucketName, targetObjectKey);
@@ -298,7 +294,6 @@ public class AmazonS3Client {
 			initiateRequest.withCannedACL(cannedAcl);
 		}
 		if( storageEncryption!=null ) {
-			ObjectMetadata meta = new ObjectMetadata();
 			meta.setSSEAlgorithm(storageEncryption.toString());
 			initiateRequest.withObjectMetadata(meta);
 		}
@@ -309,7 +304,11 @@ public class AmazonS3Client {
 		if( tags != null && tags.size()>0 ) {
 			initiateRequest.setTagging( new ObjectTagging(tags));
 		}
-		
+
+		if( contentType!=null ) {
+			meta.setContentType(contentType);
+			initiateRequest.withObjectMetadata(meta);
+		}
 		InitiateMultipartUploadResult initResult = client.initiateMultipartUpload(initiateRequest);
 
 
