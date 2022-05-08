@@ -94,9 +94,9 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.Grant;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.ObjectTagging;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.Permission;
+import com.amazonaws.services.s3.model.S3ObjectId;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.Tag;
 import com.google.common.base.Preconditions;
@@ -108,7 +108,6 @@ import com.upplication.s3fs.ng.S3ParallelDownload;
 import com.upplication.s3fs.util.IOUtils;
 import com.upplication.s3fs.util.S3MultipartOptions;
 import com.upplication.s3fs.util.S3ObjectSummaryLookup;
-import com.upplication.s3fs.util.S3UploadRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static com.google.common.collect.Sets.difference;
@@ -357,23 +356,15 @@ public class S3FileSystemProvider extends FileSystemProvider {
 	private S3OutputStream createUploaderOutputStream( S3Path fileToUpload ) {
 		AmazonS3Client s3 = fileToUpload.getFileSystem().getClient();
 
-		S3UploadRequest req = props != null ? new S3UploadRequest(props) : new S3UploadRequest();
-		req.setObjectId(fileToUpload.toS3ObjectId());
-		req.setTags(fileToUpload.getTagsList());
-		S3OutputStream stream = new S3OutputStream(s3.getClient(), req);
-		stream.setCannedAcl(s3.getCannedAcl());
+		final S3MultipartOptions opts = props != null ? new S3MultipartOptions(props) : new S3MultipartOptions();
+		final S3ObjectId objectId = fileToUpload.toS3ObjectId();
+		S3OutputStream stream = new S3OutputStream(s3.getClient(), objectId, opts)
+				.setCannedAcl(s3.getCannedAcl())
+				.setStorageClass(props.getProperty("upload_storage_class"))
+				.setStorageEncryption(props.getProperty("storage_encryption"))
+				.setKmsKeyId(props.getProperty("storage_kms_key_id"))
+				.setTags(fileToUpload.getTagsList());
 		return stream;
-	}
-
-	protected boolean isAES256Enabled() {
-		String encryption = props.getProperty("storage_encryption");
-		if ( "AES256".equals(encryption) ) {
-			return true;
-		}
-		if( encryption!=null ) {
-			log.warn("Not a valid S3 server-side encryption type: `{}` -- Currently only AES256 is supported",encryption);
-		}
-		return false;
 	}
 
 	@Override
@@ -422,8 +413,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
                 if (Files.exists(tempFile)) {
                     ObjectMetadata metadata = new ObjectMetadata();
                     metadata.setContentLength(Files.size(tempFile));
-                    if( isAES256Enabled() )
-                    	metadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
                     // FIXME: #20 ServiceLoader cant load com.upplication.s3fs.util.FileTypeDetector when this library is used inside a ear :(
 					metadata.setContentType(Files.probeContentType(tempFile));
 
@@ -503,8 +492,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
 		List<Tag> tags = s3Path.getTagsList();
 		ObjectMetadata metadata = new ObjectMetadata();
 		metadata.setContentLength(0);
-		if( isAES256Enabled() )
-			metadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
 
 		String keyName = s3Path.getKey()
 				+ (s3Path.getKey().endsWith("/") ? "" : "/");
@@ -575,35 +562,19 @@ public class S3FileSystemProvider extends FileSystemProvider {
 		AmazonS3Client client = s3Source.getFileSystem() .getClient();
 
         final ObjectMetadata sourceObjMetadata = s3Source.getFileSystem().getClient().getObjectMetadata(s3Source.getBucket(), s3Source.getKey());
-		final S3MultipartOptions opts = props != null ? new S3MultipartOptions<>(props) : new S3MultipartOptions();
+		final S3MultipartOptions opts = props != null ? new S3MultipartOptions(props) : new S3MultipartOptions();
 		final int chunkSize = opts.getChunkSize();
 		final long length = sourceObjMetadata.getContentLength();
 		final List<Tag> tags = ((S3Path) target).getTagsList();
 		
 		if( length <= chunkSize ) {
-
 			CopyObjectRequest copyObjRequest = new CopyObjectRequest(s3Source.getBucket(), s3Source.getKey(),s3Target.getBucket(), s3Target.getKey());
-			if( tags.size()>0 ) {
-				copyObjRequest.setNewObjectTagging(new ObjectTagging(tags));
-			}
-			
-			ObjectMetadata targetObjectMetadata = null;
-			if( isAES256Enabled() ) {
-				targetObjectMetadata = new ObjectMetadata();
-				targetObjectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
-				copyObjRequest.setNewObjectMetadata(targetObjectMetadata);
-			}
-			log.trace("Copy file via copy object - source: source={}, target={}, metadata={}, tags={}", s3Source, s3Target, targetObjectMetadata, tags);
-			client.copyObject(copyObjRequest);
+			log.trace("Copy file via copy object - source: source={}, target={}, tags={}", s3Source, s3Target,tags);
+			client.copyObject(copyObjRequest, tags);
 		}
 		else {
-			ObjectMetadata targetObjectMetadata = null;
-			if( isAES256Enabled() ) {
-				targetObjectMetadata = new ObjectMetadata();
-				targetObjectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
-			}
-			log.trace("Copy file via multipart upload - source: source={}, target={}, metadata={}, tags={}", s3Source, s3Target, targetObjectMetadata, tags);
-			client.multipartCopyObject(s3Source, s3Target, length, opts, targetObjectMetadata, tags);
+			log.trace("Copy file via multipart upload - source: source={}, target={}, tags={}", s3Source, s3Target, tags);
+			client.multipartCopyObject(s3Source, s3Target, length, opts, tags);
 		}
 	}
 
@@ -914,6 +885,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
 		// set the client acl
 		client.setCannedAcl(getProp(props, "s_3_acl", "s3_acl", "s3Acl"));
+		client.setStorageEncryption(props.getProperty("storage_encryption"));
+		client.setKmsKeyId(props.getProperty("storage_kms_key_id"));
 
 		if (uri.getHost() != null) {
 			client.setEndpoint(uri.getHost());

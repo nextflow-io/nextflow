@@ -782,4 +782,33 @@ class AwsBatchTaskHandlerTest extends Specification {
         trace.machineInfo.priceModel == PriceModel.spot
     }
 
+    def 'should render submit command' () {
+        given:
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def result =  handler.getSubmitCommand()
+        then:
+        handler.getAwsOptions() >> Mock(AwsOptions)  { getAwsCli() >> 'aws' }
+        handler.getLogFile() >> Paths.get('/work/log')
+        handler.getWrapperFile() >> Paths.get('/work/run')
+        then:
+        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; aws s3 cp --only-show-errors .command.log s3://work/log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors s3://work/run - | bash 2>&1 | tee .command.log'
+
+        when:
+        result =  handler.getSubmitCommand()
+        then:
+        handler.getAwsOptions() >> Mock(AwsOptions)  {
+            getAwsCli() >> 'aws';
+            getDebug() >> true
+            getStorageEncryption() >> 'aws:kms'
+            getStorageKmsKeyId() >> 'kms-key-123'
+        }
+        handler.getLogFile() >> Paths.get('/work/log')
+        handler.getWrapperFile() >> Paths.get('/work/run')
+        then:
+        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug .command.log s3://work/log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug s3://work/run - | bash 2>&1 | tee .command.log'
+
+    }
+
 }
