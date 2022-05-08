@@ -227,9 +227,10 @@ The following settings are available:
 Name                Description
 ================== ================
 cacheDir            Defines the path where Conda environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.
-createOptions       Defines any extra command line options supported by the ``conda create`` command. For details see: https://docs.conda.io/projects/conda/en/latest/commands/create.html.
+createOptions       Defines any extra command line options supported by the ``conda create`` command. For details `Conda documentation <https://docs.conda.io/projects/conda/en/latest/commands/create.html>`_.
 createTimeout       Defines the amount of time the Conda environment creation can last. The creation process is terminated when the timeout is exceeded (default: ``20 min``).
-useMamba            Uses the ``mamba`` binary instead of ``conda`` to create the conda environments. For details see: https://github.com/mamba-org/mamba.
+useMamba            Uses the ``mamba`` binary instead of ``conda`` to create the Conda environments. For details `Mamba documentation <https://github.com/mamba-org/mamba>`_.
+useMicromamba       uses the ``micromamba`` binary instead of ``conda`` to create the Conda environments (requires version ``22.05.0-edge`` or later). For details see `Micromamba documentation <https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html>`_.
 ================== ================
 
 
