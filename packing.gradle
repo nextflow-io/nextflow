@@ -18,7 +18,7 @@ dependencies {
     // default cfg = runtime + httpfs + amazon + tower client
     defaultCfg project(':nf-httpfs')
     // Capsule manages the fat jar building process
-    capsule 'io.nextflow:capsule:1.1.0'
+    capsule 'io.nextflow:capsule:1.1.1'
     capsule 'io.nextflow:capsule-maven:1.0.3.2'
     console project(':plugins:nf-console')
     ga4gh   project(':plugins:nf-ga4gh')
