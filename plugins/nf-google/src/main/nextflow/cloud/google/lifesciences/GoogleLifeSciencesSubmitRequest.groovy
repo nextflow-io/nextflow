@@ -74,5 +74,5 @@ class GoogleLifeSciencesSubmitRequest {
 
     boolean keepAliveOnFailure
 
-    Map<String, String> stickers = [:]
+    Map<String, String> resourceLabels = [:]
 }

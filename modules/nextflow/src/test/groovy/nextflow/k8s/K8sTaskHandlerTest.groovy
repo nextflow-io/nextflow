@@ -742,19 +742,19 @@ class K8sTaskHandlerTest extends Specification {
         labels.sessionId == "uuid-${uuid.toString()}".toString()
     }
 
-    def 'should return labels map if stickers' () {
+    def 'should return labels map if resourceLabels' () {
         given:
         def uuid = UUID.randomUUID()
         def task = Mock(TaskRun){
             getConfig() >> {
-                new TaskConfig([sticker:[a:'b']])
+                new TaskConfig([resourceLabels:[a:'b']])
             }
         }
         def exec = Mock(K8sExecutor)
         def proc = Mock(TaskProcessor)
         def sess = Mock(Session)
         def handler = Spy(K8sTaskHandler)
-        handler.executor = exec
+        handler.@executor = exec
 
         when:
         def labels = handler.getLabels(task)

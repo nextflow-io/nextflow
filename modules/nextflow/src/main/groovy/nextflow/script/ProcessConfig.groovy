@@ -672,7 +672,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return LABEL_REGEXP.matcher(left).matches() && LABEL_REGEXP.matcher(right).matches()
     }
 
-    protected boolean isStickerSyntax(String lbl){
+    protected boolean isResourceLabelsSyntax(String lbl){
         def p = lbl.count('=')
         if( p != 1)
             return false
@@ -706,7 +706,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     ProcessConfig label(String lbl) {
         if( !lbl ) return this
 
-        if( isStickerSyntax(lbl) ){
+        if( isResourceLabelsSyntax(lbl) ){
             Map<String,Object> map = parseAsMap(lbl)
             return label(map)
         }
@@ -743,13 +743,13 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         if( !map ) return this
 
         // -- get the current sticker, it must be a Map
-        def allStickers = (Map)configProperties.get('sticker')
+        def allStickers = (Map)configProperties.get('resourceLabels')
         if( !allStickers ) {
             allStickers = [:]
         }
         // -- merge duplicates
         allStickers += map
-        configProperties.put('sticker', allStickers)
+        configProperties.put('resourceLabels', allStickers)
         return this
     }
 
@@ -757,8 +757,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         (List<String>) configProperties.get('label') ?: Collections.<String>emptyList()
     }
 
-    Map<String,Object> getStickers() {
-        (configProperties.get('sticker') ?: Collections.emptyMap()) as Map<String, Object>
+    Map<String,Object> getResourceLabels() {
+        (configProperties.get('resourceLabels') ?: Collections.emptyMap()) as Map<String, Object>
     }
 
     ProcessConfig secret(String name) {

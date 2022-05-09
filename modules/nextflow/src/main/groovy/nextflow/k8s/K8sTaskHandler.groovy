@@ -227,12 +227,12 @@ class K8sTaskHandler extends TaskHandler {
         if( labels ) {
             result.putAll(labels)
         }
+        result.putAll(task.config?.getResourceLabels() ?: Collections.emptyMap() as Map<String,String>)
         result.app = 'nextflow'
         result.runName = getRunName()
         result.taskName = task.getName()
         result.processName = task.getProcessor().getName()
         result.sessionId = "uuid-${executor.getSession().uniqueId}" as String
-        result.putAll(task.config?.getStickers() ?: Collections.emptyMap() as Map<String,String>)
         return result
     }
 

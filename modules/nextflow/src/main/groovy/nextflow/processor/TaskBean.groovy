@@ -101,7 +101,7 @@ class TaskBean implements Serializable, Cloneable {
 
     List<String> secretNames
 
-    Map<String,String> stickers
+    Map<String,String> resourceLabels
 
     @PackageScope
     TaskBean() {
@@ -153,7 +153,7 @@ class TaskBean implements Serializable, Cloneable {
         this.stageInMode = task.config.stageInMode
         this.stageOutMode = task.config.stageOutMode
 
-        this.stickers = task.config.getStickers()
+        this.resourceLabels = task.config.getResourceLabels()
     }
 
     @Override

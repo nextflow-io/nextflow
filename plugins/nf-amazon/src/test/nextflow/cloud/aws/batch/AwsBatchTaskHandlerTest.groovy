@@ -818,7 +818,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def VAR_BAR = new KeyValuePair().withName('BAR').withValue('2')
         def task = Mock(TaskRun)
         task.getName() >> 'batch-task'
-        task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4, maxRetries: 2, errorStrategy: 'retry', sticker:[a:'b'])
+        task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4, maxRetries: 2, errorStrategy: 'retry', resourceLabels:[a:'b'])
 
         def handler = Spy(AwsBatchTaskHandler)
 

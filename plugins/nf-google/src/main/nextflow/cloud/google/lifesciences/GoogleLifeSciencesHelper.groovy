@@ -175,7 +175,7 @@ class GoogleLifeSciencesHelper {
     }
 
     protected Map<String, String>getLabels(GoogleLifeSciencesSubmitRequest req){
-        ["taskName" : req.taskName] + req.stickers
+        req.resourceLabels + ["taskName" : req.taskName]
     }
 
     protected Resources createResources(GoogleLifeSciencesSubmitRequest req) {

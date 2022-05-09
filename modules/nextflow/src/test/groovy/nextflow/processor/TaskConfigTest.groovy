@@ -591,7 +591,7 @@ class TaskConfigTest extends Specification {
 
     }
 
-    def 'should configure stickers options'()  {
+    def 'should configure resourceLabels options'()  {
 
         given:
         def script = Mock(BaseScript)
@@ -601,9 +601,9 @@ class TaskConfigTest extends Specification {
         process.label region: 'eu-west-1', organization: 'A'
 
         then:
-        process.get('sticker') == [region: 'eu-west-1', organization: 'A']
+        process.get('resourceLabels') == [region: 'eu-west-1', organization: 'A']
 
-        process.createTaskConfig().getStickers() == [region: 'eu-west-1', organization: 'A']
+        process.createTaskConfig().getResourceLabels() == [region: 'eu-west-1', organization: 'A']
 
     }
 }

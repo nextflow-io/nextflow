@@ -690,7 +690,7 @@ class FunctionalTests extends Specification {
         processor.config.label == [ 'bravo', 'gamma' ]
     }
 
-    def 'should set directive label when they are stickers' () {
+    def 'should set directive label when they are resourceLabels' () {
 
         when:
         def CONFIG = '''
@@ -719,8 +719,8 @@ class FunctionalTests extends Specification {
         processor instanceof TaskProcessor
         processor.config.label.size() == 2
         processor.config.label == [ 'bravo', 'gamma' ]
-        processor.config.sticker.size() == 2
-        processor.config.sticker == [ department: 'floor 3' , region: 'eu-west-1']
+        processor.config.resourceLabels.size() == 2
+        processor.config.resourceLabels == [ department: 'floor 3' , region: 'eu-west-1']
     }
 
     def 'should create process with repeater'() {

@@ -420,8 +420,8 @@ class TaskConfig extends LazyMap implements Cloneable {
         return CmdLineOptionMap.emptyOption()
     }
 
-    Map<String, String> getStickers() {
-        return (get('sticker') ?: Collections.emptyMap()) as Map<String, String>
+    Map<String, String> getResourceLabels() {
+        return (get('resourceLabels') ?: Collections.emptyMap()) as Map<String, String>
     }
 
     /**
