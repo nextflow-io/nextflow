@@ -36,6 +36,7 @@ class AzureRepositoryProviderTest extends Specification {
                 user = 'myname'
                 password = 'mypassword'
                 token = '65eaa9c8ef52460d22a93307fe0aee76289dc675'
+                revision = 'master'
             }
 
         }
@@ -70,6 +71,17 @@ class AzureRepositoryProviderTest extends Specification {
 
         expect:
         new AzureRepositoryProvider('t-neumann/hello', obj).getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf'
+
+    }
+
+    def 'should return content URL for revision' () {
+
+        given:
+        def config = new ConfigSlurper().parse(CONFIG)
+        def obj = new ProviderConfig('azurerepos', config.providers.azurerepos as ConfigObject)
+
+        expect:
+        new AzureRepositoryProvider('t-neumann/hello', obj).setRevision("a-branch").getContentUrl('main.nf') == 'https://dev.azure.com/t-neumann/hello/_apis/git/repositories/hello/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=main.nf&versionDescriptor.version=a-branch'
 
     }
 
