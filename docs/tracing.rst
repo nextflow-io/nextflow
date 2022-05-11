@@ -234,7 +234,7 @@ workdir                 The directory path where the task was executed.
 script                  The task command script.
 scratch                 The value of the process ``scratch`` directive.
 error_action            The action applied on errof task failure.
-hostname                The host on which the task was executed. Supported only for the Kubernetes executor yet.
+hostname                The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with ``fetchNodeName = true`` in k8s config.
 ======================= ===============
 
 .. note::
