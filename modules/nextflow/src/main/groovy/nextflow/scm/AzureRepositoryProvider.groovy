@@ -58,7 +58,19 @@ final class AzureRepositoryProvider extends RepositoryProvider {
         // see
         // https://docs.microsoft.com/en-us/rest/api/azure/devops/git/items/get?view=azure-devops-rest-6.0
         //
-        return "${config.endpoint}/${project}/_apis/git/repositories/${repo}/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=$path"
+        def queryParams =[
+                'download':false,
+                'includeContent':true,
+                'includeContentMetadata':false,
+                "api-version":6.0,
+                '$format':'json',
+                'path':path
+        ] as Map<String,Object>
+        if( revision )
+            queryParams['versionDescriptor.version']=revision
+        def queryString = queryParams.collect({ "$it.key=$it.value"}).join('&')
+        def result = "${config.endpoint}/${project}/_apis/git/repositories/${repo}/items?$queryString"
+        result
     }
 
     @Override
