@@ -169,9 +169,9 @@ class K8sConfig implements Map<String,Object> {
         podOptions
     }
 
-    @Memoized
     boolean fetchNodeName() {
-        target.fetchNodeName as boolean
+        log.info( target.toString() )
+        Boolean.valueOf( target.fetchNodeName as String )
     }
 
     /**
