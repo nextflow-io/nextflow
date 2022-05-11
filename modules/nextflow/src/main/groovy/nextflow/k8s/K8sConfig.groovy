@@ -169,6 +169,11 @@ class K8sConfig implements Map<String,Object> {
         podOptions
     }
 
+    @Memoized
+    boolean fetchNodeName() {
+        target.fetchNodeName as boolean
+    }
+
     /**
      * @return the collection of defined volume claim names
      */
