@@ -422,7 +422,7 @@ class K8sConfigTest extends Specification {
         !cfg.getDebug().getYaml()
 
         when:
-        cfg = new K8sConfig( debug: [] )
+        cfg = new K8sConfig( debug: [:] )
         then:
         !cfg.getDebug().getYaml()
 
