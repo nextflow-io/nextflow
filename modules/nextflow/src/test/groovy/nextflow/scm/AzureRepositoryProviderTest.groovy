@@ -17,6 +17,7 @@
 
 package nextflow.scm
 
+import nextflow.exception.AbortOperationException
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
@@ -144,5 +145,40 @@ class AzureRepositoryProviderTest extends Specification {
                 new RepositoryProvider.BranchInfo('feature-x', '13456a001ba5a27d643755614ab8e814d94ef888'),
                 new RepositoryProvider.BranchInfo('master', 'f84130388714582e20f0e2ff9a44b41978ec8929'),
         ]
+    }
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
+    def 'should not fetch repo file from non existing revision'() {
+        given:
+        def token = System.getenv('NXF_AZURE_REPOS_TOKEN')
+        def config = new ProviderConfig('azurerepos').setAuth(token)
+
+        when:
+        // uses repo at
+        //  https://pditommaso.visualstudio.com/nf-azure-repo/_git/nf-azure-repo
+        def repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
+        repo.revision = 'a_fake_branch'
+        def result = repo.readText('file1.txt')
+
+        then:
+        thrown(AbortOperationException)
+    }
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
+    def 'should fetch repo file from revision'() {
+        given:
+        def token = System.getenv('NXF_AZURE_REPOS_TOKEN')
+        def config = new ProviderConfig('azurerepos').setAuth(token)
+
+        when:
+        // uses repo at
+        //  https://pditommaso.visualstudio.com/nf-azure-repo/_git/nf-azure-repo
+        def repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
+        repo.revision = 'dev'
+        def result = repo.readText('file-on-dev.txt')
+        then:
+        result=='hello\n'
     }
 }
