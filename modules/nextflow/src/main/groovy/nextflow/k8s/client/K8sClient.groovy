@@ -225,7 +225,6 @@ class K8sClient {
         return false
     }
 
-    @CompileDynamic
     String getNodeOfPod(String podName){
         assert podName
         final K8sResponseJson resp = podStatus0(podName)
