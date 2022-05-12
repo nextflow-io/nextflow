@@ -83,6 +83,8 @@ class K8sTaskHandler extends TaskHandler {
 
     private K8sExecutor executor
 
+    private String runsOnNode = null
+
     K8sTaskHandler( TaskRun task, K8sExecutor executor ) {
         super(task)
         this.executor = executor
@@ -341,6 +343,7 @@ class K8sTaskHandler extends TaskHandler {
             // include `terminated` state to allow the handler status to progress
             if (state && (state.running != null || state.terminated)) {
                 status = TaskStatus.RUNNING
+                determineNode()
                 return true
             }
         }
@@ -390,6 +393,7 @@ class K8sTaskHandler extends TaskHandler {
             saveJobLogOnError(task)
             deleteJobIfSuccessful(task)
             updateTimestamps(state.terminated as Map)
+            determineNode()
             return true
         }
 
@@ -477,10 +481,19 @@ class K8sTaskHandler extends TaskHandler {
         }
     }
 
+    private void determineNode(){
+        try {
+            if ( k8sConfig.fetchNodeName() && !runsOnNode )
+                runsOnNode = client.getNodeOfPod( podName )
+        } catch ( Exception e ){
+            log.warn ("Unable to fetch pod: $podName its node -- see the log file for details", e)
+        }
+    }
 
     TraceRecord getTraceRecord() {
         final result = super.getTraceRecord()
         result.put('native_id', podName)
+        result.put( 'hostname', runsOnNode )
         return result
     }
 

@@ -413,6 +413,7 @@ storageClaimName    The name of the persistent volume claim where store workflow
 storageMountPath    The path location used to mount the persistent volume claim (default: ``/workspace``).
 storageSubPath      The path in the persistent volume to be mounted (default: root).
 useJobs             Selects whether tasks will run as `Pods` or `Jobs` (default: false, i.e., `Pods`).
+fetchNodeName       If you trace the hostname, activate this option (default: ``false``, requires version ``22.05.0-edge`` or later).
 volumeClaims        (deprecated)
 ================== ================
 
