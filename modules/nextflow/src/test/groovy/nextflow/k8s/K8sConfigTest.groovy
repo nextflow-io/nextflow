@@ -364,4 +364,31 @@ class K8sConfigTest extends Specification {
         cfg.preserveContainerEntrypoint()
 
     }
+
+    def 'should set fetchNodeName' () {
+        when:
+        def cfg = new K8sConfig( fetchNodeName: 'true' )
+        then:
+        cfg.fetchNodeName() == true
+
+        when:
+        cfg = new K8sConfig( fetchNodeName: true )
+        then:
+        cfg.fetchNodeName() == true
+
+        when:
+        cfg = new K8sConfig( fetchNodeName: 'false' )
+        then:
+        cfg.fetchNodeName() == false
+
+        when:
+        cfg = new K8sConfig( fetchNodeName: false )
+        then:
+        cfg.fetchNodeName() == false
+
+        when:
+        cfg = new K8sConfig()
+        then:
+        cfg.fetchNodeName() == false
+    }
 }
