@@ -523,6 +523,62 @@ class K8sTaskHandlerTest extends Specification {
         thrown(K8sResponseException)
     }
 
+    def 'should submit a job' () {
+        given:
+        def WORK_DIR = Paths.get('/some/work/dir')
+        def task = Mock(TaskRun)
+        def client = Mock(K8sClient)
+        def builder = Mock(K8sWrapperBuilder)
+        def config = Mock(TaskConfig)
+        def executor = Mock(K8sExecutor)
+        def k8sConfig = Mock(K8sConfig)
+        def handler = Spy(new K8sTaskHandler(builder: builder, client: client, executor: executor))
+        def podOptions = Mock(PodOptions)
+        and:
+        podOptions.automountServiceAccountToken >> true
+        Map result
+
+        when:
+        result = handler.newSubmitRequest(task)
+        then:
+        1 * client.getConfig() >> new ClientConfig()
+        1 * handler.preserveContainerEntrypoint() >> false
+        1 * handler.getSyntheticJobName(task) >> 'nf-123'
+        1 * handler.getSyntheticPodName(task) >> 'nf-123'
+        1 * handler.getLabels(task) >> [:]
+        1 * handler.getAnnotations() >> [:]
+        2 * handler.getPodOptions() >> podOptions
+        1 * handler.getContainerMounts() >> []
+        1 * task.getContainer() >> 'debian:latest'
+        1 * task.getWorkDir() >> WORK_DIR
+        1 * task.getConfig() >> config
+        2 * executor.getK8sConfig() >> k8sConfig
+        2 * k8sConfig.getJob() >> true
+
+        result == [
+            apiVersion: 'batch/v1', 
+            kind: 'Job', 
+            metadata:[name: 'nf-123', namespace: 'default'], 
+            spec:[
+              template: [
+                  apiVersion: 'v1',
+                  kind: 'Pod',
+                  metadata: [:],
+                  spec: [
+                     restartPolicy: 'Never',
+                     containers: [
+                       [
+                           name: 'nf-123',
+                           image: 'debian:latest',
+                           command: ['/bin/bash', '-ue','/some/work/dir/.command.run']
+                       ]
+                     ]
+                  ]
+              ]
+            ]
+        ]
+    }
+
     def 'should check if running'  () {
         given:
         def POD_NAME = 'pod-xyz'

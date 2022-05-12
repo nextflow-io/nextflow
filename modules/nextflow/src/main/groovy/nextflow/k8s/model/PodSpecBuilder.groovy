@@ -321,8 +321,12 @@ class PodSpecBuilder {
         final restart = this.restart ?: 'Never'
 
         final metadata = new LinkedHashMap<String,Object>()
-        metadata.name = podName
-        metadata.namespace = namespace ?: 'default'
+        // if podName -> create pod and need podName and namespace, 
+        //  else creating job without podName and namespace
+        if( this.podName ) {
+            metadata.name = podName
+            metadata.namespace = namespace ?: 'default'
+        }
 
         final labels = this.labels ?: [:]
         final env = []

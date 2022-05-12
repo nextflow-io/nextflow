@@ -68,20 +68,18 @@ class JobSpecBuilder {
         metadata.name = this.jobName
         metadata.namespace = this.namespace ?: 'default'
 
-        /*final jobSpec = [
-                template: podSpec,
-                backoffLimit: backoffLimit
-        ]*/
+        final spec = new LinkedHashMap<String,Object>()
+        spec.template = podSpec
+        if( this.backoffLimit )
+           spec.backoffLimit = backoffLimit
 
         final job = [
                 apiVersion: 'batch/v1',
                 kind: 'Job',
                 metadata: metadata,
-                spec: [ 
-                   backoffLimit: backoffLimit,
-                   template: podSpec
-                ]
+                spec: spec
         ]
+
         return job
     }
 
