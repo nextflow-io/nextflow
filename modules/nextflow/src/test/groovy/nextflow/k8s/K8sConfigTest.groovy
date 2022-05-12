@@ -68,12 +68,27 @@ class K8sConfigTest extends Specification {
         !cfg.getCleanup()
 
         when:
+        cfg = new K8sConfig(cleanup:'false')
+        then: 'it should return false'
+        !cfg.getCleanup()
+
+        when:
         cfg = new K8sConfig(cleanup:true)
         then: 'it should return true'
         cfg.getCleanup()
 
         when:
+        cfg = new K8sConfig(cleanup:'true')
+        then: 'it should return true'
+        cfg.getCleanup()
+
+        when:
         cfg = new K8sConfig(cleanup:true)
+        then: 'the default value should be ignored'
+        cfg.getCleanup(false)
+
+        when:
+        cfg = new K8sConfig(cleanup:'true')
         then: 'the default value should be ignored'
         cfg.getCleanup(false)
     }
@@ -169,6 +184,21 @@ class K8sConfigTest extends Specification {
         cfg = new K8sConfig(autoMountHostPaths: true)
         then:
         cfg.getAutoMountHostPaths()
+
+        when:
+        cfg = new K8sConfig(autoMountHostPaths: 'true')
+        then:
+        cfg.getAutoMountHostPaths()
+
+        when:
+        cfg = new K8sConfig(autoMountHostPaths: false)
+        then:
+        !cfg.getAutoMountHostPaths()
+
+        when:
+        cfg = new K8sConfig(autoMountHostPaths: 'false')
+        then:
+        !cfg.getAutoMountHostPaths()
     }
 
 
@@ -365,6 +395,43 @@ class K8sConfigTest extends Specification {
 
     }
 
+    def 'should set debug.yaml' () {
+        when:
+        def cfg = new K8sConfig( debug: [yaml: 'true'] )
+        then:
+        cfg.getDebug().getYaml()
+
+        when:
+        cfg = new K8sConfig( debug: [yaml: true] )
+        then:
+        cfg.getDebug().getYaml()
+
+        when:
+        cfg = new K8sConfig( debug: [yaml: 'false'] )
+        then:
+        !cfg.getDebug().getYaml()
+
+        when:
+        cfg = new K8sConfig( debug: [yaml: false] )
+        then:
+        !cfg.getDebug().getYaml()
+
+        when:
+        cfg = new K8sConfig( debug: null )
+        then:
+        !cfg.getDebug().getYaml()
+
+        when:
+        cfg = new K8sConfig( debug: [:] )
+        then:
+        !cfg.getDebug().getYaml()
+
+        when:
+        cfg = new K8sConfig( null )
+        then:
+        !cfg.getDebug().getYaml()
+    }
+  
     def 'should set fetchNodeName' () {
         when:
         def cfg = new K8sConfig( fetchNodeName: 'true' )

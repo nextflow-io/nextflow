@@ -94,7 +94,7 @@ class K8sConfig implements Map<String,Object> {
     }
 
     boolean getCleanup(boolean defValue=true) {
-        target.cleanup == null ? defValue : target.cleanup as boolean
+        target.cleanup == null ? defValue : Boolean.valueOf( target.cleanup as String )
     }
 
     String getUserName() {
@@ -162,7 +162,7 @@ class K8sConfig implements Map<String,Object> {
     }
 
     boolean getAutoMountHostPaths() {
-        target.autoMountHostPaths as boolean
+        Boolean.valueOf( target.autoMountHostPaths as String )
     }
 
     PodOptions getPodOptions() {
@@ -264,7 +264,7 @@ class K8sConfig implements Map<String,Object> {
             this.target = debug ?: Collections.<String,Object>emptyMap()
         }
 
-        boolean getYaml() { target.yaml as boolean }
+        boolean getYaml() { Boolean.valueOf( target.yaml as String ) }
     }
 }
 
