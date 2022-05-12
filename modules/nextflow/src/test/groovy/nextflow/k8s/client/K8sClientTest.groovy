@@ -381,6 +381,50 @@ class K8sClientTest extends Specification {
 
     }
 
+    def 'should get a pod its node' () {
+
+        given:
+        def JSON = '''
+          {
+             "kind": "Pod",
+             "apiVersion": "v1",
+             "metadata": {
+                 "name": "pod-xyz",
+                 "namespace": "default",
+                 "selfLink": "/api/v1/namespaces/default/pods/pod-xyz/status",
+                 "uid": "33390e2c-f84b-11e7-a89d-025000000001",
+                 "resourceVersion": "119932",
+                 "creationTimestamp": "2018-01-13T10:19:12Z",
+                 "labels": {
+                     "app": "nextflow"
+                 }
+             },
+             "spec": {
+                  "restartPolicy": "Never",
+                  "terminationGracePeriodSeconds": 30,
+                  "dnsPolicy": "ClusterFirst",
+                  "serviceAccountName": "default",
+                  "serviceAccount": "default",
+                  "nodeName": "gke-bioinformatics-s-pipeline-pool-sm-bbac2e1c-k1tw",
+                  "priority": 0,
+                  "enableServiceLinks": true,
+                  "preemptionPolicy": "PreemptLowerPriority"
+              }
+         }
+        '''
+
+        def client = Spy(K8sClient)
+        final POD_NAME = 'pod-xyz'
+
+        when:
+        def result = client.getNodeOfPod(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+
+        result == "gke-bioinformatics-s-pipeline-pool-sm-bbac2e1c-k1tw"
+
+    }
+
     def 'should return undetermined status' () {
         given:
         def JSON = '''
