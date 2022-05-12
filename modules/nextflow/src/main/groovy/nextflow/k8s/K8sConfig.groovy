@@ -154,6 +154,8 @@ class K8sConfig implements Map<String,Object> {
 
     String getNamespace() { target.namespace }
 
+    boolean getJob() { target.job }
+
     String getServiceAccount() { target.serviceAccount }
 
     String getNextflowImageName() {

@@ -36,6 +36,7 @@ import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodMountConfig
 import nextflow.k8s.model.PodSpecBuilder
+import nextflow.k8s.model.JobSpecBuilder
 import nextflow.scm.AssetManager
 import nextflow.scm.ProviderConfig
 import nextflow.util.ConfigHelper
@@ -49,6 +50,7 @@ import org.codehaus.groovy.runtime.MethodClosure
 @Slf4j
 class K8sDriverLauncher {
 
+    private String deploymentName = "Pod"
     /**
      * Container image to be used for the Nextflow driver pod
      */
@@ -137,24 +139,24 @@ class K8sDriverLauncher {
         this.k8sClient = makeK8sClient(k8sConfig)
         this.k8sConfig.checkStorageAndPaths(k8sClient)
         createK8sConfigMap()
-        createK8sLauncherPod()
-        waitPodStart()
+        createK8sLauncherJob()
+        waitJobStart()
         // login into container session
         if( interactive )
             launchLogin()
         // dump pod output
         else if( !background )
-            printK8sPodOutput()
+            printK8sJobOutput()
         else
             log.debug "Nextflow driver launched in background mode -- pod: $runName"
-        waitPodEnd()
+        waitJobEnd()
     }
 
     int shutdown() {
         if( background )
             return 0
         // fetch the container exit status
-        final exitCode = waitPodTermination()
+        final exitCode = waitJobTermination()
         // cleanup the config map if OK
         def deleteOnSuccessByDefault = exitCode==0
         if( k8sConfig.getCleanup(deleteOnSuccessByDefault)  ) {
@@ -166,22 +168,30 @@ class K8sDriverLauncher {
     protected void waitPodEnd() {
         if( background )
             return
-        final currentState = k8sClient.podState(runName)
+        def currentState
+        if ( k8sConfig.getJob())
+            currentState = k8sClient.jobState(runName)
+        else
+            currentState = k8sClient.podState(runName)
         if (currentState && currentState?.running instanceof Map) {
             final name = runName
-            println "Pod running: $name ... waiting for pod to stop running"
+            println "$this.deploymentName running: $name ... waiting for $this.deploymentName to stop running"
             try {
                 while( true ) {
                     sleep 10000
-                    final state = k8sClient.podState(name)
+                    def state
+                    if ( k8sConfig.getJob())
+                        state = k8sClient.jobState(name)
+                    else
+                        state = k8sClient.podState(name)
                     if ( state && !(state?.running instanceof Map) )  {
-                        println "Pod $name has changed from running state $state"
+                        println "$this.deploymentName $name has changed from running state $state"
                         break
                     }
                 }
             }
             catch( Exception e ) {
-                log.warn "Caught exception waiting for pod to stop running"
+                log.warn "Caught exception waiting for $this.deploymentName to stop running"
             }
         }
     }
@@ -190,24 +200,27 @@ class K8sDriverLauncher {
         System.currentTimeMillis()-time > 90_000
     }
 
-    protected int waitPodTermination() {
-        log.debug "Wait for pod termination name=$runName"
+    protected int waitJobTermination() {
+        log.debug "Wait for $this.deploymentName termination name=$runName"
         final rnd = new Random()
         final time = System.currentTimeMillis()
         Map state = null
         try {
             while( true ) {
                 sleep rnd.nextInt(500)
-                state = k8sClient.podState(runName)
+                if ( k8sConfig.getJob()) 
+                    state = k8sClient.jobState(runName)
+                else
+                    state = k8sClient.podState(runName)
                 if( state?.terminated instanceof Map  )
                     return state.terminated.exitCode as int
 
                 else if( isWaitTimedOut(time) )
-                    throw new IllegalStateException('Timeout waiting for pod terminated state='+state)
+                    throw new IllegalStateException('Timeout waiting for $this.deploymentName terminated state='+state)
             }
         }
         catch( Exception e ) {
-            log.warn "Unable to fetch pod exit status -- pod=$runName state=$state"
+            log.warn "Unable to fetch $this.deploymentName exit status -- $this.deploymentName=$runName state=$state"
             return 127
         }
     }
@@ -222,26 +235,33 @@ class K8sDriverLauncher {
         }
     }
 
-    protected void waitPodStart() {
+    protected void waitJobStart() {
         final name = runName
-        print "Pod submitted: $name .. waiting to start"
+        print "$this.deploymentName submitted: $name .. waiting to start"
         while( true ) {
             sleep 1000
-            final state = k8sClient.podState(name)
+            Map state
+            if ( k8sConfig.getJob()) 
+                state = k8sClient.jobState(name)
+            else
+                state = k8sClient.podState(name)
             if( state && !state.containsKey('waiting')  ) {
                 break
             }
         }
         print "\33[2K\r"
-        println "Pod started: $name"
+        println "$this.deploymentName started: $name"
     }
 
     /**
      * Wait for the driver pod creation and prints the log to the
      * console standard output
      */
-    protected void printK8sPodOutput() {
-        k8sClient.podLog(runName, follow:true).eachLine { println it }
+    protected void printK8sJobOutput() {
+        if ( k8sConfig.getJob())
+            k8sClient.jobLog(runName, follow:true).eachLine { println it }
+        else
+            k8sClient.podLog(runName, follow:true).eachLine { println it }
     }
 
     protected ConfigObject loadConfig( String pipelineName ) {
@@ -506,22 +526,32 @@ class K8sDriverLauncher {
         // -- setup config file
         String cmd = "source /etc/nextflow/init.sh; ${getLaunchCli()}"
 
-        // create the launcher pod
-        new PodSpecBuilder()
-            .withPodName(runName)
-            .withImageName(podImage ?: k8sConfig.getNextflowImageName())
-            .withCommand(['/bin/bash', '-c', cmd])
-            .withLabels([ app: 'nextflow', runName: runName ])
-            .withNamespace(k8sClient.config.namespace)
-            .withServiceAccount(k8sClient.config.serviceAccount)
-            .withPodOptions(k8sConfig.getPodOptions())
-            .withEnv( PodEnv.value('NXF_WORK', k8sConfig.getWorkDir()) )
-            .withEnv( PodEnv.value('NXF_ASSETS', k8sConfig.getProjectDir()) )
-            .withEnv( PodEnv.value('NXF_EXECUTOR', 'k8s'))
-            .withEnv( PodEnv.value('NXF_ANSI_LOG', 'false'))
-            .withMemory(headMemory?:"")
-            .withCpus(headCpus)
-            .build()
+        PodSpecBuilder podSpec = new PodSpecBuilder()
+                    .withImageName(podImage ?: k8sConfig.getNextflowImageName())
+                    .withCommand(['/bin/bash', '-c', cmd])
+                    .withLabels([ app: 'nextflow', runName: runName ])
+                    .withServiceAccount(k8sClient.config.serviceAccount)
+                    .withPodOptions(k8sConfig.getPodOptions())
+                    .withEnv( PodEnv.value('NXF_WORK', k8sConfig.getWorkDir()) )
+                    .withEnv( PodEnv.value('NXF_ASSETS', k8sConfig.getProjectDir()) )
+                    .withEnv( PodEnv.value('NXF_EXECUTOR', 'k8s'))
+                    .withEnv( PodEnv.value('NXF_ANSI_LOG', 'false'))
+                    .withMemory(headMemory?:"")
+                    .withCpus(headCpus)
+
+        if ( k8sConfig.getJob()) {
+            this.deploymentName = "Job"
+            new JobSpecBuilder()
+                .withJobName(runName)
+                .withNamespace(k8sClient.config.namespace)
+                .withJobOptions(k8sConfig.getPodOptions())
+                .withPodSpec(podSpec.withContainerName(runName).build())
+                .build()
+        } else {
+            podSpec.withPodName(runName)
+                   .withNamespace(k8sClient.config.namespace)
+                   .build()
+        }
 
         // note: do *not* set the work directory because it may need to be created  by the init script
     }
@@ -530,16 +560,20 @@ class K8sDriverLauncher {
      * Creates and executes the nextflow driver pod
      * @return A {@link nextflow.k8s.client.K8sResponseJson} response object
      */
-    protected createK8sLauncherPod() {
+    protected createK8sLauncherJob() {
         final spec = makeLauncherSpec()
-        k8sClient.podCreate(spec, yamlDebugPath())
+        if ( k8sConfig.getJob()) {
+            k8sClient.jobCreate(spec, yamlDebugPath())
+        } else {
+            k8sClient.podCreate(spec, yamlDebugPath())
+        }
     }
 
     protected Path yamlDebugPath() {
         boolean debug = config.k8s.debug?.yaml?.toString() == 'true'
-        final result = debug ? Paths.get('.nextflow.pod.yaml') : null
+        final result = debug ? Paths.get(".nextflow.${this.deploymentName}.yaml") : null
         if( result )
-            log.info "Launcher pod spec file: $result"
+            log.info "Launcher $this.deploymentName spec file: $result"
         return result
     }
 
@@ -639,6 +673,9 @@ class K8sDriverLauncher {
         def proc = new ProcessBuilder().command('bash','-c',cmd).inheritIO().start()
         def result = proc.waitFor()
         if( result == 0 )
-            k8sClient.podDelete(runName)
+            if ( k8sConfig.getJob()) 
+                k8sClient.jobDelete(runName)
+            else 
+                k8sClient.podDelete(runName)
     }
 }

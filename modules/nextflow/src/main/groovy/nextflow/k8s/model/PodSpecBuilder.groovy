@@ -42,6 +42,8 @@ class PodSpecBuilder {
 
     String podName
 
+    String containerName
+
     String imageName
 
     String imagePullPolicy
@@ -101,9 +103,14 @@ class PodSpecBuilder {
         "vol-${VOLUMES.incrementAndGet()}".toString()
     }
 
-
     PodSpecBuilder withPodName(String name) {
         this.podName = name
+        this.containerName = name
+        return this
+    }
+
+    PodSpecBuilder withContainerName(String name) {
+        this.containerName = name
         return this
     }
 
@@ -307,7 +314,7 @@ class PodSpecBuilder {
     }
 
     Map build() {
-        assert this.podName, 'Missing K8s podName parameter'
+        // podname is not set in case of jobs
         assert this.imageName, 'Missing K8s imageName parameter'
         assert this.command || this.args, 'Missing K8s command parameter'
 
@@ -329,12 +336,15 @@ class PodSpecBuilder {
         if( this.memory )
             res.memory = this.memory
 
-        final container = [ name: this.podName, image: this.imageName ]
+        final container = [
+                name: this.containerName,
+                image: this.imageName,
+        ]
+        
         if( this.command )
             container.command = this.command
         if( this.args )
             container.args = args
-
         if( this.workDir )
             container.put('workingDir', workDir)
 
