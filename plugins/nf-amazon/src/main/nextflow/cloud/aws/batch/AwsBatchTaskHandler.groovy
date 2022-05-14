@@ -636,9 +636,14 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
          */
         final attempts = maxSpotAttempts()
         if( attempts>0 ) {
+            // retry the job when an Ec2 instance is terminate
+            final cond1 = new EvaluateOnExit().withAction('RETRY').withOnStatusReason('Host EC2*')
+            // the exit condition prevent to retry for other reason and delegate
+            // instead to nextflow error strategy the handling of the error
+            final cond2 = new EvaluateOnExit().withAction('EXIT').withOnReason('*')
             final retry = new RetryStrategy()
                     .withAttempts( attempts )
-                    .withEvaluateOnExit( new EvaluateOnExit().withOnReason('Host EC2*').withAction('RETRY') )
+                    .withEvaluateOnExit(cond1, cond2)
             result.setRetryStrategy(retry)
         }
 
