@@ -3,9 +3,11 @@ package nextflow
 import java.text.SimpleDateFormat
 import java.util.regex.Pattern
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
 import nextflow.util.VersionNumber
 import static nextflow.extension.Bolts.DATETIME_FORMAT
 
@@ -14,12 +16,17 @@ import static nextflow.extension.Bolts.DATETIME_FORMAT
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 @Singleton(strict = false)
 @ToString(includeNames = true)
 @EqualsAndHashCode
 class NextflowMeta {
 
     private static final Pattern DSL_DECLARATION = ~/(?m)^\s*(nextflow\.(preview|enable)\.dsl\s*=\s*(\d))\s*(;?\s*)?(;?\/{2}.*)?$/
+
+    private static final Pattern DSL1_INPUT = ~/(?m)input:\s*(tuple|file|path|val|env|stdin)\b.*\s.*\bfrom\b.+$/
+    private static final Pattern DSL1_OUTPUT = ~/(?m)output:\s*(tuple|file|path|val|env|stdout)\b.*\s.*\binto\b.+$/
+    private static final Pattern DSL2_WORKFLOW = ~/\s+workflow\b.*\s*\{(\n|\r|.)*}/
 
     private static boolean ignoreWarnDsl2 = System.getenv('NXF_IGNORE_WARN_DSL2')=='true'
 
@@ -114,7 +121,7 @@ class NextflowMeta {
      * {@code true} when the workflow script uses DSL2 syntax, {@code false} otherwise.
      */
     boolean isDsl2() {
-        enable.dsl == 2
+        enable.dsl == 2f
     }
 
     /**
@@ -125,15 +132,22 @@ class NextflowMeta {
      */
     @Deprecated
     boolean isDsl2Final() {
-        enable.dsl == 2
+        enable.dsl == 2f
     }
 
     void enableDsl2() {
-        this.enable.dsl = 2
+        this.enable.dsl = 2f
     }
 
     void disableDsl2() {
-        enable.dsl = 1
+        enable.dsl = 1f
+    }
+
+    void enableDsl(String value) {
+        if( value !in ['1','2'] ) {
+            throw new AbortOperationException("Invalid Nextflow DSL value: $value")
+        }
+        this.enable.dsl = value=='1' ? 1f : 2f
     }
 
     boolean isStrictModeEnabled() {
@@ -144,23 +158,25 @@ class NextflowMeta {
         enable.strict = mode
     }
 
-    void checkDsl2Mode(String script) {
+    static String checkDslMode(String script) {
         final matcher = DSL_DECLARATION.matcher(script)
         final mode = matcher.find() ? matcher.group(2) : null
         if( !mode )
-            return
+            return null
         final ver = matcher.group(3)
         if( mode == 'enable' ) {
-            if( ver=='2' )
-                enableDsl2()
-            else if( ver=='1' )
-                disableDsl2()
-            else
-                throw new IllegalArgumentException("Unknown nextflow DSL version: ${ver}")
+            return ver
         }
         else if( mode == 'preview' )
             throw new IllegalArgumentException("Preview nextflow mode 'preview' is not supported anymore -- Please use `nextflow.enable.dsl=2` instead")
         else
             throw new IllegalArgumentException("Unknown nextflow mode=${matcher.group(1)}")
+    }
+
+    static boolean probeDls1(String script) {
+        boolean hasDsl1Input = DSL1_INPUT.matcher(script).find()
+        boolean hasDsl1Output = DSL1_OUTPUT.matcher(script).find()
+        boolean hasWorkflowDef = DSL2_WORKFLOW.matcher(script).find()
+        return (hasDsl1Input || hasDsl1Output) && !hasWorkflowDef
     }
 }
