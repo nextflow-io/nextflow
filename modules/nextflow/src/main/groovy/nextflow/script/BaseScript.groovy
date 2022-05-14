@@ -184,8 +184,22 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( !entryFlow ) {
             if( meta.getLocalWorkflowNames() )
                 log.warn "No entry workflow specified"
-            if( meta.getLocalProcessNames() )
-                throw new AbortOperationException("Missing workflow definition - DSL2 requires at least a workflow block in the main script")
+            if( meta.getLocalProcessNames() ) {
+                final msg = """\
+                        ==============================================================================
+                        =                                WARNING                                     =
+                        = You are running this script using DSL2 syntax, however it does not contain = 
+                        = any 'workflow' definition and therefore there's anything Nextflow can run. =
+                        =                                                                            =
+                        = If this script was written using Nextflow DSL1 syntax, please run it by    = 
+                        = adding the setting 'nextflow.enable.dsl=1' in the nextflow.config file or  =
+                        = including the option '-dsl1' to the run command.                           =
+                        =                                                                            =
+                        = More details at this link: https://www.nextflow.io/docs/latest/dsl2.html   =
+                        ==============================================================================
+                        """.stripIndent()
+                throw new AbortOperationException(msg)
+            }
             return result
         }
 
