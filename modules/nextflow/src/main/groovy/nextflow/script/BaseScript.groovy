@@ -186,17 +186,17 @@ abstract class BaseScript extends Script implements ExecutionContext {
                 log.warn "No entry workflow specified"
             if( meta.getLocalProcessNames() ) {
                 final msg = """\
-                        ==============================================================================
-                        =                                WARNING                                     =
-                        = You are running this script using DSL2 syntax, however it does not contain = 
-                        = any 'workflow' definition so there's nothing for Nextflow to run.          =
-                        =                                                                            =
-                        = If this script was written using Nextflow DSL1 syntax, please add          = 
-                        = 'nextflow.enable.dsl=1' to the nextflow.config file, or use the            =
-                        = command-line flag '-dsl1' when running the pipeline.                       =
-                        =                                                                            =
-                        = More details at this link: https://www.nextflow.io/docs/latest/dsl2.html   =
-                        ==============================================================================
+                        =============================================================================
+                        =                                WARNING                                    =
+                        = You are running this script using DSL2 syntax, however it does not        = 
+                        = contain any 'workflow' definition so there's nothing for Nextflow to run. =
+                        =                                                                           =
+                        = If this script was written using Nextflow DSL1 syntax, please add the     = 
+                        = setting 'nextflow.enable.dsl=1' to the nextflow.config file or use the    =
+                        = command-line option '-dsl1' when running the pipeline.                    =
+                        =                                                                           =
+                        = More details at this link: https://www.nextflow.io/docs/latest/dsl2.html  =
+                        =============================================================================
                         """.stripIndent()
                 throw new AbortOperationException(msg)
             }
