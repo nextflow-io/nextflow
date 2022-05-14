@@ -191,9 +191,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
                         = You are running this script using DSL2 syntax, however it does not contain = 
                         = any 'workflow' definition so there's nothing for Nextflow to run.          =
                         =                                                                            =
-                        = If this script was written using Nextflow DSL1 syntax, please run it by    = 
-                        = adding the setting 'nextflow.enable.dsl=1' in the nextflow.config file or  =
-                        = including the option '-dsl1' to the run command.                           =
+                        = If this script was written using Nextflow DSL1 syntax, please add          = 
+                        = 'nextflow.enable.dsl=1' to the nextflow.config file, or use the            =
+                        = command-line flag '-dsl1' when running the pipeline.                       =
                         =                                                                            =
                         = More details at this link: https://www.nextflow.io/docs/latest/dsl2.html   =
                         ==============================================================================
