@@ -1,5 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.04.1 - 15 May 2022
+- Improve dsl detection [739b959f]
+- Improve missing workflow err message [f3fc081b] (#2871)
+- Fix Aws Batch retry policy on spot reclaim [d855f0d9]
+- Update default SKU for Azure Batch (#2868) [be60fc14]
+- Bump nf-amazon 1.7.2
+- Bump nf-azure 0.13.2
+
 22.04.0 - 23 Apr 2022
 - Improve error reporting (#2658) [e6ef017d] <Jorge Aguilera>
 - Document params-file and improve self-update (#2673) [1e008f47] <Abhinav Sharma>
