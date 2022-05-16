@@ -16,6 +16,7 @@ import static nextflow.extension.Bolts.DATETIME_FORMAT
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 @Singleton(strict = false)
 @ToString(includeNames = true)
@@ -26,7 +27,7 @@ class NextflowMeta {
 
     private static final Pattern DSL1_INPUT = ~/(?m)input:\s*(tuple|file|path|val|env|stdin)\b.*\s.*\bfrom\b.+$/
     private static final Pattern DSL1_OUTPUT = ~/(?m)output:\s*(tuple|file|path|val|env|stdout)\b.*\s.*\binto\b.+$/
-    private static final Pattern DSL2_WORKFLOW = ~/\s+workflow\b.*\s*\{(\n|\r|.)*}/
+    private static final Pattern DSL2_WORKFLOW = ~/\s+workflow\b.*\s*\{[^}]*}/
 
     private static boolean ignoreWarnDsl2 = System.getenv('NXF_IGNORE_WARN_DSL2')=='true'
 
@@ -174,9 +175,15 @@ class NextflowMeta {
     }
 
     static boolean probeDls1(String script) {
-        boolean hasDsl1Input = DSL1_INPUT.matcher(script).find()
-        boolean hasDsl1Output = DSL1_OUTPUT.matcher(script).find()
-        boolean hasWorkflowDef = DSL2_WORKFLOW.matcher(script).find()
-        return (hasDsl1Input || hasDsl1Output) && !hasWorkflowDef
+        try {
+            boolean hasDsl1Input = DSL1_INPUT.matcher(script).find()
+            boolean hasDsl1Output = DSL1_OUTPUT.matcher(script).find()
+            boolean hasWorkflowDef = DSL2_WORKFLOW.matcher(script).find()
+            return (hasDsl1Input || hasDsl1Output) && !hasWorkflowDef
+        }
+        catch (Throwable e) {
+            log.debug "Unable to probe dsl version" ,e
+            return false
+        }
     }
 }
