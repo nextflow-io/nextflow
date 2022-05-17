@@ -387,8 +387,9 @@ class AssetManager {
         return this
     }
 
-    AssetManager checkValidRemoteRepo() {
+    AssetManager checkValidRemoteRepo(String revision=null) {
         def scriptName = getMainScriptName()
+        provider.revision = revision
         provider.validateFor(scriptName)
         return this
     }
@@ -597,7 +598,7 @@ class AssetManager {
         if( !localPath.exists() ) {
             localPath.parentFile.mkdirs()
             // make sure it contains a valid repository
-            checkValidRemoteRepo()
+            checkValidRemoteRepo(revision)
 
             final cloneURL = getGitRepositoryUrl()
             log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
