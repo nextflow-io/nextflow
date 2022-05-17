@@ -27,7 +27,7 @@ class NextflowMeta {
 
     private static final Pattern DSL1_INPUT = ~/(?m)input:\s*(tuple|file|path|val|env|stdin)\b.*\s.*\bfrom\b.+$/
     private static final Pattern DSL1_OUTPUT = ~/(?m)output:\s*(tuple|file|path|val|env|stdout)\b.*\s.*\binto\b.+$/
-    private static final Pattern DSL2_WORKFLOW = ~/\s+workflow\b.*\s*\{[^}]*}/
+    private static final Pattern DSL2_WORKFLOW = ~/\s+workflow(?!.*\.)\b.*\s*\{[^}]*}/
 
     private static boolean ignoreWarnDsl2 = System.getenv('NXF_IGNORE_WARN_DSL2')=='true'
 
