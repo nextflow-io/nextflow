@@ -237,10 +237,10 @@ If you have it installed in your computer, follow the steps below in order to us
 2. Open IntelliJ IDEA and choose "New > Project from Existing Sources..." in the "File" menu bar.
 3. Select the Nextflow project root directory in your computer and click "OK".
 4. Then, choose the "Gradle" item in the "Import project from external model" list and click on "Finish" button to finalize the import.
-5. When the import process complete, select the "Project structure" command in the "File" menu bar.
+5. When the import process completes, select the "Project structure" command in the "File" menu bar.
 6. In the showed dialog click on the "Project" item in the list of the left, and make sure that
    the "Project SDK" choice on the right contains Java 11 (or later, up to 18).
-7. Set the code formatting options with setting provided [here](https://github.com/nextflow-io/nextflow/blob/master/CONTRIBUTING.md#ide-settings).
+7. Set the code formatting options with settings provided [here](https://github.com/nextflow-io/nextflow/blob/master/CONTRIBUTING.md#ide-settings).
 
 
 
