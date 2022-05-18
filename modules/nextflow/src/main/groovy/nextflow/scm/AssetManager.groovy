@@ -388,6 +388,9 @@ class AssetManager {
     }
 
     AssetManager checkValidRemoteRepo(String revision=null) {
+        // Configure the git provider to use the required revision as source for all needed remote resources:
+        // - config if present in repo (nextflow.config by default)
+        // - main script (main.nf by default)
         provider.revision = revision
         def scriptName = getMainScriptName()
         provider.validateFor(scriptName)
