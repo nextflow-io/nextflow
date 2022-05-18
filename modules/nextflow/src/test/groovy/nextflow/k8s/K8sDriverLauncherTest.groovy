@@ -538,7 +538,6 @@ class K8sDriverLauncherTest extends Specification {
         config.k8s.storageMountPath == '/this'
         config.k8s.pod == null
         and:
-        and:
         new K8sConfig(config.k8s).getStorageClaimName() == 'xyz'
         new K8sConfig(config.k8s).getStorageMountPath() == '/this'
         new K8sConfig(config.k8s).getPodOptions() == new PodOptions([
