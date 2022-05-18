@@ -25,6 +25,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
+import nextflow.exception.AbortOperationException
 import nextflow.secret.SecretHolder
 import org.apache.commons.lang.StringUtils
 /**
@@ -248,7 +249,10 @@ class ScriptBinding extends WorkflowBinding {
         @Override
         Object get(Object key) {
             if( !target.containsKey(key) ) {
-                log.warn1("Access to undefined parameter `$key` -- Initialise it to a default value eg. `params.$key = some_value`", firstOnly: true)
+                final msg = "Access to undefined parameter `$key` -- Initialise it to a default value eg. `params.$key = some_value`"
+                if( NF.isStrictMode() )
+                    throw new AbortOperationException(msg)
+                log.warn1(msg, firstOnly: true)
                 return null
             }
             return target.get(key)
