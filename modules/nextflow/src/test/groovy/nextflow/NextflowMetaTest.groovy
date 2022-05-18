@@ -166,4 +166,63 @@ class NextflowMetaTest extends Specification {
             }
             ''')
     }
+
+    def 'should check has workfloW'() {
+        expect:
+        NextflowMeta.hasWorkflowDef('''
+            workflow bar {
+                foo()
+            }
+            ''')
+
+        and:
+        NextflowMeta.hasWorkflowDef('''
+            workflow bar { foo }
+            ''')
+
+        and:
+        NextflowMeta.hasWorkflowDef('''
+            workflow { foo }
+            ''')
+
+        and:
+        NextflowMeta.hasWorkflowDef('''
+            workflow{ foo }
+            ''')
+
+        and:
+        NextflowMeta.hasWorkflowDef('''
+            workflow{
+                foo
+            }
+            ''')
+
+        and:
+        !NextflowMeta.hasWorkflowDef('''
+            if (!(workflow.runName ==~ /[a-z]+_[a-z]+/)) {
+                custom_runName = workflow.runName
+            }
+
+            ''')
+
+        and:
+        !NextflowMeta.hasWorkflowDef('''
+            workflow.onComplete {
+
+                // Set up the e-mail variables
+                def subject = "[nf-core/chipseq] Successful: $workflow.runName"
+                if (!workflow.success) {
+                    subject = "[nf-core/chipseq] FAILED: $workflow.runName"
+                }
+                def email_fields = [:]
+                email_fields['version'] = workflow.manifest.version
+
+            ''')
+
+        and:
+        !NextflowMeta.hasWorkflowDef('''
+            workflow . onComplete {
+                def subject = "[nf-core/chipseq] Successful: $workflow.runName"
+            ''')
+    }
 }
