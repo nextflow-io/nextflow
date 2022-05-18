@@ -27,7 +27,7 @@ class NextflowMeta {
 
     private static final Pattern DSL1_INPUT = ~/(?m)input:\s*(tuple|file|path|val|env|stdin)\b.*\s.*\bfrom\b.+$/
     private static final Pattern DSL1_OUTPUT = ~/(?m)output:\s*(tuple|file|path|val|env|stdout)\b.*\s.*\binto\b.+$/
-    private static final Pattern DSL2_WORKFLOW = ~/\s+workflow\b.*\s*\{[^}]*}/
+    private static final Pattern DSL2_WORKFLOW = ~/\s+workflow(?!\s*\.)\b.*\s*\{[^}]*}/
 
     private static boolean ignoreWarnDsl2 = System.getenv('NXF_IGNORE_WARN_DSL2')=='true'
 
@@ -176,14 +176,23 @@ class NextflowMeta {
 
     static boolean probeDls1(String script) {
         try {
-            boolean hasDsl1Input = DSL1_INPUT.matcher(script).find()
-            boolean hasDsl1Output = DSL1_OUTPUT.matcher(script).find()
-            boolean hasWorkflowDef = DSL2_WORKFLOW.matcher(script).find()
-            return (hasDsl1Input || hasDsl1Output) && !hasWorkflowDef
+            return (hasDsl1Input(script) || hasDsl1Output(script)) && !hasWorkflowDef(script)
         }
         catch (Throwable e) {
             log.debug "Unable to probe dsl version" ,e
             return false
         }
+    }
+
+    static protected boolean hasDsl1Input(String script) {
+        DSL1_INPUT.matcher(script).find()
+    }
+
+    static protected boolean hasDsl1Output(String script) {
+        DSL1_OUTPUT.matcher(script).find()
+    }
+
+    static protected boolean hasWorkflowDef(String script) {
+        return DSL2_WORKFLOW.matcher(script).find()
     }
 }
