@@ -388,8 +388,8 @@ class AssetManager {
     }
 
     AssetManager checkValidRemoteRepo(String revision=null) {
-        def scriptName = getMainScriptName()
         provider.revision = revision
+        def scriptName = getMainScriptName()
         provider.validateFor(scriptName)
         return this
     }
