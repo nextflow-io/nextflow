@@ -560,6 +560,7 @@ class K8sTaskHandlerTest extends Specification {
             kind: 'Job', 
             metadata:[name: 'nf-123', namespace: 'default'], 
             spec:[
+              backoffLimit: 0,
               template: [
                   apiVersion: 'v1',
                   kind: 'Pod',

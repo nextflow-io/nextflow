@@ -224,6 +224,7 @@ class K8sDriverLauncherTest extends Specification {
             kind: 'Job', 
             metadata: [name: 'foo-boo', namespace: 'foo'], 
             spec: [
+               backoffLimit: 0,
                template: [
                   apiVersion: 'v1',
                   kind: 'Pod',
