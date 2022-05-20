@@ -642,8 +642,8 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getState() >> fullState
         1 * handler.updateTimestamps(termState)
         1 * handler.readExitFile() >> EXIT_STATUS
-        1 * handler.deleteJobIfSuccessful(task) >> null
-        1 * handler.saveJobLogOnError(task) >> null
+        1 * handler.deletePodIfSuccessful(task) >> null
+        1 * handler.savePodLogOnError(task) >> null
         handler.task.exitStatus == EXIT_STATUS
         handler.task.@stdout == OUT_FILE
         handler.task.@stderr == ERR_FILE
@@ -841,19 +841,19 @@ class K8sTaskHandlerTest extends Specification {
         def TASK_FAIL = Mock(TaskRun); TASK_FAIL.isSuccess() >> false
 
         when:
-        handler.deleteJobIfSuccessful(TASK_OK)
+        handler.deletePodIfSuccessful(TASK_OK)
         then:
         2 * executor.getK8sConfig() >> new K8sConfig()
         1 * client.podDelete(POD_NAME) >> null
 
         when:
-        handler.deleteJobIfSuccessful(TASK_OK)
+        handler.deletePodIfSuccessful(TASK_OK)
         then:
         2 * executor.getK8sConfig() >> new K8sConfig(cleanup: true)
         1 * client.podDelete(POD_NAME) >> null
 
         when:
-        handler.deleteJobIfSuccessful(TASK_FAIL)
+        handler.deletePodIfSuccessful(TASK_FAIL)
         then:
         1 * executor.getK8sConfig() >> new K8sConfig(cleanup: false)
         0 * client.podDelete(POD_NAME) >> null
@@ -875,13 +875,13 @@ class K8sTaskHandlerTest extends Specification {
         def handler = Spy(new K8sTaskHandler(executor: executor, client: client, podName: POD_NAME))
 
         when:
-        handler.saveJobLogOnError(task)
+        handler.savePodLogOnError(task)
         then:
         task.isSuccess() >> true
         0 * client.podLog(_)
 
         when:
-        handler.saveJobLogOnError(task)
+        handler.savePodLogOnError(task)
         then:
         task.isSuccess() >> false
         task.getWorkDir() >> folder

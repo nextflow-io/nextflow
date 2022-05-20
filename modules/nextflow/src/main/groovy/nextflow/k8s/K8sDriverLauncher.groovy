@@ -139,24 +139,24 @@ class K8sDriverLauncher {
         this.k8sClient = makeK8sClient(k8sConfig)
         this.k8sConfig.checkStorageAndPaths(k8sClient)
         createK8sConfigMap()
-        createK8sLauncherJob()
-        waitJobStart()
+        createK8sLauncherPod()
+        waitPodStart()
         // login into container session
         if( interactive )
             launchLogin()
         // dump pod output
         else if( !background )
-            printK8sJobOutput()
+            printK8sPodOutput()
         else
             log.debug "Nextflow driver launched in background mode -- pod: $runName"
-        waitJobEnd()
+        waitPodEnd()
     }
 
     int shutdown() {
         if( background )
             return 0
         // fetch the container exit status
-        final exitCode = waitJobTermination()
+        final exitCode = waitPodTermination()
         // cleanup the config map if OK
         def deleteOnSuccessByDefault = exitCode==0
         if( k8sConfig.getCleanup(deleteOnSuccessByDefault)  ) {
@@ -165,7 +165,7 @@ class K8sDriverLauncher {
         return exitCode
     }
 
-    protected void waitJobEnd() {
+    protected void waitPodEnd() {
         if( background )
             return
         def currentState
@@ -200,7 +200,7 @@ class K8sDriverLauncher {
         System.currentTimeMillis()-time > 90_000
     }
 
-    protected int waitJobTermination() {
+    protected int waitPodTermination() {
         log.debug "Wait for $this.resourceType termination name=$runName"
         final rnd = new Random()
         final time = System.currentTimeMillis()
@@ -235,7 +235,7 @@ class K8sDriverLauncher {
         }
     }
 
-    protected void waitJobStart() {
+    protected void waitPodStart() {
         final name = runName
         print "$this.resourceType submitted: $name .. waiting to start"
         while( true ) {
@@ -257,7 +257,7 @@ class K8sDriverLauncher {
      * Wait for the driver pod creation and prints the log to the
      * console standard output
      */
-    protected void printK8sJobOutput() {
+    protected void printK8sPodOutput() {
         if ( k8sConfig.getJob())
             k8sClient.jobLog(runName, follow:true).eachLine { println it }
         else
@@ -560,7 +560,7 @@ class K8sDriverLauncher {
      * Creates and executes the nextflow driver pod
      * @return A {@link nextflow.k8s.client.K8sResponseJson} response object
      */
-    protected createK8sLauncherJob() {
+    protected createK8sLauncherPod() {
         final spec = makeLauncherSpec()
         if ( k8sConfig.getJob()) {
             k8sClient.jobCreate(spec, yamlDebugPath())

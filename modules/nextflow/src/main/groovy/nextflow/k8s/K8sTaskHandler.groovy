@@ -390,8 +390,8 @@ class K8sTaskHandler extends TaskHandler {
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
-            saveJobLogOnError(task)
-            deleteJobIfSuccessful(task)
+            savePodLogOnError(task)
+            deletePodIfSuccessful(task)
             updateTimestamps(state.terminated as Map)
             determineNode()
             return true
@@ -400,7 +400,7 @@ class K8sTaskHandler extends TaskHandler {
         return false
     }
 
-    protected void saveJobLogOnError(TaskRun task) {
+    protected void savePodLogOnError(TaskRun task) {
         if( task.isSuccess() )
             return
 
@@ -458,7 +458,7 @@ class K8sTaskHandler extends TaskHandler {
         !k8sConfig.getCleanup()
     }
 
-    protected void deleteJobIfSuccessful(TaskRun task) {
+    protected void deletePodIfSuccessful(TaskRun task) {
         if( !podName )
             return
 
