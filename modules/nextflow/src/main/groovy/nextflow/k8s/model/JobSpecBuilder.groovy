@@ -23,7 +23,7 @@ import groovy.util.logging.Slf4j
 /**
  * Object build for a K8s job specification
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Romana Duraciova <duraciovar@gmail.com>
  */
 @CompileStatic
 @Slf4j
@@ -32,8 +32,6 @@ class JobSpecBuilder {
     String jobName
 
     String namespace
-
-    String workDir
 
     int backoffLimit = -1
 
