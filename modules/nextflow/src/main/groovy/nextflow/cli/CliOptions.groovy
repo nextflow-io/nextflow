@@ -111,7 +111,7 @@ class CliOptions {
     }
 
     boolean hasAnsiLogFlag() {
-        ansiLog==true || System.getenv('NXF_ANSI_LOG')=='true'
+        ansiLog==true || System.getenv().getOrDefault('NXF_ANSI_LOG',"false").toBoolean()=='true'
     }
 
 }

@@ -220,7 +220,7 @@ class CmdRun extends CmdBase implements HubOptions {
     String withConda
 
     @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
-    boolean offline = System.getenv('NXF_OFFLINE') as boolean
+    boolean offline = System.getenv().getOrDefault('NXF_OFFLINE', "false").toBoolean()
 
     @Parameter(names=['-entry'], description = 'Entry workflow name to be executed', arity = 1)
     String entryName
@@ -405,7 +405,7 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     private static boolean ignoreHistory() {
-        System.getenv('NXF_IGNORE_RESUME_HISTORY')=='true'
+        System.getenv().getOrDefault('NXF_IGNORE_RESUME_HISTORY',"false").toBoolean()=='true'
     }
 
     static protected boolean matchRunName(String name) {
