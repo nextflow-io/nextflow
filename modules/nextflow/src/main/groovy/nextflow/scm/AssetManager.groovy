@@ -392,7 +392,7 @@ class AssetManager {
         // - config if present in repo (nextflow.config by default)
         // - main script (main.nf by default)
         provider.revision = revision
-        def scriptName = getMainScriptName()
+        final scriptName = getMainScriptName()
         provider.validateFor(scriptName)
         return this
     }
@@ -929,7 +929,7 @@ class AssetManager {
                 throw new AbortOperationException("Project `$project` currently is sticked on revision: $current -- you need to specify explicitly a revision with the option `-r` to use it")
             }
         }
-        else if( !revision || revision == current ) {
+        if( !revision || revision == current ) {
             // nothing to do
             return
         }
