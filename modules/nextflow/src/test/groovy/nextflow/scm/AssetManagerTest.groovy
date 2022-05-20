@@ -550,4 +550,38 @@ class AssetManagerTest extends Specification {
         'paolo0758/nf-azure-repo/_git/nf-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
     }
 
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should download branch specified'() {
+
+        given:
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
+
+        when:
+        manager.download("dev")
+        then:
+        folder.resolve('nextflow-io/nf-test-branch/.git').isDirectory()
+        and:
+        folder.resolve('nextflow-io/nf-test-branch/workflow.nf').text == "println 'Hello'\n"
+
+        when:
+        manager.download()
+        then:
+        noExceptionThrown()
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should fetch main script from branch specified'() {
+
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
+
+        expect:
+        manager.checkValidRemoteRepo('dev')
+        and:
+        manager.getMainScriptName() == 'workflow.nf'
+
+    }
 }

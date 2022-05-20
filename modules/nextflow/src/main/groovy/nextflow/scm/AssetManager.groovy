@@ -387,8 +387,12 @@ class AssetManager {
         return this
     }
 
-    AssetManager checkValidRemoteRepo() {
-        def scriptName = getMainScriptName()
+    AssetManager checkValidRemoteRepo(String revision=null) {
+        // Configure the git provider to use the required revision as source for all needed remote resources:
+        // - config if present in repo (nextflow.config by default)
+        // - main script (main.nf by default)
+        provider.revision = revision
+        final scriptName = getMainScriptName()
         provider.validateFor(scriptName)
         return this
     }
@@ -597,7 +601,7 @@ class AssetManager {
         if( !localPath.exists() ) {
             localPath.parentFile.mkdirs()
             // make sure it contains a valid repository
-            checkValidRemoteRepo()
+            checkValidRemoteRepo(revision)
 
             final cloneURL = getGitRepositoryUrl()
             log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
@@ -925,7 +929,7 @@ class AssetManager {
                 throw new AbortOperationException("Project `$project` currently is sticked on revision: $current -- you need to specify explicitly a revision with the option `-r` to use it")
             }
         }
-        else if( !revision || revision == current ) {
+        if( !revision || revision == current ) {
             // nothing to do
             return
         }
