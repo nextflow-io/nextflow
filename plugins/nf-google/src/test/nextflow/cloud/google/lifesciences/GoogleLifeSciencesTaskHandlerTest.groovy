@@ -184,6 +184,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         req.cpuPlatform == null
         req.entryPoint == GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT
         !req.usePrivateAddress
+        req.timeout == null
 
         when:
         req = handler.createPipelineRequest()
@@ -226,7 +227,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         when:
         def req = handler.createPipelineRequest()
         then:
-        task.getConfig() >> new TaskConfig(disk: '250 GB', machineType: 'n1-1234')
+        task.getConfig() >> new TaskConfig(disk: '250 GB', machineType: 'n1-1234', time: "1h")
         and:
         req.machineType == 'n1-1234'
         req.project == 'my-project'
@@ -245,6 +246,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         req.cpuPlatform =='Intel Skylake'
         req.entryPoint == GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT
         req.usePrivateAddress
+        req.timeout == "3600s"
 
         when:
         req = handler.createPipelineRequest()

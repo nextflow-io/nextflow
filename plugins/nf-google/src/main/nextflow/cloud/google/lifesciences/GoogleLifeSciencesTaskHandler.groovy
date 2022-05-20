@@ -352,6 +352,8 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
         req.subnetwork = executor.config.subnetwork
         req.serviceAccountEmail = executor.config.serviceAccountEmail
         req.keepAliveOnFailure = executor.config.keepAliveOnFailure
+        req.timeout = task.config.getTime() ? "${task.config.getTime().toSeconds()}s" : null
+
         return req
     }
 
