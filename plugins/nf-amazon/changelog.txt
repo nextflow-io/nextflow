@@ -1,6 +1,9 @@
 nf-amazon changelog
 ===================
-1.7.1 - Apr 2022
+1.7.2 - 15 Apr 2022
+- Fix Aws Batch retry policy on spot reclaim [d855f0d9]
+
+1.7.1 - 23 Apr 2022
 - Add config option `aws.client.anonymous` to allow the access of public buckets
 - Add config option `aws.client.debug`
 - Fix SS3 storage encryption flag for Batch submit job
