@@ -220,7 +220,7 @@ class CmdRun extends CmdBase implements HubOptions {
     String withConda
 
     @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
-    boolean offline = System.getenv('NXF_OFFLINE') as boolean
+    boolean offline = System.getenv('NXF_OFFLINE')=='true'
 
     @Parameter(names=['-entry'], description = 'Entry workflow name to be executed', arity = 1)
     String entryName
