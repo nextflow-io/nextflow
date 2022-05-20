@@ -33,7 +33,7 @@ class JobSpecBuilder {
 
     String namespace
 
-    int backoffLimit = -1
+    Integer backoffLimit
 
     Map podSpec
 
@@ -47,9 +47,8 @@ class JobSpecBuilder {
         return this
     }
 
-    JobSpecBuilder withJobOptions(PodOptions opts) {
-        if ( opts.backoffLimit != -1)
-            backoffLimit = opts.backoffLimit
+    JobSpecBuilder withJobBackoffLimit(Integer backoffLimit) {
+        this.backoffLimit = backoffLimit
         return this
     }
 
@@ -68,8 +67,10 @@ class JobSpecBuilder {
 
         final spec = new LinkedHashMap<String,Object>()
         spec.template = podSpec
-        if( this.backoffLimit != -1 )
-           spec.backoffLimit = this.backoffLimit as int
+        if( this.backoffLimit )
+           spec.backoffLimit = this.backoffLimit
+        else
+           spec.backoffLimit = 0
 
         final job = [
                 apiVersion: 'batch/v1',

@@ -55,8 +55,6 @@ class PodOptions {
 
     private PodSecurityContext securityContext
 
-    private int backoffLimit = 0
-
     private boolean automountServiceAccountToken
 
     private String priorityClassName
@@ -173,8 +171,6 @@ class PodOptions {
         this.securityContext = ctx
         return this
     }
-
-    int getBackoffLimit() { backoffLimit }
 
     String getImagePullSecret() { imagePullSecret }
 

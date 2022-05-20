@@ -544,7 +544,6 @@ class K8sDriverLauncher {
             new JobSpecBuilder()
                 .withJobName(runName)
                 .withNamespace(k8sClient.config.namespace)
-                .withJobOptions(k8sConfig.getPodOptions())
                 .withPodSpec(podSpec.withContainerName(runName).build())
                 .build()
         } else {

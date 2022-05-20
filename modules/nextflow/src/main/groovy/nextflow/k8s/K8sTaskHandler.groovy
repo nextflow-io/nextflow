@@ -198,7 +198,6 @@ class K8sTaskHandler extends TaskHandler {
 
             jobBuilder = new JobSpecBuilder()
                 .withJobName(getSyntheticJobName(task))
-                .withJobOptions(getPodOptions())
                 .withNamespace(clientConfig.namespace)
 
 

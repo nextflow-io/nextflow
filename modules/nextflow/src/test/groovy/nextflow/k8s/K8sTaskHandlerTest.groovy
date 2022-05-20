@@ -547,8 +547,8 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
-        2 * handler.getPodOptions() >> podOptions
         1 * handler.getContainerMounts() >> []
+        1 * handler.getPodOptions() >> podOptions
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
