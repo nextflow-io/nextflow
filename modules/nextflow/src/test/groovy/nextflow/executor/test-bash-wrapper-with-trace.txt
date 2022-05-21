@@ -294,7 +294,7 @@ nxf_main() {
     touch {{folder}}/.command.begin
     set +u
     set -u
-    [[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH
+    [[ $NXF_SCRATCH ]] && cd $NXF_SCRATCH
     nxf_stage
 
     set +e
