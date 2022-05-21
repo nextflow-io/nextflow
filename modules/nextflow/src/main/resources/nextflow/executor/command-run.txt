@@ -140,7 +140,7 @@ nxf_main() {
     set -u
     {{task_env}}
     {{secrets_env}}
-    [[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH
+    [[ $NXF_SCRATCH ]] && cd $NXF_SCRATCH
     {{stage_cmd}}
 
     set +e
