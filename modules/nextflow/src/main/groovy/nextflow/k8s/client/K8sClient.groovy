@@ -297,6 +297,14 @@ class K8sClient {
         return podName
     }
 
+    K8sResponseJson jobStatus(String name) {
+        assert name
+        final action = "/apis/batch/v1/namespaces/$config.namespace/jobs/$name/status"
+        final resp = get(action)
+        trace('GET', action, resp.text)
+        return new K8sResponseJson(resp.text)
+    }
+
     K8sResponseJson podStatus(String name) {
         assert name
         final action = "/api/v1/namespaces/$config.namespace/pods/$name/status"
@@ -365,7 +373,39 @@ class K8sClient {
         assert jobName
         String podName = jobToPodName(jobName)
 
-        if( !podName) {
+        if( !podName ) {
+            final K8sResponseJson jobResp = jobStatus(jobName)
+            final jobStatus = jobResp.status as Map
+            if( jobStatus?.succeeded == 1 && jobStatus.conditions instanceof List ) {
+                final allConditions = jobStatus.conditions as List<Map>
+                final cond = allConditions.find { cond -> cond.type == 'Complete' }
+
+                if( cond?.status == 'True' ) {
+                    log.warn1("Job $jobName already completed and Pod is gone.")
+                    final dummyPodStatus = [
+                            terminated: [
+                               exitcode: 0,
+                               reason: "Completed",
+                               startedAt: jobStatus.startTime,
+                               finishedAt: jobStatus.completionTime,
+                            ]
+                         ]
+                    return dummyPodStatus
+                } else {
+                    throw new ProcessFailedException("Job $jobName succeeded but does not have Complete status. $allConditions")
+                }
+            }
+
+            if( jobStatus?.failed && (int)(jobStatus.failed) > 0 ) {
+                String message = 'unknown'
+                if( jobStatus.conditions instanceof List ) {
+                    final allConditions = jobStatus.conditions as List<Map>
+                    final cond = allConditions.find { cond -> cond.type == 'Failed' }
+                    message = cond?.message
+                }
+                throw new ProcessFailedException("Job $jobName execution failed: $message")
+            }
+
             log.warn1("Job $jobName does not have pod. Not yet scheduled?")
             return Collections.emptyMap()
         }
