@@ -50,7 +50,7 @@ dependencies {
     api 'org.postgresql:postgresql:42.2.23'
     api 'org.xerial:sqlite-jdbc:3.36.0.3'
     api 'org.duckdb:duckdb_jdbc:0.3.0'
-    api files('downloads/unzip/AthenaJDBC42_2.0.25.1001.jar')
+    api files('src/dist/lib/AthenaJDBC42_2.0.25.1001.jar')
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
@@ -80,4 +80,11 @@ task unzipAthenDep(dependsOn: verifyAthenDep, type: Copy) {
     into "${buildDir}/downloads/unzip"
 }
 
-project.compileGroovy.dependsOn('unzipAthenDep')
+// Files under src/dist are included into the distribution zip
+// https://docs.gradle.org/current/userguide/application_plugin.html
+task copyAthenDep(dependsOn: unzipAthenDep, type: Copy) {
+    from file("${buildDir}/downloads/unzip/SimbaAthenaJDBC-2.0.25.1001/AthenaJDBC42_2.0.25.1001.jar")
+    into "src/dist/lib"
+}
+
+project.compileGroovy.dependsOn('copyAthenDep')
