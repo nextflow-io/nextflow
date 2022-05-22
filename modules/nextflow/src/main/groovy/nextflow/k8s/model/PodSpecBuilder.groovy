@@ -42,8 +42,6 @@ class PodSpecBuilder {
 
     String podName
 
-    String containerName
-
     String imageName
 
     String imagePullPolicy
@@ -105,12 +103,6 @@ class PodSpecBuilder {
 
     PodSpecBuilder withPodName(String name) {
         this.podName = name
-        this.containerName = name
-        return this
-    }
-
-    PodSpecBuilder withContainerName(String name) {
-        this.containerName = name
         return this
     }
 
@@ -314,19 +306,15 @@ class PodSpecBuilder {
     }
 
     Map build() {
-        // podname is not set in case of jobs
+        assert this.podName, 'Missing K8s podName parameter'
         assert this.imageName, 'Missing K8s imageName parameter'
         assert this.command || this.args, 'Missing K8s command parameter'
 
         final restart = this.restart ?: 'Never'
 
         final metadata = new LinkedHashMap<String,Object>()
-        // if podName -> create pod and need podName and namespace, 
-        //  else creating job without podName and namespace
-        if( this.podName ) {
-            metadata.name = podName
-            metadata.namespace = namespace ?: 'default'
-        }
+        metadata.name = podName
+        metadata.namespace = namespace ?: 'default'
 
         final labels = this.labels ?: [:]
         final env = []
@@ -340,15 +328,12 @@ class PodSpecBuilder {
         if( this.memory )
             res.memory = this.memory
 
-        final container = [
-                name: this.containerName,
-                image: this.imageName,
-        ]
-        
+        final container = [ name: this.podName, image: this.imageName ]
         if( this.command )
             container.command = this.command
         if( this.args )
             container.args = args
+
         if( this.workDir )
             container.put('workingDir', workDir)
 
@@ -471,6 +456,29 @@ class PodSpecBuilder {
         return pod
     }
 
+    Map buildAsJob() {
+        final pod = build()
+
+        // job metadata
+        final metadata = new LinkedHashMap<String,Object>()
+        metadata.name = this.podName    //  just use the podName for simplicity, it may be renamed to just `name` or `resourceName` in the future
+        metadata.namespace = this.namespace ?: 'default'
+
+        // job spec
+        final spec = new LinkedHashMap<String,Object>()
+        spec.backoffLimit = 0
+        spec.template = [spec: pod.spec]
+
+        // job spec
+        final result = [
+                apiVersion: 'batch/v1',
+                kind: 'Job',
+                metadata: metadata,
+                spec: spec ]
+
+        return result
+
+    }
 
     @PackageScope
     @CompileDynamic

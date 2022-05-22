@@ -36,7 +36,6 @@ import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodMountConfig
 import nextflow.k8s.model.PodSpecBuilder
-import nextflow.k8s.model.JobSpecBuilder
 import nextflow.scm.AssetManager
 import nextflow.scm.ProviderConfig
 import nextflow.util.ConfigHelper
@@ -526,30 +525,28 @@ class K8sDriverLauncher {
         // -- setup config file
         String cmd = "source /etc/nextflow/init.sh; ${getLaunchCli()}"
 
-        PodSpecBuilder podSpec = new PodSpecBuilder()
-                    .withImageName(podImage ?: k8sConfig.getNextflowImageName())
-                    .withCommand(['/bin/bash', '-c', cmd])
-                    .withLabels([ app: 'nextflow', runName: runName ])
-                    .withServiceAccount(k8sClient.config.serviceAccount)
-                    .withPodOptions(k8sConfig.getPodOptions())
-                    .withEnv( PodEnv.value('NXF_WORK', k8sConfig.getWorkDir()) )
-                    .withEnv( PodEnv.value('NXF_ASSETS', k8sConfig.getProjectDir()) )
-                    .withEnv( PodEnv.value('NXF_EXECUTOR', 'k8s'))
-                    .withEnv( PodEnv.value('NXF_ANSI_LOG', 'false'))
-                    .withMemory(headMemory?:"")
-                    .withCpus(headCpus)
+        // create the launcher pod
+        PodSpecBuilder builder = new PodSpecBuilder()
+            .withPodName(runName)
+            .withImageName(podImage ?: k8sConfig.getNextflowImageName())
+            .withCommand(['/bin/bash', '-c', cmd])
+            .withLabels([ app: 'nextflow', runName: runName ])
+            .withNamespace(k8sClient.config.namespace)
+            .withServiceAccount(k8sClient.config.serviceAccount)
+            .withPodOptions(k8sConfig.getPodOptions())
+            .withEnv( PodEnv.value('NXF_WORK', k8sConfig.getWorkDir()) )
+            .withEnv( PodEnv.value('NXF_ASSETS', k8sConfig.getProjectDir()) )
+            .withEnv( PodEnv.value('NXF_EXECUTOR', 'k8s'))
+            .withEnv( PodEnv.value('NXF_ANSI_LOG', 'false'))
+            .withMemory(headMemory?:"")
+            .withCpus(headCpus)
 
         if ( k8sConfig.getJob()) {
             this.resourceType = "Job"
-            new JobSpecBuilder()
-                .withJobName(runName)
-                .withNamespace(k8sClient.config.namespace)
-                .withPodSpec(podSpec.withContainerName(runName).build())
-                .build()
-        } else {
-            podSpec.withPodName(runName)
-                   .withNamespace(k8sClient.config.namespace)
-                   .build()
+            return builder.buildAsJob()
+        }
+        else {
+            return builder.build()
         }
 
         // note: do *not* set the work directory because it may need to be created  by the init script

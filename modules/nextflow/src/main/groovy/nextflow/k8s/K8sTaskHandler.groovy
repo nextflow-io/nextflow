@@ -26,15 +26,14 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.container.DockerBuilder
+import nextflow.exception.NodeTerminationException
 import nextflow.exception.ProcessSubmitException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
-import nextflow.exception.NodeTerminationException
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodOptions
 import nextflow.k8s.model.PodSpecBuilder
-import nextflow.k8s.model.JobSpecBuilder
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -92,6 +91,7 @@ class K8sTaskHandler extends TaskHandler {
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
+        this.resourceType = executor.k8sConfig.getJob() ? 'job' : 'pod'
     }
 
     /** only for testing -- do not use */
@@ -111,6 +111,8 @@ class K8sTaskHandler extends TaskHandler {
     }
 
     protected K8sConfig getK8sConfig() { executor.getK8sConfig() }
+
+    protected boolean useJobResource() { resourceType=='job' }
 
     protected List<String> getContainerMounts() {
 
@@ -137,10 +139,6 @@ class K8sTaskHandler extends TaskHandler {
         new K8sWrapperBuilder(task)
     }
 
-    protected String getSyntheticJobName(TaskRun task) {
-        "nf-${task.hash}"
-    }
-
     protected String getSyntheticPodName(TaskRun task) {
         "nf-${task.hash}"
     }
@@ -149,8 +147,6 @@ class K8sTaskHandler extends TaskHandler {
 
     /**
      * Creates a Pod specification that executed that specified task
-     *
-     * TBD: Creates Job specification if requested with use of PodSpecBuilder implementation
      *
      * @param task A {@link TaskRun} instance representing the task to execute
      * @return A {@link Map} object modeling a Pod specification
@@ -180,68 +176,48 @@ class K8sTaskHandler extends TaskHandler {
         final taskCfg = task.getConfig()
 
         final clientConfig = client.config
-
-        PodSpecBuilder podBuilder
-        JobSpecBuilder jobBuilder
-
-        podBuilder = new PodSpecBuilder()
-                    .withImageName(imageName)
-                    .withServiceAccount(clientConfig.serviceAccount)
-                    .withLabels(getLabels(task))
-                    .withAnnotations(getAnnotations())
-                    .withPodOptions(getPodOptions())
-
-        if ( k8sConfig.getJob() ) {
-            this.resourceType = "job"
-
-            podBuilder = podBuilder.withContainerName(getSyntheticPodName(task))
-
-            jobBuilder = new JobSpecBuilder()
-                .withJobName(getSyntheticJobName(task))
-                .withNamespace(clientConfig.namespace)
-
-
-        } else {
-            podBuilder = podBuilder
-                    .withPodName(getSyntheticPodName(task))
-                    .withNamespace(clientConfig.namespace)
-        }
+        final builder = new PodSpecBuilder()
+            .withImageName(imageName)
+            .withPodName(getSyntheticPodName(task))
+            .withNamespace(clientConfig.namespace)
+            .withServiceAccount(clientConfig.serviceAccount)
+            .withLabels(getLabels(task))
+            .withAnnotations(getAnnotations())
+            .withPodOptions(getPodOptions())
 
         // when `preserveEntrypoint` is true the launcher is run via `args` instead of `command`
         // to not override the container entrypoint
         if( preserveContainerEntrypoint() ) {
-            podBuilder.withArgs(launcher)
+            builder.withArgs(launcher)
         }
         else {
-            podBuilder.withCommand(launcher)
+            builder.withCommand(launcher)
         }
 
         // note: task environment is managed by the task bash wrapper
         // do not add here -- see also #680
         if( fixOwnership )
-            podBuilder.withEnv(PodEnv.value('NXF_OWNER', getOwner()))
+            builder.withEnv(PodEnv.value('NXF_OWNER', getOwner()))
 
         // add computing resources
         final cpus = taskCfg.getCpus()
         final mem = taskCfg.getMemory()
         final acc = taskCfg.getAccelerator()
         if( cpus )
-            podBuilder.withCpus(cpus)
+            builder.withCpus(cpus)
         if( mem )
-            podBuilder.withMemory(mem)
+            builder.withMemory(mem)
         if( acc )
-            podBuilder.withAccelerator(acc)
+            builder.withAccelerator(acc)
 
         final List<String> hostMounts = getContainerMounts()
         for( String mount : hostMounts ) {
-            podBuilder.withHostMount(mount,mount)
+            builder.withHostMount(mount,mount)
         }
 
-        if ( k8sConfig.getJob() ) {
-            return jobBuilder.withPodSpec(podBuilder.build()).build()
-        } else {
-            return podBuilder.build()
-        }
+        return useJobResource()
+                ? builder.buildAsJob()
+                : builder.build()
     }
 
     protected PodOptions getPodOptions() {
@@ -283,7 +259,7 @@ class K8sTaskHandler extends TaskHandler {
 
         final req = newSubmitRequest(task)
         def resp
-        if ( k8sConfig.getJob() )
+        if ( useJobResource() )
             resp = client.jobCreate(req, yamlDebugPath())
         else
             resp = client.podCreate(req, yamlDebugPath())
@@ -309,7 +285,7 @@ class K8sTaskHandler extends TaskHandler {
             final delta =  now - timestamp;
             if( !state || delta >= 1_000) {
                 def newState
-                if ( k8sConfig.getJob() )
+                if ( useJobResource() )
                     newState = client.jobState(podName)
                 else
                     newState = client.podState(podName)
@@ -412,7 +388,7 @@ class K8sTaskHandler extends TaskHandler {
 
         try {
             def stream
-            if ( k8sConfig.getJob() )        
+            if ( useJobResource() )
                 stream = client.jobLog(podName)
             else
                 stream = client.podLog(podName)
@@ -443,7 +419,7 @@ class K8sTaskHandler extends TaskHandler {
         
         if( podName ) {
             log.trace "[K8s] deleting $this.resourceType name=$podName"
-            if ( k8sConfig.getJob() )
+            if ( useJobResource() )
                 client.jobDelete(podName)
             else
                 client.podDelete(podName)
@@ -470,7 +446,7 @@ class K8sTaskHandler extends TaskHandler {
         }
 
         try {
-            if ( k8sConfig.getJob() )
+            if ( useJobResource() )
                 client.jobDelete(podName)
             else
                 client.podDelete(podName)

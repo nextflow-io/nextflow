@@ -221,6 +221,7 @@ class K8sClient {
      */
 
     K8sResponseJson jobDelete(String name) {
+        assert name
 
         // get podList of a job
         final action = "/api/v1/namespaces/$config.namespace/pods?labelSelector=job-name=$name"
@@ -228,20 +229,14 @@ class K8sClient {
         trace('GET', action, resp.text)
         final podList = new K8sResponseJson(resp.text)
 
-        String podName
-
         // delete all pods in a job
-        if (podList.kind == "PodList") { //PodList - podList ??
-            final pods = podList.items
-
-            for (item in pods) {
-                podName = jobToPodName(name)
-                podDelete(podName)
+        if (podList.kind == "PodList") { 
+            for (item in podList.items) {
+                podDelete(((item as Map).metadata as Map).name as String)
             }
         }
 
         // delete job
-        assert name
         final action1 = "/apis/batch/v1/namespaces/$config.namespace/jobs/$name"
         final resp1 = delete(action1)
         trace('DELETE', action1, resp1.text)
@@ -290,8 +285,7 @@ class K8sClient {
             String latestPod = "0000-00-00T00:00:00Z"
 
             for (item in pods) {
-                final items = (Map) item
-                final podMetadata = (Map) items.metadata
+                final podMetadata = (Map) (item as Map).metadata
                 final podTimestamp = podMetadata.creationTimestamp
 
                 if (podTimestamp.toString() > latestPod) {

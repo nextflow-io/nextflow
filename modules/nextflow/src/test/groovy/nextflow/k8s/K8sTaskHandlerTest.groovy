@@ -50,16 +50,12 @@ class K8sTaskHandlerTest extends Specification {
 
     def 'should return a new pod with args' () {
         given:
-        def executor = Mock(K8sExecutor)
         def WORK_DIR = Paths.get('/some/work/dir')
         def config = Mock(TaskConfig)
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(K8sTaskHandler)
-        handler.@builder = builder
-        handler.@client = client
-        handler.@executor = executor
+        def handler = Spy(new K8sTaskHandler(builder:builder, client: client))
         Map result
 
         when:
@@ -77,7 +73,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
-        2 * executor.getK8sConfig() >> [:]
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
                     metadata: [
@@ -111,7 +106,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getCpus() >> 1
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
-        2 * executor.getK8sConfig() >> [:]
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
                     metadata: [name:'nf-foo', namespace:'default', labels: [sessionId: 'xxx'], annotations: [evict: 'false']],
@@ -144,7 +138,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getCpus() >> 4
         1 * config.getMemory() >> MemoryUnit.of('16GB')
         1 * client.getConfig() >> new ClientConfig(namespace: 'namespace-x')
-        2 * executor.getK8sConfig() >> [:]
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
                     metadata: [name:'nf-abc', namespace:'namespace-x' ],
@@ -164,13 +157,12 @@ class K8sTaskHandlerTest extends Specification {
 
     def 'should return a new pod request with no storage' () {
         given:
-        def executor = Mock(K8sExecutor)
         def WORK_DIR = Paths.get('/some/work/dir')
         def config = Mock(TaskConfig)
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(new K8sTaskHandler(builder: builder, client: client, executor: executor))
+        def handler = Spy(new K8sTaskHandler(builder: builder, client:client))
         Map result
 
         when:
@@ -188,7 +180,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
-        2 * executor.getK8sConfig() >> [:]
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
                     metadata: [
@@ -224,7 +215,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getCpus() >> 1
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
-        2 * executor.getK8sConfig() >> [:]
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
                     metadata: [name:'nf-foo', namespace:'default', labels: [sessionId: 'xxx'], annotations: [evict: 'false']],
@@ -257,7 +247,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getCpus() >> 4
         1 * config.getMemory() >> MemoryUnit.of('16GB')
         1 * client.getConfig() >> new ClientConfig(namespace: 'namespace-x')
-        2 * executor.getK8sConfig() >> [:]
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
                     metadata: [name:'nf-abc', namespace:'namespace-x' ],
@@ -283,8 +272,7 @@ class K8sTaskHandlerTest extends Specification {
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
         def config = Mock(ClientConfig)
-        def executor = Mock(K8sExecutor)
-        def handler = Spy(new K8sTaskHandler(builder: builder, client: client, executor: executor))
+        def handler = Spy(new K8sTaskHandler(builder: builder, client: client))
         Map result
 
         when:
@@ -295,14 +283,13 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
-        1 * handler.getContainerMounts() >> []        
+        1 * handler.getContainerMounts() >> []
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> new TaskConfig()
         1 * client.getConfig() >> config
         1 * config.getNamespace() >> 'just-a-namespace'
         1 * config.getServiceAccount() >> 'pedantic-kallisto'
-        2 * executor.getK8sConfig() >> [:]
 
         result == [ apiVersion: 'v1',
                     kind: 'Pod',
@@ -330,8 +317,7 @@ class K8sTaskHandlerTest extends Specification {
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
         def config = Mock(TaskConfig)
-        def executor = Mock(K8sExecutor)
-        def handler = Spy(new K8sTaskHandler(builder: builder, client: client, executor: executor))
+        def handler = Spy(new K8sTaskHandler(builder:builder, client:client))
         def podOptions = Mock(PodOptions)
         and:
         podOptions.automountServiceAccountToken >> true
@@ -353,7 +339,6 @@ class K8sTaskHandlerTest extends Specification {
         2 * podOptions.getEnvVars() >> [ PodEnv.value('FOO','bar') ]
         2 * podOptions.getMountSecrets() >> [ new PodMountSecret('my-secret/key-z', '/data/secret.txt') ]
         2 * podOptions.getMountConfigMaps() >> [ new PodMountConfig('my-data/key-x', '/etc/file.txt') ]
-        2 * executor.getK8sConfig() >> [:]
 
         result == [
             apiVersion: 'v1',
@@ -390,8 +375,7 @@ class K8sTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def executor = Mock(K8sExecutor)
-        def handler = Spy(new K8sTaskHandler(builder:builder, client:client, executor: executor))
+        def handler = Spy(new K8sTaskHandler(builder:builder, client:client))
         and:
         Map result
 
@@ -415,7 +399,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
         2 * podOptions.getVolumeClaims() >> CLAIMS
-        2 * executor.getK8sConfig() >> [:]
 
         result == [
             apiVersion: 'v1',
@@ -457,7 +440,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
-        2 * executor.getK8sConfig() >> [:]
 
         result == [
             apiVersion: 'v1',
@@ -491,8 +473,7 @@ class K8sTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def executor = Mock(K8sExecutor)
-        def handler = Spy(new K8sTaskHandler(client: client, task: task, executor: executor))
+        def handler = Spy(new K8sTaskHandler(client: client, task:task))
 
         def POD_NAME = 'new-pod-id'
         def REQUEST =  [foo: 'bar']
@@ -506,7 +487,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.yamlDebugPath() >> YAML
         1 * handler.newSubmitRequest(task) >> REQUEST
         1 * client.podCreate(REQUEST,YAML) >> RESPONSE
-        1 * executor.getK8sConfig() >> [:]
         handler.podName == POD_NAME
         handler.status == TaskStatus.SUBMITTED
 
@@ -518,7 +498,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.yamlDebugPath() >> YAML
         1 * handler.newSubmitRequest(task) >> REQUEST
         1 * client.podCreate(REQUEST,YAML) >> new K8sResponseJson([missing: 'meta'])
-        1 * executor.getK8sConfig() >> [:]
         then:
         thrown(K8sResponseException)
     }
@@ -542,8 +521,8 @@ class K8sTaskHandlerTest extends Specification {
         result = handler.newSubmitRequest(task)
         then:
         1 * client.getConfig() >> new ClientConfig()
+        1 * handler.useJobResource() >> true
         1 * handler.preserveContainerEntrypoint() >> false
-        1 * handler.getSyntheticJobName(task) >> 'nf-123'
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
@@ -552,8 +531,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
         1 * task.getConfig() >> config
-        2 * executor.getK8sConfig() >> k8sConfig
-        2 * k8sConfig.getJob() >> true
 
         result == [
             apiVersion: 'batch/v1', 
@@ -562,9 +539,6 @@ class K8sTaskHandlerTest extends Specification {
             spec:[
               backoffLimit: 0,
               template: [
-                  apiVersion: 'v1',
-                  kind: 'Pod',
-                  metadata: [:],
                   spec: [
                      restartPolicy: 'Never',
                      containers: [
@@ -618,9 +592,8 @@ class K8sTaskHandlerTest extends Specification {
                           finishedAt: "2018-01-13T10:19:36Z",
                           exitCode: 0 ]
         def fullState = [terminated: termState]
-        def executor = Mock(K8sExecutor)
         and:
-        def handler = Spy(new K8sTaskHandler(task: task, client:client, podName: POD_NAME, outputFile: OUT_FILE, errorFile: ERR_FILE, executor: executor))
+        def handler = Spy(new K8sTaskHandler(task: task, client:client, podName: POD_NAME, outputFile: OUT_FILE, errorFile: ERR_FILE))
 
         when:
         def result = handler.checkIfCompleted()
@@ -658,14 +631,12 @@ class K8sTaskHandlerTest extends Specification {
         given:
         def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
-        def executor = Mock(K8sExecutor)
-        def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME, executor: executor))
+        def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
 
         when:
         handler.kill()
         then:
         1 * handler.cleanupDisabled() >> false
-        1 * executor.getK8sConfig() >> [:]
         1 * client.podDelete(POD_NAME) >> null
 
         when:
@@ -679,8 +650,7 @@ class K8sTaskHandlerTest extends Specification {
         given:
         def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
-        def executor = Mock(K8sExecutor)
-        def handler = Spy(new K8sTaskHandler(client: client, podName: POD_NAME, executor: executor))
+        def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
         and:
         Map STATE1 = [status:'pending']
         Map STATE2 = [status:'running']
@@ -692,7 +662,6 @@ class K8sTaskHandlerTest extends Specification {
         state = handler.getState()
         then:
         1 * client.podState(POD_NAME) >> STATE1
-        1 * executor.getK8sConfig() >> [:]
         state == STATE1
 
         // second time `client.podState` NOT invoked
@@ -710,7 +679,6 @@ class K8sTaskHandlerTest extends Specification {
         state = handler.getState()
         then:
         1 * client.podState(POD_NAME) >> [:]
-        1 * executor.getK8sConfig() >> [:]
         state == STATE1
 
         // still an empty status
@@ -719,7 +687,6 @@ class K8sTaskHandlerTest extends Specification {
         state = handler.getState()
         then:
         1 * client.podState(POD_NAME) >> [:]
-        1 * executor.getK8sConfig() >> [:]
         state == STATE1
 
         // now, the a valid status is returned
@@ -728,7 +695,6 @@ class K8sTaskHandlerTest extends Specification {
         state = handler.getState()
         then:
         1 * client.podState(POD_NAME) >> STATE2
-        1 * executor.getK8sConfig() >> [:]
         state == STATE2
 
         // following invocation is cached
@@ -746,7 +712,6 @@ class K8sTaskHandlerTest extends Specification {
         state = handler.getState()
         then:
         1 * client.podState(POD_NAME) >> STATE3
-        1 * executor.getK8sConfig() >> [:]
         state == STATE3
     }
 
@@ -754,14 +719,12 @@ class K8sTaskHandlerTest extends Specification {
         given:
         def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
-        def executor = Mock(K8sExecutor)
-        def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME, executor: executor))
+        def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
         
         when:
         def state = handler.getState()
         then:
         1 * client.podState(POD_NAME) >> { throw new NodeTerminationException("Node shutdown happened") }
-        1 * executor.getK8sConfig() >> [:]
         then:
         state.terminated.startedAt
         state.terminated.finishedAt
@@ -843,13 +806,13 @@ class K8sTaskHandlerTest extends Specification {
         when:
         handler.deletePodIfSuccessful(TASK_OK)
         then:
-        2 * executor.getK8sConfig() >> new K8sConfig()
+        1 * executor.getK8sConfig() >> new K8sConfig()
         1 * client.podDelete(POD_NAME) >> null
 
         when:
         handler.deletePodIfSuccessful(TASK_OK)
         then:
-        2 * executor.getK8sConfig() >> new K8sConfig(cleanup: true)
+        1 * executor.getK8sConfig() >> new K8sConfig(cleanup: true)
         1 * client.podDelete(POD_NAME) >> null
 
         when:
@@ -890,7 +853,6 @@ class K8sTaskHandlerTest extends Specification {
         session.isCancelled() >> false
         session.isAborted() >> false
         1 * client.podLog(POD_NAME) >> POD_LOG
-        1 * executor.getK8sConfig() >> [:]
 
         folder.resolve( TaskRun.CMD_LOG ).text == POD_MESSAGE
         cleanup:
