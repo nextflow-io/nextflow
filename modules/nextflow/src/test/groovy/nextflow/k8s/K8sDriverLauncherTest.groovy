@@ -226,9 +226,6 @@ class K8sDriverLauncherTest extends Specification {
             spec: [
                backoffLimit: 0,
                template: [
-                  apiVersion: 'v1',
-                  kind: 'Pod',
-                  metadata: [labels:[app:'nextflow', runName:'foo-boo']],
                   spec: [
                         restartPolicy: 'Never',
                         containers: [
