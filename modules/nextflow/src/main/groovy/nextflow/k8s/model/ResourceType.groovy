@@ -25,7 +25,7 @@ package nextflow.k8s.model
 enum ResourceType {
     Pod, Job;
 
-    String lwr() {
+    String lower() {
         return this.name().toLowerCase()
     }
 }

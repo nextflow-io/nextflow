@@ -162,7 +162,7 @@ class K8sTaskHandler extends TaskHandler {
             newSubmitRequest0(task, imageName)
         }
         catch( Throwable e ) {
-            throw  new ProcessSubmitException("Failed to submit K8s ${resourceType.lwr()} -- Cause: ${e.message ?: e}", e)
+            throw  new ProcessSubmitException("Failed to submit K8s ${resourceType.lower()} -- Cause: ${e.message ?: e}", e)
         }
     }
 
@@ -263,7 +263,7 @@ class K8sTaskHandler extends TaskHandler {
                 : client.podCreate(req, yamlDebugPath())
 
         if( !resp.metadata?.name )
-            throw new K8sResponseException("Missing created ${resourceType.lwr()} name", resp)
+            throw new K8sResponseException("Missing created ${resourceType.lower()} name", resp)
         this.podName = resp.metadata.name
         this.status = TaskStatus.SUBMITTED
     }
@@ -286,7 +286,7 @@ class K8sTaskHandler extends TaskHandler {
                         ? client.jobState(podName)
                         : client.podState(podName)
                 if( newState ) {
-                   log.trace "[K8s] Get ${resourceType.lwr()}=$podName state=$newState"
+                   log.trace "[K8s] Get ${resourceType.lower()}=$podName state=$newState"
                    state = newState
                    timestamp = now
                 }
@@ -308,7 +308,7 @@ class K8sTaskHandler extends TaskHandler {
 
     @Override
     boolean checkIfRunning() {
-        if( !podName ) throw new IllegalStateException("Missing K8s ${resourceType.lwr()} name -- cannot check if running")
+        if( !podName ) throw new IllegalStateException("Missing K8s ${resourceType.lower()} name -- cannot check if running")
         if(isSubmitted()) {
             def state = getState()
             // include `terminated` state to allow the handler status to progress
@@ -353,7 +353,7 @@ class K8sTaskHandler extends TaskHandler {
 
     @Override
     boolean checkIfCompleted() {
-        if( !podName ) throw new IllegalStateException("Missing K8s ${resourceType.lwr()} name - cannot check if complete")
+        if( !podName ) throw new IllegalStateException("Missing K8s ${resourceType.lower()} name - cannot check if complete")
         def state = getState()
         if( state && state.terminated ) {
             if( state.nodeTermination instanceof NodeTerminationException ) {
@@ -397,7 +397,7 @@ class K8sTaskHandler extends TaskHandler {
             Files.copy(stream, task.workDir.resolve(TaskRun.CMD_LOG))
         }
         catch( Exception e ) {
-            log.warn "Failed to copy log for ${resourceType.lwr()} $podName", e
+            log.warn "Failed to copy log for ${resourceType.lower()} $podName", e
         }
     }
 
@@ -420,7 +420,7 @@ class K8sTaskHandler extends TaskHandler {
             return
         
         if( podName ) {
-            log.trace "[K8s] deleting ${resourceType.lwr()} name=$podName"
+            log.trace "[K8s] deleting ${resourceType.lower()} name=$podName"
             if ( useJobResource() )
                 client.jobDelete(podName)
             else
@@ -454,7 +454,7 @@ class K8sTaskHandler extends TaskHandler {
                 client.podDelete(podName)
         }
         catch( Exception e ) {
-            log.warn "Unable to cleanup ${resourceType.lwr()}: $podName -- see the log file for details", e
+            log.warn "Unable to cleanup ${resourceType.lower()}: $podName -- see the log file for details", e
         }
     }
 

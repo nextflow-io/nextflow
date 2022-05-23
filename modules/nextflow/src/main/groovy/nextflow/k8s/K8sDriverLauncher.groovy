@@ -175,7 +175,7 @@ class K8sDriverLauncher {
         final currentState = k8sConfig.useJobResource() ? k8sClient.jobState(runName) : k8sClient.podState(runName)
         if (currentState && currentState?.running instanceof Map) {
             final name = runName
-            println "${resourceType} running: $name ... waiting for ${resourceType.lwr()} to stop running"
+            println "${resourceType} running: $name ... waiting for ${resourceType.lower()} to stop running"
             try {
                 while( true ) {
                     sleep 10000
@@ -187,7 +187,7 @@ class K8sDriverLauncher {
                 }
             }
             catch( Exception e ) {
-                log.warn "Caught exception waiting for ${resourceType.lwr()} to stop running"
+                log.warn "Caught exception waiting for ${resourceType.lower()} to stop running"
             }
         }
     }
@@ -197,7 +197,7 @@ class K8sDriverLauncher {
     }
 
     protected int waitPodTermination() {
-        log.debug "Wait for ${resourceType.lwr()} termination name=$runName"
+        log.debug "Wait for ${resourceType.lower()} termination name=$runName"
         final rnd = new Random()
         final time = System.currentTimeMillis()
         Map state = null
@@ -209,11 +209,11 @@ class K8sDriverLauncher {
                     return state.terminated.exitCode as int
 
                 else if( isWaitTimedOut(time) )
-                    throw new IllegalStateException("Timeout waiting for ${resourceType.lwr()} terminated state=$state")
+                    throw new IllegalStateException("Timeout waiting for ${resourceType.lower()} terminated state=$state")
             }
         }
         catch( Exception e ) {
-            log.warn "Unable to fetch ${resourceType.lwr()} exit status -- ${resourceType.lwr()}=$runName state=$state"
+            log.warn "Unable to fetch ${resourceType.lower()} exit status -- ${resourceType.lower()}=$runName state=$state"
             return 127
         }
     }
@@ -557,9 +557,9 @@ class K8sDriverLauncher {
 
     protected Path yamlDebugPath() {
         boolean debug = config.k8s.debug?.yaml?.toString() == 'true'
-        final result = debug ? Paths.get(".nextflow.${resourceType.lwr()}.yaml") : null
+        final result = debug ? Paths.get(".nextflow.${resourceType.lower()}.yaml") : null
         if( result )
-            log.info "Launcher ${resourceType.lwr()} spec file: $result"
+            log.info "Launcher ${resourceType.lower()} spec file: $result"
         return result
     }
 
