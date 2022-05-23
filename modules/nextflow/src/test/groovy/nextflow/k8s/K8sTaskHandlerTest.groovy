@@ -502,7 +502,57 @@ class K8sTaskHandlerTest extends Specification {
         thrown(K8sResponseException)
     }
 
+    def 'should submit a job' () {
+        given:
+        def WORK_DIR = Paths.get('/some/work/dir')
+        def task = Mock(TaskRun)
+        def client = Mock(K8sClient)
+        def builder = Mock(K8sWrapperBuilder)
+        def config = Mock(TaskConfig)
+        def executor = Mock(K8sExecutor)
+        def k8sConfig = Mock(K8sConfig)
+        def handler = Spy(new K8sTaskHandler(builder: builder, client: client, executor: executor))
+        def podOptions = Mock(PodOptions)
+        and:
+        podOptions.automountServiceAccountToken >> true
+        Map result
 
+        when:
+        result = handler.newSubmitRequest(task)
+        then:
+        1 * client.getConfig() >> new ClientConfig()
+        1 * handler.useJobResource() >> true
+        1 * handler.preserveContainerEntrypoint() >> false
+        1 * handler.getSyntheticPodName(task) >> 'nf-123'
+        1 * handler.getLabels(task) >> [:]
+        1 * handler.getAnnotations() >> [:]
+        1 * handler.getContainerMounts() >> []
+        1 * handler.getPodOptions() >> podOptions
+        1 * task.getContainer() >> 'debian:latest'
+        1 * task.getWorkDir() >> WORK_DIR
+        1 * task.getConfig() >> config
+
+        result == [
+            apiVersion: 'batch/v1', 
+            kind: 'Job', 
+            metadata:[name: 'nf-123', namespace: 'default'], 
+            spec:[
+              backoffLimit: 0,
+              template: [
+                  spec: [
+                     restartPolicy: 'Never',
+                     containers: [
+                       [
+                           name: 'nf-123',
+                           image: 'debian:latest',
+                           command: ['/bin/bash', '-ue','/some/work/dir/.command.run']
+                       ]
+                     ]
+                  ]
+              ]
+            ]
+        ]
+    }
 
     def 'should check if running'  () {
         given:
@@ -742,7 +792,6 @@ class K8sTaskHandlerTest extends Specification {
         labels.sessionId == "uuid-${uuid.toString()}".toString()
     }
 
-
     def 'should delete pod if complete' () {
 
         given:
@@ -773,7 +822,6 @@ class K8sTaskHandlerTest extends Specification {
         0 * client.podDelete(POD_NAME) >> null
 
     }
-
 
     def 'should save pod log' () {
 
