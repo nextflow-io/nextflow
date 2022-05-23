@@ -1,0 +1,146 @@
+/*
+ * Copyright 2022, Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package nextflow.cloud.google.batch
+
+import java.nio.file.Path
+import java.nio.file.Paths
+
+import com.google.cloud.storage.contrib.nio.CloudStoragePath
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.cloud.google.batch.model.TaskVolume
+import nextflow.executor.BashWrapperBuilder
+import nextflow.extension.FilesEx
+import nextflow.processor.TaskBean
+import nextflow.processor.TaskRun
+import nextflow.util.Escape
+import nextflow.util.PathTrie
+
+/**
+ * Implement Nextflow task launcher script
+ * 
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@Slf4j
+@CompileStatic
+class GoogleBatchScriptLauncher extends BashWrapperBuilder {
+
+    private static final String MOUNT_ROOT = '/mnt'
+
+    private CloudStoragePath remoteWorkDir
+    private Path remoteBinDir
+    private Set<String> buckets = new HashSet<>()
+    private PathTrie pathTrie = new PathTrie()
+
+    /* ONLY FOR TESTING - DO NOT USE */
+    protected GoogleBatchScriptLauncher() {}
+
+    GoogleBatchScriptLauncher(TaskBean bean, Path remoteBinDir) {
+        super(bean)
+        // keep track the google storage work dir
+        this.remoteWorkDir = (CloudStoragePath) bean.workDir
+        this.remoteBinDir = toContainerMount(remoteBinDir)
+
+        // map bean work and target dirs to container mount
+        // this needed to create the command launcher using container local file paths
+        bean.workDir = toContainerMount(bean.workDir)
+        bean.targetDir = toContainerMount(bean.targetDir)
+
+        // remap input files to container mounted paths
+        for( Map.Entry<String,Path> entry : new HashMap<>(bean.inputFiles).entrySet() ) {
+            bean.inputFiles.put( entry.key, toContainerMount(entry.value, true) )
+        }
+
+        // include task script as an input to force its staging in the container work directory
+        bean.inputFiles[TaskRun.CMD_SCRIPT] = bean.workDir.resolve(TaskRun.CMD_SCRIPT)
+        // add the wrapper file when stats are enabled
+        // NOTE: this must match the logic that uses the run script in BashWrapperBuilder
+        if( isTraceRequired() ) {
+            bean.inputFiles[TaskRun.CMD_RUN] = bean.workDir.resolve(TaskRun.CMD_RUN)
+        }
+        // include task stdin file
+        if( bean.input != null ) {
+            bean.inputFiles[TaskRun.CMD_INFILE] = bean.workDir.resolve(TaskRun.CMD_INFILE)
+        }
+
+        // make it change to the task work dir
+        bean.headerScript = headerScript(bean)
+        // enable use of local scratch dir
+        if( !scratch )
+            scratch = true
+    }
+
+    protected String headerScript(TaskBean bean) {
+        def result = "NXF_CHDIR=${Escape.path(bean.workDir)}\n"
+        if( remoteBinDir ) {
+            result += "cp -r $remoteBinDir \$HOME/.nextflow-bin\n"
+            result += 'chmod +x $HOME/.nextflow-bin/*\n'
+            result += 'export PATH=$HOME/.nextflow-bin:$PATH\n'
+        }
+        return result
+    }
+
+    protected Path toContainerMount(Path path, boolean parent=false) {
+        if( path instanceof CloudStoragePath ) {
+            buckets.add(path.bucket())
+            pathTrie.add( (parent ? "/${path.bucket()}${path.parent}" : "/${path.bucket()}${path}").toString() )
+            final containerMount = "$MOUNT_ROOT/${path.bucket()}${path}"
+            log.trace "Path ${FilesEx.toUriString(path)} to container mount: $containerMount"
+            return Paths.get(containerMount)
+        }
+        else if( path==null )
+            return null
+        throw new IllegalArgumentException("Unexpected path for Google Batch task handler: ${path.toUriString()}")
+    }
+
+    List<String> getContainerMounts() {
+        final result = new ArrayList(10)
+        for( String it : pathTrie.longest() ) {
+            result.add("$MOUNT_ROOT$it:$MOUNT_ROOT$it:rw".toString() )
+        }
+        return result
+    }
+
+    String getWorkDirMount() {
+        return workDir.toString()
+    }
+
+    List<TaskVolume> getTaskVolumes() {
+        final result = new ArrayList(10)
+        final opts = ["-o rw,allow_other", "-implicit-dirs"]
+        for( String it : buckets ) {
+            result << new TaskVolume(gcs:[remotePath: it], mountPath: "${MOUNT_ROOT}/$it".toString(), mountOptions: opts)
+        }
+        return result
+    }
+
+    @Override
+    protected Path targetWrapperFile() {
+        return remoteWorkDir.resolve(TaskRun.CMD_RUN)
+    }
+
+    @Override
+    protected Path targetScriptFile() {
+        return remoteWorkDir.resolve(TaskRun.CMD_SCRIPT)
+    }
+
+    @Override
+    protected Path targetInputFile() {
+        return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
+    }
+
+}

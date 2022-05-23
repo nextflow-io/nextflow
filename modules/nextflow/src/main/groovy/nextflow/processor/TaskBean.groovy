@@ -125,9 +125,9 @@ class TaskBean implements Serializable, Cloneable {
         this.moduleNames = task.config.getModule()
         this.shell = task.config.getShell() ?: BashWrapperBuilder.BASH
         this.script = task.getScript()
-        this.beforeScript = task.config.beforeScript
-        this.afterScript = task.config.afterScript
-        this.cleanup = task.config.cleanup
+        this.beforeScript = task.config.getBeforeScript()
+        this.afterScript = task.config.getAfterScript()
+        this.cleanup = task.config.getCleanup()
 
         // container config
         this.containerImage = task.getContainer()
@@ -148,8 +148,8 @@ class TaskBean implements Serializable, Cloneable {
         this.inputFiles = task.getInputFilesMap()
         this.outputFiles = task.getOutputFilesNames()
         this.binDir = task.getProcessor().getExecutor().getBinDir()
-        this.stageInMode = task.config.stageInMode
-        this.stageOutMode = task.config.stageOutMode
+        this.stageInMode = task.config.getStageInMode()
+        this.stageOutMode = task.config.getStageOutMode()
 
     }
 

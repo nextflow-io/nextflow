@@ -1,0 +1,119 @@
+/*
+ * Copyright 2020-2022, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+package nextflow.cloud.google
+
+import groovy.json.JsonSlurper
+import groovy.transform.CompileStatic
+import groovy.transform.Memoized
+import groovy.transform.ToString
+import nextflow.Session
+import nextflow.exception.AbortOperationException
+/**
+ * Model Google config options
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@ToString(includeNames = true, includePackage = false)
+@CompileStatic
+class GoogleOpts {
+
+    static final String DEFAULT_LOCATION = 'us-central1'
+
+    static Map<String,String> env = System.getenv()
+
+    private String projectId
+    private String location
+    private File credsFile
+    private boolean enableRequesterPaysBuckets
+
+    String getProjectId() { projectId }
+    File getCredsFile() { credsFile }
+    String getLocation() { location ?: DEFAULT_LOCATION }
+    boolean getEnableRequesterPaysBuckets() { enableRequesterPaysBuckets }
+
+    @Memoized
+    static GoogleOpts fromSession(Session session) {
+        try {
+            return fromSession0(session.config)
+        }
+        catch (Exception e) {
+            if(session) session.abort()
+            throw e
+        }
+    }
+
+    protected static GoogleOpts fromSession0(Map config) {
+        final result = new GoogleOpts()
+        result.projectId = config.navigate("google.project") as String
+        result.location = config.navigate("google.location") as String
+        result.enableRequesterPaysBuckets = config.navigate('google.enableRequesterPaysBuckets') as boolean
+
+        if( result.enableRequesterPaysBuckets && !result.projectId )
+            throw new IllegalArgumentException("Config option 'google.enableRequesterPaysBuckets' cannot be honoured because the Google project Id has not been specified - Provide it by adding the option 'google.project' in the nextflow.config file")
+
+        return result
+    }
+
+    static protected String getProjectIdFromCreds(String credsFilePath) {
+        if( !credsFilePath )
+            throw new AbortOperationException('Missing Google credentials -- make sure your environment defines the GOOGLE_APPLICATION_CREDENTIALS environment variable')
+
+        final file = new File(credsFilePath)
+        try {
+            final creds = (Map)new JsonSlurper().parse(file)
+            if( creds.project_id )
+                return creds.project_id
+            else
+                throw new AbortOperationException("Missing `project_id` in Google credentials file: $credsFilePath")
+        }
+        catch(FileNotFoundException e) {
+            throw new AbortOperationException("Missing Google credentials file: $credsFilePath")
+        }
+    }
+
+    static GoogleOpts create(Session session) {
+        // Typically the credentials picked up are the "Application Default Credentials"
+        // as described at:
+        //   https://github.com/googleapis/google-auth-library-java
+        //
+        // In that case, the project ID needs to be set in the nextflow config file.
+
+        // If instead, the GOOGLE_APPLICATION_CREDENTIALS environment variable is set,
+        // then the project ID will be picked up (along with the credentials) from the
+        // JSON file that environment variable points to.
+
+        final config = fromSession(session)
+
+        def projectId
+        def credsPath = env.get('GOOGLE_APPLICATION_CREDENTIALS')
+        if( credsPath && (projectId = getProjectIdFromCreds(credsPath)) ) {
+            config.credsFile = new File(credsPath)
+            if( !config.projectId )
+                config.projectId = projectId
+            else if( config.projectId != projectId )
+                throw new AbortOperationException("Project Id `$config.projectId` declared in the nextflow config file does not match the one expected by credentials file: $credsPath")
+        }
+
+        if( !config.projectId ) {
+            throw new AbortOperationException("Missing Google project Id -- Specify it adding the setting `google.project='your-project-id'` in the nextflow.config file")
+        }
+
+        return config
+    }
+
+}
