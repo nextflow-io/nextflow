@@ -17,8 +17,6 @@
 
 package nextflow.k8s.client
 
-import groovy.transform.CompileDynamic
-
 import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLContext
@@ -37,6 +35,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.NodeTerminationException
 import nextflow.exception.ProcessFailedException
+import nextflow.k8s.model.ResourceType
 import org.yaml.snakeyaml.Yaml
 /**
  * Kubernetes API client
@@ -371,91 +370,50 @@ class K8sClient {
      */
     Map jobState( String jobName ) {
         assert jobName
-        String podName = jobToPodName(jobName)
+        final podName = jobToPodName(jobName)
+        if( podName ) {
+            return podState0(podName, ResourceType.Job)
+        }
+        else {
+            return jobStateFallback0(jobName)
+        }
+    }
 
-        if( !podName ) {
-            final K8sResponseJson jobResp = jobStatus(jobName)
-            final jobStatus = jobResp.status as Map
-            if( jobStatus?.succeeded == 1 && jobStatus.conditions instanceof List ) {
+    protected Map jobStateFallback0(String jobName) {
+        final K8sResponseJson jobResp = jobStatus(jobName)
+        final jobStatus = jobResp.status as Map
+        if( jobStatus?.succeeded == 1 && jobStatus.conditions instanceof List ) {
+            final allConditions = jobStatus.conditions as List<Map>
+            final cond = allConditions.find { cond -> cond.type == 'Complete' }
+
+            if( cond?.status == 'True' ) {
+                log.warn1("Job $jobName already completed and Pod is gone.")
+                final dummyPodStatus = [
+                        terminated: [
+                                exitcode: 0,
+                                reason: "Completed",
+                                startedAt: jobStatus.startTime,
+                                finishedAt: jobStatus.completionTime,
+                        ]
+                ]
+                return dummyPodStatus
+            } else {
+                throw new ProcessFailedException("K8s Job $jobName succeeded but does not have Complete status. $allConditions")
+            }
+        }
+
+        if( jobStatus?.failed && (int)(jobStatus.failed) > 0 ) {
+            String message = 'unknown'
+            if( jobStatus.conditions instanceof List ) {
                 final allConditions = jobStatus.conditions as List<Map>
-                final cond = allConditions.find { cond -> cond.type == 'Complete' }
-
-                if( cond?.status == 'True' ) {
-                    log.warn1("Job $jobName already completed and Pod is gone.")
-                    final dummyPodStatus = [
-                            terminated: [
-                               exitcode: 0,
-                               reason: "Completed",
-                               startedAt: jobStatus.startTime,
-                               finishedAt: jobStatus.completionTime,
-                            ]
-                         ]
-                    return dummyPodStatus
-                } else {
-                    throw new ProcessFailedException("Job $jobName succeeded but does not have Complete status. $allConditions")
-                }
+                final cond = allConditions.find { cond -> cond.type == 'Failed' }
+                message = cond?.message
             }
-
-            if( jobStatus?.failed && (int)(jobStatus.failed) > 0 ) {
-                String message = 'unknown'
-                if( jobStatus.conditions instanceof List ) {
-                    final allConditions = jobStatus.conditions as List<Map>
-                    final cond = allConditions.find { cond -> cond.type == 'Failed' }
-                    message = cond?.message
-                }
-                throw new ProcessFailedException("Job $jobName execution failed: $message")
-            }
-
-            log.warn1("Job $jobName does not have pod. Not yet scheduled?")
-            return Collections.emptyMap()
+            throw new ProcessFailedException("K8s Job $jobName execution failed: $message")
         }
 
-        final K8sResponseJson resp = podStatus0(podName)
-        final status = resp.status as Map
-        final containerStatuses = status?.containerStatuses as List<Map>
-
-        if( containerStatuses?.size()>0 ) {
-            final container = containerStatuses.get(0)
-            if( container.name != jobName )
-                throw new K8sResponseException("K8s invalid job status (name does not match)", resp)
-
-            if( !container.state )
-                throw new K8sResponseException("K8s invalid job status (missing state object)", resp)
-
-            final state = container.state as Map
-            if( state.waiting instanceof Map ) {
-                def waiting = state.waiting as Map
-                checkInvalidWaitingState(waiting, resp)
-            }
-            return state
-        }
-
-        if( status?.phase == 'Pending' ){
-            if( status.conditions instanceof List ) {
-                final allConditions = status.conditions as List<Map>
-                final cond = allConditions.find { cond -> cond.type == 'PodScheduled' }
-                if( cond.reason == 'Unschedulable' ) {
-                    def message = "K8s pod cannot be scheduled"
-                    if( cond.message ) message += " -- $cond.message"
-                    //def cause = new K8sResponseException(resp)
-                    log.warn1(message)
-                }
-            }
-            // undetermined status -- return an empty response
-            return Collections.emptyMap()
-        }
-
-        if( status?.phase == 'Failed' ) {
-            def msg = "K8s jod '$jobName' execution failed"
-            if( status.reason ) msg += " - reason: ${status.reason}"
-            if( status.message ) msg += " - message: ${status.message}"
-            final err = status.reason == 'Shutdown'
-                    ? new NodeTerminationException(msg)
-                    : new ProcessFailedException(msg)
-            throw err
-        }
-
-        throw new K8sResponseException("K8s undetermined status conditions for job $jobName", resp)
+        log.warn1("K8s Job $jobName does not have pod - Not yet scheduled?")
+        return Collections.emptyMap()
     }
 
     /**
@@ -482,6 +440,10 @@ class K8sClient {
      *
      */
     Map podState( String podName ) {
+        return podState0(podName, ResourceType.Pod)
+    }
+
+    Map podState0( String podName, ResourceType type ) {
         assert podName
 
         final K8sResponseJson resp = podStatus0(podName)
@@ -491,10 +453,10 @@ class K8sClient {
         if( containerStatuses?.size()>0 ) {
             final container = containerStatuses.get(0)
             if( container.name != podName )
-                throw new K8sResponseException("K8s invalid pod status (name does not match)", resp)
+                throw new K8sResponseException("K8s invalid ${type.lower()} status (name does not match)", resp)
 
             if( !container.state )
-                throw new K8sResponseException("K8s invalid pod status (missing state object)", resp)
+                throw new K8sResponseException("K8s invalid ${type.lower()} status (missing state object)", resp)
 
             final state = container.state as Map
             if( state.waiting instanceof Map ) {
@@ -509,7 +471,7 @@ class K8sClient {
                 final allConditions = status.conditions as List<Map>
                 final cond = allConditions.find { cond -> cond.type == 'PodScheduled' }
                 if( cond.reason == 'Unschedulable' ) {
-                    def message = "K8s pod cannot be scheduled"
+                    def message = "K8s ${type.lower()} cannot be scheduled"
                     if( cond.message ) message += " -- $cond.message"
                     //def cause = new K8sResponseException(resp)
                     log.warn1(message)
