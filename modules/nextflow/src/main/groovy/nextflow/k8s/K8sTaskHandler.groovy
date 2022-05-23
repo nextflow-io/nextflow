@@ -34,6 +34,7 @@ import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodOptions
 import nextflow.k8s.model.PodSpecBuilder
+import nextflow.k8s.model.ResourceType
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -62,7 +63,7 @@ class K8sTaskHandler extends TaskHandler {
 
     } ()
 
-    private String resourceType = "pod"
+    private ResourceType resourceType = ResourceType.Pod
 
     private K8sClient client
 
@@ -91,7 +92,7 @@ class K8sTaskHandler extends TaskHandler {
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
-        this.resourceType = executor.k8sConfig.getJob() ? 'job' : 'pod'
+        this.resourceType = executor.k8sConfig.useJobResource() ? ResourceType.Job : ResourceType.Pod
     }
 
     /** only for testing -- do not use */
@@ -112,7 +113,7 @@ class K8sTaskHandler extends TaskHandler {
 
     protected K8sConfig getK8sConfig() { executor.getK8sConfig() }
 
-    protected boolean useJobResource() { resourceType=='job' }
+    protected boolean useJobResource() { resourceType==ResourceType.Job }
 
     protected List<String> getContainerMounts() {
 
@@ -161,7 +162,7 @@ class K8sTaskHandler extends TaskHandler {
             newSubmitRequest0(task, imageName)
         }
         catch( Throwable e ) {
-            throw  new ProcessSubmitException("Failed to submit K8s $this.resourceType -- Cause: ${e.message ?: e}", e)
+            throw  new ProcessSubmitException("Failed to submit K8s ${resourceType.lwr()} -- Cause: ${e.message ?: e}", e)
         }
     }
 
@@ -247,7 +248,6 @@ class K8sTaskHandler extends TaskHandler {
         k8sConfig.getAnnotations()
     }
 
-
     /**
      * Creates a new K8s pod executing the associated task
      */
@@ -258,14 +258,12 @@ class K8sTaskHandler extends TaskHandler {
         builder.build()
 
         final req = newSubmitRequest(task)
-        def resp
-        if ( useJobResource() )
-            resp = client.jobCreate(req, yamlDebugPath())
-        else
-            resp = client.podCreate(req, yamlDebugPath())
+        final resp = useJobResource()
+                ? client.jobCreate(req, yamlDebugPath())
+                : client.podCreate(req, yamlDebugPath())
 
         if( !resp.metadata?.name )
-            throw new K8sResponseException("Missing created $this.resourceType name", resp)
+            throw new K8sResponseException("Missing created ${resourceType.lwr()} name", resp)
         this.podName = resp.metadata.name
         this.status = TaskStatus.SUBMITTED
     }
@@ -284,13 +282,11 @@ class K8sTaskHandler extends TaskHandler {
         try {
             final delta =  now - timestamp;
             if( !state || delta >= 1_000) {
-                def newState
-                if ( useJobResource() )
-                    newState = client.jobState(podName)
-                else
-                    newState = client.podState(podName)
+                def newState = useJobResource()
+                        ? client.jobState(podName)
+                        : client.podState(podName)
                 if( newState ) {
-                   log.trace "[K8s] Get $this.resourceType=$podName state=$newState"
+                   log.trace "[K8s] Get ${resourceType.lwr()}=$podName state=$newState"
                    state = newState
                    timestamp = now
                 }
@@ -307,12 +303,12 @@ class K8sTaskHandler extends TaskHandler {
             timestamp = now
             state = result
             return state
-        } 
+        }
     }
 
     @Override
     boolean checkIfRunning() {
-        if( !podName ) throw new IllegalStateException("Missing K8s $this.resourceType name -- cannot check if running")
+        if( !podName ) throw new IllegalStateException("Missing K8s ${resourceType.lwr()} name -- cannot check if running")
         if(isSubmitted()) {
             def state = getState()
             // include `terminated` state to allow the handler status to progress
@@ -357,7 +353,7 @@ class K8sTaskHandler extends TaskHandler {
 
     @Override
     boolean checkIfCompleted() {
-        if( !podName ) throw new IllegalStateException("Missing K8s $this.resourceType name - cannot check if complete")
+        if( !podName ) throw new IllegalStateException("Missing K8s ${resourceType.lwr()} name - cannot check if complete")
         def state = getState()
         if( state && state.terminated ) {
             // finalize the task
@@ -387,15 +383,13 @@ class K8sTaskHandler extends TaskHandler {
             return
 
         try {
-            def stream
-            if ( useJobResource() )
-                stream = client.jobLog(podName)
-            else
-                stream = client.podLog(podName)
+            final stream = useJobResource()
+                    ? client.jobLog(podName)
+                    : client.podLog(podName)
             Files.copy(stream, task.workDir.resolve(TaskRun.CMD_LOG))
         }
         catch( Exception e ) {
-            log.warn "Failed to copy log for $this.resourceType $podName", e
+            log.warn "Failed to copy log for ${resourceType.lwr()} $podName", e
         }
     }
 
@@ -418,7 +412,7 @@ class K8sTaskHandler extends TaskHandler {
             return
         
         if( podName ) {
-            log.trace "[K8s] deleting $this.resourceType name=$podName"
+            log.trace "[K8s] deleting ${resourceType.lwr()} name=$podName"
             if ( useJobResource() )
                 client.jobDelete(podName)
             else
@@ -452,7 +446,7 @@ class K8sTaskHandler extends TaskHandler {
                 client.podDelete(podName)
         }
         catch( Exception e ) {
-            log.warn "Unable to cleanup $this.resourceType: $podName -- see the log file for details", e
+            log.warn "Unable to cleanup ${resourceType.lwr()}: $podName -- see the log file for details", e
         }
     }
 

@@ -206,7 +206,7 @@ class K8sDriverLauncherTest extends Specification {
         k8s.getWorkDir() >> '/the/work/dir'
         k8s.getProjectDir() >> '/the/project/dir'
         k8s.getPodOptions() >> pod
-        k8s.getJob() >> true
+        k8s.useJobResource() >> true
 
         and:
         def driver = Spy(K8sDriverLauncher)
@@ -630,7 +630,7 @@ class K8sDriverLauncherTest extends Specification {
         def status = driver.waitPodTermination()
         then:
         1 * client.podState(POD_NAME) >> [terminated: [exitCode: 99]]
-        1 * driver.k8sConfig.getJob() >> [:]
+        1 * driver.k8sConfig.useJobResource() >> [:]
         then:
         status == 99
 
