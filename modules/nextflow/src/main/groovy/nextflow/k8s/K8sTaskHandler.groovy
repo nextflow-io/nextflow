@@ -356,10 +356,18 @@ class K8sTaskHandler extends TaskHandler {
         if( !podName ) throw new IllegalStateException("Missing K8s ${resourceType.lwr()} name - cannot check if complete")
         def state = getState()
         if( state && state.terminated ) {
-            // finalize the task
-            task.exitStatus = readExitFile()
-            task.stdout = outputFile
-            task.stderr = errorFile
+            if( state.nodeTermination instanceof NodeTerminationException ) {
+                // kee track of the node termination error
+                task.error = (NodeTerminationException) state.nodeTermination
+                // mark the task as ABORTED since thr failure is caused by a node failure
+                task.aborted = true
+            }
+            else {
+                // finalize the task
+                task.exitStatus = readExitFile()
+                task.stdout = outputFile
+                task.stderr = errorFile
+            }
             status = TaskStatus.COMPLETED
             savePodLogOnError(task)
             deletePodIfSuccessful(task)
