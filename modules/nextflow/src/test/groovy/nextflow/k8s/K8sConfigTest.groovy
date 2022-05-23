@@ -68,12 +68,27 @@ class K8sConfigTest extends Specification {
         !cfg.getCleanup()
 
         when:
+        cfg = new K8sConfig(cleanup:'false')
+        then: 'it should return false'
+        !cfg.getCleanup()
+
+        when:
         cfg = new K8sConfig(cleanup:true)
         then: 'it should return true'
         cfg.getCleanup()
 
         when:
+        cfg = new K8sConfig(cleanup:'true')
+        then: 'it should return true'
+        cfg.getCleanup()
+
+        when:
         cfg = new K8sConfig(cleanup:true)
+        then: 'the default value should be ignored'
+        cfg.getCleanup(false)
+
+        when:
+        cfg = new K8sConfig(cleanup:'true')
         then: 'the default value should be ignored'
         cfg.getCleanup(false)
     }
@@ -169,6 +184,21 @@ class K8sConfigTest extends Specification {
         cfg = new K8sConfig(autoMountHostPaths: true)
         then:
         cfg.getAutoMountHostPaths()
+
+        when:
+        cfg = new K8sConfig(autoMountHostPaths: 'true')
+        then:
+        cfg.getAutoMountHostPaths()
+
+        when:
+        cfg = new K8sConfig(autoMountHostPaths: false)
+        then:
+        !cfg.getAutoMountHostPaths()
+
+        when:
+        cfg = new K8sConfig(autoMountHostPaths: 'false')
+        then:
+        !cfg.getAutoMountHostPaths()
     }
 
 
@@ -330,10 +360,102 @@ class K8sConfigTest extends Specification {
 
     }
 
+    def 'should set env and sec context' () {
+        given:
+        def ctx = [
+                [env: 'NXF_FUSION_BUCKETS', value: 's3://nextflow-ci'],
+                [securityContext: [privileged: true]]]
+
+        when:
+        def cfg = new K8sConfig( pod: ctx )
+        then:
+        cfg.getPodOptions().getEnvVars().first() == PodEnv.value('NXF_FUSION_BUCKETS', 's3://nextflow-ci')
+        cfg.getPodOptions().getSecurityContext().toSpec() == [privileged:true]
+
+    }
+
     def 'should set the image pull policy' () {
         when:
         def cfg = new K8sConfig( pullPolicy: 'always' )
         then:
         cfg.getPodOptions().getImagePullPolicy() == 'always'
+    }
+
+    def 'should set preserve entrypoint setting'( ) {
+
+        when:
+        def cfg = new K8sConfig([:])
+        then:
+        !cfg.preserveContainerEntrypoint()
+
+        when:
+        cfg = new K8sConfig( preserveContainerEntrypoint: true )
+        then:
+        cfg.preserveContainerEntrypoint()
+
+    }
+
+    def 'should set debug.yaml' () {
+        when:
+        def cfg = new K8sConfig( debug: [yaml: 'true'] )
+        then:
+        cfg.getDebug().getYaml()
+
+        when:
+        cfg = new K8sConfig( debug: [yaml: true] )
+        then:
+        cfg.getDebug().getYaml()
+
+        when:
+        cfg = new K8sConfig( debug: [yaml: 'false'] )
+        then:
+        !cfg.getDebug().getYaml()
+
+        when:
+        cfg = new K8sConfig( debug: [yaml: false] )
+        then:
+        !cfg.getDebug().getYaml()
+
+        when:
+        cfg = new K8sConfig( debug: null )
+        then:
+        !cfg.getDebug().getYaml()
+
+        when:
+        cfg = new K8sConfig( debug: [:] )
+        then:
+        !cfg.getDebug().getYaml()
+
+        when:
+        cfg = new K8sConfig( null )
+        then:
+        !cfg.getDebug().getYaml()
+    }
+  
+    def 'should set fetchNodeName' () {
+        when:
+        def cfg = new K8sConfig( fetchNodeName: 'true' )
+        then:
+        cfg.fetchNodeName() == true
+
+        when:
+        cfg = new K8sConfig( fetchNodeName: true )
+        then:
+        cfg.fetchNodeName() == true
+
+        when:
+        cfg = new K8sConfig( fetchNodeName: 'false' )
+        then:
+        cfg.fetchNodeName() == false
+
+        when:
+        cfg = new K8sConfig( fetchNodeName: false )
+        then:
+        cfg.fetchNodeName() == false
+
+        when:
+        cfg = new K8sConfig()
+        then:
+        cfg.fetchNodeName() == false
     }
 }

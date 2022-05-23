@@ -25,13 +25,12 @@ import java.util.Set;
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public interface DelegatingPlugin {
+public interface ExtensionProvider {
 
     boolean isExtensionMethod(Object obj, String name);
 
     Object invokeExtensionMethod(Object channel, String method, Object[] args);
 
-    ChannelFactory getChannelFactory(String factoryDomain);
-
     Set<String> operatorNames();
+    
 }

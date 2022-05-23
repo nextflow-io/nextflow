@@ -266,7 +266,7 @@ class AzPath implements Path {
     @Override
     Path toAbsolutePath() {
         if(isAbsolute()) return this
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'toAbsolutePath' is not supported by AzPath")
     }
 
     @Override
@@ -276,17 +276,17 @@ class AzPath implements Path {
 
     @Override
     File toFile() {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'toFile' is not supported by AzPath")
     }
 
     @Override
     WatchKey register(WatchService watcher, WatchEvent.Kind<?>[] events, WatchEvent.Modifier... modifiers) throws IOException {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'register' is not supported by AzPath")
     }
 
     @Override
     WatchKey register(WatchService watcher, WatchEvent.Kind<?>... events) throws IOException {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'register' is not supported by AzPath")
     }
 
     @Override

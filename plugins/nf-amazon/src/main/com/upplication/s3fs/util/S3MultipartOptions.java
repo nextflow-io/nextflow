@@ -26,11 +26,11 @@ import org.slf4j.LoggerFactory;
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @SuppressWarnings("unchecked")
-public class S3MultipartOptions<V extends S3MultipartOptions> {
+public class S3MultipartOptions {
 
     private static final Logger log = LoggerFactory.getLogger(S3MultipartOptions.class);
 
-    public static final int DEFAULT_CHUNK_SIZE = 100 << 20;
+    public static final int DEFAULT_CHUNK_SIZE = 20 << 20;  // 20 MB
 
     /**
      * Upload chunk max size
@@ -101,14 +101,14 @@ public class S3MultipartOptions<V extends S3MultipartOptions> {
     }
 
 
-    public V setChunkSize(int chunkSize) {
+    public S3MultipartOptions setChunkSize(int chunkSize) {
         this.chunkSize = chunkSize;
-        return (V)this;
+        return this;
     }
 
-    public V setChunkSize(String chunkSize) {
+    public S3MultipartOptions setChunkSize(String chunkSize) {
         if( chunkSize==null )
-            return (V)this;
+            return this;
 
         try {
             setChunkSize(Integer.parseInt(chunkSize));
@@ -116,17 +116,17 @@ public class S3MultipartOptions<V extends S3MultipartOptions> {
         catch( NumberFormatException e ) {
             log.warn("Not a valid AWS S3 multipart upload chunk size: `{}` -- Using default", chunkSize);
         }
-        return (V)this;
+        return this;
     }
 
-    public V setMaxThreads(int maxThreads) {
+    public S3MultipartOptions setMaxThreads(int maxThreads) {
         this.maxThreads = maxThreads;
-        return (V)this;
+        return this;
     }
 
-    public V setMaxThreads(String maxThreads) {
+    public S3MultipartOptions setMaxThreads(String maxThreads) {
         if( maxThreads==null )
-            return (V)this;
+            return this;
 
         try {
             setMaxThreads(Integer.parseInt(maxThreads));
@@ -134,17 +134,17 @@ public class S3MultipartOptions<V extends S3MultipartOptions> {
         catch( NumberFormatException e ) {
             log.warn("Not a valid AWS S3 multipart upload max threads: `{}` -- Using default", maxThreads);
         }
-        return (V)this;
+        return this;
     }
 
-    public V setMaxAttempts(int maxAttempts) {
+    public S3MultipartOptions setMaxAttempts(int maxAttempts) {
         this.maxAttempts = maxAttempts;
-        return (V)this;
+        return this;
     }
 
-    public V setMaxAttempts(String maxAttempts) {
+    public S3MultipartOptions setMaxAttempts(String maxAttempts) {
         if( maxAttempts == null )
-            return (V)this;
+            return this;
 
         try {
             this.maxAttempts = Integer.parseInt(maxAttempts);
@@ -152,17 +152,17 @@ public class S3MultipartOptions<V extends S3MultipartOptions> {
         catch(NumberFormatException e ) {
             log.warn("Not a valid AWS S3 multipart upload max attempts value: `{}` -- Using default", maxAttempts);
         }
-        return (V)this;
+        return this;
     }
 
-    public V setRetrySleep( long retrySleep ) {
+    public S3MultipartOptions setRetrySleep( long retrySleep ) {
         this.retrySleep = retrySleep;
-        return (V)this;
+        return this;
     }
 
-    public V setRetrySleep( String retrySleep ) {
+    public S3MultipartOptions setRetrySleep( String retrySleep ) {
         if( retrySleep == null )
-            return (V)this;
+            return this;
 
         try {
             this.retrySleep = Long.parseLong(retrySleep);
@@ -170,7 +170,7 @@ public class S3MultipartOptions<V extends S3MultipartOptions> {
         catch (NumberFormatException e ) {
             log.warn("Not a valid AWS S3 multipart upload retry sleep value: `{}` -- Using default", retrySleep);
         }
-        return (V)this;
+        return this;
     }
 
     public long getRetrySleepWithAttempt( int attempt ) {

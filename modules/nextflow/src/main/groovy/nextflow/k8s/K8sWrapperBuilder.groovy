@@ -21,6 +21,8 @@ package nextflow.k8s
 import groovy.transform.CompileStatic
 import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.TaskRun
+import nextflow.util.Escape
+
 /**
  * Implements a BASH wrapper for tasks executed by kubernetes cluster
  *
@@ -31,6 +33,7 @@ class K8sWrapperBuilder extends BashWrapperBuilder {
 
     K8sWrapperBuilder(TaskRun task) {
         super(task)
+        this.headerScript = "NXF_CHDIR=${Escape.path(task.workDir)}"
     }
 
     /**
