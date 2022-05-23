@@ -810,5 +810,8 @@ class TaskRun implements Cloneable {
         return result
     }
 
+    TaskBean toTaskBean() {
+        return new TaskBean(this)
+    }
 }
 

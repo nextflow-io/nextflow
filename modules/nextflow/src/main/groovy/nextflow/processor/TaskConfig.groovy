@@ -186,6 +186,26 @@ class TaskConfig extends LazyMap implements Cloneable {
         return false
     }
 
+    String getBeforeScript() {
+        return get('beforeScript')
+    }
+
+    String getAfterScript() {
+        return get('afterScript')
+    }
+
+    def getCleanup() {
+        return get('cleanup')
+    }
+
+    String getStageInMode() {
+        return get('stageInMode')
+    }
+
+    String getStageOutMode() {
+        return get('stageOutMode')
+    }
+
     boolean getDebug() {
         // check both `debug` and `echo` for backward
         // compatibility until `echo` is not removed
