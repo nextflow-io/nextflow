@@ -46,14 +46,20 @@ class HyperQueueExecutor extends AbstractGridExecutor {
 
         result << '--name' << getJobNameFor(task)
         result << '--log' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
-        result << '--task-dir' << quote(task.workDir)
+        result << '--cwd' << quote(task.workDir)
 
         if( task.config.hasCpus() )
             result << '--cpus' << task.config.getCpus().toString()
         if( task.config.getTime() )
             result << '--time-limit' << (task.config.getTime().toSeconds() + 'sec')
-
-        // -- at the end append the command script wrapped file name
+        
+        // No enforcement, Hq just makes sure that the allocated value is below the limit
+        if( task.config.getMemory() )
+            result << '--resource mem=' + (task.config.getMemory().toBytes())
+        if( task.config.accelerator )
+            result << '--resource gpus=' + task.config.accelerator.limit.toString()
+        
+        // -- At the end append the command script wrapped file name
         if( task.config.clusterOptions ) {
             result << task.config.clusterOptions.toString() << ''
         }
@@ -63,7 +69,7 @@ class HyperQueueExecutor extends AbstractGridExecutor {
 
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
-        return TupleHelper.listOf('hq', '--output-mode=json','submit', '--', '/bin/bash', scriptFile.getName())
+        return TupleHelper.listOf('hq', '--output-mode=json','submit', '--directives=file', scriptFile.getName())
     }
 
     @Override
@@ -89,6 +95,20 @@ class HyperQueueExecutor extends AbstractGridExecutor {
     protected List<String> getKillCommand() {
         return TupleHelper.listOf('hq','job', 'cancel')
     }
+
+    // JobIds to the cancel command need to be separated by a comma 
+    @Override
+    protected List<String> killTaskCommand(def jobId) { 
+        final result = getKillCommand()                 
+        if( jobId instanceof Collection ) {             
+            result.add(jobId.join(','))
+    //        log.trace "Kill command: ${result}"         
+        }                                               
+        else {                                          
+            result.add(jobId.toString())                
+        }                                               
+        return result                                   
+    }                                                   
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
