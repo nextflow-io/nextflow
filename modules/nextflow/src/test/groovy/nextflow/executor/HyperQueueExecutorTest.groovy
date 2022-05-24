@@ -28,6 +28,7 @@ import spock.lang.Specification
  * Test HyperQueue executor
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Henrik Nortamo <henrik.nortamo@csc.fi>
  */
 class HyperQueueExecutorTest extends Specification {
 
