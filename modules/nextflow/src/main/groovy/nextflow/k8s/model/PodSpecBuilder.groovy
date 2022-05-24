@@ -101,7 +101,6 @@ class PodSpecBuilder {
         "vol-${VOLUMES.incrementAndGet()}".toString()
     }
 
-
     PodSpecBuilder withPodName(String name) {
         this.podName = name
         return this
@@ -457,6 +456,29 @@ class PodSpecBuilder {
         return pod
     }
 
+    Map buildAsJob() {
+        final pod = build()
+
+        // job metadata
+        final metadata = new LinkedHashMap<String,Object>()
+        metadata.name = this.podName    //  just use the podName for simplicity, it may be renamed to just `name` or `resourceName` in the future
+        metadata.namespace = this.namespace ?: 'default'
+
+        // job spec
+        final spec = new LinkedHashMap<String,Object>()
+        spec.backoffLimit = 0
+        spec.template = [spec: pod.spec]
+
+        // job spec
+        final result = [
+                apiVersion: 'batch/v1',
+                kind: 'Job',
+                metadata: metadata,
+                spec: spec ]
+
+        return result
+
+    }
 
     @PackageScope
     @CompileDynamic
