@@ -35,6 +35,10 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     private String continuationToken
 
     AzureRepositoryProvider(String project, ProviderConfig config=null) {
+        /*
+        Azure repo format follows Organization/Project/Repository where Project can be optional
+        If Project is not present then Repository is used as Project (and also as Repository)
+         */
         def tokens = project.tokenize('/')
         this.repo = tokens.removeLast()
         if( tokens.size() == 1){
@@ -73,7 +77,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
         if( revision )
             queryParams['versionDescriptor.version']=revision
         def queryString = queryParams.collect({ "$it.key=$it.value"}).join('&')
-        def result = "${config.endpoint}/${project}/_apis/git/repositories/${repo}/items?$queryString"
+        def result = "$endpointUrl/items?$queryString"
         result
     }
 
@@ -81,7 +85,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     @CompileDynamic
     List<BranchInfo> getBranches() {
         // https://docs.microsoft.com/en-us/rest/api/azure/devops/git/refs/list?view=azure-devops-rest-6.0#refs-heads
-        final url = "${config.endpoint}/${project}/_apis/git/repositories/${repo}/refs?filter=heads&api-version=6.0"
+        final url = "$endpointUrl/refs?filter=heads&api-version=6.0"
         this.<BranchInfo>invokeAndResponseWithPaging(url, { Map branch ->
             new BranchInfo(strip(branch.name), branch.objectId as String)
         })
@@ -92,7 +96,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     @Memoized
     List<TagInfo> getTags() {
         // https://docs.microsoft.com/en-us/rest/api/azure/devops/git/refs/list?view=azure-devops-rest-6.0#refs-tags
-        final url = "${config.endpoint}/${project}/_apis/git/repositories/${repo}/refs?filter=tags&api-version=6.0"
+        final url = "$endpointUrl/refs?filter=tags&api-version=6.0"
         this.<TagInfo>invokeAndResponseWithPaging(url, { Map tag ->
             new TagInfo(strip(tag.name), tag.objectId as String)
         })
