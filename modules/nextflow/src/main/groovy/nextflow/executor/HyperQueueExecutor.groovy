@@ -29,6 +29,7 @@ import nextflow.util.TupleHelper
  *  https://github.com/It4innovations/hyperqueue/
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Henrik Nortamo <henrik.nortamo@csc.fi>
  */
 @CompileStatic
 @ServiceName('hq')
