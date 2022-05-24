@@ -17,8 +17,6 @@
 
 package nextflow.k8s.client
 
-import groovy.transform.CompileDynamic
-
 import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLContext
@@ -180,6 +178,81 @@ class K8sClient {
         new K8sResponseJson(resp.text)
     }
 
+    /**
+     * Create a job
+     *
+     * See
+     *  https://v1-8.docs.kubernetes.io/docs/api-reference/v1.8/#create-55
+     *  https://v1-8.docs.kubernetes.io/docs/api-reference/v1.8/#job-v1-batch
+     *
+     * @param spec
+     * @return
+     */
+    K8sResponseJson jobCreate(String req) {
+        assert req
+        final action = "/apis/batch/v1/namespaces/$config.namespace/jobs"
+        final resp = post(action, req)
+        trace('POST', action, resp.text)
+        return new K8sResponseJson(resp.text)
+    }
+
+    K8sResponseJson jobCreate(Map req, Path saveYamlPath=null) {
+
+        if( saveYamlPath ) try {
+            saveYamlPath.text = new Yaml().dump(req).toString()
+        }
+        catch( Exception e ) {
+            log.debug "WARN: unable to save request yaml -- cause: ${e.message ?: e}"
+        }
+
+        jobCreate(JsonOutput.toJson(req))
+    }
+
+    /**
+     * Delete a job
+     *
+     * See
+     *   https://v1-8.docs.kubernetes.io/docs/api-reference/v1.8/#delete-58
+     *
+     * @param name
+     * @return
+     */
+
+    K8sResponseJson jobDelete(String name) {
+        assert name
+
+        // get podList of a job
+        final action = "/api/v1/namespaces/$config.namespace/pods?labelSelector=job-name=$name"
+        final resp = get(action)
+        trace('GET', action, resp.text)
+        final podList = new K8sResponseJson(resp.text)
+
+        // delete all pods in a job
+        if (podList.kind == "PodList") { 
+            for (item in podList.items) {
+                podDelete(((item as Map).metadata as Map).name as String)
+            }
+        }
+
+        // delete job
+        final action1 = "/apis/batch/v1/namespaces/$config.namespace/jobs/$name"
+        final resp1 = delete(action1)
+        trace('DELETE', action1, resp1.text)
+        new K8sResponseJson(resp1.text)
+    }
+
+    /*
+     * https://v1-8.docs.kubernetes.io/docs/api-reference/v1.8/#list-62
+     * https://v1-8.docs.kubernetes.io/docs/api-reference/v1.8/#list-all-namespaces-63
+     */
+
+    K8sResponseJson jobList(boolean allNamespaces=false) {
+        final String action = allNamespaces ? "jobs" : "namespaces/$config.namespace/jobs"
+        final resp = get("/apis/batch/v1/$action")
+        trace('GET', action, resp.text)
+        new K8sResponseJson(resp.text)
+    }
+
     /*
      * https://v1-8.docs.kubernetes.io/docs/api-reference/v1.8/#list-62
      * https://v1-8.docs.kubernetes.io/docs/api-reference/v1.8/#list-all-namespaces-63
@@ -194,6 +267,42 @@ class K8sClient {
     /*
      * https://v1-8.docs.kubernetes.io/docs/api-reference/v1.8/#read-status-69
      */
+
+    // converts the name of job to the name of the latest created pod
+    String findPodNameForJob(String name){
+        final action = "/api/v1/namespaces/$config.namespace/pods?labelSelector=job-name=$name"
+        final resp = get(action)
+        trace('GET', action, resp.text)
+        final podList = new K8sResponseJson(resp.text)
+
+        String podName
+
+        // find latest created pod
+        if (podList.kind == "PodList") {
+            final pods = podList.items
+            String latestPod = "0000-00-00T00:00:00Z"
+
+            for (item in pods) {
+                final podMetadata = (Map) (item as Map).metadata
+                final podTimestamp = podMetadata.creationTimestamp
+
+                if (podTimestamp.toString() > latestPod) {
+                    latestPod = podTimestamp
+                    podName = podMetadata.name
+                }
+            }
+        }
+        return podName
+    }
+
+    K8sResponseJson jobStatus(String name) {
+        assert name
+        final action = "/apis/batch/v1/namespaces/$config.namespace/jobs/$name/status"
+        final resp = get(action)
+        trace('GET', action, resp.text)
+        return new K8sResponseJson(resp.text)
+    }
+
     K8sResponseJson podStatus(String name) {
         assert name
         final action = "/api/v1/namespaces/$config.namespace/pods/$name/status"
@@ -201,6 +310,10 @@ class K8sClient {
         trace('GET', action, resp.text)
         return new K8sResponseJson(resp.text)
     }
+
+    /*
+     * https://v1-8.docs.kubernetes.io/docs/api-reference/v1.8/#read-status-69
+     */
 
     protected K8sResponseJson podStatus0(String name) {
         try {
@@ -254,6 +367,77 @@ class K8sClient {
      *
      *
      */
+    Map jobState( String jobName ) {
+        assert jobName
+        final podName = findPodNameForJob(jobName)
+        if( podName ) {
+            return podState(podName)
+        }
+        else {
+            return jobStateFallback0(jobName)
+        }
+    }
+
+    protected Map jobStateFallback0(String jobName) {
+        final K8sResponseJson jobResp = jobStatus(jobName)
+        final jobStatus = jobResp.status as Map
+        if( jobStatus?.succeeded == 1 && jobStatus.conditions instanceof List ) {
+            final allConditions = jobStatus.conditions as List<Map>
+            final cond = allConditions.find { cond -> cond.type == 'Complete' }
+
+            if( cond?.status == 'True' ) {
+                log.warn1("Job $jobName already completed and Pod is gone.")
+                final dummyPodStatus = [
+                        terminated: [
+                                exitcode: 0,
+                                reason: "Completed",
+                                startedAt: jobStatus.startTime,
+                                finishedAt: jobStatus.completionTime,
+                        ]
+                ]
+                return dummyPodStatus
+            } else {
+                throw new ProcessFailedException("K8s Job $jobName succeeded but does not have Complete status. $allConditions")
+            }
+        }
+
+        if( jobStatus?.failed && (int)(jobStatus.failed) > 0 ) {
+            String message = 'unknown'
+            if( jobStatus.conditions instanceof List ) {
+                final allConditions = jobStatus.conditions as List<Map>
+                final cond = allConditions.find { cond -> cond.type == 'Failed' }
+                message = cond?.message
+            }
+            throw new ProcessFailedException("K8s Job $jobName execution failed: $message")
+        }
+
+        log.warn1("K8s Job $jobName does not have pod - Not yet scheduled?")
+        return Collections.emptyMap()
+    }
+
+    /**
+     * Get pod current state object
+     *
+     * @param podName The pod name
+     * @return
+     *      A {@link Map} representing the container state object as shown below
+     *      <code>
+     *       {
+     *                "terminated": {
+     *                    "exitCode": 127,
+     *                    "reason": "ContainerCannotRun",
+     *                    "message": "OCI runtime create failed: container_linux.go:296: starting container process caused \"exec: \\\"bash\\\": executable file not found in $PATH\": unknown",
+     *                    "startedAt": "2018-01-12T22:04:25Z",
+     *                    "finishedAt": "2018-01-12T22:04:25Z",
+     *                    "containerID": "docker://730ef2e05be72ffc354f2682b4e8300610812137b9037b726c21e5c4e41b6dda"
+     *                }
+     *      </code>
+     *      See the following link for details https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.10/#containerstate-v1-core
+     *      An empty map is return if the pod is a `Pending` status and the container state is not
+     *      yet available
+     *
+     *
+     */
     Map podState( String podName ) {
         assert podName
 
@@ -263,11 +447,14 @@ class K8sClient {
 
         if( containerStatuses?.size()>0 ) {
             final container = containerStatuses.get(0)
-            if( container.name != podName )
-                throw new K8sResponseException("K8s invalid pod status (name does not match)", resp)
+            // note: when the pod is created by a Job submission
+            // the `podName` does not match the container name because it
+            // contains a suffix random generated by K8s pod scheduler
+            if( !container.name || !podName.startsWith(container.name.toString()) )
+                throw new K8sResponseException("K8s invalid status for pod: ${podName} (unexpected container name: ${container.name})", resp)
 
             if( !container.state )
-                throw new K8sResponseException("K8s invalid pod status (missing state object)", resp)
+                throw new K8sResponseException("K8s invalid status for pod: ${podName} (missing state object)", resp)
 
             final state = container.state as Map
             if( state.waiting instanceof Map ) {
@@ -330,6 +517,27 @@ class K8sClient {
             final cause = new K8sResponseException(resp)
             throw new PodUnschedulableException(message, cause)
         }
+    }
+
+    /*
+     * https://v1-8.docs.kubernetes.io/docs/api-reference/v1.8/#read-log
+     */
+    InputStream jobLog(String name) {
+        jobLog( Collections.emptyMap(), name )
+    }
+
+    InputStream jobLog(Map params, String name) {
+        assert name
+        // -- compose the request action uri
+        String podName = findPodNameForJob(name)
+        def action = "/api/v1/namespaces/$config.namespace/pods/$podName/log"
+        int count=0
+        for( String key : (params.keySet()) ) {
+            action += "${count++==0 ? '?' : '&'}${key}=${params.get(key)}"
+        }
+        // -- submit request
+        def resp = get(action)
+        resp.stream
     }
 
     /*
