@@ -43,22 +43,27 @@ class HyperQueueExecutor extends AbstractGridExecutor {
     }
 
     @Override
+    protected void register() {
+        super.register()
+        log.warn "The support for HyperQueue is an experimental feature and it may change in a future release"
+    }
+
+    @Override
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
         result << '--name' << getJobNameFor(task)
         result << '--log' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
         result << '--cwd' << quote(task.workDir)
 
-        if( task.config.hasCpus() )
-            result << '--cpus' << task.config.getCpus().toString()
-        if( task.config.getTime() )
-            result << '--time-limit' << (task.config.getTime().toSeconds() + 'sec')
-        
         // No enforcement, Hq just makes sure that the allocated value is below the limit
         if( task.config.getMemory() )
-            result << '--resource mem=' + (task.config.getMemory().toBytes())
+            result << '--resource mem=' + (task.config.getMemory().toBytes()) << ''
+        if( task.config.hasCpus() )
+            result << '--cpus ' + task.config.getCpus().toString() << ''
+        if( task.config.getTime() )
+            result << '--time-limit ' + (task.config.getTime().toSeconds() + 'sec') << ''
         if( task.config.accelerator )
-            result << '--resource gpus=' + task.config.accelerator.limit.toString()
+            result << '--resource gpus=' + task.config.accelerator.limit.toString() << ''
         
         // -- At the end append the command script wrapped file name
         if( task.config.clusterOptions ) {
