@@ -133,7 +133,7 @@ class K8sDriverLauncherTest extends Specification {
 
 
 
-    def 'should create launcher spec' () {
+    def 'should create launcher spec pod' () {
 
         given:
         def pod = Mock(PodOptions)
@@ -190,6 +190,70 @@ class K8sDriverLauncherTest extends Specification {
             ]
         ]
 
+    }
+
+    def 'should create launcher spec job' () {
+
+        given:
+        def pod = Mock(PodOptions)
+        pod.getVolumeClaims() >> [ new PodVolumeClaim('pvc-1', '/mnt/path/data') ]
+        pod.getMountConfigMaps() >> [ new PodMountConfig('cfg-2', '/mnt/path/cfg') ]
+        pod.getAutomountServiceAccountToken() >> true
+
+        def k8s = Mock(K8sConfig)
+        k8s.getNextflowImageName() >> 'the-image'
+        k8s.getLaunchDir() >> '/the/user/dir'
+        k8s.getWorkDir() >> '/the/work/dir'
+        k8s.getProjectDir() >> '/the/project/dir'
+        k8s.getPodOptions() >> pod
+        k8s.useJobResource() >> true
+
+        and:
+        def driver = Spy(K8sDriverLauncher)
+        driver.@runName = 'foo-boo'
+        driver.@k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
+        driver.@k8sConfig = k8s
+
+        when:
+        def spec = driver.makeLauncherSpec()
+        then:
+        driver.getLaunchCli() >> 'nextflow run foo'
+
+        spec == [
+            apiVersion: 'batch/v1', 
+            kind: 'Job', 
+            metadata: [name: 'foo-boo', namespace: 'foo'], 
+            spec: [
+               backoffLimit: 0,
+               template: [
+                  spec: [
+                        restartPolicy: 'Never',
+                        containers: [
+                            [
+                                name: 'foo-boo',
+                                image: 'the-image',
+                                command: ['/bin/bash', '-c', "source /etc/nextflow/init.sh; nextflow run foo"],
+                                env: [
+                                    [name:'NXF_WORK', value:'/the/work/dir'],
+                                    [name:'NXF_ASSETS', value:'/the/project/dir'],
+                                    [name:'NXF_EXECUTOR', value:'k8s'],
+                                    [name:'NXF_ANSI_LOG', value: 'false']
+                                ],
+                                volumeMounts: [
+                                    [name:'vol-1', mountPath:'/mnt/path/data'],
+                                    [name:'vol-2', mountPath:'/mnt/path/cfg']
+                                ]
+                            ]
+                        ],
+                        serviceAccountName: 'bar',
+                        volumes: [
+                            [name:'vol-1', persistentVolumeClaim:[claimName:'pvc-1']],
+                            [name:'vol-2', configMap:[name:'cfg-2']]
+                        ]
+                  ]
+               ]
+            ]
+        ]
     }
 
     def 'should use user provided pod image' () {
@@ -560,11 +624,13 @@ class K8sDriverLauncherTest extends Specification {
         def driver = Spy(K8sDriverLauncher)
         driver.@k8sClient = client
         driver.@runName = POD_NAME
+        driver.@k8sConfig = Mock(K8sConfig)
 
         when:
         def status = driver.waitPodTermination()
         then:
         1 * client.podState(POD_NAME) >> [terminated: [exitCode: 99]]
+        1 * driver.k8sConfig.useJobResource() >> [:]
         then:
         status == 99
 

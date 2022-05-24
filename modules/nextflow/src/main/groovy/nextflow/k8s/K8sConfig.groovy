@@ -29,6 +29,8 @@ import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.model.PodOptions
 import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
+import nextflow.k8s.model.ResourceType
+
 /**
  * Model Kubernetes specific settings defined in the nextflow
  * configuration file
@@ -153,6 +155,8 @@ class K8sConfig implements Map<String,Object> {
     }
 
     String getNamespace() { target.namespace }
+
+    boolean useJobResource() { ResourceType.Job.name() == target.computeResourceType?.toString() }
 
     String getServiceAccount() { target.serviceAccount }
 

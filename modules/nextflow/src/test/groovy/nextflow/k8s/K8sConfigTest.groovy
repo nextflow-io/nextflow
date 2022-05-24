@@ -300,6 +300,20 @@ class K8sConfigTest extends Specification {
 
     }
 
+    def 'should return compute resource type' () {
+
+        when:
+        def cfg = new K8sConfig()
+        then:
+        !cfg.useJobResource()
+
+        when:
+        cfg = new K8sConfig(computeResourceType: 'Job')
+        then:
+        cfg.useJobResource()
+
+    }
+
     def 'should return storage claim name' () {
         when:
         def cfg = new K8sConfig()

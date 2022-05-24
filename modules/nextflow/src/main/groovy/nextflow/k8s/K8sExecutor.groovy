@@ -63,9 +63,10 @@ class K8sExecutor extends Executor {
     @Override
     protected void register() {
         super.register()
-        final config = k8sConfig.getClient()
-        client = new K8sClient(config)
-        log.debug "[K8s] API client config=$config"
+        final k8sConfig = getK8sConfig()
+        final clientConfig = k8sConfig.getClient()
+        this.client = new K8sClient(clientConfig)
+        log.debug "[K8s] config=$k8sConfig; API client config=$clientConfig"
     }
 
     /**

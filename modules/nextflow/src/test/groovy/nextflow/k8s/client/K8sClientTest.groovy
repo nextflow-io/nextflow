@@ -572,14 +572,14 @@ class K8sClientTest extends Specification {
         then:
         1 * client.podStatus(POD_NAME) >> new K8sResponseJson([status:[containerStatuses: [ [name: 'foo'] ]]])
         e = thrown(K8sResponseException)
-        e.message.startsWith('K8s invalid pod status (name does not match)')
+        e.message.startsWith('K8s invalid status for pod: pod-xyz (unexpected container name: foo)')
 
         when:
         client.podState(POD_NAME)
         then:
         1 * client.podStatus(POD_NAME) >> new K8sResponseJson([status:[containerStatuses: [ [name: POD_NAME] ]]])
         e = thrown(K8sResponseException)
-        e.message.startsWith('K8s invalid pod status (missing state object)')
+        e.message.startsWith('K8s invalid status for pod: pod-xyz (missing state object)')
 
         when:
         def result = client.podState(POD_NAME)

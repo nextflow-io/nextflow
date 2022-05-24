@@ -812,4 +812,36 @@ class PodSpecBuilderTest extends Specification {
         [foo:'bar']             | [foo:'bar']
         ['key 1':'value 2']     | [key_1:'value 2']
     }
+
+
+    def 'should create job spec' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .buildAsJob()
+
+        then:
+        spec ==  [ apiVersion: 'batch/v1',
+                    kind: 'Job',
+                    metadata: [name:'foo', namespace:'default'],
+                    spec: [
+                            backoffLimit: 0,
+                            template: [
+                                    spec: [
+                                            restartPolicy:'Never',
+                                            containers:[
+                                                    [name:'foo',
+                                                     image:'busybox',
+                                                     command:['echo', 'hello'],
+                                                    ]
+                                            ]
+                                    ]
+                            ]
+                    ]
+        ]
+    }
+
 }
