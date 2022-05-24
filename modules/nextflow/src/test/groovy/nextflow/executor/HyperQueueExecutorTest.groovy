@@ -147,7 +147,7 @@ class HyperQueueExecutorTest extends Specification {
         when:
         def result = exec.getSubmitCommandLine(task, path)
         then:
-        result == ['hq', '--output-mode=json','submit', '--', '/bin/bash', 'script.run']
+        result == ['hq', '--output-mode=json','submit', '--directives=file', 'script.run']
     }
 
     def 'should get kill command'() {
@@ -156,6 +156,7 @@ class HyperQueueExecutorTest extends Specification {
         def executor = Spy(HyperQueueExecutor)
         then:
         executor.killTaskCommand('12345').join(' ') == 'hq job cancel 12345'
+        executor.killTaskCommand(['12345','12']).join(' ') == 'hq job cancel 12345,12'
 
     }
 
@@ -179,7 +180,7 @@ class HyperQueueExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #HQ --name nf-task-1
                 #HQ --log /work/dir/.command.log
-                #HQ --task-dir /work/dir
+                #HQ --cwd /work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -188,17 +189,18 @@ class HyperQueueExecutorTest extends Specification {
         task.config = new TaskConfig()
         task.config.cpus = 4
         task.config.time = '1m'
+        task.config.memory = '8GB'
+        task.config.accelerator = [request: 1, limit: 2, type: 'nvida']
         then:
         executor.getHeaders(task) == '''
                 #HQ --name nf-task-1
                 #HQ --log /work/dir/.command.log
-                #HQ --task-dir /work/dir
+                #HQ --cwd /work/dir
+                #HQ --resource mem=8589934592
                 #HQ --cpus 4
                 #HQ --time-limit 60sec
+                #HQ --resource gpus=2
                 '''
                 .stripIndent().leftTrim()
-
-
-
     }
 }
