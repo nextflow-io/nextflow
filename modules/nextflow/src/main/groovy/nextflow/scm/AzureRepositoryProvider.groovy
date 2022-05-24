@@ -35,9 +35,13 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     private String continuationToken
 
     AzureRepositoryProvider(String project, ProviderConfig config=null) {
-        this.project = project
-        this.user = this.project.tokenize('/').first()
-        this.repo = this.project.tokenize('/').last()
+        def tokens = project.tokenize('/')
+        this.repo = tokens.removeLast()
+        if( tokens.size() == 1){
+            this.project = [tokens.first(), this.repo].join('/')
+        }else{
+            this.project = tokens.join('/')
+        }
         this.config = config ?: new ProviderConfig('azurerepos')
         this.continuationToken = null
     }
