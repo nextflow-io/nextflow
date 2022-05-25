@@ -17,6 +17,7 @@
 
 package nextflow.util
 
+import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
@@ -30,6 +31,7 @@ import groovy.transform.CompileStatic
 class StringUtils {
 
     static final public Pattern URL_PROTOCOL = ~/^([a-zA-Z0-9]*):\\/\\/(.+)/
+    static final private Pattern URL_PASSWORD = ~/^[a-zA-Z][a-zA-Z0-9]*:\\/\\/(.+)@.+/
 
     static String getUrlProtocol(String str) {
         final m = URL_PROTOCOL.matcher(str)
@@ -43,5 +45,54 @@ class StringUtils {
             return null
         final m = BASE_URL.matcher(url)
         return m.matches() ? m.group(1).toLowerCase() : null
+    }
+
+    static private boolean isSensitive(Object key) {
+        final str = key.toString().toLowerCase()
+        return str.contains('password') \
+            || str.contains('token') \
+            || str.contains('secret') \
+            || str.contains('license')
+    }
+
+
+    static Map stripSecrets(Map map) {
+        final copy = new HashMap(map.size())
+        for( Map.Entry entry : map.entrySet() ) {
+            if( entry.value instanceof Map ) {
+                copy.put( entry.key, stripSecrets((Map)entry.value))
+            }
+            else if( isSensitive(entry.key) )  {
+                copy.put(entry.key, redact(entry.value))
+            }
+            else {
+                copy.put(entry.key, redactUrlPassword(entry.value))
+            }
+        }
+        return copy
+    }
+
+    static String redact(Object value) {
+        if( value==null )
+            return '(null)'
+        if( !value )
+            return '(empty)'
+        final str = value.toString()
+        return str.length()>=5 ? str[0..2] + '****' : '****'
+    }
+
+    static String redactUrlPassword(value) {
+        final str = value.toString()
+        final m = URL_PASSWORD.matcher(str)
+        if( m.matches() ) {
+            return replaceGroup(m, str, 1, redact(m.group(1)))
+        }
+        return str
+    }
+
+    static String replaceGroup(Matcher matcher, String source, int groupToReplace, String replacement) {
+        return new StringBuilder(source)
+                .replace(matcher.start(groupToReplace), matcher.end(groupToReplace), replacement)
+                .toString()
     }
 }
