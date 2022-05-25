@@ -15,12 +15,15 @@
  *
  */
 
+
+
 package nextflow.executor
 
 import java.nio.file.Path
 
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 import nextflow.util.ServiceName
 import nextflow.util.TupleHelper
@@ -33,6 +36,7 @@ import nextflow.util.TupleHelper
  */
 @CompileStatic
 @ServiceName('hq')
+@Slf4j
 class HyperQueueExecutor extends AbstractGridExecutor {
 
     private final JsonSlurper parser = new JsonSlurper()
@@ -57,13 +61,13 @@ class HyperQueueExecutor extends AbstractGridExecutor {
 
         // No enforcement, Hq just makes sure that the allocated value is below the limit
         if( task.config.getMemory() )
-            result << '--resource mem=' + (task.config.getMemory().toBytes()) << ''
+            result << '--resource' << "mem=${task.config.getMemory().toBytes()}".toString()
         if( task.config.hasCpus() )
-            result << '--cpus ' + task.config.getCpus().toString() << ''
+            result << '--cpus'<< task.config.getCpus().toString()
         if( task.config.getTime() )
-            result << '--time-limit ' + (task.config.getTime().toSeconds() + 'sec') << ''
+            result << '--time-limit' << (task.config.getTime().toSeconds() + 'sec')
         if( task.config.accelerator )
-            result << '--resource gpus=' + task.config.accelerator.limit.toString() << ''
+            result << '--resource' << "gpus=${task.config.accelerator.limit.toString()}".toString()
         
         // -- At the end append the command script wrapped file name
         if( task.config.clusterOptions ) {
