@@ -1,5 +1,8 @@
 NF-SQLDB CHANGE-LOG
 ===================
+0.4.1 - 25 May 2022
+- Fix AWS Athena driver dependency
+
 0.4.0 - 9 Apr 2022
 - Add support for batched queries via `batchSize` attribute
 - Add `emitColumns` option fromQuery operator
