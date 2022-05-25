@@ -15,8 +15,6 @@
  *
  */
 
-
-
 package nextflow.executor
 
 import java.nio.file.Path
@@ -66,8 +64,8 @@ class HyperQueueExecutor extends AbstractGridExecutor {
             result << '--cpus'<< task.config.getCpus().toString()
         if( task.config.getTime() )
             result << '--time-limit' << (task.config.getTime().toSeconds() + 'sec')
-        if( task.config.accelerator )
-            result << '--resource' << "gpus=${task.config.accelerator.limit.toString()}".toString()
+        if( task.config.getAccelerator() )
+            result << '--resource' << "gpus=${task.config.getAccelerator().limit}".toString()
         
         // -- At the end append the command script wrapped file name
         if( task.config.clusterOptions ) {
