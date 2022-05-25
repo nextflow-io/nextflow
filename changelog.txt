@@ -1,5 +1,45 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.05.0-edge 25 May 2022
+- Add Hyperqueue executor (#2896) [ffa5712e] <Henrik Nortamo>
+- Add support for K8s Job resource [c70eb12d] <xhejtman>
+- Add support for time process directive in GLS executor (#2880) [1402e183] <Florian De Temmerman>
+- Add support for priviledge option for K8s containers [7ffe3a02]
+- Add DSL1 option to docs (#2836) [d30841a5] <Jose Espinosa-Carrasco>
+- Add support for container options to Azure Batch [3f4f00f9] 
+- Add support for move operation to AWS S3 [8c0ddfd5] 
+- Add K8s execution hostname in the trace file (#2828) [ebaef92a] <Fabian Lehmann>
+- Add support for AWS S3 encyption using a custom KMS key [c1e45aa9] <Paolo Di Tommaso>
+- Add support for Micromamba [383e023f]
+- Add jaxb-api dependecy to nf-amazon [c1a09f87]
+- Add strict mode config setting [ci fast] [696e70b5]
+- Add -head-prescript option to kuberun (#2830) [9e387055] 
+- Fix missing err message on submit failure [233e67f0] (#2899)
+- Fix resolve azure devops repositories when projectId is present [2500ff01] <Jorge Aguilera>
+- Fix AthenaJdbc into distribution zip [853a1f2a] [4b3579d5] [70ef7ee3] <Jorge Aguilera>
+- Fix Inconsistent bool parsing #2881 [40bf2b2a]
+- Fix  Unable to pull pipeline if config file is not in default branch (#2876) [4ee5b04f] <Jorge Aguilera>
+- Fix Prevent crash when scratch dir does not exist (#2888) [9ef44ae5] <Fabian Lehmann>
+- Fix DSL1 detection to invalid workflow keyword matching [fe0700b0] (#2879)  <Jose Espinosa-Carrasco>
+- Fix Aws Batch retry policy on spot reclaim [6e029b79]
+- Fix 'false' string in config interpreted as true (#2865) [079a18ce] <Fabian Lehmann>
+- Improve Git Provider config logging [d7dbca8ec]
+- Improve K8s task handler [1822b2ca]
+- Improve missing workflow err message [da101e8f] (#2871)
+- Include revision in the Azure Repos provider when specified (#2861) [3342c767] <Jorge Aguilera>
+- Remove unnecessary change dir echo [372d1f47]
+- Abort execution when accessing undefined params with strict mode [93836081]
+- Update docker base image [50cd7956]
+- Update default SKU for Azure Batch (#2868) [9ea09dba] <Abhinav Sharma>]
+- Update dependencies [405d9545]
+- Refactoring to prevent name conflict [aba2671b]
+- Few DSL syntax to explicit declaration of plugin extensions (#2820) [bfc4a067] <Jorge Aguilera>
+- Sanitize k8s label and annotation keys, don't sanitize annotation value (#2843) [5287a984] <Ben Sherman>
+- Docs improvement (#2835) [09e5bca3] <Ben Sherman>
+- Bump Jgit 6.1 [7186348c]
+- Bump Spock 2.1 [51100d16]
+- Bump capsule 1.1.1 [20ec1697]
+
 22.04.3 - 18 May 2022
 - Fix dsl1 detection (#2879) [1a7ea0d1] <Jose Espinosa-Carrasco
 
