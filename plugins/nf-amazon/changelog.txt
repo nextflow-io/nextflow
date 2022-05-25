@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+1.8.0 - 25 May 2022
+- Add support for custom KMS keys
+- Add support for virtual file system move operation [8c0ddfd5]
+
 1.7.2 - 15 Apr 2022
 - Fix Aws Batch retry policy on spot reclaim [d855f0d9]
 
