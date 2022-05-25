@@ -30,7 +30,11 @@ class TupleHelperTest extends Specification {
         TupleHelper.listOf('a') == ['a']
         TupleHelper.listOf('a','b') == ['a', 'b']
         TupleHelper.listOf('a','b','z') == ['a', 'b', 'z']
+        TupleHelper.listOf('1','2','3', '4') == '1'..'4'
+        TupleHelper.listOf('1','2','3', '4', '5') == '1'..'5'
+        TupleHelper.listOf('1','2','3', '4', '5', '6') == '1'..'6'
+        TupleHelper.listOf('1','2','3', '4', '5', '6', '7') == '1'..'7'
+        TupleHelper.listOf('1','2','3', '4', '5', '6', '7', '8') == '1'..'8'
     }
-
 
 }
