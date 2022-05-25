@@ -42,6 +42,7 @@ import java.util.concurrent.TimeUnit
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import sun.net.www.protocol.ftp.FtpURLConnection
 
 /**
@@ -50,6 +51,7 @@ import sun.net.www.protocol.ftp.FtpURLConnection
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Emilio Palumbo <emilio.palumbo@crg.eu>
  */
+@Slf4j
 @PackageScope
 @CompileStatic
 abstract class XFileSystemProvider extends FileSystemProvider {
@@ -167,6 +169,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     protected URLConnection toConnection(Path path) {
         final url = path.toUri().toURL()
+        log.trace "File remote URL: $url"
         final conn = url.openConnection()
         conn.setRequestProperty("User-Agent", 'Nextflow/httpfs')
         if( url.userInfo ) {

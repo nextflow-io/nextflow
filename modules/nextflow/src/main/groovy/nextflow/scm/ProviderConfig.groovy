@@ -22,16 +22,20 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.config.ConfigParser
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.file.FileHelper
+import nextflow.util.StringUtils
+
 /**
  * Models a repository provider configuration attributes
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class ProviderConfig {
 
@@ -43,8 +47,11 @@ class ProviderConfig {
 
     static Path getScmConfigPath() {
         def cfg = env.get('NXF_SCM_FILE')
-        if( !cfg )
+        if( !cfg ) {
+            log.debug "Using SCM config path: ${DEFAULT_SCM_FILE}"
             return DEFAULT_SCM_FILE
+        }
+        log.debug "Detected SCM custom path: $cfg"
         // check and return it if valid
         return FileHelper.asPath(cfg)
     }
@@ -267,7 +274,10 @@ class ProviderConfig {
     @PackageScope
     static Map getFromFile(Path file) {
         try {
-            parse(file.text)
+            log.trace "Parsing SCM config path: $file"
+            final result = parse(file.text)
+            dumpConfig(result)
+            return result
         }
         catch (NoSuchFileException | FileNotFoundException e) {
             if( file == DEFAULT_SCM_FILE ) {
@@ -287,6 +297,15 @@ class ProviderConfig {
         catch( Exception e ) {
             final message = "Failed to parse config file '${file?.toUriString()}' -- Cause: ${e.message?:e.toString()}"
             throw new ConfigParseException(message,e)
+        }
+    }
+
+    static private void dumpConfig(Map config) {
+        try {
+            log.debug "Detected SCM config: ${StringUtils.stripSecrets(config).toMapString()}"
+        }
+        catch (Throwable e) {
+            log.debug "Failed to dump SCM config: ${e.message ?: e}", e
         }
     }
 
