@@ -550,7 +550,7 @@ class TaskConfigTest extends Specification {
 
     }
 
-    def 'should get gpu resources' () {
+    def 'should get accelerator resources' () {
 
         given:
         def script = Mock(BaseScript)
@@ -560,8 +560,8 @@ class TaskConfigTest extends Specification {
         process.accelerator 5
         def res = process.createTaskConfig().getAccelerator()
         then:
-        res.limit == 5 
         res.request == 5
+        res.limit == 5 
 
         when:
         process = new ProcessConfig(script)

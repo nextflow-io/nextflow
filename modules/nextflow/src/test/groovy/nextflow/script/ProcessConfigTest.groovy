@@ -635,12 +635,12 @@ class ProcessConfigTest extends Specification {
         when:
         process.accelerator 1, limit: 5
         then:
-        process.accelerator == [request: 1, limit:5]
+        process.accelerator == [request: 1, limit: 5]
 
         when:
         process.accelerator 5, request: 1
         then:
-        process.accelerator == [request: 1, limit:5]
+        process.accelerator == [request: 1, limit: 5]
     }
 
     def 'should get default config path' () {

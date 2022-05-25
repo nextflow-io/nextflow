@@ -401,7 +401,7 @@ class PodSpecBuilder {
 
         // add gpu settings
         if( accelerator ) {
-            container.resources = addAcceleratorResources(accelerator, container.resources as Map)
+            container.resources = addAcceleratorResource(accelerator, container.resources as Map)
         }
 
         // add storage definitions ie. volumes and mounts
@@ -497,25 +497,21 @@ class PodSpecBuilder {
         return type
     }
 
-
     @PackageScope
     @CompileDynamic
-    Map addAcceleratorResources(AcceleratorResource accelerator, Map res) {
-
-        if( res == null )
-            res = new LinkedHashMap(2)
+    Map addAcceleratorResource(AcceleratorResource accelerator, Map res) {
 
         def type = getAcceleratorType(accelerator)
 
         if( accelerator.request ) {
-            final req = res.requests ?: new LinkedHashMap<>(2)
-            req.put(type, accelerator.request)
-            res.requests = req
+            final requests = res.requests ?: [:]
+            requests.put(type, accelerator.request)
+            res.requests = requests
         }
         if( accelerator.limit ) {
-            final lim = res.limits ?: new LinkedHashMap<>(2)
-            lim.put(type, accelerator.limit)
-            res.limits = lim
+            final limits = res.limits ?: [:]
+            limits.put(type, accelerator.limit)
+            res.limits = limits
         }
 
         return res

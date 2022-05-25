@@ -716,46 +716,46 @@ class PodSpecBuilderTest extends Specification {
         def builder = new PodSpecBuilder()
 
         when:
-        def res = builder.addAcceleratorResources(new AcceleratorResource(request:2, limit: 5), null)
+        def res = builder.addAcceleratorResource(new AcceleratorResource(request: 2, limit: 5), [:])
         then:
         res.requests == ['nvidia.com/gpu': 2]
         res.limits == ['nvidia.com/gpu': 5]
 
         when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(limit: 5, type:'foo'), null)
+        res = builder.addAcceleratorResource(new AcceleratorResource(limit: 5, type:'foo'), [:])
         then:
         res.requests == ['foo.com/gpu': 5]
         res.limits == ['foo.com/gpu': 5]
 
         when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, type:'foo.org'), null)
+        res = builder.addAcceleratorResource(new AcceleratorResource(request: 5, type:'foo.org'), [:])
         then:
         res.requests == ['foo.org/gpu': 5]
         res.limits == null
 
         when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, type:'foo.org'), [limits: [cpus: 2]])
+        res = builder.addAcceleratorResource(new AcceleratorResource(request: 5, type:'foo.org'), [limits: [cpu: 2]])
         then:
         res.requests == ['foo.org/gpu': 5]
-        res.limits == [cpus:2]
+        res.limits == [cpu:2]
 
         when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, limit: 10, type:'foo.org'), [limits: [cpus: 2]])
+        res = builder.addAcceleratorResource(new AcceleratorResource(request: 5, limit: 10, type:'foo.org'), [limits: [cpu: 2]])
         then:
         res.requests == ['foo.org/gpu': 5]
-        res.limits == [cpus:2, 'foo.org/gpu': 10]
+        res.limits == [cpu:2, 'foo.org/gpu': 10]
 
         when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, type:'example.com/fpga'), null)
+        res = builder.addAcceleratorResource(new AcceleratorResource(request: 5, type:'example.com/fpga'), [:])
         then:
         res.requests == ['example.com/fpga': 5]
         res.limits == null
 
         when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, limit: 10, type:'example.com/fpga'), [limits: [cpus: 2]])
+        res = builder.addAcceleratorResource(new AcceleratorResource(request: 5, limit: 10, type:'example.com/fpga'), [limits: [cpu: 2]])
         then:
         res.requests == ['example.com/fpga': 5]
-        res.limits == [cpus:2, 'example.com/fpga': 10]
+        res.limits == [cpu:2, 'example.com/fpga': 10]
     }
 
 

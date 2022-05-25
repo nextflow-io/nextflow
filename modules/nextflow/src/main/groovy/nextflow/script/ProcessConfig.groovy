@@ -858,12 +858,24 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
     }
 
+    /**
+     * Allow user to specify `accelerator` directive as a value and a list of params, eg:
+     *
+     *     accelerator 2, type: 'nvidia.com'
+     *
+     * @param params
+     *      A map representing the accelerator params
+     * @param value
+     *      The default accelerator value
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
     ProcessConfig accelerator( Map params, value )  {
         if( value instanceof Number ) {
-            if( params.limit==null )
-                params.limit=value
-            else if( params.request==null )
-                params.request=value
+            if( params.limit == null )
+                params.limit = value
+            else if( params.request == null )
+                params.request = value
         }
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `accelerator` directive value: $value [${value.getClass().getName()}]")
@@ -871,6 +883,17 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
+    /**
+     * Allow user to specify `accelerator` directive as a value or a list of params, eg:
+     *
+     *     accelerator 2
+     *     accelerator request: 1, limit: 4
+     *
+     * @param value
+     *      The default accelerator value or map of params
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
     ProcessConfig accelerator( value ) {
         if( value instanceof Number )
             configProperties.put('accelerator', [limit: value])
