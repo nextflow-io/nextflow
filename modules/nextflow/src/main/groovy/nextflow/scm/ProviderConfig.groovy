@@ -29,7 +29,6 @@ import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.file.FileHelper
 import nextflow.util.StringUtils
-
 /**
  * Models a repository provider configuration attributes
  *
@@ -274,8 +273,9 @@ class ProviderConfig {
     @PackageScope
     static Map getFromFile(Path file) {
         try {
-            log.trace "Parsing SCM config path: $file"
-            final result = parse(file.text)
+            final content = file.text
+            log.trace "Parsing SCM config path: ${file.toUriString()}\n${content}\n"
+            final result = parse(content)
             dumpConfig(result)
             return result
         }
