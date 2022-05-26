@@ -107,14 +107,19 @@ class GoogleBatchTaskHandler extends TaskHandler {
 
         final spec = new TaskSpec()
         final res = new ComputeResource()
+
         // CPUs requirement
-        res.cpuMilli = task.config.getCpus() * 1000
+        res.cpuMilli = task.config.getCpus().request * 1000
+
         // memory requirement
-        if( task.config.getMemory() )
-            res.memoryMib = task.config.getMemory().getMega().toInteger()
+        final memory = task.config.getMemory()
+        if( memory )
+            res.memoryMib = memory.request.toMega().toInteger()
+
         // timeout requirement
-        if( task.config.getTime() )
-            spec.withMaxRunDuration(task.config.getTime() )
+        final time = task.config.getTime()
+        if( time )
+            spec.withMaxRunDuration(time.request)
 
         // task spec
         final cmd = "trap \"{ cp ${TaskRun.CMD_LOG} ${launcher.workDirMount}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${launcher.workDirMount}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"

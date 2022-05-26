@@ -92,8 +92,8 @@ class NqsiiExecutorTest extends Specification {
         when:
         task.config = new TaskConfig()
         task.config.queue = 'alpha'
-        task.config.time = '1m'
         task.config.memory = '1m'
+        task.config.time = '1m'
         then:
         executor.getHeaders(task) == '''
                 #PBS -N nf-task_name
@@ -102,8 +102,8 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -b 1
                 #PBS -q alpha
                 #PBS -l cpunum_job=1
-                #PBS -l elapstim_req=00:01:00
                 #PBS -l memsz_job=1mb
+                #PBS -l elapstim_req=00:01:00
                 NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
@@ -113,9 +113,9 @@ class NqsiiExecutorTest extends Specification {
         when:
         task.config = new TaskConfig()
         task.config.queue = 'delta'
-        task.config.time = '10m'
-        task.config.memory = '5m'
         task.config.cpus = 2
+        task.config.memory = '5m'
+        task.config.time = '10m'
         then:
         executor.getHeaders(task) == '''
                 #PBS -N nf-task_name
@@ -124,8 +124,8 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -b 1
                 #PBS -q delta
                 #PBS -l cpunum_job=2
-                #PBS -l elapstim_req=00:10:00
                 #PBS -l memsz_job=5mb
+                #PBS -l elapstim_req=00:10:00
                 NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
@@ -133,9 +133,9 @@ class NqsiiExecutorTest extends Specification {
         when:
         task.config = new TaskConfig()
         task.config.queue = 'delta'
-        task.config.time = '1d'
-        task.config.memory = '1g'
         task.config.cpus = 8
+        task.config.memory = '1g'
+        task.config.time = '1d'
         then:
         executor.getHeaders(task) == '''
                 #PBS -N nf-task_name
@@ -144,8 +144,8 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -b 1
                 #PBS -q delta
                 #PBS -l cpunum_job=8
-                #PBS -l elapstim_req=24:00:00
                 #PBS -l memsz_job=1gb
+                #PBS -l elapstim_req=24:00:00
                 NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
@@ -153,8 +153,8 @@ class NqsiiExecutorTest extends Specification {
         when:
         task.config = new TaskConfig()
         task.config.queue = 'delta'
-        task.config.time = '2d 6h 10m'
         task.config.memory = '2g'
+        task.config.time = '2d 6h 10m'
         then:
         executor.getHeaders(task) == '''
                 #PBS -N nf-task_name
@@ -163,8 +163,8 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -b 1
                 #PBS -q delta
                 #PBS -l cpunum_job=1
-                #PBS -l elapstim_req=54:10:00
                 #PBS -l memsz_job=2gb
+                #PBS -l elapstim_req=54:10:00
                 NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()

@@ -87,15 +87,15 @@ class ProcessConfigTest extends Specification {
         when:
         config.time '1h'
         then:
-        config.time == '1h'
-        config.createTaskConfig().time == new Duration('1h')
+        config.time.request == Duration.of('1h')
+        config.createTaskConfig().time.request == Duration.of('1h')
 
         // maxMemory property
         when:
         config.memory '2GB'
         then:
-        config.memory == '2GB'
-        config.createTaskConfig().memory == new MemoryUnit('2GB')
+        config.memory.request == MemoryUnit.of('2GB')
+        config.createTaskConfig().memory.request == MemoryUnit.of('2GB')
 
         when:
         config.stageInMode 'copy'
@@ -585,7 +585,7 @@ class ProcessConfigTest extends Specification {
         then:
         config.queue == 'cn-el6'
         config.container == 'ubuntu:latest'
-        config.memory == '10 GB'
+        config.memory.request == MemoryUnit.of('10 GB')
         config.getInputs().size() == 2
         config.getOutputs().size() == 1
 
@@ -600,14 +600,14 @@ class ProcessConfigTest extends Specification {
         then:
         copy.queue == 'long'
         copy.container == 'debian:wheezy'
-        copy.memory == '5 GB'
+        copy.memory.request == MemoryUnit.of('5 GB')
         copy.getInputs().size() == 3
         copy.getOutputs().size() == 2
 
         // original config is not affected
         config.queue == 'cn-el6'
         config.container == 'ubuntu:latest'
-        config.memory == '10 GB'
+        config.memory.request == MemoryUnit.of('10 GB')
         config.getInputs().size() == 2
         config.getOutputs().size() == 1
     }
@@ -618,29 +618,29 @@ class ProcessConfigTest extends Specification {
         def process = new ProcessConfig(Mock(BaseScript))
 
         when:
-        process.accelerator 5
+        process.accelerator 2
         then:
-        process.accelerator == [limit: 5]
+        process.accelerator == [request: 2, limit: 2]
 
         when:
-        process.accelerator request: 1, limit: 5, type: 'nvida'
+        process.accelerator request: 1, limit: 4, type: 'nvida'
         then:
-        process.accelerator == [request: 1, limit: 5, type: 'nvida']
+        process.accelerator == [request: 1, limit: 4, type: 'nvida']
 
         when:
-        process.accelerator 5, type: 'nvida'
+        process.accelerator 2, type: 'nvida'
         then:
-        process.accelerator == [limit: 5, type: 'nvida']
+        process.accelerator == [request: 2, limit: 2, type: 'nvida']
 
         when:
-        process.accelerator 1, limit: 5
+        process.accelerator 1, limit: 4
         then:
-        process.accelerator == [request: 1, limit: 5]
+        process.accelerator == [request: 1, limit: 4]
 
         when:
-        process.accelerator 5, request: 1
+        process.accelerator 4, request: 1
         then:
-        process.accelerator == [request: 1, limit: 5]
+        process.accelerator == [request: 1, limit: 4]
     }
 
     def 'should get default config path' () {

@@ -19,6 +19,11 @@ package nextflow.processor
 import java.nio.file.Paths
 
 import nextflow.exception.FailedGuardException
+import nextflow.executor.res.CpuResource
+import nextflow.executor.res.MemoryResource
+import nextflow.executor.res.DiskResource
+import nextflow.executor.res.TimeResource
+import nextflow.executor.res.AcceleratorResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
@@ -215,22 +220,23 @@ class TaskConfigTest extends Specification {
     }
 
 
-    def testGetTime() {
+    def testGetCpus() {
 
         when:
         def config = new TaskConfig().setContext(ten: 10)
-        config.time = value
+        config.cpus = value
 
         then:
-        config.time == expected
-        config.getTime() == expected
+        config.cpus == expected
+        config.getCpus() == expected
+        config.hasCpus() == defined
 
         where:
-        expected            || value
-        null                || null
-        new Duration('1s')  || 1000
-        new Duration('2h')  || '2h'
-        new Duration('10h') || { "$ten hours" }
+        expected            | defined  | value
+        new CpuResource(1)  | false    | null
+        new CpuResource(1)  | true     | 1
+        new CpuResource(8)  | true     | 8
+        new CpuResource(10) | true     | { ten ?: 0  }
 
     }
 
@@ -245,11 +251,11 @@ class TaskConfigTest extends Specification {
         config.getMemory() == expected
 
         where:
-        expected                || value
-        null                    || null
-        new MemoryUnit('1K')    || 1024
-        new MemoryUnit('2M')    || '2M'
-        new MemoryUnit('10G')   || { "$ten G" }
+        expected                    || value
+        null                        || null
+        new MemoryResource('1K')    || 1024
+        new MemoryResource('2M')    || '2M'
+        new MemoryResource('10G')   || { "$ten G" }
 
     }
 
@@ -264,33 +270,49 @@ class TaskConfigTest extends Specification {
         config.getDisk() == expected
 
         where:
-        expected                || value
-        null                    || null
-        new MemoryUnit('1M')    || 1024 * 1024
-        new MemoryUnit('5M')    || '5M'
-        new MemoryUnit('20G')   || { "$x G" }
-        new MemoryUnit('30G')   || MemoryUnit.of('30G')
+        expected                  || value
+        null                      || null
+        new DiskResource('1M')    || 1024 * 1024
+        new DiskResource('5M')    || '5M'
+        new DiskResource('20G')   || { "$x G" }
+        new DiskResource('30G')   || MemoryUnit.of('30G')
 
     }
 
-    def testGetCpus() {
+    def testGetTime() {
 
         when:
         def config = new TaskConfig().setContext(ten: 10)
-        config.cpus = value
+        config.time = value
 
         then:
-        config.cpus == expected
-        config.getCpus() == expected
-        config.hasCpus() == defined
+        config.time == expected
+        config.getTime() == expected
 
         where:
-        expected     | defined  | value
-        1            | false    | null
-        1            | true     | 1
-        8            | true     | 8
-        10           | true     | { ten ?: 0  }
+        expected                || value
+        null                    || null
+        new TimeResource('1s')  || 1000
+        new TimeResource('2h')  || '2h'
+        new TimeResource('10h') || { "$ten hours" }
 
+    }
+
+    def testGetAccelerator() {
+
+        when:
+        def config = new TaskConfig().setContext(ten: 10)
+        config.accelerator = value
+
+        then:
+        config.accelerator == expected
+        config.getAccelerator() == expected
+
+        where:
+        expected                    | value
+        null                        | null
+        new AcceleratorResource(2)  | 2
+        new AcceleratorResource(10) | { ten ?: 0  }
     }
 
     def testGetStore() {
@@ -513,20 +535,20 @@ class TaskConfigTest extends Specification {
         int count = 0
         config.cpus = { ++count }
         then:
-        config.getCpus() == 1
-        config.getCpus() == 1
+        config.getCpus().request == 1
+        config.getCpus().request == 1
 
         when:
         config = config.clone()
         then:
-        config.getCpus() == 2
-        config.getCpus() == 2
+        config.getCpus().request == 2
+        config.getCpus().request == 2
 
         when:
         config = config.clone()
         then:
-        config.getCpus() == 3
-        config.getCpus() == 3
+        config.getCpus().request == 3
+        config.getCpus().request == 3
     }
 
     def 'should configure pod options'()  {
@@ -548,29 +570,6 @@ class TaskConfigTest extends Specification {
                     [secret: 'foo', mountPath: '/this'],
                     [secret: 'bar', env: 'BAR_XXX'] ])
 
-    }
-
-    def 'should get accelerator resources' () {
-
-        given:
-        def script = Mock(BaseScript)
-
-        when:
-        def process = new ProcessConfig(script)
-        process.accelerator 5
-        def res = process.createTaskConfig().getAccelerator()
-        then:
-        res.request == 5
-        res.limit == 5 
-
-        when:
-        process = new ProcessConfig(script)
-        process.accelerator 5, limit: 10, type: 'nvidia'
-        res = process.createTaskConfig().getAccelerator()
-        then:
-        res.request == 5
-        res.limit == 10
-        res.type == 'nvidia'
     }
 
     def 'should configure secrets'()  {

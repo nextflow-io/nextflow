@@ -20,6 +20,9 @@ package nextflow.cloud.google.batch
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.google.batch.model.ProvisioningModel
+import nextflow.executor.res.CpuResource
+import nextflow.executor.res.MemoryResource
+import nextflow.executor.res.TimeResource
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
@@ -76,7 +79,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getWorkDir() >> WORK_DIR
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
-                getCpus() >> 2
+                getCpus() >> new CpuResource(2)
                 getContainerOptions() >> CONTAINER_OPTS
             }
         }
@@ -133,9 +136,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getWorkDir() >> WORK_DIR
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
-                getCpus() >> CPUS
-                getMemory() >> MEM
-                getTime() >> TIMEOUT
+                getCpus() >> new CpuResource(CPUS)
+                getMemory() >> new MemoryResource(MEM)
+                getTime() >> new TimeResource(TIMEOUT)
                 getMachineType() >> MACHINE_TYPE
                 getContainerOptions() >> CONTAINER_OPTS
             }

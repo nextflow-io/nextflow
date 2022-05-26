@@ -40,35 +40,39 @@ class OarExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
+        final cpus = task.config.getCpus()
+        final memory = task.config.getMemory()
+        final time = task.config.getTime()
+
         result << '-d' << quote(task.workDir)
         result << '-n' << getJobNameFor(task)
         // see discussion https://github.com/nextflow-io/nextflow/issues/1761
         result << '-O' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
         result << '-E' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
 
-        if( task.config.getMemory() ) {
-            if( task.config.getMemory().toMega() < 1024 ) {
+        if( memory ) {
+            if( memory.request.toMega() < 1024 ) {
                 result << "-p" << "\"memnode=1\""
             }
             else {
-                result << "-p" << "\"memnode=${task.config.getMemory().toGiga().toString()}\""
+                result << "-p" << "\"memnode=${memory.request.toGiga()}\""
             }
         }
 
-        if( task.config.cpus > 1) {
-            if( task.config.time ) {
-                // cpu + time set
-                result << "-l" << "/nodes=1/core=${task.config.cpus.toString()},walltime=${task.config.getTime().format('HH:mm:ss')}"
+        if( cpus.request > 1 ) {
+            if( time ) {
+                // set cpus and time
+                result << "-l" << "/nodes=1/core=${cpus.request},walltime=${time.request.format('HH:mm:ss')}"
             }
             else {
-                // just cpu set
-                result << "-l" << "/nodes=1/core=${task.config.cpus.toString()}"
+                // set cpus only
+                result << "-l" << "/nodes=1/core=${cpus.request}"
             }
         }
         else {
-            if( task.config.time ) {
-                // just time set
-                result << "-l" << "walltime=${task.config.getTime().format('HH:mm:ss')}"
+            if( time ) {
+                // set time only
+                result << "-l" << "walltime=${time.request.format('HH:mm:ss')}"
             }
         }
         

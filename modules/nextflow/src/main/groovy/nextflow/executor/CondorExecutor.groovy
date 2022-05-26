@@ -52,26 +52,35 @@ class CondorExecutor extends AbstractGridExecutor {
     @Override
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
+        final cpus = task.config.getCpus()
+        final memory = task.config.getMemory()
+        final disk = task.config.getDisk()
+        final time = task.config.getTime()
+
         result << "universe = vanilla"
         result << "executable = ${TaskRun.CMD_RUN}"
         result << "log = ${TaskRun.CMD_LOG}"
         result << "getenv = true"
 
-        if( task.config.getCpus()>1 ) {
-            result << "request_cpus = ${task.config.getCpus()}"
+        // number of cpus for multiprocessing/multi-threading
+        if( cpus.request>1 ) {
+            result << "request_cpus = ${cpus.request}"
             result << "machine_count = 1"
         }
 
-        if( task.config.getMemory() ) {
-            result << "request_memory = ${task.config.getMemory()}"
+        // max memory
+        if( memory ) {
+            result << "request_memory = ${memory.request}"
         }
 
-        if( task.config.getDisk() ) {
-            result << "request_disk = ${task.config.getDisk()}"
+        // max disk storage
+        if( disk ) {
+            result << "request_disk = ${disk.request}"
         }
 
-        if( task.config.getTime() ) {
-            result << "periodic_remove = (RemoteWallClockTime - CumulativeSuspensionTime) > ${task.config.getTime().toSeconds()}"
+        // max duration
+        if( time ) {
+            result << "periodic_remove = (RemoteWallClockTime - CumulativeSuspensionTime) > ${time.request.toSeconds()}"
         }
 
         if( task.config.clusterOptions ) {

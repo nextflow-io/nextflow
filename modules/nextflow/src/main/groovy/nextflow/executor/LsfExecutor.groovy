@@ -66,6 +66,11 @@ class LsfExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
+        final cpus = task.config.getCpus()
+        final memory = task.config.getMemory()
+        final disk = task.config.getDisk()
+        final time = task.config.getTime()
+
         result << '-o' << task.workDir.resolve(TaskRun.CMD_LOG).toString()
 
         // add other parameters (if any)
@@ -73,32 +78,34 @@ class LsfExecutor extends AbstractGridExecutor {
             result << '-q'  << (task.config.queue as String)
         }
 
-        //number of cpus for multiprocessing/multi-threading
-        if( task.config.cpus > 1 ) {
-            result << "-n" << task.config.cpus.toString()
+        // number of cpus for multiprocessing/multi-threading
+        if( cpus.request > 1 ) {
+            result << "-n" << "${cpus.request}"
             result << "-R" << "span[hosts=1]"
         }
 
-        if( task.config.time ) {
-            result << '-W' << task.config.getTime().format('HH:mm')
-        }
-
-        if( task.config.getMemory() ) {
-            def mem = task.config.getMemory()
+        // max memory
+        if( memory ) {
+            final mem = memory.request
             // LSF mem limit can be both per-process and per-job
             // depending a system configuration setting -- see https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_job_memlimit.5.dita
             // When per-process is used (default) the amount of requested memory
             // is divided by the number of used cpus (processes)
-            def mem1 = ( task.config.cpus > 1 && !perJobMemLimit ) ? mem.div(task.config.cpus as int) : mem
-            def mem2 = ( task.config.cpus > 1 && perTaskReserve ) ? mem.div(task.config.cpus as int) : mem
+            def mem1 = ( cpus.request > 1 && !perJobMemLimit ) ? mem.div(cpus.request) : mem
+            def mem2 = ( cpus.request > 1 &&  perTaskReserve ) ? mem.div(cpus.request) : mem
 
             result << '-M' << String.valueOf(mem1.toUnit(memUnit))
-            result << '-R' << "select[mem>=${mem.toUnit(memUnit)}] rusage[mem=${mem2.toUnit(usageUnit)}]".toString()
+            result << '-R' << "select[mem>=${mem.toUnit(memUnit)}] rusage[mem=${mem2.toUnit(usageUnit)}]"
         }
 
-        def disk = task.config.getDisk()
+        // max disk storage
         if( disk ) {
-            result << '-R' << "select[tmp>=${disk.toUnit(memUnit)}] rusage[tmp=${disk.toUnit(usageUnit)}]".toString()
+            result << '-R' << "select[tmp>=${disk.request.toUnit(memUnit)}] rusage[tmp=${disk.request.toUnit(usageUnit)}]"
+        }
+
+        // max duration
+        if( time ) {
+            result << '-W' << time.request.format('HH:mm')
         }
 
         // -- the job name

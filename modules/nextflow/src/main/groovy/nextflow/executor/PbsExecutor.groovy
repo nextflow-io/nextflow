@@ -38,7 +38,11 @@ class PbsExecutor extends AbstractGridExecutor {
      * @return A {@link List} containing all directive tokens and values.
      */
     protected List<String> getDirectives( TaskRun task, List<String> result ) {
-        assert result !=null
+        assert result != null
+
+        final cpus = task.config.getCpus()
+        final memory = task.config.getMemory()
+        final time = task.config.getTime()
 
         result << '-N' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
@@ -49,20 +53,20 @@ class PbsExecutor extends AbstractGridExecutor {
             result << '-q'  << (String)task.config.queue
         }
 
-        if( task.config.cpus > 1 ) {
-            result << '-l' << "nodes=1:ppn=${task.config.cpus}"
+        // number of cpus for multiprocessing/multi-threading
+        if( cpus.request > 1 ) {
+            result << '-l' << "nodes=1:ppn=${cpus.request}"
         }
 
-        // max task duration
-        if( task.config.time ) {
-            final duration = task.config.getTime()
-            result << "-l" << "walltime=${duration.format('HH:mm:ss')}"
-        }
-
-        // task max memory
-        if( task.config.memory ) {
+        // max memory
+        if( memory ) {
             // https://www.osc.edu/documentation/knowledge_base/out_of_memory_oom_or_excessive_memory_usage
-            result << "-l" << "mem=${task.config.memory.toString().replaceAll(/[\s]/,'').toLowerCase()}"
+            result << "-l" << "mem=${memory.request.toString().replaceAll(/[\s]/,'').toLowerCase()}"
+        }
+
+        // max duration
+        if( time ) {
+            result << "-l" << "walltime=${time.request.format('HH:mm:ss')}"
         }
 
         // -- at the end append the command script wrapped file name

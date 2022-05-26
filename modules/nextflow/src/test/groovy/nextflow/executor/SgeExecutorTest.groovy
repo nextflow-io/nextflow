@@ -114,8 +114,8 @@ class SgeExecutorTest extends Specification {
         config = task.config = new TaskConfig()
         config.queue = 'my-queue'
         config.name = 'task'
-        config.time = '10m'
         config.memory = '1M'
+        config.time = '10m'
         config.remove('clusterOptions')
         then:
         executor.getHeaders(task) == '''
@@ -126,8 +126,8 @@ class SgeExecutorTest extends Specification {
                 #$ -terse
                 #$ -notify
                 #$ -q my-queue
-                #$ -l h_rt=00:10:00
                 #$ -l h_rss=1M,mem_free=1M
+                #$ -l h_rt=00:10:00
                 '''
                 .stripIndent().leftTrim()
 
@@ -139,8 +139,8 @@ class SgeExecutorTest extends Specification {
         config.name = 'task'
         config.cpus = 1
         config.penv = 'smp'
-        config.time = '2 m'
         config.memory = '2 M'
+        config.time = '2 m'
         then:
         executor.getHeaders(task) == '''
                 #$ -wd /abc
@@ -151,8 +151,8 @@ class SgeExecutorTest extends Specification {
                 #$ -notify
                 #$ -q my-queue
                 #$ -pe smp 1
-                #$ -l h_rt=00:02:00
                 #$ -l h_rss=2M,mem_free=2M
+                #$ -l h_rt=00:02:00
                 '''
                 .stripIndent().leftTrim()
 
@@ -162,8 +162,8 @@ class SgeExecutorTest extends Specification {
         config.name = 'task'
         config.cpus = 2
         config.penv = 'mpi'
-        config.time = '3 d'
         config.memory = '3 g'
+        config.time = '3 d'
         then:
         executor.getHeaders(task) == '''
                 #$ -wd /abc
@@ -174,8 +174,8 @@ class SgeExecutorTest extends Specification {
                 #$ -notify
                 #$ -q my-queue
                 #$ -pe mpi 2
-                #$ -l h_rt=72:00:00
                 #$ -l h_rss=3072M,mem_free=3072M
+                #$ -l h_rt=72:00:00
                 '''
                 .stripIndent().leftTrim()
 
@@ -185,8 +185,8 @@ class SgeExecutorTest extends Specification {
         config.name = 'task'
         config.cpus = 4
         config.penv = 'orte'
-        config.time = '1d3h'
         config.memory = '4 GB '
+        config.time = '1d3h'
         then:
         executor.getHeaders(task) == '''
                 #$ -wd /abc
@@ -197,8 +197,8 @@ class SgeExecutorTest extends Specification {
                 #$ -notify
                 #$ -q my-queue
                 #$ -pe orte 4
-                #$ -l h_rt=27:00:00
                 #$ -l h_rss=4096M,mem_free=4096M
+                #$ -l h_rt=27:00:00
                 '''
                 .stripIndent().leftTrim()
 

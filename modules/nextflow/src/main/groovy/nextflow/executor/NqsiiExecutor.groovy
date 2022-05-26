@@ -42,6 +42,10 @@ class NqsiiExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
+        final cpus = task.config.getCpus()
+        final memory = task.config.getMemory()
+        final time = task.config.getTime()
+
         result << '-N' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
         result << '-j' << 'o'  // stderr to stdin
@@ -52,22 +56,21 @@ class NqsiiExecutor extends AbstractGridExecutor {
             result << '-q' << (task.config.queue as String)
         }
 
-        //number of cpus for multiprocessing/multi-threading
-        if( task.config.cpus>1 ) {
-            result << "-l" << "cpunum_job=${task.config.cpus}"
+        // number of cpus for multiprocessing/multi-threading
+        if( cpus.request>1 ) {
+            result << "-l" << "cpunum_job=${cpus.request}"
         } else {
             result << "-l" << "cpunum_job=1"
         }
 
-        // max task duration
-        if( task.config.time ) {
-            final time = task.config.getTime()
-            result << "-l" << "elapstim_req=${time.format('HH:mm:ss')}"
+        // task max memory
+        if( memory ) {
+            result << "-l" << "memsz_job=${memory.request.toString().replaceAll(/[\s]/,'').toLowerCase()}"
         }
 
-        // task max memory
-        if( task.config.memory ) {
-            result << "-l" << "memsz_job=${task.config.memory.toString().replaceAll(/[\s]/,'').toLowerCase()}"
+        // max task duration
+        if( time ) {
+            result << "-l" << "elapstim_req=${time.request.format('HH:mm:ss')}"
         }
 
         // -- at the end append the command script wrapped file name

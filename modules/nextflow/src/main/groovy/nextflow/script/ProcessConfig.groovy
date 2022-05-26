@@ -859,7 +859,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     }
 
     /**
-     * Allow user to specify `accelerator` directive as a value and a list of params, eg:
+     * Allow user to specify `accelerator` directive as a value with a list of params, eg:
      *
      *     accelerator 2, type: 'nvidia.com'
      *
@@ -874,7 +874,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         if( value instanceof Number ) {
             if( params.limit == null )
                 params.limit = value
-            else if( params.request == null )
+            if( params.request == null )
                 params.request = value
         }
         else if( value != null )
@@ -901,6 +901,178 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             configProperties.put('accelerator', value)
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `accelerator` directive value: $value [${value.getClass().getName()}]")
+        return this
+    }
+
+    /**
+     * Allow user to specify `cpus` directive as a value with a list of params, eg:
+     *
+     *     cpus 2, limit: 4
+     *
+     * @param params
+     *      A map representing the cpus params
+     * @param value
+     *      The default cpus value
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig cpus( Map params, value )  {
+        if( value instanceof Number ) {
+            if( params.limit == null )
+                params.limit = value
+            if( params.request == null )
+                params.request = value
+        }
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid `cpus` directive value: $value [${value.getClass().getName()}]")
+        cpus(params)
+        return this
+    }
+
+    /**
+     * Allow user to specify `cpus` directive as a value or a list of params, eg:
+     *
+     *     cpus 2
+     *     cpus request: 1, limit: 4
+     *
+     * @param value
+     *      The default cpus value or map of params
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig cpus( value ) {
+        if( value instanceof Number )
+            configProperties.put('cpus', [limit: value])
+        else if( value instanceof Map )
+            configProperties.put('cpus', value)
+        else if( value != null )
+            throw new IllegalArgumentException("Not a valid `cpus` directive value: $value [${value.getClass().getName()}]")
+        return this
+    }
+
+    /**
+     * Allow user to specify `disk` directive as a value with a list of params, eg:
+     *
+     *     disk 2.GB, limit: 4.GB
+     *
+     * @param params
+     *      A map representing the disk params
+     * @param value
+     *      The default disk value
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig disk( Map params, value )  {
+        if( value ) {
+            if( params.limit == null )
+                params.limit = value
+            if( params.request == null )
+                params.request = value
+        }
+        disk(params)
+        return this
+    }
+
+    /**
+     * Allow user to specify `disk` directive as a value or a list of params, eg:
+     *
+     *     disk 2.GB
+     *     disk request: 1.GB, limit: 4.GB
+     *
+     * @param value
+     *      The default disk value or map of params
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig disk( value ) {
+        if( value instanceof Map )
+            configProperties.put('disk', value)
+        else if( value != null )
+            configProperties.put('disk', [limit: value])
+        return this
+    }
+
+    /**
+     * Allow user to specify `memory` directive as a value with a list of params, eg:
+     *
+     *     memory 2.GB, limit: 4.GB
+     *
+     * @param params
+     *      A map representing the memory params
+     * @param value
+     *      The default memory value
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig memory( Map params, value )  {
+        if( value ) {
+            if( params.limit == null )
+                params.limit = value
+            if( params.request == null )
+                params.request = value
+        }
+        memory(params)
+        return this
+    }
+
+    /**
+     * Allow user to specify `memory` directive as a value or a list of params, eg:
+     *
+     *     memory 2.GB
+     *     memory request: 1.GB, limit: 4.GB
+     *
+     * @param value
+     *      The default memory value or map of params
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig memory( value ) {
+        if( value instanceof Map )
+            configProperties.put('memory', value)
+        else if( value != null )
+            configProperties.put('memory', [limit: value])
+        return this
+    }
+
+    /**
+     * Allow user to specify `time` directive as a value with a list of params, eg:
+     *
+     *     time 2.h, limit: 4.h
+     *
+     * @param params
+     *      A map representing the time params
+     * @param value
+     *      The default time value
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig time( Map params, value )  {
+        if( value ) {
+            if( params.limit == null )
+                params.limit = value
+            if( params.request == null )
+                params.request = value
+        }
+        time(params)
+        return this
+    }
+
+    /**
+     * Allow user to specify `time` directive as a value or a list of params, eg:
+     *
+     *     time 2.h
+     *     time request: 1.h, limit: 4.h
+     *
+     * @param value
+     *      The default time value or map of params
+     * @return
+     *      The {@link ProcessConfig} instance itself
+     */
+    ProcessConfig time( value ) {
+        if( value instanceof Map )
+            configProperties.put('time', value)
+        else if( value != null )
+            configProperties.put('time', [limit: value])
         return this
     }
 

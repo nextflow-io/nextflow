@@ -95,8 +95,8 @@ class PbsExecutorTest extends Specification {
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
                 #PBS -q alpha
-                #PBS -l walltime=00:01:00
                 #PBS -l mem=1mb
+                #PBS -l walltime=00:01:00
                 NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
@@ -106,9 +106,9 @@ class PbsExecutorTest extends Specification {
         when:
         task.config = new TaskConfig()
         task.config.queue = 'delta'
-        task.config.time = '10m'
-        task.config.memory = '5m'
         task.config.cpus = 2
+        task.config.memory = '5m'
+        task.config.time = '10m'
         then:
         executor.getHeaders(task) == '''
                 #PBS -N nf-task_name
@@ -116,8 +116,8 @@ class PbsExecutorTest extends Specification {
                 #PBS -j oe
                 #PBS -q delta
                 #PBS -l nodes=1:ppn=2
-                #PBS -l walltime=00:10:00
                 #PBS -l mem=5mb
+                #PBS -l walltime=00:10:00
                 NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
@@ -125,9 +125,9 @@ class PbsExecutorTest extends Specification {
         when:
         task.config = new TaskConfig()
         task.config.queue = 'delta'
-        task.config.time = '1d'
-        task.config.memory = '1g'
         task.config.cpus = 8
+        task.config.memory = '1g'
+        task.config.time = '1d'
         then:
         executor.getHeaders(task) == '''
                 #PBS -N nf-task_name
@@ -135,8 +135,8 @@ class PbsExecutorTest extends Specification {
                 #PBS -j oe
                 #PBS -q delta
                 #PBS -l nodes=1:ppn=8
-                #PBS -l walltime=24:00:00
                 #PBS -l mem=1gb
+                #PBS -l walltime=24:00:00
                 NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
@@ -144,16 +144,16 @@ class PbsExecutorTest extends Specification {
         when:
         task.config = new TaskConfig()
         task.config.queue = 'delta'
-        task.config.time = '2d 6h 10m'
         task.config.memory = '2g'
+        task.config.time = '2d 6h 10m'
         then:
         executor.getHeaders(task) == '''
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
                 #PBS -q delta
-                #PBS -l walltime=54:10:00
                 #PBS -l mem=2gb
+                #PBS -l walltime=54:10:00
                 NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()

@@ -181,9 +181,9 @@ class CrgExecutorTest extends Specification {
                     #$ -terse
                     #$ -notify
                     #$ -q short
-                    #$ -l h_rt=24:00:00
                     #$ -l h_vmem=200M,virtual_free=200M
                     #$ -l disk=2048M
+                    #$ -l h_rt=24:00:00
                     '''
                     .stripIndent().leftTrim()
 
@@ -205,8 +205,8 @@ class CrgExecutorTest extends Specification {
                     #$ -terse
                     #$ -notify
                     #$ -q short
-                    #$ -l h_rt=24:00:00
                     #$ -l h_vmem=4096M,virtual_free=4096M
+                    #$ -l h_rt=24:00:00
                     '''
                 .stripIndent().leftTrim()
 
@@ -230,8 +230,8 @@ class CrgExecutorTest extends Specification {
                     #$ -terse
                     #$ -notify
                     #$ -q short
-                    #$ -l h_rt=24:00:00
                     #$ -l h_vmem=4096M,virtual_free=4096M
+                    #$ -l h_rt=24:00:00
                     #$ -binding env linear:1
                     #$ -soft -l docker_images=*;ubuntu;*
                     '''
@@ -259,8 +259,8 @@ class CrgExecutorTest extends Specification {
                     #$ -notify
                     #$ -q long
                     #$ -pe mpi 2
-                    #$ -l h_rt=72:00:00
                     #$ -l h_vmem=3072M,virtual_free=3072M
+                    #$ -l h_rt=72:00:00
                     #$ -binding env linear:2
                     #$ -R y
                     #$ -soft -l docker_images=*;busybox;*
@@ -292,8 +292,8 @@ class CrgExecutorTest extends Specification {
                     #$ -notify
                     #$ -q long
                     #$ -pe mpi 4
-                    #$ -l h_rt=72:00:00
                     #$ -l h_vmem=3072M,virtual_free=3072M
+                    #$ -l h_rt=72:00:00
                     #$ -binding env linear:4
                     #$ -R y
                     #$ -soft -l docker_images=*;busybox;*

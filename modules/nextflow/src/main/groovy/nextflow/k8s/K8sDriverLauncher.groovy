@@ -30,6 +30,8 @@ import nextflow.cli.CmdKubeRun
 import nextflow.cli.CmdRun
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
+import nextflow.executor.res.CpuResource
+import nextflow.executor.res.MemoryResource
 import nextflow.file.FileHelper
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
@@ -528,8 +530,8 @@ class K8sDriverLauncher {
             .withEnv( PodEnv.value('NXF_ASSETS', k8sConfig.getProjectDir()) )
             .withEnv( PodEnv.value('NXF_EXECUTOR', 'k8s'))
             .withEnv( PodEnv.value('NXF_ANSI_LOG', 'false'))
-            .withMemory(headMemory?:"")
-            .withCpus(headCpus)
+            .withCpus( new CpuResource(headCpus) )
+            .withMemory( new MemoryResource(headMemory) )
 
         if ( k8sConfig.useJobResource()) {
             this.resourceType = ResourceType.Job

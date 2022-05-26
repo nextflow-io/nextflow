@@ -123,8 +123,8 @@ class SlurmExecutorTest extends Specification {
 
         when:
         task.config = new TaskConfig()
-        task.config.time = '1h'
         task.config.memory = '50 M'
+        task.config.time = '1h'
         task.config.clusterOptions = '-a 1 --signal=KILL'
 
         then:
@@ -133,8 +133,8 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
                 #SBATCH --no-requeue
-                #SBATCH -t 01:00:00
                 #SBATCH --mem 50M
+                #SBATCH -t 01:00:00
                 #SBATCH -a 1 --signal=KILL
                 '''
                 .stripIndent().leftTrim()
@@ -142,8 +142,8 @@ class SlurmExecutorTest extends Specification {
         when:
         task.config = new TaskConfig()
         task.config.cpus = 2
-        task.config.time = '2h'
         task.config.memory = '200 M'
+        task.config.time = '2h'
         task.config.clusterOptions = '-b 2'
 
         then:
@@ -154,8 +154,8 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH --no-requeue
                 #SBATCH --signal B:USR2@30
                 #SBATCH -c 2
-                #SBATCH -t 02:00:00
                 #SBATCH --mem 200M
+                #SBATCH -t 02:00:00
                 #SBATCH -b 2
                 '''
                 .stripIndent().leftTrim()
@@ -163,8 +163,8 @@ class SlurmExecutorTest extends Specification {
         when:
         task.config = new TaskConfig()
         task.config.cpus = 8
-        task.config.time = '2d 3h'
         task.config.memory = '3 G'
+        task.config.time = '2d 3h'
         task.config.clusterOptions = '-x 3'
 
         then:
@@ -175,8 +175,8 @@ class SlurmExecutorTest extends Specification {
                 #SBATCH --no-requeue
                 #SBATCH --signal B:USR2@30
                 #SBATCH -c 8
-                #SBATCH -t 51:00:00
                 #SBATCH --mem 3072M
+                #SBATCH -t 51:00:00
                 #SBATCH -x 3
                 '''
                 .stripIndent().leftTrim()

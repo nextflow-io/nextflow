@@ -307,8 +307,8 @@ class WorkflowStats implements Cloneable {
             submitted --
             running ++
             // update current load
-            loadCpus += task.getConfig().getCpus()
-            loadMemory += (task.getConfig().getMemory()?.toBytes() ?: 0)
+            loadCpus += task.getConfig().getCpus().request
+            loadMemory += (task.getConfig().getMemory()?.request.toBytes() ?: 0)
             // update peaks
             if( peakRunning < running )
                 peakRunning = running
@@ -322,8 +322,8 @@ class WorkflowStats implements Cloneable {
         submittedCount --
         runningCount ++
         // update current load
-        loadCpus += task.getConfig().getCpus()
-        loadMemory += (task.getConfig().getMemory()?.toBytes() ?: 0)
+        loadCpus += task.getConfig().getCpus().request
+        loadMemory += (task.getConfig().getMemory()?.request.toBytes() ?: 0)
 
         // update peaks
         if( peakRunning < runningCount )
@@ -342,12 +342,12 @@ class WorkflowStats implements Cloneable {
         state.taskName = task.name
         state.hash = task.hashLog
         state.running --
-        state.loadCpus -= task.getConfig().getCpus()
-        state.loadMemory -= (task.getConfig().getMemory()?.toBytes() ?: 0)
+        state.loadCpus -= task.getConfig().getCpus().request
+        state.loadMemory -= (task.getConfig().getMemory()?.request.toBytes() ?: 0)
 
         this.runningCount --
-        this.loadCpus -= task.getConfig().getCpus()
-        this.loadMemory -= (task.getConfig().getMemory()?.toBytes() ?: 0)
+        this.loadCpus -= task.getConfig().getCpus().request
+        this.loadMemory -= (task.getConfig().getMemory()?.request.toBytes() ?: 0)
 
         if( task.failed ) {
             state.failed ++

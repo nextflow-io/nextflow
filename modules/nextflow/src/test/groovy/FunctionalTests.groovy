@@ -23,6 +23,7 @@ import spock.lang.Timeout
 
 import nextflow.config.ConfigParser
 import nextflow.processor.TaskProcessor
+import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.script.TestScriptRunner
 /**
@@ -212,7 +213,7 @@ class FunctionalTests extends Specification {
         def configStr = '''
              process {
                 cpus = { 2 * task.attempt }
-                memory = { 1.GB * task.attempt  }
+                memory = { 1.GB * task.attempt }
                 time = { 1.h * task.attempt }
                 withName: taskHello{ errorStrategy = 'finish' }
             }
@@ -241,9 +242,9 @@ class FunctionalTests extends Specification {
 
         then:
         processor instanceof TaskProcessor
-        processor.config.cpus == 2
-        processor.config.memory == MemoryUnit.of('3 GB')
-        processor.config.time == '1 h'
+        processor.config.cpus.request == 2
+        processor.config.memory.request == MemoryUnit.of('3 GB')
+        processor.config.time.request == Duration.of('1 h')
         processor.config.errorStrategy == 'finish'
 
     }
@@ -298,8 +299,8 @@ class FunctionalTests extends Specification {
 
         then:
             processor instanceof TaskProcessor
-            processor.config.memory == MemoryUnit.of('2 GB')
             processor.config.cpus == null
+            processor.config.memory == MemoryUnit.of('2 GB')
             processor.config.queue == null
 
         when:
@@ -322,8 +323,8 @@ class FunctionalTests extends Specification {
 
         then:
             processor instanceof TaskProcessor
-            processor.config.memory == MemoryUnit.of('2 GB')
             processor.config.cpus == 2
+            processor.config.memory == MemoryUnit.of('2 GB')
             processor.config.queue == 'the-small-one'
 
 
@@ -372,8 +373,8 @@ class FunctionalTests extends Specification {
 
         then:
         processor instanceof TaskProcessor
-        processor.config.memory == MemoryUnit.of('2 GB')
         processor.config.cpus == 3
+        processor.config.memory == MemoryUnit.of('2 GB')
         processor.config.queue == 'legacy-queue'
     }
 
@@ -423,7 +424,7 @@ class FunctionalTests extends Specification {
 
         then:
         processor instanceof TaskProcessor
-        processor.config.cpus == 2
+        processor.config.cpus.request == 2
         processor.config.queue == 'the-small-one'
 
 
@@ -447,7 +448,7 @@ class FunctionalTests extends Specification {
 
         then:
         processor instanceof TaskProcessor
-        processor.config.cpus == 8
+        processor.config.cpus.request == 8
         processor.config.queue == 'big-partition'
     }
 

@@ -294,9 +294,9 @@ class ScriptRunnerTest extends Specification {
         then:
         process.config instanceof ProcessConfig
         process.config.penv == 1
-        process.config.cpus == '222'  // !! this value is overridden by the one in the config file
-        process.config.memory == '333'
-        process.config.time == '555'
+        process.config.cpus.request == 222  // !! this value is overridden by the one in the config file
+        process.config.memory.request == MemoryUnit.of('333')
+        process.config.time.request == Duration.of('555')
 
     }
 
@@ -338,9 +338,9 @@ class ScriptRunnerTest extends Specification {
         then:
         process.config instanceof ProcessConfig
         process.config.penv == 1
-        process.config.cpus == '222'  // !! this value is overridden by the one in the config file
-        process.config.memory == '333'
-        process.config.time == '555'
+        process.config.cpus.request == 222  // !! this value is overridden by the one in the config file
+        process.config.memory.request == MemoryUnit.of('333')
+        process.config.time.request == Duration.of('555')
 
     }
 
@@ -477,10 +477,10 @@ class ScriptRunnerTest extends Specification {
         then:
         process.config instanceof ProcessConfig
         process.config.queue == 'short'
-        process.config.cpus == 2
+        process.config.cpus.request == 2
         process.config.penv == 'mpi'
-        process.config.memory == '10G'
-        process.config.time == '6 hour'
+        process.config.memory.rqeuest == MemoryUnit.of('10G')
+        process.config.time.rqeuest == Duration.of('6 hour')
 
         when:
         def result = new TestScriptRunner(config)
@@ -518,7 +518,7 @@ class ScriptRunnerTest extends Specification {
         def process = new TestParser(session).parseAndGetProcess(script)
         then:
         process.config instanceof ProcessConfig
-        process.config.cpus == null
+        process.config.cpus.request == 1
 
         when:
         def result = new TestScriptRunner(process: [executor:'nope'])

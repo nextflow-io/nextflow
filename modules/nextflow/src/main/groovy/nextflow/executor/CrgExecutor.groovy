@@ -35,7 +35,12 @@ class CrgExecutor extends SgeExecutor {
     @Override
     List<String> getDirectives(TaskRun task, List<String> result) {
 
-        if( task.config.cpus>1 && !task.config.penv ) {
+        final cpus = task.config.getCpus()
+        final memory = task.config.getMemory()
+        final disk = task.config.getDisk()
+        final time = task.config.getTime()
+
+        if( cpus.request>1 && !task.config.penv ) {
             log.debug 'Parallel environment not specified -- Using default value: `smp`'
             task.config.penv = 'smp'
         }
@@ -57,36 +62,36 @@ class CrgExecutor extends SgeExecutor {
             result << '-q' << (task.config.queue as String)
         }
 
-        //number of cpus for multiprocessing/multi-threading
+        // number of cpus for multiprocessing/multi-threading
         if ( task.config.penv ) {
-            result << "-pe" << "${task.config.penv} ${task.config.cpus}"
+            result << "-pe" << "${task.config.penv} ${cpus.request}"
         }
-        else if( task.config.cpus>1 ) {
-            result << "-l" << "slots=${task.config.cpus}"
-        }
-
-        // max task duration
-        if( task.config.time ) {
-            final time = task.config.getTime()
-            result << "-l" << "h_rt=${time.format('HH:mm:ss')}"
+        else if( cpus.request>1 ) {
+            result << "-l" << "slots=${cpus.request}"
         }
 
-        // task max memory
-        if( task.config.getMemory() ) {
-            final mem = "${task.config.getMemory().mega}M"
+        // max memory
+        if( memory ) {
+            final mem = "${memory.request.toMega()}M"
             result << "-l" << "h_vmem=$mem,virtual_free=$mem"
         }
 
-        if( task.config.getDisk() ) {
-            result << "-l" << "disk=${task.config.getDisk().toMega()}M"
+        // max disk storage
+        if( disk ) {
+            result << "-l" << "disk=${disk.request.toMega()}M"
+        }
+
+        // max duration
+        if( time ) {
+            result << "-l" << "h_rt=${time.request.format('HH:mm:ss')}"
         }
 
         if( task.container && task.isDockerEnabled() ) {
             //  this will export the SGE_BINDING environment variable used to set Docker cpuset
-            result << '-binding' << "env linear:${task.config.cpus}"
+            result << '-binding' << "env linear:${cpus.request}"
 
             // when it is a parallel job add 'reserve' flag
-            if( task.config.cpus>1 ) {
+            if( cpus.request>1 ) {
                 result << '-R' << 'y'
             }
 

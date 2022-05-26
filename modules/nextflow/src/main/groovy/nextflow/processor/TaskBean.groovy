@@ -132,11 +132,12 @@ class TaskBean implements Serializable, Cloneable {
         // container config
         this.containerImage = task.getContainer()
         this.containerConfig = task.getContainerConfig()
-        this.containerMemory = task.config.getMemory()
-        this.containerCpus = task.config.getCpus()
+        this.containerCpus = task.config.getCpus()?.request
+        this.containerMemory = task.config.getMemory()?.request
         this.containerNative = task.isContainerNative()
         this.containerEnabled = task.isContainerEnabled()
         this.containerOptions = task.config.getContainerOptions()
+
         // secret management
         this.secretNative = task.isSecretNative()
         this.secretNames = task.config.getSecret()

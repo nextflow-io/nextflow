@@ -118,8 +118,8 @@ class OarExecutorTest extends Specification {
 
         when:
         task.config = new TaskConfig()
-        task.config.time = '1h'
         task.config.memory = '1023 M'
+        task.config.time = '1h'
         task.config.clusterOptions = '-a 1'
         then:
         executor.getHeaders(task) == '''
@@ -135,8 +135,8 @@ class OarExecutorTest extends Specification {
 
         when:
         task.config = new TaskConfig()
-        task.config.time = '1h'
         task.config.memory = '2049 M'
+        task.config.time = '1h'
         task.config.clusterOptions = '-a 1'
         then:
         executor.getHeaders(task) == '''
@@ -153,8 +153,8 @@ class OarExecutorTest extends Specification {
         when:
         task.config = new TaskConfig()
         task.config.cpus = 2
-        task.config.time = '2h'
         task.config.memory = '4 G'
+        task.config.time = '2h'
         task.config.clusterOptions = '-b 2'
         then:
         executor.getHeaders(task) == '''
@@ -171,8 +171,8 @@ class OarExecutorTest extends Specification {
         when:
         task.config = new TaskConfig()
         task.config.cpus = 8
-        task.config.time = '2d 3h'
         task.config.memory = '6 G'
+        task.config.time = '2d 3h'
         task.config.clusterOptions = '-x 3'
         then:
         executor.getHeaders(task) == '''

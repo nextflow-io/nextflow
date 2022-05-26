@@ -24,7 +24,8 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.executor.res.AcceleratorResource
-import nextflow.util.MemoryUnit
+import nextflow.executor.res.CpuResource
+import nextflow.executor.res.MemoryResource
 import groovy.util.logging.Slf4j
 
 /**
@@ -64,9 +65,9 @@ class PodSpecBuilder {
 
     String workDir
 
-    Integer cpus
+    CpuResource cpus
 
-    String memory
+    MemoryResource memory
 
     String serviceAccount
 
@@ -150,22 +151,17 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withCpus( Integer cpus ) {
+    PodSpecBuilder withCpus( CpuResource cpus ) {
         this.cpus = cpus
         return this
     }
 
-    PodSpecBuilder withMemory(String mem) {
+    PodSpecBuilder withMemory( MemoryResource mem ) {
         this.memory = mem
         return this
     }
 
-    PodSpecBuilder withMemory(MemoryUnit mem)  {
-        this.memory = "${mem.mega}Mi".toString()
-        return this
-    }
-
-    PodSpecBuilder withAccelerator(AcceleratorResource acc) {
+    PodSpecBuilder withAccelerator( AcceleratorResource acc ) {
         this.accelerator = acc
         return this
     }
@@ -322,12 +318,6 @@ class PodSpecBuilder {
             env.add(entry.toSpec())
         }
 
-        final res = [:]
-        if( this.cpus )
-            res.cpu = this.cpus
-        if( this.memory )
-            res.memory = this.memory
-
         final container = [ name: this.podName, image: this.imageName ]
         if( this.command )
             container.command = this.command
@@ -395,14 +385,19 @@ class PodSpecBuilder {
             container.env = env
 
         // add resources
-        if( res ) {
-            container.resources = [requests: res, limits: new HashMap<>(res)]
-        }
+        def res = [:]
 
-        // add gpu settings
-        if( accelerator ) {
-            container.resources = addAcceleratorResource(accelerator, container.resources as Map)
-        }
+        if( this.cpus )
+            res = addCpuResource(this.cpus, res as Map)
+
+        if( this.memory )
+            res = addMemoryResource(this.memory, res as Map)
+
+        if( this.accelerator )
+            res = addAcceleratorResource(this.accelerator, res as Map)
+
+        if( !res.isEmpty() )
+            container.resources = res
 
         // add storage definitions ie. volumes and mounts
         final mounts = []
@@ -478,6 +473,42 @@ class PodSpecBuilder {
 
         return result
 
+    }
+
+    @PackageScope
+    @CompileDynamic
+    Map addCpuResource(CpuResource cpus, Map res) {
+
+        if( cpus.request ) {
+            final requests = res.requests ?: [:]
+            requests.put("cpu", cpus.request)
+            res.requests = requests
+        }
+        if( cpus.limit ) {
+            final limits = res.limits ?: [:]
+            limits.put("cpu", cpus.limit)
+            res.limits = limits
+        }
+
+        return res
+    }
+
+    @PackageScope
+    @CompileDynamic
+    Map addMemoryResource(MemoryResource memory, Map res) {
+
+        if( memory.request ) {
+            final requests = res.requests ?: [:]
+            requests.put("memory", "${memory.request.toMega()}Mi")
+            res.requests = requests
+        }
+        if( memory.limit ) {
+            final limits = res.limits ?: [:]
+            limits.put("memory", "${memory.limit.toMega()}Mi")
+            res.limits = limits
+        }
+
+        return res
     }
 
     @PackageScope

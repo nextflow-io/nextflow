@@ -110,7 +110,7 @@ class LocalTaskHandler extends TaskHandler {
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
-        this.wallTimeMillis = task.config.getTime()?.toMillis()
+        this.wallTimeMillis = task.config.getTime()?.request.toMillis()
         this.executor = executor
         this.session = executor.session
     }
@@ -201,7 +201,7 @@ class LocalTaskHandler extends TaskHandler {
                 destroy()
                 task.stdout = outputFile
                 task.stderr = errorFile
-                task.error = new ProcessException("Process exceeded running time limit (${task.config.getTime()})")
+                task.error = new ProcessException("Process exceeded running time limit (${task.config.getTime()?.request})")
                 status = TaskStatus.COMPLETED
 
                 // signal it has completed

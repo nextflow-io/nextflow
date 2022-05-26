@@ -17,6 +17,8 @@
 
 package nextflow.trace
 
+import nextflow.executor.res.CpuResource
+import nextflow.executor.res.MemoryResource
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -253,27 +255,30 @@ class WorkflowStatsTest extends Specification {
         given:
         def RUNNING = 10
         def SUBMITTED = 20
-        def CPU = 8
+        def CPUS = 8
         def MEM = MemoryUnit.of('16 GB')
-        def LOAD_CPU = 100
+        def LOAD_CPUS = 100
         def LOAD_MEM = 200
         and:
         def task = Mock(TaskRun) {
             getProcessor() >> Mock(TaskProcessor) { getId() >> 0 }
-            getConfig() >> Mock(TaskConfig) { getCpus() >> CPU; getMemory() >> MEM }
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> new CpuResource(CPUS);
+                getMemory() >> new MemoryResource(MEM)
+            }
         }
         and:
         def rec = new ProgressRecord(0, 'foo')
         rec.running = RUNNING
         rec.submitted = SUBMITTED
-        rec.loadCpus = LOAD_CPU
+        rec.loadCpus = LOAD_CPUS
         rec.loadMemory = LOAD_MEM
         and:
         def stats = new WorkflowStats(
                 records: [0:rec],
                 runningCount: RUNNING,
                 submittedCount: SUBMITTED,
-                loadCpus: LOAD_CPU,
+                loadCpus: LOAD_CPUS,
                 loadMemory: LOAD_MEM)
 
         when:
@@ -281,7 +286,7 @@ class WorkflowStatsTest extends Specification {
         then:
         stats.submittedCount == SUBMITTED -1
         stats.runningCount == RUNNING +1
-        stats.loadCpus == LOAD_CPU + CPU
+        stats.loadCpus == LOAD_CPUS + CPUS
         stats.loadMemory == LOAD_MEM + MEM.toBytes()
         and:
         stats.peakRunning == stats.runningCount
@@ -291,7 +296,7 @@ class WorkflowStatsTest extends Specification {
         and:
         rec.submitted == SUBMITTED -1
         rec.running == RUNNING +1
-        rec.loadCpus == LOAD_CPU + CPU
+        rec.loadCpus == LOAD_CPUS + CPUS
         rec.loadMemory == LOAD_MEM + MEM.toBytes()
         and:
         rec.peakRunning == rec.running
@@ -315,7 +320,10 @@ class WorkflowStatsTest extends Specification {
         and:
         def task = Mock(TaskRun) {
             getProcessor() >> Mock(TaskProcessor) { getId() >> 0 }
-            getConfig() >> Mock(TaskConfig) { getCpus() >> CPUS; getMemory() >> MEM }
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> new CpuResource(CPUS);
+                getMemory() >> new MemoryResource(MEM)
+            }
         }
         and:
         def rec = new ProgressRecord(0, 'foo')
@@ -383,7 +391,11 @@ class WorkflowStatsTest extends Specification {
         and:
         def task = Mock(TaskRun) {
             getProcessor() >> Mock(TaskProcessor) { getId() >> 0 }
-            getConfig() >> Mock(TaskConfig) { getCpus() >> CPUS; getMemory() >> MEM } }
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> new CpuResource(CPUS);
+                getMemory() >> new MemoryResource(MEM)
+            }
+        }
         and:
         def rec = new ProgressRecord(0, 'foo')
         rec.running = RUNNING
@@ -451,7 +463,11 @@ class WorkflowStatsTest extends Specification {
         and:
         def task = Mock(TaskRun) {
             getProcessor() >> Mock(TaskProcessor) { getId() >> 0 }
-            getConfig() >> Mock(TaskConfig) { getCpus() >> CPUS; getMemory() >> MEM } }
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> new CpuResource(CPUS);
+                getMemory() >> new MemoryResource(MEM)
+            }
+        }
         and:
         def rec = new ProgressRecord(10, 'foo')
         rec.running = RUNNING
@@ -518,7 +534,11 @@ class WorkflowStatsTest extends Specification {
         and:
         def task = Mock(TaskRun) {
             getProcessor() >> Mock(TaskProcessor) { getId() >> 0 }
-            getConfig() >> Mock(TaskConfig) { getCpus() >> CPUS; getMemory() >> MEM } }
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> new CpuResource(CPUS);
+                getMemory() >> new MemoryResource(MEM)
+            }
+        }
         and:
         def rec = new ProgressRecord(0, 'foo')
         rec.running = RUNNING
@@ -582,7 +602,11 @@ class WorkflowStatsTest extends Specification {
         and:
         def task = Mock(TaskRun) {
             getProcessor() >> Mock(TaskProcessor) { getId() >> 0 }
-            getConfig() >> Mock(TaskConfig) { getCpus() >> CPUS; getMemory() >> MEM } }
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> new CpuResource(CPUS);
+                getMemory() >> new MemoryResource(MEM)
+            }
+        }
         and:
         def rec = new ProgressRecord(0, 'foo')
         rec.running = RUNNING

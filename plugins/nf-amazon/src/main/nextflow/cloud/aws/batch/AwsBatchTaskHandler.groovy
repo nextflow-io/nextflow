@@ -650,7 +650,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // set task timeout
         final time = task.config.getTime()
         if( time ) {
-            def secs = time.toSeconds() as Integer
+            def secs = (int) time.request.toSeconds()
             if( secs < 60 ) {
                 secs = 60   // Batch minimal allowed timeout is 60 seconds
             }
@@ -661,18 +661,23 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final resources = new ArrayList<ResourceRequirement>(5)
         def container = new ContainerOverrides()
         container.command = getSubmitCommand()
+
+        // set the task cpus
+        final cpus = task.config.getCpus()
+        if( cpus.request > 1 )
+            resources << new ResourceRequirement().withType(ResourceType.VCPU).withValue(cpus.request.toString())
+
         // set the task memory
-        if( task.config.getMemory() ) {
-            final mega = (int)task.config.getMemory().toMega()
+        final memory = task.config.getMemory()
+        if( memory ) {
+            final mega = (int) memory.request.toMega()
             if( mega >= 4 )
                 resources << new ResourceRequirement().withType(ResourceType.MEMORY).withValue(mega.toString())
             else
-                log.warn "Ignoring task $bean.name memory directive: ${task.config.getMemory()} -- AWS Batch job memory request cannot be lower than 4 MB"
+                log.warn "Ignoring task $bean.name memory directive: ${memory.request} -- AWS Batch job memory request cannot be lower than 4 MB"
         }
-        // set the task cpus
-        if( task.config.getCpus() > 1 )
-            resources << new ResourceRequirement().withType(ResourceType.VCPU).withValue(task.config.getCpus().toString())
 
+        // set the task accelerator
         if( task.config.getAccelerator() )
             resources << createGpuResource(task.config.getAccelerator())
 

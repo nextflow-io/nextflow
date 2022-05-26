@@ -138,8 +138,8 @@ class LsfExecutorTest extends Specification {
         task.config.queue = 'bsc_ls'
         task.config.clusterOptions = "-x 1 -R \"span[ptile=2]\""
         task.config.cpus = '2'
-        task.config.time = '1h 30min'
         task.config.memory = '8GB'
+        task.config.time = '1h 30min'
 
         then:
         executor.getHeaders(task) == '''
@@ -147,9 +147,9 @@ class LsfExecutorTest extends Specification {
                 #BSUB -q bsc_ls
                 #BSUB -n 2
                 #BSUB -R "span[hosts=1]"
-                #BSUB -W 01:30
                 #BSUB -M 4096
                 #BSUB -R "select[mem>=8192] rusage[mem=8192]"
+                #BSUB -W 01:30
                 #BSUB -J nf-mapping_hola
                 #BSUB -x 1
                 #BSUB -R "span[ptile=2]"
@@ -174,15 +174,15 @@ class LsfExecutorTest extends Specification {
         task.config = new TaskConfig()
         task.config.queue = 'alpha'
         task.config.cpus = 1
-        task.config.time = '1min'
         task.config.memory = '10MB'
+        task.config.time = '1min'
         then:
         executor.getHeaders(task) == '''
                 #BSUB -o /scratch/.command.log
                 #BSUB -q alpha
-                #BSUB -W 00:01
                 #BSUB -M 10
                 #BSUB -R "select[mem>=10] rusage[mem=10]"
+                #BSUB -W 00:01
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
@@ -192,15 +192,15 @@ class LsfExecutorTest extends Specification {
         task.config = new TaskConfig()
         task.config.queue = 'gamma'
         task.config.cpus = 1
-        task.config.time = '4h'
         task.config.memory = '200MB'
+        task.config.time = '4h'
         then:
         executor.getHeaders(task) == '''
                 #BSUB -o /scratch/.command.log
                 #BSUB -q gamma
-                #BSUB -W 04:00
                 #BSUB -M 200
                 #BSUB -R "select[mem>=200] rusage[mem=200]"
+                #BSUB -W 04:00
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
@@ -235,9 +235,9 @@ class LsfExecutorTest extends Specification {
                 #BSUB -q gamma
                 #BSUB -n 4
                 #BSUB -R "span[hosts=1]"
-                #BSUB -W 24:00
                 #BSUB -M 512
                 #BSUB -R "select[mem>=2048] rusage[mem=2048]"
+                #BSUB -W 24:00
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
@@ -255,9 +255,9 @@ class LsfExecutorTest extends Specification {
                 #BSUB -q gamma
                 #BSUB -n 8
                 #BSUB -R "span[hosts=1]"
-                #BSUB -W 48:00
                 #BSUB -M 256
                 #BSUB -R "select[mem>=2048] rusage[mem=2048]"
+                #BSUB -W 48:00
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
@@ -272,9 +272,9 @@ class LsfExecutorTest extends Specification {
         executor.getHeaders(task) == '''
                 #BSUB -o /scratch/.command.log
                 #BSUB -q delta
-                #BSUB -W 60:05
                 #BSUB -M 2048
                 #BSUB -R "select[mem>=2048] rusage[mem=2048]"
+                #BSUB -W 60:05
                 #BSUB -J nf-mapping_hola
                 '''
                 .stripIndent().leftTrim()
@@ -403,9 +403,8 @@ class LsfExecutorTest extends Specification {
         task.config.queue = 'bsc_ls'
         task.config.clusterOptions = "-x 1 -R \"span[ptile=2]\""
         task.config.cpus = '2'
-        task.config.time = '1h 30min'
         task.config.memory = '8GB'
-
+        task.config.time = '1h 30min'
 
         then:
         executor.getHeaders(task) == '''
@@ -413,9 +412,9 @@ class LsfExecutorTest extends Specification {
                 #BSUB -q bsc_ls
                 #BSUB -n 2
                 #BSUB -R "span[hosts=1]"
-                #BSUB -W 01:30
                 #BSUB -M 4096
                 #BSUB -R "select[mem>=8192] rusage[mem=8192]"
+                #BSUB -W 01:30
                 #BSUB -J nf-mapping_hola
                 #BSUB -x 1
                 #BSUB -R "span[ptile=2]"

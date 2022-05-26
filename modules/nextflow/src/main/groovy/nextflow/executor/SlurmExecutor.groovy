@@ -49,6 +49,10 @@ class SlurmExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
+        final cpus = task.config.getCpus()
+        final memory = task.config.getMemory()
+        final time = task.config.getTime()
+
         result << '-D' << quote(task.workDir)
         result << '-J' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))     // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
@@ -60,21 +64,24 @@ class SlurmExecutor extends AbstractGridExecutor {
             result << '--signal' << 'B:USR2@30'
         }
 
-        if( task.config.cpus > 1 ) {
-            result << '-c' << task.config.cpus.toString()
+        // number of cpus for multiprocessing/multi-threading
+        if( cpus.request > 1 ) {
+            result << '-c' << "${cpus.request}"
         }
 
-        if( task.config.time ) {
-            result << '-t' << task.config.getTime().format('HH:mm:ss')
-        }
-
-        if( task.config.getMemory() ) {
+        // max memory
+        if( memory ) {
             //NOTE: Enforcement of memory limits currently relies upon the task/cgroup plugin or
             // enabling of accounting, which samples memory use on a periodic basis (data need not
             // be stored, just collected). In both cases memory use is based upon the job's
             // Resident Set Size (RSS). A task may exceed the memory limit until the next periodic
             // accounting sample. -- https://slurm.schedmd.com/sbatch.html
-            result << '--mem' << task.config.getMemory().toMega().toString() + 'M'
+            result << '--mem' << "${memory.request.toMega()}M"
+        }
+
+        // max duration
+        if( time ) {
+            result << '-t' << time.request.format('HH:mm:ss')
         }
 
         // the requested partition (a.k.a queue) name

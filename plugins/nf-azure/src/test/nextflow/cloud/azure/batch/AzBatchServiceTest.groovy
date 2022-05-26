@@ -5,6 +5,8 @@ import java.util.function.Predicate
 import com.microsoft.azure.batch.protocol.models.CloudPool
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzPoolOpts
+import nextflow.executor.res.CpuResource
+import nextflow.executor.res.MemoryResource
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -310,8 +312,8 @@ class AzBatchServiceTest extends Specification {
         and:
         def TASK = Mock(TaskRun) {
             getConfig() >> Mock(TaskConfig) {
-                getMemory() >> MEM
-                getCpus() >> CPUS
+                getCpus() >> new CpuResource(CPUS)
+                getMemory() >> new MemoryResource(MEM)
                 getMachineType() >> TYPE
             }
         }

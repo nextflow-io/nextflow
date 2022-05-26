@@ -35,6 +35,10 @@ class SgeExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
+        final cpus = task.config.getCpus()
+        final memory = task.config.getMemory()
+        final time = task.config.getTime()
+
         result << '-wd' << quote(task.workDir)
         result << '-N' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
@@ -52,24 +56,23 @@ class SgeExecutor extends AbstractGridExecutor {
             result << '-q' << (task.config.queue as String)
         }
 
-        //number of cpus for multiprocessing/multi-threading
+        // number of cpus for multiprocessing/multi-threading
         if ( task.config.penv ) {
-            result << "-pe" << "${task.config.penv} ${task.config.cpus}"
+            result << "-pe" << "${task.config.penv} ${cpus.request}"
         }
-        else if( task.config.cpus>1 ) {
-            result << "-l" << "slots=${task.config.cpus}"
-        }
-
-        // max task duration
-        if( task.config.time ) {
-            final time = task.config.getTime()
-            result << "-l" << "h_rt=${time.format('HH:mm:ss')}"
+        else if( cpus.request>1 ) {
+            result << "-l" << "slots=${cpus.request}"
         }
 
-        // task max memory
-        if( task.config.memory ) {
-            final mem = "${task.config.getMemory().mega}M"
+        // max memory
+        if( memory ) {
+            final mem = "${memory.request.toMega()}M"
             result << "-l" << "h_rss=$mem,mem_free=$mem"
+        }
+
+        // max duration
+        if( time ) {
+            result << "-l" << "h_rt=${time.request.format('HH:mm:ss')}"
         }
 
         // -- at the end append the command script wrapped file name

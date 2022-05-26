@@ -43,8 +43,12 @@ class PbsProExecutor extends PbsExecutor {
      */
     @Override
     protected List<String> getDirectives(TaskRun task, List<String> result ) {
-        assert result !=null
-        
+        assert result != null
+
+        final cpus = task.config.getCpus()
+        final memory = task.config.getMemory()
+        final time = task.config.getTime()
+
         // when multiple competing directives are provided, only the first one will take effect
         // therefore clusterOptions is added as first to give priority over other options as expected
         // by the clusterOptions semantics -- see https://github.com/nextflow-io/nextflow/pull/2036
@@ -61,22 +65,22 @@ class PbsProExecutor extends PbsExecutor {
             result << '-q'  << (String)task.config.queue
         }
 
+        // cpus and memory
         def res = []
-        if( task.config.hasCpus() || task.config.memory ) {
-            res << "ncpus=${task.config.getCpus()}".toString()
+        if( task.config.hasCpus() || memory ) {
+            res << "ncpus=${cpus.request}"
         }
-        if( task.config.memory ) {
+        if( memory ) {
             // https://www.osc.edu/documentation/knowledge_base/out_of_memory_oom_or_excessive_memory_usage
-            res << "mem=${task.config.getMemory().getMega()}mb".toString()
+            res << "mem=${memory.request.toMega()}mb"
         }
         if( res ) {
-            result << '-l' << "select=1:${res.join(':')}".toString()
+            result << '-l' << "select=1:${res.join(':')}"
         }
 
-        // max task duration
-        if( task.config.time ) {
-            final duration = task.config.getTime()
-            result << "-l" << "walltime=${duration.format('HH:mm:ss')}".toString()
+        // max duration
+        if( time ) {
+            result << "-l" << "walltime=${time.request.format('HH:mm:ss')}".toString()
         }
 
         return result
