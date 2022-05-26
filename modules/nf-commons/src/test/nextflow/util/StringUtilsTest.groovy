@@ -95,6 +95,21 @@ class StringUtilsTest extends Specification {
     }
 
     @Unroll
+    def 'should strip sensitive strings' () {
+        expect:
+        StringUtils.stripSecrets(SECRET) == EXPECTED
+
+        where:
+        SECRET                                  | EXPECTED
+        'Hi\n here is the password : "1234"'    | 'Hi\n here is the password : "****"'
+        'Hi\n here is the password : "1"'       | 'Hi\n here is the password : "*"'
+        'Hi\n here is the password : ""'        | 'Hi\n here is the password : ""'
+        'Hi\n here is the password : "1"'       | 'Hi\n here is the password : "*"'
+        'Hi\n password : "1" \n "token": "abc"' | 'Hi\n password : "*" \n "token": "***"'
+        'Hi\n password : "1" token: "abc"'      | 'Hi\n password : "*" token: "***"'
+    }
+
+    @Unroll
     def 'should strip secret' () {
         expect:
         StringUtils.redact(SECRET) == EXPECTED

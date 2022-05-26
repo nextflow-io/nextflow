@@ -274,7 +274,7 @@ class ProviderConfig {
     static Map getFromFile(Path file) {
         try {
             final content = file.text
-            log.trace "Parsing SCM config path: ${file.toUriString()}\n${content}\n"
+            log.trace "Parsing SCM config path: ${file.toUriString()}\n${StringUtils.stripSecrets(content)}\n"
             final result = parse(content)
             dumpConfig(result)
             return result

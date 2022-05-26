@@ -17,6 +17,8 @@
 
 package nextflow.config
 
+import nextflow.util.StringUtils
+
 import static nextflow.util.ConfigHelper.*
 
 import java.nio.file.Path
@@ -858,7 +860,7 @@ class ConfigBuilder {
         // compute config
         final result = toCanonicalString(config, false)
         // dump config for debugging
-        log.trace "Resolved config:\n${result.indent('\t')}"
+        log.trace "Resolved config:\n${StringUtils.stripSecrets(result.indent('\t'))}"
         return result
     }
 }

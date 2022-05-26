@@ -22,6 +22,9 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 
+import java.util.stream.Collectors
+import java.util.stream.IntStream
+
 /**
  * String helper routines
  *
@@ -45,6 +48,42 @@ class StringUtils {
             return null
         final m = BASE_URL.matcher(url)
         return m.matches() ? m.group(1).toLowerCase() : null
+    }
+
+    static private Pattern multilinePattern
+    static private List<String> maskPatterns = new ArrayList<>()
+    static private void addMaskPattern(String maskPattern) {
+        maskPatterns.add(maskPattern)
+        multilinePattern = Pattern.compile(maskPatterns.join("|"), Pattern.MULTILINE)
+    }
+
+    static{
+        addMaskPattern("password\\s*:\\s*\"(.*?)\"")
+        addMaskPattern("\"password\"\\s*:\\s*\"(.*?)\"")
+        addMaskPattern("token\\s*:\\s*\"(.*?)\"")
+        addMaskPattern("\"token\"\\s*:\\s*\"(.*?)\"")
+        addMaskPattern("secret\\s*:\\s*\"(.*?)\"")
+        addMaskPattern("\"secret\"\\s*:\\s*\"(.*?)\"")
+        addMaskPattern("licence\\s*:\\s*\"(.*?)\"")
+        addMaskPattern("\"licence\"\\s*:\\s*\"(.*?)\"")
+    }
+
+    static String stripSecrets(String message) {
+        if (multilinePattern == null) {
+            return message;
+        }
+        StringBuilder sb = new StringBuilder(message);
+        Matcher matcher = multilinePattern.matcher(sb);
+        while (matcher.find()) {
+            (1..matcher.groupCount()).each{idx->
+                if( matcher.group(idx)){
+                    (matcher.start(idx)..matcher.end(idx)-1).each{i->
+                        sb.setCharAt(i, '*' as char)
+                    }
+                }
+            }
+        }
+        return sb.toString();
     }
 
     static private boolean isSensitive(Object key) {
