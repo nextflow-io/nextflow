@@ -458,7 +458,7 @@ class TaskRun implements Cloneable {
     List<String> getInputStreamNames() {
         final result = new ArrayList(20)
 
-        for( StreamInParam param : getOutputsByType(StreamInParam).keySet() ) {
+        for( StreamInParam param : getInputsByType(StreamInParam).keySet() ) {
             StreamHandle handle = context.get(param.name)
             result.add( handle.name() )
         }
