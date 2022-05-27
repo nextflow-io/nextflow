@@ -21,7 +21,6 @@ import java.io.File;
 import java.nio.file.Path;
 
 import groovy.lang.MetaClass;
-import nextflow.Channel;
 import nextflow.file.FileHelper;
 
 /**
@@ -33,7 +32,7 @@ import nextflow.file.FileHelper;
  */
 public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass {
 
-    static public DelegatingPlugin plugin;
+    static public ExtensionProvider provider;
 
     public NextflowDelegatingMetaClass(MetaClass delegate) {
         super(delegate);
@@ -56,23 +55,14 @@ public class NextflowDelegatingMetaClass extends groovy.lang.DelegatingMetaClass
             if( obj instanceof Path )
                 return FileHelper.empty((Path)obj);
         }
-        else if( plugin!=null && plugin.isExtensionMethod(obj,methodName) ) {
-            return plugin.invokeExtensionMethod(obj, methodName, args);
+        else if( provider !=null && provider.isExtensionMethod(obj,methodName) ) {
+            return provider.invokeExtensionMethod(obj, methodName, args);
         }
         else if( obj instanceof ChannelFactory ) {
             return ((ChannelFactory) obj).invokeExtensionMethod(methodName, args);
         }
 
         return delegate.invokeMethod(obj, methodName, args);
-    }
-
-    @Override
-    public Object getProperty(Object object, String property) {
-        // check if the property name is
-        ChannelFactory ext = Channel.class.equals(object) && plugin!=null
-                ? plugin.getChannelFactory(property)
-                : null;
-        return ext != null ? ext : delegate.getProperty(object, property);
     }
 
 }

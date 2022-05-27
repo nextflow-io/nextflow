@@ -25,6 +25,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.Session
+import nextflow.exception.AbortOperationException
 import nextflow.secret.SecretHolder
 import org.apache.commons.lang.StringUtils
 /**
@@ -187,7 +188,7 @@ class ScriptBinding extends WorkflowBinding {
     void setVariable( String name, Object value ) {
         if( name == 'channel' ) {
             final msg = 'The use of the identifier `channel` as variable name is discouraged and will be deprecated in a future version'
-            if( NF.isDsl2Final() ) throw new DeprecationException(msg)
+            if( NF.isDsl2() ) throw new DeprecationException(msg)
             log.warn(msg)
         }
         if( name != 'args' && name != 'params' )
@@ -248,7 +249,10 @@ class ScriptBinding extends WorkflowBinding {
         @Override
         Object get(Object key) {
             if( !target.containsKey(key) ) {
-                log.warn1("Access to undefined parameter `$key` -- Initialise it to a default value eg. `params.$key = some_value`", firstOnly: true)
+                final msg = "Access to undefined parameter `$key` -- Initialise it to a default value eg. `params.$key = some_value`"
+                if( NF.isStrictMode() )
+                    throw new AbortOperationException(msg)
+                log.warn1(msg, firstOnly: true)
                 return null
             }
             return target.get(key)

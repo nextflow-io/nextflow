@@ -1,5 +1,23 @@
 nf-amazon changelog
 ===================
+1.8.0 - 25 May 2022
+- Add support for custom KMS keys
+- Add support for virtual file system move operation [8c0ddfd5]
+
+1.7.2 - 15 Apr 2022
+- Fix Aws Batch retry policy on spot reclaim [d855f0d9]
+
+1.7.1 - 23 Apr 2022
+- Add config option `aws.client.anonymous` to allow the access of public buckets
+- Add config option `aws.client.debug`
+- Fix SS3 storage encryption flag for Batch submit job
+- Change upload default chunk size to 20MB
+
+1.7.0 - 6 Apr 2022
+- Add native handling for spot instance interruptions
+- Add config option `aws.batch.maxSpotAttempts`
+- Add fetching container reason attribute on Batch job failure
+
 1.6.0 - 27 Mar 2022
 - Handle AWS Spot interruption automatically job retry
 - Refactor AWS Batch job unique token generation to prevent
@@ -14,7 +32,7 @@ nf-amazon changelog
 
 1.5.0 - 21 Jan 2022
 - Add support for secrets management to AWS Batch executor
-- Enable parallel s3 downloads by defualt
+- Enable parallel s3 downloads by default
 
 1.4.0 - 20 Dec 2021
 - Move s3fs client implementation into nf-amazon module

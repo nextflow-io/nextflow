@@ -33,13 +33,15 @@ import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodOptions
 import nextflow.k8s.model.PodSpecBuilder
+import nextflow.k8s.model.ResourceType
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
+import nextflow.util.Escape
 import nextflow.util.PathTrie
 /**
- * Implements the {@link TaskHandler} interface for Kubernetes jobs
+ * Implements the {@link TaskHandler} interface for Kubernetes pods
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -60,6 +62,7 @@ class K8sTaskHandler extends TaskHandler {
 
     } ()
 
+    private ResourceType resourceType = ResourceType.Pod
 
     private K8sClient client
 
@@ -79,6 +82,8 @@ class K8sTaskHandler extends TaskHandler {
 
     private K8sExecutor executor
 
+    private String runsOnNode = null
+
     K8sTaskHandler( TaskRun task, K8sExecutor executor ) {
         super(task)
         this.executor = executor
@@ -86,6 +91,7 @@ class K8sTaskHandler extends TaskHandler {
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
+        this.resourceType = executor.k8sConfig.useJobResource() ? ResourceType.Job : ResourceType.Pod
     }
 
     /** only for testing -- do not use */
@@ -105,6 +111,8 @@ class K8sTaskHandler extends TaskHandler {
     }
 
     protected K8sConfig getK8sConfig() { executor.getK8sConfig() }
+
+    protected boolean useJobResource() { resourceType==ResourceType.Job }
 
     protected List<String> getContainerMounts() {
 
@@ -153,27 +161,39 @@ class K8sTaskHandler extends TaskHandler {
             newSubmitRequest0(task, imageName)
         }
         catch( Throwable e ) {
-            throw  new ProcessSubmitException("Failed to submit K8s job -- Cause: ${e.message ?: e}", e)
+            throw  new ProcessSubmitException("Failed to submit K8s ${resourceType.lower()} -- Cause: ${e.message ?: e}", e)
         }
+    }
+
+    protected boolean preserveContainerEntrypoint() {
+        return executor.getK8sConfig().preserveContainerEntrypoint()
     }
 
     protected Map newSubmitRequest0(TaskRun task, String imageName) {
 
         final fixOwnership = builder.fixOwnership()
-        final cmd = new ArrayList(BashWrapperBuilder.BASH) << "bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
+        final workingDir = Escape.path(task.workDir)
+        final launcher = new ArrayList(new ArrayList(BashWrapperBuilder.BASH)) << "bash ${workingDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${workingDir}/${TaskRun.CMD_LOG}"
         final taskCfg = task.getConfig()
 
         final clientConfig = client.config
         final builder = new PodSpecBuilder()
             .withImageName(imageName)
             .withPodName(getSyntheticPodName(task))
-            .withCommand(cmd)
-            .withWorkDir(task.workDir)
             .withNamespace(clientConfig.namespace)
             .withServiceAccount(clientConfig.serviceAccount)
             .withLabels(getLabels(task))
             .withAnnotations(getAnnotations())
             .withPodOptions(getPodOptions())
+
+        // when `preserveEntrypoint` is true the launcher is run via `args` instead of `command`
+        // to not override the container entrypoint
+        if( preserveContainerEntrypoint() ) {
+            builder.withArgs(launcher)
+        }
+        else {
+            builder.withCommand(launcher)
+        }
 
         // note: task environment is managed by the task bash wrapper
         // do not add here -- see also #680
@@ -196,7 +216,9 @@ class K8sTaskHandler extends TaskHandler {
             builder.withHostMount(mount,mount)
         }
 
-        return builder.build()
+        return useJobResource()
+                ? builder.buildAsJob()
+                : builder.build()
     }
 
     protected PodOptions getPodOptions() {
@@ -226,7 +248,6 @@ class K8sTaskHandler extends TaskHandler {
         k8sConfig.getAnnotations()
     }
 
-
     /**
      * Creates a new K8s pod executing the associated task
      */
@@ -237,10 +258,12 @@ class K8sTaskHandler extends TaskHandler {
         builder.build()
 
         final req = newSubmitRequest(task)
-        final resp = client.podCreate(req, yamlDebugPath())
+        final resp = useJobResource()
+                ? client.jobCreate(req, yamlDebugPath())
+                : client.podCreate(req, yamlDebugPath())
 
         if( !resp.metadata?.name )
-            throw new K8sResponseException("Missing created pod name", resp)
+            throw new K8sResponseException("Missing created ${resourceType.lower()} name", resp)
         this.podName = resp.metadata.name
         this.status = TaskStatus.SUBMITTED
     }
@@ -259,15 +282,17 @@ class K8sTaskHandler extends TaskHandler {
         try {
             final delta =  now - timestamp;
             if( !state || delta >= 1_000) {
-                def newState = client.podState(podName)
+                def newState = useJobResource()
+                        ? client.jobState(podName)
+                        : client.podState(podName)
                 if( newState ) {
-                    log.trace "[K8s] Get pod=$podName state=$newState"
-                    state = newState
-                    timestamp = now
+                   log.trace "[K8s] Get ${resourceType.lower()}=$podName state=$newState"
+                   state = newState
+                   timestamp = now
                 }
             }
             return state
-        }
+        } 
         catch (NodeTerminationException e) {
             // create a synthetic `state` object adding an extra `nodeTermination`
             // attribute to return the NodeTerminationException error to the caller method
@@ -283,12 +308,13 @@ class K8sTaskHandler extends TaskHandler {
 
     @Override
     boolean checkIfRunning() {
-        if( !podName ) throw new IllegalStateException("Missing K8s pod name -- cannot check if running")
+        if( !podName ) throw new IllegalStateException("Missing K8s ${resourceType.lower()} name -- cannot check if running")
         if(isSubmitted()) {
             def state = getState()
             // include `terminated` state to allow the handler status to progress
             if (state && (state.running != null || state.terminated)) {
                 status = TaskStatus.RUNNING
+                determineNode()
                 return true
             }
         }
@@ -327,7 +353,7 @@ class K8sTaskHandler extends TaskHandler {
 
     @Override
     boolean checkIfCompleted() {
-        if( !podName ) throw new IllegalStateException("Missing K8s pod name - cannot check if complete")
+        if( !podName ) throw new IllegalStateException("Missing K8s ${resourceType.lower()} name - cannot check if complete")
         def state = getState()
         if( state && state.terminated ) {
             if( state.nodeTermination instanceof NodeTerminationException ) {
@@ -345,6 +371,7 @@ class K8sTaskHandler extends TaskHandler {
             status = TaskStatus.COMPLETED
             deletePodIfSuccessful(task)
             updateTimestamps(state.terminated as Map)
+            determineNode()
             return true
         }
 
@@ -370,8 +397,11 @@ class K8sTaskHandler extends TaskHandler {
             return
         
         if( podName ) {
-            log.trace "[K8s] deleting pod name=$podName"
-            client.podDelete(podName)
+            log.trace "[K8s] deleting ${resourceType.lower()} name=$podName"
+            if ( useJobResource() )
+                client.jobDelete(podName)
+            else
+                client.podDelete(podName)
         }
         else {
             log.debug "[K8s] Oops.. invalid delete action"
@@ -395,17 +425,29 @@ class K8sTaskHandler extends TaskHandler {
         }
 
         try {
-            client.podDelete(podName)
+            if ( useJobResource() )
+                client.jobDelete(podName)
+            else
+                client.podDelete(podName)
         }
         catch( Exception e ) {
-            log.warn "Unable to cleanup pod: $podName -- see the log file for details", e
+            log.warn "Unable to cleanup ${resourceType.lower()}: $podName -- see the log file for details", e
         }
     }
 
+    private void determineNode(){
+        try {
+            if ( k8sConfig.fetchNodeName() && !runsOnNode )
+                runsOnNode = client.getNodeOfPod( podName )
+        } catch ( Exception e ){
+            log.warn ("Unable to fetch pod: $podName its node -- see the log file for details", e)
+        }
+    }
 
     TraceRecord getTraceRecord() {
         final result = super.getTraceRecord()
         result.put('native_id', podName)
+        result.put( 'hostname', runsOnNode )
         return result
     }
 

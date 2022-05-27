@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 
 process sayHello {
-  echo true
+  debug true
   input:
   val x
 

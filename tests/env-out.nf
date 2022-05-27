@@ -7,7 +7,7 @@ process foo {
 }
 
 process bar {
-    echo true
+    debug true
     input:
     env FOO from ch 
     'echo "bar says $FOO"'
