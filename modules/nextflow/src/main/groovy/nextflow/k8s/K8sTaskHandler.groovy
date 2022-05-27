@@ -173,7 +173,10 @@ class K8sTaskHandler extends TaskHandler {
 
         final fixOwnership = builder.fixOwnership()
         final workingDir = Escape.path(task.workDir)
-        final launcher = new ArrayList(new ArrayList(BashWrapperBuilder.BASH)) << "${workingDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${workingDir}/${TaskRun.CMD_LOG}".toString()
+        final launcher = new ArrayList()
+                << '/bin/sh'
+                << '-c'
+                << "${BashWrapperBuilder.BASH.join(' ')} ${workingDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${workingDir}/${TaskRun.CMD_LOG}".toString()
         final taskCfg = task.getConfig()
 
         final clientConfig = client.config
