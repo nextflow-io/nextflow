@@ -23,7 +23,6 @@ import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
 import nextflow.Channel
 import nextflow.Nextflow
-import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.ast.NextflowDSL
 import nextflow.ast.NextflowXform
@@ -168,7 +167,11 @@ class ScriptParser {
     ScriptParser parse(String scriptText, GroovyShell interpreter) {
         final String clazzName = computeClassName(scriptText)
         try {
-            script = (BaseScript)interpreter.parse(scriptText, clazzName)
+            final parsed = interpreter.parse(scriptText, clazzName)
+            if( parsed !instanceof BaseScript ){
+               throw new CompilationFailedException(0, null)
+            }
+            script = (BaseScript)parsed
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(scriptPath)
             meta.setModule(module)
@@ -178,6 +181,7 @@ class ScriptParser {
             String type = module ? "Module" : "Script"
             String header = "$type compilation error\n- file : ${FilesEx.toUriString(scriptPath)}"
             String msg = e.message ?: header
+            msg = msg != 'startup failed' ? msg : header
             msg = msg.replaceAll(/startup failed:\n/,'')
             msg = msg.replaceAll(~/$clazzName(: \d+:\b*)?/, header+'\n- cause:')
             throw new ScriptCompilationException(msg, e)
