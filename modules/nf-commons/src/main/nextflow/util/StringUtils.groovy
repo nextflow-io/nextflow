@@ -22,6 +22,9 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 
+import java.util.stream.Collectors
+import java.util.stream.IntStream
+
 /**
  * String helper routines
  *
@@ -45,6 +48,26 @@ class StringUtils {
             return null
         final m = BASE_URL.matcher(url)
         return m.matches() ? m.group(1).toLowerCase() : null
+    }
+
+    static private Pattern multilinePattern = ~/"?(password|token|secret|license)"?\s?[:=]\s?"?(\w+)"?/
+
+    static String stripSecrets(String message) {
+        if (message == null) {
+            return message
+        }
+        StringBuilder sb = new StringBuilder(message)
+        Matcher matcher = multilinePattern.matcher(sb)
+        while (matcher.find()) {
+            for(int idx=0; idx<matcher.groupCount(); idx+=2){
+                int ini = matcher.start(idx+2)
+                int end = matcher.end(idx+2)
+                sb.delete(ini, end)
+                sb.insert(ini, '********')
+            }
+            matcher.reset()
+        }
+        return sb.toString();
     }
 
     static private boolean isSensitive(Object key) {

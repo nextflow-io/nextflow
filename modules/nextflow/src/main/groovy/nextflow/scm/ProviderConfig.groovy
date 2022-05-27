@@ -273,8 +273,10 @@ class ProviderConfig {
     @PackageScope
     static Map getFromFile(Path file) {
         try {
+            // note: since this can be a remote file via e.g. read via HTTP
+            // it should not read more than once
             final content = file.text
-            log.trace "Parsing SCM config path: ${file.toUriString()}\n${content}\n"
+            dumpScmContent(file, content)
             final result = parse(content)
             dumpConfig(result)
             return result
@@ -297,6 +299,14 @@ class ProviderConfig {
         catch( Exception e ) {
             final message = "Failed to parse config file '${file?.toUriString()}' -- Cause: ${e.message?:e.toString()}"
             throw new ConfigParseException(message,e)
+        }
+    }
+
+    static private void dumpScmContent(Path file, String content) {
+        try {
+            log.trace "Parsing SCM config path: ${file.toUriString()}\n${StringUtils.stripSecrets(content)}\n"
+        }catch(Exception e){
+            log.debug "Error dumping configuration ${file.toUriString()}", e
         }
     }
 
