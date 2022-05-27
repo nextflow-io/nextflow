@@ -17,16 +17,12 @@
 
 package nextflow.script
 
-import org.codehaus.groovy.control.ErrorCollector
-import org.codehaus.groovy.control.MultipleCompilationErrorsException
-
 import java.nio.file.Path
 
 import com.google.common.hash.Hashing
 import groovy.transform.CompileStatic
 import nextflow.Channel
 import nextflow.Nextflow
-import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.ast.NextflowDSL
 import nextflow.ast.NextflowXform
@@ -171,7 +167,6 @@ class ScriptParser {
     ScriptParser parse(String scriptText, GroovyShell interpreter) {
         final String clazzName = computeClassName(scriptText)
         try {
-            NextflowMeta.instance.checkDsl2Mode(scriptText)
             Script baseScript = interpreter.parse(scriptText, clazzName)
             if( baseScript !instanceof BaseScript ){
                throw new CompilationFailedException(0, null)
