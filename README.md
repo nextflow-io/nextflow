@@ -229,19 +229,18 @@ A self-contained distribution can be created with the command: `make pack`.  To 
 IntelliJ IDEA
 ---------------
 
-Nextflow development with [IntelliJ IDEA](https://www.jetbrains.com/idea/) requires the latest version of the IDE (2019.1.2 or later).
+Nextflow development with [IntelliJ IDEA](https://www.jetbrains.com/idea/) requires a recent version of the IDE (2019.1.2 or later).
 
 If you have it installed in your computer, follow the steps below in order to use it with Nextflow:
 
 1. Clone the Nextflow repository to a directory in your computer.
-2. Open IntelliJ IDEA and choose "Import project" in the "File" menu bar.
+2. Open IntelliJ IDEA and choose "New > Project from Existing Sources..." in the "File" menu bar.
 3. Select the Nextflow project root directory in your computer and click "OK".
-4. Then, choose the "Gradle" item in the "external module" list and click on "Next" button.
-5. Confirm the default import options and click on "Finish" to finalize the project configuration.
-6. When the import process complete, select the "Project structure" command in the "File" menu bar.
-7. In the showed dialog click on the "Project" item in the list of the left, and make sure that
-   the "Project SDK" choice on the right contains Java 8.
-8. Set the code formatting options with setting provided [here](https://github.com/nextflow-io/nextflow/blob/master/CONTRIBUTING.md#ide-settings).
+4. Then, choose the "Gradle" item in the "Import project from external model" list and click on "Finish" button to finalize the import.
+5. When the import process completes, select the "Project structure" command in the "File" menu bar.
+6. In the showed dialog click on the "Project" item in the list of the left, and make sure that
+   the "Project SDK" choice on the right contains Java 11 (or later, up to 18).
+7. Set the code formatting options with settings provided [here](https://github.com/nextflow-io/nextflow/blob/master/CONTRIBUTING.md#ide-settings).
 
 
 

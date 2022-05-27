@@ -35,7 +35,6 @@ Resource requests and other job characteristics can be controlled via the follow
 
 * :ref:`process-accelerator`
 * :ref:`process-cpus`
-* :ref:`process-disk`
 * :ref:`process-memory`
 * :ref:`process-queue`
 
@@ -134,6 +133,8 @@ Resource requests and other job characteristics can be controlled via the follow
 * :ref:`process-disk`
 * :ref:`process-machineType`
 * :ref:`process-memory`
+* :ref:`process-time`
+
 
 See the :ref:`Google Life Sciences <google-lifesciences>` page for further configuration details.
 

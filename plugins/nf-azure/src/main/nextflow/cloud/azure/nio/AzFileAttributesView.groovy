@@ -22,7 +22,7 @@ import java.nio.file.attribute.FileTime
 import com.azure.storage.blob.BlobClient
 
 /**
- * Implements {@link BasicFileAttributeView} for Azure stoarge blob
+ * Implements {@link BasicFileAttributeView} for Azure storage blob
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

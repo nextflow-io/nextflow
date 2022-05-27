@@ -1,5 +1,11 @@
 nf-amazon changelog
 ===================
+0.13.2 - 15 May 2022
+- Update default SKU for Azure Batch 'batch.node.ubuntu 20.04' [be60fc14]
+
+0.13.1 - 2 Apr 2022
+- Add retry policy Azure create job [792820a2]
+
 0.13.0 - 27 Mar 2022
 - Add azcopy fine grain config settings [3998a56b]
 - Add retry policy to Az Batch operations [991c6175]
