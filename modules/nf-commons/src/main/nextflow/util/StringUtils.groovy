@@ -50,38 +50,22 @@ class StringUtils {
         return m.matches() ? m.group(1).toLowerCase() : null
     }
 
-    static private Pattern multilinePattern
-    static private List<String> maskPatterns = new ArrayList<>()
-    static private void addMaskPattern(String maskPattern) {
-        maskPatterns.add(maskPattern)
-        multilinePattern = Pattern.compile(maskPatterns.join("|"), Pattern.MULTILINE)
-    }
-
-    static{
-        addMaskPattern("password\\s*:\\s*\"(.*?)\"")
-        addMaskPattern("\"password\"\\s*:\\s*\"(.*?)\"")
-        addMaskPattern("token\\s*:\\s*\"(.*?)\"")
-        addMaskPattern("\"token\"\\s*:\\s*\"(.*?)\"")
-        addMaskPattern("secret\\s*:\\s*\"(.*?)\"")
-        addMaskPattern("\"secret\"\\s*:\\s*\"(.*?)\"")
-        addMaskPattern("licence\\s*:\\s*\"(.*?)\"")
-        addMaskPattern("\"licence\"\\s*:\\s*\"(.*?)\"")
-    }
+    static private Pattern multilinePattern = ~/"?(password|token|secret|license)"?\s?[:=]\s?"?(\w+)"?/
 
     static String stripSecrets(String message) {
         if (message == null) {
-            return message;
+            return message
         }
-        StringBuilder sb = new StringBuilder(message);
-        Matcher matcher = multilinePattern.matcher(sb);
+        StringBuilder sb = new StringBuilder(message)
+        Matcher matcher = multilinePattern.matcher(sb)
         while (matcher.find()) {
-            (1..matcher.groupCount()).each{idx->
-                if( matcher.group(idx)){
-                    (matcher.start(idx)..matcher.end(idx)-1).each{i->
-                        sb.setCharAt(i, '*' as char)
-                    }
-                }
+            for(int idx=0; idx<matcher.groupCount(); idx+=2){
+                int ini = matcher.start(idx+2)
+                int end = matcher.end(idx+2)
+                sb.delete(ini, end)
+                sb.insert(ini, '********')
             }
+            matcher.reset()
         }
         return sb.toString();
     }

@@ -101,12 +101,12 @@ class StringUtilsTest extends Specification {
 
         where:
         SECRET                                  | EXPECTED
-        'Hi\n here is the password : "1234"'    | 'Hi\n here is the password : "****"'
-        'Hi\n here is the password : "1"'       | 'Hi\n here is the password : "*"'
-        'Hi\n here is the password : ""'        | 'Hi\n here is the password : ""'
-        'Hi\n here is the password : "1"'       | 'Hi\n here is the password : "*"'
-        'Hi\n password : "1" \n "token": "abc"' | 'Hi\n password : "*" \n "token": "***"'
-        'Hi\n password : "1" token: "abc"'      | 'Hi\n password : "*" token: "***"'
+        'Hi\n here is the "password" : "1234"'  | 'Hi\n here is the "password" : "********"'
+        'Hi\n here is the password : "1"'       | 'Hi\n here is the password : "********"'
+        'Hi\n here is the password : "1"'       | 'Hi\n here is the password : "********"'
+        'Hi\n "password" :"1" \n "token": "123"'| 'Hi\n "password" :"********" \n "token": "********"'
+        'Hi\n password :"1"\nsecret: "345"'     | 'Hi\n password :"********"\nsecret: "********"'
+        'secret="abc" password:"1" more text'   | 'secret="********" password:"********" more text'
     }
 
     @Unroll
