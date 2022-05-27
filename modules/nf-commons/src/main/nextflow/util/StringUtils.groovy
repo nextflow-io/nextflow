@@ -69,7 +69,7 @@ class StringUtils {
     }
 
     static String stripSecrets(String message) {
-        if (multilinePattern == null) {
+        if (message == null) {
             return message;
         }
         StringBuilder sb = new StringBuilder(message);
