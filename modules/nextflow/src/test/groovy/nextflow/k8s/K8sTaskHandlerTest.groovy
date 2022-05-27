@@ -192,7 +192,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-123',
                                      image:'debian:latest',
-                                     command:['/bin/bash', '-ue', '/some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'] ],
+                                     command:['/bin/bash', '-ue', '/some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'] ]
                             ]
                     ]
                 ]
