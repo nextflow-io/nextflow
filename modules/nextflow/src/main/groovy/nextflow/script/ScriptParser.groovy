@@ -167,11 +167,11 @@ class ScriptParser {
     ScriptParser parse(String scriptText, GroovyShell interpreter) {
         final String clazzName = computeClassName(scriptText)
         try {
-            Script baseScript = interpreter.parse(scriptText, clazzName)
-            if( baseScript !instanceof BaseScript ){
+            final parsed = interpreter.parse(scriptText, clazzName)
+            if( parsed !instanceof BaseScript ){
                throw new CompilationFailedException(0, null)
             }
-            script = (BaseScript)baseScript
+            script = (BaseScript)parsed
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(scriptPath)
             meta.setModule(module)
