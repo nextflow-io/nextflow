@@ -274,7 +274,11 @@ class ProviderConfig {
     static Map getFromFile(Path file) {
         try {
             final content = file.text
-            log.trace "Parsing SCM config path: ${file.toUriString()}\n${StringUtils.stripSecrets(content)}\n"
+            try {
+                log.trace "Parsing SCM config path: ${file.toUriString()}\n${StringUtils.stripSecrets(content)}\n"
+            }catch(Exception e){
+                log.error "Error dumping configuration ${file.toUriString()}", e
+            }
             final result = parse(content)
             dumpConfig(result)
             return result
