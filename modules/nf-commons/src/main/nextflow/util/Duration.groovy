@@ -212,6 +212,19 @@ class Duration implements Comparable<Duration>, Serializable, Cloneable {
         }
     }
 
+    static Duration of( value ) {
+        if( !value )
+            return null
+
+        if( value instanceof Duration )
+            return (Duration) value
+
+        if( value instanceof Number )
+            return new Duration(value as long)
+
+        return new Duration(value.toString().trim())
+    }
+
     static Duration between( Temporal start, Temporal end ) {
         new Duration(java.time.Duration.between(start, end).toMillis())
     }

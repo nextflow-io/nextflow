@@ -235,55 +235,49 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid `ErrorStrategy` value: ${strategy}")
     }
 
+    Map getResourceLimits() {
+        return get('resourceLimits') as Map
+    }
 
     MemoryUnit getMemory() {
-        def value = get('memory')
-
-        if( !value )
-            return null
-
-        if( value instanceof MemoryUnit )
-            return (MemoryUnit)value
-
         try {
-            new MemoryUnit(value.toString().trim())
+            def value = MemoryUnit.of(get('memory'))
+            def limit = MemoryUnit.of(getResourceLimits()?.get('memory'))
+
+            if ( value && limit && value > limit )
+                value = limit
+
+            return value
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Not a valid 'memory' value in process definition: $value")
+            throw new AbortOperationException("Not a valid `memory` value in process definition: $value")
         }
     }
 
     MemoryUnit getDisk() {
-        def value = get('disk')
-
-        if( !value )
-            return null
-
-        if( value instanceof MemoryUnit )
-            return (MemoryUnit)value
-
         try {
-            new MemoryUnit(value.toString().trim())
+            def value = MemoryUnit.of(get('disk'))
+            def limit = MemoryUnit.of(getResourceLimits()?.get('disk'))
+
+            if ( value && limit && value > limit )
+                value = limit
+
+            return value
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Not a valid 'disk' value in process definition: $value")
+            throw new AbortOperationException("Not a valid `disk` value in process definition: $value")
         }
     }
 
     Duration getTime() {
-        def value = get('time')
-
-        if( !value )
-            return null
-
-        if( value instanceof Duration )
-            return (Duration)value
-
-        if( value instanceof Number )
-            return new Duration(value as long)
-
         try {
-            new Duration(value.toString().trim())
+            def value = Duration.of(get('time'))
+            def limit = Duration.of(getResourceLimits()?.get('time'))
+
+            if ( value && limit && value > limit )
+                value = limit
+
+            return value
         }
         catch( Exception e ) {
             throw new AbortOperationException("Not a valid `time` value in process definition: $value")
@@ -295,8 +289,13 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     int getCpus() {
-        final value = get('cpus')
-        value ? value as int : 1  // note: always return at least 1 cpus
+        def value = get('cpus') as Integer
+        def limit = getResourceLimits()?.get('cpus') as Integer
+
+        if ( value && limit && value > limit )
+            value = limit
+
+        return value ?: 1  // note: always return at least 1 cpus
     }
 
     int getMaxRetries() {

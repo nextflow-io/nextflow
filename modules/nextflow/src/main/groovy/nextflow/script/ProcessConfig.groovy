@@ -49,21 +49,20 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'afterScript',
             'beforeScript',
             'cache',
-            'conda',
-            'cpus',
-            'container',
-            'containerOptions',
             'cleanup',
             'clusterOptions',
+            'conda',
+            'container',
+            'containerOptions',
+            'cpus',
             'debug',
             'disk',
             'echo', // deprecated
             'errorStrategy',
             'executor',
             'ext',
-            'machineType',
-            'queue',
             'label',
+            'machineType',
             'maxErrors',
             'maxForks',
             'maxRetries',
@@ -72,6 +71,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'penv',
             'pod',
             'publishDir',
+            'queue',
+            'resourceLimits',
             'scratch',
             'shell',
             'storeDir',
@@ -878,6 +879,15 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             configProperties.put('accelerator', value)
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `accelerator` directive value: $value [${value.getClass().getName()}]")
+        return this
+    }
+
+    ProcessConfig resourceLimits( Map entries ) {
+        for ( entry in entries )
+            if ( entry.key in ['cpus', 'memory', 'disk', 'time'] )
+                throw new IllegalArgumentException("Not a valid directive in `resourceLimits`: $entry.key")
+
+        configProperties.put('resourceLimits', entries)
         return this
     }
 
