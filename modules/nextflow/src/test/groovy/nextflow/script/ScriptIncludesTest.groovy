@@ -16,13 +16,10 @@
 
 package nextflow.script
 
-import nextflow.exception.ScriptCompilationException
-import org.codehaus.groovy.control.CompilationFailedException
-import org.codehaus.groovy.runtime.typehandling.GroovyCastException
-
 import java.nio.file.Files
 
 import nextflow.exception.DuplicateModuleIncludeException
+import nextflow.exception.ScriptCompilationException
 import spock.lang.Timeout
 import test.Dsl2Spec
 import test.MockScriptRunner
@@ -48,8 +45,8 @@ class ScriptIncludesTest extends Dsl2Spec {
         '''
 
         SCRIPT.text = """
-        nextflow.enable.dsl=2  
         include { Foo } from "$MODULE" 
+        
         process foo {
             input:
                 val value
@@ -66,13 +63,14 @@ class ScriptIncludesTest extends Dsl2Spec {
         """
 
         when:
-        def runner = new MockScriptRunner()
-        def binding = runner.session.binding
-        def result = runner.setScript(SCRIPT).execute()
+        new MockScriptRunner().setScript(SCRIPT).execute()
 
         then:
         def err = thrown(ScriptCompilationException)
-        err.message.indexOf('Foo.groovy') != -1
+        err.message == """\
+                Module compilation error
+                - file : $MODULE
+                """.stripIndent().rightTrim()
     }
 
     def 'should invoke foreign functions' () {
