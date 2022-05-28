@@ -62,6 +62,8 @@ class CondaCache {
 
     private boolean useMamba
 
+    private boolean useMicromamba 
+
     private Path configCacheDir0
 
     @PackageScope String getCreateOptions() { createOptions }
@@ -73,7 +75,11 @@ class CondaCache {
     @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
 
     @PackageScope String getBinaryName() {
-        useMamba ? "mamba" : "conda"
+        if (useMamba)
+            return "mamba"
+        if (useMicromamba) 
+            return "micromamba"
+        return "conda"
     }
 
     /** Only for debugging purpose - do not use */
@@ -88,17 +94,24 @@ class CondaCache {
     CondaCache(CondaConfig config) {
         this.config = config
 
-        if( config['createTimeout'] )
-            createTimeout = config['createTimeout'] as Duration
+        if( config.createTimeout() )
+            createTimeout = config.createTimeout()
 
-        if( config['createOptions'] )
-            createOptions = config['createOptions']
+        if( config.createOptions() )
+            createOptions = config.createOptions()
 
-        if( config['cacheDir'] )
-            configCacheDir0 = (config['cacheDir'] as Path).toAbsolutePath()
+        if( config.cacheDir() )
+            configCacheDir0 = config.cacheDir().toAbsolutePath()
 
-        if( config['useMamba'] )
-            useMamba = config['useMamba'] as boolean
+        if( config.useMamba() && config.useMicromamba() )
+            throw new IllegalArgumentException("Both conda.useMamba and conda.useMicromamba were enabled -- Please choose only one")
+        
+        if( config.useMamba() ) {
+            useMamba = config.useMamba()
+        }
+
+        if( config.useMicromamba() )
+            useMicromamba = config.useMicromamba()
 
     }
 
@@ -175,7 +188,7 @@ class CondaCache {
                 throw new IllegalArgumentException("Conda environment file does not exist: $condaEnv")
             }
             catch( Exception e ) {
-                throw new IllegalArgumentException("Error parsing Conda environment YAML file: $condaEnv -- Chech the log file for details", e)
+                throw new IllegalArgumentException("Error parsing Conda environment YAML file: $condaEnv -- Check the log file for details", e)
             }
         }
         else if( isTextFilePath(condaEnv) )  {
@@ -188,7 +201,7 @@ class CondaCache {
                 throw new IllegalArgumentException("Conda environment file does not exist: $condaEnv")
             }
             catch( Exception e ) {
-                throw new IllegalArgumentException("Error parsing Conda environment text file: $condaEnv -- Chech the log file for details", e)
+                throw new IllegalArgumentException("Error parsing Conda environment text file: $condaEnv -- Check the log file for details", e)
             }
         }
         // it's interpreted as user provided prefix directory
@@ -251,18 +264,22 @@ class CondaCache {
 
         log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
-        final opts = createOptions ? "$createOptions " : ''
+        String opts = createOptions ? "$createOptions " : ''
+        // micromamba does not and might never support the mkdir flag, since the mkdir behaviour is the default
+        if( binaryName != 'micromamba' )
+            opts += '--mkdir '
+
         def cmd
         if( isYamlFilePath(condaEnv) ) {
             cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
         else if( isTextFilePath(condaEnv) ) {
 
-            cmd = "${binaryName} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
 
         else {
-            cmd = "${binaryName} create $opts--mkdir --yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
+            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
         }
 
         try {

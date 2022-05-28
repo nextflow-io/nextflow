@@ -2,8 +2,8 @@
 
 This plugin provides an extension to implement built-in support for SQL DB access and manipulation in Nextflow scripts. 
 
-It provides the ability to create a Nextflow channel from SQL queries and to populate database tables. The current version 
-provides out-of-the-box support for the following databases: 
+It provides the ability to create a Nextflow channel from SQL queries and to populate database tables. 
+The current version provides out-of-the-box support for the following databases: 
 
 * [H2](https://www.h2database.com)
 * [MySQL](https://www.mysql.com/) 
@@ -19,16 +19,17 @@ This repository only holds plugin artefacts. Source code is available at this [l
 
 ## Get started 
   
-Make sure to have Nextflow `21.08.0-edge` or later. Add the following snippet to your `nextflow.config` file. 
+Make sure to have Nextflow `22.05.0-edge` or later. Add the following snippet to your `nextflow.config` file. 
 
 ```
 plugins {
-  id 'nf-sqldb@0.4.0'
+  id 'nf-sqldb@0.4.1'
 }
 ```
-                                                              
-The above declaration allows the use of the SQL plugin functionalities in your Nextflow pipelines. See the section 
-below to configure the connection properties with a database instance. 
+
+The above declaration allows the use of the SQL plugin functionalities in your Nextflow pipelines. 
+See the section below to configure the connection properties with a database instance. 
+
 
 ## Configuration
 
@@ -70,7 +71,9 @@ The `fromQuery` factory method allows for performing a query against a SQL datab
 a tuple for each row in the corresponding result set. For example:
 
 ```
-ch = channel.sql.fromQuery('select alpha, delta, omega from SAMPLE', db: 'foo')
+include { fromQuery } from 'plugin/nf-sqldb'
+
+ch = channel.fromQuery('select alpha, delta, omega from SAMPLE', db: 'foo')
 ```
 
 The following options are available:
@@ -87,6 +90,8 @@ The `sqlInsert` operator provided by this plugin allows populating a database ta
 by a Nextflow channels and therefore produced as result by a pipeline process or an upstream operator. For example:
 
 ```
+include { sqlInsert } from 'plugin/nf-sqldb'
+
 channel
     .of('Hello','world!')
     .map( it -> tuple(it, it.length) )

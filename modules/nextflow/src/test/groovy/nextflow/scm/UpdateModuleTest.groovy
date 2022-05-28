@@ -55,7 +55,7 @@ class UpdateModuleTest extends Specification {
         new File(dir, 'file1.txt').text = 'Ciao'
         new File(dir, 'file2.log').text = 'Mondo'
         repo.add().addFilepattern('.').call()
-        repo.commit().setAll(true).setMessage('First commit').call()
+        repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
         repo.close()
 
         // create module c
@@ -66,7 +66,7 @@ class UpdateModuleTest extends Specification {
         new File(dir, 'file-x.txt').text = 'x'
         new File(dir, 'file-y.txt').text = 'y'
         repo.add().addFilepattern('.').call()
-        repo.commit().setAll(true).setMessage('First commit').call()
+        repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
         repo.close()
 
     }
@@ -89,7 +89,7 @@ class UpdateModuleTest extends Specification {
         // add the main file and commit all
         new File(dir, 'main.nf').text = 'main script'
         repo.add().addFilepattern('.').call()
-        repo.commit().setAll(true).setMessage('First commit').call()
+        repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
 
         // set the root folder for the asset manager
         def target = baseFolder.resolve('target')
@@ -128,7 +128,7 @@ class UpdateModuleTest extends Specification {
         new File(dir, 'main.nf').text = 'main script'
         new File(dir, 'nextflow.config').text = 'manifest.gitmodules = false'  // note: <-- this setting switch-off the submodule update
         repo.add().addFilepattern('.').call()
-        repo.commit().setAll(true).setMessage('First commit').call()
+        repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
 
         def target = baseFolder.resolve('target2')
         AssetManager.root = target.toFile()
@@ -161,7 +161,7 @@ class UpdateModuleTest extends Specification {
         new File(dir, 'main.nf').text = 'main script'
         new File(dir, 'nextflow.config').text = "manifest.gitmodules = 'prj_bbb,prj_ccc'"  // note: <-- this setting switch-off the submodule update
         repo.add().addFilepattern('.').call()
-        repo.commit().setAll(true).setMessage('First commit').call()
+        repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
 
         def target = baseFolder.resolve('target3')
         AssetManager.root = target.toFile()

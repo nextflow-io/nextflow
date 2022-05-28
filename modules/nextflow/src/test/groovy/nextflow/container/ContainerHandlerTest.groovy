@@ -182,7 +182,8 @@ class ContainerHandlerTest extends Specification {
     @Unroll
     def 'test normalize method for singularity' () {
         given:
-        def handler = Spy(ContainerHandler,constructorArgs:[[engine: 'singularity', enabled: true],Paths.get('/abs/path/')])
+        def BASE = Paths.get('/abs/path/')
+        def handler = Spy(new ContainerHandler(engine: 'singularity', enabled: true, baseDir: BASE))
 
         when:
         def result = handler.normalizeImageName(IMAGE)

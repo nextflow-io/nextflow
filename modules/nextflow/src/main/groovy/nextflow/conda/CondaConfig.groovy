@@ -17,7 +17,10 @@
 
 package nextflow.conda
 
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
+import nextflow.util.Duration
 
 /**
  *
@@ -35,5 +38,25 @@ class CondaConfig extends LinkedHashMap {
 
     boolean isEnabled() {
         get('enabled')?.toString() == 'true'
+    }
+
+    Duration createTimeout() {
+        get('createTimeout') as Duration
+    }
+
+    String createOptions() {
+        get('createOptions') as String
+    }
+
+    Path cacheDir() {
+        get('cacheDir') as Path
+    }
+
+    boolean useMamba() {
+        get('useMamba') as boolean
+    }
+
+    boolean useMicromamba() {
+        get('useMicromamba') as boolean
     }
 }

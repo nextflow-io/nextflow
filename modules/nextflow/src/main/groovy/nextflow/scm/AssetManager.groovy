@@ -387,8 +387,12 @@ class AssetManager {
         return this
     }
 
-    AssetManager checkValidRemoteRepo() {
-        def scriptName = getMainScriptName()
+    AssetManager checkValidRemoteRepo(String revision=null) {
+        // Configure the git provider to use the required revision as source for all needed remote resources:
+        // - config if present in repo (nextflow.config by default)
+        // - main script (main.nf by default)
+        provider.revision = revision
+        final scriptName = getMainScriptName()
         provider.validateFor(scriptName)
         return this
     }
@@ -588,7 +592,7 @@ class AssetManager {
      * @param revision The revision to download
      * @result A message representing the operation result
      */
-    def download(String revision=null) {
+    String download(String revision=null) {
         assert project
 
         /*
@@ -597,7 +601,7 @@ class AssetManager {
         if( !localPath.exists() ) {
             localPath.parentFile.mkdirs()
             // make sure it contains a valid repository
-            checkValidRemoteRepo()
+            checkValidRemoteRepo(revision)
 
             final cloneURL = getGitRepositoryUrl()
             log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
@@ -607,20 +611,22 @@ class AssetManager {
             if( provider.hasCredentials() )
                 clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
 
-            if( revision ) {
-                clone.setBranch(revision)
-            }
-
             clone
                 .setURI(cloneURL)
                 .setDirectory(localPath)
                 .setCloneSubmodules(manifest.recurseSubmodules)
                 .call()
 
+            if( revision ) {
+                // use an explicit checkout command *after* the clone instead of cloning a specific branch
+                // because the clone command does not allow the use of SHA commit id (only branch and tag names)
+                try { git.checkout() .setName(revision) .call() }
+                catch ( RefNotFoundException e ) { checkoutRemoteBranch(revision) }
+            }
+
             // return status message
             return "downloaded from ${cloneURL}"
         }
-
 
         log.debug "Pull pipeline $project  -- Using local path: $localPath"
 
@@ -641,7 +647,7 @@ class AssetManager {
              */
             catch ( RefNotFoundException e ) {
                 def ref = checkoutRemoteBranch(revision)
-                return "checkout-out at ${ref.getObjectId()}"
+                return "checkout-out at ${ref.getObjectId().name()}"
             }
         }
 
@@ -923,7 +929,7 @@ class AssetManager {
                 throw new AbortOperationException("Project `$project` currently is sticked on revision: $current -- you need to specify explicitly a revision with the option `-r` to use it")
             }
         }
-        else if( !revision || revision == current ) {
+        if( !revision || revision == current ) {
             // nothing to do
             return
         }

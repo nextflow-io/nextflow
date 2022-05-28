@@ -100,7 +100,8 @@ class TraceRecord implements Serializable {
             env:        'str',
             error_action:'str',
             vol_ctxt: 'num',
-            inv_ctxt: 'num'
+            inv_ctxt: 'num',
+            hostname: 'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [

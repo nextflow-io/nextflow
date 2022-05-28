@@ -13,13 +13,14 @@ on:
 
 jobs:
   build:
+    if: "github.event == 'push' || github.repository != github.event.pull_request.head.repo.full_name"
     name: Build Nextflow
     runs-on: ubuntu-latest
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        java_version: [11, 17]
+        java_version: [11, 18]
 
     steps:
     - name: Environment
