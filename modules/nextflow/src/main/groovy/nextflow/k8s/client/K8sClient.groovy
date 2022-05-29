@@ -371,7 +371,15 @@ class K8sClient {
         assert jobName
         final podName = findPodNameForJob(jobName)
         if( podName ) {
-            return podState(podName)
+            try {
+                return podState(podName)
+            } 
+            /* pod might be deleted by control plane just after findPodNameForJob() call
+             * so try fallback to jobState
+             */   
+            catch (NodeTerminationException err) {
+                return jobStateFallback0(jobName)           
+            }
         }
         else {
             return jobStateFallback0(jobName)
