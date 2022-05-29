@@ -102,7 +102,7 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
     }
 
     /**
-     * Initialise the AWS batch executor.
+     * Initialise the Azure Batch executor.
      */
     @Override
     protected void register() {

@@ -1,9 +1,7 @@
 #!/usr/bin/env nextflow
 
-nextflow.enable.dsl=2
-
 process sayHello {
-  echo true
+  debug true
   input:
   val x
 

@@ -15,7 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+nextflow.enable.dsl=1
+
 /*
  * Defines pipeline parameters in order to specify the refence genomes
  * and read pairs by using the command line options

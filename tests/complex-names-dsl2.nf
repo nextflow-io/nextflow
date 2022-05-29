@@ -1,5 +1,4 @@
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 process foo {
   publishDir 'foo', mode: 'copy'
@@ -29,7 +28,7 @@ process foo {
 }
 
 process bar {
-  echo true
+  debug true
   container 'debian:latest'
   input: 
   path '*'

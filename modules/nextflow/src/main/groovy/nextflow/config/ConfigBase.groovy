@@ -17,6 +17,8 @@
 
 package nextflow.config
 
+import groovy.transform.Memoized
+
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -86,16 +88,7 @@ abstract class ConfigBase extends Script {
             includePath = owner.resolveSibling(includeFile.toString())
         }
 
-        def configText
-        try {
-            configText = includePath.getText()
-        }
-        catch( IOException e ) {
-            if( !includePath.exists() )
-                throw new NoSuchFileException("Config file does not exist: ${includePath.toUriString()}")
-            else
-                throw new IOException("Cannot read config file include: ${includePath.toUriString()}", e)
-        }
+        def configText = readConfigFile(includePath)
 
         // -- set the required base script
         def config = new CompilerConfiguration()
@@ -124,6 +117,28 @@ abstract class ConfigBase extends Script {
 
         // remove the path from the stack
         this.configStack.pop()
+    }
+
+    /**
+     * Reads the content of a config file. The result is cached to
+     * avoid multiple reads.
+     *
+     * @param includePath The config file path
+     * @return The file content
+     */
+    @Memoized
+    protected static String readConfigFile(Path includePath) {
+        def configText
+        try {
+            configText = includePath.getText()
+        }
+        catch (NoSuchFileException | FileNotFoundException ignored) {
+            throw new NoSuchFileException("Config file does not exist: ${includePath.toUriString()}")
+        }
+        catch (IOException e) {
+            throw new IOException("Cannot read config file include: ${includePath.toUriString()}", e)
+        }
+        return configText
     }
 
 }

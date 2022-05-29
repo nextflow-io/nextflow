@@ -182,10 +182,10 @@ class ContainerHandlerTest extends Specification {
     @Unroll
     def 'test normalize method for singularity' () {
         given:
-        def handler = Spy(ContainerHandler,constructorArgs:[[engine: 'singularity', enabled: true]])
+        def BASE = Paths.get('/abs/path/')
+        def handler = Spy(new ContainerHandler(engine: 'singularity', enabled: true, baseDir: BASE))
 
         when:
-        handler.baseDir = Paths.get('/abs/path/')
         def result = handler.normalizeImageName(IMAGE)
 
         then:
@@ -248,5 +248,24 @@ class ContainerHandlerTest extends Specification {
         'http://bar:latest'     | 'http://bar:latest'   | 1     | '/local/http/foo.img'
         'https://bar:latest'    | 'https://bar:latest'  | 1     | '/local/https/foo.img'
         '/some/container.img'   | '/some/container.img' | 0     | '/some/container.img'
+    }
+
+
+    def 'should proxy image name' () {
+        given:
+        def PROXY = 'foo.io'
+
+        when:
+        def result = ContainerHandler.proxyReg(PROXY, IMAGE)
+        then:
+        result == EXPECTED
+        and:
+        ContainerHandler.resolve(result) == RESOLVED
+
+        where:
+        IMAGE                       | EXPECTED                                          | RESOLVED
+        'busybox'                   | 'foo.io/tw/nruwe4tboj4q/busybox'                  | 'library/busybox'
+        'quay.io/busybox:v1'        | 'foo.io/tw/of2wc6jonfxs63djmjzgc4tz/busybox:v1'   | 'quay.io/library/busybox:v1'
+        'quay.io/this/that:latest'  | 'foo.io/tw/of2wc6jonfxs65dinfzq/that:latest'      | 'quay.io/this/that:latest'
     }
 }

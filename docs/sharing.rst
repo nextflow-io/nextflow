@@ -9,6 +9,7 @@ and `GitLab <http://gitlab.com>`_ hosted code repositories and sharing platforms
 project code in a more consistent manner or use other people's Nextflow pipelines, published through BitBucket/GitHub/GitLab,
 in a quick and transparent way.
 
+
 How it works
 ============
 
@@ -17,6 +18,7 @@ If that file does not exist, it will look for a public repository with the same 
 If it is found, the repository is automatically downloaded to your computer and executed. This repository is
 stored in the Nextflow home directory, that is by default the ``$HOME/.nextflow`` path, and thus will be reused for any further
 executions.
+
 
 Running a pipeline
 ==================
@@ -34,8 +36,8 @@ or using the project URL::
 
     nextflow run http://github.com/foo/bar
 
-
-.. note:: In the first case, if your project is hosted on a service other than GitHub, you will need to specify this hosting
+.. note::
+    In the first case, if your project is hosted on a service other than GitHub, you will need to specify this hosting
     service in the command line by using the ``-hub`` option. For example ``-hub bitbucket`` or ``-hub gitlab``.
     In the second case, i.e. when using the project URL as name, the ``-hub`` option is not needed.
 
@@ -50,10 +52,10 @@ If the `owner` part in the pipeline name is omitted, Nextflow will look for a pi
 already executed having a name that matches the name specified. If none is found it will try to download
 it using the `organisation` name defined by the environment variable ``NXF_ORG`` (which by default is ``nextflow-io``).
 
-
-.. tip:: To access a private repository, specify the access credentials by using the ``-user`` command
+.. tip::
+    To access a private repository, specify the access credentials by using the ``-user`` command
     line option, then the program will ask you to enter the password interactively.
-    Private repositories access credentials can also be defined in the `SCM configuration file`_.
+    Private repository access credentials can also be defined in the `SCM configuration file`_.
 
 
 Handling revisions
@@ -68,16 +70,18 @@ or ::
 
     nextflow run nextflow-io/hello -r v1.1
 
-
 It will execute two different project revisions corresponding to the Git tag/branch having that names.
+
 
 Commands to manage projects
 ===========================
 
 The following commands allows you to perform some basic operations that can be used to manage your projects.
 
-.. note:: Nextflow is not meant to replace functionalities provided by the `Git <https://git-scm.com/>`_ tool. You may still need it to create new
-  repositories or commit changes, etc.
+.. note::
+    Nextflow is not meant to completely replace the `Git <https://git-scm.com/>`_ tool. You may still need ``git``
+    to create new repositories or commit changes, etc.
+
 
 Listing available projects
 --------------------------
@@ -114,6 +118,7 @@ project has been downloaded; 4) the script that is executed when launched; 5) th
 revisions i.e. branches and tags. Tags are marked with a ``[t]`` on the right, the current checked-out revision is
 marked with a ``*`` on the left.
 
+
 Pulling or updating a project
 -----------------------------
 
@@ -125,7 +130,6 @@ that repository has already been downloaded. For example::
 Altenatively, you can use the repository URL as the name of the project to pull::
 
     nextflow pull https://github.com/nextflow-io/examples
-
 
 Downloaded pipeline projects are stored in the folder ``$HOME/.nextflow/assets`` in your computer.
 
@@ -152,6 +156,7 @@ pipeline base name (e.g. `hello`) in the current folder.
 
 The clone command can be used to inspect or modify the source code of a pipeline project. You can eventually commit and push
 back your changes by using the usual Git/GitHub workflow.
+
 
 Deleting a downloaded project
 -----------------------------
@@ -180,7 +185,6 @@ properties for the same provider are grouped together with a common name and del
         }
     }
 
-
 In the above template replace `<provider-name>` with one of the "default" servers (i.e. ``bitbucket``, ``github`` or ``gitlab``)
 or a custom identifier representing a private SCM server installation.
 
@@ -201,7 +205,8 @@ The attributes marked with a * are only required when defining the configuration
 
 .. tip::
   A custom location for the SCM file can be specified using the ``NXF_SCM_FILE`` environment variable (requires
- version ``20.10.0`` or later).
+  version ``20.10.0`` or later).
+
 
 BitBucket credentials
 ---------------------
@@ -217,11 +222,11 @@ Create a ``bitbucket`` entry in the `SCM configuration file`_ specifying your us
 
     }
 
-
 .. note::
-   App passwords are substitute passwords for a user account which you can use for scripts and integrating
-   tools to avoid putting your real password into configuration files.
-   Learn more at `this link <https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/>`_.
+    App passwords are substitute passwords for a user account which you can use for scripts and integrating
+    tools in order to avoid putting your real password into configuration files.
+    Learn more at `this link <https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/>`_.
+
 
 BitBucket Server credentials
 -----------------------------
@@ -230,22 +235,22 @@ BitBucket Server credentials
 platform.
 
 .. note::
-    BitBucket Server uses different API from the `BitBucket <https://bitbucket.org/>`_ cloud service. Make sure to
+    BitBucket Server uses a different API from the `BitBucket <https://bitbucket.org/>`_ cloud service. Make sure to
     use the right configuration whether you are using the cloud service or a self-hosted installation.
 
 To access your local BitBucket Server create an entry in the `SCM configuration file`_ specifying as shown below::
 
-        providers {
+    providers {
 
-            mybitbucket {
-                platform = 'bitbucketserver'
-                server = 'https://your.bitbucket.host.com'
-                endpoint = 'https://your.bitbucket.host.com'
-                user = 'your-user'
-                password = 'your-password or your-token'
-            }
-
+        mybitbucket {
+            platform = 'bitbucketserver'
+            server = 'https://your.bitbucket.host.com'
+            endpoint = 'https://your.bitbucket.host.com'
+            user = 'your-user'
+            password = 'your-password or your-token'
         }
+
+    }
 
 
 GitHub credentials
@@ -257,13 +262,14 @@ Create a ``github`` entry in the `SCM configuration file`_ specifying your user 
 
         github {
             user = 'your-user-name'
-            password = 'your-personal-access-token;'
+            password = 'your-personal-access-token'
         }
 
     }
 
-.. tip:: GitHub requires the use of the personal access token (PAT) in place of password field when accessing APIs.
-  Learn more about PAT and how to create it at `this link <https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token>`_.
+.. note::
+    GitHub requires the use of a personal access token (PAT) in place of a password when accessing APIs.
+    Learn more about PAT and how to create it at `this link <https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token>`_.
 
 
 GitLab credentials
@@ -307,16 +313,16 @@ have to provide all the credential information below::
 
     }
 
-
 See `Gitea documentation <https://docs.gitea.io/en-us/api-usage/>`_ about how to enable API access on your
 server and how to issue a token.
+
 
 Azure Repos credentials
 -----------------------
 
 Nextflow has a builtin support for `Azure Repos <https://azure.microsoft.com/en-us/services/devops/repos/>`_, a Git source
 code management service hosted in the Azure cloud. To access your Azure Repos with Nextflow provide the repository credentials
-using the configuration snippet shown below:
+using the configuration snippet shown below::
 
     providers {
 
@@ -329,6 +335,7 @@ using the configuration snippet shown below:
 
 .. tip::
   The Personal access token can be generated in the repository `Clone Repository` dialog.
+
 
 Private server configuration
 ============================
@@ -353,7 +360,6 @@ If, for example, the host name of your private GitLab server is ``gitlab.acme.or
 
     }
 
-
 Then you will be able to run/pull a project with Nextflow using the following command line::
 
     $ nextflow run foo/bar -hub mygit
@@ -367,16 +373,17 @@ Or, in alternative, using the Git clone URL::
     base URL. For example, for GitHub Enterprise V3, add
     ``endpoint = 'https://git.your-domain.com/api/v3'``.
 
-.. warning:: When accessing a private SCM installation over ``https`` and that server uses a custom SSL certificate
-  you may need to import such certificate into your local Java keystore. Read more
-  `here <https://docs.oracle.com/javase/tutorial/security/toolsign/rstep2.html>`_.
+.. warning::
+    When accessing a private SCM installation over ``https`` from a server that uses a custom SSL certificate,
+    you may need to import the certificate into your local Java keystore. Read more
+    `here <https://docs.oracle.com/javase/tutorial/security/toolsign/rstep2.html>`_.
+
 
 Local repository configuration
 ==============================
 
 Nextflow is also able to handle repositories stored in a local or shared file system. The repository
 must be created as a `bare repository <https://mijingo.com/blog/what-is-a-bare-git-repository>`_.
-
 
 Having, for example. a bare repository store at path ``/shared/projects/foo.git``, Nextflow is able
 to run it using the following syntax::
@@ -385,6 +392,7 @@ to run it using the following syntax::
 
 See `Git documentation <https://git-scm.com/book/en/v2/Git-on-the-Server-Getting-Git-on-a-Server>`_ for
 more details about how create and manage bare repositories.
+
 
 Publishing your pipeline
 ========================
@@ -419,8 +427,9 @@ or
 
 See the `Running a pipeline`_ section for more details on how to run Nextflow projects.
 
+
 Manage dependencies
-=====================
+===================
 
 Computational pipelines are rarely composed by a single script. In real world applications they depend on dozens of other components.
 These can be other scripts, databases, or applications compiled for a platform native binary format.
@@ -439,6 +448,7 @@ pipeline project and allows you to track the changes of the source code in a con
 Moreover to guarantee that a pipeline is reproducible it should be self-contained i.e. it should have ideally no
 dependencies on the hosting environment. By using Nextflow you can achieve this goal following these methods:
 
+
 Third party scripts
 --------------------
 
@@ -449,8 +459,9 @@ Grant the execute permission to these files and copy them into a folder named ``
 project repository. Nextflow will automatically add this folder to the ``PATH`` environment variable, and the scripts
 will automatically be accessible in your pipeline without the need to specify an absolute path to invoke them.
 
+
 System environment
---------------------
+------------------
 
 Any environment variable that may be required by the tools in your pipeline can be defined in the ``nextflow.config`` file
 by using the ``env`` scope and including it in the root directory of your project. For example::
@@ -460,18 +471,19 @@ by using the ``env`` scope and including it in the root directory of your projec
     GAMMA = 'bar'
   }
 
-
 See the :ref:`config-page` page to learn more about the Nextflow configuration file.
 
+
 Resource manager
---------------------
+----------------
 
 When using Nextflow you don't need to write the code to parallelize your pipeline for a specific grid engine/resource
 manager because the parallelization is defined implicitly and managed by the Nextflow runtime. The target execution
 environment is parametrized and defined in the configuration file, thus your code is free from this kind of dependency.
 
+
 Bootstrap data
---------------------
+--------------
 
 Whenever your pipeline requires some files or dataset to carry out any initialization step, you
 can include this data in the pipeline repository itself and distribute them together.
@@ -482,13 +494,14 @@ use the implicit variable ``baseDir`` which locates the base directory of your p
 For example, you can create a folder named ``dataset/`` in your repository root directory and copy there the
 required data file(s) you may need, then you can access this data in your script by writing::
 
-   sequences = file("$baseDir/dataset/sequences.fa")
-   sequences.splitFasta {
+    sequences = file("$baseDir/dataset/sequences.fa")
+    sequences.splitFasta {
         println it
     }
 
+
 User inputs
--------------
+-----------
 
 Nextflow scripts can be easily parametrised to allow users to provide their own input data. Simply declare on the
 top of your script all the parameters it may require as shown below::
@@ -496,7 +509,7 @@ top of your script all the parameters it may require as shown below::
   params.my_input = 'default input file'
   params.my_output = 'default output path'
   params.my_flag = false
-  ..
+  ...
 
 The actual parameter values can be provided when launching the script execution on the command line
 by prefixed the parameter name with a double minus character i.e. ``--``, for example::
@@ -504,10 +517,8 @@ by prefixed the parameter name with a double minus character i.e. ``--``, for ex
   nextflow run <your pipeline> --my_input /path/to/input/file --my_output /other/path --my_flag true
 
 
-
-
 Binary applications
---------------------
+-------------------
 
 Docker allows you to ship any binary dependencies that you may have in your pipeline to a portable image
 that is downloaded on-demand and can be executed on any platform where a Docker engine is installed.
@@ -524,11 +535,10 @@ have created. For example::
 In this way when you launch the pipeline execution, the Docker image will be automatically downloaded and used to run
 your tasks.
 
-Read the :ref:`docker-page` page to learn more on how to use Docker containers with Nextflow.
-
+Read the :ref:`container-page` page to learn more on how to use containers with Nextflow.
 
 This mix of technologies makes it possible to write self-contained and truly reproducible pipelines which require
 zero configuration and can be reproduced in any system having a Java VM and a Docker engine installed.
 
 
-.. [#] BitBucket provides two types of version control system: `Git` and `Mercurial`. Nextflow supports only `Git` based repositories.
+.. [#] BitBucket provides two types of version control system: Git and Mercurial. Nextflow supports only Git repositories.

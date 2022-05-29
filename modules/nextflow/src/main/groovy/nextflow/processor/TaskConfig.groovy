@@ -131,6 +131,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         return get(name)
     }
 
+    final getRawValue(String key) {
+        return target.get(key)
+    }
+
     def get( String key ) {
         if( cache.containsKey(key) )
             return cache.get(key)
@@ -182,9 +186,31 @@ class TaskConfig extends LazyMap implements Cloneable {
         return false
     }
 
-    boolean getEcho() {
-        def value = get('echo')
-        toBool(value)
+    String getBeforeScript() {
+        return get('beforeScript')
+    }
+
+    String getAfterScript() {
+        return get('afterScript')
+    }
+
+    def getCleanup() {
+        return get('cleanup')
+    }
+
+    String getStageInMode() {
+        return get('stageInMode')
+    }
+
+    String getStageOutMode() {
+        return get('stageOutMode')
+    }
+
+    boolean getDebug() {
+        // check both `debug` and `echo` for backward
+        // compatibility until `echo` is not removed
+        def value = get('debug') || get('echo')
+        return toBool(value)
     }
 
     private static boolean toBool( value )  {

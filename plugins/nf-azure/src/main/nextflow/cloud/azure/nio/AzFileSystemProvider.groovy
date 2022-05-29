@@ -356,7 +356,7 @@ class AzFileSystemProvider extends FileSystemProvider {
 
     private void checkRoot(Path path) {
         if( path.toString() == '/' )
-            throw new UnsupportedOperationException('Operation not supported on root path')
+            throw new UnsupportedOperationException("Operation 'checkRoot' not supported on root path")
     }
 
     @Override
@@ -466,7 +466,7 @@ class AzFileSystemProvider extends FileSystemProvider {
 
     @Override
     FileStore getFileStore(Path path) throws IOException {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'getFileStore' is not supported by AzFileSystem")
     }
 
     @Override
@@ -502,12 +502,12 @@ class AzFileSystemProvider extends FileSystemProvider {
 
     @Override
     Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'readAttributes' is not supported by AzFileSystem")
     }
 
     @Override
     void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'setAttribute' is not supported by AzFileSystem")
     }
 
 }

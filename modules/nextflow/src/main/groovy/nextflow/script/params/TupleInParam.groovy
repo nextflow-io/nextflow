@@ -55,7 +55,7 @@ class TupleInParam extends BaseInParam {
         for( def item : obj ) {
 
             if( item instanceof TokenVar ) {
-                if( NF.dsl2Final ) {
+                if( NF.dsl2 ) {
                     final msg = "Unqualified input value declaration has been deprecated - replace `tuple ${item.name},..` with `tuple val(${item.name}),..`"
                     throw new DeprecationException(msg)
                 }
@@ -71,7 +71,7 @@ class TupleInParam extends BaseInParam {
                         .bind( item.target )
             }
             else if( item instanceof Map ) {
-                if( NF.dsl2Final ) {
+                if( NF.dsl2 ) {
                     final msg = "Unqualified input file declaration has been deprecated - replace `tuple $item,..` with `tuple path(${item.key}, stageAs:'${item.value}'),..`"
                     throw new DeprecationException(msg)
                 }
@@ -87,7 +87,7 @@ class TupleInParam extends BaseInParam {
                 newItem(StdInParam)
             }
             else if( item instanceof GString ) {
-                if( NF.dsl2Final )
+                if( NF.dsl2 )
                     throw new DeprecationException("Unqualified input file declaration has been deprecated - replace `tuple \"$item\".. with `tuple path(\"$item\")..`")
                 newItem(FileInParam).bind(item)
             }
@@ -95,7 +95,7 @@ class TupleInParam extends BaseInParam {
                 newItem(StdInParam)
             }
             else if( item instanceof String ) {
-                if( NF.dsl2Final )
+                if( NF.dsl2 )
                     throw new DeprecationException("Unqualified input file declaration has been deprecated - replace `tuple '$item',..` with `tuple path('$item'),..`")
                 newItem(FileInParam).bind(item)
             }

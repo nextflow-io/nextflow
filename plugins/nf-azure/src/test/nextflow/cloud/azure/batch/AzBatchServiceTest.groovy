@@ -1,5 +1,7 @@
 package nextflow.cloud.azure.batch
 
+import java.util.function.Predicate
+
 import com.microsoft.azure.batch.protocol.models.CloudPool
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzPoolOpts
@@ -319,7 +321,7 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * svc.guessBestVm(LOC, CPUS, MEM, TYPE) >> VM
         and:
-        spec.poolId == 'nf-pool-a37c437811d7e143223519784ebc55be-Standard_X1'
+        spec.poolId == 'nf-pool-ddb1223ab79edfe07c0af2be7fceeb13-Standard_X1'
 
     }
 
@@ -423,4 +425,30 @@ class AzBatchServiceTest extends Specification {
         result.vmType.numberOfCores == 2
     }
 
+    def 'should create retry policy' () {
+        given:
+        def retryCfg = [delay: '100ms', maxDelay: '200ms', maxAttempts: 300]
+        def CONFIG = [batch:[location: 'northeurope'], retryPolicy: retryCfg]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        AzBatchService svc = Spy(new AzBatchService(exec))
+
+        when:
+        final policy = svc.retryPolicy(Mock(Predicate))
+        then:
+        policy.config.delay.toMillis() == 100
+        policy.config.maxDelay.toMillis() == 200
+        policy.config.maxAttempts == 300
+
+    }
+
+    def 'should create apply policy' () {
+        given:
+        def CONFIG = [batch:[location: 'northeurope']]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        AzBatchService svc = Spy(new AzBatchService(exec))
+
+        expect:
+        svc.apply(() -> 'Hello') == 'Hello'
+
+    }
 }

@@ -1,11 +1,10 @@
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 /*
  * fake alignment step producing a BAM and BAI files
  */
 process algn {
-  echo true
+  debug true
 
   input:
   each barcode
@@ -26,7 +25,7 @@ process algn {
  */
 
 process merge {
-  echo true
+  debug true
 
   input:
   tuple val(barcode), val(seq_id), path(bam, stageAs:'bam?'), path(bai, stageAs:'bai?')

@@ -34,6 +34,11 @@ import nextflow.util.CacheHelper
 class ScriptFile {
 
     /**
+     * Pipeline source file as specified by the user (it may be a relative path
+     */
+    Path source
+
+    /**
      * Pipeline main script file
      */
     Path main
@@ -86,6 +91,7 @@ class ScriptFile {
 
     ScriptFile( Path file ) {
         assert file
+        source = file
         main = file.complete()
         localPath = main.parent
     }

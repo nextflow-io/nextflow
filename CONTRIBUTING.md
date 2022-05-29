@@ -11,9 +11,9 @@ community by helping in other ways. This is also a guide to becoming an effectiv
 
 ## Contributing by Helping Other Users
 
-A great way to contribute to Nextflow is to help answer user questions on the [discussion forum](https://groups.google.com/forum/#!forum/nextflow)
-or the [Gitter channel](https://gitter.im/nextflow-io/nextflow). There are always many new Nextflow users;
-taking a few minutes to help answer a question is a very valuable community service.
+A great way to contribute to Nextflow is to help answer user questions on the [discussion forum](https://github.com/nextflow-io/nextflow/discussions), 
+the [Gitter channel](https://gitter.im/nextflow-io/nextflow) or the [Slack channel](https://nextflow.slack.com). 
+There are always many new Nextflow users; taking a few minutes to help answer a question is a very valuable community service.
 
 Contributors should ideally subscribe to these channels and follow them in order to keep up to date
 on what's happening in Nextflow. Answering questions is an excellent and visible way to help the
@@ -83,7 +83,7 @@ The process is automatically managed by the [Probot](https://probot.github.io/ap
 The suggested development environment is [IntelliJ IDEA](https://www.jetbrains.com/idea/download/). See the [README](https://github.com/nextflow-io/nextflow/#intellij-idea) for a short primer on how to import
 and configure Nextflow to work with it.
 
-Nextflow does not impose a strict code formatting style, however the following setting should be applied:
+Nextflow does not impose a strict code formatting style, however the following settings should be applied:
 
 * Use spaces for indentation
 * Tab size: 4

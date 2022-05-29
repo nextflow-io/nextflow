@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-echo true
+nextflow.enable.dsl=1
 
 process foo {
+    debug true
     time { 1.h * task.attempt }
     memory { 1.GB * task.attempt }
     errorStrategy { task.exitStatus == 5 && task.attempt<3 ? 'retry' : 'terminate' }

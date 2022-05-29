@@ -1,3 +1,5 @@
+nextflow.enable.dsl=1
+
 process foo {
     output:
     env FOO into ch 
@@ -5,7 +7,7 @@ process foo {
 }
 
 process bar {
-    echo true
+    debug true
     input:
     env FOO from ch 
     'echo "bar says $FOO"'

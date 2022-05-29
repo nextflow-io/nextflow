@@ -25,7 +25,7 @@ Channel
 
 
 process blastThemAll {
-    echo true
+    debug true
 
     input:
     file x from proteins

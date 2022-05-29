@@ -15,11 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 params.ext = 'fastq'
 
 process foo {
-  echo true
+  debug true
   tag "${barcode}.${params.ext}"
 
   input:

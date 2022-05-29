@@ -47,23 +47,31 @@ class PluginsFacade implements PluginStateListener {
     private Path root
     private PluginUpdater updater
     private CustomPluginManager manager
-    private DefaultPlugins defaultPlugins
+    private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
     private String indexUrl = Plugins.DEFAULT_PLUGINS_REPO
 
     PluginsFacade() {
         mode = getPluginsMode()
         root = getPluginsDir()
-        if( mode=='dev' && root.toString()=='plugins' )
+        if( mode=='dev' && root.toString()=='plugins' && !isRunningFromDistArchive() )
             root = detectPluginsDevRoot()
         System.setProperty('pf4j.mode', mode)
-        defaultPlugins = new DefaultPlugins()
     }
 
     PluginsFacade(Path root, String mode=PROD_MODE) {
         this.mode = mode
         this.root = root
         System.setProperty('pf4j.mode', mode)
-        defaultPlugins = new DefaultPlugins()
+    }
+
+    /**
+     * Determine if it's running from a JAR archive
+     * @return {@code true} if the code is running from a JAR artifact, {@code false} otherwise
+     */
+    protected String isRunningFromDistArchive() {
+        final className = this.class.name.replace('.', '/');
+        final classJar = this.class.getResource("/" + className + ".class").toString();
+        return classJar.startsWith("jar:")
     }
 
     protected Path getPluginsDir() {
@@ -97,6 +105,16 @@ class PluginsFacade implements PluginStateListener {
             return null
     }
 
+    /**
+     * Determine the development plugin root. This is required to
+     * allow running unit tests for plugin projects importing the
+     * nextflow core runtime.
+     *
+     * The nextflow main project is expected to be cloned into
+     * a sibling directory respect to the plugin project
+     *
+     * @return The nextflow plugins project path in the local file system
+     */
     protected Path detectPluginsDevRoot() {
         def file = new File('.').absoluteFile
         do {
@@ -122,7 +140,7 @@ class PluginsFacade implements PluginStateListener {
             return PROD_MODE
         }
         else {
-            log.trace "Using dev plugins mode"
+            log.debug "Using dev plugins mode"
             return DEV_MODE
         }
     }
@@ -174,7 +192,7 @@ class PluginsFacade implements PluginStateListener {
         if( manager )
             throw new IllegalArgumentException("Plugin system was already setup")
         else {
-            log.debug "Setting up plugin manager > mode=${mode}; plugins-dir=$root"
+            log.debug "Setting up plugin manager > mode=${mode}; plugins-dir=$root; core-plugins: ${defaultPlugins.toSortedString()}"
             // make sure plugins dir exists
             if( mode!=DEV_MODE && !FilesEx.mkdirs(root) )
                 throw new IOException("Unable to create plugins dir: $root")
@@ -214,6 +232,23 @@ class PluginsFacade implements PluginStateListener {
     }
 
     /**
+     * Return a list of extension matching the requested interface type in a plugin
+     *
+     * @param type
+     *      The request extension interface
+     * @return
+     *      The list of extensions matching the requested interface.
+     */
+    def <T> List<T> getExtensions(Class<T> type, String pluginId) {
+        if( manager ) {
+            return manager.getExtensions(type, pluginId)
+        }
+        else {
+            return List.of()
+        }
+    }
+
+    /**
      * Return a list of extension matching the requested type
      * ordered by a priority value. The element at the beginning
      * of the list (index 0) has higher priority
@@ -234,36 +269,6 @@ class PluginsFacade implements PluginStateListener {
     protected int priority0(Object it) {
         final annot = it.getClass().getAnnotation(Priority)
         return annot ? annot.value() : 0
-    }
-
-    protected int priority1(Object it) {
-        final annot = it.getClass().getAnnotation(Scoped)
-        return annot ? annot.priority() : 0
-    }
-
-    /**
-     * Find out all extensions classed with with {@code @Scoped} annotation
-     * return one and exactly with for each different scope value
-     *
-     * @param type
-     * @param scope
-     * @return
-     */
-    def <T> Set<T> getScopedExtensions(Class<T> type,String scope=null) {
-        def result = getExtensions(type).sort(it->priority1(it))
-        def groups = new HashMap<String,T>()
-        for( T it : result ) {
-            final annot = it.getClass().getAnnotation(Scoped)
-            if( annot==null )
-                continue
-            if( !annot.value() )
-                continue
-            if( groups.containsKey(annot.value()) )
-                continue
-            if( scope==null || annot.value()==scope )
-                groups.put(annot.value(), it)
-        }
-        return new HashSet<T>(groups.values())
     }
 
     protected String group0(Object it) {
@@ -356,7 +361,7 @@ class PluginsFacade implements PluginStateListener {
         if( executor == 'awsbatch' || workDir?.startsWith('s3://') || bucketDir?.startsWith('s3://') )
             plugins << defaultPlugins.getPlugin('nf-amazon')
 
-        if( executor == 'google-lifesciences' || workDir?.startsWith('gs://') || bucketDir?.startsWith('gs://')  )
+        if( executor == 'google-lifesciences' || executor == 'google-batch' || workDir?.startsWith('gs://') || bucketDir?.startsWith('gs://')  )
             plugins << defaultPlugins.getPlugin('nf-google')
 
         if( executor == 'azurebatch' || workDir?.startsWith('az://') || bucketDir?.startsWith('az://') )

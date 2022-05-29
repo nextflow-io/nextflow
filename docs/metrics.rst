@@ -4,7 +4,7 @@
 Metrics
 *******
 
-This section details how the resource usage from the :ref:`Execution report <execution-report>` are computed.
+This section details how the resource usage metrics from the :ref:`Execution report <execution-report>` are computed.
 
 
 CPU Usage
@@ -21,7 +21,6 @@ In the first example, let's consider the simple use case in which a process perf
   #!/usr/bin/env nextflow
 
   process CpuUsageEx1 {
-    
     cpus 2
 
     """
@@ -29,15 +28,11 @@ In the first example, let's consider the simple use case in which a process perf
     """
   }
 
-
-In the second example, some time will be spent performing pure computation and some time just waiting. Using the program `stress <https://people.seas.harvard.edu/~apw/stress/>`_  and `sleep` as follows would report 75% in the `Raw Usage` tab::
-
-
+In the second example, some time will be spent performing pure computation and some time just waiting. Using the program `stress <https://people.seas.harvard.edu/~apw/stress/>`_  and ``sleep`` as follows would report 75% in the `Raw Usage` tab::
 
   #!/usr/bin/env nextflow
 
   process CpuUsageEx2 {
-    
     cpus 1
 
     """
@@ -47,22 +42,16 @@ In the second example, some time will be spent performing pure computation and s
     """
   }
 
-
 Indeed, the percentage of the CPU that this process got is a weighted average taking into account the percentage of the CPU and duration of each individual program over the job duration (a.k.a. elapsed real time, real time or wall time ) as follows:
-
 
 .. math::
   \frac{ 100\% \times 10s + 100\% \times 5s + 0\% \times 5s }{10s+5s+5s} = 75\%
 
-
 The third example is similar to the second one except that the pure computation stage is performed in a single step forked on 2 CPUs::
-
-
 
   #!/usr/bin/env nextflow
 
   process CpuUsageEx3 {
-    
     cpus 2
 
     """
@@ -71,7 +60,6 @@ The third example is similar to the second one except that the pure computation 
     """
   }
 
-
 The `Raw Usage` tab would report 100% in the `Raw Usage` tab:
 
 .. math::
@@ -79,8 +67,8 @@ The `Raw Usage` tab would report 100% in the `Raw Usage` tab:
 
 The `% Allocated` tab would report 50%, however, it would not be relevant to change the ``cpus`` directive from 2 to 1 as the process really uses 2 CPUs at it peak load.
 
-
-.. hint:: The `stress <https://people.seas.harvard.edu/~apw/stress/>`_ program can be installed with ``sudo apt-get install stress`` or ``sudo yum install stress`` depending on your linux distribution.
+.. tip::
+  The `stress <https://people.seas.harvard.edu/~apw/stress/>`_ program can be installed with ``sudo apt-get install stress`` or ``sudo yum install stress`` depending on your Linux distribution.
 
 
 Memory Usage
@@ -88,14 +76,13 @@ Memory Usage
 
 The plot has three tabs showing the usage of the physical memory (RAM), the virtual memory (vmem) and the percentage of RAM used by the process with respect to what was set in the ``memory`` directive. The peak usage during the execution of the process is reported for both physical and virtual memories.
 
-.. hint::
+.. note::
   To better understand the memory usage plot, it is important to know that:
 
-  - the total amount of memory used be a processs is the `virtual memory (vmem)`. The `vmem` contains all memory areas whether they are in the physical memory (RAM), in the Swap space, on the disk or shared with other processes,
+  - the total amount of memory used by a processs is the `virtual memory (vmem)`. The ``vmem`` contains all memory areas whether they are in the physical memory (RAM), in the Swap space, on the disk or shared with other processes,
   - the `resident set size (RSS)` is the amount of space of `physical memory (RAM)` held by a process,
   - the relationship is: vmem :math:`\geq` RSS + Swap,
   - the ``memory`` directive sets the RAM requested by the process.
-
 
 Let's illustrate how this plot behaves with one example which relies on two C programs. 
 
@@ -159,8 +146,6 @@ The first program just allocates a variable of 1 GiB:
         free(address);
         return 0;
     }
-
-
 
 The second program allocates a variable of 1 GiB and fills it with data:
 
@@ -232,29 +217,24 @@ The second program allocates a variable of 1 GiB and fills it with data:
         return 0;
     }
 
-
 The first and second programs are executed in ``foo`` and ``bar`` processes respectively as follows::
 
   #!/usr/bin/env nextflow
 
   process foo {
-  
       memory '1.5 GB'
   
       """
       memory_vmem_1GiB_ram_0Gib
       """
-
   }
 
   process bar {
-
       memory '1.5 GB'
 
       """
       memory_vmem_1GiB_ram_1Gib
       """
-
   }
 
 The `Virtual (RAM + Disk swap)` tab shows that both ``foo`` and ``bar`` processes use the same amount of virtual memory (~1 GiB):
@@ -265,12 +245,12 @@ However, the `Physical (RAM)` tab shows that only the ``bar`` process uses ~1 Gi
 
 .. image:: images/report-resource-memory-ram.png
 
-
 As expected, the `% RAM Allocated` tab shows that 0% of the resource set in the ``memory`` directive was used for ``foo`` process while 67% (= 1 / 1.5) of the resource were used for ``bar`` process:
 
 .. image:: images/report-resource-memory-pctram.png
 
-.. warning:: Binary unit are used to report memory raw values. This means that 1KB = :math:`1024` bytes, 1 MB = :math:`1024^2` bytes, 1 GB = :math:`1024^3` bytes, `etc.`
+.. warning::
+  Memory and storage metrics are reported in bytes. This means that 1KB = :math:`1024` bytes, 1 MB = :math:`1024^2` bytes, 1 GB = :math:`1024^3` bytes, etc.
 
 
 Job Duration
@@ -286,14 +266,13 @@ I/O Usage
 
 The plot has two tabs showing how many data were read and/or written each process. For example, the following processes read and write 1GB and 256MB of data respectively::
 
-  #!/usr/bin/env nextflow
+    #!/usr/bin/env nextflow
 
     process io_read_write_1G {
       """
       dd if=/dev/zero of=/dev/null bs=1G count=1
       """
     }
-
 
     process io_read_write_256M {
       """
@@ -305,9 +284,6 @@ The plot has two tabs showing how many data were read and/or written each proces
 
 .. image:: images/report-resource-io-read.png
 
-
 `Write` tab:
 
 .. image:: images/report-resource-io-write.png
-
-

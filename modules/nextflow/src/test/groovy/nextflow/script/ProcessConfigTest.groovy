@@ -146,7 +146,7 @@ class ProcessConfigTest extends Specification {
         def config = new ProcessConfig(script)
 
         expect:
-        config.containsKey('echo')
+        config.containsKey('debug')
         config.containsKey('shell')
         !config.containsKey('xyz')
         !config.containsKey('maxForks')

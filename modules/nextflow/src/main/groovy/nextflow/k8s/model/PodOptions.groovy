@@ -57,6 +57,12 @@ class PodOptions {
 
     private boolean automountServiceAccountToken
 
+    private String priorityClassName
+
+    private List<Map> tolerations
+
+    private Boolean privileged
+    
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         envVars = new HashSet<>(size)
@@ -64,6 +70,7 @@ class PodOptions {
         mountConfigMaps = new HashSet<>(size)
         mountClaims = new HashSet<>(size)
         automountServiceAccountToken = true
+        tolerations = new ArrayList<Map>(size)
         init(options)
     }
 
@@ -123,7 +130,16 @@ class PodOptions {
         else if( entry.automountServiceAccountToken instanceof Boolean ) {
             this.automountServiceAccountToken = entry.automountServiceAccountToken as Boolean
         }
-        else 
+        else if( entry.priorityClassName ) {
+            this.priorityClassName = entry.priorityClassName
+        }
+        else if( entry.toleration instanceof Map ) {
+            tolerations << (entry.toleration as Map)
+        }
+        else if( entry.privileged instanceof Boolean ) {
+            this.privileged = entry.privileged as Boolean
+        }
+        else
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
 
@@ -177,6 +193,12 @@ class PodOptions {
         return this
     }
 
+    String getPriorityClassName() { priorityClassName }
+
+    List<Map> getTolerations() { tolerations }
+
+    Boolean getPrivileged() { privileged }
+    
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
 
@@ -228,7 +250,17 @@ class PodOptions {
         result.annotations.putAll(annotations)
         result.annotations.putAll(other.annotations)
 
+        // automount service account token
         result.automountServiceAccountToken = other.automountServiceAccountToken & this.automountServiceAccountToken
+
+        // priority class name
+        result.priorityClassName = other.priorityClassName ?: this.priorityClassName
+
+        // tolerations
+        result.tolerations = other.tolerations ?: this.tolerations
+
+        //  privileged execution
+        result.privileged = other.privileged!=null ? other.privileged : this.privileged
 
         return result
     }

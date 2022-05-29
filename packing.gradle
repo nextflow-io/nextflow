@@ -18,7 +18,7 @@ dependencies {
     // default cfg = runtime + httpfs + amazon + tower client
     defaultCfg project(':nf-httpfs')
     // Capsule manages the fat jar building process
-    capsule 'io.nextflow:capsule:1.1.0'
+    capsule 'io.nextflow:capsule:1.1.1'
     capsule 'io.nextflow:capsule-maven:1.0.3.2'
     console project(':plugins:nf-console')
     ga4gh   project(':plugins:nf-ga4gh')
@@ -308,7 +308,7 @@ task dockerPack(type: Exec, dependsOn: ['pack']) {
     cd $buildDir/docker  
     mkdir -p dist
     curl -fsSLO https://get.docker.com/builds/Linux/x86_64/docker-17.03.1-ce.tgz && tar --strip-components=1 -xvzf docker-17.03.1-ce.tgz -C dist
-    NXF_HOME=\$PWD/.nextflow nextflow info
+    NXF_HOME=\$PWD/.nextflow ./nextflow info
     docker build -t nextflow/nextflow:$version .
     """.stripIndent()
 

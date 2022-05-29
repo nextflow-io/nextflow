@@ -59,6 +59,89 @@ class PodSpecBuilderTest extends Specification {
 
     }
 
+    def 'should create pod spec with args' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withWorkDir('/some/work/dir')
+                .withArgs(['echo', 'hello'])
+                .build()
+
+        then:
+        spec ==  [ apiVersion: 'v1',
+                   kind: 'Pod',
+                   metadata: [name:'foo', namespace:'default'],
+                   spec: [
+                           restartPolicy:'Never',
+                           containers:[
+                                   [name:'foo',
+                                    image:'busybox',
+                                    args:['echo', 'hello'],
+                                    workingDir:'/some/work/dir'
+                                   ]
+                           ]
+                   ]
+        ]
+
+    }
+
+    def 'should create pod spec with args string' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withWorkDir('/some/work/dir')
+                .withArgs('echo foo')
+                .build()
+
+        then:
+        spec ==  [ apiVersion: 'v1',
+                   kind: 'Pod',
+                   metadata: [name:'foo', namespace:'default'],
+                   spec: [
+                           restartPolicy:'Never',
+                           containers:[
+                                   [name:'foo',
+                                    image:'busybox',
+                                    args:['/bin/bash', '-c', 'echo foo'],
+                                    workingDir:'/some/work/dir'
+                                   ]
+                           ]
+                   ]
+        ]
+
+    }
+
+    def 'should create pod spec with privileged' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand('echo foo')
+                .withPrivileged(true)
+                .build()
+
+        then:
+        spec ==  [ apiVersion: 'v1',
+                   kind: 'Pod',
+                   metadata: [name:'foo', namespace:'default'],
+                   spec: [
+                           restartPolicy:'Never',
+                           containers:[
+                                   [name:'foo',
+                                    image:'busybox',
+                                    command:['/bin/bash', '-c', 'echo foo'],
+                                    securityContext: [privileged: true]
+                                   ]
+                           ]
+                   ]
+        ]
+
+    }
 
     def 'should set namespace, labels and annotations' () {
 
@@ -532,34 +615,47 @@ class PodSpecBuilderTest extends Specification {
 
         given:
         def opts = Mock(PodOptions)
-        def builder = new PodSpecBuilder(podName: 'foo', imageName: 'image', command: ['echo'], labels: [runName: 'crazy_john'], annotations: [evict: 'false'])
+        def builder = new PodSpecBuilder([
+            podName: 'foo',
+            imageName: 'image',
+            command: ['echo'],
+            labels: [runName: 'crazy_john'],
+            annotations: [evict: 'false']
+        ])
 
         def affinity = [
             nodeAffinity: [
                 requiredDuringSchedulingIgnoredDuringExecution: [
                     nodeSelectorTerms: [
-                        [key: "foo", operator: "In", values: ["bar", "baz"]]
+                        [key: 'foo', operator: 'In', values: ['bar', 'baz']]
                     ]
                 ]
             ]
         ]
 
-        opts.getAutomountServiceAccountToken() >> true
+        def tolerations = [[
+            key: 'example-key',
+            operator: 'Exists',
+            effect: 'NoSchedule'
+        ]]
 
         when:
         def spec = builder.withPodOptions(opts).build()
         then:
+        _ * opts.getAffinity() >> affinity
+        _ * opts.getAnnotations() >> [OMEGA:'zzz', SIGMA:'www']
+        _ * opts.getAutomountServiceAccountToken() >> false
+        2 * opts.getEnvVars() >> [ PodEnv.value('HELLO','WORLD') ]
         2 * opts.getImagePullPolicy() >> 'always'
         2 * opts.getImagePullSecret() >> 'myPullSecret'
+        _ * opts.getLabels() >> [ALPHA: 'xxx', GAMMA: 'yyy']
         2 * opts.getVolumeClaims() >> [ new PodVolumeClaim('pvc1', '/work') ]
         2 * opts.getMountConfigMaps() >> [ new PodMountConfig('data', '/home/user') ]
         2 * opts.getMountSecrets() >> [ new PodMountSecret('blah', '/etc/secret.txt') ]
-        2 * opts.getEnvVars() >> [ PodEnv.value('HELLO','WORLD') ]
-        _ * opts.getLabels() >> [ALPHA: 'xxx', GAMMA: 'yyy']
-        _ * opts.getAnnotations() >> [OMEGA:'zzz', SIGMA:'www']
-        _ * opts.getSecurityContext() >> new PodSecurityContext(1000)
         _ * opts.getNodeSelector() >> new PodNodeSelector(gpu:true, queue: 'fast')
-        _ * opts.getAffinity() >> affinity
+        _ * opts.getPriorityClassName() >> 'high-priority'
+        _ * opts.getSecurityContext() >> new PodSecurityContext(1000)
+        _ * opts.getTolerations() >> tolerations
 
         spec == [
             apiVersion: 'v1',
@@ -571,26 +667,27 @@ class PodSpecBuilderTest extends Specification {
                 annotations: [evict: 'false', OMEGA:'zzz', SIGMA:'www']
             ],
             spec: [
-                restartPolicy:'Never',
-                securityContext: [ runAsUser: 1000 ],
+                affinity: affinity,
+                automountServiceAccountToken: false,
                 imagePullSecrets: [[ name: 'myPullSecret' ]],
                 nodeSelector: [gpu: 'true', queue: 'fast'],
-                affinity: affinity,
-                
-                containers:[
-                    [
-                        name:'foo',
-                        image:'image',
-                        imagePullPolicy: 'always',
-                        command:['echo'],
-                        env:[[name:'HELLO', value:'WORLD']],
-                        volumeMounts:[
-                            [name:'vol-1', mountPath:'/work'],
-                            [name:'vol-2', mountPath:'/home/user'],
-                            [name:'vol-3', mountPath:'/etc/secret.txt']
-                        ],
-                    ]
-                ],
+                priorityClassName: 'high-priority',
+                restartPolicy:'Never',
+                securityContext: [ runAsUser: 1000 ],
+                tolerations: tolerations,
+
+                containers:[[
+                    name:'foo',
+                    image:'image',
+                    imagePullPolicy: 'always',
+                    command:['echo'],
+                    env:[[name:'HELLO', value:'WORLD']],
+                    volumeMounts:[
+                        [name:'vol-1', mountPath:'/work'],
+                        [name:'vol-2', mountPath:'/home/user'],
+                        [name:'vol-3', mountPath:'/etc/secret.txt']
+                    ],
+                ]],
                 volumes:[
                     [name:'vol-1', persistentVolumeClaim:[claimName:'pvc1']],
                     [name:'vol-2', configMap:[name:'data']],
@@ -668,7 +765,7 @@ class PodSpecBuilderTest extends Specification {
         def builder = new PodSpecBuilder()
 
         expect:
-        builder.sanitize0('foo',label, 'label') == str
+        builder.sanitize0(label, PodSpecBuilder.MetaType.LABEL) == str
 
         where:
         label           | str
@@ -687,4 +784,64 @@ class PodSpecBuilderTest extends Specification {
         '123hello'      | '123hello'
         'x2345678901234567890123456789012345678901234567890123456789012345' | 'x23456789012345678901234567890123456789012345678901234567890123'
     }
+
+    @Unroll
+    def 'should sanitize k8s label map' () {
+        given:
+        def builder = new PodSpecBuilder()
+
+        expect:
+        builder.sanitize(KEY_VALUE, PodSpecBuilder.MetaType.LABEL) == EXPECTED
+
+        where:
+        KEY_VALUE               | EXPECTED
+        [foo:'bar']             | [foo:'bar']
+        ['key 1':'value 2']     | [key_1:'value_2']
+    }
+
+    @Unroll
+    def 'should sanitize k8s annotation key' () {
+        given:
+        def builder = new PodSpecBuilder()
+
+        expect:
+        builder.sanitize(KEY_VALUE, PodSpecBuilder.MetaType.ANNOTATION) == EXPECTED
+
+        where:
+        KEY_VALUE               | EXPECTED
+        [foo:'bar']             | [foo:'bar']
+        ['key 1':'value 2']     | [key_1:'value 2']
+    }
+
+
+    def 'should create job spec' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .buildAsJob()
+
+        then:
+        spec ==  [ apiVersion: 'batch/v1',
+                    kind: 'Job',
+                    metadata: [name:'foo', namespace:'default'],
+                    spec: [
+                            backoffLimit: 0,
+                            template: [
+                                    spec: [
+                                            restartPolicy:'Never',
+                                            containers:[
+                                                    [name:'foo',
+                                                     image:'busybox',
+                                                     command:['echo', 'hello'],
+                                                    ]
+                                            ]
+                                    ]
+                            ]
+                    ]
+        ]
+    }
+
 }

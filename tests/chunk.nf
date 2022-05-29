@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 /*
  * Show how get data from the 'stdin' virtual file
@@ -26,7 +27,6 @@
  * line parameter '--chunkSize' (--chunk-size is a synonym for the same)
  */
 
-
 params.chunkSize = 1
 
 Channel
@@ -35,7 +35,7 @@ Channel
     .set{ sequences }
 
 process foo {
-    echo true
+    debug true
 
     input:
     stdin sequences
