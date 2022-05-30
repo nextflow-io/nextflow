@@ -230,7 +230,15 @@ class K8sClient {
         // delete all pods in a job
         if (podList.kind == "PodList") { 
             for (item in podList.items) {
-                podDelete(((item as Map).metadata as Map).name as String)
+                try {
+                   podDelete(((item as Map).metadata as Map).name as String)
+                }
+                catch(K8sResponseException err) {
+                   if( err.response.code == 404 )
+                       log.warn1("Unable to delete Pod for job $name, pod already gone.")
+                   else
+                       throw err
+                }
             }
         }
 
@@ -378,6 +386,7 @@ class K8sClient {
              * so try fallback to jobState
              */   
             catch (NodeTerminationException err) {
+                log.warn1("Job $jobName's Pod not found, probably cleaned by controlplane.")
                 return jobStateFallback0(jobName)           
             }
         }
