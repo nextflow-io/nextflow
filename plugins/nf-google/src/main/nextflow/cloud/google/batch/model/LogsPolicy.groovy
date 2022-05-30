@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2022, Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,23 +14,20 @@
  * limitations under the License.
  */
 
-package groovy.runtime.metaclass;
+package nextflow.cloud.google.batch.model
 
-import java.util.Set;
+import groovy.transform.CompileStatic
+import groovy.transform.ToString
 
 /**
- * Define the interface to plug the delegating metaclass
- * extension methods implementing the nextflow operators
+ * Model Google Batch Logs policy
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-public interface DelegatingPlugin {
+@CompileStatic
+@ToString(includeNames = true, ignoreNulls = true, includePackage = false)
+class LogsPolicy {
+    static public final LogsPolicy CLOUD_LOGGING = new LogsPolicy(destination: 'CLOUD_LOGGING')
 
-    boolean isExtensionMethod(Object obj, String name);
-
-    Object invokeExtensionMethod(Object channel, String method, Object[] args);
-
-    ChannelFactory getChannelFactory(String factoryDomain);
-
-    Set<String> operatorNames();
+    String destination
 }

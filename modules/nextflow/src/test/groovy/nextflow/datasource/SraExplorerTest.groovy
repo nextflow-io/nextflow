@@ -17,14 +17,13 @@
 
 package nextflow.datasource
 
-import spock.lang.IgnoreIf
-import spock.lang.Requires
-import spock.lang.Specification
-
 import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.Const
+import spock.lang.IgnoreIf
+import spock.lang.Requires
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -145,11 +144,12 @@ class SraExplorerTest extends Specification {
         result == [f1, f2]
 
         when:
-        slurper.protocol = 'http'
+        slurper.@protocol = 'http'
         and:
         result = slurper.getFastqUrl('SRR1448774')
         then:
         1 * slurper.readRunFastqs('SRR1448774') >> RESP1
+        and:
         // should return http url
         result == ('http://ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448774/SRR1448774.fastq.gz' as Path)
     }

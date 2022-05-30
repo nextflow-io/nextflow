@@ -1076,7 +1076,9 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -cache                    |             | Enable/disable processes caching.                                              |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
-| -dsl2                     | false       | Execute the workflow using DSL2 syntax.                                        |
+| -dsl1                     | false       | Execute the workflow using DSL1 syntax.                                        |
++---------------------------+-------------+--------------------------------------------------------------------------------+
+| -dsl2                     | true        | Execute the workflow using DSL2 syntax.                                        |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -dump-channels            |             | Dump channels for debugging purpose.                                           |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
@@ -1184,9 +1186,8 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 
     $ nextflow run nextflow-io/hello -with-tower
  
-
 - Invoke the nextflow pipeline execution with a custom parameters ``YAML/JSON`` file. 
-The parameters which are specified through this mechanism are merged with the resolved configuration (base configuration and profiles) and only the common fields are overwritten by the ``YAML/JSON`` file.::
+  The parameters which are specified through this mechanism are merged with the resolved configuration (base configuration and profiles) and only the common fields are overwritten by the ``YAML/JSON`` file.::
 
     $ nextflow run main.nf -params-file pipeline_params.yml
  

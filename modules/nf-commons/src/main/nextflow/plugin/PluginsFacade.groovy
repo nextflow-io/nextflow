@@ -232,6 +232,23 @@ class PluginsFacade implements PluginStateListener {
     }
 
     /**
+     * Return a list of extension matching the requested interface type in a plugin
+     *
+     * @param type
+     *      The request extension interface
+     * @return
+     *      The list of extensions matching the requested interface.
+     */
+    def <T> List<T> getExtensions(Class<T> type, String pluginId) {
+        if( manager ) {
+            return manager.getExtensions(type, pluginId)
+        }
+        else {
+            return List.of()
+        }
+    }
+
+    /**
      * Return a list of extension matching the requested type
      * ordered by a priority value. The element at the beginning
      * of the list (index 0) has higher priority
@@ -252,36 +269,6 @@ class PluginsFacade implements PluginStateListener {
     protected int priority0(Object it) {
         final annot = it.getClass().getAnnotation(Priority)
         return annot ? annot.value() : 0
-    }
-
-    protected int priority1(Object it) {
-        final annot = it.getClass().getAnnotation(Scoped)
-        return annot ? annot.priority() : 0
-    }
-
-    /**
-     * Find out all extensions classed with with {@code @Scoped} annotation
-     * return one and exactly with for each different scope value
-     *
-     * @param type
-     * @param scope
-     * @return
-     */
-    def <T> Set<T> getScopedExtensions(Class<T> type,String scope=null) {
-        def result = getExtensions(type).sort(it->priority1(it))
-        def groups = new HashMap<String,T>()
-        for( T it : result ) {
-            final annot = it.getClass().getAnnotation(Scoped)
-            if( annot==null )
-                continue
-            if( !annot.value() )
-                continue
-            if( groups.containsKey(annot.value()) )
-                continue
-            if( scope==null || annot.value()==scope )
-                groups.put(annot.value(), it)
-        }
-        return new HashSet<T>(groups.values())
     }
 
     protected String group0(Object it) {
@@ -374,7 +361,7 @@ class PluginsFacade implements PluginStateListener {
         if( executor == 'awsbatch' || workDir?.startsWith('s3://') || bucketDir?.startsWith('s3://') )
             plugins << defaultPlugins.getPlugin('nf-amazon')
 
-        if( executor == 'google-lifesciences' || workDir?.startsWith('gs://') || bucketDir?.startsWith('gs://')  )
+        if( executor == 'google-lifesciences' || executor == 'google-batch' || workDir?.startsWith('gs://') || bucketDir?.startsWith('gs://')  )
             plugins << defaultPlugins.getPlugin('nf-google')
 
         if( executor == 'azurebatch' || workDir?.startsWith('az://') || bucketDir?.startsWith('az://') )
