@@ -1,7 +1,7 @@
-nf-amazon@1.7.2
-nf-sqldb@0.4.0
+nf-amazon@1.8.0
+nf-sqldb@0.4.1
 nf-console@1.0.3
-nf-google@1.1.4
+nf-google@1.2.0
 nf-azure@0.13.2
 nf-tower@1.4.0
 nf-ga4gh@1.0.3

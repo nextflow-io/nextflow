@@ -1456,7 +1456,7 @@ only for a specific process e.g. mount a custom path::
       '''
   }
 
-.. warning:: This feature is not supported by the :ref:`k8s-executor`, :ref:`google-lifesciences-executor`, or :ref:`azurebatch-executor` executors.
+.. warning:: This feature is not supported by the :ref:`k8s-executor` and :ref:`google-lifesciences-executor` executors.
 
 
 .. _process-cpus:

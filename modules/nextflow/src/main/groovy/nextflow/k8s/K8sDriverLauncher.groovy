@@ -36,6 +36,7 @@ import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodMountConfig
 import nextflow.k8s.model.PodSpecBuilder
+import nextflow.k8s.model.ResourceType
 import nextflow.scm.AssetManager
 import nextflow.scm.ProviderConfig
 import nextflow.util.ConfigHelper
@@ -48,6 +49,11 @@ import org.codehaus.groovy.runtime.MethodClosure
  */
 @Slf4j
 class K8sDriverLauncher {
+
+    /**
+     * Either a Pod or Job
+     */
+    private ResourceType resourceType = ResourceType.Pod
 
     /**
      * Container image to be used for the Nextflow driver pod
@@ -166,22 +172,22 @@ class K8sDriverLauncher {
     protected void waitPodEnd() {
         if( background )
             return
-        final currentState = k8sClient.podState(runName)
+        final currentState = k8sConfig.useJobResource() ? k8sClient.jobState(runName) : k8sClient.podState(runName)
         if (currentState && currentState?.running instanceof Map) {
             final name = runName
-            println "Pod running: $name ... waiting for pod to stop running"
+            println "${resourceType} running: $name ... waiting for ${resourceType.lower()} to stop running"
             try {
                 while( true ) {
                     sleep 10000
-                    final state = k8sClient.podState(name)
+                    final state = k8sConfig.useJobResource() ? k8sClient.jobState(name) : k8sClient.podState(name)
                     if ( state && !(state?.running instanceof Map) )  {
-                        println "Pod $name has changed from running state $state"
+                        println "${resourceType} $name has changed from running state $state"
                         break
                     }
                 }
             }
             catch( Exception e ) {
-                log.warn "Caught exception waiting for pod to stop running"
+                log.warn "Caught exception waiting for ${resourceType.lower()} to stop running"
             }
         }
     }
@@ -191,23 +197,23 @@ class K8sDriverLauncher {
     }
 
     protected int waitPodTermination() {
-        log.debug "Wait for pod termination name=$runName"
+        log.debug "Wait for ${resourceType.lower()} termination name=$runName"
         final rnd = new Random()
         final time = System.currentTimeMillis()
         Map state = null
         try {
             while( true ) {
                 sleep rnd.nextInt(500)
-                state = k8sClient.podState(runName)
+                state = k8sConfig.useJobResource() ? k8sClient.jobState(runName) : k8sClient.podState(runName)
                 if( state?.terminated instanceof Map  )
                     return state.terminated.exitCode as int
 
                 else if( isWaitTimedOut(time) )
-                    throw new IllegalStateException('Timeout waiting for pod terminated state='+state)
+                    throw new IllegalStateException("Timeout waiting for ${resourceType.lower()} terminated state=$state")
             }
         }
         catch( Exception e ) {
-            log.warn "Unable to fetch pod exit status -- pod=$runName state=$state"
+            log.warn "Unable to fetch ${resourceType.lower()} exit status -- ${resourceType.lower()}=$runName state=$state"
             return 127
         }
     }
@@ -224,16 +230,16 @@ class K8sDriverLauncher {
 
     protected void waitPodStart() {
         final name = runName
-        print "Pod submitted: $name .. waiting to start"
+        print "${resourceType} submitted: $name .. waiting to start"
         while( true ) {
             sleep 1000
-            final state = k8sClient.podState(name)
+            final state = k8sConfig.useJobResource() ? k8sClient.jobState(name) : k8sClient.podState(name)
             if( state && !state.containsKey('waiting')  ) {
                 break
             }
         }
         print "\33[2K\r"
-        println "Pod started: $name"
+        println "${resourceType} started: $name"
     }
 
     /**
@@ -241,7 +247,10 @@ class K8sDriverLauncher {
      * console standard output
      */
     protected void printK8sPodOutput() {
-        k8sClient.podLog(runName, follow:true).eachLine { println it }
+        if ( k8sConfig.useJobResource() )
+            k8sClient.jobLog(runName, follow:true).eachLine { println it }
+        else
+            k8sClient.podLog(runName, follow:true).eachLine { println it }
     }
 
     protected ConfigObject loadConfig( String pipelineName ) {
@@ -507,7 +516,7 @@ class K8sDriverLauncher {
         String cmd = "source /etc/nextflow/init.sh; ${getLaunchCli()}"
 
         // create the launcher pod
-        new PodSpecBuilder()
+        PodSpecBuilder builder = new PodSpecBuilder()
             .withPodName(runName)
             .withImageName(podImage ?: k8sConfig.getNextflowImageName())
             .withCommand(['/bin/bash', '-c', cmd])
@@ -521,7 +530,14 @@ class K8sDriverLauncher {
             .withEnv( PodEnv.value('NXF_ANSI_LOG', 'false'))
             .withMemory(headMemory?:"")
             .withCpus(headCpus)
-            .build()
+
+        if ( k8sConfig.useJobResource()) {
+            this.resourceType = ResourceType.Job
+            return builder.buildAsJob()
+        }
+        else {
+            return builder.build()
+        }
 
         // note: do *not* set the work directory because it may need to be created  by the init script
     }
@@ -532,14 +548,18 @@ class K8sDriverLauncher {
      */
     protected createK8sLauncherPod() {
         final spec = makeLauncherSpec()
-        k8sClient.podCreate(spec, yamlDebugPath())
+        if ( k8sConfig.useJobResource() ) {
+            k8sClient.jobCreate(spec, yamlDebugPath())
+        } else {
+            k8sClient.podCreate(spec, yamlDebugPath())
+        }
     }
 
     protected Path yamlDebugPath() {
         boolean debug = config.k8s.debug?.yaml?.toString() == 'true'
-        final result = debug ? Paths.get('.nextflow.pod.yaml') : null
+        final result = debug ? Paths.get(".nextflow.${resourceType.lower()}.yaml") : null
         if( result )
-            log.info "Launcher pod spec file: $result"
+            log.info "Launcher ${resourceType.lower()} spec file: $result"
         return result
     }
 
@@ -638,7 +658,11 @@ class K8sDriverLauncher {
         def cmd = "kubectl -n ${k8sClient.config.namespace} exec -it $runName -- /bin/bash -c 'cd $launchDir; exec bash --login -i'"
         def proc = new ProcessBuilder().command('bash','-c',cmd).inheritIO().start()
         def result = proc.waitFor()
-        if( result == 0 )
-            k8sClient.podDelete(runName)
+        if( result == 0 ) {
+            if ( k8sConfig.useJobResource() )
+                k8sClient.jobDelete(runName)
+            else
+                k8sClient.podDelete(runName)
+        }
     }
 }
