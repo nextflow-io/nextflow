@@ -237,8 +237,8 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-stub-run','-stub'], description = 'Execute the workflow replacing process scripts with command stubs')
     boolean stubRun
 
-    @Parameter(names=['-dry'], hidden = true)
-    boolean dryRun
+    @Parameter(names=['-preview'], description = "Run the workflow script skipping the execution of all processes")
+    boolean preview
 
     @Parameter(names=['-plugins'], description = 'Specify the plugins to be applied for this run e.g. nf-amazon,nf-tower')
     String plugins
@@ -312,7 +312,7 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
         runner.setScript(scriptFile)
-        runner.setDryRun(this.dryRun)
+        runner.setDryRun(this.preview)
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
@@ -354,11 +354,11 @@ class CmdRun extends CmdBase implements HubOptions {
         NextflowMeta.instance.enableDsl(dsl)
         // -- show launch info
         final ver = NF.dsl2 ? DSL2 : DSL1
-        final mode = dryRun ? '* DRY-RUN *' : 'Launching'
+        final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$scriptFile.repository`"
         if( scriptFile.repository )
-            log.info "${mode} `$scriptFile.repository` [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
+            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
         else
-            log.info "${mode} `$scriptFile.source` [$runName] DSL${ver} - revision: ${scriptFile.getScriptId()?.substring(0,10)}"
+            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.getScriptId()?.substring(0,10)}"
     }
 
     static String detectDslMode(ConfigMap config, String scriptText, Map sysEnv) {
