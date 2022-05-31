@@ -19,6 +19,7 @@ package nextflow.script
 import java.nio.file.Files
 
 import nextflow.exception.DuplicateModuleIncludeException
+import nextflow.exception.ScriptCompilationException
 import spock.lang.Timeout
 import test.Dsl2Spec
 import test.MockScriptRunner
@@ -29,6 +30,48 @@ import test.TestHelper
  */
 @Timeout(10)
 class ScriptIncludesTest extends Dsl2Spec {
+
+    def 'should catch wrong script' () {
+        given:
+        def test = Files.createTempDirectory('test')
+        def lib = Files.createDirectory(test.toAbsolutePath()+"/lib")
+        def MODULE = lib.resolve('Foo.groovy')
+        def SCRIPT = test.resolve('main.nf')
+
+        MODULE.text = '''
+        class Foo {
+            String id
+        }
+        '''
+
+        SCRIPT.text = """
+        include { Foo } from "$MODULE" 
+        
+        process foo {
+            input:
+                val value
+        
+            output:
+                path '*.txt'
+        
+            script:
+                "echo 'hello'"
+        }
+        workflow {
+            foo(Channel.from(new Foo(id: "hello_world")))
+        }
+        """
+
+        when:
+        new MockScriptRunner().setScript(SCRIPT).execute()
+
+        then:
+        def err = thrown(ScriptCompilationException)
+        err.message == """\
+                Module compilation error
+                - file : $MODULE
+                """.stripIndent().rightTrim()
+    }
 
     def 'should invoke foreign functions' () {
         given:

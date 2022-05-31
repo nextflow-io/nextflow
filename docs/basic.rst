@@ -70,7 +70,7 @@ process comes before ``extractTopHits`` in the script (it could also be written 
 Instead, because the first process defines the channel ``top_hits_ch`` in its output declarations, and the
 process ``extractTopHits`` defines the channel in its input declaration, a communication link is established.
 
-This linking via the channels means that `extractTopHits` is waiting for the output of `blastSearch`, and then
+This linking via the channels means that ``extractTopHits`` is waiting for the output of `blastSearch`, and then
 runs `reactively` when the channel has contents.
 
 .. TODO describe that both processes are launched at the same time

@@ -36,6 +36,8 @@ import groovy.util.logging.Slf4j
 @Slf4j
 class PodSpecBuilder {
 
+    static enum MetaType { LABEL, ANNOTATION }
+
     static @PackageScope AtomicInteger VOLUMES = new AtomicInteger()
 
     String podName
@@ -47,6 +49,8 @@ class PodSpecBuilder {
     String imagePullSecret
 
     List<String> command = []
+
+    List<String> args = new ArrayList<>()
 
     Map<String,String> labels = [:]
 
@@ -88,13 +92,14 @@ class PodSpecBuilder {
 
     List<Map> tolerations = []
 
+    boolean privileged
+    
     /**
      * @return A sequential volume unique identifier
      */
     static protected String nextVolName() {
         "vol-${VOLUMES.incrementAndGet()}".toString()
     }
-
 
     PodSpecBuilder withPodName(String name) {
         this.podName = name
@@ -132,8 +137,16 @@ class PodSpecBuilder {
     }
 
     PodSpecBuilder withCommand( cmd ) {
+        if( cmd==null ) return this
         assert cmd instanceof List || cmd instanceof CharSequence, "Missing or invalid K8s command parameter: $cmd"
         this.command = cmd instanceof List ? cmd : ['/bin/bash','-c', cmd.toString()]
+        return this
+    }
+
+    PodSpecBuilder withArgs( args ) {
+        if( args==null ) return this
+        assert args instanceof List || args instanceof CharSequence, "Missing or invalid K8s args parameter: $args"
+        this.args = args instanceof List ? args : ['/bin/bash','-c', args.toString()]
         return this
     }
 
@@ -228,6 +241,11 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withPrivileged(boolean value) {
+        this.privileged = value
+        return this
+    }
+
     PodSpecBuilder withPodOptions(PodOptions opts) {
         // -- pull policy
         if( opts.imagePullPolicy )
@@ -273,6 +291,8 @@ class PodSpecBuilder {
         // -- tolerations
         if( opts.tolerations )
             tolerations.addAll(opts.tolerations)
+        // -- privileged
+        privileged = opts.privileged
 
         return this
     }
@@ -288,7 +308,7 @@ class PodSpecBuilder {
     Map build() {
         assert this.podName, 'Missing K8s podName parameter'
         assert this.imageName, 'Missing K8s imageName parameter'
-        assert this.command, 'Missing K8s command parameter'
+        assert this.command || this.args, 'Missing K8s command parameter'
 
         final restart = this.restart ?: 'Never'
 
@@ -308,17 +328,23 @@ class PodSpecBuilder {
         if( this.memory )
             res.memory = this.memory
 
-        final container = [
-                name: this.podName,
-                image: this.imageName,
-                command: this.command
-        ]
-        
+        final container = [ name: this.podName, image: this.imageName ]
+        if( this.command )
+            container.command = this.command
+        if( this.args )
+            container.args = args
+
         if( this.workDir )
             container.put('workingDir', workDir)
 
         if( imagePullPolicy )
             container.imagePullPolicy = imagePullPolicy
+
+        if( privileged ) {
+            // note: privileged flag needs to be defined in the *container* securityContext
+            // not the 'spec' securityContext (see below)
+            container.securityContext = [ privileged: true ]
+        }
 
         final spec = [
                 restartPolicy: restart,
@@ -352,10 +378,10 @@ class PodSpecBuilder {
 
         // add labels
         if( labels )
-            metadata.labels = sanitize0(labels, 'label')
+            metadata.labels = sanitize(labels, MetaType.LABEL)
 
-        if( annotations)
-            metadata.annotations = sanitize0(annotations, 'annotation')
+        if( annotations )
+            metadata.annotations = sanitize(annotations, MetaType.ANNOTATION)
 
         final pod = [
                 apiVersion: 'v1',
@@ -430,6 +456,29 @@ class PodSpecBuilder {
         return pod
     }
 
+    Map buildAsJob() {
+        final pod = build()
+
+        // job metadata
+        final metadata = new LinkedHashMap<String,Object>()
+        metadata.name = this.podName    //  just use the podName for simplicity, it may be renamed to just `name` or `resourceName` in the future
+        metadata.namespace = this.namespace ?: 'default'
+
+        // job spec
+        final spec = new LinkedHashMap<String,Object>()
+        spec.backoffLimit = 0
+        spec.template = [spec: pod.spec]
+
+        // job spec
+        final result = [
+                apiVersion: 'batch/v1',
+                kind: 'Job',
+                metadata: metadata,
+                spec: spec ]
+
+        return result
+
+    }
 
     @PackageScope
     @CompileDynamic
@@ -500,24 +549,27 @@ class PodSpecBuilder {
         volumes << [name: volName, configMap: config ]
     }
 
-    protected Map sanitize0(Map map, String kind) {
+    protected Map sanitize(Map map, MetaType kind) {
         final result = new HashMap(map.size())
-        for( Map.Entry entry : map )
-            result.put(entry.key, sanitize0(entry.key, entry.value, kind))
+        for( Map.Entry entry : map ) {
+            final key = sanitize0(entry.key, kind)
+            final value = (kind == MetaType.LABEL)
+                ? sanitize0(entry.value, kind)
+                : entry.value
+
+            result.put(key, value)
+        }
         return result
     }
 
     /**
-     * Valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.',
-     * and must start and end with an alphanumeric character.
-     *
-     * @param value
-     * @return
+     * Sanitize a string value to contain only alphanumeric characters, '-', '_' or '.',
+     * and to start and end with an alphanumeric character.
      */
-    protected String sanitize0( key, value, String kind ) {
+    protected String sanitize0(value, MetaType kind) {
         def str = String.valueOf(value)
         if( str.length() > 63 ) {
-            log.debug "K8s $kind exceeds allowed size: 63 -- offending name=$key value=$str"
+            log.debug "K8s $kind exceeds allowed size: 63 -- offending str=$str"
             str = str.substring(0,63)
         }
         str = str.replaceAll(/[^a-zA-Z0-9\.\_\-]+/, '_')
