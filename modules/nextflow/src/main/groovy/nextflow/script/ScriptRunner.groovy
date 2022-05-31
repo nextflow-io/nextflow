@@ -58,6 +58,11 @@ class ScriptRunner {
     private def result
 
     /**
+     * Simulate execution and exit
+     */
+    private boolean preview
+
+    /**
      * Instantiate the runner object creating a new session
      */
     ScriptRunner( ) {
@@ -78,6 +83,11 @@ class ScriptRunner {
 
     ScriptRunner setScript( ScriptFile script ) {
         this.scriptFile = script
+        return this
+    }
+
+    ScriptRunner setPreview(boolean  value ) {
+        this.preview = value
         return this
     }
 
@@ -118,8 +128,10 @@ class ScriptRunner {
             parseScript(scriptFile, entryName)
             // run the code
             run()
-            // await termination
-            terminate()
+            // await completion
+            await()
+            // shutdown session
+            shutdown()
         }
         catch (Throwable e) {
             session.abort(e)
@@ -213,12 +225,17 @@ class ScriptRunner {
         // -- normalise output
         result = normalizeOutput(scriptParser.getResult())
         // -- ignite dataflow network
-        session.fireDataflowNetwork()
+        session.fireDataflowNetwork(preview)
     }
 
-    protected terminate() {
+    protected await() {
+        if( preview )
+            return
         log.debug "> Await termination "
         session.await()
+    }
+
+    protected shutdown() {
         session.destroy()
         session.cleanup()
         log.debug "> Execution complete -- Goodbye"
