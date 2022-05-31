@@ -235,7 +235,7 @@ class K8sClient {
                 }
                 catch(K8sResponseException err) {
                    if( err.response.code == 404 )
-                       log.warn1("Unable to delete Pod for job $name, pod already gone.")
+                       log.warn1("Unable to delete Pod for job $name, pod already gone")
                    else
                        throw err
                 }
@@ -386,7 +386,7 @@ class K8sClient {
              * so try fallback to jobState
              */   
             catch (NodeTerminationException err) {
-                log.warn1("Job $jobName's Pod not found, probably cleaned by controlplane.")
+                log.debug("Job $jobName's Pod not found, probably cleaned by controlplane")
                 return jobStateFallback0(jobName)           
             }
         }
@@ -403,7 +403,7 @@ class K8sClient {
             final cond = allConditions.find { cond -> cond.type == 'Complete' }
 
             if( cond?.status == 'True' ) {
-                log.warn1("Job $jobName already completed and Pod is gone.")
+                log.debug("Job $jobName already completed and Pod is gone.")
                 final dummyPodStatus = [
                         terminated: [
                                 exitcode: 0,
