@@ -386,7 +386,7 @@ class K8sClient {
              * so try fallback to jobState
              */   
             catch (NodeTerminationException err) {
-                log.debug("Job $jobName's Pod not found, probably cleaned by controlplane")
+                log.warn1("Job $jobName's Pod not found, probably cleaned by controlplane")
                 return jobStateFallback0(jobName)           
             }
         }
