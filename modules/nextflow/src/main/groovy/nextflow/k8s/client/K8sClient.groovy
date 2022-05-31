@@ -403,7 +403,7 @@ class K8sClient {
             final cond = allConditions.find { cond -> cond.type == 'Complete' }
 
             if( cond?.status == 'True' ) {
-                log.debug("Job $jobName already completed and Pod is gone")
+                log.warn1("Job $jobName already completed and Pod is gone")
                 final dummyPodStatus = [
                         terminated: [
                                 exitcode: 0,
