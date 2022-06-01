@@ -447,16 +447,26 @@ class Session implements ISession {
         igniters.add(action)
     }
 
-    void fireDataflowNetwork() {
+    void fireDataflowNetwork(boolean preview=false) {
         checkConfig()
         notifyFlowBegin()
 
-        if( !NextflowMeta.instance.isDsl2() )
+        if( !NextflowMeta.instance.isDsl2() ) {
             return
+        }
 
         // bridge any dataflow queue into a broadcast channel
         CH.broadcast()
 
+        if( preview ) {
+            terminated = true
+        }
+        else {
+            callIgniters()
+        }
+    }
+
+    private void callIgniters() {
         log.debug "Ignite dataflow network (${igniters.size()})"
         for( Closure action : igniters ) {
             try {
@@ -611,15 +621,15 @@ class Session implements ISession {
         terminated = true
         monitorsBarrier.awaitCompletion()
         log.debug "Session await > all barriers passed"
+        if( !aborted ) {
+            joinAllOperators()
+            log.trace "Session > after processors join"
+        }
     }
 
     void destroy() {
         try {
             log.trace "Session > destroying"
-            if( !aborted ) {
-                joinAllOperators()
-                log.trace "Session > after processors join"
-            }
 
             // invoke shutdown callbacks
             shutdown0()
