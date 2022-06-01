@@ -126,8 +126,6 @@ class TowerClient implements TraceObserver {
 
     private String refreshToken
 
-    private String workspaceId
-
     private TowerReports reports
 
     /**
@@ -187,11 +185,9 @@ class TowerClient implements TraceObserver {
         this.backOffDelay = value
     }
 
-    void setWorkspaceId( String workspaceId ) {
-        this.workspaceId = workspaceId
+    protected boolean isTowerLaunch() {
+        return env.get('TOWER_WORKFLOW_ID')
     }
-
-    String getWorkspaceId() { workspaceId }
 
     /**
      * Check the URL and create an HttpPost() object. If a invalid i.e. protocol is used,
@@ -364,12 +360,23 @@ class TowerClient implements TraceObserver {
 
     String getAccessToken() {
         // access token
-        def token = session.config.navigate('tower.accessToken')
+        def token = null
+        if( !isTowerLaunch() )
+            token = session.config.navigate('tower.accessToken')
         if( !token )
             token = env.get('TOWER_ACCESS_TOKEN')
         if( !token )
             throw new AbortOperationException("Missing Nextflow Tower access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
         return token
+    }
+
+    String getWorkspaceId() {
+        def result = null
+        if( !isTowerLaunch() )
+            result = session.config.navigate('tower.workspaceId')
+        if( !result )
+            result = env.get('TOWER_WORKSPACE_ID')
+        return result
     }
 
     /**

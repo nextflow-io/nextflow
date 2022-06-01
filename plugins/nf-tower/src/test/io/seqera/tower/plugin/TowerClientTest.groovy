@@ -374,6 +374,7 @@ class TowerClientTest extends Specification {
             getUniqueId() >> uuid
             getRunName() >> 'foo_bar'
             getWorkflowMetadata() >> meta
+            getConfig() >> [:]
         }
 
         TowerClient client = Spy(TowerClient, constructorArgs: [session, 'https://tower.nf'])
@@ -381,6 +382,7 @@ class TowerClientTest extends Specification {
         when:
         client.onFlowCreate(session)
         then:
+        1 * client.isTowerLaunch() >> false
         1 * client.getAccessToken() >> 'secret'
         1 * client.makeCreateReq(session) >> [runName: 'foo']
         1 * client.sendHttpMessage('https://tower.nf/trace/create', [runName: 'foo'], 'POST') >> new TowerClient.Response(200, '{"workflowId":"xyz123"}')
@@ -395,8 +397,9 @@ class TowerClientTest extends Specification {
 
     def 'should get trace endpoint' () {
         given:
-        def tower = new TowerClient(Mock(Session), 'https://tower.nf')
-        tower.workflowId = '12345'
+        def tower = Spy(new TowerClient(Mock(Session), 'https://tower.nf'))
+        and:
+        tower.getWorkspaceId() >> '12345'
 
         expect:
         tower.getUrlTraceCreate() == 'https://tower.nf/trace/create'
@@ -459,5 +462,41 @@ class TowerClientTest extends Specification {
         null                                            | null          | null        | [:]
         "local-platform::${ProcessHelper.selfPid()}"    | null          | null        | [TOWER_ALLOW_NEXTFLOW_LOGS:'true']
         'aws-batch::1234z'                              | 'xyz.out'     | 'hola.log'  | [TOWER_ALLOW_NEXTFLOW_LOGS:'true', AWS_BATCH_JOB_ID: '1234z', NXF_OUT_FILE: 'xyz.out', NXF_LOG_FILE: 'hola.log']
+    }
+
+
+    def 'should create with with workspace id'() {
+        given:
+        def ENV = [TOWER_WORKSPACE_ID: '100']
+        def session = Mock(Session)
+        and:
+        def client = Spy(new TowerClient(session: session, env: ENV))
+
+        when:
+        def result = client.getWorkspaceId()
+        then:
+        result == '100'
+        and:
+        1 * client.isTowerLaunch() >> false
+        1 * session.getConfig() >> [tower: [enabled: true]]
+
+        when:
+        result = client.getWorkspaceId()
+        then:
+        result == '200'
+        and:
+        1 * client.isTowerLaunch() >> false
+        1 * session.getConfig() >> [tower: [enabled: true, workspaceId: '200']]
+
+        // nextflow config is ignored when is ta tower launch
+        // therefore workflowId is taken from the env
+        when:
+        result = client.getWorkspaceId()
+        then:
+        result == '100'
+        and:
+        1 * client.isTowerLaunch() >> true
+        0 * session.getConfig() >> [tower: [enabled: true, workspaceId: '200']]
+
     }
 }
