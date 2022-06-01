@@ -292,7 +292,7 @@ class LsfExecutor extends AbstractGridExecutor {
         if( conf.get('RESOURCE_RESERVE_PER_TASK') ) {
             final str = conf.get('RESOURCE_RESERVE_PER_TASK').toUpperCase()
             perTaskReserve = str == 'Y'
-            log.debug "[LSF] Detected lsf.conf RESOURCE_RESERVE_PER_TASK=$str ($perJobMemLimit)"
+            log.debug "[LSF] Detected lsf.conf RESOURCE_RESERVE_PER_TASK=$str ($perTaskReserve)"
         }
     }
 
