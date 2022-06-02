@@ -958,6 +958,4 @@ class K8sTaskHandlerTest extends Specification {
         handler.startTimeMillis == 10
         handler.completeTimeMillis == 20
     }
-
-
 }
