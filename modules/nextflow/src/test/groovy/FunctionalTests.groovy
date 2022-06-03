@@ -16,7 +16,7 @@
  */
 
 
-
+import nextflow.exception.AbortRunException
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Timeout
@@ -713,5 +713,35 @@ class FunctionalTests extends Specification {
         runner.setScript(script).execute()
         then:
         noExceptionThrown()
+    }
+
+    def 'should show the line of the error when throw an exception'() {
+
+        when:
+        def CONFIG = '''
+            process {
+                executor = 'nope'
+            }
+            '''
+
+        def script = '''
+                def sayHello(String a){
+                    a
+                }
+                   
+                process foo {
+                    input:
+                    each x from (1,2,3)
+                    script:
+                    "${sayHello(1,2,3,4)}"
+                }
+                '''
+
+        def cfg = new ConfigParser().parse(CONFIG)
+        def runner = new TestScriptRunner(cfg)
+        runner.setScript(script).execute()
+        then:
+        def abort = thrown(AbortRunException)
+        runner.session.fault.report ==~ /(?s).*-- Check script '(.*?)' at line: 10.*/
     }
 }
