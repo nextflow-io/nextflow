@@ -41,7 +41,7 @@ import groovy.util.logging.Slf4j
  */
 @Slf4j
 @CompileStatic
-class DirWatcher implements DirWatcherBase<DirWatcher> {
+class DirWatcher implements DirChangeListener<DirWatcher> {
 
     private Path base
 

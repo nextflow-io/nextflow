@@ -29,7 +29,7 @@ import groovy.transform.stc.SimpleType
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface DirWatcherBase<T> {
+interface DirChangeListener<T> {
 
     static public Map<String, WatchEvent.Kind<Path>> EVENT_MAP = [
             'create':ENTRY_CREATE,

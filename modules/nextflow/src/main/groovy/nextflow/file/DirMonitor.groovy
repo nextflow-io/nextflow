@@ -37,7 +37,7 @@ import org.apache.commons.io.monitor.FileAlterationObserver
  */
 @Slf4j
 @CompileStatic
-class DirMonitor implements DirWatcherBase<DirMonitor>, FileAlterationListener {
+class DirMonitor implements DirChangeListener<DirMonitor>, FileAlterationListener {
 
     private Path base
 
@@ -101,11 +101,17 @@ class DirMonitor implements DirWatcherBase<DirMonitor>, FileAlterationListener {
         this.monitor = new FileAlterationMonitor(1_000)
         observer.addListener(this)
         monitor.addObserver(observer)
-        monitor.start();
     }
 
     void apply( Closure onNext ) {
         this.onNext = onNext
+        if( !base.isDirectory() ) {
+            log.warn "Cannot watch a not existing directory: $base -- Make sure that path exists and it is a directory"
+            onComplete?.call()
+            return
+        }
+
+        monitor.start()
     }
 
     @Override
