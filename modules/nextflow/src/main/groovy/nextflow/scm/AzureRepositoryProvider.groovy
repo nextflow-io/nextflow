@@ -35,9 +35,17 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     private String continuationToken
 
     AzureRepositoryProvider(String project, ProviderConfig config=null) {
-        this.project = project
-        this.user = this.project.tokenize('/').first()
-        this.repo = this.project.tokenize('/').last()
+        /*
+        Azure repo format follows Organization/Project/Repository where Project can be optional
+        If Project is not present then Repository is used as Project (and also as Repository)
+         */
+        def tokens = project.tokenize('/')
+        this.repo = tokens.removeLast()
+        if( tokens.size() == 1){
+            this.project = [tokens.first(), this.repo].join('/')
+        }else{
+            this.project = tokens.join('/')
+        }
         this.config = config ?: new ProviderConfig('azurerepos')
         this.continuationToken = null
     }
@@ -58,14 +66,26 @@ final class AzureRepositoryProvider extends RepositoryProvider {
         // see
         // https://docs.microsoft.com/en-us/rest/api/azure/devops/git/items/get?view=azure-devops-rest-6.0
         //
-        return "${config.endpoint}/${project}/_apis/git/repositories/${repo}/items?download=false&includeContent=true&includeContentMetadata=false&api-version=6.0&\$format=json&path=$path"
+        def queryParams =[
+                'download':false,
+                'includeContent':true,
+                'includeContentMetadata':false,
+                "api-version":6.0,
+                '$format':'json',
+                'path':path
+        ] as Map<String,Object>
+        if( revision )
+            queryParams['versionDescriptor.version']=revision
+        def queryString = queryParams.collect({ "$it.key=$it.value"}).join('&')
+        def result = "$endpointUrl/items?$queryString"
+        result
     }
 
     @Override
     @CompileDynamic
     List<BranchInfo> getBranches() {
         // https://docs.microsoft.com/en-us/rest/api/azure/devops/git/refs/list?view=azure-devops-rest-6.0#refs-heads
-        final url = "${config.endpoint}/${project}/_apis/git/repositories/${repo}/refs?filter=heads&api-version=6.0"
+        final url = "$endpointUrl/refs?filter=heads&api-version=6.0"
         this.<BranchInfo>invokeAndResponseWithPaging(url, { Map branch ->
             new BranchInfo(strip(branch.name), branch.objectId as String)
         })
@@ -76,7 +96,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     @Memoized
     List<TagInfo> getTags() {
         // https://docs.microsoft.com/en-us/rest/api/azure/devops/git/refs/list?view=azure-devops-rest-6.0#refs-tags
-        final url = "${config.endpoint}/${project}/_apis/git/repositories/${repo}/refs?filter=tags&api-version=6.0"
+        final url = "$endpointUrl/refs?filter=tags&api-version=6.0"
         this.<TagInfo>invokeAndResponseWithPaging(url, { Map tag ->
             new TagInfo(strip(tag.name), tag.objectId as String)
         })

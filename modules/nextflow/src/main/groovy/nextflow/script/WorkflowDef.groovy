@@ -90,7 +90,11 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
     WorkflowBinding getBinding() { binding }
 
     ChannelOut getOut() {
-        if(!output) throw new ScriptRuntimeException("Access to '${name}.out' is undefined since workflow doesn't declare any output")
+        if( output==null )
+            throw new ScriptRuntimeException("Access to '${name}.out' is undefined since the workflow '$name' has not been invoked before accessing the output attribute")
+        if( output.size()==0 )
+            throw new ScriptRuntimeException("Access to '${name}.out' is undefined since the workflow '$name' doesn't declare any output")
+
         return output
     }
 

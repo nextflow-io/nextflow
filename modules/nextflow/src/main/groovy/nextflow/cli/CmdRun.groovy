@@ -56,9 +56,12 @@ import org.yaml.snakeyaml.Yaml
 @Parameters(commandDescription = "Execute a pipeline project")
 class CmdRun extends CmdBase implements HubOptions {
 
-    static final Pattern RUN_NAME_PATTERN = Pattern.compile(/^[a-z](?:[a-z\d]|[-_](?=[a-z\d])){0,79}$/, Pattern.CASE_INSENSITIVE)
+    static final public Pattern RUN_NAME_PATTERN = Pattern.compile(/^[a-z](?:[a-z\d]|[-_](?=[a-z\d])){0,79}$/, Pattern.CASE_INSENSITIVE)
 
-    static List<String> VALID_PARAMS_FILE = ['json', 'yml', 'yaml']
+    static final public List<String> VALID_PARAMS_FILE = ['json', 'yml', 'yaml']
+
+    static final public DSL2 = '2'
+    static final public DSL1 = '1'
 
     static {
         // install the custom pool factory for GPars threads
@@ -217,7 +220,7 @@ class CmdRun extends CmdBase implements HubOptions {
     String withConda
 
     @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
-    boolean offline = System.getenv('NXF_OFFLINE') as boolean
+    boolean offline = System.getenv('NXF_OFFLINE')=='true'
 
     @Parameter(names=['-entry'], description = 'Entry workflow name to be executed', arity = 1)
     String entryName
@@ -233,6 +236,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Parameter(names=['-stub-run','-stub'], description = 'Execute the workflow replacing process scripts with command stubs')
     boolean stubRun
+
+    @Parameter(names=['-preview'], description = "Run the workflow script skipping the execution of all processes")
+    boolean preview
 
     @Parameter(names=['-plugins'], description = 'Specify the plugins to be applied for this run e.g. nf-amazon,nf-tower')
     String plugins
@@ -306,6 +312,7 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
         runner.setScript(scriptFile)
+        runner.setPreview(this.preview)
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
@@ -335,28 +342,55 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     protected void launchInfo(ConfigMap config, ScriptFile scriptFile) {
-        // -- try determine DSL version from config file
-        final DSL2 = '2'
-        final DSL1 = '1'
-        final defaultDsl = sysEnv.get('NXF_DEFAULT_DSL') ?: DSL2
-        final dsl = config.navigate('nextflow.enable.dsl', defaultDsl) as String
-        if( dsl=='2' )
-            NextflowMeta.instance.enableDsl2()
-        else if( dsl=='1' )
-            NextflowMeta.instance.disableDsl2()
+        // -- determine strict mode
+        final defStrict = sysEnv.get('NXF_ENABLE_STRICT') ?: false
+        final strictMode = config.navigate('nextflow.enable.strict', defStrict)
+        if( strictMode ) {
+            log.debug "Enabling nextflow strict mode"
+            NextflowMeta.instance.strictMode(true)
+        }
+        // -- determine dsl mode
+        final dsl = detectDslMode(config, scriptFile.main.text, sysEnv)
+        NextflowMeta.instance.enableDsl(dsl)
+        // -- show launch info
+        final ver = NF.dsl2 ? DSL2 : DSL1
+        final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$scriptFile.repository`"
+        if( scriptFile.repository )
+            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
         else
-            throw new AbortOperationException("Invalid Nextflow DSL value: $dsl")
+            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.getScriptId()?.substring(0,10)}"
+    }
+
+    static String detectDslMode(ConfigMap config, String scriptText, Map sysEnv) {
+        // -- try determine DSL version from config file
+
+        final dsl = config.navigate('nextflow.enable.dsl') as String
 
         // -- script can still override the DSL version
-        NextflowMeta.instance.checkDsl2Mode(scriptFile.main.text)
+        final scriptDsl = NextflowMeta.checkDslMode(scriptText)
+        if( scriptDsl ) {
+            log.debug("Applied DSL=$scriptDsl from script declararion")
+            return scriptDsl
+        }
+        else if( dsl ) {
+            log.debug("Applied DSL=$scriptDsl from config declaration")
+            return dsl
+        }
+        // -- if still unknown try probing for DSL1
+        if( NextflowMeta.probeDls1(scriptText) ) {
+            log.debug "Applied DSL=1 by probing script field"
+            return DSL1
+        }
 
-        // -- show launch info 
-        final ver = NF.dsl2 ? DSL2 : DSL1
-        if( scriptFile.repository )
-            log.info "Launching `$scriptFile.repository` [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
-        else
-            log.info "Launching `$scriptFile.source` [$runName] DSL${ver} - revision: ${scriptFile.getScriptId()?.substring(0,10)}"
-
+        final envDsl = sysEnv.get('NXF_DEFAULT_DSL')
+        if( envDsl ) {
+            log.debug "Applied DSL=$envDsl from NXF_DEFAULT_DSL variable"
+            return envDsl
+        }
+        else {
+            log.debug "Applied DSL=2 by global default"
+            return DSL2
+        }
     }
 
     protected void checkRunName() {
@@ -451,7 +485,7 @@ class CmdRun extends CmdBase implements HubOptions {
             if( offline )
                 throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
             log.info "Pulling $repo ..."
-            def result = manager.download()
+            def result = manager.download(revision)
             if( result )
                 log.info " $result"
             checkForUpdate = false

@@ -14,7 +14,9 @@ The ``nextflow log`` command shows information about executed pipelines in the c
 
   nextflow log <run name> [options]
 
-.. note:: Both the :ref:`execution report <execution-report>` and the :ref:`trace report <trace-report>` must be specified when the pipeline is first called. By contrast, the ``log`` option is useful after a pipeline has already run and is available for every executed pipeline.
+.. note::
+  Both the :ref:`execution report <execution-report>` and the :ref:`trace report <trace-report>` must be specified when the pipeline is first called.
+  By contrast, the ``log`` option is useful after a pipeline has already run and is available for every executed pipeline.
 
 By default, ``log`` prints the list of executed pipelines::
 
@@ -55,6 +57,7 @@ The ``script`` field is useful for examining script commands run in each task::
      bowtie --index /data/genome input.fastq > output
   ...
 
+
 Templates
 ---------
 
@@ -82,7 +85,7 @@ The ``filter`` option makes it possible to select which entries to include in th
 
   nextflow log goofy_kilby -filter 'name =~ /foo.*/ && status == "FAILED"'
 
-.. warning:: The ``log`` command replaces the deprecated ``history`` command.
+.. note:: The ``log`` command replaces the deprecated ``history`` command.
 
 
 .. _execution-report:
@@ -114,34 +117,36 @@ other workflow metadata. You can see an example below:
 Resource Usage
 ---------------
 
-The `Resources` sections plots the distributions of resource usages for each workflow process
+The `Resources` section plots the distribution of resource usage for each workflow process
 using the interactive `plotly.js  <https://plot.ly/javascript/>`_ plotting library.
 
 Plots are shown for CPU, memory, job duration and disk I/O. They have two (or three) tabs with the raw values and a percentage representation showing what proportion of the requested resources
-were used. These plots are very helpful to check that job pipeline requests are efficient.
+were used. These plots are very helpful to check that task resources are used efficiently.
 
 .. image:: images/report-resource-cpu.png
 
-Learn more about how resource usage are computed in the :ref:`Metrics documentation <metrics-page>`.
+Learn more about how resource usage is computed in the :ref:`Metrics documentation <metrics-page>`.
+
 
 Tasks
 -----
 
-Finally the `Tasks` section lists all executed tasks reporting for each of them, the status, the actual command script
-and many other runtime metrics. You can see an example below:
+The `Tasks` section lists all executed tasks, reporting for each of them the status, the actual command script,
+and many other metrics. You can see an example below:
 
 .. image:: images/report-tasks-min.png
 
+.. note::
+  Nextflow collects these metrics through a background process for each job in the target environment.
+  Make sure the following tools are available in the environment where tasks are executed: ``awk``, ``date``, ``grep``, ``egrep``, ``ps``, ``sed``, ``tail``, ``tee``.
+  Moreover, some of these metrics are not reported when running on Mac OS X. See the note
+  about that in the `Trace report`_ below.
 
-.. note:: Nextflow collect these metrics running a background process for each job in the target environment.
-  Make sure the following tools are available ``awk``, ``date``, ``grep``, ``egrep``, ``ps``, ``sed``, ``tail``, ``tee`` in the
-  system where the jobs are executed. Moreover some of these metrics are not reported when using a Mac OSX system. See the note
-  message about that in the `Trace report`_ below.
-
-.. warning:: A common problem when using a third party container image is that it does not ship one or more of the
-  above utilities resulting in an empty execution report.
+.. warning:: A common problem when using a third party container image is that it does not include one or more of the
+  above utilities, resulting in an empty execution report.
 
 Please read :ref:`Report scope <config-report>` section to learn more about the execution report configuration details.
+
 
 .. _trace-report:
 
@@ -229,11 +234,13 @@ workdir                 The directory path where the task was executed.
 script                  The task command script.
 scratch                 The value of the process ``scratch`` directive.
 error_action            The action applied on errof task failure.
+hostname                The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with ``k8s.fetchNodeName = true`` in the Nextflow config file. (requires version ``22.05.0-edge`` or later)
 ======================= ===============
 
-.. note:: These numbers provide an estimation of the resources used by running tasks. They should not be intended as an alternative
-  to low level performance analysis provided by other tools and they may not be fully accurate, in particular for very short-lived tasks
-  (running for less than one second).
+.. note::
+  These metrics provide an estimation of the resources used by running tasks. They are not an alternative
+  to low-level performance analysis tools, and they may not be completely accurate, especially for very short-lived tasks
+  (running for less than a few seconds).
 
 Trace report layout and other configuration settings can be specified by using the ``nextflow.config`` configuration file.
 
@@ -299,10 +306,10 @@ svg           SVG file (*)
 gexf          Graph Exchange XML file (Gephi)
 ============ ====================
 
-.. warning:: The file formats marked with a `*` require the `Graphviz <http://www.graphviz.org>`_ tool installed
-  in your computer.
+.. note::
+  File formats marked with "*" require the `Graphviz <http://www.graphviz.org>`_ tool to be installed.
 
-The DAG produced by Nextflow for the `Shootstrap <https://github.com/cbcrg/shootstrap/>`_ pipeline:
+The DAG produced by Nextflow for the `Unistrap <https://github.com/cbcrg/unistrap/>`_ pipeline:
 
 .. image:: images/dag.png
 
@@ -355,22 +362,22 @@ And the final image produced with the `Mermaid Live Editor <https://mermaid-js.g
 Weblog via HTTP
 ===============
 
-Nextflow is able to send detailed workflow execution metadata and runtime statistics to a HTTP endpoint.
-To enable this feature use  the ``-with-weblog`` as shown below::
+Nextflow can send detailed workflow execution metadata and runtime statistics to a HTTP endpoint.
+To enable this feature, use the ``-with-weblog`` as shown below::
 
   nextflow run <pipeline name> -with-weblog [url]
 
-Workflow events are sent as HTTP POST requests to the given URL. The message is formatted using the
+Workflow events are sent as HTTP POST requests to the given URL. The message consists of the
 following JSON structure::
 
-   {
-        "runName": <run name>,
-        "runId": <uuid>,
-        "event": <started|process_submitted|process_started|process_completed|error|completed>,
-        "utcTime": <UTC timestamp>,
-        "trace": { ... },
-        "metadata": { ... }
-   }
+  {
+    "runName": <run name>,
+    "runId": <uuid>,
+    "event": <started|process_submitted|process_started|process_completed|error|completed>,
+    "utcTime": <UTC timestamp>,
+    "trace": { ... },
+    "metadata": { ... }
+  }
 
 The JSON object contains the following attributes:
 
@@ -385,8 +392,8 @@ trace              A process runtime information as described in the :ref:`trace
 metadata           The workflow metadata including the :ref:`config manifest<config-manifest>`. For a list of all fields, have a look at the bottom message examples. This attribute is only provided for the following events: ``started``, ``completed``.
 ================== ================
 
-.. warning::
-  The content of the ``trace`` attribute depends on the settings for the `Trace report <trace-report>`_ defined in the
+.. note::
+  The content of the ``trace`` attribute depends on the `Trace report <trace-report>`_ settings defined in the
   ``nextflow.config`` file. See the :ref:`Trace configuration<config-trace>` section to learn more.
 
 
@@ -394,9 +401,8 @@ Weblog Started example message
 ------------------------------
 
 When a workflow execution is started, a message like the following is posted to the specified end-point. Be aware that the
-properties in the parameter scope will look different for your workflow. This is an example output from the ``nf-core/hlatyping``
+properties in the parameter scope will look different for your workflow. Here is an example output from the ``nf-core/hlatyping``
 pipeline with the weblog feature enabled::
-
 
   {
     "runName": "friendly_pesquet",
@@ -404,94 +410,93 @@ pipeline with the weblog feature enabled::
     "event": "started",
     "utcTime": "2018-10-07T11:42:08Z",
     "metadata": {
-            "params": {
-                "container": "nfcore/hlatyping:1.1.4",
-                "help": false,
-                "outdir": "results",
-                "bam": true,
-                "singleEnd": false,
-                "single-end": false,
-                "reads": "data/test*{1,2}.fq.gz",
-                "seqtype": "dna",
-                "solver": "glpk",
-                "igenomes_base": "./iGenomes",
-                "multiqc_config": "/Users/sven1103/.nextflow/assets/nf-core/hlatyping/conf/multiqc_config.yaml",
-                "clusterOptions": false,
-                "cluster-options": false,
-                "enumerations": 1,
-                "beta": 0.009,
-                "prefix": "hla_run",
-                "base_index": "/Users/sven1103/.nextflow/assets/nf-core/hlatyping/data/indices/yara/hla_reference_",
-                "index": "/Users/sven1103/.nextflow/assets/nf-core/hlatyping/data/indices/yara/hla_reference_dna",
-                "custom_config_version": "master",
-                "custom_config_base": "https://raw.githubusercontent.com/nf-core/configs/master"
-            },
-            "workflow": {
-                "start": "2019-03-25T12:09:52Z",
-                "projectDir": "/Users/sven1103/.nextflow/assets/nf-core/hlatyping",
-                "manifest": {
-                    "nextflowVersion": ">=18.10.1",
-                    "defaultBranch": "master",
-                    "version": "1.1.4",
-                    "homePage": "https://github.com/nf-core/hlatyping",
-                    "gitmodules": null,
-                    "description": "Precision HLA typing from next-generation sequencing data.",
-                    "name": "nf-core/hlatyping",
-                    "mainScript": "main.nf",
-                    "author": null
-                },
-                "complete": null,
-                "profile": "docker,test",
-                "homeDir": "/Users/sven1103",
-                "workDir": "/Users/sven1103/git/nextflow/work",
-                "container": "nfcore/hlatyping:1.1.4",
-                "commitId": "4bcced898ee23600bd8c249ff085f8f88db90e7c",
-                "errorMessage": null,
-                "repository": "https://github.com/nf-core/hlatyping.git",
-                "containerEngine": "docker",
-                "scriptFile": "/Users/sven1103/.nextflow/assets/nf-core/hlatyping/main.nf",
-                "userName": "sven1103",
-                "launchDir": "/Users/sven1103/git/nextflow",
-                "runName": "shrivelled_cantor",
-                "configFiles": [
-                    "/Users/sven1103/.nextflow/assets/nf-core/hlatyping/nextflow.config"
-                ],
-                "sessionId": "7f344978-999c-480d-8439-741bc7520f6a",
-                "errorReport": null,
-                "scriptId": "2902f5aa7f297f2dccd6baebac7730a2",
-                "revision": "master",
-                "exitStatus": null,
-                "commandLine": "./launch.sh run nf-core/hlatyping -profile docker,test -with-weblog 'http://localhost:4567'",
-                "nextflow": {
-                              "version": "19.03.0-edge",
-                              "build": 5137,
-                              "timestamp": "2019-03-28T14:46:55Z"
-                            },
-                },
-                "stats": {
-                    "computeTimeFmt": "(a few seconds)",
-                    "cachedCount": 0,
-                    "cachedDuration": 0,
-                    "failedDuration": 0,
-                    "succeedDuration": 0,
-                    "failedCount": 0,
-                    "cachedPct": 0.0,
-                    "cachedCountFmt": "0",
-                    "succeedCountFmt": "0",
-                    "failedPct": 0.0,
-                    "failedCountFmt": "0",
-                    "ignoredCountFmt": "0",
-                    "ignoredCount": 0,
-                    "succeedPct": 0.0,
-                    "succeedCount": 0,
-                    "ignoredPct": 0.0
-                },
-                "resume": false,
-                "success": false,
-                "scriptName": "main.nf",
-                "duration": null
-            }
-        }
+      "params": {
+        "container": "nfcore/hlatyping:1.1.4",
+        "help": false,
+        "outdir": "results",
+        "bam": true,
+        "singleEnd": false,
+        "single-end": false,
+        "reads": "data/test*{1,2}.fq.gz",
+        "seqtype": "dna",
+        "solver": "glpk",
+        "igenomes_base": "./iGenomes",
+        "multiqc_config": "/Users/sven1103/.nextflow/assets/nf-core/hlatyping/conf/multiqc_config.yaml",
+        "clusterOptions": false,
+        "cluster-options": false,
+        "enumerations": 1,
+        "beta": 0.009,
+        "prefix": "hla_run",
+        "base_index": "/Users/sven1103/.nextflow/assets/nf-core/hlatyping/data/indices/yara/hla_reference_",
+        "index": "/Users/sven1103/.nextflow/assets/nf-core/hlatyping/data/indices/yara/hla_reference_dna",
+        "custom_config_version": "master",
+        "custom_config_base": "https://raw.githubusercontent.com/nf-core/configs/master"
+      },
+      "workflow": {
+        "start": "2019-03-25T12:09:52Z",
+        "projectDir": "/Users/sven1103/.nextflow/assets/nf-core/hlatyping",
+        "manifest": {
+          "nextflowVersion": ">=18.10.1",
+          "defaultBranch": "master",
+          "version": "1.1.4",
+          "homePage": "https://github.com/nf-core/hlatyping",
+          "gitmodules": null,
+          "description": "Precision HLA typing from next-generation sequencing data.",
+          "name": "nf-core/hlatyping",
+          "mainScript": "main.nf",
+          "author": null
+        },
+        "complete": null,
+        "profile": "docker,test",
+        "homeDir": "/Users/sven1103",
+        "workDir": "/Users/sven1103/git/nextflow/work",
+        "container": "nfcore/hlatyping:1.1.4",
+        "commitId": "4bcced898ee23600bd8c249ff085f8f88db90e7c",
+        "errorMessage": null,
+        "repository": "https://github.com/nf-core/hlatyping.git",
+        "containerEngine": "docker",
+        "scriptFile": "/Users/sven1103/.nextflow/assets/nf-core/hlatyping/main.nf",
+        "userName": "sven1103",
+        "launchDir": "/Users/sven1103/git/nextflow",
+        "runName": "shrivelled_cantor",
+        "configFiles": [
+          "/Users/sven1103/.nextflow/assets/nf-core/hlatyping/nextflow.config"
+        ],
+        "sessionId": "7f344978-999c-480d-8439-741bc7520f6a",
+        "errorReport": null,
+        "scriptId": "2902f5aa7f297f2dccd6baebac7730a2",
+        "revision": "master",
+        "exitStatus": null,
+        "commandLine": "./launch.sh run nf-core/hlatyping -profile docker,test -with-weblog 'http://localhost:4567'",
+        "nextflow": {
+          "version": "19.03.0-edge",
+          "build": 5137,
+          "timestamp": "2019-03-28T14:46:55Z"
+        },
+      },
+      "stats": {
+        "computeTimeFmt": "(a few seconds)",
+        "cachedCount": 0,
+        "cachedDuration": 0,
+        "failedDuration": 0,
+        "succeedDuration": 0,
+        "failedCount": 0,
+        "cachedPct": 0.0,
+        "cachedCountFmt": "0",
+        "succeedCountFmt": "0",
+        "failedPct": 0.0,
+        "failedCountFmt": "0",
+        "ignoredCountFmt": "0",
+        "ignoredCount": 0,
+        "succeedPct": 0.0,
+        "succeedCount": 0,
+        "ignoredPct": 0.0
+      },
+      "resume": false,
+      "success": false,
+      "scriptName": "main.nf",
+      "duration": null
+    }
   }
 
 
@@ -506,45 +511,45 @@ Once a process is completed, a message like the following is posted to the speci
     "event": "process_completed",
     "utcTime": "2018-10-07T11:45:30Z",
     "trace": {
-        "task_id": 2,
-        "status": "COMPLETED",
-        "hash": "a1/0024fd",
-        "name": "make_ot_config",
-        "exit": 0,
-        "submit": 1538912529498,
-        "start": 1538912529629,
-        "process": "make_ot_config",
-        "tag": null,
-        "module": [
+      "task_id": 2,
+      "status": "COMPLETED",
+      "hash": "a1/0024fd",
+      "name": "make_ot_config",
+      "exit": 0,
+      "submit": 1538912529498,
+      "start": 1538912529629,
+      "process": "make_ot_config",
+      "tag": null,
+      "module": [
 
-        ],
-        "container": "nfcore/hlatyping:1.1.1",
-        "attempt": 1,
-        "script": "\n    configbuilder --max-cpus 2 --solver glpk > config.ini\n    ",
-        "scratch": null,
-        "workdir": "/home/sven1103/git/hlatyping-workflow/work/a1/0024fd028375e2b601aaed44d112e3",
-        "queue": null,
-        "cpus": 1,
-        "memory": 7516192768,
-        "disk": null,
-        "time": 7200000,
-        "env": "PATH=/home/sven1103/git/hlatyping-workflow/bin:$PATH\n",
-        "error_action": null,
-        "complete": 1538912730599,
-        "duration": 201101,
-        "realtime": 69,
-        "%cpu": 0.0,
-        "%mem": 0.1,
-        "vmem": 54259712,
-        "rss": 10469376,
-        "peak_vmem": 20185088,
-        "peak_rss": 574972928,
-        "rchar": 7597,
-        "wchar": 162,
-        "syscr": 16,
-        "syscw": 4083712,
-        "read_bytes": 4096,
-        "write_bytes": 0,
-        "native_id": 27185
+      ],
+      "container": "nfcore/hlatyping:1.1.1",
+      "attempt": 1,
+      "script": "\n    configbuilder --max-cpus 2 --solver glpk > config.ini\n    ",
+      "scratch": null,
+      "workdir": "/home/sven1103/git/hlatyping-workflow/work/a1/0024fd028375e2b601aaed44d112e3",
+      "queue": null,
+      "cpus": 1,
+      "memory": 7516192768,
+      "disk": null,
+      "time": 7200000,
+      "env": "PATH=/home/sven1103/git/hlatyping-workflow/bin:$PATH\n",
+      "error_action": null,
+      "complete": 1538912730599,
+      "duration": 201101,
+      "realtime": 69,
+      "%cpu": 0.0,
+      "%mem": 0.1,
+      "vmem": 54259712,
+      "rss": 10469376,
+      "peak_vmem": 20185088,
+      "peak_rss": 574972928,
+      "rchar": 7597,
+      "wchar": 162,
+      "syscr": 16,
+      "syscw": 4083712,
+      "read_bytes": 4096,
+      "write_bytes": 0,
+      "native_id": 27185
     }
   }

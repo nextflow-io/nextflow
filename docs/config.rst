@@ -23,8 +23,9 @@ of priority:
 When more than one of these ways of specifying configurations are used, they are merged, so that the settings in the
 first override the same ones that may appear in the second one, and so on.
 
-.. tip:: If you want to ignore any default configuration files and use only the custom one use the command line option
-  ``-C <config file>``.
+.. tip::
+  If you want to ignore any default configuration files and use only the custom one, use ``-C <config file>``.
+
 
 Config syntax
 -------------
@@ -36,6 +37,7 @@ A Nextflow configuration file is a simple text file containing a set of properti
 Please note, string values need to be wrapped in quotation characters while numbers and boolean values (``true``, ``false``) do not.
 Also note that values are typed, meaning for example that, ``1`` is different from ``'1'``, since the first is interpreted
 as the number one, while the latter is interpreted as a string value.
+
 
 Config variables
 ----------------
@@ -57,11 +59,13 @@ not defined in the Nextflow configuration file(s) is supposed to be a reference 
 So, in the above example the property ``customPath`` is defined as the current system ``PATH`` to which
 the string ``/my/app/folder`` is appended.
 
+
 Config comments
 ---------------
 
 Configuration files use the same conventions for comments used by the Groovy or Java programming languages. Thus, use ``//`` to comment
 a single line or ``/*`` .. ``*/`` to comment a block on multiple lines.
+
 
 Config include
 --------------
@@ -115,6 +119,7 @@ Advanced client configuration options can be set by using the ``client`` attribu
 =========================== ================
 Name                        Description
 =========================== ================
+anonymous                   Allow the access of public S3 buckets without the need to provide AWS credentials. Any service that does not accept unsigned requests will return a service access error.
 s3Acl                       Allow the setting of a predefined bucket permissions also known as *canned ACL*. Permitted values are ``Private``, ``PublicRead``, ``PublicReadWrite``, ``AuthenticatedRead``, ``LogDeliveryWrite``, ``BucketOwnerRead``, ``BucketOwnerFullControl`` and ``AwsExecRead``. See `Amazon docs <https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl>`_ for details.
 connectionTimeout           The amount of time to wait (in milliseconds) when initially establishing a connection before giving up and timing out.
 endpoint                    The AWS S3 API entry point e.g. `s3-us-west-1.amazonaws.com`.
@@ -129,13 +134,14 @@ signerOverride              The name of the signature algorithm to use for signi
 socketSendBufferSizeHint    The Size hint (in bytes) for the low level TCP send buffer.
 socketRecvBufferSizeHint    The Size hint (in bytes) for the low level TCP receive buffer.
 socketTimeout               The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out.
-storageEncryption           The S3 server side encryption to be used when saving objects on S3 (currently only AES256 is supported)
+storageEncryption           The S3 server side encryption to be used when saving objects on S3, either ``AES256`` or ``aws:kms`` values are allowed.
+storageKmsKeyId             The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket (requires version ``22.05.0-edge`` or later).
 userAgent                   The HTTP user agent header passed with all HTTP requests.
 uploadMaxThreads            The maximum number of threads used for multipart upload.
-uploadChunkSize             The size of a single part in a multipart upload (default: `10 MB`).
+uploadChunkSize             The size of a single part in a multipart upload (default: `20 MB`).
 uploadStorageClass          The S3 storage class applied to stored objects, one of [`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`] (default: `STANDARD`).
 uploadMaxAttempts           The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
-uploadRetrySleep            The time to wait after a failed upload attempt to retry the part upload (default: `100ms`).
+uploadRetrySleep            The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
 =========================== ================
 
 For example::
@@ -183,7 +189,7 @@ enabled             Turn this flag to ``true`` to enable Charliecloud execution 
 envWhitelist        Comma separated list of environment variable names to be included in the container environment.
 temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created.
 runOptions          This attribute can be used to provide any extra command line options supported by the ``ch-run`` command.
-cacheDir            The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
+cacheDir            The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
 pullTimeout         The amount of time the Charliecloud pull can last, exceeding which the process is terminated (default: ``20 min``).
 ================== ================
 
@@ -205,7 +211,7 @@ Scope `cloud`
 -------------
 
 .. note::
-    The ``cloud`` configuration scope has been retired.
+    The ``cloud`` configuration scope is no longer used. See the platform-specific cloud executors instead.
 
 
 .. _config-conda:
@@ -221,10 +227,11 @@ The following settings are available:
 ================== ================
 Name                Description
 ================== ================
-cacheDir            Defines the path where Conda environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all computing nodes.
-createOptions       Defines any extra command line options supported by the ``conda create`` command. For details see: https://docs.conda.io/projects/conda/en/latest/commands/create.html.
+cacheDir            Defines the path where Conda environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.
+createOptions       Defines any extra command line options supported by the ``conda create`` command. For details `Conda documentation <https://docs.conda.io/projects/conda/en/latest/commands/create.html>`_.
 createTimeout       Defines the amount of time the Conda environment creation can last. The creation process is terminated when the timeout is exceeded (default: ``20 min``).
-useMamba            Uses the ``mamba`` binary instead of ``conda`` to create the conda environments. For details see: https://github.com/mamba-org/mamba.
+useMamba            Uses the ``mamba`` binary instead of ``conda`` to create the Conda environments. For details `Mamba documentation <https://github.com/mamba-org/mamba>`_.
+useMicromamba       uses the ``micromamba`` binary instead of ``conda`` to create the Conda environments (requires version ``22.05.0-edge`` or later). For details see `Micromamba documentation <https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html>`_.
 ================== ================
 
 
@@ -312,9 +319,10 @@ Simply prefix your variable names with the ``env`` scope or surround them by cur
         GAMMA = "/my/path:$PATH"
    }
 
-.. tip:: In the above example, variables like `$HOME` and `$PATH` are evaluated when the workflow is launched. If
-  you want these variables to be evaluated during task execution, escape them with `\$`. This difference is important
-  for variables like `$PATH`, which may be very different in the workflow environment versus the task environment.
+.. note::
+  In the above example, variables like ``$HOME`` and ``$PATH`` are evaluated when the workflow is launched. If
+  you want these variables to be evaluated during task execution, escape them with ``\$``. This difference is important
+  for variables like ``$PATH``, which may be different in the workflow environment versus the task environment.
 
 
 .. _config-executor:
@@ -332,7 +340,7 @@ queueSize             The number of tasks the executor will handle in a parallel
 pollInterval          Determines how often a poll occurs to check for a process termination.
 dumpInterval          Determines how often the executor status is written in the application log file (default: ``5min``).
 queueStatInterval     Determines how often the queue status is fetched from the cluster system. This setting is used only by grid executors (default: ``1min``).
-exitReadTimeout       Determines how long the executor waits before return an error status when a process is terminated but the `exit` file does not exist or it is empty. This setting is used only by grid executors (default: ``270 sec``).
+exitReadTimeout       Determines how long the executor waits before to an error status when a process is terminated but the ``.exitcode`` file does not exist or is empty. This setting is used only by grid executors (default: ``270 sec``).
 killBatchSize         Determines the number of jobs that can be `killed` in a single command execution (default: ``100``).
 submitRateLimit       Determines the max rate of job submission per time unit, for example ``'10sec'`` eg. max 10 jobs per second or ``'50/2min'`` i.e. 50 job submissions every 2 minutes (default: `unlimited`).
 perJobMemLimit        Specifies Platform LSF *per-job* memory limit mode. See :ref:`lsf-executor`.
@@ -404,6 +412,8 @@ securityContext     Defines the `security context <https://kubernetes.io/docs/ta
 storageClaimName    The name of the persistent volume claim where store workflow result data.
 storageMountPath    The path location used to mount the persistent volume claim (default: ``/workspace``).
 storageSubPath      The path in the persistent volume to be mounted (default: root).
+computeResourceType Define whether use Kubernetes ``Pod`` or ``Job`` resource type to carry out Nextflow tasks (default: ``Pod``).
+fetchNodeName       If you trace the hostname, activate this option (default: ``false``, requires version ``22.05.0-edge`` or later).
 volumeClaims        (deprecated)
 ================== ================
 
@@ -483,7 +493,6 @@ brackets. For example::
         version = '1.0.0'
     }
 
-
 To learn how to publish your pipeline on GitHub, BitBucket or GitLab code repositories read :ref:`sharing-page`
 documentation page.
 
@@ -533,15 +542,13 @@ Scope `params`
 The ``params`` scope allows you to define parameters that will be accessible in the pipeline script. Simply prefix the
 parameter names with the ``params`` scope or surround them by curly brackets, as shown below::
 
-     params.custom_param = 123
-     params.another_param = 'string value .. '
+    params.custom_param = 123
+    params.another_param = 'string value .. '
 
-     params {
-
+    params {
         alpha_1 = true
         beta_2 = 'another string ..'
-
-     }
+    }
 
 
 .. _config-podman:
@@ -589,14 +596,15 @@ The ``process`` configuration scope allows you to provide the default configurat
 You can specify here any property described in the :ref:`process directive<process-directives>` and the executor sections.
 For examples::
 
-  process {
-    executor='sge'
-    queue='long'
-    clusterOptions = '-pe smp 10 -l virtual_free=64G,h_rt=30:00:00'
-  }
+    process {
+        executor = 'sge'
+        queue = 'long'
+        clusterOptions = '-pe smp 10 -l virtual_free=64G,h_rt=30:00:00'
+    }
 
 By using this configuration all processes in your pipeline will be executed through the SGE cluster, with the specified
 settings.
+
 
 .. _config-process-selectors:
 
@@ -628,9 +636,11 @@ For example::
         }
     }
 
-.. tip:: Either label and process names do not need to be enclosed with quote characters, provided the name
-  does include special characters (e.g. ``-``, ``!``, etc) or it's not a keyword or a built-in type identifier.
-  In case of doubt, you can enclose the label names or the process names with single or double quote characters.
+.. tip::
+  Label and process names do not need to be enclosed with quotes, provided the name
+  does not include special characters (``-``, ``!``, etc) and is not a keyword or a built-in type identifier.
+  When in doubt, you can enclose the label name or process name with single or double quotes.
+
 
 .. _config-selector-expressions:
 
@@ -661,6 +671,7 @@ A process selector can be negated prefixing it with the special character ``!``.
 The above configuration snippet sets 2 cpus for the processes annotated with the ``foo`` label and 4 cpus to all processes
 *not* annotated with that label. Finally it sets the use of ``long`` queue to all process whose name does *not* start
 with ``align``.
+
 
 .. _config-selector-priority:
 
@@ -741,7 +752,7 @@ envWhitelist        Comma separated list of environment variable names to be inc
 runOptions          This attribute can be used to provide any extra command line options supported by the ``singularity exec``.
 noHttps             Turn this flag to ``true`` to pull the Singularity image with http protocol (default: ``false``).
 autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
-cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all computing nodes.
+cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
 pullTimeout         The amount of time the Singularity pull can last, exceeding which the process is terminated (default: ``20 min``).
 ================== ================
 
@@ -797,7 +808,7 @@ brackets, as shown below::
   Your ``accessToken`` can be obtained from your Tower instance in the `Tokens page <https://tower.nf/tokens>`.
 
 .. tip:: 
-  The Tower workspace ID can also the specified using the environment variable ``TOWER_WORKSPACE_ID`` (config file has priority over the environment variable). 
+  The Tower workspace ID can also be specified using the environment variable ``TOWER_WORKSPACE_ID`` (config file has priority over the environment variable). 
 
 
 .. _config-trace:
@@ -865,8 +876,8 @@ cleanup             If ``true``, on a successful completion of a run all files i
 ================== ================
 
 .. warning:: 
-    The use of the above ``cleanup`` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. 
-    Also, be aware that deleting all scratch files can take a lot of time especially when using shared file system or remote cloud storage.
+    The use of the ``cleanup`` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. 
+    Also, be aware that deleting all scratch files can take a lot of time, especially when using a shared file system or remote cloud storage.
 
 
 .. _config-profiles:
@@ -904,13 +915,15 @@ This configuration defines three different profiles: ``standard``, ``cluster`` a
 configuration strategies depending on the target runtime platform. By convention the ``standard`` profile is implicitly used
 when no other profile is specified by the user.
 
-.. tip:: Two or more configuration profiles can be specified by separating the profile names
-    with a comma character, for example::
+.. tip::
+    Multiple configuration profiles can be specified by separating the profile names
+    with a comma, for example::
 
         nextflow run <your script> -profile standard,cloud
 
-.. danger:: When using the *profiles* feature in your config file do NOT set attributes in the same scope both
-  inside and outside a ``profiles`` context. For example::
+.. danger::
+    When using the ``profiles`` feature in your config file, do NOT set attributes in the same scope both
+    inside and outside a ``profiles`` context. For example::
 
         process.cpus = 1
 
@@ -924,10 +937,8 @@ when no other profile is specified by the user.
           }
         }
 
-  In the above example the ``process.cpus`` attribute is not correctly applied because the ``process`` scope is also
-  used in the ``foo`` and ``bar`` profile contexts.
-
-The above feature requires version 0.28.x or higher.
+    In the above example, the ``process.cpus`` attribute is not correctly applied because the ``process`` scope is also
+    used in the ``foo`` and ``bar`` profiles.
 
 
 .. _config-env-vars:
@@ -936,37 +947,38 @@ Environment variables
 =====================
 
 The following environment variables control the configuration of the Nextflow runtime and
-the Java virtual machine used by it.
+the underlying Java virtual machine.
 
 =============================== ================
 Name                            Description
 =============================== ================
-NXF_HOME                        Nextflow home directory (default: ``$HOME/.nextflow``).
-NXF_VER                         Defines what version of Nextflow to use.
-NXF_ORG                         Default `organization` prefix when looking for a hosted repository (default: ``nextflow-io``).
-NXF_GRAB                        Provides extra runtime dependencies downloaded from a Maven repository service.
-NXF_OPTS                        Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of ``-Dkey[=value]`` properties.
-NXF_JVM_ARGS                    Allows the setting Java VM options. This is similar to ``NXF_OPTS`` however it's only applied the JVM running Nextflow and not to any java pre-launching commands (requires ``21.12.1-edge`` or later).
-NXF_CLASSPATH                   Allows the extension of the Java runtime classpath with extra JAR files or class folders.
-NXF_ASSETS                      Defines the directory where downloaded pipeline repositories are stored (default: ``$NXF_HOME/assets``)
-NXF_PID_FILE                    Name of the file where the process PID is saved when Nextflow is launched in background.
-NXF_WORK                        Directory where working files are stored (usually your *scratch* directory)
-NXF_TEMP                        Directory where temporary files are stored
-NXF_DEBUG                       Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
-NXF_EXECUTOR                    Defines the default process executor e.g. `sge`
-NXF_CONDA_CACHEDIR              Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all computing nodes.
-NXF_SINGULARITY_CACHEDIR        Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
-NXF_SINGULARITY_LIBRARYDIR      Directory where remote Singularity images are retrieved. It should be a directory accessible to all computing nodes (requires: ``21.09.0-edge`` or later).
-NXF_CHARLIECLOUD_CACHEDIR       Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all computing nodes.
-NXF_JAVA_HOME                   Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the ``JAVA_HOME`` variable if defined.
-NXF_OFFLINE                     When ``true`` disables the project automatic download and update from remote repositories (default: ``false``).
-NXF_CLOUD_DRIVER                Defines the default cloud driver to be used if not specified in the config file or as command line option, either ``aws`` or ``google``.
 NXF_ANSI_LOG                    Enables/disables ANSI console output (default ``true`` when ANSI terminal is detected).
 NXF_ANSI_SUMMARY                Enables/disables ANSI completion summary: `true|false` (default: print summary if execution last more than 1 minute).
-NXF_SCM_FILE                    Defines the path location of the SCM config file (requires version ``20.10.0`` or later).
-NXF_PARAMS_FILE                 Defines the path location of the pipeline parameters file (requires version ``20.10.0`` or later).
-NXF_DISABLE_JOBS_CANCELLATION   Disables the cancellation of child jobs on workflow execution termination (requires ``21.12.0-edge`` or later).
+NXF_ASSETS                      Defines the directory where downloaded pipeline repositories are stored (default: ``$NXF_HOME/assets``)
+NXF_CHARLIECLOUD_CACHEDIR       Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
+NXF_CLASSPATH                   Allows the extension of the Java runtime classpath with extra JAR files or class folders.
+NXF_CLOUD_DRIVER                Defines the default cloud driver to be used if not specified in the config file or as command line option, either ``aws`` or ``google``.
+NXF_CONDA_CACHEDIR              Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all compute nodes.
+NXF_DEBUG                       Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
 NXF_DEFAULT_DSL                 Defines the DSL version version that should be used in not specified otherwise in the script of config file (default: ``2``, requires version ``22.03.0-edge`` or later)
+NXF_DISABLE_JOBS_CANCELLATION   Disables the cancellation of child jobs on workflow execution termination (requires version ``21.12.0-edge`` or later).
+NXF_ENABLE_STRICT               Enable Nextflow *strict* execution mode (default: ``false``, requires version ``22.05.0-edge`` or later)
+NXF_EXECUTOR                    Defines the default process executor e.g. `sge`
+NXF_GRAB                        Provides extra runtime dependencies downloaded from a Maven repository service [DEPRECATED]
+NXF_HOME                        Nextflow home directory (default: ``$HOME/.nextflow``).
+NXF_JAVA_HOME                   Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the ``JAVA_HOME`` variable if defined.
+NXF_JVM_ARGS                    Allows the setting Java VM options. This is similar to ``NXF_OPTS`` however it's only applied the JVM running Nextflow and not to any java pre-launching commands (requires ``21.12.1-edge`` or later).
+NXF_OFFLINE                     When ``true`` disables the project automatic download and update from remote repositories (default: ``false``).
+NXF_OPTS                        Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of ``-Dkey[=value]`` properties.
+NXF_ORG                         Default `organization` prefix when looking for a hosted repository (default: ``nextflow-io``).
+NXF_PARAMS_FILE                 Defines the path location of the pipeline parameters file (requires version ``20.10.0`` or later).
+NXF_PID_FILE                    Name of the file where the process PID is saved when Nextflow is launched in background.
+NXF_SCM_FILE                    Defines the path location of the SCM config file (requires version ``20.10.0`` or later).
+NXF_SINGULARITY_CACHEDIR        Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
+NXF_SINGULARITY_LIBRARYDIR      Directory where remote Singularity images are retrieved. It should be a directory accessible to all compute nodes (requires: ``21.09.0-edge`` or later).
+NXF_TEMP                        Directory where temporary files are stored
+NXF_VER                         Defines what version of Nextflow to use.
+NXF_WORK                        Directory where working files are stored (usually your *scratch* directory)
 JAVA_HOME                       Defines the path location of the Java VM installation used to run Nextflow.
 JAVA_CMD                        Defines the path location of the Java binary command used to launch Nextflow.
 HTTP_PROXY                      Defines the HTTP proxy server. As of version ``21.06.0-edge``, proxy authentication is supported providing the credentials in the proxy URL e.g. ``http://user:password@proxy-host.com:port``.

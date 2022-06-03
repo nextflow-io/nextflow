@@ -113,6 +113,29 @@ class AwsOptionsTest extends Specification {
 
     }
 
+    def 'should set aws kms key' () {
+        when:
+        def sess1 = Mock(Session)  {
+            getConfig() >> [aws: [ client: [ storageKmsKeyId: 'my-kms-key']]]
+        }
+        and:
+        def opts = new AwsOptions(sess1)
+        then:
+        opts.storageKmsKeyId == 'my-kms-key'
+        opts.storageEncryption == null
+
+        when:
+        def sess2 = Mock(Session)  {
+            getConfig() >> [aws: [ client: [ storageKmsKeyId: 'my-kms-key', storageEncryption: 'foo']]]
+        }
+        and:
+        def opts2 = new AwsOptions(sess2)
+        then:
+        opts2.storageKmsKeyId == 'my-kms-key'
+        opts2.storageEncryption == 'foo'    // <-- allow explicit `storageEncryption`
+
+    }
+
     def 'should parse volumes list' () {
 
         given:
@@ -185,6 +208,11 @@ class AwsOptionsTest extends Specification {
         opts = new AwsOptions(storageEncryption: 'abr')
         then:
         opts.getStorageEncryption() == null
+
+        when:
+        opts = new AwsOptions(storageKmsKeyId: 'arn:aws:kms:eu-west-1:1234567890:key/e97ecf28-951e-4700-bf22-1bd416ec519f')
+        then:
+        opts.getStorageKmsKeyId() == 'arn:aws:kms:eu-west-1:1234567890:key/e97ecf28-951e-4700-bf22-1bd416ec519f'
 
         when:
         new AwsOptions(cliPath: 'bin/aws')

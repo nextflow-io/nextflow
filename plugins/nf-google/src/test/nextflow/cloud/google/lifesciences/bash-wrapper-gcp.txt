@@ -129,6 +129,7 @@ nxf_kill() {
 
 nxf_mktemp() {
     local base=${1:-/tmp}
+    mkdir -p "$base"
     if [[ $(uname) = Darwin ]]; then mktemp -d $base/nxf.XXXXXXXXXX
     else TMPDIR="$base" mktemp -d -t nxf.XXXXXXXXXX
     fi
@@ -200,7 +201,7 @@ nxf_main() {
     [[ $NXF_DEBUG > 0 ]] && nxf_env
     set +u
     set -u
-    [[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH
+    [[ $NXF_SCRATCH ]] && cd $NXF_SCRATCH
 
     set +e
     ctmp=$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp $TMPDIR)
