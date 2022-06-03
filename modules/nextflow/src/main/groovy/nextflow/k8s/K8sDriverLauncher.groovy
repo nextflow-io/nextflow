@@ -63,7 +63,7 @@ class K8sDriverLauncher {
     /** 
      * Request CPUs to be used for the Nextflow driver pod
      */
-    private int headCpus
+    private String headCpus
 
     /** 
      * Request memory to be used for the Nextflow driver pod
@@ -529,7 +529,7 @@ class K8sDriverLauncher {
             .withEnv( PodEnv.value('NXF_EXECUTOR', 'k8s'))
             .withEnv( PodEnv.value('NXF_ANSI_LOG', 'false'))
             .withMemory(headMemory?:"")
-            .withCpus(headCpus)
+            .withCpus(headCpus?:'0')
 
         if ( k8sConfig.useJobResource()) {
             this.resourceType = ResourceType.Job

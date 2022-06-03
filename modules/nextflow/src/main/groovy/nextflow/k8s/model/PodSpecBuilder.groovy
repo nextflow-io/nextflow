@@ -17,9 +17,9 @@
 
 package nextflow.k8s.model
 
+import nextflow.util.CpuUnit
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
-
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -150,8 +150,18 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withCpuMillis(Integer cpus ) {
-        this.cpuMillis = cpus
+    PodSpecBuilder withCpus(String cpus) {
+        this.cpuMillis = CpuUnit.of(cpus).toMillis()
+        return this
+    }
+
+    PodSpecBuilder withCpus(Number cpus) {
+        this.cpuMillis = CpuUnit.of(cpus).toMillis()
+        return this
+    }
+
+    PodSpecBuilder withCpus(CpuUnit cpus) {
+        this.cpuMillis = cpus.toMillis()
         return this
     }
 

@@ -249,7 +249,7 @@ class PodSpecBuilderTest extends Specification {
                 .withWorkDir('/some/work/dir')
                 .withEnv(PodEnv.value('ALPHA','hello'))
                 .withEnv(PodEnv.value('DELTA', 'world'))
-                .withCpuMillis(800)
+                .withCpus(0.8)
                 .withAccelerator( new AcceleratorResource(request: 5, limit:10, type: 'foo.org') )
                 .withMemory('100Gi')
                 .build()

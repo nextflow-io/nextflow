@@ -335,7 +335,7 @@ class K8sDriverLauncherTest extends Specification {
         driver.@k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
         driver.@k8sConfig = k8s
         driver.@podImage = 'foo/bar'
-        driver.@headCpus = 2
+        driver.@headCpus = '2'
         driver.@headMemory = '200Mi'
 
         when:
@@ -361,8 +361,8 @@ class K8sDriverLauncherTest extends Specification {
                             [name:'NXF_ANSI_LOG', value: 'false']
                         ],
                         resources: [
-                            requests: [cpu: 2, memory: '200Mi'],
-                            limits: [cpu: 2, memory: '200Mi']
+                            requests: [cpu: '2000m', memory: '200Mi'],
+                            limits: [cpu: '2000m', memory: '200Mi']
                         ],
                         volumeMounts: [
                             [name:'vol-1', mountPath:'/mnt/path/data'],
