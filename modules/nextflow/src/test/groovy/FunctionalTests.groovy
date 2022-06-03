@@ -29,7 +29,7 @@ import nextflow.script.TestScriptRunner
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Timeout(5)
+@Timeout(10)
 class FunctionalTests extends Specification {
 
     @Shared
@@ -724,18 +724,18 @@ class FunctionalTests extends Specification {
             }
             '''
 
-        def script = '''
-                def sayHello(String a){
-                    a
-                }
-                   
-                process foo {
-                    input:
-                    each x from (1,2,3)
-                    script:
-                    "${sayHello(1,2,3,4)}"
-                }
-                '''
+        def script = '''/*1*/
+/*2*/   def thisMethodExpectsOnlyOneString(String a){
+/*3*/      a
+/*4*/   }
+/*5*/                   
+/*6*/   process foo {
+/*7*/       input:
+/*8*/           each x from (1,2,3)
+/*9*/       script:
+/*10*/          "${thisMethodExpectsOnlyOneString(1,2,3,4)}"
+/*11*/      }
+        '''
 
         def cfg = new ConfigParser().parse(CONFIG)
         def runner = new TestScriptRunner(cfg)
