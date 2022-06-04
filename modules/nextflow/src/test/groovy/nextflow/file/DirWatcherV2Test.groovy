@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,13 +13,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
 package nextflow.file
 
-import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
-import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
+import static java.nio.file.StandardWatchEventKinds.*
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -30,14 +29,13 @@ import test.TestHelper
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class DirWatcherTest extends Specification {
-
+class DirWatcherV2Test extends Specification {
 
     def 'should watch for a new file' () {
 
         given:
         def folder = Files.createTempDirectory('test')
-        def watcher = new DirWatcher('glob', "$folder/", 'hola.txt', false, 'create', folder.getFileSystem())
+        def watcher = new DirWatcherV2('glob', "$folder/", 'hola.txt', false, 'create', folder.getFileSystem())
 
         when:
         List results = []
@@ -62,7 +60,7 @@ class DirWatcherTest extends Specification {
 
         given:
         def folder = Files.createTempDirectory('test')
-        def watcher = new DirWatcher('glob', "$folder/", '*.txt', false, 'create', folder.getFileSystem())
+        def watcher = new DirWatcherV2('glob', "$folder/", '*.txt', false, 'create', folder.getFileSystem())
 
         when:
         List results = []
@@ -92,7 +90,7 @@ class DirWatcherTest extends Specification {
         Files.createFile(folder.resolve('hola.txt'))
         Files.createFile(folder.resolve('ciao.txt'))
 
-        def watcher = new DirWatcher('glob', "$folder/", '*', false, 'modify,delete', folder.getFileSystem())
+        def watcher = new DirWatcherV2('glob', "$folder/", '*', false, 'modify,delete', folder.getFileSystem())
 
         when:
         Set results = []
@@ -102,7 +100,7 @@ class DirWatcherTest extends Specification {
         folder.resolve('ciao.txt').delete()
         TestHelper.stopUntil { results.size() == 2 }
         watcher.terminate()
-        
+
         then:
         results.size() == 2
         results.contains('hello.txt')
@@ -119,7 +117,7 @@ class DirWatcherTest extends Specification {
         def folder = Files.createTempDirectory('test')
         Files.createDirectories(folder.resolve('foo/bar'))
 
-        def watcher = new DirWatcher('glob', "$folder/", '**.txt', false, 'create', folder.getFileSystem())
+        def watcher = new DirWatcherV2('glob', "$folder/", '**.txt', false, 'create', folder.getFileSystem())
 
         when:
         List results = []
@@ -150,7 +148,7 @@ class DirWatcherTest extends Specification {
         def folder = Files.createTempDirectory('test')
         Files.createDirectories(folder.resolve('foo/bar'))
 
-        def watcher = new DirWatcher('glob', "$folder/", '**/h*', false, 'create', folder.getFileSystem())
+        def watcher = new DirWatcherV2('glob', "$folder/", '**/h*', false, 'create', folder.getFileSystem())
 
         when:
         List results = []
@@ -179,7 +177,7 @@ class DirWatcherTest extends Specification {
         given:
         def folder = Files.createTempDirectory('test')
 
-        def watcher = new DirWatcher('glob', "$folder/", '**/*.txt', false, 'create', folder.getFileSystem())
+        def watcher = new DirWatcherV2('glob', "$folder/", '**/*.txt', false, 'create', folder.getFileSystem())
 
         when:
         List results = []
@@ -210,7 +208,7 @@ class DirWatcherTest extends Specification {
 
     def 'should convert string events'() {
         given:
-        def watcher = Spy(DirWatcher)
+        def watcher = Spy(DirWatcherV2)
         when:
         watcher.stringToWatchEvents('xxx')
         then:
@@ -222,5 +220,4 @@ class DirWatcherTest extends Specification {
         watcher.stringToWatchEvents('Create , MODIFY ') == [ENTRY_CREATE, ENTRY_MODIFY]
 
     }
-
 }
