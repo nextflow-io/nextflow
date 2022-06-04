@@ -84,6 +84,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def req = handler.newSubmitRequest(task)
         then:
+        1 * handler.getRunName() >> 'pedantic-joe'
         1 * handler.maxSpotAttempts() >> 5
         1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
         1 * handler.getJobQueue(task) >> 'queue1'
@@ -102,10 +103,12 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getRetryStrategy() == new RetryStrategy()
                 .withAttempts(5)
                 .withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnStatusReason('Host EC2*'), new EvaluateOnExit().withOnReason('*').withAction('EXIT') )
+        req.getTags().get('nf-run-name') == 'pedantic-joe'
 
         when:
         req = handler.newSubmitRequest(task)
         then:
+        1 * handler.getRunName() >> 'pedantic-joe'
         1 * handler.maxSpotAttempts() >> 0
         1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', region: 'eu-west-1') }
         1 * handler.getJobQueue(task) >> 'queue1'
@@ -137,6 +140,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def req = handler.newSubmitRequest(task)
         then:
+        1 * handler.getRunName() >> 'pedantic-joe'
         1 * handler.maxSpotAttempts() >> 5
         1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', storageEncryption: 'AES256') }
         1 * handler.getJobQueue(task) >> 'queue1'
@@ -155,6 +159,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def req2 = handler.newSubmitRequest(task)
         then:
+        1 * handler.getRunName() >> 'pedantic-joe'
         1 * handler.maxSpotAttempts() >> 5
         1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', storageEncryption: 'AES256', debug: true) }
         1 * handler.getJobQueue(task) >> 'queue1'
@@ -187,6 +192,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', region: 'eu-west-1') }
         and:
+        1 * handler.getRunName() >> 'pedantic-joe'
         1 * handler.maxSpotAttempts() >> 0
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
@@ -213,6 +219,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getConfig() >> new TaskConfig()
         handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
         and:
+        1 * handler.getRunName() >> 'pedantic-joe'
         1 * handler.maxSpotAttempts() >> 0
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
@@ -230,6 +237,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getConfig() >> new TaskConfig(time: '5 sec')
         handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
         and:
+        1 * handler.getRunName() >> 'pedantic-joe'
         1 * handler.maxSpotAttempts() >> 0
         1 * handler.getJobQueue(task) >> 'queue2'
         1 * handler.getJobDefinition(task) >> 'job-def:2'
@@ -248,6 +256,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getConfig() >> new TaskConfig(time: '1 hour')
         handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
         and:
+        1 * handler.getRunName() >> 'pedantic-joe'
         1 * handler.maxSpotAttempts() >> 0
         1 * handler.getJobQueue(task) >> 'queue3'
         1 * handler.getJobDefinition(task) >> 'job-def:3'
@@ -277,6 +286,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', retryMode: 'adaptive', maxTransferAttempts: 10) }
         and:
+        1 * handler.getRunName() >> 'pedantic-joe'
         1 * handler.maxSpotAttempts() >> 3
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'

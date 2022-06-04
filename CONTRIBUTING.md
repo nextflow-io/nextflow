@@ -103,3 +103,16 @@ Nextflow does not impose a strict code formatting style, however the following s
     * *all other static imports*
 
 New files must include the appropriate license header boilerplate and the author name(s) and contact email(s) ([see for example](https://github.com/nextflow-io/nextflow/blob/e8945e8b6fc355d3f2eec793d8f288515db2f409/modules/nextflow/src/main/groovy/nextflow/Const.groovy#L1-L15)).
+
+## Testing Changes Locally
+
+Tests can be run in docker:
+```
+$ docker run -it --rm \
+    -v $(pwd):/work \
+    -w /work \
+    amazoncorretto:17.0.3 \
+    bash
+# yum install -y make procps
+# make test
+```

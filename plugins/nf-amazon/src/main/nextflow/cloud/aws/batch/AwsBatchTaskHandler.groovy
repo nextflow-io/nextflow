@@ -615,6 +615,13 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     /**
+     * @return The workflow execution unique run name
+     */
+    protected String getRunName() {
+        executor.session.runName
+    }
+
+    /**
      * Create a new Batch job request for the given NF {@link TaskRun}
      *
      * @param task A {@link TaskRun} to be executed as Batch job
@@ -629,6 +636,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         result.setJobName(normalizeJobName(task.name))
         result.setJobQueue(getJobQueue(task))
         result.setJobDefinition(getJobDefinition(task))
+        result.addTagsEntry('nf-run-name', getRunName())
 
         /*
          * retry on spot reclaim
