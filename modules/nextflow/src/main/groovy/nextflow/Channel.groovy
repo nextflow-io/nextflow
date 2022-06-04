@@ -17,8 +17,6 @@
 
 package nextflow
 
-import nextflow.extension.ChannelExtensionProvider
-
 import static nextflow.util.CheckHelper.*
 
 import java.nio.file.FileSystem
@@ -42,9 +40,12 @@ import nextflow.dag.NodeMarker
 import nextflow.datasource.SraExplorer
 import nextflow.exception.AbortOperationException
 import nextflow.extension.CH
+import nextflow.extension.ChannelExtensionProvider
 import nextflow.extension.GroupTupleOp
 import nextflow.extension.MapOp
+import nextflow.file.DirListener
 import nextflow.file.DirWatcher
+import nextflow.file.DirWatcherV2
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.file.PathVisitor
@@ -306,11 +307,14 @@ class Channel  {
     }
 
     static private DataflowWriteChannel watchImpl( String syntax, String folder, String pattern, boolean skipHidden, String events, FileSystem fs ) {
-        
+
         final result = CH.create()
-        final watcher = new DirWatcher(syntax,folder,pattern,skipHidden,events, fs)
-                            .setOnComplete { result.bind(STOP) }
-         
+        final legacy = System.getenv('NXF_DIRWATCHER_LEGACY')
+        final DirListener watcher = legacy=='true'
+                        ? new DirWatcher(syntax,folder,pattern,skipHidden,events,fs)
+                        : new DirWatcherV2(syntax,folder,pattern,skipHidden,events,fs)
+        watcher.onComplete { result.bind(STOP) }
+
         if( NF.isDsl2() )  {
             session.addIgniter {
                 watcher.apply { Path file -> result.bind(file.toAbsolutePath()) }   
