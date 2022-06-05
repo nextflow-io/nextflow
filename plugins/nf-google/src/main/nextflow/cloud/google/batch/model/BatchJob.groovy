@@ -41,7 +41,7 @@ class BatchJob {
         JsonHelper.toJson(this,pretty)
     }
 
-    static BatchJob create(Map req ) {
+    static BatchJob create(Map req) {
         assert req.imageUri
         assert req.command
         assert req.command instanceof List
