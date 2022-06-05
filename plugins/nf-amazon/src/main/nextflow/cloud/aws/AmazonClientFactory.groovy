@@ -24,8 +24,6 @@ import com.amazonaws.auth.BasicSessionCredentials
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.RegionUtils
 import com.amazonaws.services.batch.AWSBatchClient
-import com.amazonaws.services.codecommit.AWSCodeCommit
-import com.amazonaws.services.codecommit.AWSCodeCommitClientBuilder
 import com.amazonaws.services.ec2.AmazonEC2Client
 import com.amazonaws.services.ecs.AmazonECS
 import com.amazonaws.services.ecs.AmazonECSClientBuilder
@@ -35,7 +33,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Global
-import nextflow.ISession
 import nextflow.exception.AbortOperationException
 /**
  *
@@ -84,14 +81,6 @@ class AmazonClientFactory {
 
     String getSessionToken() { sessionToken }
 
-    @Memoized
-    static AmazonClientFactory instance(ISession session) {
-        return new AmazonClientFactory(session.config)
-    }
-
-    static AmazonClientFactory instance() {
-        return instance(Global.session)
-    }
 
     /**
      * Initialise the Amazon cloud driver with default (empty) parameters
@@ -262,7 +251,7 @@ class AmazonClientFactory {
         if( region )
             clientBuilder.withRegion(region)
 
-        final credentials = getCredentialsProvider()
+        final credentials = getCredentialsProvider0()
         if( credentials )
             clientBuilder.withCredentials(credentials)
 
@@ -276,21 +265,7 @@ class AmazonClientFactory {
         if( region )
             clientBuilder.withRegion(region)
 
-        final credentials = getCredentialsProvider()
-        if( credentials )
-            clientBuilder.withCredentials(credentials)
-
-        return clientBuilder.build()
-    }
-
-    @Memoized
-    AWSCodeCommit getCodeCommitClient() {
-
-        final clientBuilder = AWSCodeCommitClientBuilder.standard()
-        if( region )
-            clientBuilder.withRegion(region)
-
-        final credentials = getCredentialsProvider()
+        final credentials = getCredentialsProvider0()
         if( credentials )
             clientBuilder.withCredentials(credentials)
 
@@ -308,7 +283,7 @@ class AmazonClientFactory {
             new BasicAWSCredentials(accessKey, secretKey)
     }
 
-    AWSStaticCredentialsProvider getCredentialsProvider() {
+    protected AWSStaticCredentialsProvider getCredentialsProvider0() {
         final creds = getCredentials0()
         if( !creds ) return null
         return new AWSStaticCredentialsProvider(creds)

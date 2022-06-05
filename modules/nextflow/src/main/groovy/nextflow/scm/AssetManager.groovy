@@ -20,6 +20,7 @@ package nextflow.scm
 import static nextflow.Const.*
 
 import java.nio.file.Path
+import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -33,6 +34,7 @@ import nextflow.config.ConfigParser
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AmbiguousPipelineNameException
+import nextflow.plugin.Plugins
 import nextflow.script.ScriptFile
 import nextflow.util.IniFile
 import org.eclipse.jgit.api.CreateBranchCommand
@@ -56,6 +58,8 @@ import org.eclipse.jgit.merge.MergeStrategy
 @Slf4j
 @CompileStatic
 class AssetManager {
+
+    private static Pattern AWS_CODE_COMMIT = ~/https:\/\/git-codecommit\.[a-z1-9-]+\.amazonaws.com\/v1/
 
     /**
      * The folder all pipelines scripts are installed
@@ -305,55 +309,46 @@ class AssetManager {
     @PackageScope
     String resolveNameFromGitUrl( String repository ) {
 
-        if( repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/')) {
-            try {
-                def url = new GitUrl(repository)
+        final isUrl = repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/')
+        if( !isUrl )
+            return null
 
-                def result
-                if( url.protocol == 'file' ) {
-                    this.hub = "file:${url.domain}"
-                    providerConfigs << new ProviderConfig(this.hub, [path:url.domain])
-                    result = "local/${url.path}"
-                }
-                else {
-                    // find the provider config for this server
-                    def config = providerConfigs.find { it.domain == url.domain || url.domain.matches(it.domain) }
-                    this.hub = config?.name
-                    result = resolveProjectName0(url.path, config?.server)
-                }
-                log.debug "Repository URL: $repository; Project: $result; Hub provider: $hub"
-
-                return result
-            }
-            catch( IllegalArgumentException e ) {
-                log.debug "Cannot parse Git URL: $repository -- cause: ${e.message}"
-            }
+        // load required plugins if needed
+        if( isAwsCodeCommit(repository) ) {
+            Plugins.startIfMissing('nf-amazon')
         }
 
+        try {
+            def url = new GitUrl(repository)
+
+            def result
+            if( url.protocol == 'file' ) {
+                this.hub = "file:${url.domain}"
+                providerConfigs << new ProviderConfig(this.hub, [path:url.domain])
+                result = "local/${url.path}"
+            }
+            else {
+                // find the provider config for this server
+                final config = RepositoryFactory.detect(providerConfigs, url)
+                if( config ) {
+                    if( !providerConfigs.contains(config) )
+                        providerConfigs.add(config)
+                    this.hub = config.name
+                    result = config.resolveProjectName(url.path)
+                }
+                else {
+                    result = url.path.stripStart('/')
+                }
+            }
+            log.debug "Repository URL: $repository; Project: $result; Hub provider: $hub"
+            return result
+        }
+        catch( IllegalArgumentException e ) {
+            log.debug "Cannot parse Git URL: $repository -- cause: ${e.message}"
+        }
         return null
     }
 
-    protected String resolveProjectName0(String path, String server) {
-        assert path
-        assert !path.startsWith('/')
-
-        String project = path
-        if( server ) {
-            // fetch prefix from the server url
-            def prefix = new URL(server).path?.stripStart('/')
-            if( prefix && path.startsWith(prefix) ) {
-                project = path.substring(prefix.length())
-            }
-
-            if( server == 'https://dev.azure.com' ) {
-                final parts = project.tokenize('/')
-                if( parts[2]=='_git' )
-                    project = "${parts[0]}/${parts[1]}"
-            }
-        }
-
-        return project.stripStart('/')
-    }
 
     /**
      * Creates the RepositoryProvider instance i.e. the object that manages the interaction with
@@ -1109,6 +1104,10 @@ class AssetManager {
         }
 
         return result ? result.name : null
+    }
+
+    static boolean isAwsCodeCommit(String url) {
+        return AWS_CODE_COMMIT.matcher(url).find()
     }
 
     /**

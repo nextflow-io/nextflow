@@ -17,16 +17,14 @@
 
 package nextflow.cloud.aws.codecommit
 
-
 import com.amazonaws.services.codecommit.AWSCodeCommit
-import com.amazonaws.services.codecommit.AWSCodeCommitClient
+import com.amazonaws.services.codecommit.AWSCodeCommitClientBuilder
 import com.amazonaws.services.codecommit.model.GetFileRequest
 import com.amazonaws.services.codecommit.model.GetRepositoryRequest
 import com.amazonaws.services.codecommit.model.RepositoryMetadata
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import nextflow.Global
-import nextflow.cloud.aws.AmazonClientFactory
 import nextflow.exception.AbortOperationException
 import nextflow.scm.ProviderConfig
 import nextflow.scm.RepositoryProvider
@@ -40,80 +38,34 @@ import org.eclipse.jgit.transport.CredentialsProvider
 @CompileStatic
 class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
 
-    private AmazonClientFactory clientFactory
-
-    AwsCodeCommitRepositoryProvider(String project, ProviderConfig config=null, AWSCodeCommitClient client=null) {
-
-        this.project = project  // expect: "codecommit:[region]://<repository>"
-        this.config = config ?: new ProviderConfig('codecommit')
-        this.region = getRepositoryRegion()
-        this.repositoryName = getRepositoryName()
-        this.profile = getRepositoryProfile()
-        this.clientFactory = AmazonClientFactory.instance()
-        this.client = client ?: clientFactory.getCodeCommitClient()
-
+    AwsCodeCommitRepositoryProvider(String project, ProviderConfig config) {
+        assert config instanceof AwsCodeCommitProviderConfig
+        this.project = project  // expect: "codecommit/<region>/<repository>"
+        this.config = config
+        this.region = config.region
+        this.repositoryName = project.tokenize('/')[-1]
+        this.client = AWSCodeCommitClientBuilder.standard().build()
     }
 
     private String region
     private AWSCodeCommit client
     private String repositoryName
-    private String profile
 
 
     /** {@inheritDoc} **/
+    @Memoized
     @Override
     CredentialsProvider getGitCredentials() {
-        def provider = new AwsCodeCommitCredentialProvider()
-        provider.setAwsCredentialsProvider( clientFactory.getCredentialsProvider() )
-        return provider
+        return new AwsCodeCommitCredentialProvider()
     }
-
-    private String getRepositoryName() {
-        def result = project
-                .replaceAll("codecommit:.*?//", "")
-                .replaceAll(".*?@", "")
-        log.debug "project name: $result"
-        return result
-    }
-
-    private String getRepositoryProfile() {
-
-        def result = null
-
-        if ( project.indexOf('@') != -1 ) {
-            result = project
-                    .replaceAll("codecommit:.*?//", "")
-                    .replaceAll("@.*", "")
-
-            log.debug "project profile: $result"
-
-        }
-
-        return result
-    }
-
-    private String getRepositoryRegion() {
-        def region = Global.getAwsRegion()
-
-        // use the repository region if specified
-        def result = project
-                .replaceAll("codecommit:[:]*", "")
-                .replaceAll("[:]*//.*", "")
-        if ( result != "" ) {
-            region = result
-        }
-
-        log.debug "AWS CodeCommit project region: $region"
-        return region
-    }
-
 
     private RepositoryMetadata getRepositoryMetadata() {
-        def request = new GetRepositoryRequest()
-        request.setRepositoryName( repositoryName)
+        final request = new GetRepositoryRequest()
+                .withRepositoryName(repositoryName)
 
-        def response = client.getRepository( request )
-        return response.getRepositoryMetadata()
+        return client
+                .getRepository( request )
+                .getRepositoryMetadata()
     }
 
     /** {@inheritDoc} **/
@@ -134,7 +86,7 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} **/
     @Override
     String getEndpointUrl() {
-        "https://git-codecommit.${region}.amazonaws.com/v1/repos/${getRepositoryName()}"
+        "https://git-codecommit.${region}.amazonaws.com/v1/repos/${repositoryName}"
     }
 
     /** {@inheritDoc} **/
@@ -178,7 +130,7 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
             getRepositoryMetadata()
         }
         catch( IOException e ) {
-            throw new AbortOperationException("Cannot find `$project` -- Make sure a repository exists for it in AWS CodeCommit")
+            throw new AbortOperationException("Cannot find ${getEndpointUrl()} -- Make sure a repository exists for it in AWS CodeCommit")
         }
     }
 

@@ -17,6 +17,8 @@
 
 package nextflow.cloud.aws.codecommit
 
+import javax.crypto.Mac
+
 /*
  * Copyright 2013-2019 the original author or authors.
  *
@@ -33,7 +35,6 @@ package nextflow.cloud.aws.codecommit
  * limitations under the License.
  */
 
-import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import javax.security.auth.login.CredentialException
 import java.security.MessageDigest
@@ -81,7 +82,6 @@ final class AwsCodeCommitCredentialProvider extends CredentialsProvider {
     private static final String UTF8 = "UTF8"
     private static final String HMAC_SHA256 = "HmacSHA256"
 
-    private AWSCredentialsProvider awsCredentialsProvider
     private String username
     private String password
 
@@ -207,18 +207,16 @@ final class AwsCodeCommitCredentialProvider extends CredentialsProvider {
      * @return the AWS credentials.
      */
     private AWSCredentials retrieveAwsCredentials() {
-        if ( !awsCredentialsProvider ) {
-            if ( username && password ) {
-                log.debug "Creating a static AWSCredentialsProvider"
-                awsCredentialsProvider = new AWSStaticCredentialsProvider(
-                        new BasicAWSCredentials( username, password ))
-            }
-            else {
-                log.debug "Creating a default AWSCredentialsProvider"
-                awsCredentialsProvider = new DefaultAWSCredentialsProviderChain()
-            }
+        AWSCredentialsProvider credsProvider
+        if ( username && password ) {
+            log.debug "Creating a static AWS credentials provider"
+            credsProvider = new AWSStaticCredentialsProvider( new BasicAWSCredentials( username, password ))
         }
-        return awsCredentialsProvider.getCredentials()
+        else {
+            log.debug "Creating a default AWS credentials provider chain"
+            credsProvider = new DefaultAWSCredentialsProviderChain()
+        }
+        return credsProvider.getCredentials()
     }
 
     /**
@@ -326,19 +324,30 @@ final class AwsCodeCommitCredentialProvider extends CredentialsProvider {
     /**
      * @param awsCredentialProvider the awsCredentialProvider to set
      */
-    void setAwsCredentialsProvider(AWSCredentialsProvider awsCredentialsProvider) { this.awsCredentialsProvider = awsCredentialsProvider }
-    AWSCredentialsProvider getAwsCredentialsProvider() { awsCredentialsProvider }
+    void setAwsCredentialsProvider(AWSCredentialsProvider awsCredentialsProvider) {
+        this.awsCredentialsProvider = awsCredentialsProvider
+    }
 
     /**
      * @param username the username to set
      */
-    void setUsername(String username ) { this.username = username }
-    String getUsername() { username }
+    void setUsername(String username ) {
+        this.username = username
+    }
+
+    String getUsername() {
+        return username
+    }
 
     /**
      * @param password the password to set
      */
-    void setPassword(String password) { this.password = password }
-    String getPassword() { password }
+    void setPassword(String password) {
+        this.password = password
+    }
+
+    String getPassword() {
+        return password
+    }
 
 }

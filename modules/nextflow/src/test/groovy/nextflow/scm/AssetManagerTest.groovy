@@ -584,4 +584,11 @@ class AssetManagerTest extends Specification {
         manager.getMainScriptName() == 'workflow.nf'
 
     }
+
+    def 'should check codecommit' () {
+        expect:
+        !AssetManager.isAwsCodeCommit('https://github.com/nextflow-io/nextflow')
+        and:
+        AssetManager.isAwsCodeCommit('https://git-codecommit.eu-west-1.amazonaws.com/v1/repos/my-repo')
+    }
 }

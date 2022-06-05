@@ -17,13 +17,17 @@
 
 package nextflow.scm
 
+import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import org.pf4j.ExtensionPoint
 /**
+ * Implements a factory for Git {@link RepositoryProvider}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 class RepositoryFactory implements ExtensionPoint {
 
     /**
@@ -69,19 +73,38 @@ class RepositoryFactory implements ExtensionPoint {
         }
     }
 
-    static RepositoryProvider create( ProviderConfig config, String project ) {
-        // force amazon plugin loading if `codecommit` is specified
-        if(config.platform == 'codecommit') {
-            Plugins.startIfMissing('nf-amazon')
-        }
+    protected ProviderConfig findConfig(List<ProviderConfig> providers, GitUrl url) {
+        final result = providers.find(it -> it.domain == url.domain)
+        log.debug "Git url=$url -> config=$result"
+        return result
+    }
+
+    @Memoized
+    private static List<RepositoryFactory> factories() {
         // scan for available plugins
-        final all = Plugins.getPriorityExtensions(RepositoryFactory)
-        final result = all.findResult( it -> it.newInstance(config, project) )
-        if( !result ) {
-            throw new AbortOperationException("Unknown project repository platform: ${config.platform}")
+        final result = Plugins.getPriorityExtensions(RepositoryFactory)
+        log.debug "Found Git repository result: ${ result.collect(it->it.class.simpleName) }"
+        return result
+    }
+
+    static RepositoryProvider create( ProviderConfig config, String project ) {
+        // scan all installed Git repository factories and find the first
+        // returning an provider instance for the specified parameters
+        final provider = factories().findResult( it -> it.newInstance(config, project) )
+        if( !provider ) {
+            throw new AbortOperationException("Unable to find a Git repository provider matching platform: ${config.platform}")
         }
         // return matching provider
-        return result
+        return provider
+    }
+
+    static ProviderConfig detect(List<ProviderConfig> providers, GitUrl url ) {
+        final provider = factories().findResult( it -> it.findConfig(providers, url) )
+        if( !provider ) {
+            throw new AbortOperationException("Unable to find a Git provider config for ${url}")
+        }
+        // return matching provider
+        return provider
     }
 
 }
