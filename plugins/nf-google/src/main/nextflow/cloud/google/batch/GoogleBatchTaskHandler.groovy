@@ -58,11 +58,22 @@ class GoogleBatchTaskHandler extends TaskHandler {
 
     private BatchClient client
 
+    /**
+     * Job Id assigned by Nextflow
+     */
     private String jobId
 
+    /**
+     * Job unique id assigned by Google Batch service
+     */
+    private String uid
+
+    /**
+     * Job state assigned by Google Batch service
+     */
     private String jobState
 
-    private long timestamp
+    private volatile long timestamp
 
     private GoogleBatchScriptLauncher launcher
 
@@ -98,8 +109,9 @@ class GoogleBatchTaskHandler extends TaskHandler {
         final req = newSubmitRequest(task)
         log.debug "[GOOGLE BATCH] new job request > $req"
         final resp = client.submitJob(jobId, req)
+        this.uid = resp.get('uid')
         this.status = TaskStatus.SUBMITTED
-        log.debug "[GOOGLE BATCH] submitted > job=$jobId; work-dir=${task.getWorkDirStr()}; resp=$resp"
+        log.debug "[GOOGLE BATCH] submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}; resp=$resp"
     }
 
     protected BatchJob newSubmitRequest(TaskRun task) {
@@ -204,11 +216,19 @@ class GoogleBatchTaskHandler extends TaskHandler {
 
     @Override
     boolean checkIfCompleted() {
-        if( getJobState() in TERMINATED ) {
+        final state = getJobState()
+        if( state in TERMINATED ) {
+            log.debug "[GOOGLE BATCH] Terminated job=$jobId; state=$state"
             // finalize the task
             task.exitStatus = readExitFile()
-            task.stdout = outputFile
-            task.stderr = errorFile
+            if( state == 'FAILED' ) {
+                task.stdout = executor.logging.stdout(uid) ?: outputFile
+                task.stderr = executor.logging.stderr(uid) ?: errorFile
+            }
+            else {
+                task.stdout = outputFile
+                task.stderr = errorFile
+            }
             status = TaskStatus.COMPLETED
             return true
         }

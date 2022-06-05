@@ -53,7 +53,7 @@ class BatchConfig {
     static BatchConfig create(Session session) {
         final result = new BatchConfig()
         result.googleOpts = GoogleOpts.create(session)
-        result.credentials = makeCreds(result.googleOpts.credsFile)
+        result.credentials = result.googleOpts.credentials
         result.disableBinDir = session.config.navigate('google.batch.disableRemoteBinDir',false)
         result.spot = session.config.navigate('google.batch.spot',false)
         result.preemptible = session.config.navigate('google.batch.preemptible',false)
@@ -62,19 +62,6 @@ class BatchConfig {
         result.subnetwork = session.config.navigate('google.batch.subnetwork')
         result.serviceAccountEmail = session.config.navigate('google.batch.serviceAccountEmail')
         return result
-    }
-
-    static protected GoogleCredentials makeCreds(File credsFile) {
-        GoogleCredentials result
-        if( credsFile ) {
-            log.debug "Google auth via application credentials file: $credsFile"
-            result = GoogleCredentials .fromStream(new FileInputStream(credsFile))
-        }
-        else {
-            log.debug "Google auth via application DEFAULT"
-            result = GoogleCredentials.getApplicationDefault()
-        }
-        return result.createScoped("https://www.googleapis.com/auth/cloud-platform")
     }
 
     @Override
