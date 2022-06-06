@@ -119,9 +119,13 @@ abstract class RepositoryProvider {
 
     @Memoized
     protected Collection<Ref> fetchRefs() {
+        /*
+         * fetch repos tags & branches
+         * see https://github.com/centic9/jgit-cookbook/
+         */
         return Git.lsRemoteRepository()
                 .setRemote(getEndpointUrl())
-                .setCredentialsProvider( getGitCredentials() )
+                .setCredentialsProvider(getGitCredentials())
                 .call()
     }
 
