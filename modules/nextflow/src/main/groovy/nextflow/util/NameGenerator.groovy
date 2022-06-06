@@ -566,6 +566,9 @@ class NameGenerator {
             // Ian Murdock - founder of the Debian project. https://en.wikipedia.org/wiki/Ian_Murdock
             "murdock",
 
+            // Angelo Moriondo was an Italian inventor usually credited for patenting the earliest known espresso machine. https://en.wikipedia.org/wiki/Angelo_Moriondo
+            "moriondo", 
+
             // Isaac Newton invented classic mechanics and modern optics. https://en.wikipedia.org/wiki/Isaac_Newton
             "newton",
 
