@@ -25,6 +25,8 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.exception.RateLimitExceededException
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 /**
@@ -115,9 +117,37 @@ abstract class RepositoryProvider {
      */
     abstract String getRepositoryUrl()
 
-    List<BranchInfo> getBranches() { throw new UnsupportedOperationException("Get branches operation not support by ${this.getClass().getSimpleName()} provider") }
+    @Memoized
+    protected Collection<Ref> fetchRefs() {
+        return Git.lsRemoteRepository()
+                .setRemote(getEndpointUrl())
+                .setCredentialsProvider( getGitCredentials() )
+                .call()
+    }
 
-    List<TagInfo> getTags() { throw new UnsupportedOperationException("Get tags operation not support by ${this.getClass().getSimpleName()} provider") }
+    List<BranchInfo> getBranches() {
+        final PREFIX = 'refs/heads/'
+        final refs = fetchRefs()
+        final result = new ArrayList<BranchInfo>()
+        for( Ref it : refs ) {
+            if( !it.name.startsWith(PREFIX) )
+                continue
+            result.add( new BranchInfo(it.name.substring(PREFIX.size()), it.objectId.name()) )
+        }
+        return result
+    }
+
+    List<TagInfo> getTags() {
+        final PREFIX = 'refs/tags/'
+        final refs = fetchRefs()
+        final result = new ArrayList<TagInfo>()
+        for( Ref it : refs ) {
+            if( !it.name.startsWith(PREFIX) )
+                continue
+            result.add( new TagInfo(it.name.substring(PREFIX.size()), it.objectId.name()) )
+        }
+        return result
+    }
 
     /**
      * @return a org.eclipse.jgit.transport.CredentialsProvider object for authenticating git operations

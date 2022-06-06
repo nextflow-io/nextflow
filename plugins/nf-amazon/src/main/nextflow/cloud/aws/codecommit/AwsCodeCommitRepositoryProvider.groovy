@@ -65,7 +65,7 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
                 .withRepositoryName(repositoryName)
 
         return client
-                .getRepository( request )
+                .getRepository(request)
                 .getRepositoryMetadata()
     }
 
@@ -113,14 +113,15 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     @Override
     protected byte[] readBytes( String path ) {
 
-        def request = new GetFileRequest()
-        request.setRepositoryName( repositoryName )
-        request.setFilePath( path )
+        final request = new GetFileRequest()
+            .withRepositoryName(repositoryName)
+            .withFilePath(path)
+        if( revision )
+            request.withCommitSpecifier(revision)
 
-        def response = client.getFile( request )
-
-        def contents = response.getFileContent().array()
-        return contents
+        return client
+                .getFile( request )
+                .getFileContent().array()
     }
 
     /** {@inheritDoc} **/

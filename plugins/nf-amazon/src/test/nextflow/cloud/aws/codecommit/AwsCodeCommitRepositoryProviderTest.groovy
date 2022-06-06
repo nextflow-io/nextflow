@@ -19,13 +19,16 @@
 package nextflow.cloud.aws.codecommit
 
 
+import nextflow.scm.RepositoryProvider
 import spock.lang.IgnoreIf
+import spock.lang.Requires
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @IgnoreIf({System.getenv('NXF_SMOKE')})
+@Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
 class AwsCodeCommitRepositoryProviderTest extends Specification {
 
     def 'should get repo url' () {
@@ -47,7 +50,61 @@ class AwsCodeCommitRepositoryProviderTest extends Specification {
         def provider = new AwsCodeCommitRepositoryProvider('codecommit-eu-west-1/my-repo', config)
 
         expect:
-        provider.readText('main.nf') == 'println "Hello world!"\n'
+        provider.readText('main.nf') == '''\
+                #!/bin/env nextflow
+                
+                workflow {
+                  sayHello()
+                }
+                
+                process sayHello {
+                  /echo Hello world/
+                }
+                '''.stripIndent().rightTrim()
     }
 
+    def 'should read content with revision' () {
+        given:
+        def config = new AwsCodeCommitProviderConfig('git-codecommit.eu-west-1.amazonaws.com')
+        and:
+        def provider = new AwsCodeCommitRepositoryProvider('codecommit-eu-west-1/my-repo', config)
+        and:
+        provider.revision = 'dev1'
+        expect:
+        provider.readText('main.nf') == 'println "Hello world in dev branch!"\n'
+    }
+
+    def 'should fetch repo tags'() {
+        given:
+        def config = new AwsCodeCommitProviderConfig('git-codecommit.eu-west-1.amazonaws.com')
+        and:
+        def provider = new AwsCodeCommitRepositoryProvider('codecommit-eu-west-1/my-repo', config)
+
+        when:
+        // uses repo at
+        // https://git-codecommit.eu-west-1.amazonaws.com/v1/repos/my-repo
+        def result = provider.getTags() as Set
+        then:
+        result == [
+                new RepositoryProvider.TagInfo('v0.1', '1a88516b5e382d0d68bfa01c18eab6c2067c0595'),
+                new RepositoryProvider.TagInfo('v0.2', 'c673d3d55be190c54db2056690b71e285fe5b3d8')] as Set
+
+    }
+
+    def 'should fetch repo branches'() {
+        given:
+        def config = new AwsCodeCommitProviderConfig('git-codecommit.eu-west-1.amazonaws.com')
+        and:
+        def provider = new AwsCodeCommitRepositoryProvider('codecommit-eu-west-1/my-repo', config)
+
+        when:
+        // uses repo at
+        // https://git-codecommit.eu-west-1.amazonaws.com/v1/repos/my-repo
+        def result = provider.getBranches() as Set
+        then:
+        result == [
+                new RepositoryProvider.BranchInfo('master', 'c673d3d55be190c54db2056690b71e285fe5b3d8'),
+                new RepositoryProvider.BranchInfo('dev1', 'c90422a1b4823f1c0980bbf8cab261e45a351622')] as Set
+
+    }
 }
