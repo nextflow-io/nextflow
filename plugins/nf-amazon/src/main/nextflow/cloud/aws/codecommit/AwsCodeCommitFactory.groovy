@@ -35,16 +35,15 @@ class AwsCodeCommitFactory extends RepositoryFactory {
 
     @Override
     protected RepositoryProvider createProviderInstance(ProviderConfig config, String project) {
-        if( config.platform!='codecommit' )
-            return null
-
-        new AwsCodeCommitRepositoryProvider(project,config)
+        return config.platform=='codecommit'
+                ? new AwsCodeCommitRepositoryProvider(project,config)
+                : null
     }
 
     @Override
     protected ProviderConfig getConfig(List<ProviderConfig> providers, GitUrl url) {
         // do not care about non AWS codecommit url
-        if( !url.domain.startsWith('git-codecommit.') )
+        if( !url.domain.startsWith('git-codecommit.') || !url.domain.endsWith('.amazonaws.com') )
             return null
 
         // CodeCommit hostname vary depending the AWS region
@@ -55,7 +54,7 @@ class AwsCodeCommitFactory extends RepositoryFactory {
             return config
         }
         // fallback on the platform name
-        config = providers.find( it -> it.platform=='codecommit' || !it.server )
+        config = providers.find( it -> it.platform=='codecommit' && !it.server )
         if( config ) {
             config.setServer("${url.protocol}://${url.domain}")
             log.debug "Git url=$url (2) -> config=$config"
@@ -79,7 +78,7 @@ class AwsCodeCommitFactory extends RepositoryFactory {
         }
 
         return copy.platform == 'codecommit'
-                ? new AwsCodeCommitProviderConfig(attrs)
+                ? new AwsCodeCommitProviderConfig(name, copy)
                 : null
     }
 }

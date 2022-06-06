@@ -28,19 +28,19 @@ class AwsCodeCommitProviderConfigTest extends Specification {
 
     def 'should create config' () {
         given:
-        def URL = 'git-codecommit.eu-west-1.amazonaws.com'
+        def HOST = 'git-codecommit.eu-west-1.amazonaws.com'
         when:
-        def config = new AwsCodeCommitProviderConfig(URL)
+        def config = new AwsCodeCommitProviderConfig(HOST)
         then:
         config.name == 'codecommit'
         config.platform == 'codecommit'
         config.region == 'eu-west-1'
         config.domain == 'git-codecommit.eu-west-1.amazonaws.com'
-        config.server == 'https://git-codecommit.eu-west-1.amazonaws.com/v1'
-        config.endpoint == 'https://git-codecommit.eu-west-1.amazonaws.com/v1'
+        config.server == 'https://git-codecommit.eu-west-1.amazonaws.com'
+        config.endpoint == 'https://git-codecommit.eu-west-1.amazonaws.com'
 
         expect:
-        config.resolveProjectName('https://git-codecommit.eu-west-1.amazonaws.com/v1/repos/my-repo') == 'codecommit/eu-west-1/my-repo'
+        config.resolveProjectName('https://git-codecommit.eu-west-1.amazonaws.com/v1/repos/my-repo') == 'codecommit-eu-west-1/my-repo'
     }
 
 }

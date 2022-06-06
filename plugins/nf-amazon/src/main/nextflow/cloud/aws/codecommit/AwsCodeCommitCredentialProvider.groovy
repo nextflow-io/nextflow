@@ -194,6 +194,7 @@ final class AwsCodeCommitCredentialProvider extends CredentialsProvider {
         }
         catch (Throwable t) {
             // ignore all, we can't handle it
+            log.debug "AWS CodeCommit cannot handle uri: $uri - Reason: ${t.message ?: t}"
         }
 
         return false

@@ -29,20 +29,20 @@ import nextflow.scm.ProviderConfig
 class AwsCodeCommitProviderConfig extends ProviderConfig {
 
     AwsCodeCommitProviderConfig(String host) {
-        super('codecommit', [platform:'codecommit', server: "https://$host/v1"])
-        assert host =~ /git-codecommit\.[a-z0-9-]+\.amazonaws\.com/, "Invalid AWS CodeCommit host name: $host"
+        super('codecommit', [platform:'codecommit', server: "https://$host"])
+        assert host =~ /git-codecommit\.[a-z0-9-]+\.amazonaws\.com/, "Invalid AWS CodeCommit hostname: '$host'"
     }
 
-    AwsCodeCommitProviderConfig(Map attributes) {
-        super('codecommit', attributes)
-        assert attributes.platform=='codecommit', "Invalid platform value for AWS CodeCommit provider -- offending value: $attributes.platform"
+    AwsCodeCommitProviderConfig(String name, Map attributes) {
+        super(name, attributes)
+        assert attributes.platform=='codecommit', "Invalid AWS CodeCommit platform value: '$attributes.platform'"
     }
 
     String getRegion() {
         final host = getDomain()
         final result = host.tokenize('.')[1]
         if( !result )
-            throw new IllegalStateException("Unable to infer AWS region from CodeCommit hostname: ${host}")
+            throw new IllegalStateException("Invalid AWS CodeCommit hostname: '${host}'")
         return result
     }
 
@@ -50,7 +50,10 @@ class AwsCodeCommitProviderConfig extends ProviderConfig {
     protected String resolveProjectName(String path) {
         assert path
         assert !path.startsWith('/')
-        return "codecommit/$region/" + path.tokenize('/')[-1]
+        final repoName = path.tokenize('/')[-1]
+        if( !repoName )
+            throw new IllegalArgumentException("Invalid AWS CodeCommit repository path: $path")
+        return "codecommit-$region/$repoName"
     }
 
     String toString() {
