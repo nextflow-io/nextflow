@@ -17,6 +17,7 @@
 
 package nextflow.cli
 
+import nextflow.plugin.Plugins
 import spock.lang.IgnoreIf
 
 import java.nio.file.Files
@@ -46,7 +47,7 @@ class CmdPullTest extends Specification {
 
         cleanup:
         dir?.deleteDir()
-
+        Plugins.stop()
     }
 
 }

@@ -41,7 +41,7 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
 
     AwsCodeCommitRepositoryProvider(String project, ProviderConfig config) {
         assert config instanceof AwsCodeCommitProviderConfig
-        this.project = project  // expect: "codecommit/<region>/<repository>"
+        this.project = project  // expect: "codecommit-<region>/<repository>"
         this.config = config
         this.region = config.region
         this.repositoryName = project.tokenize('/')[-1]
