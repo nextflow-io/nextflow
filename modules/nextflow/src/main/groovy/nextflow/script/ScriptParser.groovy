@@ -175,6 +175,7 @@ class ScriptParser {
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(scriptPath)
             meta.setModule(module)
+            meta.validate()
             return this
         }
         catch (CompilationFailedException e) {
