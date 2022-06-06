@@ -19,32 +19,67 @@
 package nextflow.cloud.aws.codecommit
 
 import groovy.util.logging.Slf4j
+import nextflow.plugin.Priority
 import nextflow.scm.GitUrl
 import nextflow.scm.ProviderConfig
 import nextflow.scm.RepositoryFactory
 import nextflow.scm.RepositoryProvider
-
 /**
  * Implements a factory to create an instance of {@link AwsCodeCommitRepositoryProvider}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@Priority(-10)  // <-- lower is higher, this is needed to override default provider behavior
 class AwsCodeCommitFactory extends RepositoryFactory {
 
     @Override
-    protected RepositoryProvider newInstance(ProviderConfig config, String project) {
+    protected RepositoryProvider createProviderInstance(ProviderConfig config, String project) {
         if( config.platform!='codecommit' )
             return null
 
         new AwsCodeCommitRepositoryProvider(project,config)
     }
 
-    protected ProviderConfig findConfig(List<ProviderConfig> providers, GitUrl url) {
-        final result =  url.domain.startsWith('git-codecommit.')
-                ? new AwsCodeCommitProviderConfig(url.domain)
+    @Override
+    protected ProviderConfig getConfig(List<ProviderConfig> providers, GitUrl url) {
+        // do not care about non AWS codecommit url
+        if( !url.domain.startsWith('git-codecommit.') )
+            return null
+
+        // CodeCommit hostname vary depending the AWS region
+        // try to find the config for the specified region
+        def config = providers.find( it -> it.domain==url.domain )
+        if( config ) {
+            log.debug "Git url=$url (1) -> config=$config"
+            return config
+        }
+        // fallback on the platform name
+        config = providers.find( it -> it.platform=='codecommit' || !it.server )
+        if( config ) {
+            config.setServer("${url.protocol}://${url.domain}")
+            log.debug "Git url=$url (2) -> config=$config"
+            return config
+        }
+        // still nothing, create a new instance
+        config = new AwsCodeCommitProviderConfig(url.domain)
+        if( url.user ) {
+            log.debug "Git url=$url (3) -> config=$config"
+            config.setUser(url.user)
+        }
+
+        return config
+    }
+
+    @Override
+    protected ProviderConfig createConfigInstance(String name, Map attrs) {
+        final copy = new HashMap(attrs)
+        if( name == 'codecommit' ) {
+            copy.platform = 'codecommit'
+        }
+
+        return copy.platform == 'codecommit'
+                ? new AwsCodeCommitProviderConfig(attrs)
                 : null
-        log.debug "Git url=$url -> config=$result"
-        return result
     }
 }

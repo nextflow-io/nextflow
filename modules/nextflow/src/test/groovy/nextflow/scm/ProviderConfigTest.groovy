@@ -204,7 +204,7 @@ class ProviderConfigTest extends Specification {
         when:
         def result = ProviderConfig.createFromText(CONFIG)
         then:
-        result.size() == 8
+        result.size() == 7
 
         result.find { it.name == 'github' }.server == 'https://github.com'
         result.find { it.name == 'github' }.auth == '12732:35454'

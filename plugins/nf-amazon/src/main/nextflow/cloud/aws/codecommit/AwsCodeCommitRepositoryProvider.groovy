@@ -33,6 +33,7 @@ import org.eclipse.jgit.transport.CredentialsProvider
  * Implements a repository provider for AWS CodeCommit
  *
  * @author W. Lee Pang <wleepang@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
@@ -44,7 +45,7 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
         this.config = config
         this.region = config.region
         this.repositoryName = project.tokenize('/')[-1]
-        this.client = AWSCodeCommitClientBuilder.standard().build()
+        this.client = AWSCodeCommitClientBuilder.standard().withRegion(region).build()
     }
 
     private String region
@@ -90,7 +91,7 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     }
 
     /** {@inheritDoc} **/
-    // not used, but the abstract method needs to be overriden
+    // not used, but the abstract method needs to be overridden
     @Override
     String getContentUrl( String path ) {
         throw new UnsupportedOperationException()

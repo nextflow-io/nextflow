@@ -20,7 +20,6 @@ package nextflow.scm
 import static nextflow.Const.*
 
 import java.nio.file.Path
-import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -34,7 +33,6 @@ import nextflow.config.ConfigParser
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AmbiguousPipelineNameException
-import nextflow.plugin.Plugins
 import nextflow.script.ScriptFile
 import nextflow.util.IniFile
 import org.eclipse.jgit.api.CreateBranchCommand
@@ -58,8 +56,6 @@ import org.eclipse.jgit.merge.MergeStrategy
 @Slf4j
 @CompileStatic
 class AssetManager {
-
-    private static Pattern AWS_CODE_COMMIT = ~/https:\/\/git-codecommit\.[a-z1-9-]+\.amazonaws.com\/v1/
 
     /**
      * The folder all pipelines scripts are installed
@@ -313,11 +309,6 @@ class AssetManager {
         if( !isUrl )
             return null
 
-        // load required plugins if needed
-        if( isAwsCodeCommit(repository) ) {
-            Plugins.startIfMissing('nf-amazon')
-        }
-
         try {
             def url = new GitUrl(repository)
 
@@ -329,7 +320,7 @@ class AssetManager {
             }
             else {
                 // find the provider config for this server
-                final config = RepositoryFactory.detect(providerConfigs, url)
+                final config = RepositoryFactory.getProviderConfig(providerConfigs, url)
                 if( config ) {
                     if( !providerConfigs.contains(config) )
                         providerConfigs.add(config)
@@ -364,7 +355,7 @@ class AssetManager {
         if( !config )
             throw new AbortOperationException("Unknown repository configuration provider: $providerName")
 
-        return RepositoryFactory.create(config, project)
+        return RepositoryFactory.newRepositoryProvider(config, project)
     }
 
     AssetManager setLocalPath(File path) {
@@ -1104,10 +1095,6 @@ class AssetManager {
         }
 
         return result ? result.name : null
-    }
-
-    static boolean isAwsCodeCommit(String url) {
-        return AWS_CODE_COMMIT.matcher(url).find()
     }
 
     /**

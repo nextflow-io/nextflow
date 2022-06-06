@@ -18,20 +18,32 @@
 
 package nextflow.cloud.aws.codecommit
 
+import groovy.transform.CompileStatic
 import nextflow.scm.ProviderConfig
-
 /**
+ * A {@link ProviderConfig} specialised for AWS CodeCommit
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@CompileStatic
 class AwsCodeCommitProviderConfig extends ProviderConfig {
-
-    String region
 
     AwsCodeCommitProviderConfig(String host) {
         super('codecommit', [platform:'codecommit', server: "https://$host/v1"])
         assert host =~ /git-codecommit\.[a-z0-9-]+\.amazonaws\.com/, "Invalid AWS CodeCommit host name: $host"
-        this.region = host.tokenize('.')[1]
+    }
+
+    AwsCodeCommitProviderConfig(Map attributes) {
+        super('codecommit', attributes)
+        assert attributes.platform=='codecommit', "Invalid platform value for AWS CodeCommit provider -- offending value: $attributes.platform"
+    }
+
+    String getRegion() {
+        final host = getDomain()
+        final result = host.tokenize('.')[1]
+        if( !result )
+            throw new IllegalStateException("Unable to infer AWS region from CodeCommit hostname: ${host}")
+        return result
     }
 
     @Override
@@ -42,7 +54,7 @@ class AwsCodeCommitProviderConfig extends ProviderConfig {
     }
 
     String toString() {
-        "AwsCodeCommitProviderConfig[name=$name; region=$region; platform=$platform; server=$server]"
+        return "AwsCodeCommitProviderConfig[name=$name; region=$region; platform=$platform; server=$server]"
     }
 
 }

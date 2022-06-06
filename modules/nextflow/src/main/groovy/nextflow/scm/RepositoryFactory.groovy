@@ -17,10 +17,12 @@
 
 package nextflow.scm
 
-import groovy.transform.Memoized
+
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
+import nextflow.plugin.Priority
+import nextflow.util.StringUtils
 import org.pf4j.ExtensionPoint
 /**
  * Implements a factory for Git {@link RepositoryProvider}
@@ -28,6 +30,7 @@ import org.pf4j.ExtensionPoint
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@Priority(0)
 class RepositoryFactory implements ExtensionPoint {
 
     /**
@@ -42,7 +45,7 @@ class RepositoryFactory implements ExtensionPoint {
      *      An instance of a {@link RepositoryProvider} that matches the specified config
      *      or {@code null} if no match is found
      */
-    protected RepositoryProvider newInstance(ProviderConfig config, String project) {
+    protected RepositoryProvider createProviderInstance(ProviderConfig config, String project) {
 
         switch(config.platform) {
             case 'github':
@@ -73,24 +76,40 @@ class RepositoryFactory implements ExtensionPoint {
         }
     }
 
-    protected ProviderConfig findConfig(List<ProviderConfig> providers, GitUrl url) {
+    protected ProviderConfig createConfigInstance(String name, Map attrs) {
+        return new ProviderConfig(name, attrs)
+    }
+
+    protected ProviderConfig getConfig(List<ProviderConfig> providers, GitUrl url) {
         final result = providers.find(it -> it.domain == url.domain)
         log.debug "Git url=$url -> config=$result"
         return result
     }
 
-    @Memoized
+    // --==  static definitions ==--
+    private static boolean awsLoaded
+    private static List<RepositoryFactory> factories0
+
     private static List<RepositoryFactory> factories() {
+        // simple cache
+        if( factories0 )
+            return factories0
         // scan for available plugins
         final result = Plugins.getPriorityExtensions(RepositoryFactory)
         log.debug "Found Git repository result: ${ result.collect(it->it.class.simpleName) }"
-        return result
+        return factories0=result
     }
 
-    static RepositoryProvider create( ProviderConfig config, String project ) {
+    static RepositoryProvider newRepositoryProvider(ProviderConfig config, String project) {
+        // check if it's needed to load new plugins
+        if( (config.name=='codecommit' || config.platform=='codecommit') && !awsLoaded ) {
+            Plugins.startIfMissing('nf-amazon')
+            awsLoaded=true
+        }
+
         // scan all installed Git repository factories and find the first
         // returning an provider instance for the specified parameters
-        final provider = factories().findResult( it -> it.newInstance(config, project) )
+        final provider = factories().findResult( it -> it.createProviderInstance(config, project) )
         if( !provider ) {
             throw new AbortOperationException("Unable to find a Git repository provider matching platform: ${config.platform}")
         }
@@ -98,8 +117,27 @@ class RepositoryFactory implements ExtensionPoint {
         return provider
     }
 
-    static ProviderConfig detect(List<ProviderConfig> providers, GitUrl url ) {
-        final provider = factories().findResult( it -> it.findConfig(providers, url) )
+    static ProviderConfig newProviderConfig(String name, Map<String,Object> attrs) {
+        // check if it's needed to load new plugins
+        if( (name=='codecommit' || attrs.platform=='codecommit') && !awsLoaded ) {
+            Plugins.startIfMissing('nf-amazon')
+            awsLoaded=true
+        }
+
+        final config = factories().findResult( it -> it.createConfigInstance(name, attrs) )
+        if( !config ) {
+            throw new AbortOperationException("Unable to create a Git repository configuration matching name=${name} and attributes=${StringUtils.stripSecrets(attrs)}")
+        }
+        return config
+    }
+
+    static ProviderConfig getProviderConfig(List<ProviderConfig> providers, GitUrl url) {
+        if( url.domain.startsWith('git-codecommit.') && !awsLoaded ) {
+            Plugins.startIfMissing('nf-amazon')
+            awsLoaded=true
+        }
+        
+        final provider = factories().findResult( it -> it.getConfig(providers, url) )
         if( !provider ) {
             throw new AbortOperationException("Unable to find a Git provider config for ${url}")
         }

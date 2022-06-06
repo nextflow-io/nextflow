@@ -137,6 +137,8 @@ class ProviderConfig {
      */
     String getDomain() {
         def result = server ?: path
+        if( !result )
+            return null
         def p = result.indexOf('://')
         if( p != -1 )
             result = result.substring(p+3)
@@ -208,6 +210,11 @@ class ProviderConfig {
         attr.endpoint ? attr.endpoint.toString().stripEnd('/') : server
     }
 
+    ProviderConfig setServer(String serverUrl) {
+        attr.server = serverUrl
+        return this
+    }
+
     ProviderConfig setUser(String user) {
         attr.user = user
         return this
@@ -231,6 +238,7 @@ class ProviderConfig {
 
     String getToken() { attr.token }
 
+
     String toString() {
         "ProviderConfig[name: $name, platform: $platform, server: $server]"
     }
@@ -249,13 +257,13 @@ class ProviderConfig {
     @PackageScope
     static List<ProviderConfig> createFromMap(Map<String,?> config) {
 
-        def providers = (Map<String,?>)config?.providers
+        final providers = (Map<String,?>)config?.providers
 
         List<ProviderConfig> result = []
         if( providers ) {
-            providers.keySet().each { String name ->
+            for( String name : providers.keySet() ) {
                 def attrs = (Map)providers.get(name)
-                result << new ProviderConfig(name, attrs)
+                result << RepositoryFactory.newProviderConfig(name, attrs)
             }
         }
 
