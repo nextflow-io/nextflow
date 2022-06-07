@@ -170,7 +170,7 @@ process script with the string ``rev $x``, so that the process looks like this::
     process convertToUpper {
 
         input:
-        file x from letters
+        file x
 
         output:
         stdout result
