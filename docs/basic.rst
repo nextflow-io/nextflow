@@ -67,16 +67,16 @@ A Nextflow script looks like this::
 The above example defines two processes. Their execution order is not determined by the fact that the ``blastSearch``
 process comes before ``extractTopHits`` in the script (it could also be written the other way around).
 
-Instead, the pipeline (``|``) after``blastSearch`` and ``extractTopHits`` creates an anonymous channel how will serve
-as output for the fist and input for the second and a communication link is established automatically.
+Instead, the pipe character (``|``) in the workflow between``blastSearch`` and ``extractTopHits`` creates an anonymous channel which
+passes the outputs from one process to the inputs of the next, automatically.
 
 This linking via the channels means that ``extractTopHits`` is waiting for the output of `blastSearch`, and then
 runs `reactively` when the channel has contents.
 
-In this example, when the workflow is started it will create two process and tow channels (``query_ch`` plus the anonymous)
-and it will link all of them. Both process will be started at the same time and they will be listening in their
-respective input channels. Once ``blastSearch`` start to emit values into the anonymous channel ``extractTopHits``
-will start to receiving them (i.e. ``extractTopHits`` is consuming the channel in a `reactive` way)
+In this example, when the workflow is started it will create two process and two channels (``query_ch`` plus the anonymous pipe ``|``)
+and it will link all of them. Both processes will be started at the same time and they will listen to their
+respective input channels. Once ``blastSearch`` starts to emit values, the anonymous channel for ``extractTopHits``
+will start to receiving them (i.e. ``extractTopHits`` consumes the channel in a `reactive` way).
 
 Read the :ref:`Channel <channel-page>` and :ref:`Process <process-page>` sections to learn more about these features.
 
