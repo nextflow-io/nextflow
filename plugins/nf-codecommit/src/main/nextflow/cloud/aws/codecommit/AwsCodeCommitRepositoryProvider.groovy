@@ -119,9 +119,15 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
         if( revision )
             request.withCommitSpecifier(revision)
 
-        return client
-                .getFile( request )
-                .getFileContent().array()
+        try {
+            return client
+                    .getFile( request )
+                    .getFileContent()?.array()
+        }
+        catch (Exception e) {
+            log.debug "AWS CodeCommit unable to retrieve file: $path from repo: $repositoryName"
+            return null
+        }
     }
 
     /** {@inheritDoc} **/

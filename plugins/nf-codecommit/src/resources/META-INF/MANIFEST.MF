@@ -1,0 +1,6 @@
+Manifest-Version: 1.0
+Plugin-Class: nextflow.cloud.aws.CodeCommitPlugin
+Plugin-Id: nf-codecommit
+Plugin-Version: 0.1.0
+Plugin-Provider: Seqera Labs
+Plugin-Requires: >=22.05.0-edge

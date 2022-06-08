@@ -49,6 +49,7 @@ class PluginsFacade implements PluginStateListener {
     private CustomPluginManager manager
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
     private String indexUrl = Plugins.DEFAULT_PLUGINS_REPO
+    private boolean embedded
 
     PluginsFacade() {
         mode = getPluginsMode()
@@ -188,16 +189,20 @@ class PluginsFacade implements PluginStateListener {
 
     PluginManager getManager() { manager }
 
-    void init() {
+    void init(boolean embedded=false) {
         if( manager )
             throw new IllegalArgumentException("Plugin system was already setup")
 
-        log.debug "Setting up plugin manager > mode=${mode}; plugins-dir=$root; core-plugins: ${defaultPlugins.toSortedString()}"
+        log.debug "Setting up plugin manager > mode=${mode}; embedded=$embedded; plugins-dir=$root; core-plugins: ${defaultPlugins.toSortedString()}"
         // make sure plugins dir exists
         if( mode!=DEV_MODE && !FilesEx.mkdirs(root) )
             throw new IOException("Unable to create plugins dir: $root")
         init0(root)
         manager.loadPlugins()
+        if( embedded ) {
+            manager.startPlugins()
+            this.embedded = embedded
+        }
     }
 
     synchronized void setup(Map config = Collections.emptyMap()) {
@@ -323,7 +328,7 @@ class PluginsFacade implements PluginStateListener {
      * and cannot be updated. 
      */
     protected boolean isSelfContained() {
-        return env.get('NXF_PACK')=='all'
+        return env.get('NXF_PACK')=='all' || embedded
     }
 
     protected List<PluginSpec> pluginsRequirement(Map config) {
@@ -399,6 +404,8 @@ class PluginsFacade implements PluginStateListener {
 
     boolean startIfMissing(String pluginId) {
         if( env.NXF_PLUGINS_DEFAULT == 'false' )
+            return false
+        if( isSelfContained() && defaultPlugins.hasPlugin(pluginId) )
             return false
 
         if( isStarted(pluginId) )

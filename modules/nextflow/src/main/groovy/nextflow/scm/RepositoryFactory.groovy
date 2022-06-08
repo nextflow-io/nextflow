@@ -87,7 +87,7 @@ class RepositoryFactory implements ExtensionPoint {
     }
 
     // --==  static definitions ==--
-    private static boolean awsLoaded
+    private static boolean codeCommitLoaded
     private static List<RepositoryFactory> factories0
 
     private static List<RepositoryFactory> factories() {
@@ -102,9 +102,10 @@ class RepositoryFactory implements ExtensionPoint {
 
     static RepositoryProvider newRepositoryProvider(ProviderConfig config, String project) {
         // check if it's needed to load new plugins
-        if( (config.name=='codecommit' || config.platform=='codecommit') && !awsLoaded ) {
-            Plugins.startIfMissing('nf-amazon')
-            awsLoaded=true
+        if( (config.name=='codecommit' || config.platform=='codecommit') && !codeCommitLoaded ) {
+            Plugins.startIfMissing('nf-codecommit')
+            codeCommitLoaded=true
+            factories0=null
         }
 
         // scan all installed Git repository factories and find the first
@@ -119,9 +120,10 @@ class RepositoryFactory implements ExtensionPoint {
 
     static ProviderConfig newProviderConfig(String name, Map<String,Object> attrs) {
         // check if it's needed to load new plugins
-        if( (name=='codecommit' || attrs.platform=='codecommit') && !awsLoaded ) {
-            Plugins.startIfMissing('nf-amazon')
-            awsLoaded=true
+        if( (name=='codecommit' || attrs.platform=='codecommit') && !codeCommitLoaded ) {
+            Plugins.startIfMissing('nf-codecommit')
+            codeCommitLoaded=true
+            factories0=null
         }
 
         final config = factories().findResult( it -> it.createConfigInstance(name, attrs) )
@@ -132,9 +134,10 @@ class RepositoryFactory implements ExtensionPoint {
     }
 
     static ProviderConfig getProviderConfig(List<ProviderConfig> providers, GitUrl url) {
-        if( url.domain.startsWith('git-codecommit.') && !awsLoaded ) {
-            Plugins.startIfMissing('nf-amazon')
-            awsLoaded=true
+        if( url.domain.startsWith('git-codecommit.') && url.domain.endsWith('.amazonaws.com') && !codeCommitLoaded ) {
+            Plugins.startIfMissing('nf-codecommit')
+            codeCommitLoaded=true
+            factories0=null
         }
         
         final provider = factories().findResult( it -> it.getConfig(providers, url) )
