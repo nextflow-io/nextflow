@@ -184,6 +184,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         req.cpuPlatform == null
         req.entryPoint == GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT
         !req.usePrivateAddress
+        req.timeout == null
 
         when:
         req = handler.createPipelineRequest()
@@ -226,7 +227,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         when:
         def req = handler.createPipelineRequest()
         then:
-        task.getConfig() >> new TaskConfig(disk: '250 GB', machineType: 'n1-1234')
+        task.getConfig() >> new TaskConfig(disk: '250 GB', machineType: 'n1-1234', time: "1h")
         and:
         req.machineType == 'n1-1234'
         req.project == 'my-project'
@@ -245,6 +246,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         req.cpuPlatform =='Intel Skylake'
         req.entryPoint == GoogleLifeSciencesConfig.DEFAULT_ENTRY_POINT
         req.usePrivateAddress
+        req.timeout == "3600s"
 
         when:
         req = handler.createPipelineRequest()
@@ -273,8 +275,8 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         def handler = Spy(GoogleLifeSciencesTaskHandler)
         handler.executor = executor
         handler.task = task
-        handler.operation = operation
-        handler.helper = helper
+        handler.@operation = operation
+        handler.@helper = helper
 
         when:
         def result = handler.checkIfRunning()
@@ -318,7 +320,7 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         def handler = Spy(GoogleLifeSciencesTaskHandler)
         handler.executor = executor
         handler.task = task
-        handler.helper = helper
+        handler.@helper = helper
 
         when:
         def isComplete = handler.checkIfCompleted()
@@ -424,9 +426,9 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
         and:
         def handler = Spy(GoogleLifeSciencesTaskHandler)
         handler.task = task
-        handler.pipelineId = 'xyz-123'
+        handler.@pipelineId = 'xyz-123'
         handler.executor = executor
-        handler.assignedZone = 'eu-east-1'
+        handler.@assignedZone = 'eu-east-1'
 
         when:
         def record = handler.getTraceRecord()

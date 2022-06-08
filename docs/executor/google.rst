@@ -20,6 +20,7 @@ Resource requests and other job characteristics can be controlled via the follow
 * :ref:`process-disk`
 * :ref:`process-machineType`
 * :ref:`process-memory`
+* :ref:`process-time`
 
 .. warning::
   This API works well for coarse-grained workloads, i.e. long-running jobs, but is not ideal for pipelines that spawn many short-lived tasks.

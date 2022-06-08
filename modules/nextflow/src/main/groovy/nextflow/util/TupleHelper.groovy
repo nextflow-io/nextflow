@@ -47,4 +47,59 @@ class TupleHelper {
         result.add(z)
         return result
     }
+
+    static List listOf(x1, x2, x3, x4) {
+        def result = new ArrayList(4)
+        result.add(x1)
+        result.add(x2)
+        result.add(x3)
+        result.add(x4)
+        return result
+    }
+
+    static List listOf(x1, x2, x3, x4, x5) {
+        def result = new ArrayList(5)
+        result.add(x1)
+        result.add(x2)
+        result.add(x3)
+        result.add(x4)
+        result.add(x5)
+        return result
+    }
+
+    static List listOf(x1, x2, x3, x4, x5, x6) {
+        def result = new ArrayList(6)
+        result.add(x1)
+        result.add(x2)
+        result.add(x3)
+        result.add(x4)
+        result.add(x5)
+        result.add(x6)
+        return result
+    }
+
+    static List listOf(x1, x2, x3, x4, x5, x6, x7) {
+        def result = new ArrayList(7)
+        result.add(x1)
+        result.add(x2)
+        result.add(x3)
+        result.add(x4)
+        result.add(x5)
+        result.add(x6)
+        result.add(x7)
+        return result
+    }
+
+    static List listOf(x1, x2, x3, x4, x5, x6, x7, x8) {
+        def result = new ArrayList(8)
+        result.add(x1)
+        result.add(x2)
+        result.add(x3)
+        result.add(x4)
+        result.add(x5)
+        result.add(x6)
+        result.add(x7)
+        result.add(x8)
+        return result
+    }
 }

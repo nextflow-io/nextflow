@@ -22,22 +22,22 @@ dependencies {
     api "org.codehaus.groovy:groovy-xml:3.0.10"
     api "org.codehaus.groovy:groovy-json:3.0.10"
     api "org.codehaus.groovy:groovy-templates:3.0.10"
-    api "org.slf4j:jcl-over-slf4j:1.7.32"
-    api "org.slf4j:jul-to-slf4j:1.7.32"
-    api "org.slf4j:log4j-over-slf4j:1.7.32"
-    api "ch.qos.logback:logback-classic:1.2.9"
-    api "ch.qos.logback:logback-core:1.2.9"
+    api "org.slf4j:jcl-over-slf4j:1.7.36"
+    api "org.slf4j:jul-to-slf4j:1.7.36"
+    api "org.slf4j:log4j-over-slf4j:1.7.36"
+    api "ch.qos.logback:logback-classic:1.2.11"
+    api "ch.qos.logback:logback-core:1.2.11"
     api "org.codehaus.gpars:gpars:1.2.1"
-    api("ch.grengine:grengine:1.3.0") { exclude group: 'org.codehaus.groovy'  }
+    api("ch.grengine:grengine:1.3.0") { exclude group: 'org.codehaus.groovy' }
     api "commons-lang:commons-lang:2.6"
     api "commons-codec:commons-codec:1.10"
     api "com.beust:jcommander:1.35"
     api("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
     api('org.iq80.leveldb:leveldb:0.12')
-    api('org.eclipse.jgit:org.eclipse.jgit:5.2.1.201812262042-r')
+    api('org.eclipse.jgit:org.eclipse.jgit:6.1.0.202203080745-r')
     api ('javax.activation:activation:1.1.1')
     api ('javax.mail:mail:1.4.7')
-    api ('org.yaml:snakeyaml:1.28')
+    api ('org.yaml:snakeyaml:1.29')
     api ('org.jsoup:jsoup:1.14.3')
     api 'jline:jline:2.9'
     api 'org.pf4j:pf4j:3.4.1'
@@ -48,10 +48,10 @@ dependencies {
     // test configuration
     testFixturesApi ("org.codehaus.groovy:groovy-test:3.0.10") { exclude group: 'org.codehaus.groovy' }
     testFixturesApi ("cglib:cglib-nodep:3.3.0")
-    testFixturesApi ("org.objenesis:objenesis:3.1")
-    testFixturesApi ("org.spockframework:spock-core:2.0-M3-groovy-3.0") { exclude group: 'org.codehaus.groovy'; exclude group: 'net.bytebuddy' }
-    testFixturesApi ('org.spockframework:spock-junit4:2.0-M3-groovy-3.0') { exclude group: 'org.codehaus.groovy'; exclude group: 'net.bytebuddy' }
-    testFixturesApi 'com.google.jimfs:jimfs:1.1'
+    testFixturesApi ("org.objenesis:objenesis:3.2")
+    testFixturesApi ("org.spockframework:spock-core:2.1-groovy-3.0") { exclude group: 'org.codehaus.groovy'; exclude group: 'net.bytebuddy' }
+    testFixturesApi ('org.spockframework:spock-junit4:2.1-groovy-3.0') { exclude group: 'org.codehaus.groovy'; exclude group: 'net.bytebuddy' }
+    testFixturesApi 'com.google.jimfs:jimfs:1.2'
 
 }
 

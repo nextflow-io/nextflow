@@ -1945,7 +1945,7 @@ class TaskProcessor {
             task.setInput(param, resolved)
         }
 
-        // -- set the delegate map as context ih the task config
+        // -- set the delegate map as context in the task config
         //    so that lazy directives will be resolved against it
         task.config.context = ctx
 

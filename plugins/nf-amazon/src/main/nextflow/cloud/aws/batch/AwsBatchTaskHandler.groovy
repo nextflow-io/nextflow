@@ -600,8 +600,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     protected List<String> getSubmitCommand() {
         // the cmd list to launch it
         def opts = getAwsOptions()
-        def aws = opts.getAwsCli()
-        def cmd = "trap \"{ ret=\$?; $aws s3 cp --only-show-errors ${TaskRun.CMD_LOG} s3:/${getLogFile()}||true; exit \$ret; }\" EXIT; $aws s3 cp --only-show-errors s3:/${getWrapperFile()} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
+        def cli = opts.getAwsCli()
+        def debug = opts.debug ? ' --debug' : ''
+        def sse = opts.storageEncryption ? " --sse $opts.storageEncryption" : ''
+        def kms = opts.storageKmsKeyId ? " --sse-kms-key-id $opts.storageKmsKeyId" : ''
+        def aws = "$cli s3 cp --only-show-errors${sse}${kms}${debug}"
+        def cmd = "trap \"{ ret=\$?; $aws ${TaskRun.CMD_LOG} s3:/${getLogFile()}||true; exit \$ret; }\" EXIT; $aws s3:/${getWrapperFile()} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
         // final launcher command
         return ['bash','-o','pipefail','-c', cmd.toString() ]
     }
@@ -632,9 +636,14 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
          */
         final attempts = maxSpotAttempts()
         if( attempts>0 ) {
+            // retry the job when an Ec2 instance is terminate
+            final cond1 = new EvaluateOnExit().withAction('RETRY').withOnStatusReason('Host EC2*')
+            // the exit condition prevent to retry for other reason and delegate
+            // instead to nextflow error strategy the handling of the error
+            final cond2 = new EvaluateOnExit().withAction('EXIT').withOnReason('*')
             final retry = new RetryStrategy()
                     .withAttempts( attempts )
-                    .withEvaluateOnExit( new EvaluateOnExit().withOnReason('Host EC2*').withAction('RETRY') )
+                    .withEvaluateOnExit(cond1, cond2)
             result.setRetryStrategy(retry)
         }
 

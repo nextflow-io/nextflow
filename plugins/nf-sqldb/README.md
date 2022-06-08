@@ -2,15 +2,16 @@
 
 This plugin provides an extension to implement built-in support for SQL DB access and manipulation in Nextflow scripts. 
 
-It provides the ability to create a Nextflow channel from SQL queries and to populate database tables. The current version 
-provides out-of-the-box support for the following databases: 
+It provides the ability to create a Nextflow channel from SQL queries and to populate database tables. 
+The current version provides out-of-the-box support for the following databases: 
 
 * [H2](https://www.h2database.com)
 * [MySQL](https://www.mysql.com/) 
 * [MariaDB](https://mariadb.org/)
 * [PostgreSQL](https://www.postgresql.org/)
-* [Sqlite](https://www.sqlite.org/index.html)
+* [SQLite](https://www.sqlite.org/index.html)
 * [DuckDB](https://duckdb.org/)
+* [AWS Athena](https://aws.amazon.com/athena/)
                     
 NOTE: THIS IS A PREVIEW TECHNOLOGY, FEATURES AND CONFIGURATION SETTINGS CAN CHANGE IN FUTURE RELEASES.
 
@@ -18,16 +19,17 @@ This repository only holds plugin artefacts. Source code is available at this [l
 
 ## Get started 
   
-Make sure to have Nextflow 21.08.0 or later. Add the following snippet to your `nextflow.config` file. 
+Make sure to have Nextflow `22.05.0-edge` or later. Add the following snippet to your `nextflow.config` file. 
 
 ```
 plugins {
-  id 'nf-sqldb@0.2.0'
+  id 'nf-sqldb@0.4.1'
 }
 ```
-                                                              
-The above declaration allows the use of the SQL plugin functionalities in your Nextflow pipelines. See the section 
-below to configure the connection properties with a database instance. 
+
+The above declaration allows the use of the SQL plugin functionalities in your Nextflow pipelines. 
+See the section below to configure the connection properties with a database instance. 
+
 
 ## Configuration
 
@@ -69,7 +71,9 @@ The `fromQuery` factory method allows for performing a query against a SQL datab
 a tuple for each row in the corresponding result set. For example:
 
 ```
-ch = channel.sql.fromQuery('select alpha, delta, omega from SAMPLE', db: 'foo')
+include { fromQuery } from 'plugin/nf-sqldb'
+
+ch = channel.fromQuery('select alpha, delta, omega from SAMPLE', db: 'foo')
 ```
 
 The following options are available:
@@ -86,6 +90,8 @@ The `sqlInsert` operator provided by this plugin allows populating a database ta
 by a Nextflow channels and therefore produced as result by a pipeline process or an upstream operator. For example:
 
 ```
+include { sqlInsert } from 'plugin/nf-sqldb'
+
 channel
     .of('Hello','world!')
     .map( it -> tuple(it, it.length) )
@@ -111,8 +117,8 @@ The following options are available:
 | `into`            | The database table name into with the data needs to be stored.
 | `columns`         | The database table column names to be filled with the channel data. The column names order and cardinality must match the tuple values emitted by the channel. The columns can be specified as a `List` object or a comma-separated value string.
 | `statement`       | The SQL `insert` statement to be performed to insert values in the database using `?` as placeholder for the actual values, for example: `insert into SAMPLE(X,Y) values (?,?)`. When provided the `into` and `columsn` parameters are ignored.
-| `batchSize`       | The number of insert statements that are grouped together before performing the SQL operations (default: `10`). 
-| `setup`           | A SQL statement that's executed before the first insert operation. This is useful to create the target DB table. NOTE: the underlying DB should support the *create table if not exist* idiom (i.e. the plugin will execute this time every time the script is run).
+| `batchSize`       | The number of insert statements that are grouped together before performing the SQL operations (default: `10`).
+| `setup`           | A SQL statement that's executed before the first insert operation. This is useful to create the target DB table. NOTE: the underlying DB should support the *create table if not exist* idiom (i.e. the plugin will execute this statement every time the script is run).
 
 ## Query CSV files
 
