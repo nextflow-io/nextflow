@@ -285,6 +285,7 @@ class CmdRun extends CmdBase implements HubOptions {
         checkRunName()
 
         log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
+        Plugins.init()
 
         // -- specify the arguments
         final scriptFile = getScriptFile(pipeline)
@@ -301,7 +302,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         // -- load plugins
         final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
-        Plugins.setup( cfg )
+        Plugins.load(cfg)
 
         // -- load secret provider
         if( SecretsLoader.isEnabled() ) {

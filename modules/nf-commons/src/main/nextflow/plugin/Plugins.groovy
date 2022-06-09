@@ -35,8 +35,19 @@ class Plugins {
 
     static PluginManager getManager() { INSTANCE.manager }
 
+    static synchronized void init(boolean embeddedMode=false) {
+        INSTANCE.init(embeddedMode)
+    }
+
     static synchronized void setup(Map config = Collections.emptyMap()) {
         INSTANCE.setup(config)
+    }
+
+    /**
+     * @param config
+     */
+    static void load(Map config) {
+        INSTANCE.load(config)
     }
 
     static void start(String pluginId) {

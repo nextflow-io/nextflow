@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,25 +13,22 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-rootProject.name = 'nextflow-prj'
+package nextflow.cloud.aws.codecommit
 
-include 'nextflow'
-include 'nf-commons'
-include 'nf-httpfs'
+import nextflow.plugin.BasePlugin
+import org.pf4j.PluginWrapper
 
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/modules/$prj.name")
+/**
+ * AWS CodeCommit plugin entry point
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+class AwsCodeCommitPlugin extends BasePlugin {
+
+    AwsCodeCommitPlugin(PluginWrapper wrapper) {
+        super(wrapper)
+    }
 }
-
-include 'plugins'
-include 'plugins:nf-amazon'
-include 'plugins:nf-google'
-include 'plugins:nf-ga4gh'
-include 'plugins:nf-tower'
-include 'plugins:nf-console'
-include 'plugins:nf-azure'
-include 'plugins:nf-sqldb'
-include 'plugins:nf-codecommit'
-
