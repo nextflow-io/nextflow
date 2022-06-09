@@ -186,9 +186,9 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         }
         if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [307, 308] && attempt < MAX_REDIRECT_HOPS) {
             def header = conn.getHeaderFields()
-            String location = readLocationHeader(header)
+            String location = header.get("Location")?.get(0)
             URL newPath = new URI(location).toURL()
-            log.trace "Remote redirect URL: $newPath"
+            log.debug "Remote redirect URL: $newPath"
             return toConnection0(newPath, attempt+1)
         }
         return conn
@@ -441,11 +441,6 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             return readHttpAttributes(header)
         }
         return null
-    }
-
-    protected String readLocationHeader(Map<String,List<String>> header){
-        def location = header.get("Location")?.get(0)
-        location
     }
 
     protected XFileAttributes readHttpAttributes(Map<String,List<String>> header) {
