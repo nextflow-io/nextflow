@@ -60,6 +60,8 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     static public Set<String> ALL_SCHEMES = ['ftp','http','https'] as Set
 
+    static private int MAX_REDIRECT_HOPS = 5
+
     static private URI key(String s, String a) {
         new URI("$s://$a")
     }
@@ -170,6 +172,10 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     protected URLConnection toConnection(Path path) {
         final url = path.toUri().toURL()
         log.trace "File remote URL: $url"
+        toConnection0(url, 0)
+    }
+
+    protected URLConnection toConnection0(URL url, int attempt) {
         final conn = url.openConnection()
         conn.setRequestProperty("User-Agent", 'Nextflow/httpfs')
         if( url.userInfo ) {
@@ -177,6 +183,13 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         }
         else {
             XAuthRegistry.instance.authorize(conn)
+        }
+        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [307, 308] && attempt < MAX_REDIRECT_HOPS) {
+            def header = conn.getHeaderFields()
+            String location = header.get("Location")?.get(0)
+            URL newPath = new URI(location).toURL()
+            log.debug "Remote redirect URL: $newPath"
+            return toConnection0(newPath, attempt+1)
         }
         return conn
     }
@@ -423,7 +436,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         if( conn instanceof FtpURLConnection ) {
             return new XFileAttributes(null,-1)
         }
-        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [200, 301, 302]) {
+        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [200, 301, 302, 307, 308]) {
             def header = conn.getHeaderFields()
             return readHttpAttributes(header)
         }
