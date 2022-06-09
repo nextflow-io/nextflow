@@ -17,10 +17,18 @@
 
 package nextflow.file.http
 
+import com.github.tomakehurst.wiremock.junit.WireMockRule
+import com.github.tomjankes.wiremock.WireMockGroovy
+import org.junit.Rule
+
+import java.nio.file.Files
 import java.nio.file.Path
 
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import java.nio.file.Paths
+
 /**
  * Created by emilio on 08/11/16.
  */
@@ -150,4 +158,79 @@ class XFileSystemProviderTest extends Specification {
         "x-oauth-bearer:12345"  | "Bearer 12345"
     }
 
+    @Rule
+    WireMockRule wireMockRule = new WireMockRule(18080)
+
+    def 'should follow a redirect when read a http file ' () {
+        given:
+        def wireMock = new WireMockGroovy(18080)
+        wireMock.stub {
+            request {
+                method "GET"
+                url "/index.html"
+            }
+            response {
+                status HTTP_CODE
+                headers {
+                    "Location" "http://localhost:18080${REDIRECT_TO}"
+                }
+            }
+        }
+        wireMock.stub {
+            request {
+                method "GET"
+                url "/index2.html"
+            }
+            response {
+                status HTTP_CODE
+                headers {
+                    "Location" "http://localhost:18080/redirected.html"
+                }
+            }
+        }
+        wireMock.stub {
+            request {
+                method "GET"
+                url "/redirected.html"
+            }
+            response {
+                status 200
+                body """a
+                 b
+                 c
+                 d
+                 """
+                headers {
+                    "Content-Type" "text/html"
+                    "Content-Length" "10"
+                    "Last-Modified" "Fri, 04 Nov 2016 21:50:34 GMT"
+                }
+            }
+        }
+        and:
+        def provider = new HttpFileSystemProvider()
+        when:
+        def path = provider.getPath( new URI('http://localhost:18080/index.html') )
+        then:
+        path
+        Files.size(path) == 10
+        Files.getLastModifiedTime(path).toString() == EXPECTED
+
+        where:
+        HTTP_CODE               | REDIRECT_TO           | EXPECTED
+        300                     | "/redirected.html"    | "2016-11-04T21:50:34Z"
+        300                     | "/index2.html"    | "2016-11-04T21:50:34Z"
+
+        301                     | "/redirected.html"    | "2016-11-04T21:50:34Z"
+        301                     | "/index2.html"    | "2016-11-04T21:50:34Z"
+
+        302                     | "/redirected.html"    | "2016-11-04T21:50:34Z"
+        302                     | "/index2.html"    | "2016-11-04T21:50:34Z"
+
+        307                     | "/redirected.html"    | "2016-11-04T21:50:34Z"
+        307                     | "/index2.html"    | "2016-11-04T21:50:34Z"
+
+        308                     | "/redirected.html"    | "2016-11-04T21:50:34Z"
+        308                     | "/index2.html"    | "2016-11-04T21:50:34Z"
+    }
 }

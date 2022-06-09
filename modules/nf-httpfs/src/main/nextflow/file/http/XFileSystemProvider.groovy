@@ -178,6 +178,12 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         else {
             XAuthRegistry.instance.authorize(conn)
         }
+        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [307, 308]) {
+            def header = conn.getHeaderFields()
+            String location = readLocationHeader(header)
+            Path newPath = Path.of(new URI(location))
+            return toConnection(newPath)
+        }
         return conn
     }
 
@@ -423,11 +429,16 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         if( conn instanceof FtpURLConnection ) {
             return new XFileAttributes(null,-1)
         }
-        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [200, 301, 302]) {
+        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [200, 301, 302, 307, 308]) {
             def header = conn.getHeaderFields()
             return readHttpAttributes(header)
         }
         return null
+    }
+
+    protected String readLocationHeader(Map<String,List<String>> header){
+        def location = header.get("Location")?.get(0)
+        location
     }
 
     protected XFileAttributes readHttpAttributes(Map<String,List<String>> header) {
