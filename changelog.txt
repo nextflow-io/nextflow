@@ -1,5 +1,22 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.06.0 - 9 Jun 2022
+- Add AWS CodeCommit initial support [80fba6e9]
+- Add support for 307 and 308 HTTP redirection [92382012]
+- Add DirWatcher v2 [209c82cd]
+- Add Moriondo in the list of random names [e0abca58]
+- Add preview CLI option (#2914) [aa8f1aa4]
+- Fix Git config resultion error [64436697]
+- Fix StackOverflowError when dump all profiles (#2922) [28cd11a2] <Jorge Aguilera>
+- Fix gradle warning message in nf-sqldb (#2921) [b09ceabe] <Jorge Aguilera>
+- Fix log for LsfExecutror perTaskReserve attribute [7c3ec874] <Prete>
+- Fix external pod deletion for jobs (#2915) [4dd1af7a] <xhejtman>
+- Prevent function overloading in module definition [c0b522ab]
+- Improve error message of non sensical include (#2623) [285fe49c] <Jorge Aguilera>
+- Mount PWD path only when scratch is used [9b3c6e31] 
+- Stripe sensitive data into strings (#2908) [7fa4c86c] <Jorge Aguilera>
+- Dump scm content when trace is enabled [c3117ada]
+
 22.05.0-edge 25 May 2022
 - Add Hyperqueue executor (#2896) [ffa5712e] <Henrik Nortamo>
 - Add support for K8s Job resource [c70eb12d] <xhejtman>
