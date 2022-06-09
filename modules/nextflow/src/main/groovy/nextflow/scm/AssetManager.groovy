@@ -1103,7 +1103,7 @@ class AssetManager {
             throw new AbortOperationException(message)
         }
 
-        final result = providerConfigs.find { it -> it.domain == domain }
+        final result = domain ? providerConfigs.find { it -> it.domain == domain } : (ProviderConfig)null
         if( !result && failFast ) {
             def message = "Can't find any configured provider for git server `$domain` -- Make sure to have specified it in your `scm` file. For details check https://www.nextflow.io/docs/latest/sharing.html#scm-configuration-file"
             throw new AbortOperationException(message)
