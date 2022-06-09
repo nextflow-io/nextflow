@@ -93,7 +93,9 @@ class PodSpecBuilder {
     List<Map> tolerations = []
 
     boolean privileged
-    
+
+    int activeDeadlineSeconds
+
     /**
      * @return A sequential volume unique identifier
      */
@@ -243,6 +245,11 @@ class PodSpecBuilder {
 
     PodSpecBuilder withPrivileged(boolean value) {
         this.privileged = value
+        return this
+    }
+
+    PodSpecBuilder withActiveDeadline(int seconds) {
+        this.activeDeadlineSeconds = seconds
         return this
     }
 
@@ -469,7 +476,9 @@ class PodSpecBuilder {
         spec.backoffLimit = 0
         spec.template = [spec: pod.spec]
 
-        // job spec
+        if ( activeDeadlineSeconds > 0 )
+            spec.activeDeadlineSeconds = activeDeadlineSeconds
+
         final result = [
                 apiVersion: 'batch/v1',
                 kind: 'Job',

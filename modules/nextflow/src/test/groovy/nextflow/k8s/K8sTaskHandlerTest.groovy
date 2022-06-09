@@ -530,7 +530,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getPodOptions() >> podOptions
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
-        1 * task.getConfig() >> config
+        2 * task.getConfig() >> config
 
         result == [
             apiVersion: 'batch/v1', 
