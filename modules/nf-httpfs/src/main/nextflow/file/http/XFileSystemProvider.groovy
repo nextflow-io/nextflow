@@ -60,6 +60,8 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     static public Set<String> ALL_SCHEMES = ['ftp','http','https'] as Set
 
+    static private int MAX_REDIRECT_HOPS = 5
+
     static private URI key(String s, String a) {
         new URI("$s://$a")
     }
@@ -167,7 +169,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         }
     }
 
-    protected URLConnection toConnection(Path path) {
+    protected URLConnection toConnection(Path path, int attempt=0) {
         final url = path.toUri().toURL()
         log.trace "File remote URL: $url"
         final conn = url.openConnection()
@@ -178,11 +180,11 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         else {
             XAuthRegistry.instance.authorize(conn)
         }
-        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [307, 308]) {
+        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [307, 308] && attempt < MAX_REDIRECT_HOPS) {
             def header = conn.getHeaderFields()
             String location = readLocationHeader(header)
             Path newPath = Path.of(new URI(location))
-            return toConnection(newPath)
+            return toConnection(newPath, attempt+1)
         }
         return conn
     }

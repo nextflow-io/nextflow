@@ -67,7 +67,7 @@ class XFileSystemProviderTest extends Specification {
     def "should read file attributes from map"() {
         given:
         def fs = new HttpFileSystemProvider()
-        def attrMap = ['Last-Modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'Content-Length': ['21729'] ]
+        def attrMap = ['Last-Modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'Content-Length': ['21729']]
 
         when:
         def attrs = fs.readHttpAttributes(attrMap)
@@ -89,7 +89,7 @@ class XFileSystemProviderTest extends Specification {
         def GERMAN = new Locale.Builder().setLanguage("de").setRegion("DE").build()
         Locale.setDefault(Locale.Category.FORMAT, GERMAN)
         def fs = new HttpFileSystemProvider()
-        def attrMap = ['Last-Modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'Content-Length': ['21729'] ]
+        def attrMap = ['Last-Modified': ['Fri, 04 Nov 2016 21:50:34 GMT'], 'Content-Length': ['21729']]
 
         when:
         def attrs = fs.readHttpAttributes(attrMap)
@@ -105,7 +105,7 @@ class XFileSystemProviderTest extends Specification {
     def "should read file attributes from HttpPath"() {
         given:
         def fsp = new HttpFileSystemProvider()
-        def path = (XPath)fsp.getPath(new URI('http://www.nextflow.io/index.html'))
+        def path = (XPath) fsp.getPath(new URI('http://www.nextflow.io/index.html'))
 
         when:
         def attrs = fsp.readHttpAttributes(path)
@@ -117,7 +117,7 @@ class XFileSystemProviderTest extends Specification {
     def "should read file attributes from FtpPath"() {
         given:
         def fsp = new FtpFileSystemProvider()
-        def path = (XPath)fsp.getPath(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
+        def path = (XPath) fsp.getPath(new URI('ftp://ftp.ebi.ac.uk/robots.txt'))
 
         when:
         def attrs = fsp.readHttpAttributes(path)
@@ -127,41 +127,41 @@ class XFileSystemProviderTest extends Specification {
     }
 
     @Unroll
-    def 'should get uri path' () {
+    def 'should get uri path'() {
         given:
         def provider = new HttpFileSystemProvider()
 
         when:
-        def path = provider.getPath( new URI(PATH) )
+        def path = provider.getPath(new URI(PATH))
         then:
         path.toUri().toString() == EXPECTED
 
         where:
-        PATH                                | EXPECTED
-        'http://foo.com/this/that'          | 'http://foo.com/this/that'
-        'http://FOO.com/this/that'          | 'http://foo.com/this/that'
-        'http://MrXYZ@foo.com/this/that'    | 'http://MrXYZ@foo.com/this/that'
-        'http://MrXYZ@FOO.com/this/that'    | 'http://MrXYZ@foo.com/this/that'
-        'http://@FOO.com/this/that'         | 'http://@foo.com/this/that'
-        'http://foo.com/this/that?foo=1'    | 'http://foo.com/this/that?foo=1'
+        PATH                             | EXPECTED
+        'http://foo.com/this/that'       | 'http://foo.com/this/that'
+        'http://FOO.com/this/that'       | 'http://foo.com/this/that'
+        'http://MrXYZ@foo.com/this/that' | 'http://MrXYZ@foo.com/this/that'
+        'http://MrXYZ@FOO.com/this/that' | 'http://MrXYZ@foo.com/this/that'
+        'http://@FOO.com/this/that'      | 'http://@foo.com/this/that'
+        'http://foo.com/this/that?foo=1' | 'http://foo.com/this/that?foo=1'
     }
 
     @Unroll
-    def 'should encode user info' () {
+    def 'should encode user info'() {
         given:
         def provider = new HttpFileSystemProvider()
         expect:
         provider.auth(USER_INFO) == EXPECTED
         where:
-        USER_INFO               | EXPECTED
-        "foo:bar"               | "Basic ${'foo:bar'.bytes.encodeBase64()}"
-        "x-oauth-bearer:12345"  | "Bearer 12345"
+        USER_INFO              | EXPECTED
+        "foo:bar"              | "Basic ${'foo:bar'.bytes.encodeBase64()}"
+        "x-oauth-bearer:12345" | "Bearer 12345"
     }
 
     @Rule
     WireMockRule wireMockRule = new WireMockRule(18080)
 
-    def 'should follow a redirect when read a http file ' () {
+    def 'should follow a redirect when read a http file '() {
         given:
         def wireMock = new WireMockGroovy(18080)
         wireMock.stub {
@@ -210,27 +210,28 @@ class XFileSystemProviderTest extends Specification {
         and:
         def provider = new HttpFileSystemProvider()
         when:
-        def path = provider.getPath( new URI('http://localhost:18080/index.html') )
+        def path = provider.getPath(new URI('http://localhost:18080/index.html'))
         then:
         path
-        Files.size(path) == 10
-        Files.getLastModifiedTime(path).toString() == EXPECTED
+        Files.size(path) == EXPECTED
 
         where:
-        HTTP_CODE               | REDIRECT_TO           | EXPECTED
-        300                     | "/redirected.html"    | "2016-11-04T21:50:34Z"
-        300                     | "/index2.html"    | "2016-11-04T21:50:34Z"
+        HTTP_CODE | REDIRECT_TO        | EXPECTED
+        300       | "/redirected.html" | 10
+        300       | "/index2.html"     | 10
 
-        301                     | "/redirected.html"    | "2016-11-04T21:50:34Z"
-        301                     | "/index2.html"    | "2016-11-04T21:50:34Z"
+        301       | "/redirected.html" | 10
+        301       | "/index2.html"     | 10
 
-        302                     | "/redirected.html"    | "2016-11-04T21:50:34Z"
-        302                     | "/index2.html"    | "2016-11-04T21:50:34Z"
+        302       | "/redirected.html" | 10
+        302       | "/index2.html"     | 10
 
-        307                     | "/redirected.html"    | "2016-11-04T21:50:34Z"
-        307                     | "/index2.html"    | "2016-11-04T21:50:34Z"
+        307       | "/redirected.html" | 10
+        307       | "/index2.html"     | 10
 
-        308                     | "/redirected.html"    | "2016-11-04T21:50:34Z"
-        308                     | "/index2.html"    | "2016-11-04T21:50:34Z"
+        308       | "/redirected.html" | 10
+        308       | "/index2.html"     | 10
+        //infinite redirect to himself
+        308       | "/index.html"      | -1
     }
 }
