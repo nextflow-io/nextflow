@@ -12,7 +12,7 @@ community by helping in other ways. This is also a guide to becoming an effectiv
 ## Contributing by Helping Other Users
 
 A great way to contribute to Nextflow is to help answer user questions on the [discussion forum](https://github.com/nextflow-io/nextflow/discussions), 
-or the [Slack channel](https://nextflow.slack.com). 
+or the [Slack channel](https://www.nextflow.io/slack-invite.html).
 There are always many new Nextflow users; taking a few minutes to help answer a question is a very valuable community service.
 
 Contributors should ideally subscribe to these channels and follow them in order to keep up to date
