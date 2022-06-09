@@ -531,25 +531,6 @@ class AssetManagerTest extends Specification {
 
     }
 
-    def 'should resolve project name' () {
-        given:
-        def manager = new AssetManager()
-
-        expect:
-        manager.resolveProjectName0(PATH,SERVER) == EXPECTED
-
-        where:
-        PATH          | SERVER                  | EXPECTED
-        'a/b/c'       | null                    | 'a/b/c'
-        'a/b/c'       | 'http://dot.com'        | 'a/b/c'
-        'a/b/c'       | 'http://dot.com/'       | 'a/b/c'
-        'a/b/c'       | 'http://dot.com/a'      | 'b/c'
-        'a/b/c'       | 'http://dot.com/a/'     | 'b/c'
-        and:
-        'paolo0758/nf-azure-repo'                    | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
-        'paolo0758/nf-azure-repo/_git/nf-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
-    }
-
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should download branch specified'() {
 
@@ -584,4 +565,5 @@ class AssetManagerTest extends Specification {
         manager.getMainScriptName() == 'workflow.nf'
 
     }
+
 }

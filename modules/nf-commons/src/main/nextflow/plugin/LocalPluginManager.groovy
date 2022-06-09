@@ -44,14 +44,12 @@ class LocalPluginManager extends CustomPluginManager {
 
     static private Path PLUGINS_LOCAL_ROOT = Paths.get('.nextflow/plr')
     private Path repository
-    List<PluginSpec> specs
 
-    LocalPluginManager(Path repository, List<PluginSpec> specs) {
+    LocalPluginManager(Path repository) {
         super(makeLocalRoot())
         if( !localRoot ) throw new IllegalArgumentException("Missing Local plugins root directory")
         if( !repository ) throw new IllegalArgumentException("Missing plugins repository directory")
         this.repository = repository
-        this.specs = specs
     }
 
     static protected Path makeLocalRoot() {

@@ -49,6 +49,7 @@ class PluginsFacade implements PluginStateListener {
     private CustomPluginManager manager
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
     private String indexUrl = Plugins.DEFAULT_PLUGINS_REPO
+    private boolean embedded
 
     PluginsFacade() {
         mode = getPluginsMode()
@@ -160,13 +161,13 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
-    protected void init(Path root, List<PluginSpec> specs) {
-        this.manager = createManager(root, specs)
+    protected void init0(Path root) {
+        this.manager = createManager(root)
         this.updater = createUpdater(root, manager)
     }
 
-    protected CustomPluginManager createManager(Path root, List<PluginSpec> specs) {
-        final result = mode!=DEV_MODE ? new LocalPluginManager(root, specs) : new DevPluginManager(root)
+    protected CustomPluginManager createManager(Path root) {
+        final result = mode!=DEV_MODE ? new LocalPluginManager(root) : new DevPluginManager(root)
         result.addPluginStateListener(this)
         return result
     }
@@ -188,19 +189,31 @@ class PluginsFacade implements PluginStateListener {
 
     PluginManager getManager() { manager }
 
-    synchronized void setup(Map config = Collections.emptyMap()) {
+    void init(boolean embedded=false) {
         if( manager )
             throw new IllegalArgumentException("Plugin system was already setup")
-        else {
-            log.debug "Setting up plugin manager > mode=${mode}; plugins-dir=$root; core-plugins: ${defaultPlugins.toSortedString()}"
-            // make sure plugins dir exists
-            if( mode!=DEV_MODE && !FilesEx.mkdirs(root) )
-                throw new IOException("Unable to create plugins dir: $root")
-            final specs = pluginsRequirement(config)
-            init(root, specs)
-            manager.loadPlugins()
-            start(specs)
+
+        log.debug "Setting up plugin manager > mode=${mode}; embedded=$embedded; plugins-dir=$root; core-plugins: ${defaultPlugins.toSortedString()}"
+        // make sure plugins dir exists
+        if( mode!=DEV_MODE && !FilesEx.mkdirs(root) )
+            throw new IOException("Unable to create plugins dir: $root")
+        init0(root)
+        manager.loadPlugins()
+        if( embedded ) {
+            manager.startPlugins()
+            this.embedded = embedded
         }
+    }
+
+    synchronized void setup(Map config = Collections.emptyMap()) {
+        init()
+        load(config)
+    }
+
+    void load(Map config) {
+        if( !manager )
+            throw new IllegalArgumentException("Plugin system has not been initialised yet")
+        start(pluginsRequirement(config))
     }
 
     synchronized void stop() {
@@ -315,7 +328,7 @@ class PluginsFacade implements PluginStateListener {
      * and cannot be updated. 
      */
     protected boolean isSelfContained() {
-        return env.get('NXF_PACK')=='all'
+        return env.get('NXF_PACK')=='all' || embedded
     }
 
     protected List<PluginSpec> pluginsRequirement(Map config) {
@@ -391,6 +404,8 @@ class PluginsFacade implements PluginStateListener {
 
     boolean startIfMissing(String pluginId) {
         if( env.NXF_PLUGINS_DEFAULT == 'false' )
+            return false
+        if( isSelfContained() && defaultPlugins.hasPlugin(pluginId) )
             return false
 
         if( isStarted(pluginId) )
