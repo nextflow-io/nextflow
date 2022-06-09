@@ -169,9 +169,13 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         }
     }
 
-    protected URLConnection toConnection(Path path, int attempt=0) {
+    protected URLConnection toConnection(Path path) {
         final url = path.toUri().toURL()
         log.trace "File remote URL: $url"
+        toConnection0(url, 0)
+    }
+
+    protected URLConnection toConnection0(URL url, int attempt) {
         final conn = url.openConnection()
         conn.setRequestProperty("User-Agent", 'Nextflow/httpfs')
         if( url.userInfo ) {
@@ -183,8 +187,9 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [307, 308] && attempt < MAX_REDIRECT_HOPS) {
             def header = conn.getHeaderFields()
             String location = readLocationHeader(header)
-            Path newPath = Path.of(new URI(location))
-            return toConnection(newPath, attempt+1)
+            URL newPath = new URI(location).toURL()
+            log.trace "Remote redirect URL: $newPath"
+            return toConnection0(newPath, attempt+1)
         }
         return conn
     }
