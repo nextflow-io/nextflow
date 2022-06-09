@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,38 +13,34 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.cli
-import java.nio.file.Files
+package nextflow.cloud.aws.codecommit
 
-import nextflow.plugin.Plugins
-import spock.lang.Requires
 import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CmdCloneTest extends Specification {
+class AwsCodeCommitProviderConfigTest extends Specification {
 
-    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-    def testClone() {
-
+    def 'should create config' () {
         given:
-        def accessToken = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
-        def dir = Files.createTempDirectory('test')
-        def cmd = new CmdClone(hubUser: accessToken)
-        cmd.args = ['nextflow-io/hello', dir.toFile().toString()]
-
+        def HOST = 'git-codecommit.eu-west-1.amazonaws.com'
         when:
-        cmd.run()
-
+        def config = new AwsCodeCommitProviderConfig(HOST)
         then:
-        dir.resolve('README.md').exists()
+        config.name == 'codecommit'
+        config.platform == 'codecommit'
+        config.region == 'eu-west-1'
+        config.domain == 'git-codecommit.eu-west-1.amazonaws.com'
+        config.server == 'https://git-codecommit.eu-west-1.amazonaws.com'
+        config.endpoint == 'https://git-codecommit.eu-west-1.amazonaws.com'
 
-        cleanup:
-        dir?.deleteDir()
-        Plugins.stop()
+        expect:
+        config.resolveProjectName('https://git-codecommit.eu-west-1.amazonaws.com/v1/repos/my-repo') == 'codecommit-eu-west-1/my-repo'
     }
 
 }

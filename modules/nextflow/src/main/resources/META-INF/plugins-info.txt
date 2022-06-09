@@ -5,3 +5,4 @@ nf-google@1.2.1
 nf-azure@0.13.2
 nf-tower@1.4.0
 nf-ga4gh@1.0.3
+nf-codecommit@0.1.0

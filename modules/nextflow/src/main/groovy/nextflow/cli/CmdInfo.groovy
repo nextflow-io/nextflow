@@ -29,6 +29,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.DefaultPlugins
+import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.util.MemoryUnit
 import org.yaml.snakeyaml.Yaml
@@ -73,6 +74,7 @@ class CmdInfo extends CmdBase {
             return
         }
 
+        Plugins.init()
         final manager = new AssetManager(args[0])
         if( !manager.isLocal() )
             throw new AbortOperationException("Unknown project `${args[0]}`")
