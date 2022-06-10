@@ -58,24 +58,23 @@ the implementation of a Nextflow plugin.
 Import operators from plugin
 ============================
 
-New DSL2 allows to explicitly declare the extension methods imported by a Nextflow plugin and allows in this way
-to precisely control which extensions are going to be used in the workflow script.
+As of version `22.04.x`, Nextflow allows the inclusion of extension operators from Nextflow plugins.
 
-In previous versions, Nexflow allowed to invoke ``public`` methods of the ``ChannelExtensionPoint`` implementation in the
-plugin:
+For example::
 
-    def sql = "select * from FOO"
-    channel.sql.fromQuery(sql, db: "test", emitColumns:true)
-
-Now you can specify witch method(s) to use and, if desired, assign to them an alias:
-
-    include { fromQuery as selectFromTable; sqlInsert } from 'plugin/nf-sqldb'
+    include { sqlInsert; fromQuery as selectFromTable } from 'plugin/nf-sqldb'
 
     def sql = "select * from FOO"
     channel
         .selectFromTable(sql, db: "test", emitColumns:true)
         .sqlInsert(into:"BAR", columns:'id', db:"test")
 
-Keyword `plugin` aware to the interpreter to import functions from a plugin instead a module
+The above snippet includes the operators ``sqlInsert` and ``fromQuery`` from the
+`nf-sqldb <https://github.com/nextflow-io/nf-sqldb>`_ plugin. The latter will be accessible using
+the ``selectFromTable`` alias in the script.
+
+.. note::
+    The prefix ``plugin/`` must precede the plugin name in the include ``from`` statement.
+
 
 
