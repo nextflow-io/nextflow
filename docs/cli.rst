@@ -1336,3 +1336,7 @@ Then, the parameter can be accessed in the pipeline script using the ``params.fo
   the glob characters. For example::
 
         nextflow run <my script> --files "*.fasta"
+
+.. note::
+  Booleans and numbers are automatically converted so `--foo 1.2` is interpreted as `1.2 double` for example.
+  Lists and Maps can be proportionate using json syntax as `--foo '[1,"2"]'` or `--foo '{"a":"b","b":2}'`

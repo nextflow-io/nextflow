@@ -52,6 +52,10 @@ class CmdRunTest extends Specification {
         '20..0'     | '20..0'
         '20..'      | '20..'
         '..20'      | '..20'
+        '[1,2]'     | [1,2]
+        '[1,"2"]'   | [1,'2']
+        '{"a":"b"}' | [a:'b']
+        '{"a":"b","b":2}'| [a:'b', b:2]
     }
 
     def 'should parse nested params' () {

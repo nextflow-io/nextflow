@@ -591,6 +591,14 @@ class CmdRun extends CmdBase implements HubOptions {
         if ( str==~/\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
         if ( str==~/\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
 
+        if( (str.startsWith('[') && str.endsWith(']')) || (str.startsWith('{') && str.endsWith('}'))) {
+            try {
+                def json = new JsonSlurper().parseText(str)
+                return json
+            } catch (Exception e) {
+                //do nothing
+            }
+        }
         return str
     }
 
