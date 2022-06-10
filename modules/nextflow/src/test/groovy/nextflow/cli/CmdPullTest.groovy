@@ -46,8 +46,8 @@ class CmdPullTest extends Specification {
         when:
         cmd.run()
         then:
-        dir.resolve('nextflow-io/hello/.git').exists()
-        dir.resolve('nextflow-io/hello/README.md').exists()
+        dir.resolve('nextflow-io/hello/.nextflow/revs/master/.git').exists()
+        dir.resolve('nextflow-io/hello/.nextflow/revs/master/README.md').exists()
 
         cleanup:
         dir?.deleteDir()

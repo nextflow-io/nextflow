@@ -154,7 +154,7 @@ class AssetManagerTest extends Specification {
         when:
         manager.download()
         then:
-        folder.resolve('nextflow-io/hello/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/.nextflow/revs/master/.git').isDirectory()
 
         when:
         manager.download()
@@ -175,7 +175,7 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("v1.2")
         then:
-        folder.resolve('nextflow-io/hello/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/.nextflow/revs/v1.2/.git').isDirectory()
 
         when:
         manager.download("v1.2")
@@ -195,7 +195,7 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
         then:
-        folder.resolve('nextflow-io/hello/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/.nextflow/revs/6b9515aba6c7efc6a9b3f273ce116fc0c224bf68/.git').isDirectory()
 
         when:
         def result = manager.download("6b9515aba6c7efc6a9b3f273ce116fc0c224bf68")
@@ -218,7 +218,7 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("mybranch")
         then:
-        folder.resolve('nextflow-io/hello/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/.nextflow/revs/mybranch/.git').isDirectory()
 
         when:
         manager.download("mybranch")
@@ -241,7 +241,7 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("v1.2")
         then:
-        folder.resolve('nextflow-io/hello/.git').isDirectory()
+        folder.resolve('nextflow-io/hello/.nextflow/revs/v1.2/.git').isDirectory()
 
         when:
         manager.download()
@@ -370,7 +370,7 @@ class AssetManagerTest extends Specification {
         dir.resolve('foo/bar').mkdirs()
         dir.resolve('foo/bar/nextflow.config').text = config
         dir.resolve('foo/bar/.git').mkdir()
-        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+        dir.resolve('foo/bar/config').text = GIT_CONFIG_TEXT
 
         when:
         def holder = new AssetManager()
@@ -391,7 +391,7 @@ class AssetManagerTest extends Specification {
         dir.resolve('foo/bar').mkdirs()
         dir.resolve('foo/bar/nextflow.config').text = 'empty: 1'
         dir.resolve('foo/bar/.git').mkdir()
-        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+        dir.resolve('foo/bar/config').text = GIT_CONFIG_TEXT
 
         when:
         def holder = new AssetManager()
@@ -410,10 +410,10 @@ class AssetManagerTest extends Specification {
         given:
         def dir = tempDir.root
         dir.resolve('.git').mkdir()
-        dir.resolve('.git/config').text = GIT_CONFIG_LONG
+        dir.resolve('config').text = GIT_CONFIG_LONG
 
         when:
-        def manager = new AssetManager().setLocalPath(dir.toFile())
+        def manager = new AssetManager().setBarePath(dir.toFile())
         then:
         manager.getGitConfigRemoteUrl() == 'git@github.com:nextflow-io/nextflow.git'
 
@@ -424,10 +424,10 @@ class AssetManagerTest extends Specification {
         given:
         def dir = tempDir.root
         dir.resolve('.git').mkdir()
-        dir.resolve('.git/config').text = GIT_CONFIG_LONG
+        dir.resolve('config').text = GIT_CONFIG_LONG
 
         when:
-        def manager = new AssetManager().setLocalPath(dir.toFile())
+        def manager = new AssetManager().setBarePath(dir.toFile())
         then:
         manager.getGitConfigRemoteDomain() == 'github.com'
 
@@ -449,7 +449,7 @@ class AssetManagerTest extends Specification {
         repo.close()
 
         // append fake remote data
-        dir.resolve('.git/config').text = GIT_CONFIG_TEXT
+        dir.resolve('config').text = GIT_CONFIG_TEXT
 
         when:
         def p = Mock(RepositoryProvider) { getRepositoryUrl() >> 'https://github.com/nextflow-io/nextflow' }
@@ -542,9 +542,9 @@ class AssetManagerTest extends Specification {
         when:
         manager.download("dev")
         then:
-        folder.resolve('nextflow-io/nf-test-branch/.git').isDirectory()
+        folder.resolve('nextflow-io/nf-test-branch/.nextflow/revs/dev/.git').isDirectory()
         and:
-        folder.resolve('nextflow-io/nf-test-branch/workflow.nf').text == "println 'Hello'\n"
+        folder.resolve('nextflow-io/nf-test-branch/.nextflow/revs/dev/workflow.nf').text == "println 'Hello'\n"
 
         when:
         manager.download()
