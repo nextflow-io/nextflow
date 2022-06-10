@@ -395,9 +395,9 @@ workflow applications in a Kubernetes cluster.
 
 The following settings are available:
 
-================== ================
+=================== ================
 Name                Description
-================== ================
+=================== ================
 autoMountHostPaths  Automatically mounts host paths in the job pods. Only for development purpose when using a single node cluster (default: ``false``).
 context             Defines the Kubernetes `configuration context name <https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/>`_ to use.
 namespace           Defines the Kubernetes namespace to use (default: ``default``).
@@ -415,7 +415,7 @@ storageSubPath      The path in the persistent volume to be mounted (default: ro
 computeResourceType Define whether use Kubernetes ``Pod`` or ``Job`` resource type to carry out Nextflow tasks (default: ``Pod``).
 fetchNodeName       If you trace the hostname, activate this option (default: ``false``, requires version ``22.05.0-edge`` or later).
 volumeClaims        (deprecated)
-================== ================
+=================== ================
 
 See the :ref:`k8s-page` documentation for more details.
 
