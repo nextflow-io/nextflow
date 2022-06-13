@@ -126,7 +126,15 @@ class ConfigDiscovery {
         final passphrase = "".toCharArray()
         final cert = new ByteArrayInputStream(clientCert)
         final key = new ByteArrayInputStream(clientKey)
-        final keyStore = SSLUtils.createKeyStore( cert, key, "RSA", passphrase, null, null);
+        java.security.KeyStore kStore
+        try {
+            kStore = SSLUtils.createKeyStore(cert, key, "RSA", passphrase, null, null);
+        } catch (Exception e) {
+            def cert1 = new ByteArrayInputStream(clientCert)
+            def key1 = new ByteArrayInputStream(clientKey)
+            kStore = SSLUtils.createKeyStore(cert1, key1, "EC", passphrase, null, null);
+        }
+        final keyStore = kStore;
         final kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         kmf.init(keyStore, passphrase);
         return kmf.getKeyManagers();
