@@ -80,7 +80,7 @@ For example::
 The process in the above snippet declares a single input which implicitly is a value channel.
 Therefore also the ``result`` output is a value channel that can be read by more than one process.
 
-See also: :ref:`process-understand-how-multiple-input-channels-work`.
+See also: :ref:`process-multiple-input-channels`.
 
 
 .. _channel-factory:
