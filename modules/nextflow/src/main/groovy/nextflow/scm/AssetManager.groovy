@@ -1122,6 +1122,14 @@ class AssetManager {
 
     protected String guessHubProviderFromGitConfig(boolean failFast=false) {
         assert barePath
+
+        // barePath is pointing to a non bare git repo but to a working git directory
+        if( Path.of(barePath.absolutePath,'.git').exists() && Path.of(barePath.absolutePath,'.git').isDirectory()){
+            def message = """
+            It seems this is a git working directory but a bare git is required. 
+            If this is the case, please commit and push your changes and remove this directory -- Repository may be corrupted: $bareGitConfig""".stripIndent()
+            throw new AbortOperationException(message)
+        }
         
         // find the repository remote URL from the git project config file
         final domain = getGitConfigRemoteDomain()

@@ -369,7 +369,6 @@ class AssetManagerTest extends Specification {
         def dir = tempDir.getRoot()
         dir.resolve('foo/bar').mkdirs()
         dir.resolve('foo/bar/nextflow.config').text = config
-        dir.resolve('foo/bar/.git').mkdir()
         dir.resolve('foo/bar/config').text = GIT_CONFIG_TEXT
 
         when:
@@ -384,13 +383,37 @@ class AssetManagerTest extends Specification {
 
     }
 
+    def 'should detect is not bare repo' () {
+
+        given:
+        def config =
+                '''
+                manifest {
+                    homePage = 'http://foo.com'
+                    mainScript = 'hello.nf'
+                    defaultBranch = 'super-stuff'
+                    description = 'This pipeline do this and that'
+                    author = 'Hi Dude'
+                }
+                '''
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar/.git').mkdirs()
+        dir.resolve('foo/bar/config').text = GIT_CONFIG_TEXT
+
+        when:
+        def holder = new AssetManager()
+        holder.build('foo/bar')
+        then:
+        thrown(AbortOperationException)
+
+    }
+
     def 'should return default main script file' () {
 
         given:
         def dir = tempDir.getRoot()
         dir.resolve('foo/bar').mkdirs()
         dir.resolve('foo/bar/nextflow.config').text = 'empty: 1'
-        dir.resolve('foo/bar/.git').mkdir()
         dir.resolve('foo/bar/config').text = GIT_CONFIG_TEXT
 
         when:
