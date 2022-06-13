@@ -75,4 +75,65 @@ class StringUtilsTest extends Specification {
         null                 | '1234://xyz'
         null                 | '1234://xyz.com/abc'
     }
+
+    @Unroll
+    def 'should strip passwords' () {
+        expect:
+        StringUtils.stripSecrets(SECRET) == EXPECTED
+
+        where:
+        SECRET                                  | EXPECTED
+        [foo:'Hello']                           | [foo:'Hello']
+        [foo: [bar: 'World']]                   | [foo: [bar: 'World']]
+        [foo: [password:'hola', token:'hi']]    | [foo: [password:'****', token:'****']]
+        [foo: [password:'12345678']]            | [foo: [password:'123****']]
+        [foo: [customPassword:'hola']]          | [foo: [customPassword:'****']]
+        [foo: [towerLicense:'hola']]            | [foo: [towerLicense:'****']]
+        [url: 'redis://host:port']              | [url: 'redis://host:port']
+        [url: 'redis://secret@host:port']       | [url: 'redis://sec****@host:port']
+        [url: 'ftp://secret@host:port/x/y']     | [url: 'ftp://sec****@host:port/x/y']
+    }
+
+    @Unroll
+    def 'should strip sensitive strings' () {
+        expect:
+        StringUtils.stripSecrets(SECRET) == EXPECTED
+
+        where:
+        SECRET                                  | EXPECTED
+        'Hi\n here is the "password" : "1234"'  | 'Hi\n here is the "password" : "********"'
+        'Hi\n here is the password : "1"'       | 'Hi\n here is the password : "********"'
+        'Hi\n here is the password : "1"'       | 'Hi\n here is the password : "********"'
+        'Hi\n "password" :"1" \n "token": "123"'| 'Hi\n "password" :"********" \n "token": "********"'
+        'Hi\n password :"1"\nsecret: "345"'     | 'Hi\n password :"********"\nsecret: "********"'
+        'secret="abc" password:"1" more text'   | 'secret="********" password:"********" more text'
+    }
+
+    @Unroll
+    def 'should strip secret' () {
+        expect:
+        StringUtils.redact(SECRET) == EXPECTED
+
+        where:
+        SECRET          | EXPECTED
+        'hi'            | '****'
+        'Hello'         | 'Hel****'
+        'World'         | 'Wor****'
+        '12345678'      | '123****'
+        'hola'          | '****'
+        null            | '(null)'
+        ''              | '(empty)'
+    }
+
+    @Unroll
+    def 'should strip url password' () {
+        expect:
+        StringUtils.redactUrlPassword(SECRET) == EXPECTED
+
+        where:
+        SECRET                  | EXPECTED
+        'hi'                    | 'hi'
+        'http://foo/bar'        | 'http://foo/bar'
+        'http://secret@foo/bar' | 'http://sec****@foo/bar'
+    }
 }

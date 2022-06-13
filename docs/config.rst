@@ -134,7 +134,8 @@ signerOverride              The name of the signature algorithm to use for signi
 socketSendBufferSizeHint    The Size hint (in bytes) for the low level TCP send buffer.
 socketRecvBufferSizeHint    The Size hint (in bytes) for the low level TCP receive buffer.
 socketTimeout               The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out.
-storageEncryption           The S3 server side encryption to be used when saving objects on S3 (currently only AES256 is supported)
+storageEncryption           The S3 server side encryption to be used when saving objects on S3, either ``AES256`` or ``aws:kms`` values are allowed.
+storageKmsKeyId             The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket (requires version ``22.05.0-edge`` or later).
 userAgent                   The HTTP user agent header passed with all HTTP requests.
 uploadMaxThreads            The maximum number of threads used for multipart upload.
 uploadChunkSize             The size of a single part in a multipart upload (default: `20 MB`).
@@ -227,9 +228,10 @@ The following settings are available:
 Name                Description
 ================== ================
 cacheDir            Defines the path where Conda environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.
-createOptions       Defines any extra command line options supported by the ``conda create`` command. For details see: https://docs.conda.io/projects/conda/en/latest/commands/create.html.
+createOptions       Defines any extra command line options supported by the ``conda create`` command. For details `Conda documentation <https://docs.conda.io/projects/conda/en/latest/commands/create.html>`_.
 createTimeout       Defines the amount of time the Conda environment creation can last. The creation process is terminated when the timeout is exceeded (default: ``20 min``).
-useMamba            Uses the ``mamba`` binary instead of ``conda`` to create the conda environments. For details see: https://github.com/mamba-org/mamba.
+useMamba            Uses the ``mamba`` binary instead of ``conda`` to create the Conda environments. For details `Mamba documentation <https://github.com/mamba-org/mamba>`_.
+useMicromamba       uses the ``micromamba`` binary instead of ``conda`` to create the Conda environments (requires version ``22.05.0-edge`` or later). For details see `Micromamba documentation <https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html>`_.
 ================== ================
 
 
@@ -393,9 +395,9 @@ workflow applications in a Kubernetes cluster.
 
 The following settings are available:
 
-================== ================
+=================== ================
 Name                Description
-================== ================
+=================== ================
 autoMountHostPaths  Automatically mounts host paths in the job pods. Only for development purpose when using a single node cluster (default: ``false``).
 context             Defines the Kubernetes `configuration context name <https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/>`_ to use.
 namespace           Defines the Kubernetes namespace to use (default: ``default``).
@@ -410,8 +412,10 @@ securityContext     Defines the `security context <https://kubernetes.io/docs/ta
 storageClaimName    The name of the persistent volume claim where store workflow result data.
 storageMountPath    The path location used to mount the persistent volume claim (default: ``/workspace``).
 storageSubPath      The path in the persistent volume to be mounted (default: root).
+computeResourceType Define whether use Kubernetes ``Pod`` or ``Job`` resource type to carry out Nextflow tasks (default: ``Pod``).
+fetchNodeName       If you trace the hostname, activate this option (default: ``false``, requires version ``22.05.0-edge`` or later).
 volumeClaims        (deprecated)
-================== ================
+=================== ================
 
 See the :ref:`k8s-page` documentation for more details.
 
@@ -957,9 +961,10 @@ NXF_CLOUD_DRIVER                Defines the default cloud driver to be used if n
 NXF_CONDA_CACHEDIR              Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 NXF_DEBUG                       Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
 NXF_DEFAULT_DSL                 Defines the DSL version version that should be used in not specified otherwise in the script of config file (default: ``2``, requires version ``22.03.0-edge`` or later)
-NXF_DISABLE_JOBS_CANCELLATION   Disables the cancellation of child jobs on workflow execution termination (requires ``21.12.0-edge`` or later).
+NXF_DISABLE_JOBS_CANCELLATION   Disables the cancellation of child jobs on workflow execution termination (requires version ``21.12.0-edge`` or later).
+NXF_ENABLE_STRICT               Enable Nextflow *strict* execution mode (default: ``false``, requires version ``22.05.0-edge`` or later)
 NXF_EXECUTOR                    Defines the default process executor e.g. `sge`
-NXF_GRAB                        Provides extra runtime dependencies downloaded from a Maven repository service.
+NXF_GRAB                        Provides extra runtime dependencies downloaded from a Maven repository service [DEPRECATED]
 NXF_HOME                        Nextflow home directory (default: ``$HOME/.nextflow``).
 NXF_JAVA_HOME                   Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the ``JAVA_HOME`` variable if defined.
 NXF_JVM_ARGS                    Allows the setting Java VM options. This is similar to ``NXF_OPTS`` however it's only applied the JVM running Nextflow and not to any java pre-launching commands (requires ``21.12.1-edge`` or later).

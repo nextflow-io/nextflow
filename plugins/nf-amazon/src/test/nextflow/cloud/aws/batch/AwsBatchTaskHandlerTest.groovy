@@ -99,7 +99,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
         req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws s3 cp --only-show-errors .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()]
-        req.getRetryStrategy() == new RetryStrategy().withAttempts(5).withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnReason('Host EC2*') )
+        req.getRetryStrategy() == new RetryStrategy()
+                .withAttempts(5)
+                .withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnStatusReason('Host EC2*'), new EvaluateOnExit().withOnReason('*').withAction('EXIT') )
 
         when:
         req = handler.newSubmitRequest(task)
@@ -285,7 +287,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
         // no error `retry` error strategy is defined by NF, use `maxRetries` to se Batch attempts
-        req.getRetryStrategy() == new RetryStrategy().withAttempts(3).withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnReason('Host EC2*') )
+        req.getRetryStrategy() == new RetryStrategy()
+                .withAttempts(3)
+                .withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnStatusReason('Host EC2*'), new EvaluateOnExit().withOnReason('*').withAction('EXIT') )
         req.getContainerOverrides().getEnvironment() == [VAR_RETRY_MODE, VAR_MAX_ATTEMPTS, VAR_METADATA_ATTEMPTS]
     }
 
@@ -411,7 +415,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_ID = '123'
         def client = Mock(AWSBatch)
         def handler = Spy(AwsBatchTaskHandler)
-        handler.client = client
+        handler.@client = client
 
         def req = new DescribeJobDefinitionsRequest().withJobDefinitionName(JOB_NAME)
         def res = Mock(DescribeJobDefinitionsResult)
@@ -460,7 +464,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_NAME = 'foo-bar-1-0'
         def client = Mock(AWSBatch)
         def handler = Spy(AwsBatchTaskHandler)
-        handler.client = client
+        handler.@client = client
 
         def req = Mock(RegisterJobDefinitionRequest)
         def res = Mock(RegisterJobDefinitionResult)
@@ -525,7 +529,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def handler = Spy(AwsBatchTaskHandler) {
             getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
         }
-        handler.executor = Mock(AwsBatchExecutor)
+        handler.@executor = Mock(AwsBatchExecutor)
 
         when:
         def result = handler.makeJobDefRequest(IMAGE)
@@ -562,7 +566,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def handler = Spy(AwsBatchTaskHandler) {
             getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
         }
-        handler.executor = executor 
+        handler.@executor = executor
 
         when:
         def result = handler.makeJobDefRequest(IMAGE)
@@ -593,7 +597,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def handler = Spy(AwsBatchTaskHandler) {
             getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
         }
-        handler.executor = executor
+        handler.@executor = executor
 
         when:
         def result = handler.makeJobDefRequest(IMAGE)
@@ -617,7 +621,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def handler = Spy(AwsBatchTaskHandler) {
             getTask() >> Mock(TaskRun) { getConfig() >> taskConfig  }
         }
-        handler.executor = executor
+        handler.@executor = executor
 
         when:
         def result = handler.makeJobDefRequest(IMAGE)
@@ -637,7 +641,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_ID = 'job-2'
         def client = Mock(AWSBatch)
         def handler = Spy(AwsBatchTaskHandler)
-        handler.client = client
+        handler.@client = client
 
         def JOB1 = new JobDetail().withJobId('job-1')
         def JOB2 = new JobDetail().withJobId('job-2')
@@ -661,8 +665,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_ID = 'job-1'
         def client = Mock(AWSBatch)
         def handler = Spy(AwsBatchTaskHandler)
-        handler.client = client
-        handler.jobId = JOB_ID
+        handler.@client = client
+        handler.@jobId = JOB_ID
         handler.batch(collector)
 
         def JOB1 = new JobDetail().withJobId('job-1')
@@ -689,8 +693,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_ID = 'job-1'
         def client = Mock(AWSBatch)
         def handler = Spy(AwsBatchTaskHandler)
-        handler.client = client
-        handler.jobId = JOB_ID
+        handler.@client = client
+        handler.@jobId = JOB_ID
         handler.batch(collector)
 
         def JOB1 = new JobDetail().withJobId('job-1')
@@ -713,7 +717,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def client = Mock(AWSBatch)
         def proxy = Mock(AwsBatchProxy)
         def handler = Spy(AwsBatchTaskHandler)
-        handler.client = proxy
+        handler.@client = proxy
         handler.task = task
 
         def req = Mock(SubmitJobRequest)
@@ -739,7 +743,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def handler = Spy(AwsBatchTaskHandler)
         handler.task = task
-        handler.jobId = JOB_ID
+        handler.@jobId = JOB_ID
 
         def req = Mock(TerminateJobRequest)
         req.getJobId() >> JOB_ID
@@ -780,6 +784,35 @@ class AwsBatchTaskHandlerTest extends Specification {
         trace.machineInfo.type == 'x1.large'
         trace.machineInfo.zone == 'us-east-1b'
         trace.machineInfo.priceModel == PriceModel.spot
+    }
+
+    def 'should render submit command' () {
+        given:
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def result =  handler.getSubmitCommand()
+        then:
+        handler.getAwsOptions() >> Mock(AwsOptions)  { getAwsCli() >> 'aws' }
+        handler.getLogFile() >> Paths.get('/work/log')
+        handler.getWrapperFile() >> Paths.get('/work/run')
+        then:
+        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; aws s3 cp --only-show-errors .command.log s3://work/log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors s3://work/run - | bash 2>&1 | tee .command.log'
+
+        when:
+        result =  handler.getSubmitCommand()
+        then:
+        handler.getAwsOptions() >> Mock(AwsOptions)  {
+            getAwsCli() >> 'aws';
+            getDebug() >> true
+            getStorageEncryption() >> 'aws:kms'
+            getStorageKmsKeyId() >> 'kms-key-123'
+        }
+        handler.getLogFile() >> Paths.get('/work/log')
+        handler.getWrapperFile() >> Paths.get('/work/run')
+        then:
+        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug .command.log s3://work/log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug s3://work/run - | bash 2>&1 | tee .command.log'
+
     }
 
 }

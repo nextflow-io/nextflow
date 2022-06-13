@@ -10,8 +10,7 @@ configuration options and general Nextflow usage the better
 channels to post this kind of questions are: 
 
 * GitHub discussions: https://github.com/nextflow-io/nextflow/discussions
-* Google group: https://groups.google.com/forum/#!forum/nextflow
-* Gitter channel: https://gitter.im/nextflow-io/nextflow
+* Slack community chat: https://www.nextflow.io/slack-invite.html
 
 
 Also you may also want to have a look at the patterns page 

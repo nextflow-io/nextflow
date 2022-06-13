@@ -221,8 +221,7 @@ class BashWrapperBuilderTest extends Specification {
 
     def 'should add resolved inputs'() {
         given:
-        def bash = Spy(BashWrapperBuilder)
-        bash.bean = Mock(TaskBean)
+        def bash = Spy(new BashWrapperBuilder(bean: Mock(TaskBean)))
         bash.getContainerConfig() >> [engine: 'docker']
 
         def BUILDER = Mock(DockerBuilder)
@@ -658,7 +657,7 @@ class BashWrapperBuilderTest extends Specification {
                 containerConfig: [engine: 'docker', temp: 'auto', enabled: true] ).makeBinding()
 
         then:
-        binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash --name $NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$PWD" --entrypoint /bin/bash --name $NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'docker kill $NXF_BOXID'
     }
@@ -671,7 +670,7 @@ class BashWrapperBuilderTest extends Specification {
                 containerEnabled: true  ).makeBinding()
 
         then:
-        binding.launch_cmd == 'sudo docker run -i -v /work/dir:/work/dir -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash --name $NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'sudo docker run -i -v /work/dir:/work/dir -w "$PWD" --entrypoint /bin/bash --name $NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == 'sudo docker rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'sudo docker kill $NXF_BOXID'
     }
@@ -684,7 +683,7 @@ class BashWrapperBuilderTest extends Specification {
                 containerConfig: [engine: 'docker', temp: 'auto', enabled: true, remove:false, kill: false] ).makeBinding()
 
         then:
-        binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash --name $NXF_BOXID ubuntu -c "/bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$PWD" --entrypoint /bin/bash --name $NXF_BOXID ubuntu -c "/bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
         binding.kill_cmd == null
         binding.containsKey('kill_cmd')
@@ -698,7 +697,7 @@ class BashWrapperBuilderTest extends Specification {
                 containerConfig: [engine: 'docker', enabled: true, remove:false, kill: 'SIGXXX'] ).makeBinding()
 
         then:
-        binding.launch_cmd == 'docker run -i -v /work/dir:/work/dir -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash --name $NXF_BOXID ubuntu -c "/bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'docker run -i -v /work/dir:/work/dir -w "$PWD" --entrypoint /bin/bash --name $NXF_BOXID ubuntu -c "/bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
         binding.kill_cmd == 'docker kill -s SIGXXX $NXF_BOXID'
         binding.containsKey('kill_cmd')
@@ -713,7 +712,7 @@ class BashWrapperBuilderTest extends Specification {
                 containerConfig: [engine: 'docker', enabled: true] ).makeBinding()
 
         then:
-        binding.launch_cmd == 'docker run -i -v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v /work/dir:/work/dir -v "\$PWD":"\$PWD" -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'docker run -i -v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v /work/dir:/work/dir -w "\$PWD" --entrypoint /bin/bash --name \$NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'docker kill $NXF_BOXID'
     }
@@ -745,7 +744,7 @@ class BashWrapperBuilderTest extends Specification {
                 containerConfig: [engine: 'docker', enabled: true] ).makeBinding()
 
         then:
-        binding.launch_cmd == 'docker run -i -v /work/dir:/work/dir -v "$PWD":"$PWD" -w "$PWD" --entrypoint /bin/bash -v /foo:/bar --name $NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'docker run -i -v /work/dir:/work/dir -w "$PWD" --entrypoint /bin/bash -v /foo:/bar --name $NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
         binding.kill_cmd == 'docker kill $NXF_BOXID'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
     }
@@ -835,8 +834,8 @@ class BashWrapperBuilderTest extends Specification {
         def bean = Mock(TaskBean)
         def copy = Mock(ScriptFileCopyStrategy)
         bean.workDir >> Paths.get('/work/dir')
-        def builder = Spy(BashWrapperBuilder)
-        builder.bean = bean
+        and:
+        def builder = Spy(new BashWrapperBuilder(bean:bean))
         builder.copyStrategy = copy
 
         when:

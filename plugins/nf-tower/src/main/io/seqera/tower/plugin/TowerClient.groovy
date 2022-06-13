@@ -88,7 +88,7 @@ class TowerClient implements TraceObserver {
     /**
      * Simple http client object that will send out messages
      */
-    protected SimpleHttpClient httpClient
+    private SimpleHttpClient httpClient
 
     private JsonGenerator generator
 

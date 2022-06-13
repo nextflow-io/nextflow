@@ -54,3 +54,27 @@ file is downloaded.
 To add a new plugin to the Index, create a pull request including the request plugin metadata.
 The `nf-hello <https://github.com/nextflow-io/nf-hello>`_ repository provides a minimal code example for
 the implementation of a Nextflow plugin.
+
+Import operators from plugin
+============================
+
+As of version `22.04.x`, Nextflow allows the inclusion of extension operators from Nextflow plugins.
+
+For example::
+
+    include { sqlInsert; fromQuery as selectFromTable } from 'plugin/nf-sqldb'
+
+    def sql = "select * from FOO"
+    channel
+        .selectFromTable(sql, db: "test", emitColumns:true)
+        .sqlInsert(into:"BAR", columns:'id', db:"test")
+
+The above snippet includes the operators ``sqlInsert` and ``fromQuery`` from the
+`nf-sqldb <https://github.com/nextflow-io/nf-sqldb>`_ plugin. The latter will be accessible using
+the ``selectFromTable`` alias in the script.
+
+.. note::
+    The prefix ``plugin/`` must precede the plugin name in the include ``from`` statement.
+
+
+
