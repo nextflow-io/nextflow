@@ -98,7 +98,6 @@ class GitUrl {
         throw new IllegalArgumentException("Malformed repository url: $url")
     }
 
-
     private parse0( String url, int p ) {
         // split protocol and url
         protocol = url.substring(0,p)
@@ -145,7 +144,6 @@ class GitUrl {
 
     }
 
-
     private parseFile( String str ) {
         if( str.endsWith('.git') ) {
             str = str.substring(0, str.size()-4)
@@ -175,7 +173,7 @@ class GitUrl {
     /**
      * @return
      *      The URL domain e.g. given the URL {@code https://gitlab.com/pditommaso/hello.git} the string {@code gitlab.com}
-     *      is return. When the url is file system path the path withoit the last component is returned
+     *      is return. When the url is file system path the path without the last component is returned
      *      e.g. given {@code file:///opt/git/project.git} the following string is returned {@code /opt/git/}
      */
     String getDomain() { this.domain }

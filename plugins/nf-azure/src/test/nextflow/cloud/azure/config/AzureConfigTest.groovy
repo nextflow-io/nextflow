@@ -194,7 +194,7 @@ class AzureConfigTest extends Specification {
         cfg.batch().pool('myPool2').fileShareRootPath == '/mnt/resource/batch/tasks/fsmounts'
         cfg.batch().pool('myPool3').fileShareRootPath == '/mnt/batch/tasks/fsmounts'
         cfg.batch().pool('myPool4').fileShareRootPath == '/mounting/here'
-        cfg.batch().pool('myPool5').fileShareRootPath == '/mnt/resource/batch/tasks/fsmounts'
+        cfg.batch().pool('myPool5').fileShareRootPath == AzPoolOpts.DEFAULT_SHARE_ROOT_PATH
    }
 
     def 'should get azcopy options' () {

@@ -483,11 +483,12 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
 
         then:
         req.taskName >> 'foo'
+        req.timeout >> null
         1 * helper.createStagingAction(req) >> stage
         1 * helper.createUnstagingAction(req) >> unstage
         1 * helper.createMainAction(req) >> main
         1 * helper.createResources(req) >> res
-        1 * helper.createPipeline([stage, main, unstage], res) >> pipeline
+        1 * helper.createPipeline([stage, main, unstage], res, req.timeout) >> pipeline
         1 * helper.runPipeline('PRJ-X','LOC-1', pipeline, [taskName: 'foo']) >> operation
         and:
         result == operation

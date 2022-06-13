@@ -445,7 +445,7 @@ class AssetManagerTest extends Specification {
         def init = Git.init()
         def repo = init.setDirectory( dir.toFile() ).call()
         repo.add().addFilepattern('.').call()
-        def commit = repo.commit().setAll(true).setMessage('First commit').call()
+        def commit = repo.commit().setSign(false).setAll(true).setMessage('First commit').call()
         repo.close()
 
         // append fake remote data
@@ -531,23 +531,39 @@ class AssetManagerTest extends Specification {
 
     }
 
-    def 'should resolve project name' () {
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should download branch specified'() {
+
         given:
-        def manager = new AssetManager()
+        def folder = tempDir.getRoot()
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
+
+        when:
+        manager.download("dev")
+        then:
+        folder.resolve('nextflow-io/nf-test-branch/.git').isDirectory()
+        and:
+        folder.resolve('nextflow-io/nf-test-branch/workflow.nf').text == "println 'Hello'\n"
+
+        when:
+        manager.download()
+        then:
+        noExceptionThrown()
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should fetch main script from branch specified'() {
+
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def manager = new AssetManager().build('nextflow-io/nf-test-branch', [providers: [github: [auth: token]]])
 
         expect:
-        manager.resolveProjectName0(PATH,SERVER) == EXPECTED
-
-        where:
-        PATH          | SERVER                  | EXPECTED
-        'a/b/c'       | null                    | 'a/b/c'
-        'a/b/c'       | 'http://dot.com'        | 'a/b/c'
-        'a/b/c'       | 'http://dot.com/'       | 'a/b/c'
-        'a/b/c'       | 'http://dot.com/a'      | 'b/c'
-        'a/b/c'       | 'http://dot.com/a/'     | 'b/c'
+        manager.checkValidRemoteRepo('dev')
         and:
-        'paolo0758/nf-azure-repo'                    | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
-        'paolo0758/nf-azure-repo/_git/nf-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
+        manager.getMainScriptName() == 'workflow.nf'
+
     }
 
 }
