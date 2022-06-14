@@ -124,15 +124,17 @@ class ConfigDiscovery {
     protected KeyManager[] createKeyManagers(byte[] clientCert, byte[] clientKey) {
 
         final passphrase = "".toCharArray()
-        final cert = new ByteArrayInputStream(clientCert)
-        final key = new ByteArrayInputStream(clientKey)
-        java.security.KeyStore kStore
+        java.security.KeyStore kStore = null
         try {
+	    // Try to import the key as RSA
+	    def cert = new ByteArrayInputStream(clientCert)
+	    def key = new ByteArrayInputStream(clientKey)
             kStore = SSLUtils.createKeyStore(cert, key, "RSA", passphrase, null, null);
         } catch (Exception e) {
-            def cert1 = new ByteArrayInputStream(clientCert)
-            def key1 = new ByteArrayInputStream(clientKey)
-            kStore = SSLUtils.createKeyStore(cert1, key1, "EC", passphrase, null, null);
+	    // As a fallback, use EC
+            def cert = new ByteArrayInputStream(clientCert)
+            def key = new ByteArrayInputStream(clientKey)
+            kStore = SSLUtils.createKeyStore(cert, key, "EC", passphrase, null, null);
         }
         final keyStore = kStore;
         final kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
