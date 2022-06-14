@@ -1,6 +1,6 @@
 NEXTFLOW CHANGE-LOG
 ===================
-22.06.0 - 9 Jun 2022
+22.06.0-edge - 9 Jun 2022
 - Add AWS CodeCommit initial support [80fba6e9]
 - Add support for 307 and 308 HTTP redirection [92382012]
 - Add DirWatcher v2 [209c82cd]
