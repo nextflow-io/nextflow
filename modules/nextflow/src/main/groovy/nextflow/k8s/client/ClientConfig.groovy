@@ -37,6 +37,8 @@ class ClientConfig {
 
     String namespace
 
+    Integer maxErrorRetry
+
     /**
      * k8s service account name
      * https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
@@ -112,6 +114,9 @@ class ClientConfig {
             result.clientKey = map.clientKey.toString().decodeBase64()
         else if( map.clientKeyFile )
             result.clientKey = Paths.get(map.clientKeyFile.toString()).bytes
+
+        if ( map.maxErrorRetry )
+            result.maxErrorRetry = map.maxErrorRetry
 
         return result
     }
