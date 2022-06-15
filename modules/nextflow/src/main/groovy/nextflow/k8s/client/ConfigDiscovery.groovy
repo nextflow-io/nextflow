@@ -126,12 +126,12 @@ class ConfigDiscovery {
         final passphrase = "".toCharArray()
         java.security.KeyStore kStore = null
         try {
-	    // Try to import the key as RSA
-	    def cert = new ByteArrayInputStream(clientCert)
-	    def key = new ByteArrayInputStream(clientKey)
+            // Try to import the key as RSA
+            def cert = new ByteArrayInputStream(clientCert)
+            def key = new ByteArrayInputStream(clientKey)
             kStore = SSLUtils.createKeyStore(cert, key, "RSA", passphrase, null, null);
         } catch (Exception e) {
-	    // As a fallback, use EC
+            // As a fallback, use EC
             def cert = new ByteArrayInputStream(clientCert)
             def key = new ByteArrayInputStream(clientKey)
             kStore = SSLUtils.createKeyStore(cert, key, "EC", passphrase, null, null);
