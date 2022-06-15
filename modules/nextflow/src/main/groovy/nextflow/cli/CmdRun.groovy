@@ -374,7 +374,7 @@ class CmdRun extends CmdBase implements HubOptions {
             return scriptDsl
         }
         else if( dsl ) {
-            log.debug("Applied DSL=$scriptDsl from config declaration")
+            log.debug("Applied DSL=$dsl from config declaration")
             return dsl
         }
         // -- if still unknown try probing for DSL1
