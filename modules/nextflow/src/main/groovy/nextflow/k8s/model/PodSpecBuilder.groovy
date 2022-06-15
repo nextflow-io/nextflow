@@ -469,6 +469,12 @@ class PodSpecBuilder {
         spec.backoffLimit = 0
         spec.template = [spec: pod.spec]
 
+        if( labels )
+            metadata.labels = sanitize(labels, MetaType.LABEL)
+
+        if( annotations )
+            metadata.annotations = sanitize(annotations, MetaType.ANNOTATION)
+
         // job spec
         final result = [
                 apiVersion: 'batch/v1',

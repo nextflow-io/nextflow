@@ -844,4 +844,54 @@ class PodSpecBuilderTest extends Specification {
         ]
     }
 
+    def 'should set labels and annotations for job' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .withLabel('app','someApp')
+                .withLabel('runName','someName')
+                .withLabel('version','3.8.1')
+                .withAnnotation("anno1", "val1")
+                .withAnnotations([anno2: "val2", anno3: "val3"])
+                .buildAsJob()
+
+        then:
+        spec ==  [ apiVersion: 'batch/v1',
+                   kind: 'Job',
+                   metadata: [
+                           name:'foo',
+                           namespace:'default',
+                           labels: [
+                                   app: 'someApp',
+                                   runName: 'someName',
+                                   version: '3.8.1'
+                           ],
+                           annotations: [
+                                   anno1: "val1",
+                                   anno2: "val2",
+                                   anno3: "val3"
+                           ]
+                   ],
+                   spec: [
+                           backoffLimit: 0,
+                           template: [
+                                   spec: [
+                                           restartPolicy:'Never',
+                                           containers:[
+                                                   [name:'foo',
+                                                    image:'busybox',
+                                                    command:['echo', 'hello'],
+                                                   ]
+                                           ]
+                                   ]
+                           ]
+                   ]
+        ]
+    }
+
+
+
 }
