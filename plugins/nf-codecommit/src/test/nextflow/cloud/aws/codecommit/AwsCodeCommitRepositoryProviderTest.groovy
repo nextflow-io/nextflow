@@ -18,17 +18,14 @@
 
 package nextflow.cloud.aws.codecommit
 
-
 import nextflow.scm.RepositoryProvider
 import spock.lang.IgnoreIf
-import spock.lang.Requires
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @IgnoreIf({System.getenv('NXF_SMOKE')})
-@Requires({System.getenv('AWS_ACCESS_KEY_ID') && System.getenv('AWS_SECRET_ACCESS_KEY')})
 class AwsCodeCommitRepositoryProviderTest extends Specification {
 
     def 'should get repo url' () {
@@ -51,7 +48,7 @@ class AwsCodeCommitRepositoryProviderTest extends Specification {
 
         expect:
         provider.readText('main.nf') == '''\
-                #!/bin/env nextflow
+                nextflow.enable.dsl=2
                 
                 workflow {
                   sayHello()
@@ -103,8 +100,9 @@ class AwsCodeCommitRepositoryProviderTest extends Specification {
         def result = provider.getBranches() as Set
         then:
         result == [
-                new RepositoryProvider.BranchInfo('master', 'c673d3d55be190c54db2056690b71e285fe5b3d8'),
+                new RepositoryProvider.BranchInfo('master', 'c820e0904d9ce4404e005e3cc910502300b36ba3'),
                 new RepositoryProvider.BranchInfo('dev1', 'c90422a1b4823f1c0980bbf8cab261e45a351622')] as Set
 
     }
+
 }
