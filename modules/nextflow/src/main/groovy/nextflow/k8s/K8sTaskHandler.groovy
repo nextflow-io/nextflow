@@ -216,16 +216,15 @@ class K8sTaskHandler extends TaskHandler {
             builder.withHostMount(mount,mount)
         }
 
-        if ( useJobResource() ) {
-            if ( task.config.time ) {
-                final duration = task.config.getTime()
-                builder.withActiveDeadline(duration.toMillis() / 1000 as int)
-            }
+        if ( taskCfg.time ) {
+            final duration = taskCfg.getTime()
+            builder.withActiveDeadline(duration.toSeconds() as int)
+        }
+
+        if ( useJobResource() )
             return builder.buildAsJob()
-        }
-        else {
+        else
             return builder.build()
-        }
     }
 
     protected PodOptions getPodOptions() {

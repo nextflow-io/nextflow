@@ -390,6 +390,10 @@ class PodSpecBuilder {
         if( annotations )
             metadata.annotations = sanitize(annotations, MetaType.ANNOTATION)
 
+        // time directive
+        if ( activeDeadlineSeconds > 0)
+            spec.activeDeadlineSeconds = activeDeadlineSeconds
+
         final pod = [
                 apiVersion: 'v1',
                 kind: 'Pod',
@@ -475,9 +479,6 @@ class PodSpecBuilder {
         final spec = new LinkedHashMap<String,Object>()
         spec.backoffLimit = 0
         spec.template = [spec: pod.spec]
-
-        if ( activeDeadlineSeconds > 0 )
-            spec.activeDeadlineSeconds = activeDeadlineSeconds
 
         final result = [
                 apiVersion: 'batch/v1',
