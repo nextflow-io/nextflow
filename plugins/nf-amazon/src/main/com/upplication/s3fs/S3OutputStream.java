@@ -56,6 +56,8 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.util.Base64;
 import com.upplication.s3fs.util.ByteBufferInputStream;
 import com.upplication.s3fs.util.S3MultipartOptions;
+import nextflow.util.Duration;
+import nextflow.util.ThreadPoolBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static java.util.Objects.requireNonNull;
@@ -253,6 +255,9 @@ public final class S3OutputStream extends OutputStream {
      */
     @Override
     public void write (int b) throws IOException {
+        if( closed ){
+            throw new IOException("Can't write into a closed stream");
+        }
         if( buf == null ) {
             buf = allocate();
             md5 = createMd5();
@@ -473,6 +478,7 @@ public final class S3OutputStream extends OutputStream {
                     success=true;
                 }
                 catch (AmazonClientException | IOException e) {
+                    System.out.println("exception subiendo part "+e);
                     if( attempt == request.getMaxAttempts() )
                         throw new IOException("Failed to upload multipart data to Amazon S3", e);
 
@@ -641,14 +647,14 @@ public final class S3OutputStream extends OutputStream {
      */
     static synchronized ExecutorService getOrCreateExecutor(int maxThreads) {
         if( executorSingleton == null ) {
-            ThreadPoolExecutor pool = new ThreadPoolExecutor(
-                    maxThreads,
-                    Integer.MAX_VALUE,
-                    60L, TimeUnit.SECONDS,
-                    new LimitedQueue<Runnable>(maxThreads *3),
-                    new ThreadPoolExecutor.CallerRunsPolicy() );
-
-            pool.allowCoreThreadTimeOut(true);
+            ThreadPoolExecutor pool = new ThreadPoolBuilder()
+                    .withName("S3OutputStream")
+                    .withMinSize(maxThreads)
+                    .withMaxSize(maxThreads)
+                    .withQueueSize(maxThreads *3)
+                    .withKeepAliveTime(Duration.of("60sec"))
+                    .withAllowCoreThreadTimeout(true)
+                    .build();
             executorSingleton = pool;
             log.trace("Created singleton upload executor -- max-treads: {}", maxThreads);
         }
