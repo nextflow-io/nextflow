@@ -221,10 +221,9 @@ class K8sTaskHandler extends TaskHandler {
             builder.withActiveDeadline(duration.toSeconds() as int)
         }
 
-        if ( useJobResource() )
-            return builder.buildAsJob()
-        else
-            return builder.build()
+        return useJobResource()
+            ? builder.buildAsJob()
+            : builder.build()
     }
 
     protected PodOptions getPodOptions() {
