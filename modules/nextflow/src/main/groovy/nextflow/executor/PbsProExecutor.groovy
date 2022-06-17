@@ -69,6 +69,16 @@ class PbsProExecutor extends PbsExecutor {
             // https://www.osc.edu/documentation/knowledge_base/out_of_memory_oom_or_excessive_memory_usage
             res << "mem=${task.config.getMemory().getMega()}mb".toString()
         }
+
+        if ( task.config.selectOptions )
+            result << task.config.selectOptions.toString() << ''
+
+        /*
+        if( task.config.selectOptions && res )
+            result << task.config.selectOptions.toString() << '-l' << "select=1:${res.join(':')}".toString()
+        */
+
+        // povodna implementacia
         if( res ) {
             result << '-l' << "select=1:${res.join(':')}".toString()
         }
