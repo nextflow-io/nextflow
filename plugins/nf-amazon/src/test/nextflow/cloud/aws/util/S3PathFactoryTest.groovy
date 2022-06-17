@@ -29,6 +29,7 @@ class S3PathFactoryTest extends Specification {
         S3_PATH                                                 | BUCKET        | KEY
         's3://cbcrg-eu/raw/x_r1.fq'                             | 'cbcrg-eu'    | 'raw/x_r1.fq'
         's3://cbcrg-eu/raw/**_R1*{fastq,fq,fastq.gz,fq.gz}'     | 'cbcrg-eu'    | 'raw/**_R1*{fastq,fq,fastq.gz,fq.gz}'
+        's3://cbcrg-eu/raw/x_r1.fq?a=b'                         | 'cbcrg-eu'    | 'raw/x_r1.fq?a=b'
 
     }
 

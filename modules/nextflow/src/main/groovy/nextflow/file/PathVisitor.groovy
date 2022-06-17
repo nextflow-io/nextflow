@@ -66,7 +66,7 @@ class PathVisitor {
             applyRegexPattern0(filePattern)
 
         else if( filePattern != null )
-            applyGlobPattern0(filePattern as Path)
+            applyGlobPattern0( FileHelper.asPath(filePattern) )
 
         else
             throw new IllegalArgumentException("Missing file pattern argument")

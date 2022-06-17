@@ -234,6 +234,13 @@ class FileHelper {
         return !(path.getFileSystem().provider().scheme in UNSUPPORTED_GLOB_WILDCARDS)
     }
 
+    static Path asPath( Object obj){
+        if( obj instanceof Path )
+            return obj
+        if( obj instanceof URI)
+            return asPath((URI)obj)
+        asPath(obj.toString())
+    }
     /**
      * Given an hierarchical file URI path returns a {@link Path} object
      * eventually creating the associated file system if required.

@@ -145,7 +145,7 @@ class Nextflow {
         if( !filePattern )
             throw new IllegalArgumentException("Argument of `file` function cannot be ${filePattern==null?'null':'empty'}")
 
-        final path = filePattern as Path
+        final path = FileHelper.asPath(filePattern.toString())
         final glob = options?.containsKey('glob') ? options.glob as boolean : isGlobAllowed(path)
         if( !glob ) {
             return FileHelper.checkIfExists(path, options)
