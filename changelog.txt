@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.06.0-edge - 17 Jun 2022
+- Fix CodeCommit creds handling + nf-codecommit@0.1.2 [70fc0745]
+- Fix typo in log message [a8f8529d]
+- Add more scientists to the list of random names [8d5b36a2] <Marcel Ribeiro Dantas>
+
 22.06.0-edge - 9 Jun 2022
 - Add AWS CodeCommit initial support [80fba6e9]
 - Add support for 307 and 308 HTTP redirection [92382012]
