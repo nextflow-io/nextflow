@@ -285,6 +285,7 @@ class CmdRun extends CmdBase implements HubOptions {
         checkRunName()
 
         log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
+        Plugins.init()
 
         // -- specify the arguments
         final scriptFile = getScriptFile(pipeline)
@@ -301,7 +302,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         // -- load plugins
         final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
-        Plugins.setup( cfg )
+        Plugins.load(cfg)
 
         // -- load secret provider
         if( SecretsLoader.isEnabled() ) {
@@ -373,7 +374,7 @@ class CmdRun extends CmdBase implements HubOptions {
             return scriptDsl
         }
         else if( dsl ) {
-            log.debug("Applied DSL=$scriptDsl from config declaration")
+            log.debug("Applied DSL=$dsl from config declaration")
             return dsl
         }
         // -- if still unknown try probing for DSL1

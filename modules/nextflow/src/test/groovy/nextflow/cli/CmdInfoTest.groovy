@@ -17,6 +17,7 @@
 
 package nextflow.cli
 
+import nextflow.plugin.Plugins
 import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Specification
@@ -36,6 +37,10 @@ class CmdInfoTest extends Specification {
 
     @Shared Path tempDir
 
+    def cleanup() {
+        Plugins.stop()
+    }
+    
     def setupSpec() {
         tempDir = Files.createTempDirectory('test')
         AssetManager.root = tempDir.toFile()

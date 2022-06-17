@@ -17,6 +17,7 @@
 
 package nextflow.cli
 
+import nextflow.plugin.Plugins
 import spock.lang.IgnoreIf
 
 import java.nio.file.Files
@@ -27,6 +28,10 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CmdConfigTest extends Specification {
+
+    def cleanup() {
+        Plugins.stop()
+    }
 
     def 'should default notation' () {
 
