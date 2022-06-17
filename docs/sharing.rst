@@ -349,18 +349,18 @@ configuration snippet shown below::
 
         my_aws_repo {
             platform = 'codecommit'
-            user = '<YOUR USERNAME>'
-            password = '<YOUR PASSWORD>'
+            user = '<AWS ACCESS KEY>'
+            password = '<AWS SECRET KEY>'
         }
 
     }
 
-In the above snippet replace ``<YOUR USERNAME>`` and ``<YOUR PASSWORD>`` with your own credentials, and
+In the above snippet replace ``<AWS ACCESS KEY>`` and ``<AWS SECRET KEY>`` with your AWS credentials, and
 ``my_aws_repo`` with a name of your choice.
 
 .. tip::
-  The username and password credentials can be generated in the IAM user "Security Credentials" panel,
-  under the section `HTTPS Git credentials for AWS CodeCommit` section.
+  The ``user`` and ``password`` are optional settings, if omitted the
+  `AWS default credentials provider chain <https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html>`_ is used.
 
 Then the pipeline can be accessed with Nextflow as shown below::
 
