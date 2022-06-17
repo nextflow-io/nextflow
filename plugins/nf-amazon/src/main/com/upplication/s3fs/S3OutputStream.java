@@ -478,7 +478,6 @@ public final class S3OutputStream extends OutputStream {
                     success=true;
                 }
                 catch (AmazonClientException | IOException e) {
-                    System.out.println("exception subiendo part "+e);
                     if( attempt == request.getMaxAttempts() )
                         throw new IOException("Failed to upload multipart data to Amazon S3", e);
 
