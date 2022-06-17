@@ -80,6 +80,59 @@ class ConfigDiscoveryTest extends Specification {
 
     }
 
+    def 'should read config from file with multiple paths in $KUBECONFIG' () {
+
+        given:
+        def tempDir = Files.createTempDirectory("test")
+        def CONFIG1 = Files.createTempFile(tempDir, "config", null)
+        CONFIG1.text = """
+            apiVersion: v1
+            clusters:
+            - name: docker-for-desktop-cluster
+            contexts:
+            - context:
+                cluster: docker-for-desktop-cluster
+                namespace: your-space
+                user: docker-for-desktop
+              name: docker-for-desktop
+            current-context: docker-for-desktop
+            kind: Config
+            preferences: {}
+            users:
+            - name: docker-for-desktop
+            """
+            .stripIndent()
+
+        def CONFIG2 = Files.createTempFile(tempDir, "config", null)
+        CONFIG2.text = """
+            apiVersion: v1
+            clusters:
+            - name: my-cluster
+            contexts:
+            - context:
+                cluster: my-cluster
+                namespace: my-space
+                user: hello
+              name: my-context
+            current-context: my-context
+            kind: Config
+            preferences: {}
+            users:
+            - name: hello
+            """
+            .stripIndent()
+
+        def KUBECONFIG = [CONFIG1.toString(), CONFIG2.toString()].join(":")
+        def env = [KUBECONFIG: KUBECONFIG, KUBERNETES_SERVICE_HOST: "localhost"]
+        def discovery = new ConfigDiscovery(context: "my-context", env: env)
+
+        when:
+        def config = discovery.discover()
+
+        then:
+        config.namespace == 'my-space'
+    }
+
     def 'should read config from file with cert files' () {
 
         given:

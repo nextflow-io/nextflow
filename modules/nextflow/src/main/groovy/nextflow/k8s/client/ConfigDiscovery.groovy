@@ -50,7 +50,10 @@ class ConfigDiscovery {
         // running in a container. Use env HOME instead.
         def home = System.getenv('HOME')
         def kubeConfig = env.get('KUBECONFIG') ? env.get('KUBECONFIG') : "$home/.kube/config"
-        def configFile = Paths.get(kubeConfig)
+        // Split $KUBECONFIG by ':' in case there's more than one path
+        def configPaths = kubeConfig.split(":")
+        // Determine the currently used kubeconfig
+        def configFile = Paths.get(getCurrentConfig(configPaths))
 
         if( configFile.exists() ) {
             return fromConfig(configFile)
@@ -67,6 +70,38 @@ class ConfigDiscovery {
         }
 
         throw new IllegalStateException("Unable to lookup Kubernetes cluster configuration")
+    }
+
+    /**
+     * Get current k8s context from kubectl
+     */
+    protected String getCurrentContext() {
+        def cmd = "kubectl config current-context"
+        def proc = new ProcessBuilder("bash", "-c", cmd).redirectErrorStream(true).start()
+        def status = proc.waitFor()
+        if (status == 0) {
+            return proc.text.trim()
+        } else {
+            throw new IllegalStateException("Kubectl not responding")
+        }
+    }
+
+    /**
+     * Get the path to the currently used kubeconfig file, based on the k8s context
+     */
+    protected String getCurrentConfig(String[] paths) {
+        def currentContext = context ?: getCurrentContext()
+        log.debug "Kubernetes context: $currentContext"
+        for (path in paths) {
+            def configPath = Paths.get(path)
+            def yaml = (Map)new Yaml().load(Files.newInputStream(configPath))
+            def contextName = yaml."current-context" as String
+            if (contextName == currentContext) {
+                log.debug "Using config file: $path"
+                return path
+            }
+        }
+        return null
     }
 
     protected ClientConfig fromCluster(Map<String,String> env) {
