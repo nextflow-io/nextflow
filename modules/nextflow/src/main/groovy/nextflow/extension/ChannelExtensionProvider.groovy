@@ -29,6 +29,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
+import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.script.ChannelOut
 /**
@@ -104,10 +105,12 @@ class ChannelExtensionProvider implements ExtensionProvider {
      *      The class itself to allow method chaining
      */
     ChannelExtensionProvider loadPluginExtensionMethods(String pluginId, Map<String, String> includedNames){
-        final ext= findPluginExtensionMethods(pluginId)
-        if( ext ) {
-            loadPluginExtensionMethods(ext, includedNames)
-        }
+        final extensions= Plugins.getExtensionsInPluginId(ChannelExtensionPoint, pluginId)
+        if( !extensions )
+            throw new AbortOperationException("Plugin '$pluginId' does not implement any extension point")
+        if( extensions.size()>1 )
+            throw new AbortOperationException("Plugin '$pluginId' implements more than one extension point: ${extensions.collect(it -> it.class.getSimpleName()).join(',')}")
+        loadPluginExtensionMethods(extensions.first(), includedNames)
         return instance = this
     }
 
@@ -212,10 +215,6 @@ class ChannelExtensionProvider implements ExtensionProvider {
             def factory = (ChannelFactoryInstance)reference.target
             return factory.invokeExtensionMethod(reference.method, args)
         }
-    }
-
-    protected ChannelExtensionPoint findPluginExtensionMethods(String pluginId) {
-        Plugins.getExtensionsInPluginId(ChannelExtensionPoint, pluginId)?.first()
     }
 
     @Deprecated
