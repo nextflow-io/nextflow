@@ -584,7 +584,7 @@ class TaskRun implements Cloneable {
         }
 
         final cfg = getContainerConfig()
-        final handler = new ContainerHandler(cfg)
+        final handler = new ContainerHandler(cfg, processor.executor)
         final result = handler.normalizeImageName(imageName)
 
         final proxy = System.getenv('NXF_PROXY_REG')

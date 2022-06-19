@@ -17,6 +17,7 @@
 
 package nextflow.container
 
+import nextflow.executor.Executor
 import spock.lang.Specification
 
 import java.nio.file.Paths
@@ -134,7 +135,7 @@ class ContainerHandlerTest extends Specification {
     @Unroll
     def 'test normalize method for docker' () {
         given:
-        def n = Spy(ContainerHandler,constructorArgs:[[engine: 'docker', enabled: true, registry: registry]])
+        def n = Spy(new ContainerHandler([engine: 'docker', enabled: true, registry: registry]))
 
         when:
         def result = n.normalizeImageName(image)
@@ -158,7 +159,7 @@ class ContainerHandlerTest extends Specification {
     def 'test normalize method for shifter' () {
 
         given:
-        def n = Spy(ContainerHandler,constructorArgs:[[engine: 'shifter', enabled: true]])
+        def n = Spy(new ContainerHandler([engine: 'shifter', enabled: true]))
 
         when:
         def result = n.normalizeImageName(image)
@@ -179,6 +180,31 @@ class ContainerHandlerTest extends Specification {
         'docker:busybox'              | 'docker:busybox:latest'
     }
 
+    def 'should use docker for container native'  () {
+        given:
+        def EXECUTOR  = Mock(Executor)
+        def IMAGE = 'foo:latest'
+        def handler = Spy(new ContainerHandler([engine: 'shifter', enabled: true], EXECUTOR))
+
+        when:
+        def result = handler.normalizeImageName(IMAGE)
+        then:
+        1 * EXECUTOR.isContainerNative() >> false
+        1 * handler.normalizeShifterImageName(IMAGE) >> 'shifter://image'
+        0 * handler.normalizeDockerImageName(IMAGE) >> null
+        and:
+        result == 'shifter://image'
+
+        when:
+        result = handler.normalizeImageName(IMAGE)
+        then:
+        1 * EXECUTOR.isContainerNative() >> true
+        0 * handler.normalizeShifterImageName(IMAGE) >> null
+        1 * handler.normalizeDockerImageName(IMAGE) >> 'docker://image'
+        and:
+        result == 'docker://image'
+
+    }
     @Unroll
     def 'test normalize method for singularity' () {
         given:
@@ -209,7 +235,7 @@ class ContainerHandlerTest extends Specification {
 
     def 'should not invoke caching when engine is disabled' () {
         given:
-        final handler = Spy(ContainerHandler,constructorArgs:[[engine: 'singularity']])
+        final handler = Spy(new ContainerHandler([engine: 'singularity']))
         final IMAGE = 'docker://foo.img'
 
         when:

@@ -26,6 +26,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.executor.Executor
 import nextflow.util.Escape
 /**
  * Helper class to normalise a container image name depending
@@ -44,8 +45,11 @@ class ContainerHandler {
 
     private Path baseDir
 
-    ContainerHandler(Map containerConfig) {
+    private Executor executor
+
+    ContainerHandler(Map containerConfig, Executor executor=null) {
         this(containerConfig, CWD)
+        this.executor = executor
     }
 
     ContainerHandler(Map containerConfig, Path dir) {
@@ -58,6 +62,11 @@ class ContainerHandler {
     Path getBaseDir() { baseDir }
 
     String normalizeImageName(String imageName) {
+        // when the executor is container native, it's assumed
+        // the use of docker plain image name format
+        if( executor?.isContainerNative() ) {
+            return normalizeDockerImageName(imageName)
+        }
         final engine = config.getEngine()
         if( engine == 'shifter' ) {
             return normalizeShifterImageName(imageName)
