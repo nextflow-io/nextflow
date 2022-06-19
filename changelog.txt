@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.04.4 - 19 Jun 2022
+- Fix Publish copy mode for s3 based path [bb510ce6]
+- Add strict mode config setting [b0567e62]
+- Update docker base image [b00c1418]
+
 22.06.0-edge - 17 Jun 2022
 - Fix CodeCommit creds handling + nf-codecommit@0.1.2 [70fc0745]
 - Fix typo in log message [a8f8529d]
