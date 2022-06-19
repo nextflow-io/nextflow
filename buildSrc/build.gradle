@@ -12,7 +12,7 @@ group = "io.nextflow"
 
 dependencies {
     implementation ('com.amazonaws:aws-java-sdk-s3:1.11.542')
-    implementation 'com.google.code.gson:gson:2.8.6'
+    implementation 'com.google.code.gson:gson:2.8.9'
 }
 
 gradlePlugin {
