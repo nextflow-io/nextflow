@@ -17,9 +17,6 @@
 
 package nextflow.processor
 
-import nextflow.NF
-import nextflow.exception.ProcessException
-
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -37,6 +34,7 @@ import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Global
+import nextflow.NF
 import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
@@ -473,8 +471,9 @@ class PublishDir {
     @CompileStatic
     @PackageScope
     void validatePublishMode() {
-
-        if( (sourceFileSystem && sourceFileSystem != path.fileSystem) || path.fileSystem != FileSystems.default ) {
+        if( log.isTraceEnabled() )
+            log.trace "Publish path: ${path.toUriString()}; notMatchSourceFs=${sourceFileSystem && sourceFileSystem != path.fileSystem}; notMatchDefaultFs=${path.fileSystem != FileSystems.default}; isFusionFs=${path.toString().startsWith('/fusion/s3/')}"
+        if( (sourceFileSystem && sourceFileSystem != path.fileSystem) || path.fileSystem != FileSystems.default || path.toString().startsWith('/fusion/s3/') ) {
             if( !mode ) {
                 mode = Mode.COPY
             }
