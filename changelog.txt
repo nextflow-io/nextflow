@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.04.4 - 19 Jun 2022
+- Fix Publish copy mode for s3 based path [bb510ce6]
+- Add strict mode config setting [b0567e62]
+- Update docker base image [b00c1418]
+
 22.04.3 - 18 May 2022
 - Fix dsl1 detection (#2879) [1a7ea0d1] <Jose Espinosa-Carrasco
 
