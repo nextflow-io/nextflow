@@ -205,7 +205,7 @@ as shown below::
     }
 
     workflow {
-        channel.of('this', 'that') | templateExample
+        Channel.of('this', 'that') | templateExample
     }
 
 By default, Nextflow looks for the ``my_script.sh`` template file in the ``templates`` directory located alongside the
@@ -254,7 +254,7 @@ the latter, which makes process scripts easier to read and maintain. For example
     }
 
     workflow {
-        channel.of('Hello', 'Hola', 'Bonjour') | myTask
+        Channel.of('Hello', 'Hola', 'Bonjour') | myTask
     }
 
 In the above example, ``$USER`` is treated as a Bash variable, while ``!{str}`` is treated as a Nextflow variable.
@@ -290,7 +290,7 @@ For example::
     }
 
     workflow {
-        channel.of('a', 'b', 'c') | simpleSum
+        Channel.of('a', 'b', 'c') | simpleSum
     }
 
 will display::
@@ -392,7 +392,7 @@ by using the specified input name, as shown in the following example::
     }
 
     workflow {
-      def num = channel.of(1,2,3)
+      def num = Channel.of(1,2,3)
       basicExample(num)
     }
 
@@ -420,7 +420,7 @@ The resulting output is similar to the one shown below::
     }
 
     workflow {
-      channel.of(1,2,3) | basicExample
+      Channel.of(1,2,3) | basicExample
     }
 
 
@@ -455,7 +455,7 @@ input name. For example::
     }
 
     workflow {
-      def proteins = channel.fromPath( '/some/path/*.fa' )
+      def proteins = Channel.fromPath( '/some/path/*.fa' )
       blastThemAll(proteins)
     }
 
@@ -649,7 +649,7 @@ on the input value. For example::
     }
 
     workflow {
-        channel.of('hello', 'hola', 'bonjour', 'ciao') | printEnv
+        Channel.of('hello', 'hola', 'bonjour', 'ciao') | printEnv
     }
 
 ::
@@ -677,7 +677,7 @@ of the process script. For example::
     }
 
     workflow {
-      channel.of('hello', 'hola', 'bonjour', 'ciao')
+      Channel.of('hello', 'hola', 'bonjour', 'ciao')
         | map { it + '\n' }
         | printAll
     }
@@ -718,7 +718,7 @@ is associated with a corresponding element in the ``tuple`` definition. For exam
     }
 
     workflow {
-      channel.of( [1, 'alpha'], [2, 'beta'], [3, 'delta'] ) | tupleExample
+      Channel.of( [1, 'alpha'], [2, 'beta'], [3, 'delta'] ) | tupleExample
     }
 
 In the above example, the ``tuple`` input consists of the value ``x`` and the file ``latin.txt``.
@@ -819,8 +819,8 @@ For example::
   }
 
   workflow {
-    x = channel.of(1, 2)
-    y = channel.of('a', 'b', 'c')
+    x = Channel.of(1, 2)
+    y = Channel.of('a', 'b', 'c')
     foo(x, y)
   }
 
@@ -851,8 +851,8 @@ To better understand this behavior, compare the previous example with the follow
   }
 
   workflow {
-    x = channel.value(1)
-    y = channel.of('a', 'b', 'c')
+    x = Channel.value(1)
+    y = Channel.of('a', 'b', 'c')
     foo(x, y)
   }
 
@@ -942,7 +942,7 @@ in the process scope, or a value expression. For example::
     }
 
     workflow {
-      ch_dummy = channel.fromPath('*').first()
+      ch_dummy = Channel.fromPath('*').first()
       (ch_var, ch_str, ch_exp) = foo(ch_dummy)
 
       ch_var.view { "ch_var: $it" }
@@ -2186,7 +2186,7 @@ to identify them in the log file or in the trace execution report. For example::
     }
 
     workflow {
-      channel.of('alpha', 'gamma', 'omega') | foo
+      Channel.of('alpha', 'gamma', 'omega') | foo
     }
 
 The above snippet will print a log similar to the following one, where process names contain the tag value::
