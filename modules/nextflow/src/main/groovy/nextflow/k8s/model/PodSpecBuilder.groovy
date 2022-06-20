@@ -93,7 +93,9 @@ class PodSpecBuilder {
     List<Map> tolerations = []
 
     boolean privileged
-    
+
+    int activeDeadlineSeconds
+
     /**
      * @return A sequential volume unique identifier
      */
@@ -246,6 +248,11 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withActiveDeadline(int seconds) {
+        this.activeDeadlineSeconds = seconds
+        return this
+    }
+
     PodSpecBuilder withPodOptions(PodOptions opts) {
         // -- pull policy
         if( opts.imagePullPolicy )
@@ -383,6 +390,10 @@ class PodSpecBuilder {
         if( annotations )
             metadata.annotations = sanitize(annotations, MetaType.ANNOTATION)
 
+        // time directive
+        if ( activeDeadlineSeconds > 0)
+            spec.activeDeadlineSeconds = activeDeadlineSeconds
+
         final pod = [
                 apiVersion: 'v1',
                 kind: 'Pod',
@@ -475,7 +486,6 @@ class PodSpecBuilder {
         if( annotations )
             metadata.annotations = sanitize(annotations, MetaType.ANNOTATION)
 
-        // job spec
         final result = [
                 apiVersion: 'batch/v1',
                 kind: 'Job',
