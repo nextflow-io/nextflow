@@ -204,6 +204,7 @@ Resource requests and other job characteristics can be controlled via the follow
 * :ref:`process-cpus`
 * :ref:`process-memory`
 * :ref:`process-pod`
+* :ref:`process-time`
 
 See the :ref:`Kubernetes <k8s-page>` page to learn how to set up a Kubernetes cluster for running Nextflow pipelines.
 

@@ -222,7 +222,7 @@ class K8sDriverLauncherTest extends Specification {
         spec == [
             apiVersion: 'batch/v1', 
             kind: 'Job', 
-            metadata: [name: 'foo-boo', namespace: 'foo'], 
+            metadata: [name: 'foo-boo', namespace: 'foo', labels: [app: 'nextflow', runName: 'foo-boo']],
             spec: [
                backoffLimit: 0,
                template: [

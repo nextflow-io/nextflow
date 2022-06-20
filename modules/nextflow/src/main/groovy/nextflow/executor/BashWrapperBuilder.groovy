@@ -575,8 +575,8 @@ class BashWrapperBuilder {
 
         // The current work directory should be mounted only when
         // the task is executed in a temporary scratch directory (ie changeDir != null)
-        // Applying this strategy only to podman for now. See https://github.com/nextflow-io/nextflow/issues/1710
-        builder.addMountWorkDir( engine!='podman' || changeDir )
+        // See https://github.com/nextflow-io/nextflow/issues/1710
+        builder.addMountWorkDir( changeDir as boolean )
 
         builder.build()
         return builder
