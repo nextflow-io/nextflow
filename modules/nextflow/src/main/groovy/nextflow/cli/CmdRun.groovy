@@ -355,7 +355,8 @@ class CmdRun extends CmdBase implements HubOptions {
         NextflowMeta.instance.enableDsl(dsl)
         // -- show launch info
         final ver = NF.dsl2 ? DSL2 : DSL1
-        final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$scriptFile.repository`"
+        final repo = scriptFile.repository ?: scriptFile.source
+        final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$repo`"
         if( scriptFile.repository )
             log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
         else
@@ -374,7 +375,7 @@ class CmdRun extends CmdBase implements HubOptions {
             return scriptDsl
         }
         else if( dsl ) {
-            log.debug("Applied DSL=$scriptDsl from config declaration")
+            log.debug("Applied DSL=$dsl from config declaration")
             return dsl
         }
         // -- if still unknown try probing for DSL1
