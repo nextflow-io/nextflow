@@ -86,8 +86,6 @@ class AssetManager {
 
     private List<ProviderConfig> providerConfigs
 
-    private boolean bareMode = false
-
     /**
      * Create a new asset manager object with default parameters
      */
@@ -124,8 +122,7 @@ class AssetManager {
      */
     @PackageScope
     AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null ) {
-        if(cliOpts)
-            this.bareMode = cliOpts.bare ?: false
+
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
         this.project = resolveName(pipelineName)
@@ -611,7 +608,7 @@ class AssetManager {
                 .setURI(cloneURL)
                 .setDirectory(barePath)
                 .setCloneSubmodules(manifest.recurseSubmodules)
-                .setBare(bareMode)
+                .setBare(true)
                 .call()
 
             // create a working repo from HEAD
@@ -1127,7 +1124,7 @@ class AssetManager {
         assert barePath
 
         // barePath is pointing to a non bare git repo but to a working git directory
-        if ( bareMode && Path.of(barePath.absolutePath, '.git').exists() && Path.of(barePath.absolutePath, '.git').isDirectory()) {
+        if( Path.of(barePath.absolutePath,'.git').exists() && Path.of(barePath.absolutePath,'.git').isDirectory()){
             def message = """
             It seems this is a git working directory but a bare git is required. 
             If this is the case, please commit and push your changes and remove this directory -- Repository may be corrupted: $bareGitConfig""".stripIndent()
