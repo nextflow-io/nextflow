@@ -17,7 +17,7 @@
 
 package nextflow.scm
 
-import nextflow.Const
+import static nextflow.Const.*
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -65,6 +65,12 @@ class AssetManager {
     static File root = DEFAULT_ROOT
 
     /**
+     * Subdirectory where locate revisions
+     */
+    @PackageScope
+    static String SUBDIR = '.nextflow/revs'
+
+    /**
      * The pipeline name. It must be in the form {@code username/repo} where 'username'
      * is a valid user name or organisation account, while 'repo' is the repository name
      * containing the pipeline code
@@ -73,6 +79,11 @@ class AssetManager {
 
     /**
      * Directory where the pipeline is cloned (i.e. downloaded)
+     */
+    private File barePath
+
+    /**
+     * Directory where the pipeline is working
      */
     private File localPath
 
@@ -126,7 +137,7 @@ class AssetManager {
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
         this.project = resolveName(pipelineName)
-        this.localPath = checkProjectDir(project)
+        this.barePath = this.localPath = checkProjectDir(project)
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
         setupCredentials(cliOpts)
@@ -138,6 +149,11 @@ class AssetManager {
     @PackageScope
     File getLocalGitConfig() {
         localPath ? new File(localPath,'.git/config') : null
+    }
+
+    @PackageScope
+    File getBareGitConfig() {
+        barePath ? new File(barePath,'config') : null
     }
 
     @PackageScope AssetManager setProject(String name) {
@@ -197,6 +213,8 @@ class AssetManager {
         if( !localPath.exists() ) {
             return
         }
+        // at this point localPath is pointing to bare repo. Once validate if exists we change it to HEAD repo
+        localPath = resolvePathForRevision(null)
 
         // if project dir exists it must contain the Git config file
         final configProvider = guessHubProviderFromGitConfig(true)
@@ -576,7 +594,7 @@ class AssetManager {
 
 
     private File resolvePathForRevision(String revision){
-        Path.of(barePath.absolutePath, SUBDIR, revision ?: Const.DEFAULT_BRANCH).toFile()
+        Path.of(barePath.absolutePath, SUBDIR, revision ?: DEFAULT_BRANCH).toFile()
     }
 
     /**
@@ -709,7 +727,7 @@ class AssetManager {
 
         def clone = Git.cloneRepository()
         if( provider.hasCredentials() )
-            clone.setCredentialsProvider(new UsernamePasswordCredentialsProvider(provider.user, provider.password))
+            clone.setCredentialsProvider( provider.getGitCredentials() )
 
         clone
                 .setURI(barePath.toURI().toString())
