@@ -34,6 +34,10 @@ trait HubOptions {
     @Parameter(names='-user', description = 'Private repository user name')
     String hubUser
 
+    @Parameter(names='-bare', description = 'Clone as bare repo')
+    Boolean bare = false
+
+
     /**
      * Return the password provided on the command line or stop allowing the user to enter it on the console
      *

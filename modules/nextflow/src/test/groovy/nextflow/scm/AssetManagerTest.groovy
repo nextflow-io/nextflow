@@ -401,7 +401,7 @@ class AssetManagerTest extends Specification {
         dir.resolve('foo/bar/config').text = GIT_CONFIG_TEXT
 
         when:
-        def holder = new AssetManager()
+        def holder = new AssetManager(bareMode: true)
         holder.build('foo/bar')
         then:
         thrown(AbortOperationException)
