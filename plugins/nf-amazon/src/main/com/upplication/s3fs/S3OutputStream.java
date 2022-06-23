@@ -646,14 +646,11 @@ public final class S3OutputStream extends OutputStream {
      */
     static synchronized ExecutorService getOrCreateExecutor(int maxThreads) {
         if( executorSingleton == null ) {
-            ThreadPoolExecutor pool = new ThreadPoolBuilder()
-                    .withName("S3OutputStream")
-                    .withMinSize(maxThreads)
-                    .withMaxSize(maxThreads)
-                    .withQueueSize(maxThreads *3)
-                    .withKeepAliveTime(Duration.of("60sec"))
-                    .withAllowCoreThreadTimeout(true)
-                    .build();
+            ThreadPoolExecutor pool = ThreadPoolBuilder.io(
+                    maxThreads,
+                    maxThreads,
+                    maxThreads*3,
+                    "S3OutputStream");
             executorSingleton = pool;
             log.trace("Created singleton upload executor -- max-treads: {}", maxThreads);
         }
