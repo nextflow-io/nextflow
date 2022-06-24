@@ -35,6 +35,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
@@ -306,11 +307,13 @@ public final class S3OutputStream extends OutputStream {
         }
         else {
             // allocate a new buffer
+            log.debug("Allocating new buffer of {} bytes, total buffers {}", request.getChunkSize(), counter.incrementAndGet());
             result = ByteBuffer.allocateDirect(request.getChunkSize());
         }
 
         return result;
     }
+    AtomicInteger counter = new AtomicInteger();
 
 
     /**
@@ -647,9 +650,9 @@ public final class S3OutputStream extends OutputStream {
     static synchronized ExecutorService getOrCreateExecutor(int maxThreads) {
         if( executorSingleton == null ) {
             ThreadPoolExecutor pool = ThreadPoolBuilder.io(
-                    maxThreads,
-                    maxThreads,
+                    1,
                     maxThreads*3,
+                    maxThreads*10,
                     "S3OutputStream");
             executorSingleton = pool;
             log.trace("Created singleton upload executor -- max-treads: {}", maxThreads);
