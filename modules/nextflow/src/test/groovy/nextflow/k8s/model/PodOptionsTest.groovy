@@ -32,8 +32,9 @@ class PodOptionsTest extends Specification {
         def options = new PodOptions(null)
         then:
         options.getEnvVars() == [] as Set
-        options.getMountSecrets() == [] as Set
         options.getMountConfigMaps() == [] as Set
+        options.getMountCsiEphemerals() == [] as Set
+        options.getMountSecrets() == [] as Set
         options.getAutomountServiceAccountToken() == true
     }
 
@@ -95,6 +96,28 @@ class PodOptionsTest extends Specification {
     }
 
 
+    def 'should return csi ephemeral mounts' () {
+
+        given:
+        def options = [
+            [
+                mountPath: '/data',
+                csi: [
+                    driver: 'inline.storage.kubernetes.io',
+                    volumeAttributes: [foo: 'bar']
+                ]
+            ]
+        ]
+
+        when:
+        def csiEphemerals = new PodOptions(options).getMountCsiEphemerals()
+        then:
+        csiEphemerals == [
+            new PodMountCsiEphemeral(mountPath: '/data', csi: options[0].csi)
+        ] as Set
+    }
+
+
     def 'should return secret mounts' () {
 
         given:
@@ -148,7 +171,7 @@ class PodOptionsTest extends Specification {
 
     }
 
-    def 'should create volume claims' () {
+    def 'should create persistent volume claims' () {
         given:
         def options = [
                 [volumeClaim:'pvc1', mountPath: '/this/path'],
@@ -196,33 +219,34 @@ class PodOptionsTest extends Specification {
         given:
         def list1 = [
                 [env: 'HELLO', value: 'WORLD'],
-                [secret: 'secret/key', mountPath: '/etc/secret'],
                 [config: 'data/key', mountPath: '/data/file.txt'],
+                [csi: [driver: 'inline.storage.kubernetes.io'], mountPath: '/data'],
+                [secret: 'secret/key', mountPath: '/etc/secret'],
                 [volumeClaim: 'pvc', mountPath: '/mnt/claim'],
                 [runAsUser: 500]
         ]
 
         def list2 = [
                 [env: 'ALPHA', value: 'GAMMA'],
-                [secret: 'foo/key', mountPath: '/a/aa'],
                 [config: 'bar/key', mountPath: '/b/bb'],
+                [secret: 'foo/key', mountPath: '/a/aa'],
                 [volumeClaim: 'cvp', mountPath: '/c/cc'],
 
                 [env: 'DELTA', value: 'LAMBDA'],
-                [secret: 'x', mountPath: '/x'],
                 [config: 'y', mountPath: '/y'],
+                [secret: 'x', mountPath: '/x'],
                 [volumeClaim: 'z', mountPath: '/z'],
         ]
 
         def list3 = [
                 [env: 'HELLO', value: 'WORLD'],
-                [secret: 'secret/key', mountPath: '/etc/secret'],
                 [config: 'data/key', mountPath: '/data/file.txt'],
+                [secret: 'secret/key', mountPath: '/etc/secret'],
                 [volumeClaim: 'pvc', mountPath: '/mnt/claim'],
 
                 [env: 'DELTA', value: 'LAMBDA'],
-                [secret: 'x', mountPath: '/x'],
                 [config: 'y', mountPath: '/y'],
+                [secret: 'x', mountPath: '/x'],
                 [volumeClaim: 'z', mountPath: '/z'],
 
                 [securityContext: [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]],
@@ -272,14 +296,18 @@ class PodOptionsTest extends Specification {
                 PodEnv.value('DELTA','LAMBDA')
         ] as Set
 
+        opts.getMountConfigMaps() == [
+            new PodMountConfig('data/key', '/data/file.txt'),
+            new PodMountConfig('y', '/y'),
+        ] as Set
+
+        opts.getMountCsiEphemerals() == [
+            new PodMountCsiEphemeral('/data', [driver: 'inline.storage.kubernetes.io'])
+        ] as Set
+
         opts.getMountSecrets() == [
             new PodMountSecret('secret/key', '/etc/secret'),
             new PodMountSecret('x', '/x')
-        ] as Set
-
-        opts.getMountConfigMaps() == [
-                new PodMountConfig('data/key', '/data/file.txt'),
-                new PodMountConfig('y', '/y'),
         ] as Set
 
         opts.getVolumeClaims() == [

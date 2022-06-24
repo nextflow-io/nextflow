@@ -41,6 +41,8 @@ class PodOptions {
 
     private Collection<PodMountConfig> mountConfigMaps
 
+    private Collection<PodMountCsiEphemeral> mountCsiEphemerals
+
     private Collection<PodMountSecret> mountSecrets
 
     private Collection<PodVolumeClaim> mountClaims
@@ -64,13 +66,13 @@ class PodOptions {
     private Boolean privileged
     
     PodOptions( List<Map> options=null ) {
-        int size = options ? options.size() : 0
-        envVars = new HashSet<>(size)
-        mountSecrets = new HashSet<>(size)
-        mountConfigMaps = new HashSet<>(size)
-        mountClaims = new HashSet<>(size)
+        envVars = new HashSet<>()
+        mountConfigMaps = new HashSet<>()
+        mountCsiEphemerals = new HashSet<>()
+        mountSecrets = new HashSet<>()
+        mountClaims = new HashSet<>()
         automountServiceAccountToken = true
-        tolerations = new ArrayList<Map>(size)
+        tolerations = new ArrayList<Map>()
         init(options)
     }
 
@@ -94,11 +96,14 @@ class PodOptions {
         else if( entry.env && entry.config ) {
             envVars << PodEnv.config(entry.env, entry.config)
         }
-        else if( entry.mountPath && entry.secret ) {
-            mountSecrets <<  new PodMountSecret(entry)
-        }
         else if( entry.mountPath && entry.config ) {
             mountConfigMaps << new PodMountConfig(entry)
+        }
+        else if( entry.mountPath && entry.csi ) {
+            mountCsiEphemerals << new PodMountCsiEphemeral(entry)
+        }
+        else if( entry.mountPath && entry.secret ) {
+            mountSecrets << new PodMountSecret(entry)
         }
         else if( entry.mountPath && entry.volumeClaim ) {
             mountClaims << new PodVolumeClaim(entry)
@@ -147,6 +152,8 @@ class PodOptions {
     Collection<PodEnv> getEnvVars() { envVars }
 
     Collection<PodMountConfig> getMountConfigMaps() { mountConfigMaps }
+
+    Collection<PodMountCsiEphemeral> getMountCsiEphemerals() { mountCsiEphemerals }
 
     Collection<PodMountSecret> getMountSecrets() { mountSecrets }
 
@@ -209,6 +216,10 @@ class PodOptions {
         // config maps
         result.mountConfigMaps.addAll( mountConfigMaps )
         result.mountConfigMaps.addAll( other.mountConfigMaps )
+
+        // csi ephemeral volumes
+        result.mountCsiEphemerals.addAll( mountCsiEphemerals )
+        result.mountCsiEphemerals.addAll( other.mountCsiEphemerals )
 
         // secrets
         result.mountSecrets.addAll( mountSecrets )
