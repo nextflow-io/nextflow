@@ -220,7 +220,6 @@ class PodOptionsTest extends Specification {
         def list1 = [
                 [env: 'HELLO', value: 'WORLD'],
                 [config: 'data/key', mountPath: '/data/file.txt'],
-                [csi: [driver: 'inline.storage.kubernetes.io'], mountPath: '/data'],
                 [secret: 'secret/key', mountPath: '/etc/secret'],
                 [volumeClaim: 'pvc', mountPath: '/mnt/claim'],
                 [runAsUser: 500]
@@ -249,6 +248,7 @@ class PodOptionsTest extends Specification {
                 [secret: 'x', mountPath: '/x'],
                 [volumeClaim: 'z', mountPath: '/z'],
 
+                [csi: [driver: 'inline.storage.kubernetes.io'], mountPath: '/data'],
                 [securityContext: [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]],
                 [nodeSelector: 'foo=X, bar=Y'],
                 [automountServiceAccountToken: false],
@@ -263,7 +263,6 @@ class PodOptionsTest extends Specification {
         opts == new PodOptions()
 
         when:
-
         opts = new PodOptions(list1) + new PodOptions()
         then:
         opts == new PodOptions(list1)
@@ -281,7 +280,6 @@ class PodOptionsTest extends Specification {
         opts == new PodOptions(list1)
         opts.securityContext.toSpec() == [runAsUser:500]
 
-
         when:
         opts = new PodOptions(list1) + new PodOptions(list2)
         then:
@@ -292,8 +290,8 @@ class PodOptionsTest extends Specification {
         opts = new PodOptions(list1) + new PodOptions(list3)
         then:
         opts.getEnvVars() == [
-                PodEnv.value('HELLO','WORLD'),
-                PodEnv.value('DELTA','LAMBDA')
+            PodEnv.value('HELLO','WORLD'),
+            PodEnv.value('DELTA','LAMBDA')
         ] as Set
 
         opts.getMountConfigMaps() == [
@@ -311,8 +309,8 @@ class PodOptionsTest extends Specification {
         ] as Set
 
         opts.getVolumeClaims() == [
-                new PodVolumeClaim('pvc','/mnt/claim'),
-                new PodVolumeClaim('z','/z'),
+            new PodVolumeClaim('pvc','/mnt/claim'),
+            new PodVolumeClaim('z','/z'),
         ] as Set
 
         opts.securityContext.toSpec() == [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]
