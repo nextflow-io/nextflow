@@ -57,7 +57,6 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.util.Base64;
 import com.upplication.s3fs.util.ByteBufferInputStream;
 import com.upplication.s3fs.util.S3MultipartOptions;
-import nextflow.util.Duration;
 import nextflow.util.ThreadPoolBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -181,6 +180,8 @@ public final class S3OutputStream extends OutputStream {
     private CannedAccessControlList cannedAcl;
 
     private List<Tag> tags;
+
+    private AtomicInteger bufferCounter = new AtomicInteger();
 
     /**
      * Creates a new {@code S3OutputStream} that writes data directly into the S3 object with the given {@code objectId}.
@@ -307,13 +308,12 @@ public final class S3OutputStream extends OutputStream {
         }
         else {
             // allocate a new buffer
-            log.debug("Allocating new buffer of {} bytes, total buffers {}", request.getChunkSize(), counter.incrementAndGet());
+            log.debug("Allocating new buffer of {} bytes, total buffers {}", request.getChunkSize(), bufferCounter.incrementAndGet());
             result = ByteBuffer.allocateDirect(request.getChunkSize());
         }
 
         return result;
     }
-    AtomicInteger counter = new AtomicInteger();
 
 
     /**
