@@ -150,7 +150,7 @@ A minimal configuration looks like the following snippet::
 In the above example, replace the location placeholder with the name of your Azure region and the account placeholders with the values
 corresponding to your configuration . Then save it to a file named ``nextflow.config``.
 
-.. tip:: The list of Azure region can be found by executing the following Azure CLI command:
+.. tip:: The list of Azure regions can be found by executing the following Azure CLI command::
 
     az account list-locations -o table
 
