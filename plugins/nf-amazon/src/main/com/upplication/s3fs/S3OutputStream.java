@@ -35,6 +35,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
@@ -56,6 +57,7 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.util.Base64;
 import com.upplication.s3fs.util.ByteBufferInputStream;
 import com.upplication.s3fs.util.S3MultipartOptions;
+import nextflow.util.ThreadPoolBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static java.util.Objects.requireNonNull;
@@ -179,6 +181,8 @@ public final class S3OutputStream extends OutputStream {
 
     private List<Tag> tags;
 
+    private AtomicInteger bufferCounter = new AtomicInteger();
+
     /**
      * Creates a new {@code S3OutputStream} that writes data directly into the S3 object with the given {@code objectId}.
      * No special object metadata or storage class will be attached to the object.
@@ -253,6 +257,9 @@ public final class S3OutputStream extends OutputStream {
      */
     @Override
     public void write (int b) throws IOException {
+        if( closed ){
+            throw new IOException("Can't write into a closed stream");
+        }
         if( buf == null ) {
             buf = allocate();
             md5 = createMd5();
@@ -301,6 +308,7 @@ public final class S3OutputStream extends OutputStream {
         }
         else {
             // allocate a new buffer
+            log.debug("Allocating new buffer of {} bytes, total buffers {}", request.getChunkSize(), bufferCounter.incrementAndGet());
             result = ByteBuffer.allocateDirect(request.getChunkSize());
         }
 
@@ -641,14 +649,11 @@ public final class S3OutputStream extends OutputStream {
      */
     static synchronized ExecutorService getOrCreateExecutor(int maxThreads) {
         if( executorSingleton == null ) {
-            ThreadPoolExecutor pool = new ThreadPoolExecutor(
+            ThreadPoolExecutor pool = ThreadPoolBuilder.io(
+                    1,
                     maxThreads,
-                    Integer.MAX_VALUE,
-                    60L, TimeUnit.SECONDS,
-                    new LimitedQueue<Runnable>(maxThreads *3),
-                    new ThreadPoolExecutor.CallerRunsPolicy() );
-
-            pool.allowCoreThreadTimeOut(true);
+                    maxThreads*3,
+                    "S3OutputStream");
             executorSingleton = pool;
             log.trace("Created singleton upload executor -- max-treads: {}", maxThreads);
         }
