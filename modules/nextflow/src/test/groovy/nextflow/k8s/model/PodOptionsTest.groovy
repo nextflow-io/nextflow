@@ -300,7 +300,7 @@ class PodOptionsTest extends Specification {
         ] as Set
 
         opts.getMountCsiEphemerals() == [
-            new PodMountCsiEphemeral('/data', [driver: 'inline.storage.kubernetes.io'])
+            new PodMountCsiEphemeral([driver: 'inline.storage.kubernetes.io'], '/data')
         ] as Set
 
         opts.getMountSecrets() == [
