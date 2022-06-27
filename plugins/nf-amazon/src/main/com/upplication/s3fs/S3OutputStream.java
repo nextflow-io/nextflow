@@ -651,7 +651,7 @@ public final class S3OutputStream extends OutputStream {
         if( executorSingleton == null ) {
             ThreadPoolExecutor pool = ThreadPoolBuilder.io(
                     1,
-                    maxThreads*3,
+                    maxThreads,
                     maxThreads*10,
                     "S3OutputStream");
             executorSingleton = pool;
