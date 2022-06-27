@@ -304,7 +304,7 @@ class PodOptionsTest extends Specification {
         ] as Set
 
         opts.getMountEmptyDirs() == [
-                new PodMountEmptyDir('/scratch1', [:]),
+                new PodMountEmptyDir([:], '/scratch1'),
         ] as Set
 
         opts.getVolumeClaims() == [

@@ -41,7 +41,7 @@ class PodOptions {
 
     private Collection<PodMountConfig> mountConfigMaps
 
-    private Collection<PodMountEmptyDir> mountConfigEmptyDirs
+    private Collection<PodMountEmptyDir> mountEmptyDirs
 
     private Collection<PodMountSecret> mountSecrets
 
@@ -154,7 +154,7 @@ class PodOptions {
 
     Collection<PodMountConfig> getMountConfigMaps() { mountConfigMaps }
 
-    Collection<PodMountConfig> getMountEmptyDirs() { mountEmptyDirs }
+    Collection<PodMountEmptyDir> getMountEmptyDirs() { mountEmptyDirs }
 
     Collection<PodMountSecret> getMountSecrets() { mountSecrets }
 
