@@ -147,8 +147,13 @@ A minimal configuration looks like the following snippet::
       }
     }
 
-In the above example, replace the location and the account placeholders with the value corresponding to your configuration and
-save it to a file named ``nextflow.config``.
+In the above example, replace the location placeholder with the name of your Azure region and the account placeholders with the values
+corresponding to your configuration . Then save it to a file named ``nextflow.config``.
+
+.. tip:: The list of Azure regions can be found by executing the following Azure CLI command::
+
+    az account list-locations -o table
+
 
 Given the previous configuration, launch the execution of the pipeline using the following command::
 
@@ -353,7 +358,7 @@ azure.storage.tokenDuration                     The duration of the shared acces
 azure.batch.accountName                         The batch service account name.
 azure.batch.accountKey                          The batch service account key.
 azure.batch.endpoint                            The batch service endpoint e.g. ``https://nfbatch1.westeurope.batch.azure.com``.
-azure.batch.location                            The batch service location e.g. ``westeurope``. This is not needed when the endpoint is specified.
+azure.batch.location                            The name of the batch service region, e.g. ``westeurope`` or ``eastus2``. This is not needed when the endpoint is specified.
 azure.batch.autoPoolMode                        Enable the automatic creation of batch pools depending on the pipeline resources demand (default: ``true``).
 azure.batch.allowPoolCreation                   Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: ``false``).
 azure.batch.deleteJobsOnCompletion              Enable the automatic deletion of jobs created by the pipeline execution (default: ``true``).
