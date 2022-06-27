@@ -64,7 +64,7 @@ class AwsOptionsTest extends Specification {
         opts.maxParallelTransfers == AwsOptions.MAX_TRANSFER
 
         when:
-        opts = new AwsOptions(sess)
+        opts = new AwsOptions(sess, [:])
         then:
         opts.maxParallelTransfers == 5
 
@@ -90,7 +90,7 @@ class AwsOptionsTest extends Specification {
             ]
         }
 
-        def exec = Mock(AwsBatchExecutor)
+        def exec = Mock(AwsBatchRegionExecutor)
         exec.getSession() >> sess
         exec.getRemoteBinDir() >> Paths.get('/remote/bin/path')
 
@@ -107,7 +107,56 @@ class AwsOptionsTest extends Specification {
         opts.volumes == ['/foo','/this:/that']
 
         when:
-        opts = new AwsOptions(exec)
+        opts = new AwsOptions(exec, [:], exec.remoteBinDir)
+        then:
+        opts.remoteBinDir == '/remote/bin/path'
+
+    }
+
+    def 'should merge aws options' () {
+        given:
+        def sess = Mock(Session)  {
+            getConfig() >> [aws:
+                                    [
+                                            batch:[
+                                                    cliPath: '/foo/bar/aws',
+                                                    maxParallelTransfers: 5,
+                                                    maxTransferAttempts: 3,
+                                                    delayBetweenAttempts: '9 sec',
+                                                    jobRole: 'aws::foo::bar',
+                                                    volumes: '/foo,/this:/that'],
+                                            client: [
+                                                    uploadStorageClass: 'my-store-class',
+                                                    storageEncryption: 'my-ecrypt-class'],
+                                            region: 'aws-west-2'
+                                    ]
+            ]
+        }
+
+        def specificRegion = [
+                aws:[
+                        region: 'eu-west1'
+                ]
+        ]
+
+        def exec = Mock(AwsBatchRegionExecutor)
+        exec.getSession() >> sess
+        exec.getRemoteBinDir() >> Paths.get('/remote/bin/path')
+
+        when:
+        def opts = new AwsOptions(sess, specificRegion )
+        then:
+        opts.maxParallelTransfers == 5
+        opts.maxTransferAttempts == 3
+        opts.delayBetweenAttempts.seconds == 9
+        opts.storageClass == 'my-store-class'
+        opts.storageEncryption == 'my-ecrypt-class'
+        opts.region == 'eu-west1'
+        opts.jobRole == 'aws::foo::bar'
+        opts.volumes == ['/foo','/this:/that']
+
+        when:
+        opts = new AwsOptions(exec, [:], exec.remoteBinDir)
         then:
         opts.remoteBinDir == '/remote/bin/path'
 

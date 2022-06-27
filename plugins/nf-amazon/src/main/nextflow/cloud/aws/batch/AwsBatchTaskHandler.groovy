@@ -90,7 +90,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     private final Path traceFile
 
-    private AwsBatchExecutor executor
+    private AwsBatchRegionExecutor executor
 
     private AWSBatch client
 
@@ -120,7 +120,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      * @param task The {@link nextflow.processor.TaskRun} descriptor of the task to run
      * @param executor The {@link AwsBatchExecutor} instance
      */
-    AwsBatchTaskHandler(TaskRun task, AwsBatchExecutor executor) {
+    AwsBatchTaskHandler(TaskRun task, AwsBatchRegionExecutor executor) {
         super(task)
         this.executor = executor
         this.client = executor.client
@@ -519,7 +519,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return result
     }
 
-    @Memoized 
+    @Memoized
     LogConfiguration getLogConfiguration(String name, String region) {
         new LogConfiguration()
             .withLogDriver('awslogs')

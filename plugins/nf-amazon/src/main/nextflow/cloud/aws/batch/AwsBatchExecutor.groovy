@@ -58,15 +58,6 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
     private Map<String,String> sysEnv = System.getenv()
 
     /**
-     * Proxy to throttle AWS batch client requests
-     */
-    @PackageScope
-    private AwsBatchProxy client
-
-    /** Helper class to resolve Batch related metadata */
-    private AwsBatchHelper helper
-
-    /**
      * executor service to throttle service requests
      */
     private ThrottlingExecutor submitter
@@ -80,10 +71,6 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
      * A S3 path where executable scripts need to be uploaded
      */
     private Path remoteBinDir = null
-
-    private AwsOptions awsOptions
-
-    AwsOptions getAwsOptions() {  awsOptions  }
 
     /**
      * @return {@code true} to signal containers are managed directly the AWS Batch service
@@ -134,22 +121,6 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         }
     }
 
-    protected void createAwsClient() {
-        /*
-         * retrieve config and credentials and create AWS client
-         */
-        final driver = new AmazonClientFactory(session.config)
-
-        /*
-         * create a proxy for the aws batch client that manages the request throttling
-         */
-        client = new AwsBatchProxy(driver.getBatchClient(), submitter)
-        helper = new AwsBatchHelper(client, driver)
-        // create the options object
-        awsOptions = new AwsOptions(this)
-        log.debug "[AWS BATCH] Executor options=$awsOptions"
-    }
-
     /**
      * Initialise the AWS batch executor.
      */
@@ -159,17 +130,11 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         validateWorkDir()
         validatePathDir()
         uploadBinDir()
-        createAwsClient()
     }
 
     @PackageScope
     Path getRemoteBinDir() {
         remoteBinDir
-    }
-
-    @PackageScope
-    AWSBatch getClient() {
-        client
     }
 
     /**
@@ -212,7 +177,9 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         assert task
         assert task.workDir
         log.trace "[AWS BATCH] Launching process > ${task.name} -- work folder: ${task.workDirStr}"
-        new AwsBatchTaskHandler(task, this)
+        AwsBatchRegionExecutor executor = new AwsBatchRegionExecutor(this.submitter, this.reaper, remoteBinDir)
+        executor.createAwsClient(session, task.config)
+        new AwsBatchTaskHandler(task, executor)
     }
 
     /**
@@ -254,36 +221,6 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
 
     protected void logRateLimitChange(RateUnit rate) {
         log.debug "New submission rate limit: $rate"
-    }
-
-    @PackageScope
-    ThrottlingExecutor getReaper() { reaper }
-
-
-    CloudMachineInfo getMachineInfoByQueueAndTaskArn(String queue, String taskArn) {
-        try {
-            return helper?.getCloudInfoByQueueAndTaskArn(queue, taskArn)
-        }
-        catch ( AccessDeniedException e ) {
-            log.warn "Unable to retrieve AWS Batch instance type | ${e.message}"
-            // disable it since user has not permission to access this info
-            awsOptions.fetchInstanceType = false
-            return null
-        }
-        catch( Exception e ) {
-            log.warn "Unable to retrieve AWS batch instance type for queue=$queue; task=$taskArn | ${e.message}", e
-            return null
-        }
-    }
-
-    String getJobOutputStream(String jobId) {
-        try {
-            return helper.getTaskLogStream(jobId)
-        }
-        catch (Exception e) {
-            log.debug "Unable to retrieve AWS Cloudwatch logs for Batch Job id=$jobId | ${e.message}", e
-            return null
-        }
     }
 
     @Override

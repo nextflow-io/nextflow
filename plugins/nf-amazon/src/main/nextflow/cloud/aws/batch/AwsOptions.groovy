@@ -99,28 +99,36 @@ class AwsOptions implements CloudTransferOptions {
     /* Only for testing purpose */
     protected AwsOptions() { }
 
-    AwsOptions( AwsBatchExecutor executor ) {
-        this(executor.session)
-        this.remoteBinDir = executor.getRemoteBinDir()
+    AwsOptions( AwsBatchRegionExecutor executor, Path remoteBinDir ) {
+        this(executor, executor.session.config, remoteBinDir)
     }
 
-    AwsOptions(Session session) {
-        cliPath = getCliPath0(session)
-        debug = session.config.navigate('aws.client.debug') as Boolean
-        storageClass = session.config.navigate('aws.client.uploadStorageClass') as String
-        storageKmsKeyId = session.config.navigate('aws.client.storageKmsKeyId') as String
-        storageEncryption = session.config.navigate('aws.client.storageEncryption') as String
-        maxParallelTransfers = session.config.navigate('aws.batch.maxParallelTransfers', MAX_TRANSFER) as int
-        maxTransferAttempts = session.config.navigate('aws.batch.maxTransferAttempts', defaultMaxTransferAttempts()) as int
-        delayBetweenAttempts = session.config.navigate('aws.batch.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
-        maxSpotAttempts = session.config.navigate('aws.batch.maxSpotAttempts', DEFAULT_MAX_SPOT_ATTEMPTS) as int
-        region = session.config.navigate('aws.region') as String
-        volumes = makeVols(session.config.navigate('aws.batch.volumes'))
-        jobRole = session.config.navigate('aws.batch.jobRole')
-        logsGroup = session.config.navigate('aws.batch.logsGroup')
-        fetchInstanceType = session.config.navigate('aws.batch.fetchInstanceType')
-        retryMode = session.config.navigate('aws.batch.retryMode', 'standard')
-        shareIdentifier = session.config.navigate('aws.batch.shareIdentifier')
+    AwsOptions( AwsBatchRegionExecutor executor, Map awsConfig, Path remoteBinDir ) {
+        this(executor.session, awsConfig)
+        this.remoteBinDir = remoteBinDir
+    }
+
+    AwsOptions(Session session, Map config=null) {
+        Map awsConfig = session?.config?.deepClone() ?: [:]
+        if( config ){
+            awsConfig = awsConfig.deepMerge(config)
+        }
+        cliPath = getCliPath0(session, awsConfig)
+        debug = awsConfig.navigate('aws.client.debug') as Boolean
+        storageClass = awsConfig.navigate('aws.client.uploadStorageClass') as String
+        storageKmsKeyId = awsConfig.navigate('aws.client.storageKmsKeyId') as String
+        storageEncryption = awsConfig.navigate('aws.client.storageEncryption') as String
+        maxParallelTransfers = awsConfig.navigate('aws.batch.maxParallelTransfers', MAX_TRANSFER) as int
+        maxTransferAttempts = awsConfig.navigate('aws.batch.maxTransferAttempts', defaultMaxTransferAttempts()) as int
+        delayBetweenAttempts = awsConfig.navigate('aws.batch.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
+        maxSpotAttempts = awsConfig.navigate('aws.batch.maxSpotAttempts', DEFAULT_MAX_SPOT_ATTEMPTS) as int
+        region = awsConfig.navigate('aws.region') as String
+        volumes = makeVols(awsConfig.navigate('aws.batch.volumes'))
+        jobRole = awsConfig.navigate('aws.batch.jobRole')
+        logsGroup = awsConfig.config.navigate('aws.batch.logsGroup')
+        fetchInstanceType = awsConfig.navigate('aws.batch.fetchInstanceType')
+        retryMode = awsConfig.navigate('aws.batch.retryMode', 'standard')
+        shareIdentifier = awsConfig.config.navigate('aws.batch.shareIdentifier')
         if( retryMode == 'built-in' )
             retryMode = null // this force falling back on NF built-in retry mode instead of delegating to AWS CLI tool
         if( retryMode && retryMode !in VALID_RETRY_MODES )
@@ -133,8 +141,8 @@ class AwsOptions implements CloudTransferOptions {
         return env.AWS_MAX_ATTEMPTS ? env.AWS_MAX_ATTEMPTS as int : DEFAULT_AWS_MAX_ATTEMPTS
     }
 
-    protected String getCliPath0(Session session) {
-        def result = session.config.navigate('aws.batch.cliPath')
+    protected String getCliPath0(Session session, Map awsConfig) {
+        def result = awsConfig.navigate('aws.batch.cliPath')
         if( result )
             return result
 
