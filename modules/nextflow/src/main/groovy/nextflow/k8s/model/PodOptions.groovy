@@ -41,6 +41,8 @@ class PodOptions {
 
     private Collection<PodMountConfig> mountConfigMaps
 
+    private Collection<PodMountEmptyDir> mountConfigEmptyDirs
+
     private Collection<PodMountSecret> mountSecrets
 
     private Collection<PodVolumeClaim> mountClaims
@@ -66,8 +68,9 @@ class PodOptions {
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         envVars = new HashSet<>(size)
-        mountSecrets = new HashSet<>(size)
         mountConfigMaps = new HashSet<>(size)
+        mountEmptyDirs = new HashSet<>(size)
+        mountSecrets = new HashSet<>(size)
         mountClaims = new HashSet<>(size)
         automountServiceAccountToken = true
         tolerations = new ArrayList<Map>(size)
@@ -94,11 +97,14 @@ class PodOptions {
         else if( entry.env && entry.config ) {
             envVars << PodEnv.config(entry.env, entry.config)
         }
-        else if( entry.mountPath && entry.secret ) {
-            mountSecrets <<  new PodMountSecret(entry)
-        }
         else if( entry.mountPath && entry.config ) {
             mountConfigMaps << new PodMountConfig(entry)
+        }
+        else if( entry.mountPath && entry.emptyDir ) {
+            mountEmptyDirs << new PodMountEmptyDir(entry)
+        }
+        else if( entry.mountPath && entry.secret ) {
+            mountSecrets <<  new PodMountSecret(entry)
         }
         else if( entry.mountPath && entry.volumeClaim ) {
             mountClaims << new PodVolumeClaim(entry)
@@ -147,6 +153,8 @@ class PodOptions {
     Collection<PodEnv> getEnvVars() { envVars }
 
     Collection<PodMountConfig> getMountConfigMaps() { mountConfigMaps }
+
+    Collection<PodMountConfig> getMountEmptyDirs() { mountEmptyDirs }
 
     Collection<PodMountSecret> getMountSecrets() { mountSecrets }
 
@@ -209,6 +217,10 @@ class PodOptions {
         // config maps
         result.mountConfigMaps.addAll( mountConfigMaps )
         result.mountConfigMaps.addAll( other.mountConfigMaps )
+
+        // empty dirs
+        result.mountEmptyDirs.addAll( mountEmptyDirs )
+        result.mountEmptyDirs.addAll( other.mountEmptyDirs )
 
         // secrets
         result.mountSecrets.addAll( mountSecrets )

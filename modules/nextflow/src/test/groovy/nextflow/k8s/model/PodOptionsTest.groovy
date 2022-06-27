@@ -32,8 +32,9 @@ class PodOptionsTest extends Specification {
         def options = new PodOptions(null)
         then:
         options.getEnvVars() == [] as Set
-        options.getMountSecrets() == [] as Set
         options.getMountConfigMaps() == [] as Set
+        options.getMountEmptyDirs() == [] as Set
+        options.getMountSecrets() == [] as Set
         options.getAutomountServiceAccountToken() == true
     }
 
@@ -91,6 +92,25 @@ class PodOptionsTest extends Specification {
         configs == [
                 new PodMountConfig(mountPath: '/this/path1.txt', config: 'name/key1'),
                 new PodMountConfig(mountPath: '/this/path2.txt', config: 'name/key2')
+        ] as Set
+    }
+
+
+    def 'should return emptyDir mounts' () {
+
+        given:
+        def options = [
+                [mountPath: '/scratch1', emptyDir: [medium: 'Memory']],
+                [mountPath: '/scratch2', emptyDir: [medium: 'Disk']]
+        ]
+
+        when:
+        def emptyDirs = new PodOptions(options).getMountEmptyDirs()
+        then:
+        emptyDirs.size() == 2
+        emptyDirs == [
+                new PodMountEmptyDir(options[0]),
+                new PodMountEmptyDir(options[1])
         ] as Set
     }
 
@@ -225,6 +245,7 @@ class PodOptionsTest extends Specification {
                 [config: 'y', mountPath: '/y'],
                 [volumeClaim: 'z', mountPath: '/z'],
 
+                [emptyDir: [:], mountPath: 'scratch1'],
                 [securityContext: [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]],
                 [nodeSelector: 'foo=X, bar=Y'],
                 [automountServiceAccountToken: false],
@@ -280,6 +301,10 @@ class PodOptionsTest extends Specification {
         opts.getMountConfigMaps() == [
                 new PodMountConfig('data/key', '/data/file.txt'),
                 new PodMountConfig('y', '/y'),
+        ] as Set
+
+        opts.getMountEmptyDirs() == [
+                new PodMountEmptyDir('/scratch1', [:]),
         ] as Set
 
         opts.getVolumeClaims() == [

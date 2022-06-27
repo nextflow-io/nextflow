@@ -74,9 +74,11 @@ class PodSpecBuilder {
 
     AcceleratorResource accelerator
 
-    Collection<PodMountSecret> secrets = []
-
     Collection<PodMountConfig> configMaps = []
+
+    Collection<PodMountEmptyDir> emptyDirs = []
+
+    Collection<PodMountSecret> secrets = []
 
     Collection<PodHostMount> hostMounts = []
 
@@ -223,6 +225,16 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withEmptyDirs( Collection<PodMountEmptyDir> emptyDirs ) {
+        this.emptyDirs.addAll(emptyDirs)
+        return this
+    }
+
+    PodSpecBuilder withEmptyDir( PodMountEmptyDir emptyDir ) {
+        this.emptyDirs.add(emptyDir)
+        return this
+    }
+
     PodSpecBuilder withSecrets( Collection<PodMountSecret> secrets ) {
         this.secrets.addAll(secrets)
         return this
@@ -262,12 +274,15 @@ class PodSpecBuilder {
         // -- env vars
         if( opts.getEnvVars() )
             envVars.addAll( opts.getEnvVars() )
-        // -- secrets
-        if( opts.getMountSecrets() )
-            secrets.addAll( opts.getMountSecrets() )
         // -- configMaps
         if( opts.getMountConfigMaps() )
             configMaps.addAll( opts.getMountConfigMaps() )
+        // -- emptyDirs
+        if( opts.getMountEmptyDirs() )
+            emptyDirs.addAll( opts.getMountEmptyDirs() )
+        // -- secrets
+        if( opts.getMountSecrets() )
+            secrets.addAll( opts.getMountSecrets() )
         // -- volume claims 
         if( opts.getVolumeClaims() )
             volumeClaims.addAll( opts.getVolumeClaims() )
@@ -443,6 +458,13 @@ class PodSpecBuilder {
         for( PodMountConfig entry : configMaps ) {
             final name = nextVolName()
             configMapToSpec(name, entry, mounts, volumes)
+        }
+
+        // -- emptyDir volumes
+        for( PodMountEmptyDir entry : emptyDirs ) {
+            final name = nextVolName()
+            mounts << [name: name, mountPath: entry.mountPath]
+            volumes << [name: name, emptyDir: entry.emptyDir]
         }
 
         // host mounts

@@ -390,6 +390,42 @@ class PodSpecBuilderTest extends Specification {
 
     }
 
+    def 'should get empty dir mounts' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withWorkDir('/path')
+                .withCommand(['echo'])
+                .withEmptyDir(new PodMountEmptyDir(mountPath: '/scratch1', emptyDir: [medium: 'Disk']))
+                .withEmptyDir(new PodMountEmptyDir(mountPath: '/scratch2', emptyDir: [medium: 'Memory']))
+                .build()
+        then:
+        spec ==  [
+                apiVersion: 'v1',
+                kind: 'Pod',
+                metadata: [name: 'foo', namespace: 'default'],
+                spec: [
+                        restartPolicy: 'Never',
+                        containers: [[
+                                name: 'foo',
+                                image: 'busybox',
+                                command: ['echo'],
+                                workingDir: '/path',
+                                volumeMounts: [
+                                        [name: 'vol-1', mountPath: '/scratch1'],
+                                        [name: 'vol-2', mountPath: '/scratch2']
+                                ]
+                        ]],
+                        volumes: [
+                                [name: 'vol-1', emptyDir: [medium: 'Disk']],
+                                [name: 'vol-2', emptyDir: [medium: 'Memory']]
+                        ]
+                ]
+        ]
+    }
+
     def 'should consume env secrets' () {
 
         when:
