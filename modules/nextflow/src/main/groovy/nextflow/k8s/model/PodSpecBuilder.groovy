@@ -68,6 +68,8 @@ class PodSpecBuilder {
 
     String memory
 
+    String disk
+
     String serviceAccount
 
     boolean automountServiceAccountToken = true
@@ -166,6 +168,16 @@ class PodSpecBuilder {
 
     PodSpecBuilder withMemory(MemoryUnit mem)  {
         this.memory = "${mem.mega}Mi".toString()
+        return this
+    }
+
+    PodSpecBuilder withDisk(String disk) {
+        this.disk = disk
+        return this
+    }
+
+    PodSpecBuilder withDisk(MemoryUnit disk)  {
+        this.disk = "${disk.mega}Mi".toString()
         return this
     }
 
@@ -349,6 +361,8 @@ class PodSpecBuilder {
             res.cpu = this.cpus
         if( this.memory )
             res.memory = this.memory
+        if( this.disk )
+            res['ephemeral-storage'] = this.disk
 
         final container = [ name: this.podName, image: this.imageName ]
         if( this.command )
