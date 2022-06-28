@@ -276,13 +276,12 @@ class TaskConfigTest extends Specification {
     }
 
     @Unroll
-    def testGetCpus() {
+    def testGetCpuCores() {
         when:
         def config = new TaskConfig().setContext(ten: 10)
         config.cpus = value
 
         then:
-        config.cpus == expected
         config.getCpuCores() == expected
         config.hasCpus() == defined
 
@@ -292,6 +291,32 @@ class TaskConfigTest extends Specification {
         1            | true     | 1
         8            | true     | 8
         10           | true     | { ten ?: 0  }
+        and:
+        1            | true     | 0.1
+        2            | true     | 1.5
+        3            | true     | '2100m'
+    }
+
+    @Unroll
+    def testGetCpus() {
+        when:
+        def config = new TaskConfig().setContext(ten: 10)
+        config.cpus = value
+
+        then:
+        config.getCpus() == expected
+        config.hasCpus() == defined
+
+        where:
+        expected     | defined  | value
+        1            | false    | null
+        1            | true     | 1
+        8            | true     | 8
+        10           | true     | { ten ?: 0  }
+        and:
+        0.1          | true     | 0.1
+        1.5          | true     | 1.5
+        2.1          | true     | '2100m'
     }
 
     @Unroll

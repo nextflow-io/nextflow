@@ -50,7 +50,7 @@ class TaskHandlerTest extends Specification {
                 tag: 'seq_x',
                 container: 'ubuntu',
                 queue: 'longjobs',
-                cpus: 2,
+                cpus: "2100m",
                 time: '1 hour',
                 disk: '100 GB',
                 memory: '4 GB'
@@ -96,7 +96,7 @@ class TaskHandlerTest extends Specification {
         trace.read_bytes == 20
         trace.write_bytes == 30
         trace.queue == 'longjobs'
-        trace.cpus == 2
+        trace.cpus == 2.1
         trace.time == Duration.of('1 hour').toMillis()
         trace.memory == MemoryUnit.of('4 GB').toBytes()
         trace.disk == MemoryUnit.of('100 GB').toBytes()
