@@ -33,6 +33,7 @@ import nextflow.file.FileHelper
 import nextflow.io.ValueObject
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import nextflow.util.CpuUnit
 import org.apache.commons.lang.StringUtils
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -115,6 +116,7 @@ class ScriptParser {
         importCustomizer.addImports( Channel.name )
         importCustomizer.addImports( Duration.name )
         importCustomizer.addImports( MemoryUnit.name )
+        importCustomizer.addImports( CpuUnit.name )
         importCustomizer.addImports( ValueObject.name )
         importCustomizer.addImport( 'channel', Channel.name )
         importCustomizer.addStaticStars( Nextflow.name )

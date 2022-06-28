@@ -18,6 +18,7 @@
 package nextflow.cloud.types
 
 import groovy.transform.Immutable
+import nextflow.util.CpuUnit
 import nextflow.util.MemoryUnit
 
 /**
@@ -36,7 +37,7 @@ class CloudInstanceType implements Serializable, Cloneable {
     /**
      * Number of CPUs
      */
-    int cpus
+    CpuUnit cpus
 
     /**
      * Amount of memory (RAM)

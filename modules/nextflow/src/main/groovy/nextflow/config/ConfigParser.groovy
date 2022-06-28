@@ -28,6 +28,7 @@ import nextflow.extension.Bolts
 import nextflow.file.FileHelper
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import nextflow.util.CpuUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
@@ -178,6 +179,7 @@ class ConfigParser {
         def importCustomizer = new ImportCustomizer()
         importCustomizer.addImports( Duration.name )
         importCustomizer.addImports( MemoryUnit.name )
+        importCustomizer.addImports( CpuUnit.name )
         config.addCompilationCustomizers(importCustomizer)
         grengine = new Grengine(config)
     }

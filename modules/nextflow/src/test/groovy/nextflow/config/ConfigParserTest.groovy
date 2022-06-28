@@ -17,6 +17,7 @@
 
 package nextflow.config
 
+import nextflow.util.CpuUnit
 import spock.lang.Ignore
 
 import java.nio.file.Files
@@ -61,6 +62,36 @@ class ConfigParserTest extends Specification {
         config.plugins == ['foo','bar'] as Set
         and:
         config.process.cpus == 1
+    }
+
+    def 'should parse cpu millis' () {
+        given:
+        def CONFIG = '''
+        process {
+            cpus = '100m'
+        }
+        '''
+
+        when:
+        def config = new ConfigParser().parse(CONFIG)
+
+        then:
+        config.process.cpus == '100m'
+    }
+
+    def 'should parse cpu fractions' () {
+        given:
+        def CONFIG = '''
+        process {
+            cpus = 0.8
+        }
+        '''
+
+        when:
+        def config = new ConfigParser().parse(CONFIG)
+
+        then:
+        config.process.cpus == 0.8
     }
 
     def 'should fail plugins id' () {

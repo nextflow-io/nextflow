@@ -37,8 +37,8 @@ import groovy.transform.EqualsAndHashCode
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@EqualsAndHashCode(includeFields = true)
-class CpuUnit implements Serializable, Cloneable {
+@EqualsAndHashCode(includes = 'millis', includeFields = true)
+class CpuUnit implements Comparable<CpuUnit>, Serializable, Cloneable {
 
     static public CpuUnit ONE_CORE = new CpuUnit(1_000)
 
@@ -51,6 +51,29 @@ class CpuUnit implements Serializable, Cloneable {
     }
 
     final private int millis
+
+    @Override
+    int compareTo(CpuUnit that) {
+        return this.millis <=> that.millis
+    }
+
+    static int compareTo(CpuUnit left, Object right) {
+        assert left
+
+        if( right==null )
+            throw new IllegalArgumentException("Not a valid cpu value: null")
+
+        if( right instanceof CpuUnit )
+            return left <=> (CpuUnit)right
+
+        if( right instanceof Number )
+            return left <=> CpuUnit.of(right)
+
+        if( right instanceof CharSequence )
+            return left <=> CpuUnit.of(right)
+
+        throw new IllegalArgumentException("Not a valid cpu value: $right")
+    }
 
     static CpuUnit of(CharSequence value) {
         return new CpuUnit(parseCpuMillis(value) )

@@ -283,6 +283,52 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'read CPU fraction' () {
+        given:
+        def folder = File.createTempDir()
+        def configMain = new File(folder,'nextflow.config').absoluteFile
+
+
+        configMain.text = """
+        process.name = 'fraction'
+        process.cpus = 0.4
+        """
+
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun()
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(configMain.toPath())
+
+        then:
+        config.process.cpus == 0.4
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'read CPU millis' () {
+        given:
+        def folder = File.createTempDir()
+        def configMain = new File(folder,'nextflow.config').absoluteFile
+
+
+        configMain.text = """
+        process.name = 'millis'
+        process.cpus = '400m'
+        """
+
+        when:
+        def opt = new CliOptions()
+        def run = new CmdRun()
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(configMain.toPath())
+
+        then:
+        config.process.cpus == '400m'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should include config with params' () {
         given:
         def folder = File.createTempDir()
