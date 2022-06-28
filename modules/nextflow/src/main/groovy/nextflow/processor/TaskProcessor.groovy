@@ -1259,8 +1259,12 @@ class TaskProcessor {
                 result += " -- Check script '${details[0]}' at line: ${details[1]}"
             return result
         }
-
-        return fail.message ?: fail.toString()
+        def result = fail.message ?: fail.toString()
+        def details = LoggerHelper.findErrorLine(fail)
+        if( details ){
+            result += " -- Check script '${details[0]}' at line: ${details[1]}"
+        }
+        return result
     }
 
     /**

@@ -23,12 +23,19 @@ import java.nio.file.Path
 import org.eclipse.jgit.api.Git
 import spock.lang.Shared
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class UpdateModuleTest extends Specification {
+
+//    def setup() {
+//        Plugins.init()
+//    }
+//
+//    def cleanup() {
+//        Plugins.stop()
+//    }
 
     @Shared
     Path baseFolder

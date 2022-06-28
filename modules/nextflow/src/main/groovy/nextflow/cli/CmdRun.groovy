@@ -237,6 +237,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-stub-run','-stub'], description = 'Execute the workflow replacing process scripts with command stubs')
     boolean stubRun
 
+    @Parameter(names=['-preview'], description = "Run the workflow script skipping the execution of all processes")
+    boolean preview
+
     @Parameter(names=['-plugins'], description = 'Specify the plugins to be applied for this run e.g. nf-amazon,nf-tower')
     String plugins
 
@@ -282,6 +285,7 @@ class CmdRun extends CmdBase implements HubOptions {
         checkRunName()
 
         log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
+        Plugins.init()
 
         // -- specify the arguments
         final scriptFile = getScriptFile(pipeline)
@@ -298,7 +302,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         // -- load plugins
         final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
-        Plugins.setup( cfg )
+        Plugins.load(cfg)
 
         // -- load secret provider
         if( SecretsLoader.isEnabled() ) {
@@ -309,6 +313,7 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
         runner.setScript(scriptFile)
+        runner.setPreview(this.preview)
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
@@ -350,11 +355,12 @@ class CmdRun extends CmdBase implements HubOptions {
         NextflowMeta.instance.enableDsl(dsl)
         // -- show launch info
         final ver = NF.dsl2 ? DSL2 : DSL1
+        final repo = scriptFile.repository ?: scriptFile.source
+        final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$repo`"
         if( scriptFile.repository )
-            log.info "Launching `$scriptFile.repository` [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
+            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
         else
-            log.info "Launching `$scriptFile.source` [$runName] DSL${ver} - revision: ${scriptFile.getScriptId()?.substring(0,10)}"
-
+            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.getScriptId()?.substring(0,10)}"
     }
 
     static String detectDslMode(ConfigMap config, String scriptText, Map sysEnv) {
@@ -369,7 +375,7 @@ class CmdRun extends CmdBase implements HubOptions {
             return scriptDsl
         }
         else if( dsl ) {
-            log.debug("Applied DSL=$scriptDsl from config declaration")
+            log.debug("Applied DSL=$dsl from config declaration")
             return dsl
         }
         // -- if still unknown try probing for DSL1

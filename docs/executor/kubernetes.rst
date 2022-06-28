@@ -18,6 +18,7 @@ Resource requests and other job characteristics can be controlled via the follow
 * :ref:`process-cpus`
 * :ref:`process-memory`
 * :ref:`process-pod`
+* :ref:`process-time`
 
 
 Concepts

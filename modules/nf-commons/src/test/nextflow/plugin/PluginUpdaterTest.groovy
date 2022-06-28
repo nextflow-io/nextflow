@@ -49,7 +49,7 @@ class PluginUpdaterTest extends Specification {
         // the central cache where downloaded unzipped plugins are kept
         def cacheDir = Files.createDirectory(folder.resolve('cache'))
         and:
-        def manager = new LocalPluginManager(cacheDir, [])
+        def manager = new LocalPluginManager(cacheDir)
         def updater = new PluginUpdater(manager, cacheDir, new URL("file:${repoDir.resolve('plugins.json')}"))
 
         when:
@@ -91,7 +91,7 @@ class PluginUpdaterTest extends Specification {
         // the central cache where downloaded unzipped plugins are kept
         def cacheDir = Files.createDirectory(folder.resolve('cache'))
         and:
-        def manager = new LocalPluginManager(cacheDir, [])
+        def manager = new LocalPluginManager(cacheDir)
         def updater = new PluginUpdater(manager, cacheDir, new URL("file:${repoDir.resolve('plugins.json')}"))
 
         when:
@@ -135,7 +135,7 @@ class PluginUpdaterTest extends Specification {
         def plugin1 = createPlugin(cacheDir,'my-plugin', '1.0.0', FooPlugin.class)
         def plugin2 = createPlugin(cacheDir,'my-plugin', '2.0.0', FooPlugin.class)
         and:
-        def manager = new LocalPluginManager(cacheDir, [])
+        def manager = new LocalPluginManager(cacheDir)
         def updater = new PluginUpdater(manager, cacheDir, new URL("file:${repoDir.resolve('plugins.json')}"))
 
         when:
