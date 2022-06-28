@@ -240,7 +240,7 @@ class TraceRecordTest extends Specification {
         record.'%cpu' = '5.00'
         record.rss = '1024'
         record.queue = 'big'
-        record.cpus = 4
+        record.cpus = 4.1
         record.time = 3_600_000L
         record.memory = 1024L * 1024L * 1024L * 8L
 
@@ -255,7 +255,7 @@ class TraceRecordTest extends Specification {
         json.'%cpu' == '5.0%'
         json.rss == '1 KB'
         json.queue == 'big'
-        json.cpus == '4'
+        json.cpus == '4.1'
         json.time == '1h'
         json.memory == '8 GB'
 

@@ -68,7 +68,12 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         return (V)this
     }
 
-    V setCpus(int value) {
+    V setCpus(Number value) {
+        this.cpus = CpuUnit.of(value)
+        return (V)this
+    }
+
+    V setCpus(String value) {
         this.cpus = CpuUnit.of(value)
         return (V)this
     }
