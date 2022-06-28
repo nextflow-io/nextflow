@@ -20,6 +20,8 @@ package nextflow.executor
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 
+import javax.sound.midi.SysexMessage
+
 /**
  * Implements a executor for PBSPro cluster executor
  *
@@ -44,12 +46,31 @@ class PbsProExecutor extends PbsExecutor {
     @Override
     protected List<String> getDirectives(TaskRun task, List<String> result ) {
         assert result !=null
-        
+
         // when multiple competing directives are provided, only the first one will take effect
         // therefore clusterOptions is added as first to give priority over other options as expected
         // by the clusterOptions semantics -- see https://github.com/nextflow-io/nextflow/pull/2036
+
+        Map<String, String> clOptsMap = [:]
         if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
+            String clusterOpts = task.config.clusterOptions.toString()
+
+            // load clusterOptions into a map
+            if ( clusterOpts.contains("-l select=") ) {
+                List<String> clOptsList = task.config.getClusterOptionsAsList()
+                for ( String element : clOptsList ) {
+                    String[] el = element.split(':')
+                    for ( String opt : el ) {
+                        if ( opt != "-l" ) {
+                            String[] splitOpt = opt.split('=')
+                            clOptsMap.put(splitOpt[0], splitOpt[1])
+                        }
+                    }
+                }
+            }
+            else {
+                result << clusterOpts << ''
+            }
         }
 
         result << '-N' << getJobNameFor(task)
@@ -70,17 +91,25 @@ class PbsProExecutor extends PbsExecutor {
             res << "mem=${task.config.getMemory().getMega()}mb".toString()
         }
 
-        if ( task.config.selectOptions )
-            result << task.config.selectOptions.toString() << ''
+        // load res to a map
+        Map<String, String> resMap = [:]
+        for ( String element : res ) {
+            String[] el = element.split('=')
+            resMap.put(el[0], el[1])
+        }
 
-        /*
-        if( task.config.selectOptions && res )
-            result << task.config.selectOptions.toString() << '-l' << "select=1:${res.join(':')}".toString()
-        */
+        // merge clOptsMap into resMap
+        resMap.putAll(clOptsMap)
 
-        // povodna implementacia
-        if( res ) {
-            result << '-l' << "select=1:${res.join(':')}".toString()
+        def res1 = []
+        for ( e in resMap ) {
+            if ( e.key != "select" ) {
+                res1 << "${e.key}=${e.value}"
+            }
+
+        }
+        if ( !(res1.isEmpty()) ) {
+            result << '-l' << "select=1:${res1.join(':')}".toString()
         }
 
         // max task duration
@@ -94,7 +123,7 @@ class PbsProExecutor extends PbsExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        String cmd = 'qstat -f ' 
+        String cmd = 'qstat -f '
         if( queue ) {
             cmd += queue
         } else {
@@ -108,12 +137,12 @@ class PbsProExecutor extends PbsExecutor {
     static private Map DECODE_STATUS = [
             'F': QueueStatus.DONE,      // job is finished
             'E': QueueStatus.RUNNING,   // job is exiting (therefore still running)
-            'R': QueueStatus.RUNNING,   // job is running 
-            'Q': QueueStatus.PENDING,   // job is queued 
+            'R': QueueStatus.RUNNING,   // job is running
+            'Q': QueueStatus.PENDING,   // job is queued
             'H': QueueStatus.HOLD,      // job is held
-            'S': QueueStatus.HOLD,      // job is suspended 
+            'S': QueueStatus.HOLD,      // job is suspended
             'U': QueueStatus.HOLD,      // job is suspended due to workstation becoming busy
-            'W': QueueStatus.HOLD,      // job is waiting 
+            'W': QueueStatus.HOLD,      // job is waiting
             'T': QueueStatus.HOLD,      // job is in transition
             'M': QueueStatus.HOLD,      // job was moved to another server
     ]
