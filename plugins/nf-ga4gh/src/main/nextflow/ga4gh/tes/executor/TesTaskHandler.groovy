@@ -204,7 +204,7 @@ class TesTaskHandler extends TaskHandler {
 
     private TesResources getResources(TaskConfig cfg) {
         def res = new TesResources()
-        res.cpuCores(cfg.getCpus())
+        res.cpuCores(cfg.getCpuCores())
             .ramGb(toGiga(cfg.getMemory()))
             .diskGb(cfg.getDisk()?.toGiga())
         log.trace("[TES] Adding resource request: $res")

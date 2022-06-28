@@ -145,6 +145,10 @@ class CpuUnit implements Comparable<CpuUnit>, Serializable, Cloneable {
         return IntMath.divide(millis, 1_000, RoundingMode.CEILING);
     }
 
+    BigDecimal toDecimal() {
+        return millis / 1_000
+    }
+
     int toMillis() {
         return millis;
     }

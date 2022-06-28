@@ -42,12 +42,12 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     /**
      * Number of `free` CPUs available to execute pending tasks
      */
-    private int availCpus
+    private BigDecimal availCpus
 
     /**
      * Total number of CPUs available in the system
      */
-    private final int maxCpus
+    private final BigDecimal maxCpus
 
     /**
      * Amount of `free` memory available to execute pending tasks
@@ -135,7 +135,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      * @return
      *      The number of cpus requested to execute the specified task
      */
-    private static int cpus(TaskHandler handler) {
+    private static BigDecimal cpus(TaskHandler handler) {
         handler.task.getConfig()?.getCpus()
     }
 

@@ -76,7 +76,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getWorkDir() >> WORK_DIR
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
-                getCpus() >> 2
+                getCpuCores() >> 2
                 getContainerOptions() >> CONTAINER_OPTS
             }
         }
@@ -133,7 +133,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getWorkDir() >> WORK_DIR
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
-                getCpus() >> CPUS
+                getCpuCores() >> CPUS
                 getMemory() >> MEM
                 getTime() >> TIMEOUT
                 getMachineType() >> MACHINE_TYPE

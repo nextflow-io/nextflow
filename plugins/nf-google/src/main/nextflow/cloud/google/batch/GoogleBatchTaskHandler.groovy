@@ -108,7 +108,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
         final spec = new TaskSpec()
         final res = new ComputeResource()
         // CPUs requirement
-        res.cpuMilli = task.config.getCpus() * 1000
+        res.cpuMilli = task.config.getCpuUnits().toMillis()
         // memory requirement
         if( task.config.getMemory() )
             res.memoryMib = task.config.getMemory().getMega().toInteger()

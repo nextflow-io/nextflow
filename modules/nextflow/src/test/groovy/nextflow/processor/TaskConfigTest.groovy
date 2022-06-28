@@ -283,7 +283,7 @@ class TaskConfigTest extends Specification {
 
         then:
         config.cpus == expected
-        config.getCpus() == expected
+        config.getCpuCores() == expected
         config.hasCpus() == defined
 
         where:
@@ -536,20 +536,20 @@ class TaskConfigTest extends Specification {
         int count = 0
         config.cpus = { ++count }
         then:
-        config.getCpus() == 1
-        config.getCpus() == 1
+        config.getCpuCores() == 1
+        config.getCpuCores() == 1
 
         when:
         config = config.clone()
         then:
-        config.getCpus() == 2
-        config.getCpus() == 2
+        config.getCpuCores() == 2
+        config.getCpuCores() == 2
 
         when:
         config = config.clone()
         then:
-        config.getCpus() == 3
-        config.getCpus() == 3
+        config.getCpuCores() == 3
+        config.getCpuCores() == 3
     }
 
     def 'should configure pod options'()  {

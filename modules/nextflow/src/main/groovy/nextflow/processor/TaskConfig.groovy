@@ -295,9 +295,14 @@ class TaskConfig extends LazyMap implements Cloneable {
         get('cpus') != null
     }
 
-    int getCpus() {
+    int getCpuCores() {
         final value = get('cpus')
         value ? CpuUnit.of(value).toCores() : 1  // note: always return at least 1 cpus
+    }
+
+    BigDecimal getCpus() {
+        final value = get('cpus')
+        value ? CpuUnit.of(value).toDecimal() : 1
     }
 
     CpuUnit getCpuUnits() {
