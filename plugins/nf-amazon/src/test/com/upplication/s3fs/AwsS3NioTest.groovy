@@ -1,5 +1,7 @@
 package com.upplication.s3fs
 
+import nextflow.file.FileHelper
+
 import java.nio.charset.Charset
 import java.nio.file.DirectoryNotEmptyException
 import java.nio.file.FileAlreadyExistsException
@@ -594,6 +596,25 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
         when:
         def reader = Files.newInputStream(path)
+        then:
+        reader.text == TEXT
+
+        cleanup:
+        deleteBucket(bucketName)
+    }
+
+    def 'should copy a bucket' () {
+        given:
+        def bucketName = createBucket()
+        def reader = Files.createTempFile("","")
+        and:
+        final TEXT = randomText(50 * 1024)
+        final path = Paths.get(new URI("s3:///$bucketName/file.txt"))
+        createObject(path, TEXT)
+
+        when:
+        reader = FileHelper.copyPath( path, reader)
+
         then:
         reader.text == TEXT
 

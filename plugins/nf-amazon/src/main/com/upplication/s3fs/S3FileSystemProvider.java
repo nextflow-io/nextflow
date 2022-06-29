@@ -79,6 +79,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -88,6 +89,9 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AnonymousAWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
+import com.amazonaws.event.ProgressEvent;
+import com.amazonaws.event.ProgressEventType;
+import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
@@ -99,6 +103,9 @@ import com.amazonaws.services.s3.model.Permission;
 import com.amazonaws.services.s3.model.S3ObjectId;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.Tag;
+import com.amazonaws.services.s3.transfer.Download;
+import com.amazonaws.services.s3.transfer.TransferManager;
+import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -108,6 +115,7 @@ import com.upplication.s3fs.ng.S3ParallelDownload;
 import com.upplication.s3fs.util.IOUtils;
 import com.upplication.s3fs.util.S3MultipartOptions;
 import com.upplication.s3fs.util.S3ObjectSummaryLookup;
+import nextflow.file.FileSystemProviderExt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static com.google.common.collect.Sets.difference;
@@ -139,7 +147,7 @@ import static java.lang.String.format;
  * 
  * 
  */
-public class S3FileSystemProvider extends FileSystemProvider {
+public class S3FileSystemProvider extends FileSystemProvider implements FileSystemProviderExt {
 
 	private static Logger log = LoggerFactory.getLogger(S3FileSystemProvider.class);
 
@@ -351,6 +359,42 @@ public class S3FileSystemProvider extends FileSystemProvider {
 		}
 
 		return createUploaderOutputStream(s3Path);
+	}
+
+	@Override
+	public boolean canCopy(Path source, Path target, CopyOption... options) {
+		return source instanceof S3Path;
+	}
+
+	public void copyToForeignTarget(Path source, Path target, CopyOption... options) throws IOException {
+		Preconditions.checkArgument(options.length == 0,
+				"CopyOption not yet supported: %s",
+				ImmutableList.copyOf(options)); // TODO
+
+		Preconditions.checkArgument(source instanceof S3Path,
+				"path must be an instance of %s", S3Path.class.getName());
+		S3Path s3Path = (S3Path) source;
+
+		Preconditions.checkArgument(!s3Path.getKey().equals(""),
+				"cannot create InputStream for root directory: %s", s3Path);
+
+		DownloadOpts opts = DownloadOpts.from(props, System.getenv());
+
+		final AmazonS3Client s3Client = s3Path.getFileSystem().getClient();
+
+		TransferManager transferManager = TransferManagerBuilder.standard()
+				.withS3Client(s3Client.getClient())
+				.withMultipartCopyPartSize((long)opts.chunkSize())
+				.withExecutorFactory(() -> Executors.newFixedThreadPool(opts.numWorkers()))
+				.build();
+
+		Download download = transferManager.download(s3Path.getBucket(), s3Path.getKey(), target.toFile());
+		try {
+			download.waitForCompletion();
+		} catch (InterruptedException e) {
+			log.error("S3 part downloaded: s3://{}/{} interrupted",s3Path.getBucket(), s3Path.getKey());
+			throw new RuntimeException(e);
+		}
 	}
 
 	private S3OutputStream createUploaderOutputStream( S3Path fileToUpload ) {
