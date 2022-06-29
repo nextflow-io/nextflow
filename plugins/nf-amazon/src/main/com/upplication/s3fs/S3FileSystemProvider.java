@@ -395,6 +395,8 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			log.error("S3 part downloaded: s3://{}/{} interrupted",s3Path.getBucket(), s3Path.getKey());
 			throw new RuntimeException(e);
 		}
+		//ends executors only of current transfer manager
+		transferManager.shutdownNow(false);
 	}
 
 	private S3OutputStream createUploaderOutputStream( S3Path fileToUpload ) {
