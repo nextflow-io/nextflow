@@ -4,9 +4,8 @@
 Operators
 *********
 
-Nextflow `operators` are methods that allow you to manipulate channels. Every operator,
-with the exception of :ref:`operator-set` and :ref:`channel-subscribe`, produces a new
-channel, allowing you to chain operators to fit your needs.
+Nextflow `operators` are methods that allow you to manipulate channels. Every operator
+produces one or more new channels, allowing you to chain operators to fit your needs.
 
 This page is a comprehensive reference for all Nextflow operators. However, if you are new
 to Nextflow, here are some suggested operators to learn for common use cases:
@@ -1605,6 +1604,9 @@ This is semantically equivalent to the following assignment::
 However the ``set`` operator is more idiomatic in Nextflow scripting, since it can be used at the end
 of a chain of operator transformations, thus resulting in a more fluent and readable operation.
 
+Starting in version 22.10.0, the ``set`` operator also emits the input channel, allowing you to extract
+an output channel from part of an operator chain.
+
 
 splitCsv
 --------
@@ -1936,6 +1938,9 @@ See also `until`_.
 
 tap
 ---
+
+.. warning::
+    This operator is deprecated. Use the `set`_ operator instead.
 
 The ``tap`` operator combines the functions of `into`_ and `separate`_ operators in such a way that
 it connects two channels, copying the values from the source into the `tapped` channel. At the same
