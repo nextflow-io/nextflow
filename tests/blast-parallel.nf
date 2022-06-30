@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
 params.db = "$baseDir/blast-db/tiny"
 params.query = "$baseDir/data/sample.fa"
@@ -64,7 +63,7 @@ all_seq = sequences.collectFile(name:'all_seq')
  * Aligns a T-Coffee MSA and print it 
  */
 process align {
-    echo true
+    debug true
 
     input:
     file all_seq

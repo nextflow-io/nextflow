@@ -21,7 +21,7 @@ x = 1
 y = ['a','b']
 
 process foo {
-    echo true
+    debug true
 
     input:
     val x

@@ -1,6 +1,6 @@
 
 process foo1 {
-    echo true
+    debug true
     input: path x
     input: path y
     """
@@ -9,7 +9,7 @@ process foo1 {
 }
 
 process foo2 {
-    echo true
+    debug true
     input: path x
     input: path y
     script:
@@ -19,7 +19,7 @@ process foo2 {
 }
 
 process foo3 {
-    echo true
+    debug true
     input: path x
     input: path y
     shell:
@@ -29,7 +29,7 @@ process foo3 {
 }
 
 process foo4 {
-    echo true
+    debug true
     input: path x
     input: path y
     script:

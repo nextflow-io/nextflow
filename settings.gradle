@@ -33,4 +33,5 @@ include 'plugins:nf-tower'
 include 'plugins:nf-console'
 include 'plugins:nf-azure'
 include 'plugins:nf-sqldb'
+include 'plugins:nf-codecommit'
 

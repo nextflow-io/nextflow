@@ -3,7 +3,7 @@ set -e
 #
 # run normal mode
 #
-$NXF_RUN -process.echo true | tee stdout
+$NXF_RUN -process.debug | tee stdout
 
 [[ `< .nextflow.log grep -c 'Submitted process'` == 2 ]] || false
 [[ `< stdout grep 'task=.small.txt mem=100 MB'` ]] || false
@@ -12,7 +12,7 @@ $NXF_RUN -process.echo true | tee stdout
 #
 # run resume mode
 #
-$NXF_RUN -process.echo true -resume | tee stdout
+$NXF_RUN -process.debug -resume | tee stdout
 
 [[ `< .nextflow.log grep -c 'Cached process'` == 2 ]] || false
 

@@ -44,6 +44,7 @@ nxf_kill() {
 
 nxf_mktemp() {
     local base=${1:-/tmp}
+    mkdir -p "$base"
     if [[ $(uname) = Darwin ]]; then mktemp -d $base/nxf.XXXXXXXXXX
     else TMPDIR="$base" mktemp -d -t nxf.XXXXXXXXXX
     fi
@@ -112,7 +113,7 @@ nxf_main() {
     # conda environment
     source $(conda info --json | awk '/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }')/bin/activate /conda/env/path
     set -u
-    [[ $NXF_SCRATCH ]] && echo "nxf-scratch-dir $HOSTNAME:$NXF_SCRATCH" && cd $NXF_SCRATCH
+    [[ $NXF_SCRATCH ]] && cd $NXF_SCRATCH
     nxf_stage
 
     set +e

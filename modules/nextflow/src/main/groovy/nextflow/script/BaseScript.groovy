@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.Session
+import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskProcessor
 /**
  * Any user defined script will extends this class, it provides the base execution context
@@ -65,7 +66,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
      */
     protected Map getConfig() {
         final msg = "The access of `config` object is deprecated"
-        if( NF.dsl2Final )
+        if( NF.dsl2 )
             throw new DeprecationException(msg)
         log.warn(msg)
         session.getConfig()
@@ -83,7 +84,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
      */
     protected void echo(boolean value = true) {
         final msg = "The use of `echo` method has been deprecated"
-        if( NF.dsl2Final )
+        if( NF.dsl2 )
             throw new DeprecationException(msg)
         log.warn(msg)
         session.getConfig().process.echo = value
@@ -183,6 +184,22 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( !entryFlow ) {
             if( meta.getLocalWorkflowNames() )
                 log.warn "No entry workflow specified"
+            if( meta.getLocalProcessNames() ) {
+                final msg = """\
+                        =============================================================================
+                        =                                WARNING                                    =
+                        = You are running this script using DSL2 syntax, however it does not        = 
+                        = contain any 'workflow' definition so there's nothing for Nextflow to run. =
+                        =                                                                           =
+                        = If this script was written using Nextflow DSL1 syntax, please add the     = 
+                        = setting 'nextflow.enable.dsl=1' to the nextflow.config file or use the    =
+                        = command-line option '-dsl1' when running the pipeline.                    =
+                        =                                                                           =
+                        = More details at this link: https://www.nextflow.io/docs/latest/dsl2.html  =
+                        =============================================================================
+                        """.stripIndent()
+                throw new AbortOperationException(msg)
+            }
             return result
         }
 

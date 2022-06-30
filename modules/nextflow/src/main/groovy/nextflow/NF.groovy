@@ -19,7 +19,7 @@ package nextflow
 
 import groovy.runtime.metaclass.NextflowDelegatingMetaClass
 import nextflow.extension.CH
-import nextflow.extension.ChannelExtensionDelegate
+import nextflow.extension.ChannelExtensionProvider
 import nextflow.script.ExecutionStack
 import nextflow.script.WorkflowBinding
 /**
@@ -34,13 +34,13 @@ class NF {
     }
 
     static void init() {
-        NextflowDelegatingMetaClass.plugin = ChannelExtensionDelegate.INSTANCE()
+        NextflowDelegatingMetaClass.provider = ChannelExtensionProvider.INSTANCE()
         CH.init()
         WorkflowBinding.init()
     }
 
     static boolean hasOperator(String name) {
-        NextflowDelegatingMetaClass.plugin.operatorNames().contains(name)
+        NextflowDelegatingMetaClass.provider.operatorNames().contains(name)
     }
 
     static boolean isDsl1() {
@@ -51,6 +51,7 @@ class NF {
         NextflowMeta.instance.isDsl2()
     }
 
+    @Deprecated
     static boolean isDsl2Final() {
         NextflowMeta.instance.isDsl2Final()
     }

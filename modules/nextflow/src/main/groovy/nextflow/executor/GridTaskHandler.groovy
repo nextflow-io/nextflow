@@ -205,8 +205,6 @@ class GridTaskHandler extends TaskHandler {
      */
     @Override
     void submit() {
-        String result = null
-        def exitStatus = Integer.MAX_VALUE
         ProcessBuilder builder = null
         try {
             // -- create the wrapper script
@@ -216,7 +214,7 @@ class GridTaskHandler extends TaskHandler {
             // -- forward the job launcher script to the command stdin if required
             final stdinScript = executor.pipeLauncherScript() ? wrapperFile.text : null
             // -- execute with a re-triable strategy
-            result = safeExecute( () -> processStart(builder, stdinScript) )
+            final result = safeExecute( () -> processStart(builder, stdinScript) )
             // -- save the JobId in the
             this.jobId = executor.parseJobId(result)
             this.status = SUBMITTED
@@ -225,9 +223,11 @@ class GridTaskHandler extends TaskHandler {
         }
         catch( Exception e ) {
             // update task exit status and message
-            task.exitStatus = exitStatus
+            if( e instanceof ProcessNonZeroExitStatusException ) {
+                task.exitStatus = e.getExitStatus()
+                task.stdout = e.getReason()
+            }
             task.script = builder ? CmdLineHelper.toLine(builder.command()) : null
-            task.stdout = result
             status = COMPLETED
             throw new ProcessFailedException("Error submitting process '${task.name}' for execution", e )
         }

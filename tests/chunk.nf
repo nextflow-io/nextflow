@@ -27,7 +27,6 @@ nextflow.enable.dsl=1
  * line parameter '--chunkSize' (--chunk-size is a synonym for the same)
  */
 
-
 params.chunkSize = 1
 
 Channel
@@ -36,7 +35,7 @@ Channel
     .set{ sequences }
 
 process foo {
-    echo true
+    debug true
 
     input:
     stdin sequences

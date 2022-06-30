@@ -1259,8 +1259,12 @@ class TaskProcessor {
                 result += " -- Check script '${details[0]}' at line: ${details[1]}"
             return result
         }
-
-        return fail.message ?: fail.toString()
+        def result = fail.message ?: fail.toString()
+        def details = LoggerHelper.findErrorLine(fail)
+        if( details ){
+            result += " -- Check script '${details[0]}' at line: ${details[1]}"
+        }
+        return result
     }
 
     /**
@@ -1377,8 +1381,8 @@ class TaskProcessor {
                 throw new IllegalStateException("Unknown bind output parameter type: ${param}")
         }
 
-        // -- finally prints out the task output when 'echo' is true
-        if( task.config.echo ) {
+        // -- finally prints out the task output when 'debug' is true
+        if( task.config.debug ) {
             task.echoStdout(session)
         }
     }
@@ -1945,7 +1949,7 @@ class TaskProcessor {
             task.setInput(param, resolved)
         }
 
-        // -- set the delegate map as context ih the task config
+        // -- set the delegate map as context in the task config
         //    so that lazy directives will be resolved against it
         task.config.context = ctx
 

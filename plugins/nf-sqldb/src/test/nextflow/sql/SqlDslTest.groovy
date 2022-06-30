@@ -19,13 +19,9 @@ package nextflow.sql
 
 import groovy.sql.Sql
 import nextflow.Channel
-import nextflow.Session
-import nextflow.extension.ChannelExtensionDelegate
-import nextflow.plugin.Plugins
-import spock.lang.Stepwise
+import nextflow.extension.ChannelExtensionProvider
 import spock.lang.Timeout
 import test.BaseSpec
-import test.Dsl2Spec
 import test.MockScriptRunner
 
 /**
@@ -36,7 +32,13 @@ import test.MockScriptRunner
 class SqlDslTest extends BaseSpec {
 
     def setup () {
-        ChannelExtensionDelegate.reloadExtensionPoints()
+        new ChannelExtensionProvider()
+                .install()
+                .loadPluginExtensionMethods(new ChannelSqlExtension(), ['fromQuery':'fromQuery', sqlInsert:'sqlInsert'])
+    }
+
+    def cleanup() {
+        ChannelExtensionProvider.reset()
     }
 
     def 'should perform a query and create a channel' () {
@@ -55,7 +57,7 @@ class SqlDslTest extends BaseSpec {
         def SCRIPT = '''
             def table = 'FOO'
             def sql = "select * from $table"
-            channel.sql.fromQuery(sql, db: "test") 
+            channel.fromQuery(sql, db: "test") 
             '''
         and:
         def result = new MockScriptRunner(config).setScript(SCRIPT).execute()
@@ -67,7 +69,7 @@ class SqlDslTest extends BaseSpec {
     }
 
 
-    def 'should insert channel data into a channel' () {
+    def 'should insert channel data into a db table' () {
         given:
         def JDBC_URL = 'jdbc:h2:mem:test_' + Random.newInstance().nextInt(1_000_000)
         def sql = Sql.newInstance(JDBC_URL, 'sa', null)
@@ -97,4 +99,63 @@ class SqlDslTest extends BaseSpec {
 
     }
 
+    def 'should insert channel data into a db table in batches' () {
+        given:
+        def JDBC_URL = 'jdbc:h2:mem:test_' + Random.newInstance().nextInt(1_000_000)
+        def sql = Sql.newInstance(JDBC_URL, 'sa', null)
+        and:
+        sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
+        and:
+        def config = [sql: [db: [ds1: [url: JDBC_URL]]]]
+
+        when:
+        def SCRIPT = '''
+            channel
+              .of(100,200,300,400,500)
+              .sqlInsert(into:'FOO', columns:'id', db:'ds1', batchSize: 2)
+            '''
+        and:
+        def result = new MockScriptRunner(config).setScript(SCRIPT).execute()
+        then:
+        result.val == 100
+        result.val == 200
+        result.val == 300
+        result.val == 400
+        result.val == 500
+        result.val == Channel.STOP
+        and:
+        def rows =  sql.rows("select id from FOO;")
+        and:
+        rows.size() == 5
+        rows.id == [100, 200, 300, 400, 500]
+
+    }
+
+    def 'should perform a query with headers and create a channel' () {
+        given:
+        def JDBC_URL = 'jdbc:h2:mem:test_' + Random.newInstance().nextInt(1_000_000)
+        def sql = Sql.newInstance(JDBC_URL, 'sa', null)
+        and:
+        sql.execute('create table FOO(id int primary key, alpha varchar(255), omega int);')
+        sql.execute("insert into FOO (id, alpha, omega) values (1, 'hola', 10) ")
+        sql.execute("insert into FOO (id, alpha, omega) values (2, 'ciao', 20) ")
+        sql.execute("insert into FOO (id, alpha, omega) values (3, 'hello', 30) ")
+        and:
+        def config = [sql: [db: [test: [url: JDBC_URL]]]]
+
+        when:
+        def SCRIPT = '''
+            def table = 'FOO'
+            def sql = "select * from $table"
+            channel.fromQuery(sql, db: "test", emitColumns:true) 
+            '''
+        and:
+        def result = new MockScriptRunner(config).setScript(SCRIPT).execute()
+        then:
+        result.val == ['ID', 'ALPHA', 'OMEGA']
+        result.val == [1, 'hola', 10]
+        result.val == [2, 'ciao', 20]
+        result.val == [3, 'hello', 30]
+        result.val == Channel.STOP
+    }
 }

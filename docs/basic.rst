@@ -65,15 +65,14 @@ A Nextflow script looks like this::
     }
 
 The above example defines two processes. Their execution order is not determined by the fact that the ``blastSearch``
-process comes before ``extractTopHits`` in the script (it could also be written the other way around).
+process comes before ``extractTopHits`` in the script (it could also be written the other way around). Instead, the
+pipe operator (``|``) in the workflow between ``blastSearch`` and ``extractTopHits`` forwards the outputs from one
+process to the inputs of the following one.
 
-Instead, because the first process defines the channel ``top_hits_ch`` in its output declarations, and the
-process ``extractTopHits`` defines the channel in its input declaration, a communication link is established.
-
-This linking via the channels means that `extractTopHits` is waiting for the output of `blastSearch`, and then
-runs `reactively` when the channel has contents.
-
-.. TODO describe that both processes are launched at the same time
+When the workflow is started, it will create two processes and one channel (``query_ch``)
+and it will link all of them. Both processes will be started at the same time and they will listen to their
+respective input channels. Whenever ``blastSearch`` emits a value, ``extractTopHits``
+will receive it (i.e. ``extractTopHits`` consumes the channel in a `reactive` way).
 
 Read the :ref:`Channel <channel-page>` and :ref:`Process <process-page>` sections to learn more about these features.
 

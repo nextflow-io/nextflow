@@ -35,8 +35,19 @@ class Plugins {
 
     static PluginManager getManager() { INSTANCE.manager }
 
+    static synchronized void init(boolean embeddedMode=false) {
+        INSTANCE.init(embeddedMode)
+    }
+
     static synchronized void setup(Map config = Collections.emptyMap()) {
         INSTANCE.setup(config)
+    }
+
+    /**
+     * @param config
+     */
+    static void load(Map config) {
+        INSTANCE.load(config)
     }
 
     static void start(String pluginId) {
@@ -55,13 +66,14 @@ class Plugins {
         INSTANCE.getPriorityExtensions(type,group)
     }
 
-    static <T> Set<T> getScopedExtensions(Class<T> type, String scope=null) {
-        INSTANCE.getScopedExtensions(type,scope)
-    }
-
     static <T> T getExtension(Class<T> type) {
         final allExtensions = INSTANCE.getExtensions(type)
         return allExtensions ? allExtensions.first() : null
+    }
+
+    static <T> List<T> getExtensionsInPluginId(Class<T> type, String pluginId) {
+        final allExtensions = INSTANCE.getExtensions(type, pluginId)
+        return allExtensions
     }
 
     static void pull(List<String> ids) {
@@ -75,5 +87,9 @@ class Plugins {
             log.debug "Plugins subsystem not available - Ignoring installIfMissing('$pluginId')"
             return false
         }
+    }
+
+    static boolean isStarted(String pluginId) {
+        INSTANCE.isStarted(pluginId)
     }
 }

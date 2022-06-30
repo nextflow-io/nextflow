@@ -16,7 +16,7 @@
  */
 
 
-
+import nextflow.exception.AbortRunException
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Timeout
@@ -29,7 +29,7 @@ import nextflow.script.TestScriptRunner
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Timeout(5)
+@Timeout(10)
 class FunctionalTests extends Specification {
 
     @Shared
@@ -101,7 +101,7 @@ class FunctionalTests extends Specification {
              process {
                 dummyField = 99
                 executor = 'nope'
-                echo = true
+                debug = true
                 shell = 'zsh'
                 maxForks = 10
                 environment = [a:1, b:2,c:3]
@@ -114,7 +114,7 @@ class FunctionalTests extends Specification {
         def script = '''
 
             process taskHello {
-                echo true
+                debug true
                 maxForks 11
                 'echo hello'
             }
@@ -128,7 +128,7 @@ class FunctionalTests extends Specification {
         then:
         processor instanceof TaskProcessor
         processor.getName() == 'taskHello'
-        processor.config.echo == true
+        processor.config.debug == true
         processor.config.shell == 'zsh'
         processor.config.maxForks == 11
         processor.config.dummyField == 99
@@ -713,5 +713,35 @@ class FunctionalTests extends Specification {
         runner.setScript(script).execute()
         then:
         noExceptionThrown()
+    }
+
+    def 'should show the line of the error when throw an exception'() {
+
+        when:
+        def CONFIG = '''
+            process {
+                executor = 'nope'
+            }
+            '''
+
+        def script = '''/*1*/
+/*2*/   def thisMethodExpectsOnlyOneString(String a){
+/*3*/      a
+/*4*/   }
+/*5*/                   
+/*6*/   process foo {
+/*7*/       input:
+/*8*/           each x from (1,2,3)
+/*9*/       script:
+/*10*/          "${thisMethodExpectsOnlyOneString(1,2,3,4)}"
+/*11*/      }
+        '''
+
+        def cfg = new ConfigParser().parse(CONFIG)
+        def runner = new TestScriptRunner(cfg)
+        runner.setScript(script).execute()
+        then:
+        def abort = thrown(AbortRunException)
+        runner.session.fault.report ==~ /(?s).*-- Check script '(.*?)' at line: 10.*/
     }
 }

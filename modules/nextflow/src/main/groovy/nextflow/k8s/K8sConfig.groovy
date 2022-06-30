@@ -29,6 +29,8 @@ import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.model.PodOptions
 import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
+import nextflow.k8s.model.ResourceType
+
 /**
  * Model Kubernetes specific settings defined in the nextflow
  * configuration file
@@ -97,7 +99,7 @@ class K8sConfig implements Map<String,Object> {
     }
 
     boolean getCleanup(boolean defValue=true) {
-        target.cleanup == null ? defValue : target.cleanup as boolean
+        target.cleanup == null ? defValue : Boolean.valueOf( target.cleanup as String )
     }
 
     String getUserName() {
@@ -114,6 +116,20 @@ class K8sConfig implements Map<String,Object> {
 
     String getStorageSubPath() {
         target.storageSubPath
+    }
+
+    /**
+     * Whenever the pod should honour the entrypoint defined by the image (default: false)
+     *
+     *  @return  When {@code false} the launcher script is run by using pod `command` attributes which
+     *      overrides the entrypoint point defined by the image.
+     *
+     *      When {@code true} the launcher is run via the pod `args` attribute, without altering the
+     *      container entrypoint (it does however require to have a bash shell as the image entrypoint)
+     *
+     */
+    boolean preserveContainerEntrypoint() {
+        return target.preserveContainerEntrypoint
     }
 
     /**
@@ -143,6 +159,8 @@ class K8sConfig implements Map<String,Object> {
 
     String getNamespace() { target.namespace }
 
+    boolean useJobResource() { ResourceType.Job.name() == target.computeResourceType?.toString() }
+
     String getServiceAccount() { target.serviceAccount }
 
     String getNextflowImageName() {
@@ -151,11 +169,16 @@ class K8sConfig implements Map<String,Object> {
     }
 
     boolean getAutoMountHostPaths() {
-        target.autoMountHostPaths as boolean
+        Boolean.valueOf( target.autoMountHostPaths as String )
     }
 
     PodOptions getPodOptions() {
         podOptions
+    }
+
+    @Memoized
+    boolean fetchNodeName() {
+        Boolean.valueOf( target.fetchNodeName as String )
     }
 
     /**
@@ -248,7 +271,7 @@ class K8sConfig implements Map<String,Object> {
             this.target = debug ?: Collections.<String,Object>emptyMap()
         }
 
-        boolean getYaml() { target.yaml as boolean }
+        boolean getYaml() { Boolean.valueOf( target.yaml as String ) }
     }
 }
 

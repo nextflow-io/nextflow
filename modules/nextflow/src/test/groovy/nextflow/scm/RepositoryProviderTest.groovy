@@ -30,25 +30,25 @@ class RepositoryProviderTest extends Specification {
         def provider
 
         when:
-        provider = RepositoryProvider.create(new ProviderConfig('github'),'project/x')
+        provider = RepositoryFactory.newRepositoryProvider(new ProviderConfig('github'),'project/x')
         then:
         provider instanceof GithubRepositoryProvider
         provider.endpointUrl == 'https://api.github.com/repos/project/x'
 
         when:
-        provider = RepositoryProvider.create(new ProviderConfig('gitlab'),'project/y')
+        provider = RepositoryFactory.newRepositoryProvider(new ProviderConfig('gitlab'),'project/y')
         then:
         provider instanceof GitlabRepositoryProvider
         provider.endpointUrl == 'https://gitlab.com/api/v4/projects/project%2Fy'
 
         when:
-        provider = RepositoryProvider.create(new ProviderConfig('bitbucket'),'project/z')
+        provider = RepositoryFactory.newRepositoryProvider(new ProviderConfig('bitbucket'),'project/z')
         then:
         provider instanceof BitbucketRepositoryProvider
         provider.endpointUrl == 'https://bitbucket.org/api/2.0/repositories/project/z'
 
         when:
-        provider = RepositoryProvider.create(new ProviderConfig('local', [path:'/user/data']),'local/w')
+        provider = RepositoryFactory.newRepositoryProvider(new ProviderConfig('local', [path:'/user/data']),'local/w')
         then:
         provider.endpointUrl == 'file:/user/data/w'
     }
@@ -58,7 +58,7 @@ class RepositoryProviderTest extends Specification {
         given:
         def config = Mock(ProviderConfig)
         def provider = Spy(RepositoryProvider)
-        provider.config = config
+        provider.@config = config
 
         when:
         provider.setCredentials('pditommaso', 'secret1')
