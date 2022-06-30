@@ -90,7 +90,7 @@ class LsfExecutor extends AbstractGridExecutor {
             // When per-process is used (default) the amount of requested memory
             // is divided by the number of used cpus (processes)
             def mem1 = ( task.config.cpus > 1 && !perJobMemLimit ) ? mem.div(task.config.cpus as int) : mem
-            def mem2 = ( task.config.cpus > 1 && perTaskReserve ) ? mem.div(task.config.cpus as int) : mem
+            def mem2 = ( task.config.cpus > 1 &&  perTaskReserve ) ? mem.div(task.config.cpus as int) : mem
 
             result << '-M' << String.valueOf(mem1.toUnit(memUnit))
             result << '-R' << "select[mem>=${mem.toUnit(memUnit)}] rusage[mem=${mem2.toUnit(usageUnit)}]".toString()
@@ -284,9 +284,8 @@ class LsfExecutor extends AbstractGridExecutor {
             perJobMemLimit = str == 'Y'
             log.debug "[LSF] Detected lsf.conf LSB_JOB_MEMLIMIT=$str ($perJobMemLimit)"
         }
-        else {
-            perJobMemLimit = session.getExecConfigProp(name, 'perJobMemLimit', false)
-        }
+
+        perJobMemLimit = session.getExecConfigProp(name, 'perJobMemLimit', perJobMemLimit)
 
         // per task reserve https://github.com/nextflow-io/nextflow/issues/1071#issuecomment-481412239
         if( conf.get('RESOURCE_RESERVE_PER_TASK') ) {
@@ -294,6 +293,8 @@ class LsfExecutor extends AbstractGridExecutor {
             perTaskReserve = str == 'Y'
             log.debug "[LSF] Detected lsf.conf RESOURCE_RESERVE_PER_TASK=$str ($perTaskReserve)"
         }
+
+        perTaskReserve = session.getExecConfigProp(name, 'perTaskReserve', perTaskReserve)
     }
 
 }
