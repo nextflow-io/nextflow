@@ -100,7 +100,7 @@ class PodOptions {
         else if( entry.mountPath && entry.config ) {
             mountConfigMaps << new PodMountConfig(entry)
         }
-        else if( entry.mountPath && entry.emptyDir ) {
+        else if( entry.mountPath && entry.emptyDir != null ) {
             mountEmptyDirs << new PodMountEmptyDir(entry)
         }
         else if( entry.mountPath && entry.secret ) {
