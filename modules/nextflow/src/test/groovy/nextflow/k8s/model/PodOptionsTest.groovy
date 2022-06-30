@@ -45,7 +45,7 @@ class PodOptionsTest extends Specification {
         options.getImagePullPolicy() == null
         
         when:
-        options = new PodOptions([ [imagePullPolicy: 'Always'] ])
+        options = new PodOptions([ [pullPolicy: 'Always'] ])
         then:
         options.getImagePullPolicy() == 'Always'
 
