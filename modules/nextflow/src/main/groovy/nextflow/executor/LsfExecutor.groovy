@@ -90,7 +90,7 @@ class LsfExecutor extends AbstractGridExecutor {
             // When per-process is used (default) the amount of requested memory
             // is divided by the number of used cpus (processes)
             def mem1 = ( task.config.cpus > 1 && !perJobMemLimit ) ? mem.div(task.config.cpus as int) : mem
-            def mem2 = ( task.config.cpus > 1 &&  perTaskReserve ) ? mem.div(task.config.cpus as int) : mem
+            def mem2 = ( task.config.cpus > 1 && perTaskReserve ) ? mem.div(task.config.cpus as int) : mem
 
             result << '-M' << String.valueOf(mem1.toUnit(memUnit))
             result << '-R' << "select[mem>=${mem.toUnit(memUnit)}] rusage[mem=${mem2.toUnit(usageUnit)}]".toString()
