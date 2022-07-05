@@ -27,8 +27,27 @@ import groovy.transform.ToString
 @CompileStatic
 @ToString(includeNames = true, ignoreNulls = true, includePackage = false)
 class TaskVolume {
+
+    // A Google Cloud Storage source for the volume.
     Map gcs
+
+    // An NFS source for the volume (could be a Filestore, for example).
+    Map nfs
+
+    // A persistent disk source for the volume.
+    Map pd
+
+    // Mount path for the volume, e.g. /mnt/share
     String mountPath
+
+    // Mount options
+    // For Google Cloud Storage, mount options are the global options supported by
+    // gcsfuse tool. Batch will use them to mount the volume with the following
+    // command:
+    // "gcsfuse [global options] bucket mountpoint".
+    // For PD, NFS, mount options are these supported by /etc/fstab. Batch will
+    // use Fstab to mount such volumes.
+    // https://help.ubuntu.com/community/Fstab
     List<String> mountOptions
 
     TaskVolume withMountOptions(List<String> opts) {

@@ -29,26 +29,24 @@ import groovy.transform.ToString
 @ToString(includeNames = true, ignoreNulls = true, includePackage = false)
 class AllocationPolicy {
 
+    static class InstancePolicyOrTemplate {
+        InstancePolicy policy
+        // Name of an instance template used to create VMs.
+        // Named the field as 'instance_template' instead of 'template' to avoid
+        // c++ keyword conflict.
+        String instance_template
+
+        InstancePolicyOrTemplate(InstancePolicy policy) {
+            this.policy = policy
+        }
+    }
+
     // Location where compute resources should be allocated for the Job.
     LocationPolicy location
 
-    // Create only instances allowed by this policy.
-    InstancePolicy instance
-
-    // Create instances from the first instance template - MVP
-    // Use 'gcloud compute instance-templates list` to see available templates
-    // in the project If specified, it overrides the 'instance' field.
-    Set<String> instanceTemplates
-
-    // Create only instances in the listed provisiong models.
-    // Default to allow all.
-    //
-    // Currently only the first model of the provisioning_models list will be
-    // considered; specifying additional models (e.g., 2nd, 3rd, etc.) is a no-op.
-    Set<ProvisioningModel> provisioningModels
-
-    // Email of the service account that VMs will run as.
-    String serviceAccount
+    // Describe instances that can be created by this AllocationPolicy.
+    // Only instances[0] is supported now.
+    List<InstancePolicyOrTemplate> instance
 
     /**
      // Labels applied to all VM instances and other resources
@@ -64,23 +62,20 @@ class AllocationPolicy {
     // The network policy.
     NetworkPolicy network
 
+    InstancePolicy instancePolicy() {
+        if( !instance ) {
+            this.instance = List.of(new InstancePolicyOrTemplate(new InstancePolicy()))
+        }
+        return instance[0].policy
+    }
+
     AllocationPolicy withProvisioningModel(ProvisioningModel provisioning) {
-        this.provisioningModels = Collections.singleton(provisioning)
+        instancePolicy().withProvisioningModel(provisioning)
         return this
     }
 
-    AllocationPolicy withMachineTypes(String... machineTypes) {
-        this.instance = new InstancePolicy(allowedMachineTypes: machineTypes.toList())
-        return this
-    }
-
-    AllocationPolicy withInstancePolicy(InstancePolicy policy) {
-        this.instance = policy
-        return this
-    }
-
-    AllocationPolicy withLocationPolicy(LocationPolicy policy) {
-        this.location = policy
+    AllocationPolicy withMachineType(String machineType) {
+        instancePolicy().withMachineType(machineType)
         return this
     }
 

@@ -52,7 +52,22 @@ class TaskContainer {
     /**
      * Arbitrary additional options to include in the "docker run" command when // running this container, e.g. "−−network host".
      */
-    String options;
+    String options
+
+    // If set to true, external network access to and from container will be
+    // blocked. The container will use the default internal network
+    // 'goog-internal'.
+    Boolean blockExternalNetwork
+
+    // Optional username for logging in to a docker registry. If username
+    // matches "projects/*/secrets/*/versions/*" then Batch will read the
+    // username from the Secret Manager.
+    String username
+
+    // Optional password for logging in to a docker registry. If password
+    // matches "projects/*/secrets/*/versions/*" then Batch will read the
+    // password from the Secret Manager;
+    String password
 
     TaskContainer withImageUri(String it) {
         this.imageUri = it

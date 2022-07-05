@@ -27,7 +27,12 @@ import groovy.transform.ToString
 @CompileStatic
 @ToString(includeNames = true, ignoreNulls = true, includePackage = false)
 class TaskRunnable {
+
+    // either task container
     TaskContainer container
+
+    // or task script
+    TaskScript script
 
     // Normally, a non−zero exit status causes the Task // execution of other Runnables to continue instead.
     Boolean ignoreExitStatus

@@ -59,8 +59,7 @@ enum ProvisioningModel {
      *
      * <code>PREEMPTIBLE = 3;</code>
      */
-    PREEMPTIBLE(3),
-    UNRECOGNIZED(-1);
+    PREEMPTIBLE(3);
     
 
     /**

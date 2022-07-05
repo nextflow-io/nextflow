@@ -29,11 +29,51 @@ import nextflow.cloud.google.batch.json.JsonHelper
 @ToString(includeNames = true, ignoreNulls = true, includePackage = false)
 class BatchJob {
 
+    // Job name.
+    // It must have the format of "projects/*/locations/*/jobs/*".
+    // For example: "projects/123456/locations/us-west1/jobs/job01".
+    String name
+
+    // Output only. A system generated unique ID (in UUID4 format) for the Job.
+    String uid
+
+    // Priority of the Job.
+    // The valid value range is [0, 100).
+    // A job with higher priority value will be scheduled to run earlier.
+    Integer priority
+
+    // Required. TaskGroups in the Job. Only one TaskGroup is supported now.
     List<TaskGroup> taskGroups = []
+
+    // Compute resource allocation for all TaskGroups in the Job.
+    AllocationPolicy allocationPolicy
+
+    // Labels for the Job. Labels could be user provided or system generated.
+    // For example,
+    // "labels": {
+    //    "department": "finance",
+    //    "environment": "test"
+    //  }
+    // You can assign up to 64 labels.  [Google Compute Engine label
+    // restrictions](https://cloud.google.com/compute/docs/labeling-resources#restrictions)
+    // apply.
+    // Label names that start with "goog-" or "google-" are reserved.
+    Map<String,String> labels
+
+    // Output only. Job status. It is read only for users.
+    JobStatus status
+
     LogsPolicy logsPolicy = LogsPolicy.CLOUD_LOGGING
+
+    List<JobNotification> notifications
 
     BatchJob addTaskGroup(TaskGroup it) {
         taskGroups.add(it)
+        return this
+    }
+
+    BatchJob withAllocationPolicy(AllocationPolicy allocationPolicy) {
+        this.allocationPolicy = allocationPolicy
         return this
     }
 

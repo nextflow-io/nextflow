@@ -28,6 +28,13 @@ import groovy.transform.ToString
 @ToString(includeNames = true, ignoreNulls = true, includePackage = false)
 class TaskGroup {
 
+    // Output only. TaskGroup name.
+    // The system generates this field based on parent Job name.
+    // For example:
+    // "projects/123456/locations/us-west1/jobs/job01/taskGroups/default-group".
+    String name
+
+
     /**
      *  Required. Tasks in the group share the same task spec.
      */
@@ -45,27 +52,6 @@ class TaskGroup {
     Integer parallelism
 
     /**
-     * Scheduling policy for Tasks in the TaskGroup
-     */
-    SchedulingPolicy schedulingPolicy
-
-    /**
-     * Compute resource allocation for the TaskGroup.
-     * If specified, it overrides resources in Job.
-     */
-    AllocationPolicy allocationPolicy
-    
-    /**
-     *  Labels could be user provided or system generated.
-     * You can assign up to 64 labels.  [Google Compute Engine label
-     * restrictions](https://cloud.google.com/compute/docs/labeling-resources#restrictions)
-     * apply.
-     * Label names that start with "goog-" or "google-" are reserved.
-     */
-    Map<String,String> labels
-
-
-    /**
      // An array of environment variable mappings, which are passed to Tasks with
      // matching indices. If task_environments is used then task_count should
      // not be specified in the request (and will be ignored). Task count will be
@@ -78,7 +64,7 @@ class TaskGroup {
      //
      // task_environments supports up to 200 entries.
      */
-    Environment taskEnvironments
+    List<Environment> taskEnvironments
 
     /**
      * Max number of tasks that can be run on a node
@@ -93,18 +79,13 @@ class TaskGroup {
      */
     Boolean requireHostsFile
 
+    // When true, Batch will configure SSH to allow passwordless login between
+    // VMs for the user running the Batch tasks.
+    Boolean permissiveSsh
+
     TaskGroup withTaskSpec(TaskSpec spec) {
         this.taskSpec = spec
         return this
     }
 
-    TaskGroup withLabels(Map<String,String> labels) {
-        this.labels = labels
-        return this
-    }
-
-    TaskGroup withAllocationPolicy(AllocationPolicy policy) {
-        this.allocationPolicy = policy
-        return this
-    }
 }

@@ -28,8 +28,9 @@ import nextflow.util.Duration
 @CompileStatic
 @ToString(includeNames = true, ignoreNulls = true, includePackage = false)
 class TaskSpec {
+
     List<TaskRunnable> runnables = []
-    List<TaskVolume> volumes = []
+
     ComputeResource computeResource
 
     /*
@@ -43,11 +44,27 @@ class TaskSpec {
      */
     Integer maxRetryCount
 
+    // Lifecycle management schema when any task in a task group is failed.
+    // The valid size of lifecycle policies are [0, 10].
+    // For each lifecycle policy, when the condition is met,
+    // the action in that policy will be executed.
+    // If there are multiple policies that the task execution result matches,
+    // we use the action from the first matched policy. If task execution result
+    // does not meet with any of the defined lifecycle policy, we consider it as
+    // the default policy. Default policy means if the exit code is 0, exit task.
+    // If task ends with non-zero exit code, retry the task with max_retry_count.
+    List<LifecyclePolicy> lifecyclePolicies;
+
     /**
      * Environment variables to set before running the Task.
      * You can set up to 100 environments.
      */
     Map<String,String> environment
+
+    /*
+     * Volumes to mount before running Tasks using this TaskSpec.
+     */
+    List<TaskVolume> volumes = []
 
     TaskSpec addRunnable(TaskRunnable it) {
         runnables.add(it)

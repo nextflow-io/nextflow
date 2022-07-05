@@ -115,7 +115,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
     }
 
     protected BatchJob newSubmitRequest(TaskRun task) {
-        final result = new BatchJob()
+        final batchJob = new BatchJob()
 
         final spec = new TaskSpec()
         final res = new ComputeResource()
@@ -147,15 +147,17 @@ class GoogleBatchTaskHandler extends TaskHandler {
         if( networkPolicy )
             allocPolicy.withNetworkPolicy(networkPolicy)
         if( task.config.getMachineType() )
-            allocPolicy.withMachineTypes( task.config.getMachineType() )
+            allocPolicy.withMachineType( task.config.getMachineType() )
         if( executor.config.preemptible )
             allocPolicy.withProvisioningModel(ProvisioningModel.PREEMPTIBLE)
         if( executor.config.spot )
             allocPolicy.withProvisioningModel(ProvisioningModel.SPOT)
         
         // create the task group
-        result.addTaskGroup( new TaskGroup().withTaskSpec(spec).withAllocationPolicy(allocPolicy) )
-        return result
+        batchJob
+            .addTaskGroup(new TaskGroup().withTaskSpec(spec))
+            .withAllocationPolicy(allocPolicy)
+        return batchJob
     }
 
     protected NetworkPolicy networkPolicy(BatchConfig config) {
