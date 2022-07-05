@@ -28,56 +28,63 @@ import groovy.transform.ToString
 @ToString(includeNames = true, ignoreNulls = true, includePackage = false)
 class InstancePolicy {
 
-    // A list of allowed Compute Engine machine types, for example,
-    // e2-standard-4. Default is empty which means allowing all.
-    List<String> allowedMachineTypes;
+    static class Accelerator {
+        // The accelerator type. For example, "nvidia-tesla-t4".
+        // See `gcloud compute accelerator-types list`.
+        String type
 
-    // A list of denied Compute Engine machine types.
-    // Default is empty which means denying none.
-    // A machine type is allowed if it matches 'allowed_machine_types' AND
-    // does not match 'denied_machine_types'.
-    // For example,
-    //   allowed_machine_types = "e2-standard"
-    //   denied_machine_types = "e2-standard-2, e2-standard-4"
-    // means using all E2 standard machine types except for 'e2-standard-2' and
-    // 'e2-standard-4.
-    //
-    // [NotImplemented]
-    List<String> deniedMachineTypes;
+        // The number of accelerators of this type.
+        Integer count
+    }
 
-    // A list of allowed CPU platforms, for example,
-    // "Intel Cascade Lake", "AMD Rome".
-    // Default is empty which means allowing all.
-    //
-    // [NotImplemented]
-    List<String> allowedCpuPlatforms
+    static class Disk {
+        // A data source from which a PD will be created.
+        // Name of a public or custom image used as the data source.
+        String image
 
-    // A list of denied CPU platforms.
-    // Default is empty which means denying none.
-    // A CPU platform is allowed if it matches 'allowed_cpu_platforms' AND
-    // does not match 'denied_cpu_platforms'.
-    // If a CPU platform belongs to both lists, it will be denied.
-    //
-    // [NotImplemented]
-    List<String> deniedCpuPlatforms;
+        // Name of a snapshot used as the data source.
+        String snapshot
 
-    // A list of allowed accelerator types (GPU models), for example,
-    // "nvidia-tesla-t4". Default is empty which means allowing all.
-    //
-    // [NotImplemented]
-    List<String> allowedAcceleratorTypes
+        // Disk type as shown in `gcloud compute disk-types list`
+        // For example, "pd-ssd", "pd-standard", "pd-balanced".
+        String type
 
-    // A list of denied accelerator types (GPU models).
-    // Default is empty which means denying none.
-    // A accelerator type is allowed if it matches 'allowed_accelerator_types'
-    // AND does not match 'denied__accelerator_types'.
-    //
-    // [NotImplemented]
-    List<String> deniedAcceleratorTypes
+        // Disk size in GB.
+        // This field is ignored if `data_source` is `disk` or `image`.
+        Integer sizeGb
+    }
 
-    // The number of accelerators per VM instance.
-    //
-    // [NotImplemented]
-    Integer accelerator_count
-    
+    static class AttachedDisk {
+        Disk newDisk
+        // Name of an existing PD.
+        String existingDisk
+    }
+
+    // The Compute Engine machine type.
+    String machineType
+
+    // The minimum CPU platform.
+    // See
+    // `https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform`.
+    String minCpuPlatform
+
+    // The provisioning model.
+    ProvisioningModel provisioningModel
+
+    // The accelerators attached to each VM instance.
+    List<Accelerator> accelerators
+
+    // Non-boot disks to be attached for each VM created by this InstancePolicy.
+    // New disks will be deleted when the attached VM is deleted.
+    List<AttachedDisk> disks
+
+    InstancePolicy withProvisioningModel(ProvisioningModel model) {
+        this.provisioningModel = model
+        return this
+    }
+
+    InstancePolicy withMachineType(String type) {
+        this.machineType = type
+        return this
+    }
 }

@@ -33,7 +33,4 @@ class LocationPolicy {
     // First location in the list should be a region.
     List<String> allowedLocations
 
-    // A list of denied location names.
-    List<String> deniedLocations
-
 }
