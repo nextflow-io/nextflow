@@ -130,6 +130,7 @@ proxyHost                   The proxy host to connect through.
 proxyPort                   The port on the proxy host to connect through.
 proxyUsername               The user name to use when connecting through a proxy.
 proxyPassword               The password to use when connecting through a proxy.
+s3PathStyleAccess           Enable the use of path-based access model that is used to specify the address of an object in S3-compatible storage systems.
 signerOverride              The name of the signature algorithm to use for signing requests made by the client.
 socketSendBufferSizeHint    The Size hint (in bytes) for the low level TCP send buffer.
 socketRecvBufferSizeHint    The Size hint (in bytes) for the low level TCP receive buffer.
