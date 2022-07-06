@@ -17,7 +17,6 @@
 
 package nextflow.processor
 
-
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -29,15 +28,17 @@ import nextflow.Session
 import nextflow.conda.CondaCache
 import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
-import nextflow.container.ContainerHandler
+import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
+import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
+import nextflow.script.bundle.ModuleBundle
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
@@ -573,6 +574,7 @@ class TaskRun implements Cloneable {
     /**
      * The name of a docker container where the task is supposed to run when provided
      */
+    @Memoized
     String getContainer() {
         // set the docker container to be used
         String imageName
@@ -583,12 +585,17 @@ class TaskRun implements Cloneable {
             imageName = config.container as String
         }
 
-        final cfg = getContainerConfig()
-        final handler = new ContainerHandler(cfg, processor.executor)
-        final result = handler.normalizeImageName(imageName)
+        final res = ContainerResolverProvider.resolver()
+        final target = res.resolveImage(this, imageName)
+        if( !target )
+            throw new ProcessUnrecoverableException("Failed to resolve container image for process '${this.processor.name}' -- source container: $imageName")
+        return target
+    }
 
-        final proxy = System.getenv('NXF_PROXY_REG')
-        return proxy ? ContainerHandler.proxyReg(proxy, result) : result
+    ModuleBundle getModuleBundle() {
+        final script = this.getProcessor().getOwnerScript()
+        final meta = ScriptMeta.get(script)
+        return meta != null ? meta.moduleBundle : null
     }
 
     /**
@@ -597,7 +604,6 @@ class TaskRun implements Cloneable {
     ContainerConfig getContainerConfig() {
         processor.getSession().getContainerConfig()
     }
-
 
     /**
      * @return {@true} when the process must run within a container and the docker engine is enabled

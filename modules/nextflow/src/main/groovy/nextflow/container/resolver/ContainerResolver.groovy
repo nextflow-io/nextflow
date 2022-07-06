@@ -1,6 +1,5 @@
 /*
  * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +12,20 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-rootProject.name = 'nextflow-prj'
+package nextflow.container.resolver
 
-include 'nextflow'
-include 'nf-commons'
-include 'nf-httpfs'
+import nextflow.processor.TaskRun
+import org.pf4j.ExtensionPoint
 
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/modules/$prj.name")
+/**
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+interface ContainerResolver extends ExtensionPoint {
+
+    abstract String resolveImage(TaskRun task, String imageName)
+
 }
-
-include 'plugins'
-include 'plugins:nf-amazon'
-include 'plugins:nf-google'
-include 'plugins:nf-ga4gh'
-include 'plugins:nf-tower'
-include 'plugins:nf-console'
-include 'plugins:nf-azure'
-include 'plugins:nf-codecommit'
-include 'plugins:nf-wave'

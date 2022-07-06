@@ -17,6 +17,7 @@
 
 package nextflow.script
 
+import nextflow.exception.ScriptCompilationException
 import nextflow.extension.ChannelExtensionProvider
 import nextflow.plugin.Plugins
 
@@ -48,6 +49,12 @@ class IncludeDef {
     static class Module {
         String name
         String alias
+    }
+
+    @Canonical
+    static class ModulePath {
+        final Path target
+        final boolean bundle
     }
 
     @PackageScope path
@@ -144,14 +151,15 @@ class IncludeDef {
 
     @PackageScope
     @Memoized
-    static BaseScript loadModule0(Path path, Map params, Session session) {
+    static BaseScript loadModule0(ModulePath path, Map params, Session session) {
         final binding = new ScriptBinding() .setParams(params)
 
         // the execution of a library file has as side effect the registration of declared processes
         new ScriptParser(session)
                 .setModule(true)
+                .setBundle(path.isBundle())
                 .setBinding(binding)
-                .runScript(path)
+                .runScript(path.target)
                 .getScript()
     }
 
@@ -169,19 +177,26 @@ class IncludeDef {
     }
 
     @PackageScope
-    Path realModulePath(include) {
+    ModulePath realModulePath(include) {
         def module = resolveModulePath(include)
 
         // check if exists a file with `.nf` extension
         if( !module.name.endsWith('.nf') ) {
-            def extendedName = module.resolveSibling( "${module.name}.nf" )
+            final extendedName = module.resolveSibling( "${module.name}.nf" )
             if( extendedName.exists() )
-                return extendedName
+                return new ModulePath(extendedName)
+        }
+        if( module.isDirectory() ) {
+            final target = module.resolve('main.nf')
+            if( target.exists() ) {
+                return new ModulePath(target, true)
+            }
+            throw new ScriptCompilationException("Include '$include' does not provide any module script -- the following path should contain a 'main.nf' script: '$module'" )
         }
 
         // check the file exists
         if( module.exists() )
-            return module
+            return new ModulePath(module)
 
         throw new NoSuchFileException("Can't find a matching module file for include: $include")
     }

@@ -24,7 +24,6 @@ import java.nio.file.Paths
 
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -1249,6 +1248,93 @@ class FilesExTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should convert octal to permissions' () {
+        expect:
+        FilesEx.toPosixFilePermission(0) == [] as Set
+        and:
+        FilesEx.toPosixFilePermission(01) == [OTHERS_EXECUTE] as Set
+        FilesEx.toPosixFilePermission(02) == [OTHERS_WRITE] as Set
+        FilesEx.toPosixFilePermission(04) == [OTHERS_READ] as Set
+        FilesEx.toPosixFilePermission(07) == [OTHERS_READ, OTHERS_WRITE, OTHERS_EXECUTE] as Set
+        and:
+        FilesEx.toPosixFilePermission(010) == [GROUP_EXECUTE] as Set
+        FilesEx.toPosixFilePermission(020) == [GROUP_WRITE] as Set
+        FilesEx.toPosixFilePermission(040) == [GROUP_READ] as Set
+        FilesEx.toPosixFilePermission(070) == [GROUP_READ, GROUP_WRITE, GROUP_EXECUTE] as Set
+        and:
+        FilesEx.toPosixFilePermission(0100) == [OWNER_EXECUTE] as Set
+        FilesEx.toPosixFilePermission(0200) == [OWNER_WRITE] as Set
+        FilesEx.toPosixFilePermission(0400) == [OWNER_READ] as Set
+        FilesEx.toPosixFilePermission(0700) == [OWNER_READ, OWNER_WRITE, OWNER_EXECUTE] as Set
+        and:
+        FilesEx.toPosixFilePermission(0644) == [OWNER_READ, OWNER_WRITE, GROUP_READ, OTHERS_READ] as Set
+    }
+
+    def 'should convert permissions to actal' () {
+        expect:
+        FilesEx.toOctalFileMode([] as Set) == 0
+        and:
+        FilesEx.toOctalFileMode([OTHERS_EXECUTE] as Set) == 01
+        FilesEx.toOctalFileMode([OTHERS_WRITE] as Set) == 02
+        FilesEx.toOctalFileMode([OTHERS_READ] as Set) == 04
+        FilesEx.toOctalFileMode([OTHERS_READ, OTHERS_WRITE, OTHERS_EXECUTE] as Set) == 07
+        and:
+        FilesEx.toOctalFileMode([GROUP_EXECUTE] as Set) == 010
+        FilesEx.toOctalFileMode([GROUP_WRITE] as Set) == 020
+        FilesEx.toOctalFileMode([GROUP_READ] as Set) == 040
+        FilesEx.toOctalFileMode([GROUP_READ, GROUP_WRITE, GROUP_EXECUTE] as Set) == 070
+        and:
+        FilesEx.toOctalFileMode([OWNER_EXECUTE] as Set) == 0100
+        FilesEx.toOctalFileMode([OWNER_WRITE] as Set) == 0200
+        FilesEx.toOctalFileMode([OWNER_READ] as Set) == 0400
+        FilesEx.toOctalFileMode([OWNER_READ, OWNER_WRITE, OWNER_EXECUTE] as Set) == 0700
+        and:
+        FilesEx.toOctalFileMode([OWNER_READ, OWNER_WRITE, GROUP_READ, OTHERS_READ] as Set) == 0644
+    }
+
+    def 'should read and write path file mode' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file = Files.createFile(folder.resolve('file.txt'))
+        def dirx = Files.createDirectory(folder.resolve('dirx'))
+
+        when:
+        file.setPermissionsMode(0644)
+        then:
+        file.getPermissionsMode() == 0644
+        file.getPermissions() == 'rw-r--r--'
+
+        when:
+        dirx.setPermissionsMode(0755)
+        then:
+        dirx.getPermissionsMode() == 0755
+        dirx.getPermissions() == 'rwxr-xr-x'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should read and write  file mode' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file = Files.createFile(folder.resolve('file.txt')).toFile()
+        def dirx = Files.createDirectory(folder.resolve('dirx')).toFile()
+
+        when:
+        file.setPermissionsMode(0644)
+        then:
+        file.getPermissionsMode() == 0644
+        file.getPermissions() == 'rw-r--r--'
+
+        when:
+        dirx.setPermissionsMode(0755)
+        then:
+        dirx.getPermissionsMode() == 0755
+        dirx.getPermissions() == 'rwxr-xr-x'
+
+        cleanup:
+        folder?.deleteDir()
+    }
 }
 
 

@@ -1,5 +1,6 @@
 package nextflow.script
 
+import nextflow.exception.ScriptCompilationException
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -51,18 +52,54 @@ class IncludeDefTest extends Specification {
         when:
         def result = include.realModulePath( 'mod-x.nf')
         then:
-        result == module
+        result.target == module
+        !result.isBundle()
 
         when:
         result = include.realModulePath('mod-x')
         then:
-        result == module
+        result.target == module
+        !result.isBundle()
 
         when:
         include.realModulePath('xyz')
         then:
         thrown(NoSuchFileException)
 
+    }
+
+    def 'should include module bundle' () {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def script = folder.resolve('main.nf'); script.text = 'echo ciao'
+        and:
+        folder.resolve('foo').mkdir()
+        def module = folder.resolve('foo/main.nf')
+        module.text = "I'm the module script"
+
+        and:
+        def include = Spy(IncludeDef)
+        include.getOwnerPath() >> script
+
+        // when the module name reference a directory that contains
+        // a file named 'main.nf', it's considered a module 'bundle'
+        when:
+        def result = include.realModulePath('foo')
+        then:
+        result.target == module
+        result.isBundle()
+
+        when:
+        include.realModulePath('bar')
+        then:
+        thrown(NoSuchFileException)
+
+        when:
+        folder.resolve('bar').mkdir()
+        include.realModulePath('bar')
+        then:
+        def e = thrown(ScriptCompilationException)
+        e.message == "Include 'bar' does not provide any module script -- the following path should contain a 'main.nf' script: '${folder.resolve('bar')}'"
     }
 
     def 'should check valid path' () {

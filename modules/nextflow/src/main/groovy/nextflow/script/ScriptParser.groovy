@@ -52,6 +52,9 @@ class ScriptParser {
 
     private boolean module
 
+    @Deprecated
+    private boolean bundle
+
     private Path scriptPath
 
     private BaseScript script
@@ -81,6 +84,12 @@ class ScriptParser {
 
     ScriptParser setModule(boolean value) {
         this.module = value
+        return this
+    }
+
+    @Deprecated
+    ScriptParser setBundle(boolean value) {
+        this.bundle = value
         return this
     }
 
