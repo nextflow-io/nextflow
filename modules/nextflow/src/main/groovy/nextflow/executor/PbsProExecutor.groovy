@@ -66,11 +66,16 @@ class PbsProExecutor extends PbsExecutor {
             res << "ncpus=${task.config.getCpus()}".toString()
         }
         if( task.config.memory ) {
-            // https://www.osc.edu/documentation/knowledge_base/out_of_memory_oom_or_excessive_memory_usage
             res << "mem=${task.config.getMemory().getMega()}mb".toString()
         }
         if( res ) {
-            result << '-l' << "select=1:${res.join(':')}".toString()
+            if( task.config.clusterOptions && task.config.clusterOptions.indexOf('-l') != -1 ) {
+                log.warn 'cpus and memory directives are ignored when clusterOptions contains -l option'
+                log.warn 'tip: clusterOptions = { "-l select=1:ncpus=${task.cpus}:mem=${task.mem.toMega()}mb:..." }'
+            }
+            else {
+                result << '-l' << "select=1:${res.join(':')}".toString()
+            }
         }
 
         // max task duration
