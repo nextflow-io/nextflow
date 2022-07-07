@@ -1267,6 +1267,16 @@ class TaskProcessor {
         return result
     }
 
+    protected PublishDir archivePublisher(Path target, String pattern) {
+        PublishDir.create(
+                path: target,
+                mode: 'copy',
+                overwrite: true,
+                pattern: pattern,
+                notify: false,
+                enabled: true)
+    }
+
     /**
      * Publish output files to a specified target folder
      *
@@ -1276,13 +1286,30 @@ class TaskProcessor {
     @CompileStatic
     protected void publishOutputs( TaskRun task ) {
         final publishList = task.config.getPublishDir()
-        if( !publishList ) {
-            return
-        }
+        final archiveDir = System.getenv('NXF_ARCHIVE_DIR')
+        Path archivePath = archiveDir ? FileHelper.asPath(archiveDir) : null
 
         for( PublishDir pub : publishList ) {
             publishOutputs0(task, pub)
+            // add a publisher for the archiver
+            if( archivePath && !pub.path.startsWith(archiveDir) ) {
+                final archiver = archivePublisher(archivePath, pub.pattern)
+                publishOutputs0(task, archiver)
+            }
         }
+        // add an archiver for .command.* files
+        if( archivePath ) {
+            final target = archivePath.resolve("work/${task.workDir.parent.name}/${task.workDir.name}")
+            final pub = archivePublisher(target, '.command.*')
+            pub.apply(dotCommandFiles(task), task)
+        }
+    }
+
+    private Set<Path> dotCommandFiles(TaskRun task) {
+        final result = new HashSet(10)
+        final opts = [relative: false, maxDepth: 1, hidden:true, type:'file']
+        FileHelper.visitFiles(opts, task.workDir, '.command.*') { Path it -> result.add(it) }
+        return result
     }
 
     private void publishOutputs0( TaskRun task, PublishDir publish ) {
