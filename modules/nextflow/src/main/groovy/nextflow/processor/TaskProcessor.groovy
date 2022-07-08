@@ -96,6 +96,7 @@ import nextflow.script.params.TupleInParam
 import nextflow.script.params.TupleOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
+import nextflow.util.FileArchiver
 import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
@@ -1286,22 +1287,16 @@ class TaskProcessor {
     @CompileStatic
     protected void publishOutputs( TaskRun task ) {
         final publishList = task.config.getPublishDir()
-        final archiveDir = System.getenv('NXF_ARCHIVE_DIR')
-        Path archivePath = archiveDir ? FileHelper.asPath(archiveDir) : null
 
         for( PublishDir pub : publishList ) {
             publishOutputs0(task, pub)
-            // add a publisher for the archiver
-            if( archivePath && !pub.path.startsWith(archiveDir) ) {
-                final archiver = archivePublisher(archivePath, pub.pattern)
-                publishOutputs0(task, archiver)
-            }
         }
+
         // add an archiver for .command.* files
-        if( archivePath ) {
-            final target = archivePath.resolve("work/${task.workDir.parent.name}/${task.workDir.name}")
-            final pub = archivePublisher(target, '.command.*')
-            pub.apply(dotCommandFiles(task), task)
+        if( FileArchiver.instance ) {
+            final target = FileArchiver.instance.archivePath(task.workDir)
+            final publisher = archivePublisher(target, '.command.*')
+            publisher.apply(dotCommandFiles(task), task)
         }
     }
 

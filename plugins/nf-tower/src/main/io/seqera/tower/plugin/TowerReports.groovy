@@ -153,7 +153,7 @@ class TowerReports {
      *
      * @param destination Path of the published file at destination filesystem.
      */
-    void filePublish(Path destination) {
+    boolean filePublish(Path destination) {
         if (processReports && destination) {
 
             if (!matchers) {
@@ -172,10 +172,11 @@ class TowerReports {
                     writer.send { PrintWriter it -> it.println("${reportEntry.key}\t${dst}\t${destination.size()}\t${display}\t${mimeType}") }
                     final numRep = totalReports.incrementAndGet()
                     log.debug("Adding report [${numRep}] ${reportEntry.key} -- ${dst}")
-                    break
+                    return true
                 }
             }
         }
+        return false
     }
 
     protected static String convertToGlobPattern(String reportKey) {

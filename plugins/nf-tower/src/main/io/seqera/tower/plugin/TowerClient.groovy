@@ -11,6 +11,7 @@
 
 package io.seqera.tower.plugin
 
+import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -34,6 +35,7 @@ import nextflow.trace.ResourcesAggregator
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
 import nextflow.util.Duration
+import nextflow.util.FileArchiver
 import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
@@ -467,7 +469,13 @@ class TowerClient implements TraceObserver {
      */
     @Override
     void onFilePublish(Path destination) {
-        reports.filePublish(destination)
+        final result = reports.filePublish(destination)
+        if( !FileArchiver.instance )
+            return
+        final target = FileArchiver.instance.archivePath(destination)
+        log.debug "Archiving file: $destination; target: $target"
+        if( target )
+            Files.copy(destination, target)
     }
 
     protected void refreshToken(String refresh) {
