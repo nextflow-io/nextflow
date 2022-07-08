@@ -470,7 +470,7 @@ class TowerClient implements TraceObserver {
     @Override
     void onFilePublish(Path destination) {
         final result = reports.filePublish(destination)
-        if( !FileArchiver.instance )
+        if( !result || !FileArchiver.instance )
             return
         final target = FileArchiver.instance.archivePath(destination)
         log.debug "Archiving file: $destination; target: $target"
