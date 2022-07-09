@@ -61,6 +61,21 @@ class XPathTest extends Specification {
         XPath.get('http://www.nextflow.io/abc/d.txt?').toUri().toString() == 'http://www.nextflow.io/abc/d.txt'
     }
 
+    def 'should validate uri' () {
+        when:
+        def uri = XPath.get(LOCATION).toUri()
+        then:
+        uri.authority == AUTH
+        uri.path == PATH
+        uri.query == QUERY
+        uri.scheme == SCHEME
+        
+        where:
+        LOCATION                                | SCHEME    |  AUTH             | PATH          | QUERY
+        'http://www.nextflow.io/abc/d.txt'      | 'http'    | 'www.nextflow.io' | '/abc/d.txt'  | null
+        'http://www.nextflow.io/abc/d.txt?q=1'  | 'http'    | 'www.nextflow.io' | '/abc/d.txt'  | 'q=1'
+    }
+
     def "should return url root"() {
 
         expect:
@@ -209,6 +224,7 @@ class XPathTest extends Specification {
         'http://nextflow.io/ab/c.txt'       | 'http://nextflow.io/ab/c.txt'
         'http://nextflow.io/ab/c/../d.txt'  | 'http://nextflow.io/ab/d.txt'
         'ab/c/../d.txt'                     | 'ab/d.txt'
+        'http://nextflow.io/ab/c.txt?q=1'   | 'http://nextflow.io/ab/c.txt?q=1'
 
     }
 

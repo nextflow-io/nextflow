@@ -44,8 +44,6 @@ class NextflowTest extends Specification {
 
     }
 
-
-
     def testFile2() {
 
         when:
@@ -72,6 +70,23 @@ class NextflowTest extends Specification {
         then:
         e = thrown(IllegalArgumentException)
         e.message == 'Argument of `file` function cannot be empty'
+    }
+
+    def 'should return http path' () {
+
+        when:
+        def uri = (URI) Nextflow.file(LOCATION).toUri()
+        then:
+        uri.scheme == SCHEME
+        uri.authority == AUTH
+        uri.path == PATH
+        uri.query == QUERY
+        
+        where:
+        LOCATION                            | SCHEME    | AUTH      | PATH              | QUERY
+        'http://foo.com/some/file.txt'      | 'http'    | 'foo.com' | '/some/file.txt'  | null
+        'https://foo.com/some/file.txt?q=1' | 'https'   | 'foo.com' | '/some/file.txt'  | 'q=1'
+
     }
 
     def testFileWithWildcards() {
