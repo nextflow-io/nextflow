@@ -65,7 +65,8 @@ class AwsContainerOptionsMapperTest extends Specification {
         def map = CmdLineHelper.parseGnuArgs('-e x=y')
         def properties = AwsContainerOptionsMapper.createContainerProperties(map)
         then:
-        properties.getEnvironment()
+        properties.getEnvironment().get(0).getName()=='x'
+        properties.getEnvironment().get(0).getValue()=='y'
     }
 
     def 'should set tmpfs linux params'() {
