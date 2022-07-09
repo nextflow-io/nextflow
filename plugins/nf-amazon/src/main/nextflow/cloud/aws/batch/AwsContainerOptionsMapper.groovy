@@ -48,8 +48,8 @@ class AwsContainerOptionsMapper {
         final keyValuePairs = new ArrayList<KeyValuePair>()
         List<String> values = findOptionWithMultipleValues(options, 'env')
         values.addAll(findOptionWithMultipleValues(options, 'e'))
-        values.each { String value ->
-            final tokens = value.tokenize('=')
+        for( String it : values ) {
+            final tokens = it.tokenize('=')
             keyValuePairs << new KeyValuePair().withName(tokens[0]).withValue(tokens.size() == 2 ? tokens[1] : null)
         }
         if ( keyValuePairs )

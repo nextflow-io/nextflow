@@ -35,7 +35,7 @@ class CmdLineOptionMap implements CacheFunnel {
     }
 
     List<String> getValues(String key) {
-        return options.containsKey(key) ? options[key] : Collections.emptyList() as List<String>
+        return options.containsKey(key) ? options[key] : new ArrayList<String>(10)
     }
 
     def getFirstValue(String key) {
