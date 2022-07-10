@@ -147,7 +147,9 @@ class ModuleBundle {
 
     private List fileMeta(String name, Path file) {
         final attrs = Files.readAttributes(file, BasicFileAttributes)
-        return [ name, attrs.size(), attrs.lastModifiedTime(), file.permissionsMode ]
+        final meta = [ name, attrs.size(), attrs.lastModifiedTime().toMillis(), Integer.toOctalString(file.getPermissionsMode()) ]
+        log.debug "Module bundle entry=$meta"
+        return meta
     }
 
     String fingerprint() {

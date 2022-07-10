@@ -69,7 +69,7 @@ class ModuleBundleTest extends Specification {
                 'this/that/ciao.txt' ] as Set
 
         and:
-        bundle.fingerprint() == '0812b46bb0cba45c38d4ccadb864f0db'
+        bundle.fingerprint() == '35511b49753596b603d976243453f31b'
 
         cleanup:
         folder?.deleteDir()
@@ -92,19 +92,19 @@ class ModuleBundleTest extends Specification {
         bundle
         !bundle.isEmpty()
         and:
-        bundle.fingerprint() == '9e14bead054287ebc970f003d12ea5d8'
+        bundle.fingerprint() == 'c8597047abea34f987e6a347dca36823'
 
         when:
         // changing file permissions, change the fingerprint
         dockerPath.setPermissions(6,0,0)
         then:
-        bundle.fingerprint() == '310f66e457d2cd8d7fd7cc67165051c4'
+        bundle.fingerprint() == '280d52c24debce950148f4250a34e3ff'
 
         when:
         // changing the last modified time, change the fingerprint
         dockerPath.setLastModified(LAST_MODIFIED +100)
         then:
-        bundle.fingerprint() == '90118552144dbc6f757b6a4a58f7e3b8'
+        bundle.fingerprint() == '41bd15592039e3a198bef861800d3cd6'
         
         cleanup:
         folder?.deleteDir()
