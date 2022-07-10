@@ -28,6 +28,7 @@ import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.AbortOperationException
+import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
@@ -39,7 +40,6 @@ import nextflow.util.FileArchiver
 import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
-
 /**
  * Send out messages via HTTP to a configured URL on different workflow
  * execution events.
@@ -392,6 +392,8 @@ class TowerClient implements TraceObserver {
         final req = makeCompleteReq(session)
         final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
         logHttpResponse(urlTraceComplete, resp)
+        // archive log files
+        archiveLogs()
     }
 
     @Override
@@ -833,4 +835,25 @@ class TowerClient implements TraceObserver {
         }
     }
 
+    protected void archiveLogs() {
+        archiveFile(env.get('NXF_OUT_FILE'))
+        archiveFile(env.get('NXF_LOG_FILE'))
+        archiveFile(env.get('NXF_TML_FILE'))
+        archiveFile(env.get('TOWER_CONFIG_FILE'))
+        archiveFile(env.get('TOWER_REPORTS_FILE'))
+    }
+
+    protected void archiveFile(String name) {
+        if( !name || !FileArchiver.instance )
+            return
+        try {
+            final source = Path.of(name).toAbsolutePath()
+            final target = FileArchiver.instance.archivePath(source)
+            if( target!=null )
+                FileHelper.copyPath(source, target)
+        }
+        catch (Throwable t) {
+            log.warn("Unable to archive file: $name -- cause: ${t.message ?: t}", t)
+        }
+    }
 }
