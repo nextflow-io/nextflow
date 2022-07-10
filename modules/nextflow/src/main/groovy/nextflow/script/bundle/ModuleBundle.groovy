@@ -147,7 +147,11 @@ class ModuleBundle {
 
     private List fileMeta(String name, Path file) {
         final attrs = Files.readAttributes(file, BasicFileAttributes)
-        final meta = [ name, attrs.size(), attrs.lastModifiedTime().toMillis(), Integer.toOctalString(file.getPermissionsMode()) ]
+        final meta = [
+                name,
+                attrs.isRegularFile() ? attrs.size() : 0,
+                attrs.lastModifiedTime().toMillis(),
+                Integer.toOctalString(file.getPermissionsMode()) ]
         log.debug "Module bundle entry=$meta"
         return meta
     }

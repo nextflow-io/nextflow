@@ -69,7 +69,7 @@ class ModuleBundleTest extends Specification {
                 'this/that/ciao.txt' ] as Set
 
         and:
-        bundle.fingerprint() == '35511b49753596b603d976243453f31b'
+        bundle.fingerprint() == 'c063b8f42cfd65f4eb8efe7c30c108bc'
 
         cleanup:
         folder?.deleteDir()

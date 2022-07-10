@@ -24,6 +24,9 @@ import java.nio.file.Paths
 
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import static java.nio.file.attribute.PosixFilePermission.*
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
