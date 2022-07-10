@@ -17,15 +17,16 @@
 
 package nextflow.container.resolver
 
-
 import nextflow.plugin.Plugins
+
 /**
+ * Load an instance of {@link ContainerResolver}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ContainerResolverProvider {
 
-    static ContainerResolver resolver() {
+    static ContainerResolver load() {
         final resolvers = Plugins.getPriorityExtensions(ContainerResolver)
         if( !resolvers )
             throw new IllegalStateException("Cannot load ${ContainerResolver.class.simpleName}")

@@ -20,6 +20,7 @@ package io.seqera.wave.plugin
 import groovy.transform.CompileStatic
 
 /**
+ * Model Wave client configuration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

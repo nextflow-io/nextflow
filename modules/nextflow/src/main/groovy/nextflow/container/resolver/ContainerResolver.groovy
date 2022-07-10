@@ -21,6 +21,11 @@ import nextflow.processor.TaskRun
 import org.pf4j.ExtensionPoint
 
 /**
+ * Given a container image name resolves it to target image name.
+ *
+ * The resolver takes care to prepend the target registry name defined
+ * in the nextflow config or adapt the container image name depending
+ * the configured container engine
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

@@ -24,6 +24,7 @@ import java.util.concurrent.Callable
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import io.seqera.wave.plugin.SubmitContainerTokenResponse
 import io.seqera.wave.plugin.WaveClient
 import nextflow.Global
@@ -37,6 +38,7 @@ import nextflow.processor.TaskRun
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 @Priority(-10)  // <-- lower is higher, this is needed to override default provider behavior
 class WaveContainerResolver implements ContainerResolver {
@@ -62,6 +64,12 @@ class WaveContainerResolver implements ContainerResolver {
     String resolveImage(TaskRun task, String imageName) {
         if( !client().enabled() )
             return defaultResolver.resolveImage(task, imageName)
+
+        if( !imageName ) {
+            // when no image name is provider the module bundle should include a
+            // Dockerfile to build an image on-fly with a automatically assigned name
+            return waveContainer(task, null)
+        }
 
         final engine = task.processor.executor.isContainerNative()
                 ? 'docker'  // <-- container native executor such as AWS Batch are implicitly docker based
@@ -91,8 +99,15 @@ class WaveContainerResolver implements ContainerResolver {
 
     synchronized String waveContainer(TaskRun task, String container) {
         final bundle = task.getModuleBundle()
+        if( !container && !bundle.dockerfile ) {
+            // no container and no dockerfile, wave cannot do anything
+            log.trace "No container defined for task ${task.processor.name}"
+            return null
+        }
+        
+        // go ahead
         final key = bundle.fingerprint()
-        final result = cache.get(key, { client().sendRequest(container, bundle) } as Callable )
+        final result = cache.get(key, { client().sendRequest(bundle, container) } as Callable )
         return result.targetImage
     }
 }

@@ -335,14 +335,14 @@ class TaskRunTest extends Specification {
     }
 
     def 'should return container image name' () {
-
         given:
         def task = Spy(TaskRun)
         task.processor = Mock(TaskProcessor)
-
-        when:
+        and:
         task.script = 'bwa-mem --this'
         task.config = new TaskConfig([container: CONTAINER])
+
+        when:
         def image = task.getContainer()
         then:
         task.getContainerConfig() >> [docker:[enabled: true]]
@@ -355,7 +355,6 @@ class TaskRunTest extends Specification {
         'debian:latest'   | 'debian:latest'
 
     }
-
 
 
     def 'should render template and set task attributes'() {
@@ -593,14 +592,14 @@ class TaskRunTest extends Specification {
         when:
         def enabled = task.isContainerEnabled()
         then:
-        1 * task.getConfig() >> new TaskConfig()
+        1 * task.getContainer() >> null
         !enabled
 
         when:
         enabled = task.isContainerEnabled()
         then:
         // NO container image is specified => NOT enable even if `enabled` flag is set to true
-        _ * task.getConfig() >> new TaskConfig()
+        _ * task.getContainer() >> null
         _ * task.getContainerConfig() >> new ContainerConfig([enabled: true])
         _ * task.isContainerNative() >> false
         !enabled
@@ -609,7 +608,7 @@ class TaskRunTest extends Specification {
         enabled = task.isContainerEnabled()
         then:
         // container is specified, not enabled
-        _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
+        _ * task.getContainer() >> 'foo/bar'
         _ * task.getContainerConfig() >> new ContainerConfig([:])
         _ * task.isContainerNative() >> false
         !enabled
@@ -618,7 +617,7 @@ class TaskRunTest extends Specification {
         enabled = task.isContainerEnabled()
         then:
         // container is specified AND native executor (eg kubernetes) => enabled
-        _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
+        _ * task.getContainer() >> 'foo/bar'
         _ * task.getContainerConfig() >> new ContainerConfig([:])
         _ * task.isContainerNative() >> true
         enabled
@@ -627,7 +626,7 @@ class TaskRunTest extends Specification {
         enabled = task.isContainerEnabled()
         then:
         // container is specified AND enabled => enabled
-        _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
+        _ * task.getContainer() >> 'foo/bar'
         _ * task.getContainerConfig() >> new ContainerConfig([enabled: true])
         _ * task.isContainerNative() >> false
         enabled

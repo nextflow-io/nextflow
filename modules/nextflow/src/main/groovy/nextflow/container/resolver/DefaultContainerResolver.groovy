@@ -21,6 +21,11 @@ import nextflow.container.ContainerHandler
 import nextflow.processor.TaskRun
 
 /**
+ * Given a container image name resolves it to target image name.
+ *
+ * The resolver takes care to prepend the target registry name defined
+ * in the nextflow config or adapt the container image name depending
+ * the configured container engine
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -28,6 +33,11 @@ class DefaultContainerResolver implements ContainerResolver {
 
     @Override
     String resolveImage(TaskRun task, String imageName) {
+        if( !imageName ) {
+            // no image given, just return null
+            return null
+        }
+
         final cfg = task.getContainerConfig()
         final handler = new ContainerHandler(cfg, task.processor.executor)
         final result = handler.normalizeImageName(imageName)

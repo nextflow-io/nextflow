@@ -17,6 +17,7 @@
 
 package io.seqera.wave.plugin
 
+import javax.annotation.Nullable
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -139,15 +140,15 @@ class WaveClient {
 
     }
 
-    SubmitContainerTokenRequest makeRequest(String container, ModuleBundle bundle) {
+    SubmitContainerTokenRequest makeRequest(ModuleBundle bundle, @Nullable String container) {
         final layers = bundle ? [layer(bundle)] : []
         final config = new ContainerConfig(layers: layers)
         final dockerContent = bundle.dockerfile?.text?.bytes?.encodeBase64()?.toString()
         return new SubmitContainerTokenRequest(containerImage: container, containerConfig: config, containerFile: dockerContent)
     }
 
-    SubmitContainerTokenResponse sendRequest(String container, ModuleBundle bundle) {
-        final req = makeRequest(container, bundle)
+    SubmitContainerTokenResponse sendRequest(ModuleBundle bundle, @Nullable String container) {
+        final req = makeRequest(bundle, container)
         return sendRequest(req)
     }
 

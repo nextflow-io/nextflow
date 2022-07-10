@@ -574,28 +574,25 @@ class TaskRun implements Cloneable {
     /**
      * The name of a docker container where the task is supposed to run when provided
      */
-    @Memoized
     String getContainer() {
-        // set the docker container to be used
-        String imageName
-        if( !config.container ) {
+        // fetch the container image from the config
+        def imageImage = config.getContainer()
+        // the boolean `false` literal can be provided
+        // to signal the absence of the container
+        if( imageImage == false )
             return null
-        }
-        else {
-            imageName = config.container as String
-        }
+        if( !imageImage )
+            imageImage = null
 
-        final res = ContainerResolverProvider.resolver()
-        final target = res.resolveImage(this, imageName)
-        if( !target )
-            throw new ProcessUnrecoverableException("Failed to resolve container image for process '${this.processor.name}' -- source container: $imageName")
+        final res = ContainerResolverProvider.load()
+        final target = res.resolveImage(this, imageImage as String)
         return target
     }
 
     ModuleBundle getModuleBundle() {
         final script = this.getProcessor().getOwnerScript()
         final meta = ScriptMeta.get(script)
-        return meta != null ? meta.moduleBundle : null
+        return meta != null ? meta.getModuleBundle() : null
     }
 
     /**
@@ -618,7 +615,7 @@ class TaskRun implements Cloneable {
     }
 
     boolean isContainerEnabled() {
-        getConfig().container && (getContainerConfig().enabled || isContainerNative())
+        getContainer() && (getContainerConfig().enabled || isContainerNative())
     }
 
     boolean isSecretNative() {
