@@ -44,4 +44,22 @@ class ContainerConfigTest extends Specification {
 
     }
 
+    def 'should validate legacy entry point' () {
+
+        when:
+        def cfg = new ContainerConfig(OPTS, ENV)
+        then:
+        cfg.legacyEntrypoint() == EXPECTED
+        
+        where:
+        OPTS                            | ENV          | EXPECTED
+        [:]                             | [:]          | false
+        [legacyEntrypoint: false]       | [:]          | false
+        [legacyEntrypoint: true]        | [:]          | true
+        and:
+        [:]                             | [NXF_CONTAINER_LEGACY_ENTRYPOINT: 'true']  | true
+        [legacyEntrypoint: false]       | [NXF_CONTAINER_LEGACY_ENTRYPOINT: 'true']  | false
+
+    }
+
 }

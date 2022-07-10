@@ -125,8 +125,11 @@ class K8sConfig implements Map<String,Object> {
      *      container entrypoint (it does however require to have a bash shell as the image entrypoint)
      *
      */
-    boolean preserveContainerEntrypoint() {
-        return target.preserveContainerEntrypoint
+    boolean legacyEntrypoint() {
+        def result = target.legacyEntrypoint
+        if( result == null )
+            result = System.getenv('NXF_CONTAINER_LEGACY_ENTRYPOINT')
+        return result
     }
 
     /**

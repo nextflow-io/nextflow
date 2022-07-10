@@ -400,12 +400,12 @@ class K8sConfigTest extends Specification {
         when:
         def cfg = new K8sConfig([:])
         then:
-        !cfg.preserveContainerEntrypoint()
+        !cfg.legacyEntrypoint()
 
         when:
-        cfg = new K8sConfig( preserveContainerEntrypoint: true )
+        cfg = new K8sConfig( legacyEntrypoint: true )
         then:
-        cfg.preserveContainerEntrypoint()
+        cfg.legacyEntrypoint()
 
     }
 
