@@ -1,5 +1,4 @@
 nf-amazon@1.8.0
-nf-sqldb@0.4.1
 nf-console@1.0.3
 nf-google@1.2.1
 nf-azure@0.13.2

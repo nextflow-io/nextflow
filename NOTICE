@@ -141,10 +141,5 @@ This software includes source code and libraries developed by:
     Copyright 2008, http://www.snakeyaml.org
     Licensed under Apache License, Version 2.0
 
-    Magnitude Simba Athena JDBC driver
-    https://docs.aws.amazon.com/athena/latest/ug/connect-with-jdbc.html#atelong-jdbc-driver-license-agreement
-    https://s3.amazonaws.com/athena-downloads/drivers/JDBC/SimbaAthenaJDBC-2.0.27.1000/doc/LICENSE.txt
-    Licensed under Apache License, Version 2.0
-
 Nextflow is a registered trademark of Centre for Genomic Regulation, Spain (CRG).
 See the trademark policy for details https://github.com/nextflow-io/trademark
