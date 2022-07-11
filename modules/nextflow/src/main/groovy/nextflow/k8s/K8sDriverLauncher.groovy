@@ -59,7 +59,7 @@ class K8sDriverLauncher {
     /**
      * Container image to be used for the Nextflow driver pod
      */
-    private String podImage
+    private String headImage
 
     /** 
      * Request CPUs to be used for the Nextflow driver pod
@@ -520,7 +520,7 @@ class K8sDriverLauncher {
         // create the launcher pod
         PodSpecBuilder builder = new PodSpecBuilder()
             .withPodName(runName)
-            .withImageName(podImage ?: k8sConfig.getNextflowImageName())
+            .withImageName(headImage ?: k8sConfig.getNextflowImageName())
             .withCommand(['/bin/bash', '-c', cmd])
             .withLabels([ app: 'nextflow', runName: runName ])
             .withNamespace(k8sClient.config.namespace)
