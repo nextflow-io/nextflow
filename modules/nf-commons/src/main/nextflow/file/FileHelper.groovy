@@ -923,22 +923,26 @@ class FileHelper {
     static Path copyPath(Path source, Path target, CopyOption... options)
             throws IOException
     {
-        FileSystemProvider provider = source.fileSystem.provider()
-        if (target.fileSystem.provider().is(provider)) {
+        FileSystemProvider sourceProvider = source.fileSystem.provider()
+        FileSystemProvider targetProvider = target.fileSystem.provider()
+        if (target.fileSystem.provider().is(sourceProvider)) {
             final linkOpts = options.contains(LinkOption.NOFOLLOW_LINKS) ? NO_FOLLOW_LINKS : FOLLOW_LINKS
             // same provider
             if( Files.isDirectory(source, linkOpts) ) {
                 CopyMoveHelper.copyDirectory(source, target, options)
             }
             else {
-                provider.copy(source, target, options);
+                sourceProvider.copy(source, target, options);
             }
         }
         else {
-            // different providers
-            if( provider instanceof FileSystemProviderExt && provider.canCopy(source, target, options)){
-                provider.copyToForeignTarget(source, target, options)
-            }else {
+            if( sourceProvider instanceof FileSystemTransferAware && sourceProvider.canDownload(source, target)){
+                sourceProvider.download(source, target, options)
+            }
+            else if( sourceProvider instanceof FileSystemTransferAware && sourceProvider.canUpload(source, target)) {
+                sourceProvider.upload(source, target, options)
+            }
+            else {
                 CopyMoveHelper.copyToForeignTarget(source, target, options)
             }
         }

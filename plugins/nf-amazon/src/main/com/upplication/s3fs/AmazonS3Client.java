@@ -46,7 +46,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -82,7 +84,21 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.SSEAlgorithm;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.Tag;
+import com.amazonaws.services.s3.transfer.Download;
+import com.amazonaws.services.s3.transfer.MultipleFileDownload;
+import com.amazonaws.services.s3.transfer.MultipleFileUpload;
+import com.amazonaws.services.s3.transfer.ObjectCannedAclProvider;
+import com.amazonaws.services.s3.transfer.ObjectMetadataProvider;
+import com.amazonaws.services.s3.transfer.ObjectTaggingProvider;
+import com.amazonaws.services.s3.transfer.TransferManager;
+import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
+import com.amazonaws.services.s3.transfer.Upload;
+import com.amazonaws.services.s3.transfer.UploadContext;
+import com.amazonaws.services.s3.transfer.internal.TransferManagerUtils;
 import com.upplication.s3fs.util.S3MultipartOptions;
+import nextflow.extension.FilesEx;
+import nextflow.util.Duration;
+import nextflow.util.ThreadPoolHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,7 +106,7 @@ import org.slf4j.LoggerFactory;
  * Client Amazon S3
  * @see com.amazonaws.services.s3.AmazonS3Client
  */
-public class AmazonS3Client {
+public class AmazonS3Client implements ObjectMetadataProvider, ObjectTaggingProvider, ObjectCannedAclProvider {
 
 	private static final Logger log = LoggerFactory.getLogger(AmazonS3Client.class);
 	
@@ -101,6 +117,16 @@ public class AmazonS3Client {
 	private String kmsKeyId;
 
 	private SSEAlgorithm storageEncryption;
+
+	private TransferManager transferManager;
+
+	private ExecutorService transferPool;
+
+	private static final List<AmazonS3Client> allSessions = new ArrayList<>();
+
+	{
+		allSessions.add(this);
+	}
 
 	public AmazonS3Client(AmazonS3 client){
 		this.client = client;
@@ -151,7 +177,24 @@ public class AmazonS3Client {
 		}
 		return client.putObject(req);
 	}
-	
+
+	private PutObjectRequest preparePutObjectRequest(PutObjectRequest req, ObjectMetadata metadata, List<Tag> tags) {
+		req.withMetadata(metadata);
+		if( cannedAcl != null ) {
+			req.withCannedAcl(cannedAcl);
+		}
+		if( tags != null && tags.size()>0 ) {
+			req.setTagging(new ObjectTagging(tags));
+		}
+		if( kmsKeyId != null ) {
+			req.withSSEAwsKeyManagementParams( new SSEAwsKeyManagementParams(kmsKeyId) );
+		}
+		if( storageEncryption!=null ) {
+			metadata.setSSEAlgorithm(storageEncryption.toString());
+		}
+		return req;
+	}
+
 	/**
 	 * @see com.amazonaws.services.s3.AmazonS3Client#putObject(String, String, java.io.InputStream, ObjectMetadata)
 	 */
@@ -406,4 +449,135 @@ public class AmazonS3Client {
 		return result;
 	}
 
+	synchronized TransferManager transferManager() {
+		if( transferManager==null ) {
+			transferPool = TransferManagerUtils.createDefaultExecutorService();
+			transferManager = TransferManagerBuilder.standard()
+					.withS3Client(getClient())
+					.withExecutorFactory(() -> transferPool)
+					.build();
+		}
+		return transferManager;
+	}
+
+	public void downloadFile(S3Path source, File target) {
+		log.debug("S3 download file from={} to={}", FilesEx.toUriString(source), target);
+		Download download = transferManager()
+				.download(source.getBucket(), source.getKey(), target);
+		try {
+			download.waitForCompletion();
+		}
+		catch (InterruptedException e) {
+			log.debug("S3 download file: s3://{}/{} interrupted",source.getBucket(), source.getKey());
+			Thread.currentThread().interrupt();
+		}
+	}
+
+	public void downloadDirectory(S3Path source, File target) {
+		log.debug("S3 download directory from={} to={}", FilesEx.toUriString(source), target);
+		MultipleFileDownload download = transferManager()
+				.downloadDirectory(source.getBucket(), source.getKey(), target);
+		try {
+			download.waitForCompletion();
+		}
+		catch (InterruptedException e) {
+			log.debug("S3 download directory: s3://{}/{} interrupted",source.getBucket(), source.getKey());
+			Thread.currentThread().interrupt();
+		}
+	}
+
+	public void uploadFile(File source, S3Path target) {
+		log.debug("S3 upload file from={} to={}", source, FilesEx.toUriString(target));
+		PutObjectRequest req = new PutObjectRequest(target.getBucket(), target.getKey(), source);
+		ObjectMetadata metadata = new ObjectMetadata();
+		preparePutObjectRequest(req,metadata, target.getTagsList());
+		// initiate transfer
+		Upload upload = transferManager() .upload(req);
+		// await for completion
+		try {
+			upload.waitForCompletion();
+		}
+		catch (InterruptedException e) {
+			log.debug("S3 upload file: s3://{}/{} interrupted", target.getBucket(), target.getKey());
+			Thread.currentThread().interrupt();
+		}
+	}
+
+	private Map<String,List<Tag>> uploadTags = new ConcurrentHashMap<>();
+
+	private List<Tag> uploadTags(String bucket, String key) {
+		final String fullKey = bucket + "/" + key;
+		return uploadTags.get(fullKey);
+	}
+
+	private void uploadTags(String bucket, String key, List<Tag> tags) {
+		final String fullKey = bucket + "/" + key;
+		if( tags!=null ) {
+			uploadTags.put(fullKey, tags);
+		}
+		else
+			uploadTags.remove(fullKey);
+	}
+
+	public void uploadDirectory(File source, S3Path target) {
+		log.debug("S3 upload file from={} to={}", source, FilesEx.toUriString(target));
+		uploadTags(target.getBucket(), target.getKey(), target.getTagsList());
+		// initiate transfer
+		MultipleFileUpload upload = transferManager()
+				.uploadDirectory(target.getBucket(), target.getKey(), source, true, this, this, this);
+		// await for completion
+		try {
+			upload.waitForCompletion();
+		}
+		catch (InterruptedException e) {
+			log.debug("S3 upload file: s3://{}/{} interrupted", target.getBucket(), target.getKey());
+			Thread.currentThread().interrupt();
+		}
+	}
+
+	void showdown0(boolean hard) {
+		if( transferManager==null )
+			return;
+		if( hard ) {
+			transferManager.shutdownNow();
+		}
+		else {
+			// await pool completion
+			transferPool.shutdown();
+			final String waitMsg = "[AWS S3] Waiting files transfer to complete (%d files)";
+			final String exitMsg = "[AWS S3] Exiting before FileTransfer thread pool complete -- Some files maybe lost";
+			ThreadPoolHelper.await(transferPool, Duration.of("1h"), waitMsg, exitMsg);
+		}
+	}
+
+	static public void shutdown(boolean hard) {
+		for( AmazonS3Client it : allSessions ) {
+			try {
+				it.showdown0(hard);
+			}
+			catch (Exception e) {
+				log.debug("Unexpected error during S3 session shutdown - cause: " + e.getMessage(), e);
+			}
+		}
+	}
+
+	@Override
+	public CannedAccessControlList provideObjectCannedAcl(File file) {
+		return cannedAcl;
+	}
+
+	@Override
+	public void provideObjectMetadata(File file, ObjectMetadata metadata) {
+		if( storageEncryption!=null ) {
+			metadata.setSSEAlgorithm(storageEncryption.toString());
+		}
+	}
+
+	@Override
+	public ObjectTagging provideObjectTags(UploadContext context) {
+		List<Tag> tags = uploadTags(context.getBucket(), context.getKey());
+		if( tags==null || tags.size()==0 )
+			return null;
+		return new ObjectTagging(new ArrayList<>(tags));
+	}
 }

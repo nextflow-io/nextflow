@@ -58,6 +58,7 @@ import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystemAlreadyExistsException;
 import java.nio.file.FileSystemNotFoundException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
@@ -77,9 +78,9 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -89,9 +90,6 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AnonymousAWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
-import com.amazonaws.event.ProgressEvent;
-import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
@@ -103,9 +101,6 @@ import com.amazonaws.services.s3.model.Permission;
 import com.amazonaws.services.s3.model.S3ObjectId;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.Tag;
-import com.amazonaws.services.s3.transfer.Download;
-import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -115,7 +110,9 @@ import com.upplication.s3fs.ng.S3ParallelDownload;
 import com.upplication.s3fs.util.IOUtils;
 import com.upplication.s3fs.util.S3MultipartOptions;
 import com.upplication.s3fs.util.S3ObjectSummaryLookup;
-import nextflow.file.FileSystemProviderExt;
+import nextflow.file.CopyOptions;
+import nextflow.file.FileHelper;
+import nextflow.file.FileSystemTransferAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static com.google.common.collect.Sets.difference;
@@ -147,7 +144,7 @@ import static java.lang.String.format;
  * 
  * 
  */
-public class S3FileSystemProvider extends FileSystemProvider implements FileSystemProviderExt {
+public class S3FileSystemProvider extends FileSystemProvider implements FileSystemTransferAware {
 
 	private static Logger log = LoggerFactory.getLogger(S3FileSystemProvider.class);
 
@@ -362,41 +359,65 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	}
 
 	@Override
-	public boolean canCopy(Path source, Path target, CopyOption... options) {
-		return source instanceof S3Path;
+	public boolean canUpload(Path source, Path target) {
+		return FileSystems.getDefault().equals(source.getFileSystem()) && target instanceof S3Path;
 	}
 
-	public void copyToForeignTarget(Path source, Path target, CopyOption... options) throws IOException {
-		Preconditions.checkArgument(options.length == 0,
-				"CopyOption not yet supported: %s",
-				ImmutableList.copyOf(options)); // TODO
+	@Override
+	public boolean canDownload(Path source, Path target) {
+		return source instanceof S3Path && FileSystems.getDefault().equals(target.getFileSystem());
+	}
 
-		Preconditions.checkArgument(source instanceof S3Path,
-				"path must be an instance of %s", S3Path.class.getName());
-		S3Path s3Path = (S3Path) source;
+	public void download(Path remoteFile, Path localDestination, CopyOption... options) throws IOException {
+		final S3Path source = (S3Path)remoteFile;
 
-		Preconditions.checkArgument(!s3Path.getKey().equals(""),
-				"cannot create InputStream for root directory: %s", s3Path);
-
-		DownloadOpts opts = DownloadOpts.from(props, System.getenv());
-
-		final AmazonS3Client s3Client = s3Path.getFileSystem().getClient();
-
-		TransferManager transferManager = TransferManagerBuilder.standard()
-				.withS3Client(s3Client.getClient())
-				.withMultipartCopyPartSize((long)opts.chunkSize())
-				.withExecutorFactory(() -> Executors.newFixedThreadPool(opts.numWorkers()))
-				.build();
-
-		Download download = transferManager.download(s3Path.getBucket(), s3Path.getKey(), target.toFile());
-		try {
-			download.waitForCompletion();
-		} catch (InterruptedException e) {
-			log.error("S3 part downloaded: s3://{}/{} interrupted",s3Path.getBucket(), s3Path.getKey());
-			throw new RuntimeException(e);
+		final CopyOptions opts = CopyOptions.parse(options);
+		// delete target if it exists and REPLACE_EXISTING is specified
+		if (opts.replaceExisting()) {
+			FileHelper.deletePath(localDestination);
 		}
-		//ends executors only of current transfer manager
-		transferManager.shutdownNow(false);
+		else if (Files.exists(localDestination))
+			throw new FileAlreadyExistsException(localDestination.toString());
+
+		final Optional<S3FileAttributes> attrs = readAttr1(source);
+		final boolean isDirectory = attrs.isPresent() && attrs.get().isDirectory();
+		final AmazonS3Client s3Client = source.getFileSystem().getClient();
+		if( isDirectory ) {
+			s3Client.downloadDirectory(source, localDestination.toFile());
+		}
+		else {
+			s3Client.downloadFile(source, localDestination.toFile());
+		}
+	}
+
+	public void upload(Path localFile, Path remoteDestination, CopyOption... options) throws IOException {
+		final S3Path target = (S3Path) remoteDestination;
+
+		CopyOptions opts = CopyOptions.parse(options);
+		LinkOption[] linkOptions = (opts.followLinks()) ? new LinkOption[0] : new LinkOption[] { LinkOption.NOFOLLOW_LINKS };
+
+		// attributes of source file
+		if (Files.readAttributes(localFile, BasicFileAttributes.class, linkOptions).isSymbolicLink())
+			throw new IOException("Uploading of symbolic links not supported - offending path: " + localFile);
+
+		final Optional<S3FileAttributes> attrs = readAttr1(target);
+		final boolean exits = attrs.isPresent();
+		final boolean isDirectory = attrs.isPresent() && attrs.get().isDirectory();
+
+		// delete target if it exists and REPLACE_EXISTING is specified
+		if (opts.replaceExisting()) {
+			FileHelper.deletePath(target);
+		}
+		else if ( exits )
+			throw new FileAlreadyExistsException(target.toString());
+
+		final AmazonS3Client s3Client = target.getFileSystem().getClient();
+		if( isDirectory ) {
+			s3Client.uploadDirectory(localFile.toFile(), target);
+		}
+		else {
+			s3Client.uploadFile(localFile.toFile(), target);
+		}
 	}
 
 	private S3OutputStream createUploaderOutputStream( S3Path fileToUpload ) {
@@ -740,6 +761,15 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		}
 		// not support attribute class
 		throw new UnsupportedOperationException(format("only %s supported", BasicFileAttributes.class));
+	}
+
+	private Optional<S3FileAttributes> readAttr1(S3Path s3Path) throws IOException {
+		try {
+			return Optional.of(readAttr0(s3Path));
+		}
+		catch (NoSuchFileException e) {
+			return Optional.<S3FileAttributes>empty();
+		}
 	}
 
 	private S3FileAttributes readAttr0(S3Path s3Path) throws IOException {

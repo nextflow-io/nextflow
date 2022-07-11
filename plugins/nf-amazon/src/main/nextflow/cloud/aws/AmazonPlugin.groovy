@@ -1,5 +1,6 @@
 package nextflow.cloud.aws
 
+import com.upplication.s3fs.AmazonS3Client
 import com.upplication.s3fs.S3FileSystemProvider
 import groovy.transform.CompileStatic
 import nextflow.Global
@@ -32,5 +33,6 @@ class AmazonPlugin extends BasePlugin {
         final session = (Global.session as Session)
         final aborted = session ? session.isAborted() : false
         S3FileSystemProvider.shutdown(aborted)
+        AmazonS3Client.shutdown(aborted)
     }
 }
