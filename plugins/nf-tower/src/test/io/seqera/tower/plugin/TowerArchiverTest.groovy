@@ -28,7 +28,7 @@ import spock.lang.Unroll
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FileArchiverTest extends Specification {
+class TowerArchiverTest extends Specification {
 
     def 'should empty target path' () {
         expect:
@@ -55,6 +55,35 @@ class FileArchiverTest extends Specification {
         '/some/file.txt'            | null
         '/data/work/some/file.txt'  | 'http://bucket/data/export/work/some/file.txt'
 
+    }
+
+    def 'should parse paths' () {
+        expect:
+        TowerArchiver.parse(null) == []
+        TowerArchiver.parse('/this,http://that') == ['/this','http://that']
+        TowerArchiver.parse('/this,http://that/and/1\\,2\\,3') == ['/this','http://that/and/1,2,3']
+    }
+
+    def 'should failed parsing paths' () {
+        when:
+        TowerArchiver.parse('/this')
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        TowerArchiver.parse('this,/that')
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        TowerArchiver.parse('/this,that')
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        TowerArchiver.parse('/a,/b,/c')
+        then:
+        thrown(IllegalArgumentException)
     }
 
 }

@@ -18,6 +18,7 @@
 package io.seqera.tower.plugin
 
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutorService
 import java.util.function.Predicate
@@ -34,6 +35,8 @@ import nextflow.Session
 import nextflow.file.FileHelper
 import nextflow.util.Duration
 import nextflow.util.ThreadPoolBuilder
+import nextflow.util.ThreadPoolHelper
+
 /**
  * Helper class to resolve bucket archive paths
  *
@@ -41,7 +44,7 @@ import nextflow.util.ThreadPoolBuilder
  */
 @Slf4j
 @CompileStatic
-class TowerArchiver implements Closeable {
+class TowerArchiver {
 
     private Map<String,String> env = System.getenv()
 
@@ -53,6 +56,7 @@ class TowerArchiver implements Closeable {
     private Duration maxDelay
     private Integer maxAttempts
     private Double jitter
+    private Duration maxAwait
 
     Path getBaseDir() { baseDir }
 
@@ -67,6 +71,7 @@ class TowerArchiver implements Closeable {
         this.maxDelay = session.config.navigate('tower.archiver.maxDelay', '1m') as Duration
         this.maxAttempts = session.config.navigate('tower.archiver.maxAttempts', '2') as Integer
         this.jitter = session.config.navigate('tower.archiver.jitter', '0.25') as Double
+        this.maxAwait = session.config.navigate('tower.archiver.shutdown.maxAwait', '1h') as Duration
         executor = ThreadPoolBuilder.io(10,10,1000, 'tower-archiver')
         if( env!=null )
             this.env = env
@@ -82,7 +87,7 @@ class TowerArchiver implements Closeable {
     static protected List<String> parse(String archiveDef) {
         if( !archiveDef )
             return Collections.<String>emptyList()
-        final paths = archiveDef.tokenize(',')
+        final paths = splitPaths(archiveDef)
         if( !paths )
             return Collections.<String>emptyList()
 
@@ -91,12 +96,21 @@ class TowerArchiver implements Closeable {
         if( !paths[0].startsWith('/') )
             throw new IllegalArgumentException("Invalid NXF_ARCHIVE_DIR base path - it must start with a slash character - offending value: '${paths[0]}'")
         final scheme = FileHelper.getUrlProtocol(paths[1])
-        if ( !scheme )
+        if ( !scheme && !paths[1].startsWith('/') )
             throw new IllegalArgumentException("Invalid NXF_ARCHIVE_DIR target path - it must start be a remote path - offending value: '${paths[1]}'")
 
         return paths
     }
 
+    static List<String> splitPaths(String paths){
+        // multiple paths should be separated by comma
+        // allow to escape the separator using backslash
+        paths.split(/(?<!\\),/).collect( it-> unescapeQuote(it))
+    }
+
+    static protected String unescapeQuote(String uri) {
+        uri.replaceAll(/\\,/,',').trim()
+    }
 
     Path archivePath(Path source) {
         if( baseDir==null )
@@ -150,8 +164,8 @@ class TowerArchiver implements Closeable {
             @Override
             void run() {
                 try {
-                    safeExecute(() -> FileHelper.copyPath(source, target) )
-                    log.debug("Archived file: '$source to: '$target'")
+                    safeExecute(() -> FileHelper.copyPath(source, target, StandardCopyOption.REPLACE_EXISTING) )
+                    log.trace("Archived file: '$source to: '$target'")
                 }
                 catch (Exception e) {
                     log.warn("Unable to archive file: $source -- cause: ${e.message ?: e}", e)
@@ -192,9 +206,10 @@ class TowerArchiver implements Closeable {
         return Failsafe.with(policy).get(action)
     }
 
-    @Override
-    void close() throws IOException {
+    void shutdown() throws IOException {
         executor.shutdown()
-        Thre    
+        final waitMsg = "Waiting file archiver to complete (%d files)"
+        final exitMsg = "Exiting before file archiver thread pool complete -- Some files maybe lost"
+        ThreadPoolHelper.await(executor, maxAwait, waitMsg, exitMsg)
     }
 }
