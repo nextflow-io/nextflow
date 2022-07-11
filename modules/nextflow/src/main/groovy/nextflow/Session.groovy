@@ -25,8 +25,6 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileDynamic
@@ -74,6 +72,7 @@ import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
 import nextflow.util.ThreadPoolBuilder
+import nextflow.util.ThreadPoolHelper
 import nextflow.util.VersionNumber
 import sun.misc.Signal
 import sun.misc.SignalHandler
@@ -1369,40 +1368,15 @@ class Session implements ISession {
                 .build()
 
         this.onShutdown {
-            final max = maxAwait.millis
-            final t0 = System.currentTimeMillis()
-            // start shutdown process
             if( aborted ) {
                 pool.shutdownNow()
                 return
             }
             pool.shutdown()
             // wait for ongoing file transfer to complete
-            int count=0
-            while( true ) {
-                final terminated = pool.awaitTermination(5, TimeUnit.SECONDS)
-                if( terminated )
-                    break
-                
-                final delta = System.currentTimeMillis()-t0
-                if( delta > max ) {
-                    log.warn "Exiting before FileTransfer thread pool complete -- Some files maybe lost"
-                    break
-                }
-
-                final p1 = ((ThreadPoolExecutor)pool)
-                final pending = p1.getTaskCount() - p1.getCompletedTaskCount()
-                // log to console every 10 minutes (120 * 5 sec)
-                if( count % 120 == 0 ) {
-                    log.info1 "Waiting files transfer to complete (${pending} files)"
-                }
-                // log to the debug file every minute (12 * 5 sec)
-                else if( count % 12 == 0 ) {
-                    log.debug "Waiting files transfer to complete (${pending} files)"
-                }
-                // increment the count
-                count++
-            }
+            final waitMsg = "Waiting files transfer to complete (%d files)"
+            final exitMsg = "Exiting before FileTransfer thread pool complete -- Some files maybe lost"
+            ThreadPoolHelper.await(pool, maxAwait, waitMsg, exitMsg)
         }
 
         return pool
