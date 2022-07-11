@@ -109,8 +109,6 @@ class PublishDir {
 
     private String taskName
 
-    private boolean notify = true
-
     @Lazy
     private ExecutorService threadPool = FileTransferPool.getExecutorService()
 
@@ -189,9 +187,6 @@ class PublishDir {
         if( params.tags != null )
             result.tags = params.tags
 
-        if( params.notify != null )
-            result.notify = Boolean.parseBoolean(params.notify.toString())
-        
         return result
     }
 
@@ -367,9 +362,7 @@ class PublishDir {
             processFileImpl(source, destination)
         }
 
-        if( notify ) {
-            notifyFilePublish(destination)
-        }
+        notifyFilePublish(destination)
     }
 
     private String real0(Path p) {
@@ -502,5 +495,6 @@ class PublishDir {
             sess.notifyFilePublish(destination)
         }
     }
+
 
 }
