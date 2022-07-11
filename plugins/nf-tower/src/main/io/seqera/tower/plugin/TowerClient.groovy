@@ -11,7 +11,7 @@
 
 package io.seqera.tower.plugin
 
-import java.nio.file.Files
+
 import java.nio.file.Path
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -28,7 +28,6 @@ import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.AbortOperationException
-import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
@@ -36,7 +35,6 @@ import nextflow.trace.ResourcesAggregator
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceRecord
 import nextflow.util.Duration
-import nextflow.util.FileArchiver
 import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
@@ -132,6 +130,8 @@ class TowerClient implements TraceObserver {
 
     private TowerReports reports
 
+    private TowerArchiver archiver
+
     /**
      * Constructor that consumes a URL and creates
      * a basic HTTP client.
@@ -143,6 +143,7 @@ class TowerClient implements TraceObserver {
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         this.reports = new TowerReports(session)
+        this.archiver = TowerArchiver.create(session, env)
     }
 
     TowerClient withEnvironment(Map env) {
@@ -393,7 +394,7 @@ class TowerClient implements TraceObserver {
         final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
         logHttpResponse(urlTraceComplete, resp)
         // archive log files
-        archiveLogs()
+        archiver?.archiveLogs()
     }
 
     @Override
@@ -436,6 +437,8 @@ class TowerClient implements TraceObserver {
         synchronized (this) {
             aggregator.aggregate(trace)
         }
+
+        archiver?.archiveTaskLogs(trace.workDir)
     }
 
     @Override
@@ -472,12 +475,8 @@ class TowerClient implements TraceObserver {
     @Override
     void onFilePublish(Path destination) {
         final result = reports.filePublish(destination)
-        if( !result || !FileArchiver.instance )
-            return
-        final target = FileArchiver.instance.archivePath(destination)
-        log.debug "Archiving file: $destination; target: $target"
-        if( target )
-            Files.copy(destination, target)
+        if( result && archiver )
+            archiver.archiveFile(destination)
     }
 
     protected void refreshToken(String refresh) {
@@ -835,25 +834,4 @@ class TowerClient implements TraceObserver {
         }
     }
 
-    protected void archiveLogs() {
-        archiveFile(env.get('NXF_OUT_FILE'))
-        archiveFile(env.get('NXF_LOG_FILE'))
-        archiveFile(env.get('NXF_TML_FILE'))
-        archiveFile(env.get('TOWER_CONFIG_FILE'))
-        archiveFile(env.get('TOWER_REPORTS_FILE'))
-    }
-
-    protected void archiveFile(String name) {
-        if( !name || !FileArchiver.instance )
-            return
-        try {
-            final source = Path.of(name).toAbsolutePath()
-            final target = FileArchiver.instance.archivePath(source)
-            if( target!=null )
-                FileHelper.copyPath(source, target)
-        }
-        catch (Throwable t) {
-            log.warn("Unable to archive file: $name -- cause: ${t.message ?: t}", t)
-        }
-    }
 }

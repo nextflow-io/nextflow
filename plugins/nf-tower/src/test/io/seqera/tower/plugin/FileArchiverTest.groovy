@@ -15,10 +15,11 @@
  *
  */
 
-package nextflow.util
+package io.seqera.tower.plugin
 
 import java.nio.file.Path
 
+import nextflow.Session
 import nextflow.file.FileHelper
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -30,21 +31,17 @@ import spock.lang.Unroll
 class FileArchiverTest extends Specification {
 
     def 'should empty target path' () {
-        given:
-        def helper = new FileArchiver([:])
-
         expect:
-        helper.getBaseDir() == null
-        helper.getTargetDir() == null
-        and:
-        helper.archivePath(null) == null
-        helper.archivePath(Path.of('/some/data/file.txt')) == null
+        TowerArchiver.create(Mock(Session), [:]) == null
     }
 
     @Unroll
     def 'should final target path' () {
         given:
-        def helper = new FileArchiver([NXF_ARCHIVE_DIR:'/data,http://bucket/data/export'])
+        def sess = Mock(Session) {
+            getConfig() >> [:]
+        }
+        def helper = TowerArchiver.create(sess, [NXF_ARCHIVE_DIR:'/data,http://bucket/data/export'])
 
         expect:
         helper.getBaseDir() == Path.of('/data')

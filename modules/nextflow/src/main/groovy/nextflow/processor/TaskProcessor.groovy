@@ -96,7 +96,6 @@ import nextflow.script.params.TupleInParam
 import nextflow.script.params.TupleOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
-import nextflow.util.FileArchiver
 import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
@@ -1268,16 +1267,6 @@ class TaskProcessor {
         return result
     }
 
-    protected PublishDir archivePublisher(Path target, String pattern) {
-        PublishDir.create(
-                path: target,
-                mode: 'copy',
-                overwrite: true,
-                pattern: pattern,
-                notify: false,
-                enabled: true)
-    }
-
     /**
      * Publish output files to a specified target folder
      *
@@ -1287,24 +1276,13 @@ class TaskProcessor {
     @CompileStatic
     protected void publishOutputs( TaskRun task ) {
         final publishList = task.config.getPublishDir()
+        if( !publishList ) {
+            return
+        }
 
         for( PublishDir pub : publishList ) {
             publishOutputs0(task, pub)
         }
-
-        // add an archiver for .command.* files
-        if( FileArchiver.instance ) {
-            final target = FileArchiver.instance.archivePath(task.workDir)
-            final publisher = archivePublisher(target, '.command.*')
-            publisher.apply(dotCommandFiles(task), task)
-        }
-    }
-
-    private Set<Path> dotCommandFiles(TaskRun task) {
-        final result = new HashSet(10)
-        final opts = [relative: false, maxDepth: 1, hidden:true, type:'file']
-        FileHelper.visitFiles(opts, task.workDir, '.command.*') { Path it -> result.add(it) }
-        return result
     }
 
     private void publishOutputs0( TaskRun task, PublishDir publish ) {
