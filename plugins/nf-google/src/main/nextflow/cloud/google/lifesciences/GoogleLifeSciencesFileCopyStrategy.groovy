@@ -166,6 +166,6 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
     }
 
     static String uploadCmd(String source, Path target) {
-        "nxf_gs_upload '$source' ${Escape.uriPath(target)}"
+        "nxf_gs_upload ${Escape.path(source)} ${Escape.uriPath(target)}"
     }
 }

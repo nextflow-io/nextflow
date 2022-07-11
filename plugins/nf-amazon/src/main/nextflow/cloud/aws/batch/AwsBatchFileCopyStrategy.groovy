@@ -154,7 +154,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     }
 
     static String uploadCmd( String source, Path target ) {
-        "nxf_s3_upload '$source' s3:/$target"
+        "nxf_s3_upload ${Escape.path(source)} s3:/${Escape.path(target)}"
     }
 
     /**
