@@ -48,7 +48,7 @@ credentials file just downloaded::
 Cloud Batch
 ============
 
-Google Cloud Batch is a managed computing service that allows the execution of containerized workloads in the
+`Google Cloud Batch <https://cloud.google.com/batch>`_ is a managed computing service that allows the execution of containerized workloads in the
 Google Cloud Platform infrastructure.
 
 Nextflow provides built-in support for Cloud Batch which allows the seamless deployment of a Nextflow pipeline
