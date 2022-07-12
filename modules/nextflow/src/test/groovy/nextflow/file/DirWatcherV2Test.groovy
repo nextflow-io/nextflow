@@ -204,7 +204,101 @@ class DirWatcherV2Test extends Specification {
 
     }
 
+    def 'should watch when glob is early in pattern' () {
 
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        def watcher = new DirWatcherV2('glob', "$folder/", '*/b??/car/*.txt', false, 'create', folder.getFileSystem())
+
+        when:
+        List results = []
+        watcher.apply { Path file -> results.add(file.name) }
+        sleep 500
+        Files.createDirectories(folder.resolve('ant/bat/car'))
+        Files.createDirectories(folder.resolve('ant/box/car'))
+        Files.createDirectories(folder.resolve('axe/zap/car'))
+        Files.createDirectories(folder.resolve('ant/box/car/car'))
+        folder.resolve('ant/bat/ciao.txt').text          = '.' // No match
+        folder.resolve('ant/bat/car/bonjour.txt').text   = '1' // Matches
+        folder.resolve('ant/bat/car/hi.txt').text        = '2' // Matches
+        folder.resolve('axe/zap/car/goodbye.txt').text   = '.' // No match
+        folder.resolve('ant/box/car/car/holla.txt').text = '.' // No match
+        folder.resolve('ant/box/car/salut.txt').text     = '3' // Matches
+        TestHelper.stopUntil { results.size() == 3 }
+        watcher.terminate()
+
+        then:
+        results.size() == 3
+        results.contains('hi.txt')
+        results.contains('salut.txt')
+        results.contains('bonjour.txt')
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+    def 'should see files created immediatly after directories' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def watcher = new DirWatcherV2('glob', "$folder/", '*/foo/*.txt', false, 'create', folder.getFileSystem())
+
+        when:
+        List results = []
+        watcher.apply { Path file -> results.add(file.name) }
+        sleep 500
+        Files.createDirectories(folder.resolve('blah/foo'))
+        folder.resolve('blah/foo/a.txt').text = '1'
+        folder.resolve('blah/foo/b.txt').text = '2'
+        folder.resolve('blah/foo/c.txt').text = '3'
+        TestHelper.stopUntil { results.size() == 3 }
+        watcher.terminate()
+
+        then:
+        results.size == 3
+        results.contains('a.txt')
+        results.contains('b.txt')
+        results.contains('c.txt')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should not terminate unless parent target is deleted' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        Files.createDirectories(folder.resolve('ant/bat/car'))
+        Files.createDirectories(folder.resolve('ant/box/car'))
+
+        def watcher = new DirWatcherV2('glob', "$folder/", '*/b??/car/*.txt', false, 'create', folder.getFileSystem())
+
+        when:
+        List results = []
+        watcher.apply { Path file -> results.add(file.name)}
+        sleep 500
+        folder.resolve('ant/bat/car/bonjour.txt').text = '1'
+        folder.resolve('ant/bat/car/hi.txt').text = '2'
+        TestHelper.stopUntil { results.size() == 2 }
+        Files.delete(folder.resolve('ant/bat/car/bonjour.txt'))
+        Files.delete(folder.resolve('ant/bat/car/hi.txt'))
+        Files.delete(folder.resolve('ant/bat/car'))
+        Files.delete(folder.resolve('ant/bat'))
+        folder.resolve('ant/box/car/salut.txt').text = '3'
+        TestHelper.stopUntil { results.size() == 3 }
+        watcher.terminate()
+
+        then:
+        results.size == 3
+        results.contains('bonjour.txt')
+        results.contains('hi.txt')
+        results.contains('salut.txt')
+
+        cleanup:
+        folder?.deleteDir()
+    }
 
     def 'should convert string events'() {
         given:
