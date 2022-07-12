@@ -20,7 +20,6 @@ package nextflow.k8s.model
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.CpuResource
 import nextflow.executor.res.MemoryResource
-import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
 /**

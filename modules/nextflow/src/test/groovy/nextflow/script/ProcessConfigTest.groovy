@@ -630,7 +630,7 @@ class ProcessConfigTest extends Specification {
         when:
         process.accelerator 2, type: 'nvida'
         then:
-        process.accelerator == [request: 2, limit: 2, type: 'nvida']
+        process.accelerator == [limit: 2, type: 'nvida']
 
         when:
         process.accelerator 1, limit: 4
