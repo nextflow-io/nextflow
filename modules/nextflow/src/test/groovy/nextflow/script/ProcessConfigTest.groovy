@@ -618,29 +618,29 @@ class ProcessConfigTest extends Specification {
         def process = new ProcessConfig(Mock(BaseScript))
 
         when:
-        process.accelerator 5
+        process.accelerator 2
         then:
-        process.accelerator == [limit: 5]
+        process.accelerator == [request: 2, limit: 2]
 
         when:
-        process.accelerator request: 1, limit: 5, type: 'nvida'
+        process.accelerator request: 1, limit: 4, type: 'nvida'
         then:
-        process.accelerator == [request: 1, limit: 5, type: 'nvida']
+        process.accelerator == [request: 1, limit: 4, type: 'nvida']
 
         when:
-        process.accelerator 5, type: 'nvida'
+        process.accelerator 2, type: 'nvida'
         then:
-        process.accelerator == [limit: 5, type: 'nvida']
+        process.accelerator == [request: 2, limit: 2, type: 'nvida']
 
         when:
-        process.accelerator 1, limit: 5
+        process.accelerator 1, limit: 4
         then:
-        process.accelerator == [request: 1, limit: 5]
+        process.accelerator == [request: 1, limit: 4]
 
         when:
-        process.accelerator 5, request: 1
+        process.accelerator 4, request: 1
         then:
-        process.accelerator == [request: 1, limit: 5]
+        process.accelerator == [request: 1, limit: 4]
     }
 
     def 'should get default config path' () {

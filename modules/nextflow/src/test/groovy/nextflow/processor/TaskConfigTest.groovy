@@ -19,6 +19,7 @@ package nextflow.processor
 import java.nio.file.Paths
 
 import nextflow.exception.FailedGuardException
+import nextflow.executor.res.AcceleratorResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
@@ -293,6 +294,23 @@ class TaskConfigTest extends Specification {
 
     }
 
+    def testGetAccelerator() {
+
+        when:
+        def config = new TaskConfig().setContext(ten: 10)
+        config.accelerator = value
+
+        then:
+        config.accelerator == expected
+        config.getAccelerator() == expected
+
+        where:
+        expected                    | value
+        null                        | null
+        new AcceleratorResource(2)  | 2
+        new AcceleratorResource(10) | { ten ?: 0  }
+    }
+
     def testGetStore() {
 
         when:
@@ -548,29 +566,6 @@ class TaskConfigTest extends Specification {
                     [secret: 'foo', mountPath: '/this'],
                     [secret: 'bar', env: 'BAR_XXX'] ])
 
-    }
-
-    def 'should get accelerator resources' () {
-
-        given:
-        def script = Mock(BaseScript)
-
-        when:
-        def process = new ProcessConfig(script)
-        process.accelerator 5
-        def res = process.createTaskConfig().getAccelerator()
-        then:
-        res.request == 5
-        res.limit == 5 
-
-        when:
-        process = new ProcessConfig(script)
-        process.accelerator 5, limit: 10, type: 'nvidia'
-        res = process.createTaskConfig().getAccelerator()
-        then:
-        res.request == 5
-        res.limit == 10
-        res.type == 'nvidia'
     }
 
     def 'should configure secrets'()  {

@@ -18,6 +18,9 @@
 package nextflow.k8s.model
 
 import nextflow.executor.res.AcceleratorResource
+import nextflow.executor.res.CpuResource
+import nextflow.executor.res.MemoryResource
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -249,9 +252,9 @@ class PodSpecBuilderTest extends Specification {
                 .withWorkDir('/some/work/dir')
                 .withEnv(PodEnv.value('ALPHA','hello'))
                 .withEnv(PodEnv.value('DELTA', 'world'))
-                .withCpus(8)
-                .withAccelerator( new AcceleratorResource(request: 5, limit:10, type: 'foo.org') )
-                .withMemory('100Gi')
+                .withCpus( new CpuResource(8) )
+                .withMemory( new MemoryResource('64 GB') )
+                .withAccelerator( new AcceleratorResource(request: 1, limit: 4, type: 'foo.org') )
                 .build()
 
         then:
@@ -270,8 +273,9 @@ class PodSpecBuilderTest extends Specification {
                                             [name:'DELTA', value:'world']
                                     ],
                                     resources:[
-                                            requests: ['foo.org/gpu':5, cpu:8, memory:'100Gi'],
-                                            limits:['foo.org/gpu':10, cpu:8, memory:'100Gi'] ]
+                                            requests: [cpu:8, memory:'65536Mi', 'foo.org/gpu':1],
+                                            limits:   [cpu:8, memory:'65536Mi', 'foo.org/gpu':4]
+                                    ]
                                    ]
                            ]
                    ]
@@ -716,46 +720,24 @@ class PodSpecBuilderTest extends Specification {
         def builder = new PodSpecBuilder()
 
         when:
-        def res = builder.addAcceleratorResource(new AcceleratorResource(request: 2, limit: 5), [:])
+        type = builder.getAcceleratorType(new AcceleratorResource(type: null))
         then:
-        res.requests == ['nvidia.com/gpu': 2]
-        res.limits == ['nvidia.com/gpu': 5]
+        type == 'nvidia.com/gpu'
 
         when:
-        res = builder.addAcceleratorResource(new AcceleratorResource(limit: 5, type:'foo'), [:])
+        type = builder.getAcceleratorType(new AcceleratorResource(type: 'foo'))
         then:
-        res.requests == ['foo.com/gpu': 5]
-        res.limits == ['foo.com/gpu': 5]
+        type == 'foo.com/gpu'
 
         when:
-        res = builder.addAcceleratorResource(new AcceleratorResource(request: 5, type:'foo.org'), [:])
+        type = builder.getAcceleratorType(new AcceleratorResource(type: 'foo.org'))
         then:
-        res.requests == ['foo.org/gpu': 5]
-        res.limits == null
+        type == 'foo.org/gpu'
 
         when:
-        res = builder.addAcceleratorResource(new AcceleratorResource(request: 5, type:'foo.org'), [limits: [cpu: 2]])
+        type = builder.getAcceleratorType(new AcceleratorResource(type: 'example.com/fpga'))
         then:
-        res.requests == ['foo.org/gpu': 5]
-        res.limits == [cpu:2]
-
-        when:
-        res = builder.addAcceleratorResource(new AcceleratorResource(request: 5, limit: 10, type:'foo.org'), [limits: [cpu: 2]])
-        then:
-        res.requests == ['foo.org/gpu': 5]
-        res.limits == [cpu:2, 'foo.org/gpu': 10]
-
-        when:
-        res = builder.addAcceleratorResource(new AcceleratorResource(request: 5, type:'example.com/fpga'), [:])
-        then:
-        res.requests == ['example.com/fpga': 5]
-        res.limits == null
-
-        when:
-        res = builder.addAcceleratorResource(new AcceleratorResource(request: 5, limit: 10, type:'example.com/fpga'), [limits: [cpu: 2]])
-        then:
-        res.requests == ['example.com/fpga': 5]
-        res.limits == [cpu:2, 'example.com/fpga': 10]
+        type == 'example.com/fpga'
     }
 
 

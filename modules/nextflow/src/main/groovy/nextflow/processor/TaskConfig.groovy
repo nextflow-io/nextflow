@@ -26,10 +26,13 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import nextflow.Const
 import nextflow.ast.NextflowDSLImpl
-import nextflow.exception.AbortOperationException
 import nextflow.exception.FailedGuardException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
+import nextflow.executor.res.CpuResource
+import nextflow.executor.res.DiskResource
+import nextflow.executor.res.MemoryResource
+import nextflow.executor.res.TimeResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
@@ -235,68 +238,60 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid `ErrorStrategy` value: ${strategy}")
     }
 
+    MemoryResource getMemoryResource() {
+        def value = get('memory')
+        if( value instanceof Map )
+            return new MemoryResource(value as Map)
+        if( value != null )
+            return new MemoryResource(value)
+        return null
+    }
 
     MemoryUnit getMemory() {
-        def value = get('memory')
+        getMemoryResource()?.getRequest()
+    }
 
-        if( !value )
-            return null
-
-        if( value instanceof MemoryUnit )
-            return (MemoryUnit)value
-
-        try {
-            new MemoryUnit(value.toString().trim())
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Not a valid 'memory' value in process definition: $value")
-        }
+    DiskResource getDiskResource() {
+        def value = get('disk')
+        if( value instanceof Map )
+            return new DiskResource(value as Map)
+        if( value != null )
+            return new DiskResource(value)
+        return null
     }
 
     MemoryUnit getDisk() {
-        def value = get('disk')
+        getDiskResource()?.getRequest()
+    }
 
-        if( !value )
-            return null
-
-        if( value instanceof MemoryUnit )
-            return (MemoryUnit)value
-
-        try {
-            new MemoryUnit(value.toString().trim())
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Not a valid 'disk' value in process definition: $value")
-        }
+    TimeResource getTimeResource() {
+        def value = get('time')
+        if( value instanceof Map )
+            return new TimeResource(value as Map)
+        if( value != null )
+            return new TimeResource(value)
+        return null
     }
 
     Duration getTime() {
-        def value = get('time')
-
-        if( !value )
-            return null
-
-        if( value instanceof Duration )
-            return (Duration)value
-
-        if( value instanceof Number )
-            return new Duration(value as long)
-
-        try {
-            new Duration(value.toString().trim())
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Not a valid `time` value in process definition: $value")
-        }
+        getTimeResource()?.getRequest()
     }
 
     boolean hasCpus() {
         get('cpus') != null
     }
 
-    int getCpus() {
+    CpuResource getCpusResource() {
         final value = get('cpus')
-        value ? value as int : 1  // note: always return at least 1 cpus
+        if( value instanceof Map )
+            return new CpuResource(value as Map)
+        if( value != null )
+            return new CpuResource(value as int)
+        return new CpuResource(1)  // note: always return at least 1 cpus
+    }
+
+    int getCpus() {
+        getCpusResource().getRequest()
     }
 
     int getMaxRetries() {

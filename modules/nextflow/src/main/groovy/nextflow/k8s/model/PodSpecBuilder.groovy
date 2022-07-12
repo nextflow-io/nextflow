@@ -24,7 +24,8 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.executor.res.AcceleratorResource
-import nextflow.util.MemoryUnit
+import nextflow.executor.res.CpuResource
+import nextflow.executor.res.MemoryResource
 import groovy.util.logging.Slf4j
 
 /**
@@ -64,9 +65,9 @@ class PodSpecBuilder {
 
     String workDir
 
-    Integer cpus
+    CpuResource cpus
 
-    String memory
+    MemoryResource memory
 
     String serviceAccount
 
@@ -150,22 +151,17 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withCpus( Integer cpus ) {
+    PodSpecBuilder withCpus( CpuResource cpus ) {
         this.cpus = cpus
         return this
     }
 
-    PodSpecBuilder withMemory(String mem) {
+    PodSpecBuilder withMemory( MemoryResource mem ) {
         this.memory = mem
         return this
     }
 
-    PodSpecBuilder withMemory(MemoryUnit mem)  {
-        this.memory = "${mem.mega}Mi".toString()
-        return this
-    }
-
-    PodSpecBuilder withAccelerator(AcceleratorResource acc) {
+    PodSpecBuilder withAccelerator( AcceleratorResource acc ) {
         this.accelerator = acc
         return this
     }
@@ -322,12 +318,6 @@ class PodSpecBuilder {
             env.add(entry.toSpec())
         }
 
-        final res = [:]
-        if( this.cpus )
-            res.cpu = this.cpus
-        if( this.memory )
-            res.memory = this.memory
-
         final container = [ name: this.podName, image: this.imageName ]
         if( this.command )
             container.command = this.command
@@ -395,14 +385,33 @@ class PodSpecBuilder {
             container.env = env
 
         // add resources
-        if( res ) {
-            container.resources = [requests: res, limits: new HashMap<>(res)]
+        def res = [requests: [:], limits: [:]]
+
+        if( cpus?.request ) {
+            res.requests.put('cpu', cpus.request)
+        }
+        if( cpus?.limit ) {
+            res.limits.put('cpu', cpus.limit)
         }
 
-        // add gpu settings
-        if( accelerator ) {
-            container.resources = addAcceleratorResource(accelerator, container.resources as Map)
+        if( memory?.request ) {
+            res.requests.put('memory', "${memory.request.toMega()}Mi")
         }
+        if( memory?.limit ) {
+            res.limits.put('memory', "${memory.limit.toMega()}Mi")
+        }
+
+        final acceleratorType = getAcceleratorType(accelerator)
+
+        if( accelerator?.request ) {
+            res.requests.put(acceleratorType, accelerator.request)
+        }
+        if( accelerator?.limit ) {
+            res.limits.put(acceleratorType, accelerator.limit)
+        }
+
+        if( !res.requests.isEmpty() || !res.limits.isEmpty() )
+            container.resources = res
 
         // add storage definitions ie. volumes and mounts
         final mounts = []
@@ -484,37 +493,17 @@ class PodSpecBuilder {
     @CompileDynamic
     String getAcceleratorType(AcceleratorResource accelerator) {
 
-        def type = accelerator.type ?: 'nvidia.com'
+        def type = accelerator?.type ?: 'nvidia.com'
 
-        if ( type.contains('/') )
-            // Assume the user has fully specified the resource type.
-            return type
+        // Assume the user has fully specified the resource type.
+        if ( type.contains('/') ) return type
 
         // Assume we're using GPU and update as necessary.
         if( !type.contains('.') ) type += '.com'
+
         type += '/gpu'
 
         return type
-    }
-
-    @PackageScope
-    @CompileDynamic
-    Map addAcceleratorResource(AcceleratorResource accelerator, Map res) {
-
-        def type = getAcceleratorType(accelerator)
-
-        if( accelerator.request ) {
-            final requests = res.requests ?: [:]
-            requests.put(type, accelerator.request)
-            res.requests = requests
-        }
-        if( accelerator.limit ) {
-            final limits = res.limits ?: [:]
-            limits.put(type, accelerator.limit)
-            res.limits = limits
-        }
-
-        return res
     }
 
     @PackageScope
