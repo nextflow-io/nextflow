@@ -21,10 +21,13 @@ import spock.lang.IgnoreIf
 
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.Config
 import org.junit.Rule
 import spock.lang.Requires
 import spock.lang.Specification
 import test.TemporaryPath
+import java.nio.file.Path
+import java.nio.file.Paths
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -442,6 +445,15 @@ class AssetManagerTest extends Specification {
         dir.resolve('nextflow.config').text = 'manifest {  }'
         dir.resolve('foo.nf').text = 'this is foo content'
 
+        // Use this user's custom defaultBranch name if set in ~/.gitconfig
+        def defaultBranch = 'master'
+        def gitconfig = Paths.get(System.getProperty('user.home'),'.gitconfig');
+        if(gitconfig.exists()) {
+            def config = new Config()
+            config.fromText(gitconfig.text)
+            defaultBranch = config.getString('init', null, 'defaultBranch') ?: 'master'
+        }
+
         def init = Git.init()
         def repo = init.setDirectory( dir.toFile() ).call()
         repo.add().addFilepattern('.').call()
@@ -462,7 +474,7 @@ class AssetManagerTest extends Specification {
         then:
         script.localPath == dir
         script.commitId == commit.name()
-        script.revision == 'master'
+        script.revision == defaultBranch
         script.parent == dir
         script.text == "println 'Hello world'"
         script.repository == 'https://github.com/nextflow-io/nextflow'
@@ -479,7 +491,7 @@ class AssetManagerTest extends Specification {
         then:
         script.localPath == dir
         script.commitId == commit.name()
-        script.revision == 'master'
+        script.revision == defaultBranch
         script.parent == dir
         script.text == "this is foo content"
         script.repository == 'https://github.com/nextflow-io/nextflow'
