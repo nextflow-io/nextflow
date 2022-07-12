@@ -209,16 +209,17 @@ class DirWatcherTest extends Specification {
 
 
     def 'should convert string events'() {
-
+        given:
+        def watcher = Spy(DirWatcher)
         when:
-        DirWatcher.stringToWatchEvents('xxx')
+        watcher.stringToWatchEvents('xxx')
         then:
         thrown(IllegalArgumentException)
 
         expect:
-        DirWatcher.stringToWatchEvents() == [ ENTRY_CREATE ]
-        DirWatcher.stringToWatchEvents('create,delete') == [ENTRY_CREATE, ENTRY_DELETE]
-        DirWatcher.stringToWatchEvents('Create , MODIFY ') == [ENTRY_CREATE, ENTRY_MODIFY]
+        watcher.stringToWatchEvents() == [ ENTRY_CREATE ]
+        watcher.stringToWatchEvents('create,delete') == [ENTRY_CREATE, ENTRY_DELETE]
+        watcher.stringToWatchEvents('Create , MODIFY ') == [ENTRY_CREATE, ENTRY_MODIFY]
 
     }
 

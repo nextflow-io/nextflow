@@ -60,6 +60,15 @@ class AwsContainerOptionsMapperTest extends Specification {
         properties.getReadonlyRootFilesystem()
     }
 
+    def 'should set env'() {
+        when:
+        def map = CmdLineHelper.parseGnuArgs('-e x=y')
+        def properties = AwsContainerOptionsMapper.createContainerProperties(map)
+        then:
+        properties.getEnvironment().get(0).getName()=='x'
+        properties.getEnvironment().get(0).getValue()=='y'
+    }
+
     def 'should set tmpfs linux params'() {
 
         when:

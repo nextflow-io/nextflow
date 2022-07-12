@@ -29,4 +29,5 @@ import groovy.transform.ToString
 class ComputeResource {
     Integer cpuMilli
     Integer memoryMib
+    Integer bootDiskMib
 }
