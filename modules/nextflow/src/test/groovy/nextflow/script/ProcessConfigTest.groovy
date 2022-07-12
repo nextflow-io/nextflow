@@ -87,14 +87,14 @@ class ProcessConfigTest extends Specification {
         when:
         config.time '1h'
         then:
-        config.time == '1h'
+        config.time == [limit: '1h']
         config.createTaskConfig().time == new Duration('1h')
 
         // maxMemory property
         when:
         config.memory '2GB'
         then:
-        config.memory == '2GB'
+        config.memory == [limit: '2GB']
         config.createTaskConfig().memory == new MemoryUnit('2GB')
 
         when:
@@ -585,7 +585,7 @@ class ProcessConfigTest extends Specification {
         then:
         config.queue == 'cn-el6'
         config.container == 'ubuntu:latest'
-        config.memory == '10 GB'
+        config.memory == [limit: '10 GB']
         config.getInputs().size() == 2
         config.getOutputs().size() == 1
 
@@ -600,14 +600,14 @@ class ProcessConfigTest extends Specification {
         then:
         copy.queue == 'long'
         copy.container == 'debian:wheezy'
-        copy.memory == '5 GB'
+        copy.memory == [limit: '5 GB']
         copy.getInputs().size() == 3
         copy.getOutputs().size() == 2
 
         // original config is not affected
         config.queue == 'cn-el6'
         config.container == 'ubuntu:latest'
-        config.memory == '10 GB'
+        config.memory == [limit: '10 GB']
         config.getInputs().size() == 2
         config.getOutputs().size() == 1
     }
@@ -620,7 +620,7 @@ class ProcessConfigTest extends Specification {
         when:
         process.accelerator 2
         then:
-        process.accelerator == [request: 2, limit: 2]
+        process.accelerator == [limit: 2]
 
         when:
         process.accelerator request: 1, limit: 4, type: 'nvida'

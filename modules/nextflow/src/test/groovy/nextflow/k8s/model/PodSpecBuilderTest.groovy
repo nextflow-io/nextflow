@@ -718,6 +718,7 @@ class PodSpecBuilderTest extends Specification {
 
         given:
         def builder = new PodSpecBuilder()
+        def type = null
 
         when:
         type = builder.getAcceleratorType(new AcceleratorResource(type: null))

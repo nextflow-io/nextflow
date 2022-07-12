@@ -874,7 +874,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         if( value instanceof Number ) {
             if( params.limit == null )
                 params.limit = value
-            else if( params.request == null )
+            if( params.request == null )
                 params.request = value
         }
         else if( value != null )
