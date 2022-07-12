@@ -27,8 +27,6 @@ import com.amazonaws.services.ec2.model.Instance
 import com.amazonaws.services.ecs.AmazonECS
 import com.amazonaws.services.ecs.model.DescribeContainerInstancesRequest
 import com.amazonaws.services.ecs.model.DescribeTasksRequest
-import com.amazonaws.services.ecs.model.DescribeTasksResult
-import com.amazonaws.services.ecs.model.InvalidParameterException
 import com.amazonaws.services.logs.AWSLogs
 import com.amazonaws.services.logs.model.GetLogEventsRequest
 import com.amazonaws.services.logs.model.OutputLogEvent
@@ -102,33 +100,23 @@ class AwsBatchHelper {
         return instanceId ? getInfoByInstanceId(instanceId) : null
     }
 
-     private String getContainerIdByClusterAndTaskArn(String clusterArn, String taskArn) {
-		DescribeTasksResult describeTasksResult;
+    private String getContainerIdByClusterAndTaskArn(String clusterArn, String taskArn) {
         final describeTaskReq = new DescribeTasksRequest()
                 .withCluster(clusterArn)
                 .withTasks(taskArn)
-        try {
-            describeTasksResult = ecsClient.describeTasks(describeTaskReq)
+        final containers = ecsClient
+                .describeTasks(describeTaskReq)
+                .getTasks()
+                *.getContainerInstanceArn()
+        if( containers.size()==1 ) {
+            return containers.get(0)
         }
-        catch (InvalidParameterException e) {
-            log.debug "Cannot find container id for clusterArn=$clusterArn and taskArn=$taskArn.  Task is likely running on another cluster."
+        if( containers.size()==0 ) {
+            log.debug "Unable to find container id for clusterArn=$clusterArn and taskArn=$taskArn"
             return null
         }
-        if( describeTasksResult ) {
-            final containers = 
-                    describeTasksResult.getTasks()
-                    *.getContainerInstanceArn()
-            if( containers.size()==1 ) {
-                return containers.get(0)
-            }
-            if( containers.size()==0 ) {
-                log.debug "Unable to find container id for clusterArn=$clusterArn and taskArn=$taskArn"
-                return null
-            }
-            else
-                throw new IllegalStateException("Found more than one container for taskArn=$taskArn")
-        }
-        return null
+        else
+            throw new IllegalStateException("Found more than one container for taskArn=$taskArn")
     }
 
     private String getInstanceIdByClusterAndContainerId(String clusterArn, String containerId) {
