@@ -58,7 +58,7 @@ in the cloud, offloading the process executions through the Google Cloud service
 Requirements
 ------------
 
-The support for Google Batch requires Nextflow version ``22.07.0-edge`` or later. If you have already Nextflow
+The support for Google Batch requires Nextflow version ``22.07.1-edge`` or later. If you have already Nextflow
 installed make sure to update to the latest `edge` release using these commands::
 
     export NXF_EDGE=1 
