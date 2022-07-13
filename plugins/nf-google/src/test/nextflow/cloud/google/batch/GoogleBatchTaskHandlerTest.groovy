@@ -24,6 +24,7 @@ import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 import nextflow.util.Duration
+import nextflow.util.CpuUnit
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
@@ -76,7 +77,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getWorkDir() >> WORK_DIR
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
-                getCpuCores() >> 2
+                getCpuUnits() >> CpuUnit.of(2)
                 getContainerOptions() >> CONTAINER_OPTS
             }
         }
@@ -112,7 +113,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         def CONTAINER_IMAGE = 'ubuntu:22.1'
         def CONTAINER_OPTS = '--this --that'
-        def CPUS = 4
+        def CPUS = CpuUnit.of(4)
         def MEM = MemoryUnit.of('8 GB')
         def TIMEOUT = Duration.of('1 hour')
         def MACHINE_TYPE = 'vm-type-2'
@@ -133,7 +134,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getWorkDir() >> WORK_DIR
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
-                getCpuCores() >> CPUS
+                getCpuUnits() >> CPUS
                 getMemory() >> MEM
                 getTime() >> TIMEOUT
                 getMachineType() >> MACHINE_TYPE
@@ -151,7 +152,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         def group = req.getTaskGroups().get(0)
         and:
-        group.taskSpec.computeResource.cpuMilli == CPUS * 1_000
+        group.taskSpec.computeResource.cpuMilli == CPUS.toMillis()
         group.taskSpec.computeResource.memoryMib == MEM.toMega()
         group.taskSpec.maxRunDuration == TIMEOUT.seconds + 's'
         and:

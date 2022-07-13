@@ -142,4 +142,13 @@ class CpuUnitTest extends Specification {
         0.99        | '1.0'
         1.1         | '1.1'
     }
+
+    def 'test equals and compare' () {
+
+        expect:
+        CpuUnit.of(4) == CpuUnit.of('4000m')
+        CpuUnit.of(1.2) < CpuUnit.of(10)
+        CpuUnit.of('5100m') > CpuUnit.of(3.6)
+
+    }
 }
