@@ -26,11 +26,7 @@ import spock.lang.Specification
  */
 class TimeResourceTest extends Specification {
 
-    def 'should create a memory resource' () {
-
-        final _1_h = '1 h' as Duration
-        final _2_h = '2 h' as Duration
-        final _4_h = '4 h' as Duration
+    def 'should create a time resource' () {
 
         when:
         def time = new TimeResource(VALUE)
@@ -39,10 +35,11 @@ class TimeResourceTest extends Specification {
         time.limit == LIM
 
         where:
-        VALUE                         | REQ      | LIM
-        _1_h                          | _1_h     | _1_h
-        [request: _2_h]               | _2_h     | null
-        [limit: _4_h]                 | _4_h     | _4_h
-        [request: _2_h, limit: _4_h]  | _2_h     | _4_h
+        VALUE                         | REQ                | LIM
+        '1h'                          | Duration.of('1h')  | Duration.of('1h')
+        [request: '2h']               | Duration.of('2h')  | null
+        [limit: '4h']                 | Duration.of('4h')  | Duration.of('4h')
+        [request: '2h', limit: '4h']  | Duration.of('2h')  | Duration.of('4h')
     }
+
 }

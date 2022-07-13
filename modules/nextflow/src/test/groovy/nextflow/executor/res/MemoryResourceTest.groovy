@@ -28,10 +28,6 @@ class MemoryResourceTest extends Specification {
 
     def 'should create a memory resource' () {
 
-        final _1_GB = '1 GB' as MemoryUnit
-        final _2_GB = '2 GB' as MemoryUnit
-        final _4_GB = '4 GB' as MemoryUnit
-
         when:
         def mem = new MemoryResource(VALUE)
         then:
@@ -39,10 +35,11 @@ class MemoryResourceTest extends Specification {
         mem.limit == LIM
 
         where:
-        VALUE                           | REQ       | LIM
-        _1_GB                           | _1_GB     | _1_GB
-        [request: _2_GB]                | _2_GB     | null
-        [limit: _4_GB]                  | _4_GB     | _4_GB
-        [request: _2_GB, limit: _4_GB]  | _2_GB     | _4_GB
+        VALUE                           | REQ                   | LIM
+        '1GB'                           | MemoryUnit.of('1GB')  | MemoryUnit.of('1GB')
+        [request: '2GB']                | MemoryUnit.of('2GB')  | null
+        [limit: '4GB']                  | MemoryUnit.of('4GB')  | MemoryUnit.of('4GB')
+        [request: '2GB', limit: '4GB']  | MemoryUnit.of('2GB')  | MemoryUnit.of('4GB')
     }
+
 }

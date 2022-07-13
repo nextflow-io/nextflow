@@ -17,28 +17,29 @@
 
 package nextflow.executor.res
 
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 
 /**
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-class CpuResourceTest extends Specification {
+class DiskResourceTest extends Specification {
 
-    def 'should create a cpu resource' () {
+    def 'should create a disk resource' () {
 
         when:
-        def cpu = new CpuResource(VALUE)
+        def mem = new DiskResource(VALUE)
         then:
-        cpu.request == REQ
-        cpu.limit == LIM
+        mem.request == REQ
+        mem.limit == LIM
 
         where:
-        VALUE                   | REQ   | LIM
-        1                       | 1     | 1
-        [request: 2]            | 2     | null
-        [limit: 4]              | 4     | 4
-        [request: 2, limit: 4]  | 2     | 4
+        VALUE                           | REQ                   | LIM
+        '1GB'                           | MemoryUnit.of('1GB')  | MemoryUnit.of('1GB')
+        [request: '2GB']                | MemoryUnit.of('2GB')  | null
+        [limit: '4GB']                  | MemoryUnit.of('4GB')  | MemoryUnit.of('4GB')
+        [request: '2GB', limit: '4GB']  | MemoryUnit.of('2GB')  | MemoryUnit.of('4GB')
     }
 
 }

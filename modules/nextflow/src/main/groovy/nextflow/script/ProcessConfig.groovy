@@ -920,7 +920,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         if( value instanceof Number ) {
             if( params.limit == null )
                 params.limit = value
-            if( params.request == null )
+            else if( params.request == null )
                 params.request = value
         }
         else if( value != null )
@@ -966,7 +966,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         if( value ) {
             if( params.limit == null )
                 params.limit = value
-            if( params.request == null )
+            else if( params.request == null )
                 params.request = value
         }
         disk(params)
@@ -1008,7 +1008,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         if( value ) {
             if( params.limit == null )
                 params.limit = value
-            if( params.request == null )
+            else if( params.request == null )
                 params.request = value
         }
         memory(params)
@@ -1050,7 +1050,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         if( value ) {
             if( params.limit == null )
                 params.limit = value
-            if( params.request == null )
+            else if( params.request == null )
                 params.request = value
         }
         time(params)

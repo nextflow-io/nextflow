@@ -44,4 +44,5 @@ class AcceleratorResourceTest extends Specification {
         [limit: 3, type: 'nvidia']  | 3     | 3     | 'nvidia' | null
         [limit: 3, runtime: 'foo']  | 3     | 3     | null  | 'foo'
     }
+
 }
