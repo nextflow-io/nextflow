@@ -1,9 +1,6 @@
 NEXTFLOW CHANGE-LOG
 ===================
 22.07.1-edge - 13 Jul 2022
-- Update core plugins reference
-
-22.07.0-edge - 13 Jul 2022
 - Add support for Google Batch API v1 [4c116d58] [e85d87ee]
 - Add time directive support for K8s executor (#2948) [2b6f70a8] <romanaduraciova>
 - Add docs aws.client.s3PathStyleAccess config (#3000) [20005500] <Abhinav Sharma>
@@ -25,6 +22,8 @@ NEXTFLOW CHANGE-LOG
 - Bump jgit@6.2.0 [3331826f]
 - Bump snakeyaml@1.30 [de62fd3f]
 - Bump gson@2.8.9 [3234ddd5]
+
+22.07.0-edge - [SKIPPED]
 
 22.04.4 - 19 Jun 2022
 - Fix Publish copy mode for s3 based path [bb510ce6]
