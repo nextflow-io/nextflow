@@ -1,11 +1,34 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.07.0-edge - 13 Jul 2022
+- Add support for Google Batch API v1 [4c116d58] [e85d87ee]
+- Add time directive support for K8s executor (#2948) [2b6f70a8] <romanaduraciova>
+- Add docs aws.client.s3PathStyleAccess config (#3000) [20005500] <Abhinav Sharma>
+- Allow to override lsf.conf settings with nextflow config #2862 [dae191a1] <Paolo Di Tommaso>
+- Allow hybrid containers execution [0af1bcb3]
+- Improve error msg when script file cannot be read [52c2780e]
+- Improve error reporting for custom function [877c7931] <Jorge Aguilera>
+- Improve error message for missing plugin extension [4a43db84]
+- Improve test #3019 [7c37e0be] <Paolo Di Tommaso>
+- Rename kuberun -pod-image to -head-image [2576ba62] <Ben Sherman>
+- Externalise sqldb plugin source code [17e80b4f] <Paolo Di Tommaso>
+- Fix escape unstage outputs with double quotes #2912 #2904 #2790 [49ff02a6] <Ben Sherman>
+- Fix Exception when settings AWS Batch containerOptions #3019 [89312ad8] <Paolo Di Tommaso>
+- Fix Missing query param in http file (#2918) [43cc8511] <Paolo Di Tommaso>
+- Fix Publish copy mode for S3 based path [085f6b2b]
+- Fix Fail fast uploads to S3 (#2969) [7fd1a6e1] <Jorge Aguilera>
+- Fix null script name in launch info [7118849f]
+- Bump commons-code@1.15 [a06b4442]
+- Bump jgit@6.2.0 [3331826f]
+- Bump snakeyaml@1.30 [de62fd3f]
+- Bump gson@2.8.9 [3234ddd5]
+
 22.04.4 - 19 Jun 2022
 - Fix Publish copy mode for s3 based path [bb510ce6]
 - Add strict mode config setting [b0567e62]
 - Update docker base image [b00c1418]
 
-22.06.0-edge - 17 Jun 2022
+22.06.1-edge - 17 Jun 2022
 - Fix CodeCommit creds handling + nf-codecommit@0.1.2 [70fc0745]
 - Fix typo in log message [a8f8529d]
 - Add more scientists to the list of random names [8d5b36a2] <Marcel Ribeiro Dantas>
