@@ -17,17 +17,20 @@
 
 package io.seqera.tower.plugin
 
+
 import java.nio.file.Path
 
 import nextflow.Session
 import nextflow.file.FileHelper
 import spock.lang.Specification
+import spock.lang.Timeout
 import spock.lang.Unroll
-
+import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Timeout(5)
 class TowerArchiverTest extends Specification {
 
     def 'should empty target path' () {
@@ -84,6 +87,41 @@ class TowerArchiverTest extends Specification {
         TowerArchiver.parse('/a,/b,/c')
         then:
         thrown(IllegalArgumentException)
+    }
+
+    def 'should validate retry policy' () {
+        given:
+        def sess = Mock(Session) { getConfig() >> [:] }
+        def archiver = new TowerArchiver(Path.of('/foo'),Path.of('/bar'), sess)
+
+        expect:
+        !archiver.retryPattern().matcher('hello').find()
+        !archiver.retryPattern().matcher('slow').find()
+        and:
+        archiver.retryPattern().matcher('slowdown').find()
+        archiver.retryPattern().matcher('SlowDown').find()
+        archiver.retryPattern().matcher('Slow Down').find()
+        archiver.retryPattern().matcher('TooMany').find()
+        archiver.retryPattern().matcher('Too Many').find()
+    }
+
+    def 'should archive path' () {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def source = folder.resolve('foo.txt'); source.text = 'xya'
+        and:
+        def sess = Mock(Session) { getConfig() >> [:] }
+        def archiver = Spy(new TowerArchiver(folder,Path.of('/bar'), sess))
+        def target = folder.resolve('bar.txt')
+
+        when:
+        archiver.archiveFile(source)
+        then:
+        1 * archiver.archivePath(source) >> target
+        and:sleep 100   // <-- sleep a bit to allow the task to enter in the exec pool
+        archiver.shutdown()
+        and:
+        target.exists()
     }
 
 }

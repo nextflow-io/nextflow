@@ -17,11 +17,12 @@
 
 package io.seqera.tower.plugin
 
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutorService
 import java.util.function.Predicate
+import java.util.regex.Pattern
 
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
@@ -36,7 +37,6 @@ import nextflow.file.FileHelper
 import nextflow.util.Duration
 import nextflow.util.ThreadPoolBuilder
 import nextflow.util.ThreadPoolHelper
-
 /**
  * Helper class to resolve bucket archive paths
  *
@@ -46,6 +46,7 @@ import nextflow.util.ThreadPoolHelper
 @CompileStatic
 class TowerArchiver {
 
+    private static final String RETRY_REASON = 'slowdown|slow down|toomany|too many'
     private Map<String,String> env = System.getenv()
 
     private final Path baseDir
@@ -57,6 +58,7 @@ class TowerArchiver {
     private Integer maxAttempts
     private Double jitter
     private Duration maxAwait
+    private String retryReason
 
     Path getBaseDir() { baseDir }
 
@@ -72,6 +74,7 @@ class TowerArchiver {
         this.maxAttempts = session.config.navigate('tower.archiver.maxAttempts', '2') as Integer
         this.jitter = session.config.navigate('tower.archiver.jitter', '0.25') as Double
         this.maxAwait = session.config.navigate('tower.archiver.shutdown.maxAwait', '1h') as Duration
+        this.retryReason = session.config.navigate('tower.archiver.shutdown.retryReason', RETRY_REASON) as String
         executor = ThreadPoolBuilder.io(10,10,1000, 'tower-archiver')
         if( env!=null )
             this.env = env
@@ -149,14 +152,23 @@ class TowerArchiver {
 
     protected void archiveFile(Path source) {
         try {
+            if( !source.exists() ) {
+                log.debug "File does not exist: $source -- skipping archiving"
+                return
+            }
+            // go ahead with archiving
             final target = archivePath(source)
             if( target==null )
                 return
-            executor.submit( submitArchive(source,target))
+            executor.submit(submitArchive(source,target))
         }
         catch (Throwable t) {
             log.warn("Unable to archive file: $source -- cause: ${t.message ?: t}", t)
         }
+    }
+
+    protected void copyPath(Path source, Path target) {
+        FileHelper.copyPath(source, target)
     }
 
     Runnable submitArchive(Path source, Path target) {
@@ -164,8 +176,11 @@ class TowerArchiver {
             @Override
             void run() {
                 try {
-                    safeExecute(() -> FileHelper.copyPath(source, target, StandardCopyOption.REPLACE_EXISTING) )
+                    safeExecute(() -> copyPath(source,target) )
                     log.trace("Archived file: '$source to: '$target'")
+                }
+                catch (FileAlreadyExistsException e) {
+                    log.debug "Skipping archive of file: $source; target alredy exists: $target"
                 }
                 catch (Exception e) {
                     log.warn("Unable to archive file: $source -- cause: ${e.message ?: e}", e)
@@ -191,12 +206,22 @@ class TowerArchiver {
                 .build()
     }
 
+    protected Pattern retryPattern() {
+        log.debug "File archiver retry-reason='$retryReason'"
+        return Pattern.compile(retryReason, Pattern.CASE_INSENSITIVE | Pattern.MULTILINE)
+    }
+
     @Memoized
     protected Predicate<? extends Throwable> retryCondition() {
+
         return new Predicate<Throwable>() {
             @Override
             boolean test(Throwable failure) {
-                return failure instanceof IOException
+                final reason = failure.message ?: failure.toString()
+                log.trace "Testing file archiver failing reason for retry: '$reason'"
+                return retryPattern()
+                        .matcher(reason)
+                        .find()
             }
         }
     }
