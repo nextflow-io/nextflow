@@ -402,16 +402,14 @@ class CmdRun extends CmdBase implements HubOptions {
             throw new AbortOperationException("Not a valid run name: `$runName` -- It must match the pattern $RUN_NAME_PATTERN")
 
         if( !runName ) {
+            if( HistoryFile.disabled() )
+                throw new AbortOperationException("Missing workflow run name")
             // -- make sure the generated name does not exist already
             runName = HistoryFile.DEFAULT.generateNextName()
         }
 
-        else if( HistoryFile.DEFAULT.checkExistsByName(runName) && !ignoreHistory() )
+        else if( !HistoryFile.disabled() && HistoryFile.DEFAULT.checkExistsByName(runName) )
             throw new AbortOperationException("Run name `$runName` has been already used -- Specify a different one")
-    }
-
-    private static boolean ignoreHistory() {
-        System.getenv('NXF_IGNORE_RESUME_HISTORY')=='true'
     }
 
     static protected boolean matchRunName(String name) {

@@ -247,9 +247,13 @@ class ScriptRunner {
     void verifyAndTrackHistory(String cli, String name) {
         assert cli, 'Missing launch command line'
 
-        final ignore = System.getenv('NXF_IGNORE_RESUME_HISTORY')=='true'
+        if( HistoryFile.disabled() ) {
+            log.debug "Nextflow history file tracking disabled"
+            return
+        }
+
         // -- when resume, make sure the session id exists in the executions history
-        if( session.resumeMode && !ignore && !HistoryFile.DEFAULT.checkExistsById(session.uniqueId.toString()) ) {
+        if( session.resumeMode && !HistoryFile.DEFAULT.checkExistsById(session.uniqueId.toString()) ) {
             throw new AbortOperationException("Can't find a run with the specified id: ${session.uniqueId} -- Execution can't be resumed")
         }
 

@@ -652,7 +652,7 @@ class Session implements ISession {
         }
         finally {
             // -- update the history file
-            if( HistoryFile.DEFAULT.exists() ) {
+            if( !HistoryFile.disabled() && HistoryFile.DEFAULT.exists() ) {
                 HistoryFile.DEFAULT.update(runName,isSuccess())
             }
             log.trace "Session destroyed"

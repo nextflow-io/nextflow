@@ -512,8 +512,9 @@ class ConfigBuilder {
     private String normalizeResumeId( String uniqueId ) {
         if( !uniqueId )
             return null
-
         if( uniqueId == 'last' || uniqueId == 'true' ) {
+            if( HistoryFile.disabled() )
+                throw new AbortOperationException("The resume session id should be specified via `-resume` option when history file tracking is disabled")
             uniqueId = HistoryFile.DEFAULT.getLast()?.sessionId
 
             if( !uniqueId ) {
