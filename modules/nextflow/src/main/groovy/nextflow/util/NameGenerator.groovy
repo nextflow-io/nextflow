@@ -223,6 +223,9 @@ class NameGenerator {
 
             // Walter Houser Brattain co-invented the transistor. https://en.wikipedia.org/wiki/Walter_Houser_Brattain
             "brattain",
+        
+            // Vital Brazil Mineiro da Campanha, also known as Vital Brazil, was a Brazilian physician, biomedical scientist and immunologist, known to develop the first anti-scorpion and anti-spider serums. https://en.wikipedia.org/wiki/Vital_Brazil
+            "brazil",
 
             // Sydney Brenner - South African biologist who worked on the genetic code, and other areas of molecular biology. https://en.wikipedia.org/wiki/Sydney_Brenner
             "brenner",
@@ -467,6 +470,9 @@ class NameGenerator {
             // Pierre-Simon, marquis de Laplace, French scholar whose work was important to the development of mathematics, statistics, physics and astronomy. https://en.wikipedia.org/wiki/Pierre-Simon_Laplace
             "laplace",
 
+            // Cesare Mansueto Giulio Lattes, also known as César Lattes, was a Brazilian experimental physicist and one of the discoverers of the pion, a composite subatomic particle made of a quark and an antiquark. https://en.wikipedia.org/wiki/César_Lattes
+            "lattes",
+        
             // Antoine Lavoisier - French chemist central to the 18th-century chemical revolution and had a large influence on both the history of chemistry and the history of biology. https://en.wikipedia.org/wiki/Antoine_Lavoisier
             "lavoisier",
 
@@ -565,6 +571,9 @@ class NameGenerator {
 
             // Ian Murdock - founder of the Debian project. https://en.wikipedia.org/wiki/Ian_Murdock
             "murdock",
+
+            // Angelo Moriondo was an Italian inventor usually credited for patenting the earliest known espresso machine. https://en.wikipedia.org/wiki/Angelo_Moriondo
+            "moriondo", 
 
             // Isaac Newton invented classic mechanics and modern optics. https://en.wikipedia.org/wiki/Isaac_Newton
             "newton",

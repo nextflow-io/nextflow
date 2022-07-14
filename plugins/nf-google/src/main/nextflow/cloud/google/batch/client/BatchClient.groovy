@@ -34,7 +34,7 @@ class BatchClient {
     protected String projectId
     protected String location
     protected GoogleCredentials credentials
-    protected String BATCH_ENDPOINT = 'https://batch.googleapis.com/v1alpha1'
+    protected String BATCH_ENDPOINT = 'https://batch.googleapis.com/v1'
     protected String LOGS_ENDPOINT = 'https://logging.googleapis.com'
 
     BatchClient(BatchConfig config) {

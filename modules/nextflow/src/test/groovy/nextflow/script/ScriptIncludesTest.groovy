@@ -18,6 +18,8 @@ package nextflow.script
 
 import java.nio.file.Files
 
+import nextflow.NextflowMeta
+import nextflow.exception.DuplicateModuleFunctionException
 import nextflow.exception.DuplicateModuleIncludeException
 import nextflow.exception.ScriptCompilationException
 import spock.lang.Timeout
@@ -145,6 +147,39 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         then:
         result.val == 'dlrow olleh'
+    }
+
+    def 'should not allow duplicate functions' () {
+        given:
+        NextflowMeta.instance.strictMode(true)
+        and:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        def foo(str='foo') {
+          return str.reverse()
+        }   
+        '''
+
+        SCRIPT.text = """  
+        include { foo } from "$MODULE" 
+        workflow {
+           emit:
+           channel.of('hello world').map { foo(it) }
+        }
+        """
+
+        when:
+        new MockScriptRunner() .setScript(SCRIPT).execute()
+
+        then:
+        def err = thrown(DuplicateModuleFunctionException)
+        err.message.startsWith("A function with name 'foo' is defined more than once in module script")
+        
+        cleanup:
+        NextflowMeta.instance.strictMode(false)
     }
 
     def 'should invoke a workflow from include' () {

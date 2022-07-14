@@ -130,6 +130,7 @@ proxyHost                   The proxy host to connect through.
 proxyPort                   The port on the proxy host to connect through.
 proxyUsername               The user name to use when connecting through a proxy.
 proxyPassword               The password to use when connecting through a proxy.
+s3PathStyleAccess           Enable the use of path-based access model that is used to specify the address of an object in S3-compatible storage systems.
 signerOverride              The name of the signature algorithm to use for signing requests made by the client.
 socketSendBufferSizeHint    The Size hint (in bytes) for the low level TCP send buffer.
 socketRecvBufferSizeHint    The Size hint (in bytes) for the low level TCP receive buffer.
@@ -344,6 +345,7 @@ exitReadTimeout       Determines how long the executor waits before to an error 
 killBatchSize         Determines the number of jobs that can be `killed` in a single command execution (default: ``100``).
 submitRateLimit       Determines the max rate of job submission per time unit, for example ``'10sec'`` eg. max 10 jobs per second or ``'50/2min'`` i.e. 50 job submissions every 2 minutes (default: `unlimited`).
 perJobMemLimit        Specifies Platform LSF *per-job* memory limit mode. See :ref:`lsf-executor`.
+perTaskReserve        Specifies Platform LSF *per-task* memory reserve mode. See :ref:`lsf-executor`.
 jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }`` Note: when using this option you need to make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
 cpus                  The maximum number of CPUs made available by the underlying system (only used by the ``local`` executor).
 memory                The maximum amount of memory made available by the underlying system (only used by the ``local`` executor).
@@ -395,9 +397,9 @@ workflow applications in a Kubernetes cluster.
 
 The following settings are available:
 
-================== ================
+=================== ================
 Name                Description
-================== ================
+=================== ================
 autoMountHostPaths  Automatically mounts host paths in the job pods. Only for development purpose when using a single node cluster (default: ``false``).
 context             Defines the Kubernetes `configuration context name <https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/>`_ to use.
 namespace           Defines the Kubernetes namespace to use (default: ``default``).
@@ -415,7 +417,7 @@ storageSubPath      The path in the persistent volume to be mounted (default: ro
 computeResourceType Define whether use Kubernetes ``Pod`` or ``Job`` resource type to carry out Nextflow tasks (default: ``Pod``).
 fetchNodeName       If you trace the hostname, activate this option (default: ``false``, requires version ``22.05.0-edge`` or later).
 volumeClaims        (deprecated)
-================== ================
+=================== ================
 
 See the :ref:`k8s-page` documentation for more details.
 

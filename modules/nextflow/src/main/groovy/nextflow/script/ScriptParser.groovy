@@ -177,6 +177,7 @@ class ScriptParser {
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(scriptPath)
             meta.setModule(module)
+            meta.validate()
             return this
         }
         catch (CompilationFailedException e) {
@@ -203,7 +204,12 @@ class ScriptParser {
 
     ScriptParser runScript(Path scriptPath) {
         this.scriptPath = scriptPath
-        runScript(scriptPath.text)
+        try {
+            runScript(scriptPath.text)
+        }
+        catch (IOException e) {
+            throw new ScriptCompilationException("Unable to read script: '$scriptPath' -- cause: $e.message", e)
+        }
         return this
     }
 

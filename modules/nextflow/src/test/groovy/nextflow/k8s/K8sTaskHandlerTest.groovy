@@ -296,8 +296,8 @@ class K8sTaskHandlerTest extends Specification {
                     kind: 'Pod',
                     metadata: [name:'nf-123', namespace:'just-a-namespace' ],
                     spec: [
-                            serviceAccountName: 'pedantic-kallisto',
                             restartPolicy:'Never',
+                            serviceAccountName: 'pedantic-kallisto',
                             containers:[
                                     [name:'nf-123',
                                      image:'debian:latest',

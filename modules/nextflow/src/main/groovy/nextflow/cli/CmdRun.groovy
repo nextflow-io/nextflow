@@ -285,6 +285,7 @@ class CmdRun extends CmdBase implements HubOptions {
         checkRunName()
 
         log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
+        Plugins.init()
 
         // -- specify the arguments
         final scriptFile = getScriptFile(pipeline)
@@ -301,7 +302,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         // -- load plugins
         final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
-        Plugins.setup( cfg )
+        Plugins.load(cfg)
 
         // -- load secret provider
         if( SecretsLoader.isEnabled() ) {
@@ -354,7 +355,8 @@ class CmdRun extends CmdBase implements HubOptions {
         NextflowMeta.instance.enableDsl(dsl)
         // -- show launch info
         final ver = NF.dsl2 ? DSL2 : DSL1
-        final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$scriptFile.repository`"
+        final repo = scriptFile.repository ?: scriptFile.source
+        final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$repo`"
         if( scriptFile.repository )
             log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
         else
@@ -373,7 +375,7 @@ class CmdRun extends CmdBase implements HubOptions {
             return scriptDsl
         }
         else if( dsl ) {
-            log.debug("Applied DSL=$scriptDsl from config declaration")
+            log.debug("Applied DSL=$dsl from config declaration")
             return dsl
         }
         // -- if still unknown try probing for DSL1
@@ -400,16 +402,14 @@ class CmdRun extends CmdBase implements HubOptions {
             throw new AbortOperationException("Not a valid run name: `$runName` -- It must match the pattern $RUN_NAME_PATTERN")
 
         if( !runName ) {
+            if( HistoryFile.disabled() )
+                throw new AbortOperationException("Missing workflow run name")
             // -- make sure the generated name does not exist already
             runName = HistoryFile.DEFAULT.generateNextName()
         }
 
-        else if( HistoryFile.DEFAULT.checkExistsByName(runName) && !ignoreHistory() )
+        else if( !HistoryFile.disabled() && HistoryFile.DEFAULT.checkExistsByName(runName) )
             throw new AbortOperationException("Run name `$runName` has been already used -- Specify a different one")
-    }
-
-    private static boolean ignoreHistory() {
-        System.getenv('NXF_IGNORE_RESUME_HISTORY')=='true'
     }
 
     static protected boolean matchRunName(String name) {
