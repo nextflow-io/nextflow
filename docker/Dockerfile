@@ -4,7 +4,10 @@ RUN yum install -y procps-ng
 FROM amazoncorretto:17.0.3
 COPY --from=0 /bin/ps /bin/ps
 COPY --from=0 /lib64/libprocps.so.4 /lib64/libprocps.so.4
+COPY --from=0 /usr/lib64/libdw.so.1 /usr/lib64/libdw.so.1
+COPY --from=0 /usr/lib64/liblz4.so.1 /usr/lib64/liblz4.so.1
 COPY --from=0 /usr/lib64/libsystemd.so.0 /usr/lib64/libsystemd.so.0
+
 ENV NXF_HOME=/.nextflow
 ARG TARGETPLATFORM
 
