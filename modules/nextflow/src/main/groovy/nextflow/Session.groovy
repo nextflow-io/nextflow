@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,6 +36,8 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
+import nextflow.cache.CacheDB
+import nextflow.cache.CacheFactory
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.dag.DAG
@@ -377,7 +379,7 @@ class Session implements ISession {
         binding.setParams( (Map)config.params )
         binding.setArgs( new ScriptRunner.ArgsList(args) )
 
-        cache = new CacheDB(uniqueId,runName).open()
+        cache = CacheFactory.create(uniqueId,runName).open()
 
         return this
     }
@@ -445,16 +447,26 @@ class Session implements ISession {
         igniters.add(action)
     }
 
-    void fireDataflowNetwork() {
+    void fireDataflowNetwork(boolean preview=false) {
         checkConfig()
         notifyFlowBegin()
 
-        if( !NextflowMeta.instance.isDsl2() )
+        if( !NextflowMeta.instance.isDsl2() ) {
             return
+        }
 
         // bridge any dataflow queue into a broadcast channel
         CH.broadcast()
 
+        if( preview ) {
+            terminated = true
+        }
+        else {
+            callIgniters()
+        }
+    }
+
+    private void callIgniters() {
         log.debug "Ignite dataflow network (${igniters.size()})"
         for( Closure action : igniters ) {
             try {
@@ -609,15 +621,15 @@ class Session implements ISession {
         terminated = true
         monitorsBarrier.awaitCompletion()
         log.debug "Session await > all barriers passed"
+        if( !aborted ) {
+            joinAllOperators()
+            log.trace "Session > after processors join"
+        }
     }
 
     void destroy() {
         try {
             log.trace "Session > destroying"
-            if( !aborted ) {
-                joinAllOperators()
-                log.trace "Session > after processors join"
-            }
 
             // invoke shutdown callbacks
             shutdown0()
@@ -640,7 +652,7 @@ class Session implements ISession {
         }
         finally {
             // -- update the history file
-            if( HistoryFile.DEFAULT.exists() ) {
+            if( !HistoryFile.disabled() && HistoryFile.DEFAULT.exists() ) {
                 HistoryFile.DEFAULT.update(runName,isSuccess())
             }
             log.trace "Session destroyed"
@@ -792,10 +804,16 @@ class Session implements ISession {
     }
 
     @PackageScope void checkConfig() {
-        final names = ScriptMeta.allProcessNames()
-        final ver = "dsl${NF.dsl1 ?'1' :'2'}"
-        log.debug "Workflow process names [$ver]: ${names.join(', ')}"
-        validateConfig(names)
+        final enabled = config.navigate('nextflow.enable.configProcessNamesValidation', true) as boolean
+        if( enabled ) {
+            final names = ScriptMeta.allProcessNames()
+            final ver = "dsl${NF.dsl1 ?'1' :'2'}"
+            log.debug "Workflow process names [$ver]: ${names.join(', ')}"
+            validateConfig(names)
+        }
+        else {
+            log.debug "Config process names validation disabled as requested"
+        }
     }
 
     @PackageScope VersionNumber getCurrentVersion() {
@@ -1021,6 +1039,18 @@ class Session implements ISession {
         observers.each { trace -> trace.onFlowCreate(this) }
     }
 
+    void notifyFilePublish(Path destination) {
+        def copy = new ArrayList<TraceObserver>(observers)
+        for( TraceObserver observer : copy  ) {
+            try {
+                observer.onFilePublish(destination)
+            }
+            catch( Exception e ) {
+                log.error "Failed to invoke observer on file publish: $observer", e
+            }
+        }
+    }
+
     void notifyFlowComplete() {
         def copy = new ArrayList<TraceObserver>(observers)
         for( TraceObserver observer : copy  ) {
@@ -1083,7 +1113,7 @@ class Session implements ISession {
         CacheDB db = null
         try {
             log.trace "Cleaning-up workdir"
-            db = new CacheDB(uniqueId, runName).openForRead()
+            db = CacheFactory.create(uniqueId, runName).openForRead()
             db.eachRecord { HashCode hash, TraceRecord record ->
                 def deleted = db.removeTaskEntry(hash)
                 if( deleted ) {
@@ -1094,7 +1124,7 @@ class Session implements ISession {
             log.trace "Clean workdir complete"
         }
         catch( Exception e ) {
-            log.warn("Failed to cleanup work dir: $workDir")
+            log.warn("Failed to cleanup work dir: ${workDir.toUriString()}")
         }
         finally {
             db.close()

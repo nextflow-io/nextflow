@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -168,7 +168,7 @@ class BashWrapperBuilder {
         result.append('set +u\n')
         for( int i=0; i<names.size(); i++) {
             final key = names[i]
-            result.append "echo $key=\$$key "
+            result.append "echo $key=\${$key[@]} "
             result.append( i==0 ? '> ' : '>> ' )
             result.append(TaskRun.CMD_ENV)
             result.append('\n')
@@ -256,6 +256,9 @@ class BashWrapperBuilder {
         if( !isSecretNative() ) {
             binding.secrets_env = getSecretsEnv()
         }
+        else {
+            binding.secrets_env = null
+        }
 
         /*
          * staging input files when required
@@ -292,7 +295,7 @@ class BashWrapperBuilder {
 
     protected String getSecretsEnv() {
         return SecretsLoader.isEnabled()
-                ? SecretsLoader.instance.load() .getSecretEnv()
+                ? SecretsLoader.instance.load() .getSecretsEnv(secretNames)
                 : null
     }
 
@@ -572,8 +575,8 @@ class BashWrapperBuilder {
 
         // The current work directory should be mounted only when
         // the task is executed in a temporary scratch directory (ie changeDir != null)
-        // Applying this strategy only to podman for now. See https://github.com/nextflow-io/nextflow/issues/1710
-        builder.addMountWorkDir( engine!='podman' || changeDir )
+        // See https://github.com/nextflow-io/nextflow/issues/1710
+        builder.addMountWorkDir( changeDir as boolean )
 
         builder.build()
         return builder

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -154,11 +154,6 @@ class TaskProcessor {
     protected BaseScript ownerScript
 
     /**
-     * Gpars thread pool
-     */
-    protected PGroup group = Dataflow.retrieveCurrentDFPGroup()
-
-    /**
      * The processor descriptive name
      */
     protected String name
@@ -289,7 +284,7 @@ class TaskProcessor {
         this.config = config
         this.taskBody = taskBody
         this.name = name
-        this.maxForks = config.maxForks as Integer ?: 0
+        this.maxForks = config.maxForks ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
     }
 
@@ -466,6 +461,12 @@ class TaskProcessor {
             }
         }
 
+        /**
+         * The thread pool used by GPars. The thread pool to be used is set in the static
+         * initializer of {@link nextflow.cli.CmdRun} class. See also {@link nextflow.util.CustomPoolFactory}
+         */
+        final PGroup group = Dataflow.retrieveCurrentDFPGroup()
+
         /*
          * When one (or more) {@code each} are declared as input, it is created an extra
          * operator which will receive the inputs from the channel (excepts the values over iterate)
@@ -508,15 +509,6 @@ class TaskProcessor {
             opInputs.add( config.getInputs().getChannels().last() )
         }
 
-
-        /*
-         * define the max forks attribute:
-         * - by default the process execution is parallel using the poolSize value
-         * - otherwise use the value defined by the user via 'taskConfig'
-         */
-        final maxForks = maxForks ?: session.poolSize
-        log.trace "Creating operator > $name -- maxForks: $maxForks"
-
         /*
          * finally create the operator
          */
@@ -526,7 +518,7 @@ class TaskProcessor {
         this.openPorts = createPortsArray(opInputs.size())
         config.getOutputs().setSingleton(singleton)
         def interceptor = new TaskProcessorInterceptor(opInputs, singleton)
-        def params = [inputs: opInputs, maxForks: maxForks, listeners: [interceptor] ]
+        def params = [inputs: opInputs, maxForks: session.poolSize, listeners: [interceptor] ]
         def invoke = new InvokeTaskAdapter(this, opInputs.size())
         session.allOperators << (operator = new DataflowOperator(group, params, invoke))
 
@@ -831,14 +823,13 @@ class TaskProcessor {
 
 
         try {
-            final exit = task.config.getValidExitStatus()[0]
             // -- expose task exit status to make accessible as output value
-            task.config.exitStatus = exit
+            task.config.exitStatus = TaskConfig.EXIT_ZERO
             // -- check if all output resources are available
             collectOutputs(task)
             log.info "[skipping] Stored process > ${task.name}"
             // set the exit code in to the task object
-            task.exitStatus = exit
+            task.exitStatus = TaskConfig.EXIT_ZERO
             task.cached = true
             session.notifyTaskCached(new StoredTaskHandler(task))
 
@@ -979,8 +970,8 @@ class TaskProcessor {
             if( error instanceof Error ) throw error
 
             // -- retry without increasing the error counts
-            if( task && (error instanceof NodeTerminationException || error.cause instanceof CloudSpotTerminationException) ) {
-                if( error instanceof NodeTerminationException )
+            if( task && (error.cause instanceof NodeTerminationException || error.cause instanceof CloudSpotTerminationException) ) {
+                if( error.cause instanceof NodeTerminationException )
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
                 else
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
@@ -1268,8 +1259,12 @@ class TaskProcessor {
                 result += " -- Check script '${details[0]}' at line: ${details[1]}"
             return result
         }
-
-        return fail.message ?: fail.toString()
+        def result = fail.message ?: fail.toString()
+        def details = LoggerHelper.findErrorLine(fail)
+        if( details ){
+            result += " -- Check script '${details[0]}' at line: ${details[1]}"
+        }
+        return result
     }
 
     /**
@@ -1386,8 +1381,8 @@ class TaskProcessor {
                 throw new IllegalStateException("Unknown bind output parameter type: ${param}")
         }
 
-        // -- finally prints out the task output when 'echo' is true
-        if( task.config.echo ) {
+        // -- finally prints out the task output when 'debug' is true
+        if( task.config.debug ) {
             task.echoStdout(session)
         }
     }
@@ -1638,7 +1633,7 @@ class TaskProcessor {
     @Memoized
     Map<String,String> getProcessEnvironment() {
 
-        def result = [:]
+        def result = new LinkedHashMap<String,String>(20)
 
         // add the taskConfig environment entries
         if( session.config.env instanceof Map ) {
@@ -1954,7 +1949,7 @@ class TaskProcessor {
             task.setInput(param, resolved)
         }
 
-        // -- set the delegate map as context ih the task config
+        // -- set the delegate map as context in the task config
         //    so that lazy directives will be resolved against it
         task.config.context = ctx
 

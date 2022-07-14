@@ -4,7 +4,6 @@
 Nextflow scripting
 ******************
 
-
 The Nextflow scripting language is an extension of the Groovy programming language.
 Groovy is a powerful programming language for the Java virtual machine. The Nextflow
 syntax has been specialized to ease the writing of computational pipelines in a declarative manner.
@@ -17,15 +16,13 @@ For a detailed description of the Groovy programming language, reference these l
 * `Groovy Cheat sheet <http://www.cheat-sheets.org/saved-copy/rc015-groovy_online.pdf>`_
 * `Groovy in Action <http://www.manning.com/koenig2/>`_
 
-
 Below you can find a crash course in the most important language constructs used in the Nextflow scripting language.
 
-.. warning:: Nextflow uses ``UTF-8`` as the default file character encoding for source and application files. Make sure
-  to use the ``UTF-8`` encoding when editing Nextflow scripts with your favourite text editor.
+.. warning:: Nextflow uses UTF-8 as the default character encoding for source files. Make sure
+  to use UTF-8 encoding when editing Nextflow scripts with your preferred text editor.
 
 Language basics
 ==================
-
 
 Hello world
 ------------
@@ -75,7 +72,6 @@ In order to get the length of the list use the ``size`` method::
 
     println myList.size()
 
-
 Learn more about lists:
 
 * `Groovy Lists tutorial <http://groovy-lang.org/groovy-dev-kit.html#Collections-Lists>`_
@@ -90,7 +86,6 @@ Maps are used to store `associative arrays` or `dictionaries`. They are unordere
 
     scores = [ "Brett":100, "Pete":"Did not finish", "Andrew":86.87934 ]
 
-
 Note that each of the values stored in the map can be of a different type. ``Brett`` is an integer, ``Pete`` is a string,
 and ``Andrew`` is a floating-point number.
 
@@ -99,12 +94,10 @@ We can access the values in a map in two main ways::
     println scores["Pete"]
     println scores.Pete
 
-
 To add data to or modify a map, the syntax is similar to adding values to list::
 
     scores["Pete"] = 3
     scores["Cedric"] = 120
-
 
 Learn more about maps:
 
@@ -143,7 +136,6 @@ different conditions. The simplest way to do this is to use the ``if`` construct
     }
 
 
-
 Strings
 -------
 
@@ -151,7 +143,6 @@ Strings can be defined by enclosing text in single or double quotes (``'`` or ``
 
     println "he said 'cheese' once"
     println 'he said "cheese!" again'
-
 
 Strings can be concatenated with ``+``::
 
@@ -196,21 +187,22 @@ A block of text that span multiple lines can be defined by delimiting it with tr
 .. note:: Like before, multi-line strings inside double quotes support variable interpolation, while
    single-quoted multi-line strings do not.
 
-
 As in Bash/shell scripts, terminating a line in a multi-line string with a ``\`` character prevents a
 a `new line` character from separating that line from the one that follows::
 
-    myLongCmdline = """ blastp \
-                    -in $input_query \
-                    -out $output_file \
-                    -db $blast_database \
-                    -html
-                    """
+    myLongCmdline = """
+        blastp \
+        -in $input_query \
+        -out $output_file \
+        -db $blast_database \
+        -html
+        """
 
     result = myLongCmdline.execute().text
 
 In the preceding example, ``blastp`` and its ``-in``, ``-out``, ``-db`` and ``-html`` switches and
 their arguments are effectively a single line.
+
 
 .. _implicit-variables:
 
@@ -253,8 +245,21 @@ Name            Description
 Process implicit variables
 --------------------------
 
-In the process definition scope it's available the ``task`` implicit variable which allow accessing
-the current task configuration directives. For examples::
+The following variables are implicitly defined in the ``task`` object of each process:
+
+=============== ========================
+Name            Description
+=============== ========================
+``attempt``     The current task attempt
+``hash``        The task unique hash Id
+``index``       The task index (corresponds to ``task_id`` in the execution trace)
+``name``        The current task name
+``process``     The current process name
+``workDir``     The task unique directory. NOTE: This is only available for processes that run native code via the ``exec:`` statement. 
+=============== ========================
+
+The ``task`` object also contains the values of all process directives for the given task,
+which allows you to access these settings at runtime. For examples::
 
     process foo {
       script:
@@ -262,7 +267,6 @@ the current task configuration directives. For examples::
       some_tool --cpus $task.cpus --mem $task.memory
       """
     }
-
 
 In the above snippet the ``task.cpus`` report the value for the :ref:`cpus directive<process-cpus>` and
 the ``task.memory`` the current value for :ref:`memory directive<process-memory>` depending on the actual
@@ -285,7 +289,6 @@ More formally, you can create functions that are defined as `first class objects
 
     square = { it * it }
 
-
 The curly brackets around the expression ``it * it`` tells the script interpreter to treat this expression as code.
 The `it` identifier is an implicit variable that represents the value that is passed to the function when it is invoked.
 
@@ -296,12 +299,10 @@ Now we can do something like this::
 
 and get the value 81.
 
-
 This is not very interesting until we find that we can pass the function ``square`` as an argument to other functions or methods.
 Some built-in functions take a function like this as an argument. One example is the ``collect`` method on lists::
 
     [ 1, 2, 3, 4 ].collect(square)
-
 
 This expression says: Create an array with the values 1, 2, 3 and 4, then call its ``collect`` method, passing in the
 closure we defined above. The ``collect`` method runs through each item in the array, calls the closure on the item,
@@ -309,14 +310,11 @@ then puts the result in a new array, resulting in::
 
     [ 1, 4, 9, 16 ]
 
-
 For more methods that you can call with closures as arguments, see the `Groovy GDK documentation <http://docs.groovy-lang.org/latest/html/groovy-jdk/>`_.
-
 
 By default, closures take a single parameter called ``it``, but you can also create closures with multiple, custom-named parameters.
 For example, the method ``Map.each()`` can take a closure with two arguments, to which it binds the `key` and the associated `value`
 for each key-value pair in the ``Map``. Here, we use the obvious variable names ``key`` and ``value`` in our closure::
-
 
     printMapClosure = { key, value ->
         println "$key = $value"
@@ -324,9 +322,7 @@ for each key-value pair in the ``Map``. Here, we use the obvious variable names 
 
     [ "Yue" : "Wu", "Mark" : "Williams", "Sudha" : "Kumari" ].each(printMapClosure)
 
-
 Prints::
-
 
     Yue = Wu
     Mark = Williams
@@ -347,7 +343,6 @@ As an example showing both these features, see the following code fragment::
 
     println result
 
-
 Learn more about closures in the `Groovy documentation <http://groovy-lang.org/closures.html>`_
 
 .. _script-regexp:
@@ -365,13 +360,11 @@ Use ``=~`` to check whether a given pattern occurs anywhere in a string::
     assert 'foo' =~ /foo/       // return TRUE
     assert 'foobar' =~ /foo/    // return TRUE
 
-
 Use ``==~`` to check whether a string matches a given regular expression pattern exactly.
 ::
 
     assert 'foo' ==~ /foo/       // return TRUE
     assert 'foobar' ==~ /foo/    // return FALSE
-
 
 It is worth noting that the ``~`` operator creates a Java ``Pattern`` object from the given string,
 while the ``=~`` operator creates a Java ``Matcher`` object.
@@ -384,7 +377,6 @@ while the ``=~`` operator creates a Java ``Matcher`` object.
     y = 'some string' =~ /abc/
     println y.class
     // prints java.util.regex.Matcher
-
 
 Regular expression support is imported from Java. Java's regular expression language and API is documented in the
 `Pattern Java documentation <http://download.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html>`_.
@@ -406,7 +398,6 @@ To replace pattern occurrences in a given string, use the ``replaceFirst`` and `
      // prints: nicenice
 
 
-
 Capturing groups
 ----------------
 
@@ -425,8 +416,6 @@ Here's how it works::
     assert m[0][2] == '7'
     assert m[0][3] == '3'
     assert m[0][4] == 'beta'
-
-
 
 Applying some syntactic sugar, you can do the same in just one line of code::
 
@@ -453,16 +442,13 @@ replaced with an empty String::
     ('Hello Groovy world!' - wordStartsWithGr) == 'Hello world!'
     ('Hi Grails users' - wordStartsWithGr) == 'Hi users'
 
-
 Remove the first 5-character word from a string::
 
     assert ('Remove first match of 5 letter word' - ~/\b\w{5}\b/) == 'Remove  match of 5 letter word'
 
-
 Remove the first number with its trailing whitespace from a string::
 
     assert ('Line contains 20 characters' - ~/\d+\s+/) == 'Line contains characters'
-
 
 
 .. _script-file-io:
@@ -475,7 +461,6 @@ given a file path string::
 
   myFile = file('some/path/to/my_file.file')
 
-
 The ``file`` method can reference either `files` or `directories`, depending on what the string path refers to in the
 file system.
 
@@ -485,8 +470,8 @@ empty list if no match is found::
 
   listOfFiles = file('some/path/*.fa')
 
-.. note:: Two asterisks (``**``) in a glob pattern works like ``*`` but matches any number of directory components in a
-          file system path.
+.. note::
+    Two asterisks (``**``) in a glob pattern works like ``*`` but also searches through subdirectories.
 
 By default, wildcard characters do not match directories or hidden files. For example, if you want to include hidden
 files in the result list, add the optional parameter ``hidden``::
@@ -506,14 +491,15 @@ followLinks     When ``true`` follows symbolic links during directory tree trave
 checkIfExists   When ``true`` throws an exception of the specified path do not exist in the file system (default: ``false``)
 =============== ===================
 
-
-.. tip:: If you are a Java geek you will be interested to know that the ``file`` method returns a
+.. tip::
+  If you are a Java geek, you might be interested to know that the ``file`` method returns a
   `Path <http://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html>`_ object, which allows
-  you to use the usual methods you would in a Java program.
+  you to use the same methods you would use in a Java program.
 
 See also: :ref:`Channel.fromPath <channel-path>`.
 
 .. _glob: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
+
 
 Basic read/write
 ------------------
@@ -524,14 +510,12 @@ as a string value::
 
   print myFile.text
 
-
 Similarly, you can save a string value to a file by simply assigning it to the file's ``text`` property::
 
   myFile.text = 'Hello world!'
 
-
-.. note:: Existing file content is overwritten by the assignment operation, which also implicitly creates
-          files that do not exist.
+.. note::
+    The above assignment overwrites any existing file contents, and implicitly creates the file if it doesn't exist.
 
 In order to append a string value to a file without erasing existing content, you can use the ``append`` method::
 
@@ -540,7 +524,6 @@ In order to append a string value to a file without erasing existing content, yo
 Or use the `left shift` operator, a more idiomatic way to append text content to a file::
 
   myFile << 'Add a line more\n'
-
 
 Binary data can managed in the same way, just using the file property ``bytes`` instead of ``text``. Thus, the following
 example reads the file and returns its content as a byte array::
@@ -551,10 +534,10 @@ Or you can save a byte array data buffer to a file, by simply writing::
 
   myFile.bytes = binaryBuffer
 
-
-.. warning:: The above methods read and write ALL the file content at once, in a single variable or buffer. For this
-  reason they are not suggested when dealing with big files, which require a more memory efficient approach, for example
-  reading a file line by line or by using a fixed size buffer.
+.. warning::
+  The above methods read and write the **entire** file contents at once, in a single variable or buffer. For this
+  reason, when dealing with large files it is recommended that you use a more memory efficient approach, such as
+  reading/writing a file line by line or using a fixed size buffer.
 
 
 Read a file line by line
@@ -564,11 +547,10 @@ In order to read a text file line by line you can use the method ``readLines()``
 returns the file content as a list of strings::
 
     myFile = file('some/my_file.txt')
-    allLines  = myFile.readLines()
+    allLines = myFile.readLines()
     for( line : allLines ) {
         println line
     }
-
 
 This can also be written in a more idiomatic syntax::
 
@@ -576,25 +558,22 @@ This can also be written in a more idiomatic syntax::
         .readLines()
         .each { println it }
 
-
-.. note:: The method ``readLines()`` reads all the file content at once and returns a list containing all the lines. For
-  this reason, do not use it to read big files.
-
+.. warning::
+    The method ``readLines()`` reads the **entire** file at once and returns a list containing all the lines. For
+    this reason, do not use it to read big files.
 
 To process a big file, use the method ``eachLine``, which reads only a single line at a time into memory::
 
     count = 0
-    myFile.eachLine {  str ->
-            println "line ${count++}: $str"
-        }
-
+    myFile.eachLine { str ->
+        println "line ${count++}: $str"
+    }
 
 
 Advanced file reading operations
------------------------------------
+--------------------------------
 
 The classes ``Reader`` and ``InputStream`` provide fine control for reading text and binary files, respectively._
-
 
 The method ``newReader`` creates a `Reader <http://docs.oracle.com/javase/7/docs/api/java/io/Reader.html>`_ object
 for the given file that allows you to read the content as single characters, lines or arrays of characters::
@@ -605,7 +584,6 @@ for the given file that allows you to read the content as single characters, lin
         println line
     }
     myReader.close()
-
 
 The method ``withReader`` works similarly, but automatically calls the ``close`` method for you when you have finished
 processing the file. So, the previous example can be written more simply as::
@@ -637,14 +615,13 @@ newReader       Returns a `Reader <http://docs.oracle.com/javase/7/docs/api/java
 newInputStream  Returns an `InputStream <http://docs.oracle.com/javase/7/docs/api/java/io/InputStream.html>`_ object to read a binary file
 =============== ==============
 
-
 Read the Java documentation for `Reader <http://docs.oracle.com/javase/7/docs/api/java/io/Reader.html>`_ and
 `InputStream <http://docs.oracle.com/javase/7/docs/api/java/io/InputStream.html>`_ classes to learn more about
 methods available for reading data from files.
 
 
 Advanced file writing operations
-----------------------------------
+--------------------------------
 
 The ``Writer`` and ``OutputStream`` classes provide fine control for writing text and binary files,
 respectively, including low-level operations for single characters or bytes, and support for big files.
@@ -660,7 +637,6 @@ first file's content into the second file, replacing all ``U`` characters with `
             }
         }
     }
-
 
 Here are the most important methods for writing to files:
 
@@ -701,9 +677,9 @@ which return a collection of first-level elements (files and directories) of a d
         println file
     }
 
-.. note:: The only difference between ``list`` and ``listFiles`` is that the former returns a list of strings, and the latter a
-   list of file objects that allow you to access file metadata, e.g. size, last modified time, etc.
-
+.. note::
+    The only difference between ``list`` and ``listFiles`` is that the former returns a list of strings, and the latter
+    returns a list of file objects that allow you to access file metadata (size, last modified time, etc).
 
 The ``eachFile`` method allows you to iterate through the first-level elements only
 (just like ``listFiles``). As with other `each-` methods, ``eachFiles`` takes a closure as a parameter::
@@ -716,7 +692,6 @@ The ``eachFile`` method allows you to iterate through the first-level elements o
             println "${item.getName()} - DIR"
         }
     }
-
 
 Several variants of the above method are available. See the table below for a complete list.
 
@@ -731,7 +706,6 @@ eachFileRecurse     Iterates through directory elements depth-first. `Read more 
 eachDirRecurse      Iterates through directories depth-first (regular files are ignored). `Read more <http://docs.groovy-lang.org/latest/html/groovy-jdk/java/io/File.html#eachDirRecurse(groovy.lang.Closure)>`_
 =================== ==================
 
-
 See also: Channel :ref:`channel-path` method.
 
 
@@ -740,13 +714,13 @@ Create directories
 
 Given a file variable representing a nonexistent directory, like the following::
 
-  myDir = file('any/path')
+    myDir = file('any/path')
 
 the method ``mkdir`` creates a directory at the given path, returning ``true`` if the directory is created
 successfully, and ``false`` otherwise::
 
-   result = myDir.mkdir()
-   println result ? "OK" : "Cannot create directory: $myDir"
+    result = myDir.mkdir()
+    println result ? "OK" : "Cannot create directory: $myDir"
 
 .. note:: If the parent directories do not exist, the above method will fail and return ``false``.
 
@@ -762,7 +736,6 @@ Given a file, the method ``mklink`` creates a *file system link* for that file u
 
   myFile = file('/some/path/file.txt')
   myFile.mklink('/user/name/link-to-file.txt')
-
 
 Table of optional parameters:
 
@@ -782,26 +755,24 @@ directory::
 
   myFile.copyTo('new_name.txt')
 
-
-.. note:: If the target file already exists, it will be replaced by the new one. Note also that, if the target is
-  a directory, the source file will be copied into that directory, maintaining the file's original name.
-
+.. note::
+    If the target file already exists, it will be replaced by the new one. Note also that, if the target is
+    a directory, the source file will be copied into that directory, maintaining the file's original name.
 
 When the source file is a directory, all its content is copied to the target directory::
 
   myDir = file('/some/path')
   myDir.copyTo('/some/new/path')
 
+If the target path does not exist, it will be created automatically.
 
-  If the target path does not exist, it will be created automatically.
-
-.. tip:: The ``copyTo`` method mimics the semantics of the Linux command ``cp -r <source> <target>``, with the
-         following caveat: While Linux tools often treat paths ending with a slash (e.g. ``/some/path/name/``)
-         as directories, and those not (e.g. ``/some/path/name``) as regular files, Nextflow (due to its use of
-         the Java files API) views both these paths as the same file system object. If the path exists, it is
-         handled according to its actual type (i.e. as a regular file or as a directory). If the path does not
-         exist, it is treated as a regular file, with any missing parent directories created automatically.
-
+.. note::
+    The ``copyTo`` method mimics the semantics of the Linux command ``cp -r <source> <target>``, with the
+    following caveat: while Linux tools often treat paths ending with a slash (e.g. ``/some/path/name/``)
+    as directories, and those not (e.g. ``/some/path/name``) as regular files, Nextflow (due to its use of
+    the Java files API) views both these paths as the same file system object. If the path exists, it is
+    handled according to its actual type (i.e. as a regular file or as a directory). If the path does not
+    exist, it is treated as a regular file, with any missing parent directories created automatically.
 
 
 Move files
@@ -812,16 +783,15 @@ You can move a file by using the method ``moveTo``::
   myFile = file('/some/path/file.txt')
   myFile.moveTo('/another/path/new_file.txt')
 
-
-.. note:: When a file with the same name as the target already exists, it will be replaced by the source. Note
-          also that, when the target is a directory, the file will be moved to (or within) that directory,
-          maintaining the file's original name.
+.. note::
+    When a file with the same name as the target already exists, it will be replaced by the source. Note
+    also that, when the target is a directory, the file will be moved to (or within) that directory,
+    maintaining the file's original name.
 
 When the source is a directory, all the directory content is moved to the target directory::
 
   myDir = file('/any/dir_a')
   myDir.moveTo('/any/dir_b')
-
 
 Please note that the result of the above example depends on the existence of the target directory. If the target
 directory exists, the source is moved into the target directory, resulting in the path::
@@ -832,9 +802,9 @@ If the target directory does not exist, the source is just renamed to the target
 
   /any/dir_b
 
-
-.. tip:: The ``moveTo`` method mimics the semantics of the Linux command ``mv <source> <target>``, with the
-         same caveat as that given for ``copyTo``, above.
+.. note::
+    The ``moveTo`` method mimics the semantics of the Linux command ``mv <source> <target>``, with the
+    same caveat as that given above for ``copyTo``.
 
 
 Rename files
@@ -856,10 +826,10 @@ operation succeeds, and ``false`` otherwise::
   result = myFile.delete()
   println result ? "OK" : "Cannot delete: $myFile"
 
-
-.. note:: This method deletes a directory ONLY if it does not contain any files or sub-directories. To
-          delete a directory and ALL its content (i.e. removing all the files and sub-directories it may
-          contain), use the method ``deleteDir``.
+.. note::
+    This method deletes a directory **only** if it does not contain any files or sub-directories. To
+    delete a directory and **all** its contents (i.e. removing all the files and sub-directories it may
+    contain), use the method ``deleteDir``.
 
 
 Check file attributes
@@ -884,15 +854,14 @@ isHidden            Returns ``true`` if the file is hidden
 lastModified        Returns the file last modified timestamp i.e. a long as Linux epoch time
 ==================  ================
 
-
 For example, the following line prints a file name and size::
 
   println "File ${myFile.getName() size: ${myFile.size()}"
 
-
-.. tip:: The invocation of any method name starting with the ``get`` prefix can be shortcut
-    omitting the `get` prefix and ending ``()`` parentheses. Therefore writing ``myFile.getName()``
-    is exactly the same of ``myFile.name`` and ``myFile.getBaseName()`` is the same of ``myFile.baseName``
+.. tip::
+    The invocation of any method name starting with the ``get`` prefix can be shortcut by
+    omitting the ``get`` prefix and ``()`` parentheses. Therefore, writing ``myFile.getName()``
+    is exactly the same as ``myFile.name`` and ``myFile.getBaseName()`` is the same as ``myFile.baseName``
     and so on.
 
 
@@ -906,25 +875,23 @@ e.g. ``rw-rw-r--``::
 
     permissions = myFile.getPermissions()
 
-
 Similarly, the method ``setPermissions`` sets the file's permissions using the same notation::
 
     myFile.setPermissions('rwxr-xr-x')
-
 
 A second version of the ``setPermissions`` method sets a file's permissions given three digits representing,
 respectively, the `owner`, `group` and `other` permissions::
 
     myFile.setPermissions(7,5,5)
 
-
 Learn more about `File permissions numeric notation <http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation>`_.
+
 
 HTTP/FTP files
 --------------
 
 Nextflow provides transparent integration of HTTP/S and FTP protocols for handling remote resources
-as local file system objects. Simply specify the resource URL as the argument of the `file` object::
+as local file system objects. Simply specify the resource URL as the argument of the ``file`` object::
 
     pdb = file('http://files.rcsb.org/header/5FID.pdb')
 
@@ -950,9 +917,9 @@ The ``countLines`` methods counts the lines in a text files.
     def sample = file('/data/sample.txt')
     println sample.countLines()
 
-
 Files whose name ends with the ``.gz`` suffix are expected to be GZIP compressed and
 automatically uncompressed.
+
 
 countFasta
 ^^^^^^^^^^
@@ -967,6 +934,7 @@ formatted file.
 Files whose name ends with the ``.gz`` suffix are expected to be GZIP compressed and
 automatically uncompressed.
 
+
 countFastq
 ^^^^^^^^^^
 
@@ -979,5 +947,3 @@ formatted file.
 
 Files whose name ends with the ``.gz`` suffix are expected to be GZIP compressed and
 automatically uncompressed.
-
-

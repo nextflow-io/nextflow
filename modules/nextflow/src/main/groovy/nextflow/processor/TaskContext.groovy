@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -315,7 +315,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
             return path
 
         // make from the module dir
-        def module = NF.isDsl2Final() ? ScriptMeta.get(this.script)?.getModuleDir() : null
+        def module = NF.isDsl2() ? ScriptMeta.get(this.script)?.getModuleDir() : null
         if( module ) {
             def target = module.resolve('templates').resolve(path)
             if (Files.exists(target))

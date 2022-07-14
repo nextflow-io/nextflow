@@ -1,8 +1,7 @@
 #!/usr/bin/env nextflow
-nextflow.enable.dsl=2
 
 process foo {
-  echo true
+  debug true
   tag "$x"
 
   input:

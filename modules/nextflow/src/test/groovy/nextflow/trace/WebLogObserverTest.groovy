@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2018, University of Tübingen, Quantitative Biology Center (QBiC)
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
@@ -77,11 +77,11 @@ class WebLogObserverTest extends Specification {
         given:
         def observer = Spy(WebLogObserver)
         def CLIENT = Mock(SimpleHttpClient)
-        observer.endpoint = 'http://foo.com'
-        observer.httpClient = CLIENT
-        observer.runName = 'foo'
-        observer.runId = 'xyz'
-        observer.generator = new JsonGenerator.Options().build()
+        observer.@endpoint = 'http://foo.com'
+        observer.@httpClient = CLIENT
+        observer.@runName = 'foo'
+        observer.@runId = 'xyz'
+        observer.@generator = new JsonGenerator.Options().build()
         def TRACE = new TraceRecord([hash: '4a4a4a', process: 'bar'])
 
         when:

@@ -80,7 +80,24 @@ For example::
 		}
 	}
 
-The directory specified in `mountPath` is where the task can access to the files available in the File share.
+The files in the File share are available to the task in the directory:
+`<YOUR MOUNT DESTINATION>/<YOUR SOURCE FILE SHARE NAME>`.
+
+For instance, given the following configuration::
+
+	azure {
+		storage {
+			...
+			fileShares {
+				dir1 {
+					mountPath = "/mnt/mydata/"
+				}
+			}
+		}
+	}
+
+
+The task can access to the File share in `/mnt/mydata/dir1`.
 
 .. _azure-batch:
 
@@ -96,25 +113,19 @@ offloading the process executions as Batch jobs.
 Get started
 -------------
 
-1 - Create a Batch account in Azure portal. Take note of the account name and key.
+1. Create a Batch account in Azure portal. Take note of the account name and key.
 
-2 - Make sure to adjust your quotas on the pipeline's needs. There are limits on certain resources associated with the
-Batch account. Many of these limits are default quotas applied by Azure at the subscription or account level.
-Quotas impact on the number of Pools, CPUs and Jobs you can create at any given time.
+2. Make sure to adjust your quotas on the pipeline's needs. There are limits on certain resources associated with the Batch account. Many of these limits are default quotas applied by Azure at the subscription or account level. Quotas impact on the number of Pools, CPUs and Jobs you can create at any given time.
 
-3 - Create a Storage account and, within, an Azure Blob Container in the same location where the Batch account was created.
-Take note of the account name and key.
+3. Create a Storage account and, within, an Azure Blob Container in the same location where the Batch account was created. Take note of the account name and key.
 
-4 - If planning to use Azure files, create an Azure File share within the same Storage account and upload there
-the data to mount on the pool nodes.
+4. If planning to use Azure files, create an Azure File share within the same Storage account and upload there the data to mount on the pool nodes.
 
-5 - Associate the Storage account with the Azure Batch account.
+5. Associate the Storage account with the Azure Batch account.
 
-6 - Make sure your pipeline processes specify one or more Docker containers by using the :ref:`process-container` directive.
+6. Make sure your pipeline processes specify one or more Docker containers by using the :ref:`process-container` directive.
 
-7 - The container images need to be published into Docker registry such as `Docker Hub <https://hub.docker.com/>`_,
-`Quay <https://quay.io/>`_ or `Azure Container Registry <https://docs.microsoft.com/en-us/azure/container-registry/>`_
-that can be reached by Azure Batch environment.
+7. The container images need to be published into Docker registry such as `Docker Hub <https://hub.docker.com/>`_, `Quay <https://quay.io/>`_ or `Azure Container Registry <https://docs.microsoft.com/en-us/azure/container-registry/>`_ that can be reached by Azure Batch environment.
 
 
 A minimal configuration looks like the following snippet::
@@ -136,8 +147,13 @@ A minimal configuration looks like the following snippet::
       }
     }
 
-In the above example, replace the location and the account placeholders with the value corresponding to your configuration and
-save it to a file named ``nextflow.config``.
+In the above example, replace the location placeholder with the name of your Azure region and the account placeholders with the values
+corresponding to your configuration . Then save it to a file named ``nextflow.config``.
+
+.. tip:: The list of Azure regions can be found by executing the following Azure CLI command::
+
+    az account list-locations -o table
+
 
 Given the previous configuration, launch the execution of the pipeline using the following command::
 
@@ -229,10 +245,9 @@ Requirements on pre-existing named pools
 When Nextflow is configured to use a pool already available in the Batch account, the target pool must satisfy the following
 requirements:
 
-1 - the pool must be declared as ``dockerCompatible`` (``Container Type`` property)
+1. the pool must be declared as ``dockerCompatible`` (``Container Type`` property)
 
-2 - the task slots per node must match with the number of cores for the selected VM. Nextflow would return an error like
-"Azure Batch pool 'ID' slots per node does not match the VM num cores (slots: N, cores: Y)".
+2. the task slots per node must match with the number of cores for the selected VM. Nextflow would return an error like "Azure Batch pool 'ID' slots per node does not match the VM num cores (slots: N, cores: Y)".
 
 Pool autoscaling
 ----------------
@@ -295,17 +310,19 @@ Below the configurations for image reference/SKU combinations to select two popu
 
 * Ubuntu 20.04::
 
-	sku = "batch.node.ubuntu 20.04"
-	offer = "ubuntu-server-container"
-	publisher = "microsoft-azure-batch"
+	azure.batch.pools.<name>.sku = "batch.node.ubuntu 20.04"
+	azure.batch.pools.<name>.offer = "ubuntu-server-container"
+	azure.batch.pools.<name>.publisher = "microsoft-azure-batch"
 
 * CentOS 8 (default)::
 
-	sku = "batch.node.centos 8"
-	offer = "centos-container"
-	publisher = "microsoft-azure-batch"
+	azure.batch.pools.<name>.sku = "batch.node.centos 8"
+	azure.batch.pools.<name>.offer = "centos-container"
+	azure.batch.pools.<name>.publisher = "microsoft-azure-batch"
 
-See the `Advanced settings`_ below and `Azure Batch nodes <https://docs.microsoft.com/en-us/azure/batch/batch-linux-nodes>` documentation for more details.
+In the above snippet replace ``<name>`` with the name of your Azure node pool.
+
+See the `Advanced settings`_ below and `Azure Batch nodes <https://docs.microsoft.com/en-us/azure/batch/batch-linux-nodes>`_ documentation for more details.
 
 Private container registry
 --------------------------
@@ -343,7 +360,7 @@ azure.storage.tokenDuration                     The duration of the shared acces
 azure.batch.accountName                         The batch service account name.
 azure.batch.accountKey                          The batch service account key.
 azure.batch.endpoint                            The batch service endpoint e.g. ``https://nfbatch1.westeurope.batch.azure.com``.
-azure.batch.location                            The batch service location e.g. ``westeurope``. This is not needed when the endpoint is specified.
+azure.batch.location                            The name of the batch service region, e.g. ``westeurope`` or ``eastus2``. This is not needed when the endpoint is specified.
 azure.batch.autoPoolMode                        Enable the automatic creation of batch pools depending on the pipeline resources demand (default: ``true``).
 azure.batch.allowPoolCreation                   Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: ``false``).
 azure.batch.deleteJobsOnCompletion              Enable the automatic deletion of jobs created by the pipeline execution (default: ``true``).
@@ -362,7 +379,7 @@ azure.batch.pools.<name>.scaleInterval          Specify the interval at which to
 azure.batch.pools.<name>.schedulePolicy         Specify the scheduling policy for the pool identified with ``<name>``. It can be either ``spread`` or ``pack`` (default: ``spread``).
 azure.batch.pools.<name>.privileged             Enable the task to run with elevated access. Ignored if `runAs` is set (default: ``false``).
 azure.batch.pools.<name>.runAs                  Specify the username under which the task is run. The user must already exist on each node of the pool.
-azure.batch.registry.server                     Specify the container registry from which to pull the Docker images (default: ``docker.io``, requires ``nf-azure@0.9.8``).
-azure.batch.registry.userName                   Specify the username to connect to a private container registry (requires ``nf-azure@0.9.8``).
-azure.batch.registry.password                   Specify the password to connect to a private container registry (requires ``nf-azure@0.9.8``).
+azure.registry.server                           Specify the container registry from which to pull the Docker images (default: ``docker.io``, requires ``nf-azure@0.9.8``).
+azure.registry.userName                         Specify the username to connect to a private container registry (requires ``nf-azure@0.9.8``).
+azure.registry.password                         Specify the password to connect to a private container registry (requires ``nf-azure@0.9.8``).
 ============================================== =================

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 
 package nextflow.cli
 
+import nextflow.plugin.Plugins
 import spock.lang.IgnoreIf
 
 import java.nio.file.Files
@@ -27,6 +28,10 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CmdConfigTest extends Specification {
+
+    def cleanup() {
+        Plugins.stop()
+    }
 
     def 'should default notation' () {
 
@@ -228,7 +233,7 @@ class CmdConfigTest extends Specification {
         params {
           alpha = ["${X1}/a", "b", "c"]
           delta = [ X2, 'z' ]
-          gamma = [p: "${X1}/a", q: X2]
+          gamma = [p: "${X1}/a", q: X2, 'r-r': 'X1']
           omega = X3 
         }
         '''
@@ -252,7 +257,7 @@ class CmdConfigTest extends Specification {
         params {
            alpha = ['SOMETHING/a', 'b', 'c']
            delta = [['SOMETHING'], 'z']
-           gamma = [p:'SOMETHING/a', q:['SOMETHING']]
+           gamma = [p:'SOMETHING/a', q:['SOMETHING'], 'r-r':'X1']
            omega = [p:111, q:'bbb']
         }
         '''.stripIndent()
@@ -265,7 +270,7 @@ class CmdConfigTest extends Specification {
         result.X3 == [p:111, q:'bbb']
         result.params.alpha == ['SOMETHING/a', 'b', 'c']
         result.params.delta == [['SOMETHING'], 'z']
-        result.params.gamma == [p:'SOMETHING/a', q:['SOMETHING']]
+        result.params.gamma == [p:'SOMETHING/a', q:['SOMETHING'], 'r-r': 'X1']
         result.params.omega == [p:111, q:'bbb']
 
     }
@@ -292,4 +297,45 @@ class CmdConfigTest extends Specification {
             .stripIndent()
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    def 'should resolve profiles into profiles config' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def CONFIG = folder.resolve('nextflow.config')
+
+        CONFIG.text = '''
+            params {
+               foo = 'baz'
+            }
+            
+            profiles {
+               test {
+                  params {
+                    foo = 'foo'
+                  }
+                  profiles {                      
+                      debug {
+                        cleanup = false
+                      }                    
+                  }
+               }
+            }        
+        '''
+
+        def buffer = new ByteArrayOutputStream()
+        // command definition
+        def cmd = new CmdConfig(showAllProfiles: true)
+        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
+        cmd.stdout = buffer
+        cmd.args = ['.']
+
+        when:
+        cmd.run()
+        def result = new ConfigSlurper().parse(buffer.toString())
+
+        then:
+        result.params.foo == 'baz'
+        result.profiles.test.params.foo == 'foo'
+        result.profiles.debug.cleanup == false
+    }
 }

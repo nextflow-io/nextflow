@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -577,6 +577,9 @@ class TaskPollingMonitor implements TaskMonitor {
     final protected void handleException( TaskHandler handler, Throwable error ) {
         def fault = null
         try {
+            if (evict(handler)) { 
+                handler.decProcessForks()
+            }
             fault = handler.task.processor.resumeOrDie(handler?.task, error)
         }
         finally {

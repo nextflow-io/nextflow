@@ -1,8 +1,8 @@
 .. _plugins-page:
 
-*********
+*******
 Plugins
-*********
+*******
 
 Main concepts
 =============
@@ -24,39 +24,57 @@ Nextflow *default* plugins:
 Configuration
 ==============
 
-Nextflow *defaults* plugins do not require any configuration, they are automatically installed on-demand when
+Nextflow *default* plugins do not require any configuration. They are automatically installed when
 the corresponding feature is requested by a Nextflow pipeline.
 
-To use **non-default** plugins in your pipeline execution it's required to declared them in the Nextflow configuration file
-listing each plugin identifiers as shown below::
+To use **non-default** plugins in your pipeline execution, you must declare them in the Nextflow configuration file,
+listing each plugin as shown below::
 
     plugins {
       id 'nf-hello@0.1.0'
     }
 
+The plugin identifier consists of the plugin name and plugin version separated by a ``@``.
 
-.. note::
-  The plugin identifier is composed by the plugin name, followed by the ``@`` separator and finally the plugin version.
-
-Alternatively, plugins can be required using the command line option ``-plugins`` e.g.::
+Alternatively, plugins can be required using the ``-plugins`` command line option::
 
     nextflow run <PIPELINE NAME> -plugins nf-hello@0.1.0
 
-
-.. note::
-  When using the ``-plugins`` CLI option any plugin declaration in the Nextflow config file is ignored.
-  Multiple plugin Ids can be specified separating them with a comma character.
+Multiple plugins can be specified by separating them with a comma.
+When specifiying plugins via the command line, any plugin declarations in the Nextflow config file are ignored.
 
 
 Index
-======
+=====
 
 Nextflow resolves plugins download location through the `Plugins index <https://github.com/nextflow-io/plugins/>`_.
 The index stores for each plugin the available version, the creation date, checksum and the link from where the plugin
 file is downloaded.
 
 To add a new plugin to the Index, create a pull request including the request plugin metadata.
+The `nf-hello <https://github.com/nextflow-io/nf-hello>`_ repository provides a minimal code example for
+the implementation of a Nextflow plugin.
 
-.. tip::
-  The `nf-hello plugin <https://github.com/nextflow-io/nf-hello>`_ repository provides an bare minimal code example for
-  the implementation of a Nextflow plugin.
+Import operators from plugin
+============================
+
+As of version `22.04.x`, Nextflow allows the inclusion of extension operators from Nextflow plugins.
+
+For example::
+
+    include { sqlInsert; fromQuery as selectFromTable } from 'plugin/nf-sqldb'
+
+    def sql = "select * from FOO"
+    channel
+        .selectFromTable(sql, db: "test", emitColumns:true)
+        .sqlInsert(into:"BAR", columns:'id', db:"test")
+
+The above snippet includes the operators ``sqlInsert` and ``fromQuery`` from the
+`nf-sqldb <https://github.com/nextflow-io/nf-sqldb>`_ plugin. The latter will be accessible using
+the ``selectFromTable`` alias in the script.
+
+.. note::
+    The prefix ``plugin/`` must precede the plugin name in the include ``from`` statement.
+
+
+

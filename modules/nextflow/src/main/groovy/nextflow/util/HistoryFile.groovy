@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +23,7 @@ import java.text.DateFormat
 import java.text.SimpleDateFormat
 
 import groovy.transform.EqualsAndHashCode
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
@@ -38,6 +39,9 @@ class HistoryFile extends File {
 
     @Lazy
     public static final HistoryFile DEFAULT = { def f=new HistoryFile(); f.parentFile?.mkdirs(); return f } ()
+
+    @Memoized
+    static final disabled() { System.getenv('NXF_IGNORE_RESUME_HISTORY')=='true' }
 
     private static final DateFormat TIMESTAMP_FMT = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss')
 

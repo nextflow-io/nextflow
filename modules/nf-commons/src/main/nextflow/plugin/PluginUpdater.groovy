@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ class PluginUpdater extends UpdateManager {
 
     private boolean pullOnly
 
-    private DefaultPlugins defaultPlugins = new DefaultPlugins()
+    private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
 
     protected PluginUpdater(CustomPluginManager pluginManager) {
         super(pluginManager)
@@ -243,6 +243,11 @@ class PluginUpdater extends UpdateManager {
         def pluginPath = pluginsStore.resolve("$id-$version")
         if( !FilesEx.exists(pluginPath) ) {
             pluginPath = safeDownload(id, version)
+        }
+
+        // verify the plugin install path contains the expected manifest path
+        if( !FilesEx.exists(pluginPath.resolve('classes/META-INF/MANIFEST.MF')) ) {
+            log.warn("Plugin '${pluginPath.getFileName()}' installation looks corrupted - Delete the following directory and run nextflow again: $pluginPath")
         }
 
         // load the plugin from the file system

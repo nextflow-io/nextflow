@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,10 +42,10 @@ dependencies {
     api 'io.swagger:swagger-annotations:1.5.15'
     api 'com.squareup.okhttp:okhttp:2.7.5'
     api 'com.squareup.okhttp:logging-interceptor:2.7.5'
-    api 'com.google.code.gson:gson:2.8.1'
+    api 'com.google.code.gson:gson:2.9.0'
     api 'joda-time:joda-time:2.9.9'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.codehaus.groovy:groovy:3.0.9"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.9"
+    testImplementation "org.codehaus.groovy:groovy:3.0.10"
+    testImplementation "org.codehaus.groovy:groovy-nio:3.0.10"
 }

@@ -24,7 +24,7 @@ import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
-import nextflow.cloud.google.lifesciences.GoogleLifeSciencesConfig
+import nextflow.cloud.google.GoogleOpts
 import nextflow.cloud.google.lifesciences.GoogleLifeSciencesFileCopyStrategy
 import nextflow.file.FileSystemPathFactory
 /**
@@ -45,10 +45,10 @@ class GsPathFactory extends FileSystemPathFactory {
         if (!session)
             throw new IllegalStateException("Cannot initialize GsPathFactory: missing session")
 
-        final config = GoogleLifeSciencesConfig.fromSession(session)
+        final config = GoogleOpts.fromSession(session)
         final builder = CloudStorageConfiguration.builder()
         if (config.enableRequesterPaysBuckets) {
-            builder.userProject(config.project)
+            builder.userProject(config.getProjectId())
         }
         return builder.build()
     }

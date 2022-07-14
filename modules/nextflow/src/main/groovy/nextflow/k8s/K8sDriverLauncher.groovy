@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,6 +36,8 @@ import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodMountConfig
 import nextflow.k8s.model.PodSpecBuilder
+import nextflow.k8s.model.ResourceType
+import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.scm.ProviderConfig
 import nextflow.util.ConfigHelper
@@ -50,9 +52,29 @@ import org.codehaus.groovy.runtime.MethodClosure
 class K8sDriverLauncher {
 
     /**
+     * Either a Pod or Job
+     */
+    private ResourceType resourceType = ResourceType.Pod
+
+    /**
      * Container image to be used for the Nextflow driver pod
      */
-    private String podImage
+    private String headImage
+
+    /** 
+     * Request CPUs to be used for the Nextflow driver pod
+     */
+    private int headCpus
+
+    /** 
+     * Request memory to be used for the Nextflow driver pod
+     */
+    private String headMemory
+
+    /** 
+     * Pre-script to run before nextflow
+     */
+    private String headPreScript
 
     /**
      * Nextflow execution run name
@@ -77,7 +99,7 @@ class K8sDriverLauncher {
     /**
      * Nextflow resolved config object
      */
-    private Map config
+    private ConfigObject config
 
     /**
      * Name of the config map used to propagate the nextflow
@@ -118,7 +140,7 @@ class K8sDriverLauncher {
         if( background && interactive )
             throw new AbortOperationException("Option -bg conflicts with interactive mode")
         this.config = makeConfig(pipelineName)
-        this.k8sConfig = makeK8sConfig(config)
+        this.k8sConfig = makeK8sConfig(config.toMap())
         this.k8sClient = makeK8sClient(k8sConfig)
         this.k8sConfig.checkStorageAndPaths(k8sClient)
         createK8sConfigMap()
@@ -132,6 +154,7 @@ class K8sDriverLauncher {
             printK8sPodOutput()
         else
             log.debug "Nextflow driver launched in background mode -- pod: $runName"
+        waitPodEnd()
     }
 
     int shutdown() {
@@ -147,28 +170,51 @@ class K8sDriverLauncher {
         return exitCode
     }
 
+    protected void waitPodEnd() {
+        if( background )
+            return
+        final currentState = k8sConfig.useJobResource() ? k8sClient.jobState(runName) : k8sClient.podState(runName)
+        if (currentState && currentState?.running instanceof Map) {
+            final name = runName
+            println "${resourceType} running: $name ... waiting for ${resourceType.lower()} to stop running"
+            try {
+                while( true ) {
+                    sleep 10000
+                    final state = k8sConfig.useJobResource() ? k8sClient.jobState(name) : k8sClient.podState(name)
+                    if ( state && !(state?.running instanceof Map) )  {
+                        println "${resourceType} $name has changed from running state $state"
+                        break
+                    }
+                }
+            }
+            catch( Exception e ) {
+                log.warn "Caught exception waiting for ${resourceType.lower()} to stop running"
+            }
+        }
+    }
+    
     protected boolean isWaitTimedOut(long time) {
         System.currentTimeMillis()-time > 90_000
     }
 
     protected int waitPodTermination() {
-        log.debug "Wait for pod termination name=$runName"
+        log.debug "Wait for ${resourceType.lower()} termination name=$runName"
         final rnd = new Random()
         final time = System.currentTimeMillis()
         Map state = null
         try {
             while( true ) {
                 sleep rnd.nextInt(500)
-                state = k8sClient.podState(runName)
+                state = k8sConfig.useJobResource() ? k8sClient.jobState(runName) : k8sClient.podState(runName)
                 if( state?.terminated instanceof Map  )
                     return state.terminated.exitCode as int
 
                 else if( isWaitTimedOut(time) )
-                    throw new IllegalStateException('Timeout waiting for pod terminated state='+state)
+                    throw new IllegalStateException("Timeout waiting for ${resourceType.lower()} terminated state=$state")
             }
         }
         catch( Exception e ) {
-            log.warn "Unable to fetch pod exit status -- pod=$runName state=$state"
+            log.warn "Unable to fetch ${resourceType.lower()} exit status -- ${resourceType.lower()}=$runName state=$state"
             return 127
         }
     }
@@ -185,16 +231,16 @@ class K8sDriverLauncher {
 
     protected void waitPodStart() {
         final name = runName
-        print "Pod submitted: $name .. waiting to start"
+        print "${resourceType} submitted: $name .. waiting to start"
         while( true ) {
             sleep 1000
-            final state = k8sClient.podState(name)
+            final state = k8sConfig.useJobResource() ? k8sClient.jobState(name) : k8sClient.podState(name)
             if( state && !state.containsKey('waiting')  ) {
                 break
             }
         }
         print "\33[2K\r"
-        println "Pod started: $name"
+        println "${resourceType} started: $name"
     }
 
     /**
@@ -202,7 +248,10 @@ class K8sDriverLauncher {
      * console standard output
      */
     protected void printK8sPodOutput() {
-        k8sClient.podLog(runName, follow:true).eachLine { println it }
+        if ( k8sConfig.useJobResource() )
+            k8sClient.jobLog(runName, follow:true).eachLine { println it }
+        else
+            k8sClient.podLog(runName, follow:true).eachLine { println it }
     }
 
     protected ConfigObject loadConfig( String pipelineName ) {
@@ -214,8 +263,9 @@ class K8sDriverLauncher {
                 .setProfile(cmd.profile)
                 .setCmdRun(cmd)
 
-        if( !interactive && !pipelineName.startsWith('/') ) {
+        if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.runRemoteConfig ) {
             // -- check and parse project remote config
+            Plugins.init()
             final pipelineConfig = new AssetManager(pipelineName, cmd) .getConfigFile()
             builder.setUserConfigFiles(pipelineConfig)
         }
@@ -237,7 +287,7 @@ class K8sDriverLauncher {
      * @param pipelineName Workflow project name
      * @return A {@link Map} modeling the execution configuration settings
      */
-    protected Map makeConfig(String pipelineName) {
+    protected ConfigObject makeConfig(String pipelineName) {
 
         def file = new File(pipelineName)
         if( !interactive && file.exists() ) {
@@ -318,9 +368,8 @@ class K8sDriverLauncher {
         if( !config.libDir )
             config.remove('libDir')
 
-        final result = config.toMap()
-        log.trace "K8s config object:\n${ConfigHelper.toCanonicalString(result).indent('  ')}"
-        return result
+        log.trace "K8s config object:\n${ConfigHelper.toCanonicalString(config).indent('  ')}"
+        return config
     }
 
 
@@ -424,10 +473,17 @@ class K8sDriverLauncher {
         addOption(result, cmd.&env )
         addOption(result, cmd.&process )
         addOption(result, cmd.&params )
+        addOption(result, cmd.&entryName )
 
         if( paramsFile ) {
             result << "-params-file $paramsFile"
         }
+
+        if ( cmd.runRemoteConfig )
+            cmd.runRemoteConfig.forEach { result << "-config $it" }
+
+        if ( cmd.remoteProfile )
+            result << "-profile ${cmd.remoteProfile}"
 
         if( cmd.process?.executor )
             abort('process.executor')
@@ -462,9 +518,9 @@ class K8sDriverLauncher {
         String cmd = "source /etc/nextflow/init.sh; ${getLaunchCli()}"
 
         // create the launcher pod
-        new PodSpecBuilder()
+        PodSpecBuilder builder = new PodSpecBuilder()
             .withPodName(runName)
-            .withImageName(podImage ?: k8sConfig.getNextflowImageName())
+            .withImageName(headImage ?: k8sConfig.getNextflowImageName())
             .withCommand(['/bin/bash', '-c', cmd])
             .withLabels([ app: 'nextflow', runName: runName ])
             .withNamespace(k8sClient.config.namespace)
@@ -474,7 +530,16 @@ class K8sDriverLauncher {
             .withEnv( PodEnv.value('NXF_ASSETS', k8sConfig.getProjectDir()) )
             .withEnv( PodEnv.value('NXF_EXECUTOR', 'k8s'))
             .withEnv( PodEnv.value('NXF_ANSI_LOG', 'false'))
-            .build()
+            .withMemory(headMemory?:"")
+            .withCpus(headCpus)
+
+        if ( k8sConfig.useJobResource()) {
+            this.resourceType = ResourceType.Job
+            return builder.buildAsJob()
+        }
+        else {
+            return builder.build()
+        }
 
         // note: do *not* set the work directory because it may need to be created  by the init script
     }
@@ -485,14 +550,18 @@ class K8sDriverLauncher {
      */
     protected createK8sLauncherPod() {
         final spec = makeLauncherSpec()
-        k8sClient.podCreate(spec, yamlDebugPath())
+        if ( k8sConfig.useJobResource() ) {
+            k8sClient.jobCreate(spec, yamlDebugPath())
+        } else {
+            k8sClient.podCreate(spec, yamlDebugPath())
+        }
     }
 
     protected Path yamlDebugPath() {
         boolean debug = config.k8s.debug?.yaml?.toString() == 'true'
-        final result = debug ? Paths.get('.nextflow.pod.yaml') : null
+        final result = debug ? Paths.get(".nextflow.${resourceType.lower()}.yaml") : null
         if( result )
-            log.info "Launcher pod spec file: $result"
+            log.info "Launcher ${resourceType.lower()} spec file: $result"
         return result
     }
 
@@ -508,7 +577,7 @@ class K8sDriverLauncher {
         return interactive
     }
 
-    protected Map getConfig() {
+    protected ConfigObject getConfig() {
         return config
     }
 
@@ -532,11 +601,13 @@ class K8sDriverLauncher {
         initScript += "mkdir -p '$launchDir'; if [ -d '$launchDir' ]; then cd '$launchDir'; else echo 'Cannot create directory: $launchDir'; exit 1; fi; "
         initScript += '[ -f /etc/nextflow/scm ] && ln -s /etc/nextflow/scm $NXF_HOME/scm; '
         initScript += '[ -f /etc/nextflow/nextflow.config ] && cp /etc/nextflow/nextflow.config $PWD/nextflow.config; '
+        if( headPreScript ) 
+            initScript += "[ -f '$headPreScript' ] && '$headPreScript'; "
         configMap['init.sh'] = initScript
 
         // nextflow config file
-        if( config ) {
-            configMap['nextflow.config'] = ConfigHelper.toCanonicalString(config)
+        if( this.config ) {
+            configMap['nextflow.config'] = ConfigHelper.toCanonicalString( this.config )
         }
 
         // scm config file
@@ -589,7 +660,11 @@ class K8sDriverLauncher {
         def cmd = "kubectl -n ${k8sClient.config.namespace} exec -it $runName -- /bin/bash -c 'cd $launchDir; exec bash --login -i'"
         def proc = new ProcessBuilder().command('bash','-c',cmd).inheritIO().start()
         def result = proc.waitFor()
-        if( result == 0 )
-            k8sClient.podDelete(runName)
+        if( result == 0 ) {
+            if ( k8sConfig.useJobResource() )
+                k8sClient.jobDelete(runName)
+            else
+                k8sClient.podDelete(runName)
+        }
     }
 }

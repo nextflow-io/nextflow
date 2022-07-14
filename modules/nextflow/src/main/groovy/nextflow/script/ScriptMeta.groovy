@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
+import nextflow.exception.DuplicateModuleFunctionException
 import nextflow.exception.DuplicateModuleIncludeException
 import nextflow.exception.MissingModuleComponentException
 /**
@@ -93,6 +94,8 @@ class ScriptMeta {
     /** Whenever it's a module script or the main script */
     private boolean module
 
+    private Map<String,Integer> functionsCount = new HashMap<>()
+
     Path getScriptPath() { scriptPath }
 
     Path getModuleDir () { scriptPath?.parent }
@@ -105,6 +108,7 @@ class ScriptMeta {
         this.clazz = script.class
         for( def entry : definedFunctions0(script) ) {
             addDefinition(entry)
+            incFunctionCount(entry.name)
         }
     }
 
@@ -121,6 +125,23 @@ class ScriptMeta {
         this.module = val
     }
 
+    private void incFunctionCount(String name) {
+        final count = functionsCount.getOrDefault(name, 0)
+        functionsCount.put(name, count+1)
+    }
+
+    void validate() {
+        // check for duplicate function names
+        for( final name : functionsCount.keySet() ) {
+            if( functionsCount.get(name)<2 )
+                continue
+            final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function with multiple signatures or arguments with a default value"
+            if( NF.isStrictMode() )
+                throw new DuplicateModuleFunctionException(msg)
+            log.warn(msg)
+        }
+    }
+    
     /*
      * This method invocation is made by the NF AST transformer to pass
      * the process names declared in the workflow script. This is only required
@@ -148,8 +169,8 @@ class ScriptMeta {
     }
 
     static List<FunctionDef> definedFunctions0(BaseScript script) {
-        def allMethods = script.class.getDeclaredMethods()
-        def result = new ArrayList(allMethods.length)
+        final allMethods = script.class.getDeclaredMethods()
+        final result = new ArrayList(allMethods.length)
         for( Method method : allMethods ) {
             if( !Modifier.isPublic(method.getModifiers()) ) continue
             if( Modifier.isStatic(method.getModifiers())) continue
@@ -223,6 +244,19 @@ class ScriptMeta {
         }
         // processes from imports
         for( def item: imports.values() ) {
+            if( item instanceof ProcessDef )
+                result.add(item.name)
+        }
+        return result
+    }
+
+    Set<String> getLocalProcessNames() {
+        if( NF.dsl1 )
+            return new HashSet<String>(getDsl1ProcessNames())
+
+        def result = new HashSet(definitions.size() + imports.size())
+        // local definitions
+        for( def item : definitions.values() ) {
             if( item instanceof ProcessDef )
                 result.add(item.name)
         }

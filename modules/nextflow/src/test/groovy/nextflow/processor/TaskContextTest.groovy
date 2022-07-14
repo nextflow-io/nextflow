@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,7 @@ package nextflow.processor
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import groovy.runtime.metaclass.DelegatingPlugin
+import groovy.runtime.metaclass.ExtensionProvider
 import groovy.runtime.metaclass.NextflowDelegatingMetaClass
 import groovy.transform.InheritConstructors
 import nextflow.Global
@@ -190,7 +190,7 @@ class TaskContextTest extends Specification {
         when:
         // it's a DSL2 module
         NextflowMeta.instance.enableDsl2()
-        NextflowDelegatingMetaClass.plugin = Mock(DelegatingPlugin) { operatorNames() >> new HashSet<String>() }
+        NextflowDelegatingMetaClass.provider = Mock(ExtensionProvider) { operatorNames() >> new HashSet<String>() }
         def meta = ScriptMeta.register(script)
         meta.setScriptPath(temp.resolve('modules/my-module/main.nf'))
         and:
@@ -205,7 +205,7 @@ class TaskContextTest extends Specification {
         result == temp.resolve('modules/my-module/templates/foo.txt')
 
         cleanup:
-        NextflowDelegatingMetaClass.plugin = null
+        NextflowDelegatingMetaClass.provider = null
         NextflowMeta.instance.disableDsl2()
         temp?.deleteDir()
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +17,12 @@
 
 package nextflow.cli
 
+import java.nio.file.Files
+
+import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 import spock.lang.Unroll
-
-import java.nio.file.Files
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -119,6 +119,8 @@ class CmdRunTest extends Specification {
         then:
         params.abc == 1
         params.xyz == 2
+        and:
+        cmd.hasParams()
         
         when:
         file = folder.resolve('params.yaml')
@@ -129,22 +131,24 @@ class CmdRunTest extends Specification {
         then:
         params.foo == 1
         params.bar == 2
+        and:
+        cmd.hasParams()
 
         when:
-        cmd = new CmdRun(env: [NXF_PARAMS_FILE: file.toString()])
+        cmd = new CmdRun(sysEnv: [NXF_PARAMS_FILE: file.toString()])
         params = cmd.parsedParams()
         then:
         params.foo == 1
         params.bar == 2
-
+        and:
+        cmd.hasParams()
 
         when:
-        cmd = new CmdRun(env: [NXF_PARAMS_FILE: '/missing/path'])
+        cmd = new CmdRun(sysEnv: [NXF_PARAMS_FILE: '/missing/path.yml'])
         cmd.parsedParams()
         then:
         def e = thrown(AbortOperationException)
-        e.message == 'Specified params file does not exists: /missing/path'
-
+        e.message == 'Specified params file does not exists: /missing/path.yml'
 
         cleanup:
         folder?.delete()
@@ -208,7 +212,7 @@ class CmdRunTest extends Specification {
         and:
         new CmdRun(params: [foo:'x']).hasParams()
         new CmdRun(paramsFile: '/some/file.yml').hasParams()
-        new CmdRun(env:[NXF_PARAMS_FILE: '/some/file.yml']).hasParams()
+        new CmdRun(sysEnv:[NXF_PARAMS_FILE: '/some/file.yml']).hasParams()
     }
 
     def 'should replace values' () {
@@ -248,7 +252,7 @@ class CmdRunTest extends Specification {
         cmd.getDisableJobsCancellation() == true
 
         when:
-        cmd = new CmdRun(env: [NXF_DISABLE_JOBS_CANCELLATION: true])
+        cmd = new CmdRun(sysEnv: [NXF_DISABLE_JOBS_CANCELLATION: true])
         then:
         cmd.getDisableJobsCancellation() == true
     }
@@ -266,5 +270,68 @@ class CmdRunTest extends Specification {
         false       | 'script.nf'
         false       | '/some/path'
         false       | '../some/path'
+    }
+
+    def 'should determine dsl mode' () {
+        given:
+        def DSL1_SCRIPT = '''
+        process foo {
+          input: 
+          file x from ch
+        }
+        '''
+
+        def DSL2_SCRIPT = '''
+        process foo {
+          input: 
+          file x
+        }
+        
+        workflow { foo() }
+        '''
+
+        expect:
+        // default to DSL2 if nothing is specified
+        CmdRun.detectDslMode(new ConfigMap(), '', [:]) == '2'
+
+        and:
+        // take from the config
+        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:1]]]), '', [:]) == '1'
+
+        and:
+        // the script declaration has priority
+        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:1]]]), 'nextflow.enable.dsl=3', [:]) == '3'
+
+        and:
+        // env variable is ignored when the config is provided
+        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:1]]]), 'echo hello', [NXF_DEFAULT_DSL:'4']) == '1'
+
+        and:
+        // env variable is used if nothing else is specified
+        CmdRun.detectDslMode(new ConfigMap(), 'echo hello', [NXF_DEFAULT_DSL:'4']) == '4'
+
+        and:
+        // dsl mode is taken from the config
+        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:4]]]), DSL1_SCRIPT, [:]) == '4'
+
+        and:
+        // dsl mode is taken from the config
+        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:4]]]), DSL2_SCRIPT, [:]) == '4'
+
+        and:
+        // detect version from DSL1 script
+        CmdRun.detectDslMode(new ConfigMap(), DSL1_SCRIPT, [NXF_DEFAULT_DSL:'2']) == '1'
+
+        and:
+        // detect version from DSL1 script
+        CmdRun.detectDslMode(new ConfigMap(), DSL1_SCRIPT, [:]) == '1'
+
+        and:
+        // detect version from env
+        CmdRun.detectDslMode(new ConfigMap(), DSL2_SCRIPT, [NXF_DEFAULT_DSL:'2']) == '2'
+
+        and:
+        // detect version from global default
+        CmdRun.detectDslMode(new ConfigMap(), DSL2_SCRIPT, [:]) == '2'
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,6 +58,11 @@ class ScriptRunner {
     private def result
 
     /**
+     * Simulate execution and exit
+     */
+    private boolean preview
+
+    /**
      * Instantiate the runner object creating a new session
      */
     ScriptRunner( ) {
@@ -78,6 +83,11 @@ class ScriptRunner {
 
     ScriptRunner setScript( ScriptFile script ) {
         this.scriptFile = script
+        return this
+    }
+
+    ScriptRunner setPreview(boolean  value ) {
+        this.preview = value
         return this
     }
 
@@ -118,8 +128,10 @@ class ScriptRunner {
             parseScript(scriptFile, entryName)
             // run the code
             run()
-            // await termination
-            terminate()
+            // await completion
+            await()
+            // shutdown session
+            shutdown()
         }
         catch (Throwable e) {
             session.abort(e)
@@ -213,12 +225,17 @@ class ScriptRunner {
         // -- normalise output
         result = normalizeOutput(scriptParser.getResult())
         // -- ignite dataflow network
-        session.fireDataflowNetwork()
+        session.fireDataflowNetwork(preview)
     }
 
-    protected terminate() {
+    protected await() {
+        if( preview )
+            return
         log.debug "> Await termination "
         session.await()
+    }
+
+    protected shutdown() {
         session.destroy()
         session.cleanup()
         log.debug "> Execution complete -- Goodbye"
@@ -230,9 +247,13 @@ class ScriptRunner {
     void verifyAndTrackHistory(String cli, String name) {
         assert cli, 'Missing launch command line'
 
-        final ignore = System.getenv('NXF_IGNORE_RESUME_HISTORY') as Boolean
+        if( HistoryFile.disabled() ) {
+            log.debug "Nextflow history file tracking disabled"
+            return
+        }
+
         // -- when resume, make sure the session id exists in the executions history
-        if( session.resumeMode && !ignore && !HistoryFile.DEFAULT.checkExistsById(session.uniqueId.toString()) ) {
+        if( session.resumeMode && !HistoryFile.DEFAULT.checkExistsById(session.uniqueId.toString()) ) {
             throw new AbortOperationException("Can't find a run with the specified id: ${session.uniqueId} -- Execution can't be resumed")
         }
 

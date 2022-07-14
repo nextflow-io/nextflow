@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@
  */
 
 package nextflow.scm
+
+import static nextflow.Const.*
 
 import java.nio.file.Path
 
@@ -43,14 +45,8 @@ import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.ObjectId
 import org.eclipse.jgit.lib.Ref
 import org.eclipse.jgit.lib.Repository
-import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
-import org.eclipse.jgit.merge.MergeStrategy
 import org.eclipse.jgit.lib.SubmoduleConfig.FetchRecurseSubmodulesMode
-import static nextflow.Const.DEFAULT_HUB
-import static nextflow.Const.DEFAULT_MAIN_FILE_NAME
-import static nextflow.Const.DEFAULT_ORGANIZATION
-import static nextflow.Const.DEFAULT_ROOT
-import static nextflow.Const.MANIFEST_FILE_NAME
+import org.eclipse.jgit.merge.MergeStrategy
 /**
  * Handles operation on remote and local installed pipelines
  *
@@ -309,55 +305,41 @@ class AssetManager {
     @PackageScope
     String resolveNameFromGitUrl( String repository ) {
 
-        if( repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/')) {
-            try {
-                def url = new GitUrl(repository)
+        final isUrl = repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/')
+        if( !isUrl )
+            return null
 
-                def result
-                if( url.protocol == 'file' ) {
-                    this.hub = "file:${url.domain}"
-                    providerConfigs << new ProviderConfig(this.hub, [path:url.domain])
-                    result = "local/${url.path}"
+        try {
+            def url = new GitUrl(repository)
+
+            def result
+            if( url.protocol == 'file' ) {
+                this.hub = "file:${url.domain}"
+                providerConfigs << new ProviderConfig(this.hub, [path:url.domain])
+                result = "local/${url.path}"
+            }
+            else {
+                // find the provider config for this server
+                final config = RepositoryFactory.getProviderConfig(providerConfigs, url)
+                if( config ) {
+                    if( !providerConfigs.contains(config) )
+                        providerConfigs.add(config)
+                    this.hub = config.name
+                    result = config.resolveProjectName(url.path)
                 }
                 else {
-                    // find the provider config for this server
-                    def config = providerConfigs.find { it.domain == url.domain }
-                    this.hub = config?.name
-                    result = resolveProjectName0(url.path, config?.server)
+                    result = url.path.stripStart('/')
                 }
-                log.debug "Repository URL: $repository; Project: $result; Hub provider: $hub"
-
-                return result
             }
-            catch( IllegalArgumentException e ) {
-                log.debug "Cannot parse Git URL: $repository -- cause: ${e.message}"
-            }
+            log.debug "Repository URL: $repository; Project: $result; Hub provider: $hub"
+            return result
         }
-
+        catch( IllegalArgumentException e ) {
+            log.debug "Cannot parse Git URL: $repository -- cause: ${e.message}"
+        }
         return null
     }
 
-    protected String resolveProjectName0(String path, String server) {
-        assert path
-        assert !path.startsWith('/')
-
-        String project = path
-        if( server ) {
-            // fetch prefix from the server url
-            def prefix = new URL(server).path?.stripStart('/')
-            if( prefix && path.startsWith(prefix) ) {
-                project = path.substring(prefix.length())
-            }
-
-            if( server == 'https://dev.azure.com' ) {
-                final parts = project.tokenize('/')
-                if( parts[2]=='_git' )
-                    project = "${parts[0]}/${parts[1]}"
-            }
-        }
-
-        return project.stripStart('/')
-    }
 
     /**
      * Creates the RepositoryProvider instance i.e. the object that manages the interaction with
@@ -373,8 +355,7 @@ class AssetManager {
         if( !config )
             throw new AbortOperationException("Unknown repository configuration provider: $providerName")
 
-        RepositoryProvider .create(config, project)
-
+        return RepositoryFactory.newRepositoryProvider(config, project)
     }
 
     AssetManager setLocalPath(File path) {
@@ -387,8 +368,12 @@ class AssetManager {
         return this
     }
 
-    AssetManager checkValidRemoteRepo() {
-        def scriptName = getMainScriptName()
+    AssetManager checkValidRemoteRepo(String revision=null) {
+        // Configure the git provider to use the required revision as source for all needed remote resources:
+        // - config if present in repo (nextflow.config by default)
+        // - main script (main.nf by default)
+        provider.revision = revision
+        final scriptName = getMainScriptName()
         provider.validateFor(scriptName)
         return this
     }
@@ -588,7 +573,7 @@ class AssetManager {
      * @param revision The revision to download
      * @result A message representing the operation result
      */
-    def download(String revision=null) {
+    String download(String revision=null) {
         assert project
 
         /*
@@ -597,7 +582,7 @@ class AssetManager {
         if( !localPath.exists() ) {
             localPath.parentFile.mkdirs()
             // make sure it contains a valid repository
-            checkValidRemoteRepo()
+            checkValidRemoteRepo(revision)
 
             final cloneURL = getGitRepositoryUrl()
             log.debug "Pulling $project -- Using remote clone url: ${cloneURL}"
@@ -605,11 +590,7 @@ class AssetManager {
             // clone it
             def clone = Git.cloneRepository()
             if( provider.hasCredentials() )
-                clone.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
-
-            if( revision ) {
-                clone.setBranch(revision)
-            }
+                clone.setCredentialsProvider( provider.getGitCredentials() )
 
             clone
                 .setURI(cloneURL)
@@ -617,10 +598,16 @@ class AssetManager {
                 .setCloneSubmodules(manifest.recurseSubmodules)
                 .call()
 
+            if( revision ) {
+                // use an explicit checkout command *after* the clone instead of cloning a specific branch
+                // because the clone command does not allow the use of SHA commit id (only branch and tag names)
+                try { git.checkout() .setName(revision) .call() }
+                catch ( RefNotFoundException e ) { checkoutRemoteBranch(revision) }
+            }
+
             // return status message
             return "downloaded from ${cloneURL}"
         }
-
 
         log.debug "Pull pipeline $project  -- Using local path: $localPath"
 
@@ -641,7 +628,7 @@ class AssetManager {
              */
             catch ( RefNotFoundException e ) {
                 def ref = checkoutRemoteBranch(revision)
-                return "checkout-out at ${ref.getObjectId()}"
+                return "checkout-out at ${ref.getObjectId().name()}"
             }
         }
 
@@ -658,7 +645,7 @@ class AssetManager {
         }
 
         if( provider.hasCredentials() )
-            pull.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password))
+            pull.setCredentialsProvider( provider.getGitCredentials() )
 
         if( manifest.recurseSubmodules ) {
             pull.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
@@ -690,7 +677,7 @@ class AssetManager {
         clone.setDirectory(directory)
         clone.setCloneSubmodules(manifest.recurseSubmodules)
         if( provider.hasCredentials() )
-            clone.setCredentialsProvider(new UsernamePasswordCredentialsProvider(provider.user, provider.password))
+            clone.setCredentialsProvider( provider.getGitCredentials() )
 
         if( revision )
             clone.setBranch(revision)
@@ -923,7 +910,7 @@ class AssetManager {
                 throw new AbortOperationException("Project `$project` currently is sticked on revision: $current -- you need to specify explicitly a revision with the option `-r` to use it")
             }
         }
-        else if( !revision || revision == current ) {
+        if( !revision || revision == current ) {
             // nothing to do
             return
         }
@@ -947,7 +934,7 @@ class AssetManager {
         try {
             def fetch = git.fetch()
             if(provider.hasCredentials()) {
-                fetch.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
+                fetch.setCredentialsProvider( provider.getGitCredentials() )
             }
             if( manifest.recurseSubmodules ) {
                 fetch.setRecurseSubmodules(FetchRecurseSubmodulesMode.YES)
@@ -1000,7 +987,7 @@ class AssetManager {
         init.call()
         // call submodule update
         if( provider.hasCredentials() )
-            update.setCredentialsProvider( new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
+            update.setCredentialsProvider( provider.getGitCredentials() )
         def updatedList = update.call()
         log.debug "Update submodules $updatedList"
     }
@@ -1009,7 +996,7 @@ class AssetManager {
         final tag = rev.type == RevisionInfo.Type.TAG
         final cmd = git.lsRemote().setTags(tag)
         if( provider.hasCredentials() )
-            cmd.setCredentialsProvider(new UsernamePasswordCredentialsProvider(provider.user, provider.password) )
+            cmd.setCredentialsProvider( provider.getGitCredentials() )
         final list = cmd.call()
         final ref = list.find { Repository.shortenRefName(it.name) == rev.name }
         if( !ref ) {
@@ -1097,7 +1084,7 @@ class AssetManager {
             throw new AbortOperationException(message)
         }
 
-        final result = providerConfigs.find { it -> it.domain == domain }
+        final result = domain ? providerConfigs.find { it -> it.domain == domain } : (ProviderConfig)null
         if( !result && failFast ) {
             def message = "Can't find any configured provider for git server `$domain` -- Make sure to have specified it in your `scm` file. For details check https://www.nextflow.io/docs/latest/sharing.html#scm-configuration-file"
             throw new AbortOperationException(message)
@@ -1147,7 +1134,7 @@ class AssetManager {
                 return "${commitId.substring(0,10)} [${name}]"
             }
 
-            commitId
+            return commitId
         }
     }
 }

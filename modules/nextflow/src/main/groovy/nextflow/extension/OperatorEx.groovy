@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1341,13 +1341,11 @@ class OperatorEx  {
     }
 
     // NO DAG
-    @DeprecatedDsl2
     DataflowWriteChannel merge(final DataflowReadChannel source, final DataflowReadChannel... others) {
         new MergeOp(source,others as List).apply()
     }
 
     // NO DAG
-    @DeprecatedDsl2
     DataflowWriteChannel merge(final DataflowReadChannel source, final List<DataflowReadChannel> others, final Closure closure=null) {
         new MergeOp(source,others,closure).apply()
     }

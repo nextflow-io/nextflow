@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +29,7 @@ import nextflow.dag.DagRenderer
 import nextflow.dag.DotRenderer
 import nextflow.dag.GexfRenderer
 import nextflow.dag.GraphvizRenderer
+import nextflow.dag.MermaidRenderer
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 /**
@@ -90,6 +91,9 @@ class GraphObserver implements TraceObserver {
 
         else if( format == 'gexf' )
             new GexfRenderer(name)
+
+        else if( format == 'mmd' )
+            new MermaidRenderer()
 
         else
             new GraphvizRenderer(name, format)

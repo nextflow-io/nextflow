@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,14 +44,12 @@ class LocalPluginManager extends CustomPluginManager {
 
     static private Path PLUGINS_LOCAL_ROOT = Paths.get('.nextflow/plr')
     private Path repository
-    List<PluginSpec> specs
 
-    LocalPluginManager(Path repository, List<PluginSpec> specs) {
+    LocalPluginManager(Path repository) {
         super(makeLocalRoot())
         if( !localRoot ) throw new IllegalArgumentException("Missing Local plugins root directory")
         if( !repository ) throw new IllegalArgumentException("Missing plugins repository directory")
         this.repository = repository
-        this.specs = specs
     }
 
     static protected Path makeLocalRoot() {

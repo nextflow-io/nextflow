@@ -17,10 +17,9 @@ For example::
     println "Cmd line: $workflow.commandLine"
     println "Manifest's pipeline version: $workflow.manifest.version"
 
-
-.. tip:: To shortcut the access to multiple ``workflow`` properties you can use the Groovy
+.. tip::
+    To shortcut the access to multiple ``workflow`` properties you can use the Groovy
     `with <http://docs.groovy-lang.org/latest/html/groovy-jdk/java/lang/Object.html#with(groovy.lang.Closure)>`_ method.
-
 
 The following table lists the properties that can be accessed on the ``workflow`` object:
 
@@ -63,6 +62,7 @@ manifest                    Entries of the workflow manifest.
 | Properties marked with a `*` are accessible only in the workflow completion and error handlers. See the `Completion handler`_ section for details.
 |
 
+
 .. _metadata-nextflow:
 
 Nextflow metadata
@@ -83,8 +83,8 @@ requirement eventually needed by your workflow script. The required version stri
 comparison operators eg ``>``, ``>=``, ``=``, etc. or postfixed with the ``+`` operator to specify a minimal version
 requirement. For example::
 
-    if( !nextflow.version.matches('0.22+') ) {
-        println "This workflow requires Nextflow version 0.22 or greater -- You are running version $nextflow.version"
+    if( !nextflow.version.matches('21.04+') ) {
+        println "This workflow requires Nextflow version 21.04 or greater -- You are running version $nextflow.version"
         exit 1
     }
 
@@ -108,6 +108,7 @@ to access the workflow termination status and other useful information. For exam
 
 If you want an e-mail notification on completion, check :ref:`mail-page`.
 
+
 .. _metadata-error-handler:
 
 Error handler
@@ -120,14 +121,15 @@ For example::
         println "Oops... Pipeline execution stopped with the following message: ${workflow.errorMessage}"
     }
 
-.. note:: Both the ``onError`` and ``onComplete`` handlers are invoked when an error condition is encountered.
-    However the first is called as soon as the error is raised, while the second just before the pipeline execution
-    is going to terminate. When using the ``finish`` :ref:`process-page-error-strategy`, between the two there could be
-    a significant time gap depending on the time required to complete any pending job.
+.. note::
+    Both the ``onError`` and ``onComplete`` handlers are invoked when an error condition is encountered.
+    The first is called as soon as the error is raised, while the second is called just before the pipeline execution
+    is about to terminate. When using the ``finish`` :ref:`process-error-strategy`, there may be a significant gap
+    between the two, depending on the time required to complete any pending job.
 
 
 Decoupling metadata
------------------------
+-------------------
 
 The workflow event handlers can be defined also in the ``nextflow.config`` file. This is useful to
 decouple the handling of pipeline events from the main script logic.
@@ -141,12 +143,10 @@ the ``onError`` closures have to be defined by using the assignment operator as 
         println "Command line: $workflow.commandLine"
     }
 
-
     workflow.onError = {
         println "Oops .. something when wrong"
     }
 
-
-.. note:: It is possible to define a workflow event handlers both in the pipeline script **and** in the
-  configuration file.
-
+.. note::
+    It is possible to define workflow event handlers both in the pipeline script **and** in the
+    configuration file.

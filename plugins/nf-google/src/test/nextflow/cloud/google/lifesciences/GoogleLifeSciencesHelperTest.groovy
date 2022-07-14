@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -483,11 +483,12 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
 
         then:
         req.taskName >> 'foo'
+        req.timeout >> null
         1 * helper.createStagingAction(req) >> stage
         1 * helper.createUnstagingAction(req) >> unstage
         1 * helper.createMainAction(req) >> main
         1 * helper.createResources(req) >> res
-        1 * helper.createPipeline([stage, main, unstage], res) >> pipeline
+        1 * helper.createPipeline([stage, main, unstage], res, req.timeout) >> pipeline
         1 * helper.runPipeline('PRJ-X','LOC-1', pipeline, [taskName: 'foo']) >> operation
         and:
         result == operation

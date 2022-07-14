@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,11 +16,11 @@
  */
 
 package nextflow.script
+
 import java.nio.file.Path
 
 import groovy.text.GStringTemplateEngine
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.mail.Attachment
 import nextflow.mail.Mail
@@ -37,17 +37,17 @@ class WorkflowNotifier {
     /**
      * A map representing the nextflow configuration
      */
-    @PackageScope Map config
+    private Map config
 
     /**
     * A map representing the variables defined in the script golab scope
      */
-    @PackageScope Map variables
+    private Map variables
 
     /**
      * The {@link WorkflowMetadata} object
      */
-    @PackageScope WorkflowMetadata workflow
+    private WorkflowMetadata workflow
 
     /**
      * Send notification email

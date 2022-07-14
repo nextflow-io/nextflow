@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -154,7 +154,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     }
 
     static String uploadCmd( String source, Path target ) {
-        "nxf_s3_upload '$source' s3:/$target"
+        "nxf_s3_upload ${Escape.path(source)} s3:/${Escape.path(target)}"
     }
 
     /**

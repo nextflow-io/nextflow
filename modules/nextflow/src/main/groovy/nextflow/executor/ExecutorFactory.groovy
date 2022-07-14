@@ -57,7 +57,8 @@ class ExecutorFactory {
             'k8s': K8sExecutor,
             'nqsii': NqsiiExecutor,
             'moab': MoabExecutor,
-            'oar': OarExecutor
+            'oar': OarExecutor,
+            'hq': HyperQueueExecutor
     ]
 
     @PackageScope Map<String, Class<? extends Executor>> executorsMap

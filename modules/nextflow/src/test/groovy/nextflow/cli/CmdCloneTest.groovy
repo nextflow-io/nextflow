@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@
 package nextflow.cli
 import java.nio.file.Files
 
+import nextflow.plugin.Plugins
 import spock.lang.Requires
 import spock.lang.Specification
 /**
@@ -43,7 +44,7 @@ class CmdCloneTest extends Specification {
 
         cleanup:
         dir?.deleteDir()
-
+        Plugins.stop()
     }
 
 }

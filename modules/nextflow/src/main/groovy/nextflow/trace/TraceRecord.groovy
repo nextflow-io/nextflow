@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -100,7 +100,8 @@ class TraceRecord implements Serializable {
             env:        'str',
             error_action:'str',
             vol_ctxt: 'num',
-            inv_ctxt: 'num'
+            inv_ctxt: 'num',
+            hostname: 'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [

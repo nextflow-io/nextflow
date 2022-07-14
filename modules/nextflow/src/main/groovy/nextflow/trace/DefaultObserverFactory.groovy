@@ -64,7 +64,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         def report = (fileName as Path).complete()
         def observer = new ReportObserver(report)
         observer.maxTasks = maxTasks
-        config.navigate('report.overwrite') { observer.overwrite = true }
+        config.navigate('report.overwrite') { observer.overwrite = it }
         result << observer
     }
 

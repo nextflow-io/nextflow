@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -720,8 +720,8 @@ class TaskProcessorTest extends Specification {
         }
         and:
         def processor = Spy(TaskProcessor)
-        processor.session = session
-        processor.config = Mock(ProcessConfig)
+        processor.@session = session
+        processor.@config = Mock(ProcessConfig)
 
         when:
         def uuid1 = processor.createTaskHashKey(task)
@@ -806,7 +806,7 @@ class TaskProcessorTest extends Specification {
     def 'should get task directive vars' () {
         given:
         def processor = Spy(TaskProcessor)
-        processor.config = Mock(ProcessConfig)
+        processor.@config = Mock(ProcessConfig)
         and:
         def task = Mock(TaskRun)
         and:

@@ -65,6 +65,7 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
@@ -84,6 +85,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AnonymousAWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.services.s3.S3ClientOptions;
@@ -92,9 +94,9 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.Grant;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.ObjectTagging;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.Permission;
+import com.amazonaws.services.s3.model.S3ObjectId;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.Tag;
 import com.google.common.base.Preconditions;
@@ -106,7 +108,6 @@ import com.upplication.s3fs.ng.S3ParallelDownload;
 import com.upplication.s3fs.util.IOUtils;
 import com.upplication.s3fs.util.S3MultipartOptions;
 import com.upplication.s3fs.util.S3ObjectSummaryLookup;
-import com.upplication.s3fs.util.S3UploadRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static com.google.common.collect.Sets.difference;
@@ -355,23 +356,15 @@ public class S3FileSystemProvider extends FileSystemProvider {
 	private S3OutputStream createUploaderOutputStream( S3Path fileToUpload ) {
 		AmazonS3Client s3 = fileToUpload.getFileSystem().getClient();
 
-		S3UploadRequest req = props != null ? new S3UploadRequest(props) : new S3UploadRequest();
-		req.setObjectId(fileToUpload.toS3ObjectId());
-		req.setTags(fileToUpload.getTagsList());
-		S3OutputStream stream = new S3OutputStream(s3.getClient(), req);
-		stream.setCannedAcl(s3.getCannedAcl());
+		final S3MultipartOptions opts = props != null ? new S3MultipartOptions(props) : new S3MultipartOptions();
+		final S3ObjectId objectId = fileToUpload.toS3ObjectId();
+		S3OutputStream stream = new S3OutputStream(s3.getClient(), objectId, opts)
+				.setCannedAcl(s3.getCannedAcl())
+				.setStorageClass(props.getProperty("upload_storage_class"))
+				.setStorageEncryption(props.getProperty("storage_encryption"))
+				.setKmsKeyId(props.getProperty("storage_kms_key_id"))
+				.setTags(fileToUpload.getTagsList());
 		return stream;
-	}
-
-	protected boolean isAES256Enabled() {
-		String encryption = props.getProperty("storage_encryption");
-		if ( "AES256".equals(encryption) ) {
-			return true;
-		}
-		if( encryption!=null ) {
-			log.warn("Not a valid S3 server-side encryption type: `{}` -- Currently only AES256 is supported",encryption);
-		}
-		return false;
 	}
 
 	@Override
@@ -420,8 +413,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
                 if (Files.exists(tempFile)) {
                     ObjectMetadata metadata = new ObjectMetadata();
                     metadata.setContentLength(Files.size(tempFile));
-                    if( isAES256Enabled() )
-                    	metadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
                     // FIXME: #20 ServiceLoader cant load com.upplication.s3fs.util.FileTypeDetector when this library is used inside a ear :(
 					metadata.setContentType(Files.probeContentType(tempFile));
 
@@ -501,8 +492,6 @@ public class S3FileSystemProvider extends FileSystemProvider {
 		List<Tag> tags = s3Path.getTagsList();
 		ObjectMetadata metadata = new ObjectMetadata();
 		metadata.setContentLength(0);
-		if( isAES256Enabled() )
-			metadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
 
 		String keyName = s3Path.getKey()
 				+ (s3Path.getKey().endsWith("/") ? "" : "/");
@@ -573,43 +562,31 @@ public class S3FileSystemProvider extends FileSystemProvider {
 		AmazonS3Client client = s3Source.getFileSystem() .getClient();
 
         final ObjectMetadata sourceObjMetadata = s3Source.getFileSystem().getClient().getObjectMetadata(s3Source.getBucket(), s3Source.getKey());
-		final S3MultipartOptions opts = props != null ? new S3MultipartOptions<>(props) : new S3MultipartOptions();
+		final S3MultipartOptions opts = props != null ? new S3MultipartOptions(props) : new S3MultipartOptions();
 		final int chunkSize = opts.getChunkSize();
 		final long length = sourceObjMetadata.getContentLength();
 		final List<Tag> tags = ((S3Path) target).getTagsList();
 		
 		if( length <= chunkSize ) {
-
 			CopyObjectRequest copyObjRequest = new CopyObjectRequest(s3Source.getBucket(), s3Source.getKey(),s3Target.getBucket(), s3Target.getKey());
-			if( tags.size()>0 ) {
-				copyObjRequest.setNewObjectTagging(new ObjectTagging(tags));
-			}
-			
-			ObjectMetadata targetObjectMetadata = null;
-			if( isAES256Enabled() ) {
-				targetObjectMetadata = new ObjectMetadata();
-				targetObjectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
-				copyObjRequest.setNewObjectMetadata(targetObjectMetadata);
-			}
-			log.trace("Copy file via copy object - source: source={}, target={}, metadata={}, tags={}", s3Source, s3Target, targetObjectMetadata, tags);
-			client.copyObject(copyObjRequest);
+			log.trace("Copy file via copy object - source: source={}, target={}, tags={}", s3Source, s3Target,tags);
+			client.copyObject(copyObjRequest, tags);
 		}
 		else {
-			ObjectMetadata targetObjectMetadata = null;
-			if( isAES256Enabled() ) {
-				targetObjectMetadata = new ObjectMetadata();
-				targetObjectMetadata.setSSEAlgorithm(ObjectMetadata.AES_256_SERVER_SIDE_ENCRYPTION);
-			}
-			log.trace("Copy file via multipart upload - source: source={}, target={}, metadata={}, tags={}", s3Source, s3Target, targetObjectMetadata, tags);
-			client.multipartCopyObject(s3Source, s3Target, length, opts, targetObjectMetadata, tags);
+			log.trace("Copy file via multipart upload - source: source={}, target={}, tags={}", s3Source, s3Target, tags);
+			client.multipartCopyObject(s3Source, s3Target, length, opts, tags);
 		}
 	}
 
 
 	@Override
-	public void move(Path source, Path target, CopyOption... options)
-			throws IOException {
-		throw new UnsupportedOperationException();
+	public void move(Path source, Path target, CopyOption... options) throws IOException {
+		for( CopyOption it : options ) {
+			if( it==StandardCopyOption.ATOMIC_MOVE )
+				throw new IllegalArgumentException("Atomic move not supported by S3 file system provider");
+		}
+		copy(source,target,options);
+		delete(source);
 	}
 
 	@Override
@@ -691,59 +668,69 @@ public class S3FileSystemProvider extends FileSystemProvider {
 	}
 
 	@Override
-	public <V extends FileAttributeView> V getFileAttributeView(Path path,
-			Class<V> type, LinkOption... options) {
-		throw new UnsupportedOperationException();
-	}
-
-	@Override
-	public <A extends BasicFileAttributes> A readAttributes(Path path,
-			Class<A> type, LinkOption... options) throws IOException {
+	public <V extends FileAttributeView> V getFileAttributeView(Path path, Class<V> type, LinkOption... options) {
 		Preconditions.checkArgument(path instanceof S3Path,
 				"path must be an instance of %s", S3Path.class.getName());
 		S3Path s3Path = (S3Path) path;
-
-		if (type == BasicFileAttributes.class) {
-
-			S3ObjectSummary objectSummary = s3ObjectSummaryLookup.lookup(s3Path);
-
-			// parse the data to BasicFileAttributes.
-			FileTime lastModifiedTime = null;
-			if( objectSummary.getLastModified() != null ) {
-				lastModifiedTime = FileTime.from(objectSummary.getLastModified().getTime(), TimeUnit.MILLISECONDS);
+		if (type.isAssignableFrom(BasicFileAttributeView.class)) {
+			try {
+				return (V) new S3FileAttributesView(readAttr0(s3Path));
 			}
-
-			long size =  objectSummary.getSize();
-			boolean directory = false;
-			boolean regularFile = false;
-			String key = objectSummary.getKey();
-            // check if is a directory and exists the key of this directory at amazon s3
-			if (objectSummary.getKey().equals(s3Path.getKey() + "/") && objectSummary.getKey().endsWith("/")) {
-				directory = true;
+			catch (IOException e) {
+				throw new RuntimeException("Unable read attributes for file: " + s3Path.toUri(), e);
 			}
-			// is a directory but not exists at amazon s3
-			else if ((!objectSummary.getKey().equals(s3Path.getKey()) || "".equals(s3Path.getKey())) && objectSummary.getKey().startsWith(s3Path.getKey())){
-				directory = true;
-				// no metadata, we fake one
-				size = 0;
-                // delete extra part
-                key = s3Path.getKey() + "/";
-			}
-			// is a file:
-			else {
-                regularFile = true;
-			}
-
-			return type.cast(new S3FileAttributes(key, lastModifiedTime, size, directory, regularFile));
 		}
+		throw new UnsupportedOperationException("Not a valid S3 file system provider file attribute view: " + type.getName());
+	}
 
+
+	@Override
+	public <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
+		Preconditions.checkArgument(path instanceof S3Path,
+				"path must be an instance of %s", S3Path.class.getName());
+		S3Path s3Path = (S3Path) path;
+		if (type.isAssignableFrom(BasicFileAttributes.class)) {
+			return (A) readAttr0(s3Path);
+		}
 		// not support attribute class
 		throw new UnsupportedOperationException(format("only %s supported", BasicFileAttributes.class));
 	}
 
+	private S3FileAttributes readAttr0(S3Path s3Path) throws IOException {
+		S3ObjectSummary objectSummary = s3ObjectSummaryLookup.lookup(s3Path);
+
+		// parse the data to BasicFileAttributes.
+		FileTime lastModifiedTime = null;
+		if( objectSummary.getLastModified() != null ) {
+			lastModifiedTime = FileTime.from(objectSummary.getLastModified().getTime(), TimeUnit.MILLISECONDS);
+		}
+
+		long size =  objectSummary.getSize();
+		boolean directory = false;
+		boolean regularFile = false;
+		String key = objectSummary.getKey();
+		// check if is a directory and exists the key of this directory at amazon s3
+		if (objectSummary.getKey().equals(s3Path.getKey() + "/") && objectSummary.getKey().endsWith("/")) {
+			directory = true;
+		}
+		// is a directory but not exists at amazon s3
+		else if ((!objectSummary.getKey().equals(s3Path.getKey()) || "".equals(s3Path.getKey())) && objectSummary.getKey().startsWith(s3Path.getKey())){
+			directory = true;
+			// no metadata, we fake one
+			size = 0;
+			// delete extra part
+			key = s3Path.getKey() + "/";
+		}
+		// is a file:
+		else {
+			regularFile = true;
+		}
+
+		return new S3FileAttributes(key, lastModifiedTime, size, directory, regularFile);
+	}
+
 	@Override
-	public Map<String, Object> readAttributes(Path path, String attributes,
-			LinkOption... options) throws IOException {
+	public Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
 		throw new UnsupportedOperationException();
 	}
 
@@ -863,7 +850,12 @@ public class S3FileSystemProvider extends FileSystemProvider {
 		AmazonS3Client client;
 		ClientConfiguration config = createClientConfig(props);
 
-		if (accessKey == null && secretKey == null) {
+		final boolean anonymous = "true".equals(props.getProperty("anonymous"));
+		if( anonymous ) {
+			log.debug("Creating AWS S3 client with anonymous credentials");
+			client = new AmazonS3Client(new com.amazonaws.services.s3.AmazonS3Client(new AnonymousAWSCredentials(), config));
+		}
+		else if (accessKey == null && secretKey == null) {
 			client = new AmazonS3Client(new com.amazonaws.services.s3.AmazonS3Client(config));
 		}
 		else {
@@ -893,6 +885,8 @@ public class S3FileSystemProvider extends FileSystemProvider {
 
 		// set the client acl
 		client.setCannedAcl(getProp(props, "s_3_acl", "s3_acl", "s3Acl"));
+		client.setStorageEncryption(props.getProperty("storage_encryption"));
+		client.setKmsKeyId(props.getProperty("storage_kms_key_id"));
 
 		if (uri.getHost() != null) {
 			client.setEndpoint(uri.getHost());

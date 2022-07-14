@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -149,7 +149,10 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     ProcessConfig getProcessConfig() { processConfig }
 
     ChannelOut getOut() {
-        if(!output) throw new ScriptRuntimeException("Access to '${processName}.out' is undefined since process doesn't declare any output")
+        if( output==null )
+            throw new ScriptRuntimeException("Access to '${processName}.out' is undefined since the process '$processName' has not been invoked before accessing the output attribute")
+        if( output.size()==0 )
+            throw new ScriptRuntimeException("Access to '${processName}.out' is undefined since the process '$processName' doesn't declare any output")
         return output
     }
 

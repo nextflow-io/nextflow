@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,12 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 /*
  * fake alignment step producing a BAM and BAI files
  */
 process algn {
-  echo true
+  debug true
 
   input:
   each barcode from 'alpha', 'gamma'
@@ -48,7 +49,7 @@ aggregation = algn_files.groupTuple()
  */
 
 process merge {
-  echo true
+  debug true
 
   input:
   set barcode, seq_id, file(bam: 'bam?'), file(bai: 'bai?') from aggregation

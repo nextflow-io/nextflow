@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -116,7 +116,7 @@ class XPath implements Path {
 
     @Override
     Path normalize() {
-        return new XPath(fs, path.normalize())
+        return new XPath(fs, path.normalize(), query)
     }
 
     @Override

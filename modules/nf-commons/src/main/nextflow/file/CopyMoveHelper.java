@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -149,7 +149,7 @@ class CopyMoveHelper {
                 String delta = rel != null ? rel.toString() : null;
                 Path newFolder = delta != null ? target.resolve(delta) : target;
                 if(log.isTraceEnabled())
-                log.trace("Copy DIR: $current -> " + newFolder);
+                    log.trace("Copy DIR: " + current + " -> " + newFolder);
                 // this `copy` creates the new folder, but does not copy the contained files
                 Files.createDirectory(newFolder);
                 return FileVisitResult.CONTINUE;

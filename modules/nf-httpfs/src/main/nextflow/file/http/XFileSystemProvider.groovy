@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,6 +42,7 @@ import java.util.concurrent.TimeUnit
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import sun.net.www.protocol.ftp.FtpURLConnection
 
 /**
@@ -50,6 +51,7 @@ import sun.net.www.protocol.ftp.FtpURLConnection
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Emilio Palumbo <emilio.palumbo@crg.eu>
  */
+@Slf4j
 @PackageScope
 @CompileStatic
 abstract class XFileSystemProvider extends FileSystemProvider {
@@ -57,6 +59,8 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     private Map<URI, FileSystem> fileSystemMap = new LinkedHashMap<>(20)
 
     static public Set<String> ALL_SCHEMES = ['ftp','http','https'] as Set
+
+    static private int MAX_REDIRECT_HOPS = 5
 
     static private URI key(String s, String a) {
         new URI("$s://$a")
@@ -167,6 +171,11 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     protected URLConnection toConnection(Path path) {
         final url = path.toUri().toURL()
+        log.trace "File remote URL: $url"
+        toConnection0(url, 0)
+    }
+
+    protected URLConnection toConnection0(URL url, int attempt) {
         final conn = url.openConnection()
         conn.setRequestProperty("User-Agent", 'Nextflow/httpfs')
         if( url.userInfo ) {
@@ -174,6 +183,13 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         }
         else {
             XAuthRegistry.instance.authorize(conn)
+        }
+        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [307, 308] && attempt < MAX_REDIRECT_HOPS) {
+            def header = conn.getHeaderFields()
+            String location = header.get("Location")?.get(0)
+            URL newPath = new URI(location).toURL()
+            log.debug "Remote redirect URL: $newPath"
+            return toConnection0(newPath, attempt+1)
         }
         return conn
     }
@@ -420,7 +436,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         if( conn instanceof FtpURLConnection ) {
             return new XFileAttributes(null,-1)
         }
-        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [200, 301, 302]) {
+        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [200, 301, 302, 307, 308]) {
             def header = conn.getHeaderFields()
             return readHttpAttributes(header)
         }

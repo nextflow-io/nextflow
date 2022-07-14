@@ -118,7 +118,7 @@ class AzFileSystem extends FileSystem {
 
     @Override
     Iterable<FileStore> getFileStores() {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'getFileStores' is not supported by AzFileSystem")
     }
 
     @Override
@@ -170,17 +170,17 @@ class AzFileSystem extends FileSystem {
 
     @Override
     PathMatcher getPathMatcher(String syntaxAndPattern) {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'getPathMatcher' is not supported by AzFileSystem")
     }
 
     @Override
     UserPrincipalLookupService getUserPrincipalLookupService() {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'getUserPrincipalLookupService' is not supported by AzFileSystem")
     }
 
     @Override
     WatchService newWatchService() throws IOException {
-        throw new UnsupportedOperationException()
+        throw new UnsupportedOperationException("Operation 'newWatchService' is not supported by AzFileSystem")
     }
 
     @PackageScope
@@ -294,7 +294,7 @@ class AzFileSystem extends FileSystem {
     @PackageScope
     void createDirectory(AzPath path) {
         if( isReadOnly() )
-            throw new UnsupportedOperationException('Operation not support in root path')
+            throw new UnsupportedOperationException("Operation 'createDirectory' not supported in root path")
 
         if( !path.containerName )
             throw new IllegalArgumentException("Missing Azure storage blob container name")
@@ -408,8 +408,19 @@ class AzFileSystem extends FileSystem {
 
     @PackageScope
     void copy(AzPath source, AzPath target) {
+        final sasToken = provider.getSasToken()
+        String sourceUrl = source.blobClient().getBlobUrl()
+
+        if (sasToken != null) {
+            if (sourceUrl.contains('?')){
+                sourceUrl = String.format("%s&%s", sourceUrl, sasToken);
+            } else {
+                sourceUrl = String.format("%s?%s", sourceUrl, sasToken);
+            }
+        }
+
         SyncPoller<BlobCopyInfo, Void> pollResponse =
-                target.blobClient().beginCopy( source.blobClient().getBlobUrl(), null )
+                target.blobClient().beginCopy( sourceUrl, null )
         pollResponse.waitForCompletion(Duration.ofSeconds(maxCopyDurationSecs))
     }
 

@@ -28,19 +28,18 @@ and ultimately the pipeline execution flow itself, is implicitly defined by thes
 
 A Nextflow script looks like this::
 
+    // Declare syntax version
+    nextflow.enable.dsl=2
     // Script parameters
     params.query = "/some/data/sample.fa"
     params.db = "/some/path/pdb"
 
-    db = file(params.db)
-    query_ch = Channel.fromPath(params.query)
-
     process blastSearch {
-        input:
-        file query from query_ch
-
-        output:
-        file "top_hits.txt" into top_hits_ch
+      input:
+        path query
+        path db
+      output:
+        path "top_hits.txt"
 
         """
         blastp -db $db -query $query -outfmt 6 > blast_result
@@ -49,29 +48,31 @@ A Nextflow script looks like this::
     }
 
     process extractTopHits {
-        input:
-        file top_hits from top_hits_ch
+      input:
+        path top_hits
 
-        output:
-        file "sequences.txt" into sequences_ch
+      output:
+        path "sequences.txt"
 
         """
         blastdbcmd -db $db -entry_batch $top_hits > sequences.txt
         """
     }
 
-
+    workflow {
+       def query_ch = Channel.fromPath(params.query)
+       blastSearch(query_ch, params.db) | extractTopHits | view
+    }
 
 The above example defines two processes. Their execution order is not determined by the fact that the ``blastSearch``
-process comes before ``extractTopHits`` in the script (it could also be written the other way around).
+process comes before ``extractTopHits`` in the script (it could also be written the other way around). Instead, the
+pipe operator (``|``) in the workflow between ``blastSearch`` and ``extractTopHits`` forwards the outputs from one
+process to the inputs of the following one.
 
-Instead, because the first process defines the channel ``top_hits_ch`` in its output declarations, and the
-process ``extractTopHits`` defines the channel in its input declaration, a communication link is established.
-
-This linking via the channels means that `extractTopHits` is waiting for the output of `blastSearch`, and then
-runs `reactively` when the channel has contents.
-
-.. TODO describe that both processes are launched at the same time
+When the workflow is started, it will create two processes and one channel (``query_ch``)
+and it will link all of them. Both processes will be started at the same time and they will listen to their
+respective input channels. Whenever ``blastSearch`` emits a value, ``extractTopHits``
+will receive it (i.e. ``extractTopHits`` consumes the channel in a `reactive` way).
 
 Read the :ref:`Channel <channel-page>` and :ref:`Process <process-page>` sections to learn more about these features.
 

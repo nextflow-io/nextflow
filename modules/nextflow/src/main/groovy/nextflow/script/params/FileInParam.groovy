@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -58,7 +58,7 @@ class FileInParam extends BaseInParam implements PathQualifier {
 
         // the ability to pass a closure as file name has been replaced by
         // lazy gstring -- this should be deprecated
-        if( obj instanceof Closure && !NF.dsl2Final ) {
+        if( obj instanceof Closure && !NF.dsl2 ) {
             filePattern = obj
             return this
         }

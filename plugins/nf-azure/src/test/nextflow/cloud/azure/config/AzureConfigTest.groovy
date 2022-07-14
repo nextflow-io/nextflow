@@ -194,7 +194,24 @@ class AzureConfigTest extends Specification {
         cfg.batch().pool('myPool2').fileShareRootPath == '/mnt/resource/batch/tasks/fsmounts'
         cfg.batch().pool('myPool3').fileShareRootPath == '/mnt/batch/tasks/fsmounts'
         cfg.batch().pool('myPool4').fileShareRootPath == '/mounting/here'
-        cfg.batch().pool('myPool5').fileShareRootPath == '/mnt/resource/batch/tasks/fsmounts'
+        cfg.batch().pool('myPool5').fileShareRootPath == AzPoolOpts.DEFAULT_SHARE_ROOT_PATH
    }
 
+    def 'should get azcopy options' () {
+
+        when:
+        def session = Mock(Session) {
+            getConfig() >> [ azure:
+                                     [azcopy:[
+                                             blobTier: "Hot",
+                                             blockSize: "100" ]] ]
+        }
+
+        and:
+        def cfg = AzConfig.getConfig(session)
+
+        then:
+        cfg.azcopy().blobTier == "Hot"
+        cfg.azcopy().blockSize == "100"
+    }
 }

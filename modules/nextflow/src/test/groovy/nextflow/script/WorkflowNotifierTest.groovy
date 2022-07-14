@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -230,7 +230,7 @@ class WorkflowNotifierTest extends Specification {
         Mail mail
         def workflow = new WorkflowMetadata()
         def notifier = Spy(WorkflowNotifier)
-        notifier.workflow = workflow
+        notifier.@workflow = workflow
         def attach = Mock(Attachment)
 
         /*
@@ -288,8 +288,8 @@ class WorkflowNotifierTest extends Specification {
         def MAILER = Mock(Mailer)
 
         when:
-        notifier.workflow = workflow
-        notifier.config = [notification: CONFIG_NOTIFIER, mail: CONFIG_MAIL]
+        notifier.@workflow = workflow
+        notifier.@config = [notification: CONFIG_NOTIFIER, mail: CONFIG_MAIL]
         notifier.sendNotification()
         then:
         1 * notifier.createMail(CONFIG_NOTIFIER) >> MAIL
@@ -299,7 +299,7 @@ class WorkflowNotifierTest extends Specification {
         when: '''
         `enabled` flag is false, notification is NOT sent
         '''
-        notifier.config = [notification: [enabled: false, to:'you@dot.com']]
+        notifier.@config = [notification: [enabled: false, to:'you@dot.com']]
         notifier.sendNotification()
         then:
         0 * notifier.createMail(_) >> null
@@ -309,7 +309,7 @@ class WorkflowNotifierTest extends Specification {
         when: '''
         notification is implicitly enabled if recipient field is provided
         '''
-        notifier.config = [notification: [to:'you@dot.com']]
+        notifier.@config = [notification: [to:'you@dot.com']]
         notifier.sendNotification()
         then:
         0 * notifier.createMail(_) >> null
