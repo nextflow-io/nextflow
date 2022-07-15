@@ -404,9 +404,9 @@ The resulting output is similar to the one shown below::
     process job 2
 
 .. note::
-  The channel guarantees that items are emitted in the same order as they were received - however -
-  since the process is executed in a parallel manner, there is no guarantee that they are processed in the
-  same order as they were emitted. In the above example, the value ``3`` was processed before the others.
+  While channels do emit items in the order that they are received, *processes* do not
+  necessarily *process* items in the order that they are received. In the above example,
+  the value ``3`` was processed before the others.
 
 .. note::
   When the process declares exactly one input, the pipe ``|`` operator can be used to provide inputs to the process,
