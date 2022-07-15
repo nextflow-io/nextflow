@@ -19,13 +19,14 @@ package nextflow.k8s.model
 
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import nextflow.executor.res.AcceleratorResource
-import nextflow.util.MemoryUnit
-import nextflow.util.CpuUnit
 import groovy.util.logging.Slf4j
+import nextflow.executor.res.AcceleratorResource
+import nextflow.util.CpuUnit
+import nextflow.util.MemoryUnit
 
 /**
  * Object build for a K8s pod specification
