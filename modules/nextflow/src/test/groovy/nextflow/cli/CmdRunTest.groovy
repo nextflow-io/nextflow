@@ -99,6 +99,7 @@ class CmdRunTest extends Specification {
 
     }
 
+
     def 'should parse params file' () {
         given:
         def folder = Files.createTempDirectory('test')

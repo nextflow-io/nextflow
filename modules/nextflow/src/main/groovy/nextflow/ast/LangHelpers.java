@@ -81,7 +81,7 @@ class LangHelpers {
             return MemoryUnit.compareTo((MemoryUnit)right, left)==0;
         }
         // -- compare cpu unit
-        if( left instanceof CpuUnit) {
+        if( left instanceof CpuUnit ) {
             if( right == null ) return false;
             return CpuUnit.compareTo((CpuUnit)left, right)==0;
         }

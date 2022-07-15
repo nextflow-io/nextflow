@@ -24,6 +24,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.util.CpuUnit
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 
@@ -73,7 +74,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      */
     protected LocalPollingMonitor(Map params) {
         super(params)
-        this.availCpus = maxCpus = params.cpus as int
+        this.availCpus = maxCpus = params.cpus as BigDecimal
         this.availMemory = maxMemory = params.memory as long
         assert availCpus>0, "Local avail `cpus` attribute cannot be zero"
         assert availMemory>0, "Local avail `memory` attribute cannot zero"
@@ -97,7 +98,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         final pollInterval = session.getPollInterval(name, defPollInterval)
         final dumpInterval = session.getMonitorDumpInterval(name)
 
-        final int cpus = configCpus(session,name)
+        final BigDecimal cpus = configCpus(session,name)
         final long memory = configMem(session,name)
         final int size = session.getQueueSize(name, OS.getAvailableProcessors())
 
@@ -115,13 +116,8 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     }
 
     @PackageScope
-    static int configCpus(Session session, String name) {
-        int cpus = session.getExecConfigProp(name, 'cpus', 0) as int
-
-        if( !cpus )
-            cpus = OS.getAvailableProcessors()
-
-        return cpus
+    static BigDecimal configCpus(Session session, String name) {
+        CpuUnit.of(session.getExecConfigProp(name, 'cpus', OS.getAvailableProcessors())).toDecimal()
     }
 
     @PackageScope
@@ -136,7 +132,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      *      The number of cpus requested to execute the specified task
      */
     private static BigDecimal cpus(TaskHandler handler) {
-        handler.task.getConfig()?.getCpus()
+        handler.task.getConfig()?.getCpuUnits().toDecimal()
     }
 
     /**

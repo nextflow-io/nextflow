@@ -123,7 +123,7 @@ class GoogleLifeSciencesTaskHandler extends TaskHandler {
     // If memory not specified, default to 1 GB per cpu.  An absence of the cpus directive defaults to 1 cpu.
     // If the process machineType is defined, use that instead of cpus/memory (must be a predefined GCP machine type)
     protected String getMachineType() {
-        String machineType = getMachineType0(task.config.getMachineType(), task.config.getCpuCores(), task.config.getMemory())
+        String machineType = getMachineType0(task.config.getMachineType(), task.config.getCpus(), task.config.getMemory())
         log.trace "[GLS] Task: $task.name - Instance Type: $machineType"
         return machineType
     }

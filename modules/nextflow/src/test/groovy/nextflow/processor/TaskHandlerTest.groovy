@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.LongAdder
 
 import nextflow.Session
 import nextflow.executor.Executor
+import nextflow.util.CpuUnit
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -50,7 +51,7 @@ class TaskHandlerTest extends Specification {
                 tag: 'seq_x',
                 container: 'ubuntu',
                 queue: 'longjobs',
-                cpus: "2100m",
+                cpus: '2100m',
                 time: '1 hour',
                 disk: '100 GB',
                 memory: '4 GB'
@@ -96,7 +97,7 @@ class TaskHandlerTest extends Specification {
         trace.read_bytes == 20
         trace.write_bytes == 30
         trace.queue == 'longjobs'
-        trace.cpus == 2.1
+        trace.cpus == CpuUnit.of('2100m').toCores()
         trace.time == Duration.of('1 hour').toMillis()
         trace.memory == MemoryUnit.of('4 GB').toBytes()
         trace.disk == MemoryUnit.of('100 GB').toBytes()

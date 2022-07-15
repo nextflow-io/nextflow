@@ -64,6 +64,21 @@ class ConfigParserTest extends Specification {
         config.process.cpus == 1
     }
 
+    def 'should parse cpu decimal' () {
+        given:
+        def CONFIG = '''
+        process {
+            cpus = 0.8
+        }
+        '''
+
+        when:
+        def config = new ConfigParser().parse(CONFIG)
+
+        then:
+        config.process.cpus == 0.8
+    }
+
     def 'should parse cpu millis' () {
         given:
         def CONFIG = '''
@@ -77,21 +92,6 @@ class ConfigParserTest extends Specification {
 
         then:
         config.process.cpus == '100m'
-    }
-
-    def 'should parse cpu fractions' () {
-        given:
-        def CONFIG = '''
-        process {
-            cpus = 0.8
-        }
-        '''
-
-        when:
-        def config = new ConfigParser().parse(CONFIG)
-
-        then:
-        config.process.cpus == 0.8
     }
 
     def 'should fail plugins id' () {

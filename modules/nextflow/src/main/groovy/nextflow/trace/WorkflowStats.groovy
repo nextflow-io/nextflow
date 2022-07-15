@@ -307,7 +307,7 @@ class WorkflowStats implements Cloneable {
             submitted --
             running ++
             // update current load
-            loadCpus += task.getConfig().getCpuCores()
+            loadCpus += task.getConfig().getCpus()
             loadMemory += (task.getConfig().getMemory()?.toBytes() ?: 0)
             // update peaks
             if( peakRunning < running )
@@ -322,7 +322,7 @@ class WorkflowStats implements Cloneable {
         submittedCount --
         runningCount ++
         // update current load
-        loadCpus += task.getConfig().getCpuCores()
+        loadCpus += task.getConfig().getCpus()
         loadMemory += (task.getConfig().getMemory()?.toBytes() ?: 0)
 
         // update peaks
@@ -342,11 +342,11 @@ class WorkflowStats implements Cloneable {
         state.taskName = task.name
         state.hash = task.hashLog
         state.running --
-        state.loadCpus -= task.getConfig().getCpuCores()
+        state.loadCpus -= task.getConfig().getCpus()
         state.loadMemory -= (task.getConfig().getMemory()?.toBytes() ?: 0)
 
         this.runningCount --
-        this.loadCpus -= task.getConfig().getCpuCores()
+        this.loadCpus -= task.getConfig().getCpus()
         this.loadMemory -= (task.getConfig().getMemory()?.toBytes() ?: 0)
 
         if( task.failed ) {

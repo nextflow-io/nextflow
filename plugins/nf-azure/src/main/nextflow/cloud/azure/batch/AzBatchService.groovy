@@ -238,7 +238,7 @@ class AzBatchService implements Closeable {
 
     protected int computeSlots(TaskRun task, AzVmPoolSpec pool) {
         computeSlots(
-                task.config.getCpuCores(),
+                task.config.getCpus(),
                 task.config.getMemory(),
                 pool.vmType.numberOfCores,
                 pool.vmType.memory )
@@ -359,7 +359,7 @@ class AzBatchService implements Closeable {
                 .withContainerRunOptions(opts)
 
         final slots = computeSlots(task, pool)
-        log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpuCores()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
+        log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
 
         final taskToAdd = new TaskAddParameter()
                 .withId(taskId)
@@ -464,7 +464,7 @@ class AzBatchService implements Closeable {
 
         final opts = config.batch().autoPoolOpts()
         final mem = task.config.getMemory()
-        final cpus = task.config.getCpuCores()
+        final cpus = task.config.getCpus()
         final type = task.config.getMachineType() ?: opts.vmType
         if( !type )
             throw new IllegalArgumentException("Missing Azure Batch VM type for task '${task.name}'")

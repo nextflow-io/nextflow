@@ -283,14 +283,14 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'read CPU fraction' () {
+    def 'should read cpu decimal' () {
         given:
         def folder = File.createTempDir()
         def configMain = new File(folder,'nextflow.config').absoluteFile
 
 
         configMain.text = """
-        process.name = 'fraction'
+        process.name = 'decimal'
         process.cpus = 0.4
         """
 
@@ -306,7 +306,7 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'read CPU millis' () {
+    def 'should read cpu millis' () {
         given:
         def folder = File.createTempDir()
         def configMain = new File(folder,'nextflow.config').absoluteFile

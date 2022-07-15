@@ -23,8 +23,8 @@ import nextflow.cloud.google.batch.model.ProvisioningModel
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
-import nextflow.util.Duration
 import nextflow.util.CpuUnit
+import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**

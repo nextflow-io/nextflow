@@ -260,7 +260,7 @@ class WorkflowStatsTest extends Specification {
         and:
         def task = Mock(TaskRun) {
             getProcessor() >> Mock(TaskProcessor) { getId() >> 0 }
-            getConfig() >> Mock(TaskConfig) { getCpuCores() >> CPU; getMemory() >> MEM }
+            getConfig() >> Mock(TaskConfig) { getCpus() >> CPU; getMemory() >> MEM }
         }
         and:
         def rec = new ProgressRecord(0, 'foo')
@@ -315,7 +315,7 @@ class WorkflowStatsTest extends Specification {
         and:
         def task = Mock(TaskRun) {
             getProcessor() >> Mock(TaskProcessor) { getId() >> 0 }
-            getConfig() >> Mock(TaskConfig) { getCpuCores() >> CPUS; getMemory() >> MEM }
+            getConfig() >> Mock(TaskConfig) { getCpus() >> CPUS; getMemory() >> MEM }
         }
         and:
         def rec = new ProgressRecord(0, 'foo')
@@ -383,7 +383,7 @@ class WorkflowStatsTest extends Specification {
         and:
         def task = Mock(TaskRun) {
             getProcessor() >> Mock(TaskProcessor) { getId() >> 0 }
-            getConfig() >> Mock(TaskConfig) { getCpuCores() >> CPUS; getMemory() >> MEM } }
+            getConfig() >> Mock(TaskConfig) { getCpus() >> CPUS; getMemory() >> MEM } }
         and:
         def rec = new ProgressRecord(0, 'foo')
         rec.running = RUNNING
@@ -451,7 +451,7 @@ class WorkflowStatsTest extends Specification {
         and:
         def task = Mock(TaskRun) {
             getProcessor() >> Mock(TaskProcessor) { getId() >> 0 }
-            getConfig() >> Mock(TaskConfig) { getCpuCores() >> CPUS; getMemory() >> MEM } }
+            getConfig() >> Mock(TaskConfig) { getCpus() >> CPUS; getMemory() >> MEM } }
         and:
         def rec = new ProgressRecord(10, 'foo')
         rec.running = RUNNING
@@ -518,7 +518,7 @@ class WorkflowStatsTest extends Specification {
         and:
         def task = Mock(TaskRun) {
             getProcessor() >> Mock(TaskProcessor) { getId() >> 0 }
-            getConfig() >> Mock(TaskConfig) { getCpuCores() >> CPUS; getMemory() >> MEM } }
+            getConfig() >> Mock(TaskConfig) { getCpus() >> CPUS; getMemory() >> MEM } }
         and:
         def rec = new ProgressRecord(0, 'foo')
         rec.running = RUNNING
@@ -582,7 +582,7 @@ class WorkflowStatsTest extends Specification {
         and:
         def task = Mock(TaskRun) {
             getProcessor() >> Mock(TaskProcessor) { getId() >> 0 }
-            getConfig() >> Mock(TaskConfig) { getCpuCores() >> CPUS; getMemory() >> MEM } }
+            getConfig() >> Mock(TaskConfig) { getCpus() >> CPUS; getMemory() >> MEM } }
         and:
         def rec = new ProgressRecord(0, 'foo')
         rec.running = RUNNING

@@ -205,7 +205,7 @@ class K8sTaskHandler extends TaskHandler {
         final mem = taskCfg.getMemory()
         final acc = taskCfg.getAccelerator()
         if( cpus )
-            builder.withCpuMillis(cpus.toMillis())
+            builder.withCpus(cpus)
         if( mem )
             builder.withMemory(mem)
         if( acc )

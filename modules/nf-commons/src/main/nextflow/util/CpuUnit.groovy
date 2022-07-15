@@ -100,15 +100,15 @@ class CpuUnit implements Comparable<CpuUnit>, Serializable, Cloneable {
 
     /*
      * Default constructor is required by Kryo serializer
-     * Do not remove of use directly
+     * Do not remove or use directly
      */
     private CpuUnit() { this.millis=0 }
 
     static protected int parseCpuMillis(Number value) {
         if( value instanceof Integer )
-            return value.toInteger() * 1000
+            return value.toInteger() * 1_000
         if( value instanceof Number )
-            return Math.ceil(value.toDouble() * 1000)
+            return Math.ceil(value.toDouble() * 1_000)
         throw new IllegalArgumentException("Not a valid cpus value: '$value'")
     }
 
@@ -126,7 +126,7 @@ class CpuUnit implements Comparable<CpuUnit>, Serializable, Cloneable {
         // turn float to unit
         if( str.contains('.') ) {
             try {
-                return Math.ceil(str.toDouble() * 1000)
+                return Math.ceil(str.toDouble() * 1_000)
             }
             catch (NumberFormatException e) {
                 throw new IllegalArgumentException("Not a valid cpus value: '$value'", e)
@@ -134,7 +134,7 @@ class CpuUnit implements Comparable<CpuUnit>, Serializable, Cloneable {
         }
         // it should be an integer value
         try {
-            return str.toInteger() * 1000
+            return str.toInteger() * 1_000
         }
         catch (NumberFormatException e) {
             throw new IllegalArgumentException("Not a valid cpus value: '$value'", e)

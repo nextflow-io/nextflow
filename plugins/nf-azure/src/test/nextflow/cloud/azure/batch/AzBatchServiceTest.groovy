@@ -311,7 +311,7 @@ class AzBatchServiceTest extends Specification {
         def TASK = Mock(TaskRun) {
             getConfig() >> Mock(TaskConfig) {
                 getMemory() >> MEM
-                getCpuCores() >> CPUS
+                getCpus() >> CPUS
                 getMachineType() >> TYPE
             }
         }

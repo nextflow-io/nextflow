@@ -670,8 +670,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 log.warn "Ignoring task $bean.name memory directive: ${task.config.getMemory()} -- AWS Batch job memory request cannot be lower than 4 MB"
         }
         // set the task cpus
-        if( task.config.getCpuCores() > 1 )
-            resources << new ResourceRequirement().withType(ResourceType.VCPU).withValue(task.config.getCpuCores().toString())
+        if( task.config.getCpus() > 1 )
+            resources << new ResourceRequirement().withType(ResourceType.VCPU).withValue(task.config.getCpus().toString())
 
         if( task.config.getAccelerator() )
             resources << createGpuResource(task.config.getAccelerator())
