@@ -724,12 +724,12 @@ is associated with a corresponding element in the ``tuple`` definition. For exam
 In the above example, the ``tuple`` input consists of the value ``x`` and the file ``latin.txt``.
 
 A ``tuple`` definition may contain any of the following qualifiers, as previously described:
-``val``, ``env``, ``path`` and ``stdin``. File names can also be defined dynamically as
-explained in the `Dynamic input file names`_ section.
+``val``, ``env``, ``path`` and ``stdin``. Files specified with the ``path`` qualifier are treated
+exactly the same as standalone ``path`` inputs.
 
 
-Input type ``each``
--------------------
+Input repeaters (`each`)
+------------------------
 
 The ``each`` qualifier allows you to repeat the execution of a process for each item in a collection,
 each time a new value is received. For example::
@@ -1174,8 +1174,8 @@ In the above example, a ``blast`` task is executed for each pair of ``species`` 
 Each task produces a new tuple containing the value for ``species`` and the file ``result``.
 
 A ``tuple`` definition may contain any of the following qualifiers, as previously described:
-``val``, ``path``, ``env`` and ``stdout``. File names can also be defined dynamically as explained
-in the `Dynamic output file names`_ section.
+``val``, ``path``, ``env`` and ``stdout``. Files specified with the ``path`` qualifier are treated
+exactly the same as standalone ``path`` inputs.
 
 
 Optional outputs
