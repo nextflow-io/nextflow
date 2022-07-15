@@ -839,6 +839,12 @@ channel. It prints::
   1 and b
   1 and c
 
+.. note::
+  In general, multiple input channels should be used to process *combinations* of different inputs,
+  using the ``each`` qualifier or value channels. Having multiple queue channels as inputs is equivalent
+  to using the ``merge`` operator, which is not recommended as it may lead to inputs being combined in
+  a non-deterministic way.
+
 See also: :ref:`channel-types`.
 
 Outputs
