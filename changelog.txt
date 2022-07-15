@@ -1,5 +1,8 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.04.5 - 15 Jul 2022
+- Allow fully disabling history file [1a36c9bc]
+
 22.07.1-edge - 13 Jul 2022
 - Add support for Google Batch API v1 [4c116d58] [e85d87ee]
 - Add time directive support for K8s executor (#2948) [2b6f70a8] <romanaduraciova>
