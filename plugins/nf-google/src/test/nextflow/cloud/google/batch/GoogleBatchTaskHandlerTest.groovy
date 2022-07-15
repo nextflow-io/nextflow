@@ -102,8 +102,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         runnable.container.getOptions() == CONTAINER_OPTS
         runnable.container.getVolumes() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
         and:
-        !group.allocationPolicy.provisioningModels
-        !group.allocationPolicy.network
+        !req.allocationPolicy.network
+        !req.allocationPolicy.instancePolicy().machineType
     }
 
     def 'should create submit request/2' () {
@@ -162,11 +162,10 @@ class GoogleBatchTaskHandlerTest extends Specification {
         runnable.container.getOptions() == CONTAINER_OPTS
         runnable.container.getVolumes() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
         and:
-        group.allocationPolicy.provisioningModels == [ProvisioningModel.SPOT] as Set
-        group.allocationPolicy.instance.allowedMachineTypes == [MACHINE_TYPE]
-        !group.allocationPolicy.instance.deniedMachineTypes
+        req.allocationPolicy.instancePolicy().provisioningModel == ProvisioningModel.SPOT
+        req.allocationPolicy.instancePolicy().machineType == MACHINE_TYPE
         and:
-        def netInterface = group.allocationPolicy.network.getNetworkInterfaces().get(0)
+        def netInterface = req.allocationPolicy.network.getNetworkInterfaces().get(0)
         netInterface.network == 'net-1'
         netInterface.subnetwork == 'subnet-1'
         netInterface.noExternalIpAddress

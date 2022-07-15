@@ -1,5 +1,6 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2020, Seqera Labs
+ * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,23 +16,21 @@
  *
  */
 
-package nextflow.sql
+package nextflow.cloud.google.batch.model
 
-import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.sql.config.SqlDataSource
+import groovy.transform.CompileStatic
 
 /**
- * Declares core main interface for SQL query operation
+ * Model a task script that can be executed by Batch
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface QueryOp<T extends QueryOp> {
+@CompileStatic
+class TaskScript {
 
-    QueryOp withStatement(String stm)
-    QueryOp withTarget(DataflowWriteChannel channel)
-    QueryOp withDataSource(SqlDataSource ds)
-    QueryOp withOpts(Map options)
+    // Script file path.
+    String path
 
-    T perform()
-    T perform(boolean async)
+    // Shell script text.
+    String text
 }
