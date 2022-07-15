@@ -1,5 +1,8 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.04.5 - 15 Jul 2022
+- Allow fully disabling history file [1a36c9bc]
+
 22.04.4 - 19 Jun 2022
 - Fix Publish copy mode for s3 based path [bb510ce6]
 - Add strict mode config setting [b0567e62]
