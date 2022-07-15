@@ -97,7 +97,7 @@ class CpuUnitTest extends Specification {
         1.1         | 2
     }
 
-    def 'should validate to milils' () {
+    def 'should get milils' () {
         expect:
         CpuUnit.of(VALUE).toMillis() == MILLIS
 

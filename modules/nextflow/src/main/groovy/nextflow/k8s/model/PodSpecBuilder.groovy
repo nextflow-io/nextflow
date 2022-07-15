@@ -153,12 +153,12 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withCpus(String cpus) {
+    PodSpecBuilder withCpus(Number cpus) {
         this.cpuMillis = CpuUnit.of(cpus).toMillis()
         return this
     }
 
-    PodSpecBuilder withCpus(Number cpus) {
+    PodSpecBuilder withCpus(String cpus) {
         this.cpuMillis = CpuUnit.of(cpus).toMillis()
         return this
     }

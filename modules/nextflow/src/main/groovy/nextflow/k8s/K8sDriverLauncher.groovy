@@ -530,8 +530,8 @@ class K8sDriverLauncher {
             .withEnv( PodEnv.value('NXF_ASSETS', k8sConfig.getProjectDir()) )
             .withEnv( PodEnv.value('NXF_EXECUTOR', 'k8s'))
             .withEnv( PodEnv.value('NXF_ANSI_LOG', 'false'))
-            .withMemory(headMemory?:"")
             .withCpus(headCpus?:'0')
+            .withMemory(headMemory?:'')
 
         if ( k8sConfig.useJobResource()) {
             this.resourceType = ResourceType.Job

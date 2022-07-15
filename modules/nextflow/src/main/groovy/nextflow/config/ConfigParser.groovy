@@ -26,9 +26,9 @@ import nextflow.ast.NextflowXform
 import nextflow.exception.ConfigParseException
 import nextflow.extension.Bolts
 import nextflow.file.FileHelper
+import nextflow.util.CpuUnit
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import nextflow.util.CpuUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
@@ -177,9 +177,9 @@ class ConfigParser {
         config.addCompilationCustomizers(new ASTTransformationCustomizer(NextflowXform))
         //  add implicit types
         def importCustomizer = new ImportCustomizer()
+        importCustomizer.addImports( CpuUnit.name )
         importCustomizer.addImports( Duration.name )
         importCustomizer.addImports( MemoryUnit.name )
-        importCustomizer.addImports( CpuUnit.name )
         config.addCompilationCustomizers(importCustomizer)
         grengine = new Grengine(config)
     }

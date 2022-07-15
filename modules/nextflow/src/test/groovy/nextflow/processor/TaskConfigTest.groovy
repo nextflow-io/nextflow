@@ -276,7 +276,7 @@ class TaskConfigTest extends Specification {
     }
 
     @Unroll
-    def testGetCpu() {
+    def testGetCpus() {
         when:
         def config = new TaskConfig().setContext(ten: 10)
         config.cpus = value
