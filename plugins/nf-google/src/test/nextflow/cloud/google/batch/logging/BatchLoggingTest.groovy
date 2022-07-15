@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@
  *
  */
 
-package nextflow.cloud.google
+package nextflow.cloud.google.batch.logging
 
 import java.util.concurrent.TimeUnit
 
@@ -124,7 +124,7 @@ class BatchLoggingTest extends Specification {
         log.debug "STDOUT: $stdout"
         log.debug "STDERR: $stderr"
         then:
-        stdout == 'Hello world!\n'
+        stdout.contains('Hello world!')
         stderr.contains('Oops something went wrong')
 
     }

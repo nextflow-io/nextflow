@@ -275,7 +275,7 @@ class K8sDriverLauncherTest extends Specification {
         driver.@runName = 'foo-boo'
         driver.@k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
         driver.@k8sConfig = k8s
-        driver.@podImage = 'foo/bar'
+        driver.@headImage = 'foo/bar'
 
         when:
         def spec = driver.makeLauncherSpec()
@@ -334,7 +334,7 @@ class K8sDriverLauncherTest extends Specification {
         driver.@runName = 'foo-boo'
         driver.@k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
         driver.@k8sConfig = k8s
-        driver.@podImage = 'foo/bar'
+        driver.@headImage = 'foo/bar'
         driver.@headCpus = 2
         driver.@headMemory = '200Mi'
 

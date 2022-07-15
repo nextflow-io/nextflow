@@ -4,23 +4,10 @@
 Google Cloud
 ************
 
-Requirements
-============
-
-Nextflow
---------
-The support for Google Cloud requires Nextflow version ``20.01.0`` or later. To install it define the following variables
-in your system environment::
-
-    export NXF_VER=20.01.0
-    export NXF_MODE=google
-
-.. note:: As of version ``21.04.0`` or later the above variables are not required anymore and therefore should not be used.
-
 Credentials
------------
+===========
 
-Credentials for submitting requests to the Google LifeSciences API are picked up from your
+Credentials for submitting requests to the Google Cloud Batch and Cloud LifeSciences API are picked up from your
 environment using `Application Default Credentials <https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http>`_.
 Application Default Credentials are designed to use the credentials most natural to the
 environment in which a tool runs.
@@ -58,10 +45,183 @@ credentials file just downloaded::
 
     export GOOGLE_APPLICATION_CREDENTIALS=/path/your/file/creds.json
 
+Cloud Batch
+============
+
+`Google Cloud Batch <https://cloud.google.com/batch>`_ is a managed computing service that allows the execution of containerized workloads in the
+Google Cloud Platform infrastructure.
+
+Nextflow provides built-in support for Cloud Batch which allows the seamless deployment of a Nextflow pipeline
+in the cloud, offloading the process executions through the Google Cloud service.
+
+
+Requirements
+------------
+
+The support for Google Batch requires Nextflow version ``22.07.1-edge`` or later. If you have already Nextflow
+installed make sure to update to the latest `edge` release using these commands::
+
+    export NXF_EDGE=1 
+    nextflow -self-update
+
+If you don't have Nextflow, install it with command below::
+
+    curl get.nextflow.io | bash
+
+when done, make sure to use the latest `edge` release running the snippet in the previous paragraph.
+
+.. _google-batch-config:
+
+Configuration
+-------------
+
+Make sure to have defined in your environment the ``GOOGLE_APPLICATION_CREDENTIALS`` variable.
+See the section `Credentials`_ for details.
+
+.. tip::
+    Make sure your Google account is allowed to access the Google Cloud Batch service by checking
+    the `API & Service <https://console.cloud.google.com/apis/dashboard>`_ dashboard.
+
+Create or edit the file ``nextflow.config`` in your project root directory. The config must specify the following parameters:
+
+* Google Cloud Batch as Nextflow executor i.e. ``process.executor = 'google-batch'``.
+* The Docker container image to be used to run pipeline tasks e.g. ``process.container = 'biocontainers/salmon:0.8.2--1'``.
+* The Google Cloud `project` ID to run in e.g. ``google.project = 'rare-lattice-222412'``.
+* The Google location e.g. ``google.location = 'us-central1'``.
+
+Example::
+
+    process {
+        executor = 'google-batch'
+        container = 'your/container:latest'
+    }
+
+    google {
+        project = 'your-project-id'
+        location = 'us-central1'
+    }
+
+
+.. warning:: Make sure to specify in the above setting the project ID not the project name.
+
+.. Note:: A container image must be specified to deploy the process execution. You can use a different Docker image for
+  each process using one or more :ref:`config-process-selectors`.
+
+The following configuration options are available:
+
+============================================== =================
+Name                                           Description
+============================================== =================
+google.project                                 The Google Project Id to use for the pipeline execution.
+google.location                                The Google *location* where the job executions are deployed (default: ``us-central1``).
+google.enableRequesterPaysBuckets              When ``true`` uses the configured Google project id as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See `Requester Pays on Google Cloud Storage documentation  <https://cloud.google.com/storage/docs/requester-pays>`_ (default: ``false``).
+google.batch.spot                              When ``true`` enables the usage of *spot* virtual machines or ``false`` otherwise (default: ``false``).
+google.batch.usePrivateAddress                 When ``true`` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: ``false``).
+google.batch.network                           Set network name to attach the VM's network interface to. The value will be prefixed with global/networks/ unless it contains a /, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used.
+google.batch.serviceAccountEmail               Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
+google.batch.subnetwork                        Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL.
+============================================== =================
+
+
+Process definition
+------------------
+Processes can be defined as usual and by default the ``cpus`` and ``memory`` directives are used to instantiate a custom
+machine type with the specified compute resources.  If ``memory`` is not specified, 1GB of memory is allocated per cpu.
+
+The process ``machineType`` directive may optionally be used to specify a predefined Google Compute Platform `machine type <https://cloud.google.com/compute/docs/machine-types>`_
+If specified, this value overrides the ``cpus`` and ``memory`` directives.
+If the ``cpus`` and ``memory`` directives are used, the values must comply with the allowed custom machine type `specifications <https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#specifications>`_ .  Extended memory is not directly supported, however high memory or cpu predefined
+instances may be utilized using the ``machineType`` directive
+
+Examples::
+
+    process custom_resources_task {
+        cpus 8
+        memory '40 GB'
+
+        """
+        <Your script here>
+        """
+    }
+
+    process predefined_resources_task {
+        machineType 'n1-highmem-8'
+
+        """
+        <Your script here>
+        """
+    }
+
+
+Pipeline execution
+------------------
+
+The pipeline can be launched either in a local computer or a cloud instance. Pipeline input data can be stored either
+locally or in a Google Storage bucket.
+
+The pipeline execution must specify a Google Storage bucket where the workflow's intermediate results are stored using
+the ``-work-dir`` command line options. For example::
+
+    nextflow run <script or project name> -work-dir gs://my-bucket/some/path
+
+.. tip::
+  Any input data **not** stored in a Google Storage bucket will automatically be transferred to the
+  pipeline work bucket. Use this feature with caution being careful to avoid unnecessary data transfers.
+
+
+.. warning::
+  The Google Storage path needs to contain at least sub-directory. Don't use only the bucket name e.g. ``gs://my-bucket``.
+
+
+Spot instances
+---------------
+
+Spot instances are supported adding the following setting in the Nextflow config file::
+
+    google {
+        batch.spot = true
+    }
+
+Since this type of virtual machines can be retired by the provider before the job completion, it is advisable
+to add the following retry strategy to your config file to instruct Nextflow to automatically re-execute a job
+if the virtual machine was terminated preemptively::
+
+    process {
+      errorStrategy = { task.exitStatus==14 ? 'retry' : 'terminate' }
+      maxRetries = 5
+    }
+
+Supported directives
+--------------------
+
+The integration with Google Batch is a developer preview feature. Currently the following Nextflow directives are
+supported:
+
+* :ref:`process-cpus`
+* :ref:`process-memory`
+* :ref:`process-time`
+* :ref:`process-container`
+* :ref:`process-containeroptions`
+* :ref:`process-machinetype`
+* :ref:`process-executor`
+
+
+
 .. _google-lifesciences:
 
 Cloud Life Sciences
 ===================
+
+Requirements
+------------
+The support for Google Cloud requires Nextflow version ``20.01.0`` or later. To install it define the following variables
+in your system environment::
+
+    export NXF_VER=20.01.0
+    export NXF_MODE=google
+
+.. note:: As of version ``21.04.0`` or later the above variables are not required anymore and therefore should not be used.
+
 
 `Cloud Life Sciences <https://cloud.google.com/life-sciences/>`_ is a managed computing service that allows the execution of
 containerized workloads in the Google Cloud Platform infrastructure.
@@ -82,7 +242,7 @@ Configuration
 -------------
 
 Make sure to have defined in your environment the ``GOOGLE_APPLICATION_CREDENTIALS`` variable.
-See the section `Requirements`_ for details.
+See the section `Credentials`_ for details.
 
 .. tip:: Make sure to have enabled Cloud Life Sciences API to use this feature. To learn how to enable it
   follow `this link <https://cloud.google.com/life-sciences/docs/quickstart>`_.
@@ -90,7 +250,7 @@ See the section `Requirements`_ for details.
 Create a ``nextflow.config`` file in the project root directory. The config must specify the following parameters:
 
 * Google Life Sciences as Nextflow executor i.e. ``process.executor = 'google-lifesciences'``.
-* The Docker container images to be used to run pipeline tasks e.g. ``process.container = 'biocontainers/salmon:0.8.2--1'``.
+* The Docker container image to be used to run pipeline tasks e.g. ``process.container = 'biocontainers/salmon:0.8.2--1'``.
 * The Google Cloud `project` ID to run in e.g. ``google.project = 'rare-lattice-222412'``.
 * The Google Cloud `region` or `zone`. This is where the Compute Engine VMs will be started.
   You need to specify either one, **not** both. Multiple regions or zones can be specified by
