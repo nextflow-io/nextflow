@@ -59,6 +59,7 @@ import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
@@ -554,6 +555,10 @@ public class AmazonS3Client {
 		public void provideObjectMetadata(File file, ObjectMetadata metadata) {
 			if( storageEncryption!=null ) {
 				metadata.setSSEAlgorithm(storageEncryption.toString());
+			}
+			if( kmsKeyId!=null ) {
+				// metadata.setHeader(Headers.SERVER_SIDE_ENCRYPTION, SSEAlgorithm.KMS.getAlgorithm());
+				metadata.setHeader(Headers.SERVER_SIDE_ENCRYPTION_AWS_KMS_KEYID, kmsKeyId);
 			}
 		}
 
