@@ -61,7 +61,7 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> true
+        1 * handler.entrypointOverride() >> false
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
@@ -92,7 +92,7 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-foo'
         1 * handler.getLabels(task) >> [sessionId:'xxx']
         1 * handler.getAnnotations() >>  [evict: 'false']
@@ -126,7 +126,7 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-abc'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
@@ -168,7 +168,7 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [foo: 'bar', hello: 'world']
@@ -201,7 +201,7 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-foo'
         1 * handler.getLabels(task) >> [sessionId:'xxx']
         1 * handler.getAnnotations() >>  [evict: 'false']
@@ -235,7 +235,7 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-abc'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
@@ -278,7 +278,7 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getLabels(task) >> [:]
@@ -327,7 +327,7 @@ class K8sTaskHandlerTest extends Specification {
         result = handler.newSubmitRequest(task)
         then:
         1 * client.getConfig() >> new ClientConfig()
-        1 * handler.preserveContainerEntrypoint() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
@@ -386,7 +386,7 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getContainerMounts() >> []
         1 * handler.getLabels(task) >> [:]
@@ -428,7 +428,7 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getContainerMounts() >> ['/tmp', '/data']
         1 * handler.getLabels(task) >> [:]
@@ -522,7 +522,7 @@ class K8sTaskHandlerTest extends Specification {
         then:
         1 * client.getConfig() >> new ClientConfig()
         1 * handler.useJobResource() >> true
-        1 * handler.preserveContainerEntrypoint() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]

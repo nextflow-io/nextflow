@@ -166,8 +166,8 @@ class K8sTaskHandler extends TaskHandler {
         }
     }
 
-    protected boolean preserveContainerEntrypoint() {
-        return executor.getK8sConfig().preserveContainerEntrypoint()
+    protected boolean entrypointOverride() {
+        return executor.getK8sConfig().entrypointOverride()
     }
 
     protected Map newSubmitRequest0(TaskRun task, String imageName) {
@@ -186,9 +186,9 @@ class K8sTaskHandler extends TaskHandler {
             .withAnnotations(getAnnotations())
             .withPodOptions(getPodOptions())
 
-        // when `preserveEntrypoint` is true the launcher is run via `args` instead of `command`
+        // when `entrypointOverride` is false the launcher is run via `args` instead of `command`
         // to not override the container entrypoint
-        if( preserveContainerEntrypoint() ) {
+        if( !entrypointOverride() ) {
             builder.withArgs(launcher)
         }
         else {

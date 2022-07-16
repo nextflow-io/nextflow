@@ -419,7 +419,12 @@ class BashWrapperBuilder {
          * create the container engine command when needed
          */
         if( containerBuilder ) {
-            def cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
+            String cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
+            if( env && !containerConfig.entrypointOverride() ) {
+                if( containerBuilder instanceof SingularityBuilder )
+                    cmd = 'cd $PWD; ' + cmd
+                cmd = "/bin/bash -c \"$cmd\""
+            }
             launcher = containerBuilder.getRunCommand(cmd)
         }
 
@@ -566,7 +571,8 @@ class BashWrapperBuilder {
         if( containerConfig.writableInputMounts==false )
             builder.params(readOnlyInputs: true)
 
-        builder.params(entry: '/bin/bash')
+        if( this.containerConfig.entrypointOverride() )
+            builder.params(entry: '/bin/bash')
 
         // give a chance to override any option with process specific `containerOptions`
         if( containerOptions ) {

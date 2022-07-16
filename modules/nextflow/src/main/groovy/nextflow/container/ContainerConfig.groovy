@@ -27,6 +27,8 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class ContainerConfig extends LinkedHashMap {
 
+    private Map<String,String> sysEnv = System.getenv()
+
     /* required by Kryo deserialization -- do not remove */
     private ContainerConfig() { }
 
@@ -34,12 +36,13 @@ class ContainerConfig extends LinkedHashMap {
         super(config)
     }
 
-    boolean isEnabled() {
-        get('enabled')?.toString() == 'true'
+    ContainerConfig(Map config, Map<String,String> env) {
+        super(config)
+        this.sysEnv = env
     }
 
-    boolean isLegacy() {
-        get(legacy)?.toString() == 'true'
+    boolean isEnabled() {
+        get('enabled')?.toString() == 'true'
     }
 
     String getEngine() {
@@ -58,5 +61,14 @@ class ContainerConfig extends LinkedHashMap {
             return result
 
         throw new IllegalArgumentException("Not a valid `envWhitelist` argument")
+    }
+
+    boolean entrypointOverride() {
+        def result = get('entrypointOverride')
+        if( result == null )
+            result = sysEnv.get('NXF_CONTAINER_ENTRYPOINT_OVERRIDE')
+        if( result != null )
+            return Boolean.parseBoolean(result.toString())
+        return false
     }
 }
