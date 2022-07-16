@@ -25,6 +25,7 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.function.Consumer
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileDynamic
@@ -903,11 +904,15 @@ class Session implements ISession {
      * Register a shutdown hook to close services when the session terminates
      * @param Closure
      */
-    void onShutdown( Closure shutdown ) {
+    void onShutdown( Closure<Void> shutdown ) {
         if( !shutdown )
             return
 
         shutdownCallbacks << shutdown
+    }
+
+    void onShutdown( Consumer<Object> callback ) {
+        onShutdown( { callback.accept(it) } )
     }
 
     void notifyProcessCreate(TaskProcessor process) {

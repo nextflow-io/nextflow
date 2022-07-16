@@ -105,8 +105,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import com.upplication.s3fs.ng.DownloadOpts;
-import com.upplication.s3fs.ng.S3ParallelDownload;
 import com.upplication.s3fs.util.IOUtils;
 import com.upplication.s3fs.util.S3MultipartOptions;
 import com.upplication.s3fs.util.S3ObjectSummaryLookup;
@@ -159,8 +157,6 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 	private Properties props;
 
-	private S3ParallelDownload downloader;
-
 	@Override
 	public String getScheme() {
 		return "s3";
@@ -203,16 +199,6 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		if (!fileSystem.compareAndSet(null, result)) {
 			throw new FileSystemAlreadyExistsException(
 					"S3 filesystem already exists. Use getFileSystem() instead");
-		}
-
-		// create s3 downloader
-		DownloadOpts opts = DownloadOpts.from(props, System.getenv());
-		if( opts.parallelEnabled() ) {
-			log.debug("Using S3 multi-part downloader");
-			this.downloader = S3ParallelDownload.create(result.getClient().getClient(), opts);
-		}
-		else {
-			log.debug("Using S3 serial downloader");
 		}
 
 		return result;
@@ -289,18 +275,12 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 		InputStream result;
 		try {
-			if( downloader==null ) {
-				result = s3Path.getFileSystem().getClient()
-						.getObject(s3Path.getBucket(), s3Path.getKey())
-						.getObjectContent();
+			result = s3Path.getFileSystem().getClient()
+					.getObject(s3Path.getBucket(), s3Path.getKey())
+					.getObjectContent();
 
-				if (result == null)
-					throw new IOException(String.format("The specified path is a directory: %s", path));
-			}
-			else {
-				log.debug("S3 parallel download with direct buffer: s3://{}/{}",s3Path.getBucket(), s3Path.getKey());
-				result = downloader.download(s3Path.getBucket(), s3Path.getKey());
-			}
+			if (result == null)
+				throw new IOException(String.format("The specified path is a directory: %s", path));
 		}
 		catch (AmazonS3Exception e) {
 			if (e.getStatusCode() == 404)
@@ -1048,8 +1028,4 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
         return Files.createTempDirectory("temp-s3-");
     }
 
-    public static void shutdown(boolean hard) {
-		S3OutputStream.shutdownExecutor(hard);
-		S3ParallelDownload.shutdown(hard);
-	}
 }

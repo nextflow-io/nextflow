@@ -94,6 +94,8 @@ import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.services.s3.transfer.UploadContext;
 import com.amazonaws.services.s3.transfer.internal.TransferManagerUtils;
 import com.upplication.s3fs.util.S3MultipartOptions;
+import nextflow.Global;
+import nextflow.Session;
 import nextflow.extension.FilesEx;
 import nextflow.util.Duration;
 import nextflow.util.ThreadPoolHelper;
@@ -119,12 +121,6 @@ public class AmazonS3Client {
 	private TransferManager transferManager;
 
 	private ExecutorService transferPool;
-
-	private static final List<AmazonS3Client> allSessions = new ArrayList<>();
-
-	{
-		allSessions.add(this);
-	}
 
 	public AmazonS3Client(AmazonS3 client){
 		this.client = client;
@@ -456,6 +452,15 @@ public class AmazonS3Client {
 					.withS3Client(getClient())
 					.withExecutorFactory(() -> transferPool)
 					.build();
+
+			// add a shutdown hook
+			final Session sess = (Session) Global.getSession();
+			if( sess != null ) {
+				sess.onShutdown( (it) -> { showdown0(sess.isAborted()); });
+			}
+			else {
+				log.warn("Session not available -- S3 file transfer may not shutdown properly");
+			}
 		}
 		return transferManager;
 	}
@@ -559,8 +564,6 @@ public class AmazonS3Client {
 	}
 
 	void showdown0(boolean hard) {
-		if( transferManager==null )
-			return;
 		if( hard ) {
 			transferManager.shutdownNow();
 		}
@@ -573,14 +576,4 @@ public class AmazonS3Client {
 		}
 	}
 
-	static public void shutdown(boolean hard) {
-		for( AmazonS3Client it : allSessions ) {
-			try {
-				it.showdown0(hard);
-			}
-			catch (Exception e) {
-				log.debug("Unexpected error during S3 session shutdown - cause: " + e.getMessage(), e);
-			}
-		}
-	}
 }
