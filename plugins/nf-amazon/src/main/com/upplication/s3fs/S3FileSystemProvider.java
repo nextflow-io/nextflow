@@ -402,7 +402,6 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 		final Optional<S3FileAttributes> attrs = readAttr1(target);
 		final boolean exits = attrs.isPresent();
-		final boolean isDirectory = attrs.isPresent() && attrs.get().isDirectory();
 
 		// delete target if it exists and REPLACE_EXISTING is specified
 		if (opts.replaceExisting()) {
@@ -412,7 +411,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			throw new FileAlreadyExistsException(target.toString());
 
 		final AmazonS3Client s3Client = target.getFileSystem().getClient();
-		if( isDirectory ) {
+		if( Files.isDirectory(localFile) ) {
 			s3Client.uploadDirectory(localFile.toFile(), target);
 		}
 		else {

@@ -46,9 +46,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -106,7 +104,7 @@ import org.slf4j.LoggerFactory;
  * Client Amazon S3
  * @see com.amazonaws.services.s3.AmazonS3Client
  */
-public class AmazonS3Client implements ObjectMetadataProvider, ObjectTaggingProvider, ObjectCannedAclProvider {
+public class AmazonS3Client {
 
 	private static final Logger log = LoggerFactory.getLogger(AmazonS3Client.class);
 	
@@ -449,6 +447,8 @@ public class AmazonS3Client implements ObjectMetadataProvider, ObjectTaggingProv
 		return result;
 	}
 
+	// ===== transfer manager section =====
+
 	synchronized TransferManager transferManager() {
 		if( transferManager==null ) {
 			transferPool = TransferManagerUtils.createDefaultExecutorService();
@@ -503,28 +503,46 @@ public class AmazonS3Client implements ObjectMetadataProvider, ObjectTaggingProv
 		}
 	}
 
-	private Map<String,List<Tag>> uploadTags = new ConcurrentHashMap<>();
+	/**
+	 * This class is used by the upload directory operation to acquire the mecessary meta info
+	 */
+	private class MetadataProvider implements ObjectMetadataProvider, ObjectTaggingProvider, ObjectCannedAclProvider {
 
-	private List<Tag> uploadTags(String bucket, String key) {
-		final String fullKey = bucket + "/" + key;
-		return uploadTags.get(fullKey);
-	}
-
-	private void uploadTags(String bucket, String key, List<Tag> tags) {
-		final String fullKey = bucket + "/" + key;
-		if( tags!=null ) {
-			uploadTags.put(fullKey, tags);
+		@Override
+		public CannedAccessControlList provideObjectCannedAcl(File file) {
+			return cannedAcl;
 		}
-		else
-			uploadTags.remove(fullKey);
+
+		@Override
+		public void provideObjectMetadata(File file, ObjectMetadata metadata) {
+			if( storageEncryption!=null ) {
+				metadata.setSSEAlgorithm(storageEncryption.toString());
+			}
+		}
+
+		@Override
+		public ObjectTagging provideObjectTags(UploadContext context) {
+			List<Tag> tags = uploadTags.get();
+			if( tags==null || tags.size()==0 )
+				return null;
+			return new ObjectTagging(new ArrayList<>(tags));
+		}
 	}
+
+	final private MetadataProvider metaProvider = new MetadataProvider();
+
+	final private ThreadLocal<List<Tag>> uploadTags = new ThreadLocal<>();
 
 	public void uploadDirectory(File source, S3Path target) {
 		log.debug("S3 upload file from={} to={}", source, FilesEx.toUriString(target));
-		uploadTags(target.getBucket(), target.getKey(), target.getTagsList());
+		// set the tags to be used in a thread local
+		uploadTags.set( target.getTagsList() );
 		// initiate transfer
 		MultipleFileUpload upload = transferManager()
-				.uploadDirectory(target.getBucket(), target.getKey(), source, true, this, this, this);
+				.uploadDirectory(target.getBucket(), target.getKey(), source, true, metaProvider, metaProvider, metaProvider);
+		// the tags are fetched by the previous operation
+		// the thread local can be cleared
+		uploadTags.remove();
 		// await for completion
 		try {
 			upload.waitForCompletion();
@@ -533,6 +551,11 @@ public class AmazonS3Client implements ObjectMetadataProvider, ObjectTaggingProv
 			log.debug("S3 upload file: s3://{}/{} interrupted", target.getBucket(), target.getKey());
 			Thread.currentThread().interrupt();
 		}
+	}
+
+
+	String getObjectKmsKeyId(String bucketName, String key) {
+		return getObjectMetadata(bucketName,key).getSSEAwsKmsKeyId();
 	}
 
 	void showdown0(boolean hard) {
@@ -559,25 +582,5 @@ public class AmazonS3Client implements ObjectMetadataProvider, ObjectTaggingProv
 				log.debug("Unexpected error during S3 session shutdown - cause: " + e.getMessage(), e);
 			}
 		}
-	}
-
-	@Override
-	public CannedAccessControlList provideObjectCannedAcl(File file) {
-		return cannedAcl;
-	}
-
-	@Override
-	public void provideObjectMetadata(File file, ObjectMetadata metadata) {
-		if( storageEncryption!=null ) {
-			metadata.setSSEAlgorithm(storageEncryption.toString());
-		}
-	}
-
-	@Override
-	public ObjectTagging provideObjectTags(UploadContext context) {
-		List<Tag> tags = uploadTags(context.getBucket(), context.getKey());
-		if( tags==null || tags.size()==0 )
-			return null;
-		return new ObjectTagging(new ArrayList<>(tags));
 	}
 }
