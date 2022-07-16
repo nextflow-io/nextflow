@@ -75,33 +75,6 @@ import static java.util.Objects.requireNonNull;
 
 public final class S3OutputStream extends OutputStream {
 
-    /**
-     * Hack a LinkedBlockingQueue to make the offer method blocking
-     *
-     * http://stackoverflow.com/a/4522411/395921
-     *
-     * @param <E>
-     */
-    static class LimitedQueue<E> extends LinkedBlockingQueue<E>
-    {
-        public LimitedQueue(int maxSize)
-        {
-            super(maxSize);
-        }
-
-        @Override
-        public boolean offer(E e)
-        {
-            // turn offer() and add() into a blocking calls (unless interrupted)
-            try {
-                put(e);
-                return true;
-            } catch(InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            }
-            return false;
-        }
-    }
 
     private static final Logger log = LoggerFactory.getLogger(S3OutputStream.class);
 

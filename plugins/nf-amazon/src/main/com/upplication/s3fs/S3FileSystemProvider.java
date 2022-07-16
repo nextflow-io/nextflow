@@ -348,6 +348,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		return source instanceof S3Path && FileSystems.getDefault().equals(target.getFileSystem());
 	}
 
+	@Override
 	public void download(Path remoteFile, Path localDestination, CopyOption... options) throws IOException {
 		final S3Path source = (S3Path)remoteFile;
 
@@ -370,6 +371,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		}
 	}
 
+	@Override
 	public void upload(Path localFile, Path remoteDestination, CopyOption... options) throws IOException {
 		final S3Path target = (S3Path) remoteDestination;
 
@@ -942,6 +944,8 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		client.setCannedAcl(getProp(props, "s_3_acl", "s3_acl", "s3Acl"));
 		client.setStorageEncryption(props.getProperty("storage_encryption"));
 		client.setKmsKeyId(props.getProperty("storage_kms_key_id"));
+		client.setUploadChunkSize(props.getProperty("upload_chunk_size"));
+		client.setUploadMaxThreads(props.getProperty("upload_max_threads"));
 
 		if (uri.getHost() != null) {
 			client.setEndpoint(uri.getHost());

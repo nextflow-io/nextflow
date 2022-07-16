@@ -92,12 +92,12 @@ import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.services.s3.transfer.UploadContext;
-import com.amazonaws.services.s3.transfer.internal.TransferManagerUtils;
 import com.upplication.s3fs.util.S3MultipartOptions;
 import nextflow.Global;
 import nextflow.Session;
 import nextflow.extension.FilesEx;
 import nextflow.util.Duration;
+import nextflow.util.ThreadPoolBuilder;
 import nextflow.util.ThreadPoolHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -121,6 +121,10 @@ public class AmazonS3Client {
 	private TransferManager transferManager;
 
 	private ExecutorService transferPool;
+
+	private Long uploadChunkSize = Long.valueOf(S3MultipartOptions.DEFAULT_CHUNK_SIZE);
+
+	private Integer uploadMaxThreads = 10;
 
 	public AmazonS3Client(AmazonS3 client){
 		this.client = client;
@@ -280,6 +284,32 @@ public class AmazonS3Client {
 			return;
 		this.storageEncryption = SSEAlgorithm.fromString(alg);
 		log.debug("Setting S3 SSE storage encryption algorithm={}", alg);
+	}
+
+	public void setUploadChunkSize(String value) {
+		if( value==null )
+			return;
+
+		try {
+			this.uploadChunkSize = Long.valueOf(value);
+			log.debug("Setting S3 upload chunk size={}", uploadChunkSize);
+		}
+		catch( NumberFormatException e ) {
+			log.warn("Not a valid AWS S3 upload chunk size: `{}` -- Using default", value);
+		}
+	}
+
+	public void setUploadMaxThreads(String value) {
+		if( value==null )
+			return;
+
+		try {
+			this.uploadMaxThreads = Integer.valueOf(value);
+			log.debug("Setting S3 upload max threads={}", uploadMaxThreads);
+		}
+		catch( NumberFormatException e ) {
+			log.warn("Not a valid AWS S3 upload max threads: `{}` -- Using default", value);
+		}
 	}
 
 	public CannedAccessControlList getCannedAcl() {
@@ -447,9 +477,11 @@ public class AmazonS3Client {
 
 	synchronized TransferManager transferManager() {
 		if( transferManager==null ) {
-			transferPool = TransferManagerUtils.createDefaultExecutorService();
+			log.debug("Creating S3 transfer manager pool - chunk-size={}; max-treads={};", uploadChunkSize, uploadMaxThreads);
+			transferPool = ThreadPoolBuilder.io(1, uploadMaxThreads, 100, "s3-transfer-manager");
 			transferManager = TransferManagerBuilder.standard()
 					.withS3Client(getClient())
+					.withMinimumUploadPartSize(uploadChunkSize)
 					.withExecutorFactory(() -> transferPool)
 					.build();
 
