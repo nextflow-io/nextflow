@@ -49,6 +49,7 @@ import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
+import nextflow.file.FileTransferPool
 import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
@@ -72,8 +73,6 @@ import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
-import nextflow.util.ThreadPoolBuilder
-import nextflow.util.ThreadPoolHelper
 import nextflow.util.VersionNumber
 import sun.misc.Signal
 import sun.misc.SignalHandler
@@ -630,7 +629,10 @@ class Session implements ISession {
     void destroy() {
         try {
             log.trace "Session > destroying"
-
+            // note: the file transfer pool must be terminated before
+            // invoking the shutdown callback to prevent depending pool (e.g. s3 transfer pool)
+            // are terminated while some file still needs to be download/uploaded
+            FileTransferPool.shutdown(aborted)
             // invoke shutdown callbacks
             shutdown0()
             log.trace "Session > after cleanup"
@@ -1342,48 +1344,4 @@ class Session implements ISession {
         ansiLogObserver ? ansiLogObserver.appendInfo(file.text) : Files.copy(file, System.out)
     }
 
-    @Memoized // <-- this guarantees that the same executor is used across different publish dir in the same session
-    @CompileStatic
-    synchronized ExecutorService getFileTransferThreadPool() {
-        final DEFAULT_MIN_THREAD = Math.min(Runtime.runtime.availableProcessors(), 4)
-        final DEFAULT_MAX_THREAD = DEFAULT_MIN_THREAD
-        final DEFAULT_QUEUE = 10_000
-        final DEFAULT_KEEP_ALIVE =  Duration.of('60sec')
-        final DEFAULT_MAX_AWAIT = Duration.of('12 hour')
-
-        def minThreads = config.navigate("threadPool.FileTransfer.minThreads", DEFAULT_MIN_THREAD) as Integer
-        def maxThreads = config.navigate("threadPool.FileTransfer.maxThreads", DEFAULT_MAX_THREAD) as Integer
-        def maxQueueSize = config.navigate("threadPool.FileTransfer.maxQueueSize", DEFAULT_QUEUE) as Integer
-        def keepAlive = config.navigate("threadPool.FileTransfer.keepAlive", DEFAULT_KEEP_ALIVE) as Duration
-        def maxAwait = config.navigate("threadPool.FileTransfer.maxAwait", DEFAULT_MAX_AWAIT) as Duration
-        def allowThreadTimeout = config.navigate("threadPool.FileTransfer.allowThreadTimeout", false) as Boolean
-
-        if( minThreads>maxThreads ) {
-            log.debug("FileTransfer minThreads ($minThreads) cannot be greater than maxThreads ($maxThreads) - Setting minThreads to $maxThreads")
-            minThreads = maxThreads
-        }
-
-        final pool = new ThreadPoolBuilder()
-                .withName('FileTransfer')
-                .withMinSize(minThreads)
-                .withMaxSize(maxThreads)
-                .withQueueSize(maxQueueSize)
-                .withKeepAliveTime(keepAlive)
-                .withAllowCoreThreadTimeout(allowThreadTimeout)
-                .build()
-
-        this.onShutdown {
-            if( aborted ) {
-                pool.shutdownNow()
-                return
-            }
-            pool.shutdown()
-            // wait for ongoing file transfer to complete
-            final waitMsg = "Waiting files transfer to complete (%d files)"
-            final exitMsg = "Exiting before FileTransfer thread pool complete -- Some files maybe lost"
-            ThreadPoolHelper.await(pool, maxAwait, waitMsg, exitMsg)
-        }
-
-        return pool
-    }
 }

@@ -96,7 +96,6 @@ import com.amazonaws.services.s3.transfer.UploadContext;
 import com.upplication.s3fs.util.S3MultipartOptions;
 import nextflow.Global;
 import nextflow.Session;
-import nextflow.extension.FilesEx;
 import nextflow.util.Duration;
 import nextflow.util.ThreadPoolBuilder;
 import nextflow.util.ThreadPoolHelper;
@@ -499,7 +498,6 @@ public class AmazonS3Client {
 	}
 
 	public void downloadFile(S3Path source, File target) {
-		log.debug("S3 download file from={} to={}", FilesEx.toUriString(source), target);
 		Download download = transferManager()
 				.download(source.getBucket(), source.getKey(), target);
 		try {
@@ -512,7 +510,6 @@ public class AmazonS3Client {
 	}
 
 	public void downloadDirectory(S3Path source, File target) {
-		log.debug("S3 download directory from={} to={}", FilesEx.toUriString(source), target);
 		MultipleFileDownload download = transferManager()
 				.downloadDirectory(source.getBucket(), source.getKey(), target);
 		try {
@@ -525,7 +522,6 @@ public class AmazonS3Client {
 	}
 
 	public void uploadFile(File source, S3Path target) {
-		log.debug("S3 upload file from={} to={}", source, FilesEx.toUriString(target));
 		PutObjectRequest req = new PutObjectRequest(target.getBucket(), target.getKey(), source);
 		ObjectMetadata metadata = new ObjectMetadata();
 		preparePutObjectRequest(req,metadata, target.getTagsList());
@@ -576,7 +572,6 @@ public class AmazonS3Client {
 	final private ThreadLocal<List<Tag>> uploadTags = new ThreadLocal<>();
 
 	public void uploadDirectory(File source, S3Path target) {
-		log.debug("S3 upload file from={} to={}", source, FilesEx.toUriString(target));
 		// set the tags to be used in a thread local
 		uploadTags.set( target.getTagsList() );
 		// initiate transfer
@@ -601,6 +596,7 @@ public class AmazonS3Client {
 	}
 
 	void showdown0(boolean hard) {
+		log.debug("Initiating transfer manager shutdown (hard={})", hard);
 		if( hard ) {
 			transferManager.shutdownNow();
 		}

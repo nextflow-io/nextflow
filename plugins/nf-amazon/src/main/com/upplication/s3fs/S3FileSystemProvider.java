@@ -108,6 +108,7 @@ import com.google.common.collect.Sets;
 import com.upplication.s3fs.util.IOUtils;
 import com.upplication.s3fs.util.S3MultipartOptions;
 import com.upplication.s3fs.util.S3ObjectSummaryLookup;
+import nextflow.extension.FilesEx;
 import nextflow.file.CopyOptions;
 import nextflow.file.FileHelper;
 import nextflow.file.FileSystemTransferAware;
@@ -361,9 +362,11 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			throw new FileAlreadyExistsException(localDestination.toString());
 
 		final Optional<S3FileAttributes> attrs = readAttr1(source);
-		final boolean isDirectory = attrs.isPresent() && attrs.get().isDirectory();
+		final boolean isDir = attrs.isPresent() && attrs.get().isDirectory();
+		final String type = isDir ? "directory": "file";
 		final AmazonS3Client s3Client = source.getFileSystem().getClient();
-		if( isDirectory ) {
+		log.debug("S3 download {} from={} to={}", type, FilesEx.toUriString(source), localDestination);
+		if( isDir ) {
 			s3Client.downloadDirectory(source, localDestination.toFile());
 		}
 		else {
@@ -392,8 +395,11 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		else if ( exits )
 			throw new FileAlreadyExistsException(target.toString());
 
+		final boolean isDir = Files.isDirectory(localFile);
+		final String type = isDir ? "directory": "file";
+		log.debug("S3 upload {} from={} to={}", type, localFile, FilesEx.toUriString(target));
 		final AmazonS3Client s3Client = target.getFileSystem().getClient();
-		if( Files.isDirectory(localFile) ) {
+		if( isDir ) {
 			s3Client.uploadDirectory(localFile.toFile(), target);
 		}
 		else {
