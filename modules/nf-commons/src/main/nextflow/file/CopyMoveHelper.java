@@ -40,45 +40,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Helper class to handle copy/move files and directories
  */
-class CopyMoveHelper {
+public class CopyMoveHelper {
 
     private static Logger log = LoggerFactory.getLogger(CopyMoveHelper.class);
 
     private CopyMoveHelper() { }
 
-    /**
-     * Parses the arguments for a file copy operation.
-     */
-    private static class CopyOptions {
-        boolean replaceExisting = false;
-        boolean copyAttributes = false;
-        boolean followLinks = true;
-
-        private CopyOptions() { }
-
-        static CopyOptions parse(CopyOption... options) {
-            CopyOptions result = new CopyOptions();
-            for (CopyOption option: options) {
-                if (option == StandardCopyOption.REPLACE_EXISTING) {
-                    result.replaceExisting = true;
-                    continue;
-                }
-                if (option == LinkOption.NOFOLLOW_LINKS) {
-                    result.followLinks = false;
-                    continue;
-                }
-                if (option == StandardCopyOption.COPY_ATTRIBUTES) {
-                    result.copyAttributes = true;
-                    continue;
-                }
-                if (option == null)
-                    throw new NullPointerException();
-                throw new UnsupportedOperationException("'" + option +
-                        "' is not a recognized copy option");
-            }
-            return result;
-        }
-    }
 
     /**
      * Converts the given array of options for moving a file to options suitable
@@ -183,7 +150,7 @@ class CopyMoveHelper {
             throws IOException
     {
         CopyOptions opts = CopyOptions.parse(options);
-        LinkOption[] linkOptions = (opts.followLinks) ? new LinkOption[0] : new LinkOption[] { LinkOption.NOFOLLOW_LINKS };
+        LinkOption[] linkOptions = (opts.followLinks()) ? new LinkOption[0] : new LinkOption[] { LinkOption.NOFOLLOW_LINKS };
 
         // attributes of source file
         BasicFileAttributes attrs = Files.readAttributes(source, BasicFileAttributes.class, linkOptions);
@@ -191,7 +158,7 @@ class CopyMoveHelper {
             throw new IOException("Copying of symbolic links not supported");
 
         // delete target if it exists and REPLACE_EXISTING is specified
-        if (opts.replaceExisting) {
+        if (opts.replaceExisting()) {
             FileHelper.deletePath(target);
         }
         else if (Files.exists(target))
