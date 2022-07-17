@@ -85,11 +85,11 @@ jobs:
         AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
     - name: Tar integration tests
-      if: always()
+      if: failure()
       run: tar -cvf integration-tests.tar tests/checks
 
     - name: Publish tests report
-      if: always()
+      if: failure()
       uses: actions/upload-artifact@v2
       with:
         name: test-reports-jdk-${{ matrix.java_version }}
