@@ -97,7 +97,7 @@ class SimpleAgent<T> {
                     throw new IllegalArgumentException("Invalid agent event object: $ev [${ev.getClass().getName()}]")
             }
             catch (InterruptedException e) {
-                log.debug "Got an interrupeted exception while polling agent event | ${e.message ?: e}"
+                log.debug "Got an interrupted exception while polling agent event | ${e.message ?: e}"
                 break
             }
             catch(Throwable e) {

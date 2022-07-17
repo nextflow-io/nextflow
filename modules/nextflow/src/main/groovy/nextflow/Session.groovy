@@ -25,8 +25,7 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
+import java.util.function.Consumer
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileDynamic
@@ -50,6 +49,7 @@ import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
+import nextflow.file.FileTransferPool
 import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
@@ -73,7 +73,6 @@ import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
-import nextflow.util.ThreadPoolBuilder
 import nextflow.util.VersionNumber
 import sun.misc.Signal
 import sun.misc.SignalHandler
@@ -630,7 +629,10 @@ class Session implements ISession {
     void destroy() {
         try {
             log.trace "Session > destroying"
-
+            // note: the file transfer pool must be terminated before
+            // invoking the shutdown callback to prevent depending pool (e.g. s3 transfer pool)
+            // are terminated while some file still needs to be download/uploaded
+            FileTransferPool.shutdown(aborted)
             // invoke shutdown callbacks
             shutdown0()
             log.trace "Session > after cleanup"
@@ -904,11 +906,15 @@ class Session implements ISession {
      * Register a shutdown hook to close services when the session terminates
      * @param Closure
      */
-    void onShutdown( Closure shutdown ) {
+    void onShutdown( Closure<Void> shutdown ) {
         if( !shutdown )
             return
 
         shutdownCallbacks << shutdown
+    }
+
+    void onShutdown( Consumer<Object> callback ) {
+        onShutdown( { callback.accept(it) } )
     }
 
     void notifyProcessCreate(TaskProcessor process) {
@@ -1338,73 +1344,4 @@ class Session implements ISession {
         ansiLogObserver ? ansiLogObserver.appendInfo(file.text) : Files.copy(file, System.out)
     }
 
-    @Memoized // <-- this guarantees that the same executor is used across different publish dir in the same session
-    @CompileStatic
-    synchronized ExecutorService getFileTransferThreadPool() {
-        final DEFAULT_MIN_THREAD = Math.min(Runtime.runtime.availableProcessors(), 4)
-        final DEFAULT_MAX_THREAD = DEFAULT_MIN_THREAD
-        final DEFAULT_QUEUE = 10_000
-        final DEFAULT_KEEP_ALIVE =  Duration.of('60sec')
-        final DEFAULT_MAX_AWAIT = Duration.of('12 hour')
-
-        def minThreads = config.navigate("threadPool.FileTransfer.minThreads", DEFAULT_MIN_THREAD) as Integer
-        def maxThreads = config.navigate("threadPool.FileTransfer.maxThreads", DEFAULT_MAX_THREAD) as Integer
-        def maxQueueSize = config.navigate("threadPool.FileTransfer.maxQueueSize", DEFAULT_QUEUE) as Integer
-        def keepAlive = config.navigate("threadPool.FileTransfer.keepAlive", DEFAULT_KEEP_ALIVE) as Duration
-        def maxAwait = config.navigate("threadPool.FileTransfer.maxAwait", DEFAULT_MAX_AWAIT) as Duration
-        def allowThreadTimeout = config.navigate("threadPool.FileTransfer.allowThreadTimeout", false) as Boolean
-
-        if( minThreads>maxThreads ) {
-            log.debug("FileTransfer minThreads ($minThreads) cannot be greater than maxThreads ($maxThreads) - Setting minThreads to $maxThreads")
-            minThreads = maxThreads
-        }
-
-        final pool = new ThreadPoolBuilder()
-                .withName('FileTransfer')
-                .withMinSize(minThreads)
-                .withMaxSize(maxThreads)
-                .withQueueSize(maxQueueSize)
-                .withKeepAliveTime(keepAlive)
-                .withAllowCoreThreadTimeout(allowThreadTimeout)
-                .build()
-
-        this.onShutdown {
-            final max = maxAwait.millis
-            final t0 = System.currentTimeMillis()
-            // start shutdown process
-            if( aborted ) {
-                pool.shutdownNow()
-                return
-            }
-            pool.shutdown()
-            // wait for ongoing file transfer to complete
-            int count=0
-            while( true ) {
-                final terminated = pool.awaitTermination(5, TimeUnit.SECONDS)
-                if( terminated )
-                    break
-                
-                final delta = System.currentTimeMillis()-t0
-                if( delta > max ) {
-                    log.warn "Exiting before FileTransfer thread pool complete -- Some files maybe lost"
-                    break
-                }
-
-                final p1 = ((ThreadPoolExecutor)pool)
-                final pending = p1.getTaskCount() - p1.getCompletedTaskCount()
-                // log to console every 10 minutes (120 * 5 sec)
-                if( count % 120 == 0 ) {
-                    log.info1 "Waiting files transfer to complete (${pending} files)"
-                }
-                // log to the debug file every minute (12 * 5 sec)
-                else if( count % 12 == 0 ) {
-                    log.debug "Waiting files transfer to complete (${pending} files)"
-                }
-                // increment the count
-                count++
-            }
-        }
-
-        return pool
-    }
 }

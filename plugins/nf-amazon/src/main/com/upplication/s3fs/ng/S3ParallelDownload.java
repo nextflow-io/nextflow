@@ -42,6 +42,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Deprecated
 public class S3ParallelDownload {
 
     static final private Logger log = LoggerFactory.getLogger(S3ParallelDownload.class);

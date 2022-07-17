@@ -129,7 +129,7 @@ public class S3ObjectSummaryLookup {
                 break;
         }
 
-        throw new NoSuchFileException("s3://" + s3Path.getBucket() + "/" + s3Path.toString());
+        throw new NoSuchFileException("s3://" + s3Path.getBucket() + "/" + s3Path.getKey());
     }
 
     private boolean matchName(String fileName, S3ObjectSummary summary) {

@@ -38,7 +38,7 @@ class DownloadOptsTest extends Specification {
         opts.queueMaxSize() == 10_000
         opts.bufferMaxSize() == MemoryUnit.of('1 GB')
         opts.chunkSize() == 10 * 1024 * 1024
-        opts.parallelEnabled()
+        !opts.parallelEnabled()
         opts.maxDelayMillis() == Duration.of('90s').toMillis()
         opts.maxAttempts() == 5
     }

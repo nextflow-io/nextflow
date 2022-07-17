@@ -21,6 +21,7 @@ import static nextflow.Const.*
 
 import java.lang.reflect.Field
 import java.nio.file.DirectoryNotEmptyException
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
@@ -456,6 +457,9 @@ class LoggerHelper {
         }
         else if( fail instanceof NoSuchFileException ) {
             buffer.append("No such file: ${normalize(fail.message)}")
+        }
+        else if( fail instanceof FileAlreadyExistsException ) {
+            buffer.append("File already exist: $fail.message")
         }
         else if( fail instanceof ClassNotFoundException ) {
             buffer.append("Class not found: ${normalize(fail.message)}")
