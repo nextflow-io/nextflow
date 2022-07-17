@@ -1,8 +1,6 @@
 FROM amazoncorretto:17.0.3
 RUN yum install -y procps-ng
 
-FROM amazoncorretto:17.0.3
-COPY --from=0 /bin/ps /bin/ps
 ENV NXF_HOME=/.nextflow
 ARG TARGETPLATFORM
 
@@ -20,4 +18,3 @@ RUN mkdir /.nextflow \
 
 # define the entry point
 ENTRYPOINT ["/usr/local/bin/entry.sh"]
-
