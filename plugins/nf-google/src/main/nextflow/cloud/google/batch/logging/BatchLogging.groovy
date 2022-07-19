@@ -38,7 +38,7 @@ class BatchLogging {
     private LoggingOptions opts
     private String projectId
 
-    /** only for testing - do not usr */
+    /** only for testing - do not use */
     protected BatchLogging() {
 
     }
