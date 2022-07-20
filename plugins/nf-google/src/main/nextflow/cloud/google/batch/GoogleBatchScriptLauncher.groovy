@@ -109,22 +109,28 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder {
     }
 
     List<String> getContainerMounts() {
-        return pathTrie.longest().collect { it ->
-            "${MOUNT_ROOT}${it}:${MOUNT_ROOT}${it}:rw".toString()
+        final result = new ArrayList(10)
+        for( String it : pathTrie.longest() ) {
+            result.add( "${MOUNT_ROOT}${it}:${MOUNT_ROOT}${it}:rw".toString() )
         }
+        return result
     }
 
     List<Volume> getVolumes() {
-        return buckets.collect { it ->
-            Volume.newBuilder()
-                .setGcs(
-                    GCS.newBuilder()
-                        .setRemotePath(it)
-                )
-                .setMountPath("${MOUNT_ROOT}/${it}".toString())
-                .addAllMountOptions(['-o rw,allow_other', '-implicit-dirs'])
-                .build()
+        final result = new ArrayList(10)
+        for( String it : buckets ) {
+            result.add(
+                Volume.newBuilder()
+                    .setGcs(
+                        GCS.newBuilder()
+                            .setRemotePath(it)
+                    )
+                    .setMountPath( "${MOUNT_ROOT}/${it}".toString() )
+                    .addAllMountOptions( ['-o rw,allow_other', '-implicit-dirs'] )
+                    .build()
+            )
         }
+        return result
     }
 
     String getWorkDirMount() {
