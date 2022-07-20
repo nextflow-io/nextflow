@@ -16,7 +16,10 @@
 
 package nextflow.cloud.google.batch.client
 
+import com.google.api.gax.core.CredentialsProvider
+import com.google.auth.Credentials
 import com.google.cloud.batch.v1.BatchServiceClient
+import com.google.cloud.batch.v1.BatchServiceSettings
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.JobName
 import com.google.cloud.batch.v1.JobStatus
@@ -40,11 +43,35 @@ class BatchClient {
     BatchClient(BatchConfig config) {
         this.projectId = config.googleOpts.projectId
         this.location = config.googleOpts.location
-        this.batchServiceClient = BatchServiceClient.create()
+        this.batchServiceClient = createBatchService(config)
     }
 
     /** Only for testing - do not use */
     protected BatchClient() {}
+
+    protected CredentialsProvider createCredentialsProvider(BatchConfig config) {
+        if( !config.getCredentials() )
+            return null
+        return new CredentialsProvider() {
+            @Override
+            Credentials getCredentials() throws IOException {
+                return config.getCredentials()
+            }
+        }
+    }
+
+    protected BatchServiceClient createBatchService(BatchConfig config) {
+        final provider = createCredentialsProvider(config)
+        if( provider ) {
+            log.debug "Creating Batch service client with config credentials"
+            final settings = BatchServiceSettings.newBuilder().setCredentialsProvider(provider).build()
+            return BatchServiceClient.create(settings)
+        }
+        else {
+            log.debug "Creating Batch service client with default settings"
+            return BatchServiceClient.create()
+        }
+    }
 
     Job submitJob(String jobId, Job job) {
         final parent = LocationName.of(projectId, location)
