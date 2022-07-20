@@ -104,11 +104,11 @@ class GoogleBatchTaskHandler extends TaskHandler {
          * create submit request
          */
         final req = newSubmitRequest(task)
-        log.debug "[GOOGLE BATCH] new job request > $req"
+        log.trace "[GOOGLE BATCH] new job request > $req"
         final resp = client.submitJob(jobId, req)
         this.uid = resp.getUid()
         this.status = TaskStatus.SUBMITTED
-        log.debug "[GOOGLE BATCH] submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}; resp=$resp"
+        log.debug "[GOOGLE BATCH] submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
     }
 
     protected Job newSubmitRequest(TaskRun task) {
@@ -116,35 +116,33 @@ class GoogleBatchTaskHandler extends TaskHandler {
         final taskSpec = TaskSpec.newBuilder()
         final computeResource = ComputeResource.newBuilder()
 
-        if( task.config.getCpus() ) {
-            computeResource.setCpuMilli( task.config.getCpus() * 1000 )
-        }
+        computeResource.setCpuMilli( task.config.getCpus() * 1000 )
 
-        if( task.config.getMemory() ) {
+        if( task.config.getMemory() )
             computeResource.setMemoryMib( task.config.getMemory().getMega() )
-        }
 
-        if( task.config.getTime() ) {
+        if( task.config.getTime() )
             taskSpec.setMaxRunDuration(
                 Duration.newBuilder()
                     .setSeconds( task.config.getTime().toSeconds() )
             )
-        }
+
+        // container
+        final cmd = "trap \"{ cp ${TaskRun.CMD_LOG} ${launcher.workDirMount}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${launcher.workDirMount}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
+        final container = Runnable.Container.newBuilder()
+            .setImageUri( task.container )
+            .addAllCommands( ['/bin/bash','-o','pipefail','-c', cmd.toString()] )
+            .addAllVolumes( launcher.getContainerMounts() )
+
+        if( task.config.getContainerOptions() )
+            container.setOptions( task.config.getContainerOptions() )
 
         // task spec
-        final cmd = "trap \"{ cp ${TaskRun.CMD_LOG} ${launcher.workDirMount}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${launcher.workDirMount}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
-
         taskSpec
             .setComputeResource(computeResource)
             .addRunnables(
                 Runnable.newBuilder()
-                    .setContainer(
-                        Runnable.Container.newBuilder()
-                            .setImageUri( task.container )
-                            .addAllCommands( ['/bin/bash','-o','pipefail','-c', cmd.toString()] )
-                            .addAllVolumes( launcher.getContainerMounts() )
-                            .setOptions( task.config.getContainerOptions() )
-                    )
+                    .setContainer(container)
             )
             .addAllVolumes( launcher.getVolumes() )
 
@@ -183,12 +181,11 @@ class GoogleBatchTaskHandler extends TaskHandler {
             networkInterface.setNoExternalIpAddress( true )
         }
 
-        if( hasNetworkPolicy ) {
+        if( hasNetworkPolicy )
             allocationPolicy.setNetwork(
                 AllocationPolicy.NetworkPolicy.newBuilder()
                     .addNetworkInterfaces(networkInterface)
             )
-        }
 
         // create the job
         return Job.newBuilder()
@@ -209,7 +206,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
         if( !jobState || delta >= 1_000) {
             def newState = client.getJobState(jobId)
             if( newState ) {
-                log.trace "[GOOGLE BATCH] Get Batch job=$jobId state=$newState"
+                log.trace "[GOOGLE BATCH] Get job=$jobId state=$newState"
                 jobState = newState
                 timestamp = now
             }
@@ -269,7 +266,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
     @Override
     void kill() {
         if( isSubmitted() ) {
-            log.trace "[GOOGLE BATCH] deleting pod name=$jobId"
+            log.trace "[GOOGLE BATCH] deleting job name=$jobId"
             client.deleteJob(jobId)
         }
         else {

@@ -92,7 +92,9 @@ class BatchClient {
     }
 
     void deleteJob(String jobId) {
-        batchServiceClient.deleteJobAsync(jobId).get()
+        final name = JobName.of(projectId, location, jobId).toString()
+
+        batchServiceClient.deleteJobAsync(name)
     }
 
     JobStatus getJobStatus(String jobId) {

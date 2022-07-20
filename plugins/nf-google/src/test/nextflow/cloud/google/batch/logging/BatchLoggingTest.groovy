@@ -103,11 +103,11 @@ class BatchLoggingTest extends Specification {
 
         when:
         def imageUri = 'quay.io/nextflow/bash'
-        def cmd = ['/bin/bash','-c','echo Hello world! && echo "Oops something went wrong" >&2']
-        def ref = Job.newBuilder()
+        def cmd = ['/bin/bash','-c','echo "Hello world!" && echo "Oops something went wrong" >&2']
+        def req = Job.newBuilder()
             .addTaskGroups(
                 TaskGroup.newBuilder()
-                    .withTaskSpec(
+                    .setTaskSpec(
                         TaskSpec.newBuilder()
                             .addRunnables(
                                 Runnable.newBuilder()

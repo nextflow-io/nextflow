@@ -35,7 +35,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
         given:
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'debian:latest'
-        def CONTAINER_OPTS = '--foo'
         def exec = Mock(GoogleBatchExecutor) {
             getConfig() >> Mock(BatchConfig)
         }
@@ -48,7 +47,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
                 getCpus() >> 2
-                getContainerOptions() >> CONTAINER_OPTS
             }
         }
 
@@ -68,7 +66,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/foo/scratch/.command.run 2>&1 | tee .command.log'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
-        runnable.getContainer().getOptions() == CONTAINER_OPTS
+        runnable.getContainer().getOptions() == ''
         runnable.getContainer().getVolumesList() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
         and:
         instancePolicy.getMachineType() == ''
