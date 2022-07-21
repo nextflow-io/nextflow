@@ -38,6 +38,7 @@ import nextflow.NF
 import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
+import nextflow.file.FileTransferPool
 import nextflow.file.TagAwareFile
 import nextflow.util.PathTrie
 /**
@@ -109,7 +110,7 @@ class PublishDir {
     private String taskName
 
     @Lazy
-    private ExecutorService threadPool = (Global.session as Session).getFileTransferThreadPool()
+    private ExecutorService threadPool = FileTransferPool.getExecutorService()
 
     void setPath( Closure obj ) {
         setPath( obj.call() as Path )
