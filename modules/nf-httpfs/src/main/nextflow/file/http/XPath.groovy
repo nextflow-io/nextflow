@@ -116,7 +116,7 @@ class XPath implements Path {
 
     @Override
     Path normalize() {
-        return new XPath(fs, path.normalize())
+        return new XPath(fs, path.normalize(), query)
     }
 
     @Override

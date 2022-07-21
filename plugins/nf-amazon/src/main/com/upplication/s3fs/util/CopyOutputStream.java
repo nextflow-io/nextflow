@@ -15,23 +15,21 @@
  *
  */
 
-package nextflow.sql
+package com.upplication.s3fs.util;
 
-import groovyx.gpars.dataflow.DataflowWriteChannel
-import nextflow.sql.config.SqlDataSource
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 
 /**
- * Declares core main interface for SQL query operation
- * 
+ * https://stackoverflow.com/a/31809148/395921
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface QueryOp<T extends QueryOp> {
+public class CopyOutputStream extends ByteArrayOutputStream {
 
-    QueryOp withStatement(String stm)
-    QueryOp withTarget(DataflowWriteChannel channel)
-    QueryOp withDataSource(SqlDataSource ds)
-    QueryOp withOpts(Map options)
-
-    T perform()
-    T perform(boolean async)
+    //Creates InputStream without actually copying the buffer and using up mem for that.
+    public InputStream toInputStream(){
+        return new ByteArrayInputStream(buf, 0, count);
+    }
 }

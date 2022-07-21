@@ -34,7 +34,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonClientException;
@@ -57,7 +56,11 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.util.Base64;
 import com.upplication.s3fs.util.ByteBufferInputStream;
 import com.upplication.s3fs.util.S3MultipartOptions;
+import nextflow.Global;
+import nextflow.Session;
+import nextflow.util.Duration;
 import nextflow.util.ThreadPoolBuilder;
+import nextflow.util.ThreadPoolHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static java.util.Objects.requireNonNull;
@@ -72,33 +75,6 @@ import static java.util.Objects.requireNonNull;
 
 public final class S3OutputStream extends OutputStream {
 
-    /**
-     * Hack a LinkedBlockingQueue to make the offer method blocking
-     *
-     * http://stackoverflow.com/a/4522411/395921
-     *
-     * @param <E>
-     */
-    static class LimitedQueue<E> extends LinkedBlockingQueue<E>
-    {
-        public LimitedQueue(int maxSize)
-        {
-            super(maxSize);
-        }
-
-        @Override
-        public boolean offer(E e)
-        {
-            // turn offer() and add() into a blocking calls (unless interrupted)
-            try {
-                put(e);
-                return true;
-            } catch(InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            }
-            return false;
-        }
-    }
 
     private static final Logger log = LoggerFactory.getLogger(S3OutputStream.class);
 
@@ -656,6 +632,14 @@ public final class S3OutputStream extends OutputStream {
                     "S3OutputStream");
             executorSingleton = pool;
             log.trace("Created singleton upload executor -- max-treads: {}", maxThreads);
+            // register shutdown hook
+            Session sess = (Session) Global.getSession();
+            if( sess != null ) {
+                sess.onShutdown( (it) -> { shutdownExecutor(sess.isAborted()); } );
+            }
+            else {
+                log.warn("Session not available -- S3 uploader may not shutdown properly");
+            }
         }
         return executorSingleton;
     }
@@ -663,27 +647,19 @@ public final class S3OutputStream extends OutputStream {
     /**
      * Shutdown the executor and clear the singleton
      */
-    public static synchronized void shutdownExecutor(boolean hard) {
-        log.trace("Uploader shutdown -- Executor: {}", executorSingleton);
-
-        if( executorSingleton != null ) {
-            if( hard )
-                executorSingleton.shutdownNow();
-            else
-                executorSingleton.shutdown();
+    static void shutdownExecutor(boolean hard) {
+        if( hard ) {
+            executorSingleton.shutdownNow();
+        }
+        else {
+            executorSingleton.shutdown();
             log.trace("Uploader await completion");
-            awaitExecutorCompletion();
-            executorSingleton = null;
+            final String waitMsg = "[AWS S3] Waiting stream uploader to complete (%d files)";
+            final String exitMsg = "[AWS S3] Exiting before stream uploader thread pool complete -- Some files maybe lost";
+            ThreadPoolHelper.await(executorSingleton, Duration.of("1h") ,waitMsg, exitMsg);
             log.trace("Uploader shutdown completed");
+            executorSingleton = null;
         }
     }
 
-    private static void awaitExecutorCompletion() {
-        try {
-            executorSingleton.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
-        }
-        catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
 }
