@@ -21,6 +21,7 @@ package nextflow.cloud.google.batch.logging
 import java.util.concurrent.TimeUnit
 
 import com.google.cloud.batch.v1.Job
+import com.google.cloud.batch.v1.LogsPolicy
 import com.google.cloud.batch.v1.Runnable
 import com.google.cloud.batch.v1.TaskGroup
 import com.google.cloud.batch.v1.TaskSpec
@@ -118,6 +119,10 @@ class BatchLoggingTest extends Specification {
                                     )
                             )
                     )
+            )
+            .setLogsPolicy(
+                LogsPolicy.newBuilder()
+                    .setDestination(LogsPolicy.Destination.CLOUD_LOGGING)
             )
             .build()
         def jobId = 'nf-test-' + System.currentTimeMillis()

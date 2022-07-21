@@ -21,6 +21,7 @@ import java.nio.file.Path
 import com.google.cloud.batch.v1.AllocationPolicy
 import com.google.cloud.batch.v1.ComputeResource
 import com.google.cloud.batch.v1.Job
+import com.google.cloud.batch.v1.LogsPolicy
 import com.google.cloud.batch.v1.Runnable
 import com.google.cloud.batch.v1.TaskGroup
 import com.google.cloud.batch.v1.TaskSpec
@@ -194,6 +195,10 @@ class GoogleBatchTaskHandler extends TaskHandler {
                     .setTaskSpec(taskSpec)
             )
             .setAllocationPolicy(allocationPolicy)
+            .setLogsPolicy(
+                LogsPolicy.newBuilder()
+                    .setDestination(LogsPolicy.Destination.CLOUD_LOGGING)
+            )
             .build()
     }
 

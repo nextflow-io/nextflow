@@ -72,6 +72,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         instancePolicy.getMachineType() == ''
         and:
         req.getAllocationPolicy().getNetwork().getNetworkInterfacesCount() == 0
+        and:
+        req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
     }
 
     def 'should create submit request/2' () {
@@ -135,5 +137,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         networkInterface.getNetwork() == 'net-1'
         networkInterface.getSubnetwork() == 'subnet-1'
         networkInterface.getNoExternalIpAddress() == true
+        and:
+        req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
     }
 }
