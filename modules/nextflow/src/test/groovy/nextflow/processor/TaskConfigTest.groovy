@@ -282,7 +282,7 @@ class TaskConfigTest extends Specification {
         config.cpus = value
 
         then:
-        config.cpus == expoected
+        config.cpus == expected
         config.getCpus() == expected
         config.hasCpus() == defined
 
