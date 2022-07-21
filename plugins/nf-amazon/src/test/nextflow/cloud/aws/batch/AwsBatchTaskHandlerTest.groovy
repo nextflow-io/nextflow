@@ -387,14 +387,15 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_ID= '123'
         def handler = Spy(AwsBatchTaskHandler)
 
-        def req = Mock(RegisterJobDefinitionRequest)
+        def req = Mock(RegisterJobDefinitionRequest) {
+            getJobDefinitionName() >> JOB_NAME
+            getParameters() >> [ 'nf-token': JOB_ID ]
+        }
 
         when:
         handler.resolveJobDefinition(IMAGE)
         then:
         1 * handler.makeJobDefRequest(IMAGE) >> req
-        1 * req.getJobDefinitionName() >> JOB_NAME
-        1 * req.getParameters() >> [ 'nf-token': JOB_ID ]
         1 * handler.findJobDef(JOB_NAME, JOB_ID) >> null
         1 * handler.createJobDef(req) >> null
 
@@ -402,7 +403,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         handler.resolveJobDefinition(IMAGE)
         then:
         // second time are not invoked for the same image
-        0 * handler.makeJobDefRequest(IMAGE) >> req
+        1 * handler.makeJobDefRequest(IMAGE) >> req
         0 * handler.findJobDef(JOB_NAME, JOB_ID) >> null
         0 * handler.createJobDef(req) >> null
 

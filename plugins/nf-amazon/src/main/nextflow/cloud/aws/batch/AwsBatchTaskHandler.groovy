@@ -396,18 +396,18 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     protected String resolveJobDefinition0(String container) {
-        if( jobDefinitions.containsKey(container) )
-            return jobDefinitions[container]
+        final req = makeJobDefRequest(container)
+        final token = req.getParameters().get('nf-token')
+        final jobKey = "$container:$token".toString()
+        if( jobDefinitions.containsKey(jobKey) )
+            return jobDefinitions[jobKey]
 
-        // this could race a race condition on the creation of a job definition
-        // with another NF instance using the same container name
         synchronized(jobDefinitions) {
-            if( jobDefinitions.containsKey(container) )
-                return jobDefinitions[container]
+            if( jobDefinitions.containsKey(jobKey) )
+                return jobDefinitions[jobKey]
 
             def msg
-            def req = makeJobDefRequest(container)
-            def name = findJobDef(req.jobDefinitionName, req.parameters?.'nf-token')
+            def name = findJobDef(req.jobDefinitionName, token)
             if( name ) {
                 msg = "[AWS BATCH] Found job definition name=$name; container=$container"
             }
@@ -421,7 +421,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             else
                 log.debug "[AWS BATCH] $msg"
 
-            jobDefinitions[container] = name
+            jobDefinitions[jobKey] = name
             return name
         }
     }
