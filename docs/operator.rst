@@ -301,14 +301,14 @@ For example::
     # outputs
     [5,4,7]
 
-.. Available parameters:
-..
-.. =========== ============================
-.. Field       Description
-.. =========== ============================
-.. flat        When ``true`` nested list structures are normalised and their items are added to the resulting list object (default: ``true``).
-.. sort        When ``true`` the items in the resulting list are sorted by their natural ordering. It is possible to provide a custom ordering criteria by using either a :ref:`closure <script-closure>` or a `Comparator <https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html>`_ object (default: ``false``).
-.. =========== ============================
+Available parameters:
+
+=========== ============================
+Field       Description
+=========== ============================
+flat        When ``true`` nested list structures are normalised and their items are added to the resulting list object (default: ``true``).
+sort        When ``true`` the items in the resulting list are sorted by their natural ordering. It is possible to provide a custom ordering criteria by using either a :ref:`closure <script-closure>` or a `Comparator <https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html>`_ object (default: ``false``).
+=========== ============================
 
 See also: `toList`_ and `toSortedList`_ operator.
 
