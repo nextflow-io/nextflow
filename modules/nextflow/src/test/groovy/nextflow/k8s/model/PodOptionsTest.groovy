@@ -245,7 +245,7 @@ class PodOptionsTest extends Specification {
                 [config: 'y', mountPath: '/y'],
                 [volumeClaim: 'z', mountPath: '/z'],
 
-                [emptyDir: [:], mountPath: 'scratch1'],
+                [emptyDir: [:], mountPath: '/scratch1'],
                 [securityContext: [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]],
                 [nodeSelector: 'foo=X, bar=Y'],
                 [automountServiceAccountToken: false],

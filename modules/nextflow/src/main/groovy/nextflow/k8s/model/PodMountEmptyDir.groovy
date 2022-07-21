@@ -38,7 +38,6 @@ class PodMountEmptyDir {
     Map emptyDir
 
     PodMountEmptyDir( Map emptyDir, String mountPath ) {
-        assert emptyDir
         assert mountPath
 
         this.emptyDir = emptyDir
