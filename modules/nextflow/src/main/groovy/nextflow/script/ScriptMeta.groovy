@@ -298,12 +298,6 @@ class ScriptMeta {
         assert component
 
         final name = alias ?: component.name
-        final existing = getComponent(name)
-        if (existing) {
-            def msg = "A ${existing.type} with name '$name' is already defined in the current context"
-            throw new DuplicateModuleIncludeException(msg)
-        }
-
         if( name != component.name ) {
             imports.put(name, component.cloneWithName(name))
         }

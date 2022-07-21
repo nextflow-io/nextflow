@@ -697,7 +697,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         noExceptionThrown()
     }
 
-    def 'should error on duplicate import' () {
+    def 'should allows duplicate import' () {
         given:
         def folder = TestHelper.createInMemTempDir();
         def MOD1 = folder.resolve('mod1.nf')
@@ -720,8 +720,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def runner = new MockScriptRunner()
         runner.setScript(SCRIPT).execute()
         then:
-        def err = thrown(DuplicateModuleIncludeException)
-        err.message == "A process with name 'foo' is already defined in the current context"
+        noExceptionThrown()
     }
 
     def 'should include only named component' () {

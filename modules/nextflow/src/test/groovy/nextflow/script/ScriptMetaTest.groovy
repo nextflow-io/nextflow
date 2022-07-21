@@ -3,6 +3,7 @@ package nextflow.script
 import java.nio.file.Files
 
 import groovy.transform.InheritConstructors
+import nextflow.NF
 import nextflow.exception.DuplicateModuleIncludeException
 import test.Dsl2Spec
 import test.TestHelper
@@ -17,6 +18,10 @@ class ScriptMetaTest extends Dsl2Spec {
     static class FooScript extends BaseScript {
         @Override
         protected Object runScript() { null }
+    }
+
+    def setupSpec(){
+        NF.init()
     }
 
     def 'should return all defined names' () {
@@ -120,7 +125,6 @@ class ScriptMetaTest extends Dsl2Spec {
         meta.addModule0(comp1)
         then:
         2 * comp1.getName() >> 'foo'
-        1 * meta.getComponent('foo') >> null
         meta.@imports.get('foo') == comp1
 
         // should a component to imports with alias name
@@ -129,13 +133,12 @@ class ScriptMetaTest extends Dsl2Spec {
         meta.addModule0(comp1, 'bar')
         then:
         1 * comp1.getName() >> 'foo'
-        1 * meta.getComponent('bar') >> null
         1 * comp1.cloneWithName('bar') >> comp2
         meta.@imports.get('bar') == comp2
 
     }
 
-    def 'should throw a duplicate process name exception' () {
+    def 'should not throw a duplicate process name exception' () {
         given:
         def meta = Spy(ScriptMeta)
         def comp1 = Mock(ComponentDef)
@@ -144,10 +147,7 @@ class ScriptMetaTest extends Dsl2Spec {
         meta.@imports.clear()
         meta.addModule0(comp1)
         then:
-        1 * comp1.getName() >> 'foo'
-        1 * meta.getComponent('foo') >> comp1
-
-        thrown(DuplicateModuleIncludeException)
+        2 * comp1.getName() >> 'foo'
     }
 
     def 'should get module bundle' () {
