@@ -17,6 +17,8 @@
 
 package nextflow.util
 
+import nextflow.script.FunctionNameDef
+
 import static nextflow.Const.*
 
 import java.lang.reflect.Field
@@ -729,6 +731,8 @@ class LoggerHelper {
             if( ComponentDef.isAssignableFrom(type) )
                 return 'process type'
             if( FunctionDef.isAssignableFrom(type) )
+                return 'function type'
+            if( FunctionNameDef.isAssignableFrom(type) )
                 return 'function type'
             if( WorkflowDef.isAssignableFrom(type) )
                 return 'workflow type'

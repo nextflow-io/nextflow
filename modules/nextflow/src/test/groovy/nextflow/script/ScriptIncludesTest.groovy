@@ -149,7 +149,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         result.val == 'dlrow olleh'
     }
 
-    def 'should not allow duplicate functions' () {
+    def 'should allows duplicate functions' () {
         given:
         NextflowMeta.instance.strictMode(true)
         and:
@@ -172,11 +172,10 @@ class ScriptIncludesTest extends Dsl2Spec {
         """
 
         when:
-        new MockScriptRunner() .setScript(SCRIPT).execute()
+        def result = new MockScriptRunner() .setScript(SCRIPT).execute()
 
         then:
-        def err = thrown(DuplicateModuleFunctionException)
-        err.message.startsWith("A function with name 'foo' is defined more than once in module script")
+        result.val == 'hello world'.reverse()
         
         cleanup:
         NextflowMeta.instance.strictMode(false)

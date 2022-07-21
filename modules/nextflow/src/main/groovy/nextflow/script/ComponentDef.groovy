@@ -38,6 +38,10 @@ abstract class ComponentDef implements Cloneable {
     abstract Object invoke_a(Object[] args)
 
     Object invoke_o(Object args) {
+        if( this instanceof FunctionNameDef){
+            FunctionNameDef fdef = (this as FunctionNameDef)
+            return fdef.invoke_method(args)
+        }
         invoke_a(InvokerHelper.asArray(args))
     }
 
