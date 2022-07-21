@@ -15,14 +15,15 @@ import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 
 import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.s3.model.Tag
 import groovy.util.logging.Slf4j
+import nextflow.file.FileHelper
 import spock.lang.Ignore
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Timeout
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -601,6 +602,25 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         deleteBucket(bucketName)
     }
 
+    def 'should copy a bucket' () {
+        given:
+        def bucketName = createBucket()
+        def reader = Files.createTempFile("","")
+        and:
+        final TEXT = randomText(50 * 1024)
+        final path = Paths.get(new URI("s3:///$bucketName/file.txt"))
+        createObject(path, TEXT)
+
+        when:
+        reader = FileHelper.copyPath( path, reader)
+
+        then:
+        reader.text == TEXT
+
+        cleanup:
+        deleteBucket(bucketName)
+    }
+
     def 'should create a newOutputStream' () {
         given:
         def bucketName = createBucket()
@@ -987,6 +1007,91 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
         cleanup:
         deleteBucket(bucketName)
+    }
+
+    def 'should download file from encrypted bucket' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def target = folder.resolve('test-data.txt')
+        and:
+        def source = (S3Path) Paths.get(new URI("s3:///nf-kms-xyz/test-data.txt"))
+
+        when:
+        FileHelper.copyPath(source, target)
+        then:
+        target.exists()
+        
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should upload file to encrypted bucket' () {
+        given:
+        def KEY = 'arn:aws:kms:eu-west-1:195996028523:key/e97ecf28-951e-4700-bf22-1bd416ec519f'
+        and:
+        def folder = Files.createTempDirectory('test')
+        def source = folder.resolve('hello.txt'); source.text = 'Hello world'
+        and:
+        def target = (S3Path) Paths.get(new URI("s3:///nf-kms-xyz/test-${UUID.randomUUID()}.txt"))
+        and: // assign some tags
+        target.setTags([ONE: 'HELLO'])
+
+        when:
+        FileHelper.copyPath(source, target)
+        then:
+        target.exists()
+        
+        expect:
+        target.getFileSystem().getClient().getObjectKmsKeyId(target.bucket, target.key) == KEY
+        and:
+        target.getFileSystem().getClient().getObjectTags(target.bucket, target.key).find { it.key=='ONE' }.value == 'HELLO'
+
+        cleanup:
+        Files.deleteIfExists(target)
+        folder?.deleteDir()
+    }
+
+    def 'should upload directory to encrypted bucket' () {
+        given:
+        def KEY = 'arn:aws:kms:eu-west-1:195996028523:key/e97ecf28-951e-4700-bf22-1bd416ec519f'
+        and:
+        def folder = Files.createTempDirectory('test')
+        def source = folder.resolve('data'); source.mkdir()
+        source.resolve('file-1.txt').text = 'file 1'
+        source.resolve('file-2.txt').text = 'file 2'
+        source.resolve('alpha').mkdir()
+        source.resolve('alpha/file-3.txt').text = 'file 3'
+        source.resolve('alpha/beta').mkdir()
+        source.resolve('alpha/beta/file-4.txt').text = 'file 4'
+        source.resolve('alpha/beta/file-5.txt').text = 'file 5'
+
+        and:
+        def target = (S3Path) Paths.get(new URI("s3:///nf-kms-xyz/test-${UUID.randomUUID()}"))
+        and: // assign some tags
+        target.setTags([ONE: 'HELLO'])
+
+        when:
+        FileHelper.copyPath(source, target)
+        then:
+        target.exists()
+        target.resolve('file-1.txt').text == 'file 1'
+        target.resolve('file-2.txt').text == 'file 2'
+        target.resolve('alpha/file-3.txt').text == 'file 3'
+        target.resolve('alpha/beta/file-4.txt').text == 'file 4'
+        target.resolve('alpha/beta/file-5.txt').text == 'file 5'
+
+        expect:
+        def client = target.getFileSystem().getClient()
+        and:
+        client.getObjectKmsKeyId(target.bucket,  "$target.key/file-1.txt") == KEY
+        client.getObjectKmsKeyId(target.bucket,  "$target.key/alpha/beta/file-5.txt") == KEY
+        and:
+        client.getObjectTags(target.bucket,  "$target.key/file-1.txt") == [ new Tag('ONE','HELLO') ]
+        client.getObjectTags(target.bucket,  "$target.key/alpha/beta/file-5.txt") == [ new Tag('ONE','HELLO') ]
+
+        cleanup:
+        target?.deleteDir()
+        folder?.deleteDir()
     }
 
 }
