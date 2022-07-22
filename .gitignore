@@ -3,6 +3,7 @@
 .*.log*
 .cache/*
 .vagrant/*
+.cache/*
 .nextflow*
 .node-nextflow*
 **/build/**
@@ -36,4 +37,3 @@ gradle.properties
 plugins-prod
 sandbox
 wave-demo
-/external-projects/

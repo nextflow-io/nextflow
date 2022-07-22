@@ -33,9 +33,4 @@ include 'plugins:nf-tower'
 include 'plugins:nf-console'
 include 'plugins:nf-azure'
 include 'plugins:nf-codecommit'
-includeBuild 'external-projects/wave',{
-    dependencySubstitution{
-        substitute module('io.sequera.wave:wave-utils') using project(':wave-utils')
-    }
-}
 include 'plugins:nf-wave'
