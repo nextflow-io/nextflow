@@ -897,7 +897,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     ProcessConfig accelerator( value ) {
         if( value instanceof Number )
             configProperties.put('accelerator', [limit: value])
-        else if( value instanceof Map )
+        else if( value instanceof Map || value instanceof Closure )
             configProperties.put('accelerator', value)
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `accelerator` directive value: $value [${value.getClass().getName()}]")
@@ -943,7 +943,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     ProcessConfig cpus( value ) {
         if( value instanceof Number )
             configProperties.put('cpus', [limit: value])
-        else if( value instanceof Map )
+        else if( value instanceof Map || value instanceof Closure )
             configProperties.put('cpus', value)
         else if( value != null )
             throw new IllegalArgumentException("Not a valid `cpus` directive value: $value [${value.getClass().getName()}]")
@@ -985,7 +985,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      *      The {@link ProcessConfig} instance itself
      */
     ProcessConfig disk( value ) {
-        if( value instanceof Map )
+        if( value instanceof Map || value instanceof Closure )
             configProperties.put('disk', value)
         else if( value != null )
             configProperties.put('disk', [limit: value])
@@ -1027,7 +1027,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      *      The {@link ProcessConfig} instance itself
      */
     ProcessConfig memory( value ) {
-        if( value instanceof Map )
+        if( value instanceof Map || value instanceof Closure )
             configProperties.put('memory', value)
         else if( value != null )
             configProperties.put('memory', [limit: value])
@@ -1069,7 +1069,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      *      The {@link ProcessConfig} instance itself
      */
     ProcessConfig time( value ) {
-        if( value instanceof Map )
+        if( value instanceof Map || value instanceof Closure )
             configProperties.put('time', value)
         else if( value != null )
             configProperties.put('time', [limit: value])
