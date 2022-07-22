@@ -19,7 +19,6 @@ package nextflow.cloud.google.batch
 
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.batch.client.BatchConfig
-import nextflow.cloud.google.batch.model.ProvisioningModel
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
@@ -32,39 +31,10 @@ import spock.lang.Specification
  */
 class GoogleBatchTaskHandlerTest extends Specification {
 
-    def 'should create network policy' () {
-        given:
-        def handler = new GoogleBatchTaskHandler()
-
-        when:
-        def policy = handler.networkPolicy(Mock(BatchConfig))
-        then:
-        policy == null
-
-        when:
-        def config2 = Mock(BatchConfig) {getNetwork() >> 'net-abc'; getSubnetwork() >> 'sub-123' }
-        def policy2 = handler.networkPolicy(config2)
-        then:
-        policy2.getNetworkInterfaces().size() == 1
-        and:
-        policy2.getNetworkInterfaces().get(0).getNetwork() == 'net-abc'
-        policy2.getNetworkInterfaces().get(0).getSubnetwork() == 'sub-123'
-        !policy2.getNetworkInterfaces().get(0).noExternalIpAddress
-
-        when:
-        def config3 = Mock(BatchConfig) {getUsePrivateAddress() >> true }
-        def policy3 = handler.networkPolicy(config3)
-        then:
-        policy3.getNetworkInterfaces().size() == 1
-        and:
-        policy3.getNetworkInterfaces().get(0).noExternalIpAddress
-    }
-
-    def 'should create submit request' () {
+    def 'should create submit request/1' () {
         given:
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'debian:latest'
-        def CONTAINER_OPTS = '--foo'
         def exec = Mock(GoogleBatchExecutor) {
             getConfig() >> Mock(BatchConfig)
         }
@@ -77,7 +47,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
                 getCpus() >> 2
-                getContainerOptions() >> CONTAINER_OPTS
             }
         }
 
@@ -87,23 +56,24 @@ class GoogleBatchTaskHandlerTest extends Specification {
         when:
         def req = handler.newSubmitRequest(task)
         then:
-        req.getTaskGroups().size() == 1
+        def taskGroup = req.getTaskGroups(0)
+        def runnable = taskGroup.getTaskSpec().getRunnables(0)
+        def instancePolicy = req.getAllocationPolicy().getInstances(0).getPolicy()
         and:
-        def group = req.getTaskGroups().get(0)
+        taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == 2_000
+        taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == 0
+        taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == 0
         and:
-        group.taskSpec.computeResource.cpuMilli == 2_000
-        group.taskSpec.computeResource.memoryMib == null
-        group.taskSpec.maxRunDuration == null
+        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/foo/scratch/.command.run 2>&1 | tee .command.log'
+        runnable.getContainer().getImageUri() == CONTAINER_IMAGE
+        runnable.getContainer().getOptions() == ''
+        runnable.getContainer().getVolumesList() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
         and:
-        group.taskSpec.runnables.size() == 1
-        def runnable = group.taskSpec.runnables.get(0)
-        runnable.container.getCommands().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/foo/scratch/.command.run 2>&1 | tee .command.log'
-        runnable.container.getImageUri() == CONTAINER_IMAGE
-        runnable.container.getOptions() == CONTAINER_OPTS
-        runnable.container.getVolumes() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
+        instancePolicy.getMachineType() == ''
         and:
-        !req.allocationPolicy.network
-        !req.allocationPolicy.instancePolicy().machineType
+        req.getAllocationPolicy().getNetwork().getNetworkInterfacesCount() == 0
+        and:
+        req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
     }
 
     def 'should create submit request/2' () {
@@ -147,27 +117,27 @@ class GoogleBatchTaskHandlerTest extends Specification {
         when:
         def req = handler.newSubmitRequest(task)
         then:
-        req.getTaskGroups().size() == 1
+        def taskGroup = req.getTaskGroups(0)
+        def runnable = taskGroup.getTaskSpec().getRunnables(0)
+        def instancePolicy = req.getAllocationPolicy().getInstances(0).getPolicy()
+        def networkInterface = req.getAllocationPolicy().getNetwork().getNetworkInterfaces(0)
         and:
-        def group = req.getTaskGroups().get(0)
+        taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == CPUS * 1_000
+        taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == MEM.toMega()
+        taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == TIMEOUT.seconds
         and:
-        group.taskSpec.computeResource.cpuMilli == CPUS * 1_000
-        group.taskSpec.computeResource.memoryMib == MEM.toMega()
-        group.taskSpec.maxRunDuration == TIMEOUT.seconds + 's'
+        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/foo/scratch/.command.run 2>&1 | tee .command.log'
+        runnable.getContainer().getImageUri() == CONTAINER_IMAGE
+        runnable.getContainer().getOptions() == CONTAINER_OPTS
+        runnable.getContainer().getVolumesList() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
         and:
-        group.taskSpec.runnables.size() == 1
-        def runnable = group.taskSpec.runnables.get(0)
-        runnable.container.getCommands().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/foo/scratch/.command.run 2>&1 | tee .command.log'
-        runnable.container.getImageUri() == CONTAINER_IMAGE
-        runnable.container.getOptions() == CONTAINER_OPTS
-        runnable.container.getVolumes() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
+        instancePolicy.getProvisioningModel().toString() == 'SPOT'
+        instancePolicy.getMachineType() == MACHINE_TYPE
         and:
-        req.allocationPolicy.instancePolicy().provisioningModel == ProvisioningModel.SPOT
-        req.allocationPolicy.instancePolicy().machineType == MACHINE_TYPE
+        networkInterface.getNetwork() == 'net-1'
+        networkInterface.getSubnetwork() == 'subnet-1'
+        networkInterface.getNoExternalIpAddress() == true
         and:
-        def netInterface = req.allocationPolicy.network.getNetworkInterfaces().get(0)
-        netInterface.network == 'net-1'
-        netInterface.subnetwork == 'subnet-1'
-        netInterface.noExternalIpAddress
+        req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
     }
 }

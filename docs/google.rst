@@ -78,9 +78,9 @@ Configuration
 Make sure to have defined in your environment the ``GOOGLE_APPLICATION_CREDENTIALS`` variable.
 See the section `Credentials`_ for details.
 
-.. tip::
+.. note::
     Make sure your Google account is allowed to access the Google Cloud Batch service by checking
-    the `API & Service <https://console.cloud.google.com/apis/dashboard>`_ dashboard.
+    the `APIs & Services <https://console.cloud.google.com/apis/dashboard>`_ dashboard.
 
 Create or edit the file ``nextflow.config`` in your project root directory. The config must specify the following parameters:
 
@@ -101,10 +101,16 @@ Example::
         location = 'us-central1'
     }
 
+.. note::
+  Make sure to specify the project ID, not the project name.
 
-.. warning:: Make sure to specify in the above setting the project ID not the project name.
+.. note::
+  Make sure to specify a location where Google Batch is available. Refer to the
+  `Google Batch documentation <https://cloud.google.com/batch/docs/get-started#locations>`_
+  for region availability.
 
-.. Note:: A container image must be specified to deploy the process execution. You can use a different Docker image for
+.. Note::
+  A container image must be specified to deploy the process execution. You can use a different Docker image for
   each process using one or more :ref:`config-process-selectors`.
 
 The following configuration options are available:
