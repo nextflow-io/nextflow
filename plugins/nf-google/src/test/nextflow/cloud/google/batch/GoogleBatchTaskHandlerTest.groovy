@@ -31,7 +31,7 @@ import spock.lang.Specification
  */
 class GoogleBatchTaskHandlerTest extends Specification {
 
-    def 'should create submit request/1' () {
+    def 'should create submit request with minimal spec' () {
         given:
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'debian:latest'
@@ -60,6 +60,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def runnable = taskGroup.getTaskSpec().getRunnables(0)
         def instancePolicy = req.getAllocationPolicy().getInstances(0).getPolicy()
         and:
+        taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == 0
         taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == 2_000
         taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == 0
         taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == 0
@@ -70,18 +71,22 @@ class GoogleBatchTaskHandlerTest extends Specification {
         runnable.getContainer().getVolumesList() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
         and:
         instancePolicy.getMachineType() == ''
+        instancePolicy.getMinCpuPlatform() == ''
+        instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
         and:
         req.getAllocationPolicy().getNetwork().getNetworkInterfacesCount() == 0
         and:
         req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
     }
 
-    def 'should create submit request/2' () {
+    def 'should create submit request with maximal spec' () {
         given:
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         and:
+        def BOOT_DISK = MemoryUnit.of('10 GB')
         def CONTAINER_IMAGE = 'ubuntu:22.1'
         def CONTAINER_OPTS = '--this --that'
+        def CPU_PLATFORM = 'Intel Skylake'
         def CPUS = 4
         def MEM = MemoryUnit.of('8 GB')
         def TIMEOUT = Duration.of('1 hour')
@@ -89,6 +94,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         def exec = Mock(GoogleBatchExecutor) {
             getConfig() >> Mock(BatchConfig) {
+                getBootDiskSize() >> BOOT_DISK
+                getCpuPlatform() >> CPU_PLATFORM
                 getSpot() >> true
                 getNetwork() >> 'net-1'
                 getSubnetwork() >> 'subnet-1'
@@ -122,6 +129,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def instancePolicy = req.getAllocationPolicy().getInstances(0).getPolicy()
         def networkInterface = req.getAllocationPolicy().getNetwork().getNetworkInterfaces(0)
         and:
+        taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == BOOT_DISK.toMega()
         taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == CPUS * 1_000
         taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == MEM.toMega()
         taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == TIMEOUT.seconds
@@ -131,8 +139,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
         runnable.getContainer().getOptions() == CONTAINER_OPTS
         runnable.getContainer().getVolumesList() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
         and:
-        instancePolicy.getProvisioningModel().toString() == 'SPOT'
         instancePolicy.getMachineType() == MACHINE_TYPE
+        instancePolicy.getMinCpuPlatform() == CPU_PLATFORM
+        instancePolicy.getProvisioningModel().toString() == 'SPOT'
         and:
         networkInterface.getNetwork() == 'net-1'
         networkInterface.getSubnetwork() == 'subnet-1'
