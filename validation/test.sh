@@ -86,7 +86,7 @@ fi
 #
 if [ "$GOOGLE_SECRET" ]; then
   echo "Google LS tests"
-  bash gls.sh
+  bash google.sh
 else
   echo "Missing GOOGLE_SECRET variable -- Skipping Google LS tests"
 fi

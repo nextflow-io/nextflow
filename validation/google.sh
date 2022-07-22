@@ -67,4 +67,9 @@ $NXF_CMD -C ./gls.config run ./test-overwrite.nf
 ## re-executing should overwrite the published file
 [ `$NXF_CMD -C ./gls.config run ./test-overwrite.nf -resume | { grep 'Failed to publish file' -c || true; }` == 0 ] && echo OK || { echo 'Failed to publish file' && false; }
 
+## google batch
+$NXF_CMD -C ./googlebatch.config \
+    run nextflow-io/rnaseq-nf \
+    -with-report \
+    -with-trace $OPTS
 
