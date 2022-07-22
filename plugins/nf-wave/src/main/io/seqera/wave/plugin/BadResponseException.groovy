@@ -17,38 +17,13 @@
 
 package io.seqera.wave.plugin
 
-import groovy.transform.Canonical
-import groovy.transform.CompileStatic
-import groovy.transform.builder.Builder
+import groovy.transform.InheritConstructors
 
 /**
- * Model a container configuration
+ * Model an invalid HTTP response
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Builder
-@Canonical
-@CompileStatic
-class ContainerConfig {
-
-    List<String> entrypoint
-    List<String> cmd
-    List<String> env
-    String workingDir
-
-    List<ContainerLayer> layers
-
-    ContainerConfig appendLayer(ContainerLayer it)  {
-        if( layers==null )
-            layers = new ArrayList<>(10)
-        layers.add(it)
-        return this
-    }
-
-    ContainerConfig prependLayer(ContainerLayer it)  {
-        if( layers==null )
-            layers = new ArrayList<>(10)
-        layers.add(0, it)
-        return this
-    }
+@InheritConstructors
+class BadResponseException extends RuntimeException{
 }

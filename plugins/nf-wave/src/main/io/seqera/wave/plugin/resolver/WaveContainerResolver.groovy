@@ -19,13 +19,9 @@ package io.seqera.wave.plugin.resolver
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.Callable
 
-import com.google.common.cache.Cache
-import com.google.common.cache.CacheBuilder
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import io.seqera.wave.plugin.SubmitContainerTokenResponse
 import io.seqera.wave.plugin.WaveClient
 import nextflow.Global
 import nextflow.Session
@@ -47,11 +43,6 @@ class WaveContainerResolver implements ContainerResolver {
     private List<String> DOCKER_LIKE = ['docker','podman']
     private final String DOCKER_PREFIX = 'docker://'
     private WaveClient client0
-
-
-    private Cache<String, SubmitContainerTokenResponse> cache = CacheBuilder<String, SubmitContainerTokenResponse>
-                    .newBuilder()
-                    .build()
 
 
     synchronized protected WaveClient client() {
@@ -97,17 +88,15 @@ class WaveContainerResolver implements ContainerResolver {
         }
     }
 
+
     synchronized String waveContainer(TaskRun task, String container) {
         final bundle = task.getModuleBundle()
-        if( !container && !bundle.dockerfile ) {
-            // no container and no dockerfile, wave cannot do anything
-            log.trace "No container defined for task ${task.processor.name}"
-            return null
+        final configUrl = client().config().containerConfigUrl()
+        if( container || bundle?.dockerfile ) {
+            return client().fetchContainerImage(bundle, container, configUrl)
         }
-        
-        // go ahead
-        final key = bundle.fingerprint()
-        final result = cache.get(key, { client().sendRequest(bundle, container) } as Callable )
-        return result.targetImage
+        // no container and no dockerfile, wave cannot do anything
+        log.trace "No container defined for task ${task.processor.name}"
+        return null
     }
 }

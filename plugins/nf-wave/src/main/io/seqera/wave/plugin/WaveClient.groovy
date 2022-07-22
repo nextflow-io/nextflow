@@ -25,13 +25,18 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 import java.time.Duration
+import java.util.concurrent.Callable
 
+import com.google.common.cache.Cache
+import com.google.common.cache.CacheBuilder
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
-import nextflow.Session
+import groovy.transform.Memoized
 import io.seqera.wave.plugin.util.DigestFunctions
+import nextflow.Session
 import nextflow.script.bundle.ModuleBundle
+import nextflow.util.CacheHelper
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
@@ -51,6 +56,11 @@ class WaveClient {
     final private WaveConfig config
 
     final private String endpoint
+
+    private Cache<String, SubmitContainerTokenResponse> cache = CacheBuilder<String, SubmitContainerTokenResponse>
+            .newBuilder()
+            .build()
+
 
     WaveClient(Session session) {
         this.config = new WaveConfig(session.config.wave as Map)
@@ -140,15 +150,20 @@ class WaveClient {
 
     }
 
-    SubmitContainerTokenRequest makeRequest(ModuleBundle bundle, @Nullable String container) {
-        final layers = bundle ? [layer(bundle)] : []
-        final config = new ContainerConfig(layers: layers)
-        final dockerContent = bundle.dockerfile?.text?.bytes?.encodeBase64()?.toString()
+    SubmitContainerTokenRequest makeRequest(ModuleBundle bundle, @Nullable String container, @Nullable ContainerConfig config) {
+        if( config == null ) {
+            config = new ContainerConfig()
+        }
+        // pre-prepend the bundle layer
+        if( bundle ) {
+            config.prependLayer(layer(bundle))
+        }
+        final dockerContent = bundle?.dockerfile?.text?.bytes?.encodeBase64()?.toString()
         return new SubmitContainerTokenRequest(containerImage: container, containerConfig: config, containerFile: dockerContent)
     }
 
-    SubmitContainerTokenResponse sendRequest(ModuleBundle bundle, @Nullable String container) {
-        final req = makeRequest(bundle, container)
+    SubmitContainerTokenResponse sendRequest(ModuleBundle bundle, @Nullable String container, @Nullable ContainerConfig config) {
+        final req = makeRequest(bundle, container, config)
         return sendRequest(req)
     }
 
@@ -170,9 +185,44 @@ class WaveClient {
             log.debug "Wave response: ${resp.body()}"
             return new JsonSlurper().parseText(resp.body()) as SubmitContainerTokenResponse
         }
+        throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
+    }
+
+    @Memoized
+    ContainerConfig fetchContainerConfig(URL configUrl) {
+        log.debug "Wave request container config: $configUrl"
+        final req = HttpRequest.newBuilder()
+                .uri(configUrl.toURI())
+                .headers('Content-Type','application/json')
+                .GET()
+                .build()
+
+        final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
+        if( resp.statusCode()==200 ) {
+            log.debug "Wave container config response: ${resp.body()}"
+            return new JsonSlurper().parseText(resp.body()) as ContainerConfig
+        }
         else {
-            log.warn "Wave error response: [${resp.statusCode()}] ${resp.body()}"
+            log.warn "Wave container config error response: [${resp.statusCode()}] ${resp.body()}"
             return null
         }
     }
+
+    @Memoized
+    protected String key0(ModuleBundle bundle, ContainerConfig containerConfig, String image) {
+        final allMeta = new ArrayList(10)
+        allMeta.add( bundle?.fingerprint() )
+        allMeta.add( containerConfig?.hashCode() )
+        allMeta.add( image )
+        return CacheHelper.hasher(allMeta).hash().toString()
+    }
+
+    String fetchContainerImage(ModuleBundle bundle, String container, URL configUrl) {
+        final ContainerConfig containerConfig = configUrl ? fetchContainerConfig(configUrl) : null
+        // go ahead
+        final key = key0(bundle, containerConfig, container)
+        final result = cache.get(key, { sendRequest(bundle, container, containerConfig) } as Callable )
+        return result.targetImage
+    }
+
 }
