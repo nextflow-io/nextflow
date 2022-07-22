@@ -29,13 +29,17 @@ class WaveConfig {
     final private static String DEF_ENDPOINT = 'http://localhost:9090'
     final private Boolean enabled
     final private String endpoint
+    final private String containerConfigUrl
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
+        this.containerConfigUrl = (opts.containerConfigUrl?.toString() ?: env.get('WAVE_CONTAINER_CONFIG_URL'))?.stripEnd('/')
     }
 
     Boolean enabled() { this.enabled }
 
     String endpoint() { this.endpoint }
+
+    String containerConfigUrl() { this.containerConfigUrl }
 }

@@ -66,12 +66,12 @@ allprojects {
     }
 
     compileJava {
-        options.release = 8
+        options.release = 11
     }
 
     tasks.withType(GroovyCompile) {
-        sourceCompatibility = '1.8'
-        targetCompatibility = '1.8'
+        sourceCompatibility = '11'
+        targetCompatibility = '11'
     }
 
     idea {

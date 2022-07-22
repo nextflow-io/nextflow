@@ -152,6 +152,19 @@ class WaveClient {
         return sendRequest(req)
     }
 
+    SubmitContainerTokenRequest makeRequest(String configUrl, String container) {
+        final config = fetchContainerConfig(configUrl)
+        if( !config )
+            return null
+
+        return new SubmitContainerTokenRequest(containerImage: container, containerConfig: config, containerFile: null)
+    }
+
+    SubmitContainerTokenResponse sendRequest(String configUrl, String container) {
+        final req = makeRequest(configUrl, container)
+        return sendRequest(req)
+    }
+
     SubmitContainerTokenResponse sendRequest(SubmitContainerTokenRequest request) {
         assert endpoint, 'Missing wave endpoint'
         assert !endpoint.endsWith('/'), "Endpoint url must not end with a slash - offending value: $endpoint"
@@ -172,6 +185,26 @@ class WaveClient {
         }
         else {
             log.warn "Wave error response: [${resp.statusCode()}] ${resp.body()}"
+            return null
+        }
+    }
+
+    ContainerConfig fetchContainerConfig(String configUrl) {
+        final uri = URI.create(configUrl)
+        log.debug "Wave request container config: $uri"
+        final req = HttpRequest.newBuilder()
+                .uri(uri)
+                .headers('Content-Type','application/json')
+                .GET()
+                .build()
+
+        final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
+        if( resp.statusCode()==200 ) {
+            log.debug "Wave container config response: ${resp.body()}"
+            return new JsonSlurper().parseText(resp.body()) as ContainerConfig
+        }
+        else {
+            log.warn "Wave container config error response: [${resp.statusCode()}] ${resp.body()}"
             return null
         }
     }

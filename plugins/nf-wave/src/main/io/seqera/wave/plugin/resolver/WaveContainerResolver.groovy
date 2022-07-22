@@ -104,6 +104,14 @@ class WaveContainerResolver implements ContainerResolver {
             log.trace "No container defined for task ${task.processor.name}"
             return null
         }
+
+        // Add custom container config
+        //TODO allow to mix custom container config with bundle layers or Dockerfile
+        final configUrl = client().config().containerConfigUrl()
+        if( container && configUrl ) {
+            final result = cache.get(container, { client().sendRequest(configUrl, container) } as Callable )
+            return result.targetImage
+        }
         
         // go ahead
         final key = bundle.fingerprint()
