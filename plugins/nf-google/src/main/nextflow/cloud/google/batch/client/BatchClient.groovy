@@ -63,12 +63,12 @@ class BatchClient {
     protected BatchServiceClient createBatchService(BatchConfig config) {
         final provider = createCredentialsProvider(config)
         if( provider ) {
-            log.debug "Creating Batch service client with config credentials"
+            log.debug "[GOOGLE BATCH] Creating service client with config credentials"
             final settings = BatchServiceSettings.newBuilder().setCredentialsProvider(provider).build()
             return BatchServiceClient.create(settings)
         }
         else {
-            log.debug "Creating Batch service client with default settings"
+            log.debug "[GOOGLE BATCH] Creating service client with default settings"
             return BatchServiceClient.create()
         }
     }

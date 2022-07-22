@@ -49,7 +49,6 @@ class BatchLogging {
         this.projectId = config.googleOpts.projectId
     }
 
-
     String stdout(String jobId) {
         return fetchLogs(jobId)[0]
     }

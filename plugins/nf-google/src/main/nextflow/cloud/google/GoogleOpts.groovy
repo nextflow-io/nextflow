@@ -119,6 +119,7 @@ class GoogleOpts {
         return config
     }
 
+    @Memoized // make memoized to prevent multiple access to the creds file
     GoogleCredentials getCredentials() {
         return makeCreds(credsFile)
     }
