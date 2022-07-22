@@ -26,6 +26,10 @@ import spock.lang.Specification
  */
 class MemoryResourceTest extends Specification {
 
+    static final _1_GB = MemoryUnit.of('1GB')
+    static final _2_GB = MemoryUnit.of('2GB')
+    static final _4_GB = MemoryUnit.of('4GB')
+
     def 'should create a memory resource' () {
 
         when:
@@ -35,11 +39,11 @@ class MemoryResourceTest extends Specification {
         mem.limit == LIM
 
         where:
-        VALUE                           | REQ                   | LIM
-        '1GB'                           | MemoryUnit.of('1GB')  | MemoryUnit.of('1GB')
-        [request: '2GB']                | MemoryUnit.of('2GB')  | null
-        [limit: '4GB']                  | MemoryUnit.of('4GB')  | MemoryUnit.of('4GB')
-        [request: '2GB', limit: '4GB']  | MemoryUnit.of('2GB')  | MemoryUnit.of('4GB')
+        VALUE                           | REQ    | LIM
+        _1_GB                           | _1_GB  | _1_GB
+        [request: _2_GB]                | _2_GB  | null
+        [limit: _4_GB]                  | _4_GB  | _4_GB
+        [request: _2_GB, limit: _4_GB]  | _2_GB  | _4_GB
     }
 
 }
