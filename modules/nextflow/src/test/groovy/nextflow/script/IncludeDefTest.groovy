@@ -52,14 +52,12 @@ class IncludeDefTest extends Specification {
         when:
         def result = include.realModulePath( 'mod-x.nf')
         then:
-        result.target == module
-        !result.isBundle()
+        result == module
 
         when:
         result = include.realModulePath('mod-x')
         then:
-        result.target == module
-        !result.isBundle()
+        result == module
 
         when:
         include.realModulePath('xyz')
@@ -86,8 +84,7 @@ class IncludeDefTest extends Specification {
         when:
         def result = include.realModulePath('foo')
         then:
-        result.target == module
-        result.isBundle()
+        result == module
 
         when:
         include.realModulePath('bar')

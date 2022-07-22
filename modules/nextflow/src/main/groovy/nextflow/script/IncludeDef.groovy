@@ -51,12 +51,6 @@ class IncludeDef {
         String alias
     }
 
-    @Canonical
-    static class ModulePath {
-        final Path target
-        final boolean bundle
-    }
-
     @PackageScope path
     @PackageScope List<Module> modules
     @PackageScope Map params
@@ -151,15 +145,14 @@ class IncludeDef {
 
     @PackageScope
     @Memoized
-    static BaseScript loadModule0(ModulePath path, Map params, Session session) {
+    static BaseScript loadModule0(Path path, Map params, Session session) {
         final binding = new ScriptBinding() .setParams(params)
 
         // the execution of a library file has as side effect the registration of declared processes
         new ScriptParser(session)
                 .setModule(true)
-                .setBundle(path.isBundle())
                 .setBinding(binding)
-                .runScript(path.target)
+                .runScript(path)
                 .getScript()
     }
 
@@ -177,26 +170,26 @@ class IncludeDef {
     }
 
     @PackageScope
-    ModulePath realModulePath(include) {
+    Path realModulePath(include) {
         def module = resolveModulePath(include)
 
         // check if exists a file with `.nf` extension
         if( !module.name.endsWith('.nf') ) {
             final extendedName = module.resolveSibling( "${module.name}.nf" )
             if( extendedName.exists() )
-                return new ModulePath(extendedName)
+                return extendedName
         }
         if( module.isDirectory() ) {
             final target = module.resolve('main.nf')
             if( target.exists() ) {
-                return new ModulePath(target, true)
+                return target
             }
             throw new ScriptCompilationException("Include '$include' does not provide any module script -- the following path should contain a 'main.nf' script: '$module'" )
         }
 
         // check the file exists
         if( module.exists() )
-            return new ModulePath(module)
+            return module
 
         throw new NoSuchFileException("Can't find a matching module file for include: $include")
     }
