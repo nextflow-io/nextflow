@@ -80,7 +80,7 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
 
     protected void createConfig() {
         this.config = BatchConfig.create(session)
-        log.debug "Google Batch config=$config"
+        log.debug "[GOOGLE BATCH] Executor config=$config"
     }
 
     protected void createClient() {

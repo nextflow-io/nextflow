@@ -20,12 +20,16 @@ package nextflow.cloud.google.batch.logging
 
 import java.util.concurrent.TimeUnit
 
+import com.google.cloud.batch.v1.Job
+import com.google.cloud.batch.v1.LogsPolicy
+import com.google.cloud.batch.v1.Runnable
+import com.google.cloud.batch.v1.TaskGroup
+import com.google.cloud.batch.v1.TaskSpec
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.google.batch.logging.BatchLogging
-import nextflow.cloud.google.batch.model.BatchJob
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
@@ -45,7 +49,7 @@ class BatchLoggingTest extends Specification {
         def client = new BatchLogging()
 
         when:
-        def stdout = new StringBuilder();
+        def stdout = new StringBuilder()
         def stderr = new StringBuilder()
         and:
         client.parseOutput(OUT_TEXT, stdout, stderr)
@@ -99,11 +103,31 @@ class BatchLoggingTest extends Specification {
         def logClient = new BatchLogging(config)
 
         when:
-        def cmd = ['-c','echo Hello world! && echo "Oops something went wrong" >&2']
-        def req = BatchJob.create(imageUri: 'quay.io/nextflow/bash', command: cmd)
+        def imageUri = 'quay.io/nextflow/bash'
+        def cmd = ['/bin/bash','-c','echo "Hello world!" && echo "Oops something went wrong" >&2']
+        def req = Job.newBuilder()
+            .addTaskGroups(
+                TaskGroup.newBuilder()
+                    .setTaskSpec(
+                        TaskSpec.newBuilder()
+                            .addRunnables(
+                                Runnable.newBuilder()
+                                    .setContainer(
+                                        Runnable.Container.newBuilder()
+                                            .setImageUri(imageUri)
+                                            .addAllCommands(cmd)
+                                    )
+                            )
+                    )
+            )
+            .setLogsPolicy(
+                LogsPolicy.newBuilder()
+                    .setDestination(LogsPolicy.Destination.CLOUD_LOGGING)
+            )
+            .build()
         def jobId = 'nf-test-' + System.currentTimeMillis()
         def resp = batchClient.submitJob(jobId, req)
-        def uid = resp.get('uid') as String
+        def uid = resp.getUid()
         log.debug "Test job uid=$uid"
         then:
         uid
@@ -126,6 +150,6 @@ class BatchLoggingTest extends Specification {
         then:
         stdout.contains('Hello world!')
         stderr.contains('Oops something went wrong')
-
     }
+
 }
