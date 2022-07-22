@@ -24,6 +24,7 @@ import nextflow.Session
 import nextflow.cloud.google.GoogleOpts
 /**
  * Model Google Batch config settings
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
