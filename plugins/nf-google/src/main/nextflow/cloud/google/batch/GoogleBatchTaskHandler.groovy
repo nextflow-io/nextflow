@@ -44,6 +44,8 @@ import nextflow.processor.TaskStatus
 @CompileStatic
 class GoogleBatchTaskHandler extends TaskHandler {
 
+    public final static String DEFAULT_DISK_NAME = 'nf-pipeline-work'
+
     private GoogleBatchExecutor executor
 
     private TaskBean taskBean
@@ -117,6 +119,9 @@ class GoogleBatchTaskHandler extends TaskHandler {
         final taskSpec = TaskSpec.newBuilder()
         final computeResource = ComputeResource.newBuilder()
 
+        if( executor.config.bootDiskSize )
+            computeResource.setBootDiskMib( executor.config.bootDiskSize.getMega() )
+
         computeResource.setCpuMilli( task.config.getCpus() * 1000 )
 
         if( task.config.getMemory() )
@@ -150,6 +155,26 @@ class GoogleBatchTaskHandler extends TaskHandler {
         // instance policy
         final allocationPolicy = AllocationPolicy.newBuilder()
         final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
+
+        if( task.config.getAccelerator() )
+            instancePolicy.addAccelerators(
+                AllocationPolicy.Accelerator.newBuilder()
+                    .setCount( task.config.getAccelerator().getRequest() )
+                    .setType( task.config.getAccelerator().getType() )
+            )
+
+        if( executor.config.cpuPlatform )
+            instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
+
+        if( task.config.getDisk() )
+            instancePolicy.addDisks(
+                AllocationPolicy.AttachedDisk.newBuilder()
+                    .setDeviceName( DEFAULT_DISK_NAME )
+                    .setNewDisk(
+                        AllocationPolicy.Disk.newBuilder()
+                            .setSizeGb( task.config.getDisk().getGiga() )
+                    )
+            )
 
         if( task.config.getMachineType() )
             instancePolicy.setMachineType( task.config.getMachineType() )
