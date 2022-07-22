@@ -44,6 +44,8 @@ import nextflow.processor.TaskStatus
 @CompileStatic
 class GoogleBatchTaskHandler extends TaskHandler {
 
+    public final static String DEFAULT_DISK_NAME = 'nf-pipeline-work'
+
     private GoogleBatchExecutor executor
 
     private TaskBean taskBean
@@ -150,6 +152,16 @@ class GoogleBatchTaskHandler extends TaskHandler {
         // instance policy
         final allocationPolicy = AllocationPolicy.newBuilder()
         final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
+
+        if( task.config.getDisk() )
+            instancePolicy.addDisks(
+                AllocationPolicy.AttachedDisk.newBuilder()
+                    .setDeviceName( DEFAULT_DISK_NAME )
+                    .setNewDisk(
+                        AllocationPolicy.Disk.newBuilder()
+                            .setSizeGb( task.config.getDisk().getGiga() )
+                    )
+            )
 
         if( task.config.getMachineType() )
             instancePolicy.setMachineType( task.config.getMachineType() )

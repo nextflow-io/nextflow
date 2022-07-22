@@ -69,6 +69,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         runnable.getContainer().getOptions() == ''
         runnable.getContainer().getVolumesList() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
         and:
+        instancePolicy.getDisksCount() == 0
         instancePolicy.getMachineType() == ''
         and:
         req.getAllocationPolicy().getNetwork().getNetworkInterfacesCount() == 0
@@ -83,9 +84,10 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def CONTAINER_IMAGE = 'ubuntu:22.1'
         def CONTAINER_OPTS = '--this --that'
         def CPUS = 4
+        def DISK = MemoryUnit.of('50 GB')
+        def MACHINE_TYPE = 'vm-type-2'
         def MEM = MemoryUnit.of('8 GB')
         def TIMEOUT = Duration.of('1 hour')
-        def MACHINE_TYPE = 'vm-type-2'
         and:
         def exec = Mock(GoogleBatchExecutor) {
             getConfig() >> Mock(BatchConfig) {
@@ -103,11 +105,12 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getWorkDir() >> WORK_DIR
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
+                getContainerOptions() >> CONTAINER_OPTS
                 getCpus() >> CPUS
+                getDisk() >> DISK
+                getMachineType() >> MACHINE_TYPE
                 getMemory() >> MEM
                 getTime() >> TIMEOUT
-                getMachineType() >> MACHINE_TYPE
-                getContainerOptions() >> CONTAINER_OPTS
             }
         }
 
@@ -131,6 +134,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         runnable.getContainer().getOptions() == CONTAINER_OPTS
         runnable.getContainer().getVolumesList() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
         and:
+        instancePolicy.getDisks(0).getNewDisk().getSizeGb() == DISK.toGiga()
         instancePolicy.getProvisioningModel().toString() == 'SPOT'
         instancePolicy.getMachineType() == MACHINE_TYPE
         and:

@@ -203,14 +203,14 @@ Supported directives
 The integration with Google Batch is a developer preview feature. Currently the following Nextflow directives are
 supported:
 
-* :ref:`process-cpus`
-* :ref:`process-memory`
-* :ref:`process-time`
 * :ref:`process-container`
 * :ref:`process-containeroptions`
-* :ref:`process-machinetype`
+* :ref:`process-cpus`
+* :ref:`process-disk`
 * :ref:`process-executor`
-
+* :ref:`process-machinetype`
+* :ref:`process-memory`
+* :ref:`process-time`
 
 
 .. _google-lifesciences:
