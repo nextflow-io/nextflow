@@ -151,6 +151,13 @@ class GoogleBatchTaskHandler extends TaskHandler {
         final allocationPolicy = AllocationPolicy.newBuilder()
         final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
+        if( task.config.getAccelerator() )
+            instancePolicy.addAccelerators(
+                AllocationPolicy.Accelerator.newBuilder()
+                    .setCount( task.config.getAccelerator().getRequest() )
+                    .setType( task.config.getAccelerator().getType() )
+            )
+
         if( task.config.getMachineType() )
             instancePolicy.setMachineType( task.config.getMachineType() )
 
