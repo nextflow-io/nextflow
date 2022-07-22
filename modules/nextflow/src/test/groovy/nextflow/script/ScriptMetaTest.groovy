@@ -31,7 +31,7 @@ class ScriptMetaTest extends Dsl2Spec {
 
         def proc1 = new ProcessDef(script, Mock(Closure), 'proc1')
         def proc2 = new ProcessDef(script, Mock(Closure), 'proc2')
-        def func1 = new FunctionDef(name: 'func1')
+        def func1 = new FunctionDef(name: 'func1', alias: 'func1')
         def work1 = new WorkflowDef(name:'work1')
 
         def meta = new ScriptMeta(script)
@@ -66,19 +66,19 @@ class ScriptMetaTest extends Dsl2Spec {
         def meta3 = new ScriptMeta(script3)
 
         // defs in the root script
-        def func1 = new FunctionDef(name: 'func1')
+        def func1 = new FunctionDef(name: 'func1', alias: 'func1')
         def proc1 = new ProcessDef(script1, Mock(Closure), 'proc1')
         def work1 = new WorkflowDef(name:'work1')
         meta1.addDefinition(proc1, func1, work1)
 
         // defs in the second script imported in the root namespace
-        def func2 = new FunctionDef(name: 'func2')
+        def func2 = new FunctionDef(name: 'func2', alias: 'func2')
         def proc2 = new ProcessDef(script2, Mock(Closure), 'proc2')
         def work2 = new WorkflowDef(name:'work2')
         meta2.addDefinition(proc2, func2, work2)
 
         // defs in the third script imported in a separate namespace
-        def func3 = new FunctionDef(name: 'func3')
+        def func3 = new FunctionDef(name: 'func3', alias: 'func3')
         def proc3 = new ProcessDef(script2, Mock(Closure), 'proc3')
         def work3 = new WorkflowDef(name:'work3')
         meta3.addDefinition(proc3, func3, work3)

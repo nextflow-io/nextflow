@@ -171,9 +171,9 @@ class ScriptMeta {
         return meta
     }
 
-    static List<FunctionNameDef> definedFunctions0(BaseScript script) {
+    static List<FunctionDef> definedFunctions0(BaseScript script) {
         final allMethods = script.class.getDeclaredMethods()
-        final result = new ArrayList<FunctionNameDef>(allMethods.length)
+        final result = new ArrayList<FunctionDef>(allMethods.length)
         for( Method method : allMethods ) {
             if( !Modifier.isPublic(method.getModifiers()) ) continue
             if( Modifier.isStatic(method.getModifiers())) continue
@@ -181,7 +181,7 @@ class ScriptMeta {
             if( method.name in INVALID_FUNCTION_NAMES ) continue
 
             if( result.find{it.name == method.name}) continue
-            result.add(new FunctionNameDef(script, method.name))
+            result.add(new FunctionDef(script, method.name))
         }
         return result
     }
@@ -217,8 +217,8 @@ class ScriptMeta {
         (ProcessDef)getComponent(name)
     }
 
-    FunctionNameDef getFunction(String name) {
-        (FunctionNameDef)getComponent(name)
+    FunctionDef getFunction(String name) {
+        (FunctionDef)getComponent(name)
     }
 
     Set<String> getAllNames() {

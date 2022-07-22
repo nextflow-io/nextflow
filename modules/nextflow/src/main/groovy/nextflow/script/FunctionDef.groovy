@@ -17,9 +17,11 @@
 
 package nextflow.script
 
+import groovy.transform.CompileStatic
+
+import javax.mail.MethodNotSupportedException
 import java.lang.reflect.Method
 
-import groovy.transform.CompileStatic
 import static ChannelOut.spreadToArray
 
 /**
@@ -33,37 +35,49 @@ class FunctionDef extends ComponentDef implements ChainableDef {
 
     private BaseScript owner
 
-    private Method method
-
     private String name
 
-    FunctionDef(BaseScript owner, Method method) {
+    private String alias
+
+    FunctionDef(BaseScript owner, String name) {
         this.owner = owner
-        this.method = method
-        this.name = method.name
+        this.name = name
+        this.alias = name
     }
 
     protected FunctionDef() { }
 
     String getType() { 'function' }
 
-    Method getMethod() { method }
-
-    String getName() { name }
+    String getName() { alias }
 
     BaseScript getOwner() { owner }
 
     Object invoke_a(Object[] args) {
-        method.invoke(owner, spreadToArray(args))
+        throw new MethodNotSupportedException()
+    }
+
+    @Override
+    Object invoke_o(Object args) {
+        final Object[] argsArr = args instanceof Object[] ?  args as Object[]
+                : args instanceof ChannelOut ? (args as List) as Object[]
+                : new Object[]{args};
+        def meta = owner.metaClass.getMetaMethod(name, argsArr)
+        if( meta == null )
+            throw new MissingMethodException(name, owner.getClass(), args)
+        Method callMethod = owner.getClass().getMethod(name, meta.getNativeParameterTypes())
+        if( callMethod == null )
+            throw new MissingMethodException(name, owner.getClass(), args)
+        callMethod.invoke(owner, argsArr)
     }
 
     FunctionDef clone() {
-      return (FunctionDef)super.clone()
+        return (FunctionDef)super.clone()
     }
 
     FunctionDef cloneWithName(String name) {
         def result = clone()
-        result.@name = name
+        result.@alias = name
         return result
     }
 }
