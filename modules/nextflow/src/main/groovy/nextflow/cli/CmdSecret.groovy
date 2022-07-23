@@ -81,7 +81,7 @@ class CmdSecret extends CmdBase implements UsageAware {
      */
     void usage(List<String> args) {
 
-        def result = []
+        List<String> result = []
         if( !args ) {
             result << this.getClass().getAnnotation(Parameters).commandDescription()
             result << 'Usage: nextflow secret <sub-command> [options]'

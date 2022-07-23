@@ -78,7 +78,7 @@ class IntoOp {
         if( names.size() == 1 )
             log.warn("The `into` operator should be used to connect two or more target channels -- consider to replace it with `.set { ${names[0]} }`")
 
-        def targets = []
+        List<DataflowWriteChannel> targets = []
         names.each { identifier ->
             def channel = newChannelBy(source)
             targets.add(channel)

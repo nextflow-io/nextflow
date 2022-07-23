@@ -49,6 +49,6 @@ dependencies {
         
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.codehaus.groovy:groovy:3.0.10"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.10"
+    testImplementation "org.codehaus.groovy:groovy:3.0.12"
+    testImplementation "org.codehaus.groovy:groovy-nio:3.0.12"
 }

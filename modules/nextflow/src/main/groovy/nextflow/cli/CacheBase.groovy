@@ -91,7 +91,7 @@ trait CacheBase {
         if( !args )
             return history.findByIdOrName('last')
 
-        def result = []
+        List<Record> result = []
         for( String name : args ) {
             result.addAll(history.findByIdOrName(name))
         }

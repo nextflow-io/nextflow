@@ -200,7 +200,7 @@ class Launcher {
     @PackageScope
     List<String> normalizeArgs( String ... args ) {
 
-        def normalized = []
+        List<String> normalized = []
         int i=0
         while( true ) {
             if( i==args.size() ) { break }

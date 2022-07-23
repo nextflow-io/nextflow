@@ -77,7 +77,7 @@ class CmdRun extends CmdBase implements HubOptions {
         }
     }
 
-    static final public NAME = 'run'
+    static final public String NAME = 'run'
 
     private Map<String,String> sysEnv = System.getenv()
 
