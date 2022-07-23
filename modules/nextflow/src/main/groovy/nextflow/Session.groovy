@@ -73,8 +73,6 @@ import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
-import nextflow.util.ThreadPoolBuilder
-import nextflow.util.ThreadPoolHelper
 import nextflow.util.VersionNumber
 import sun.misc.Signal
 import sun.misc.SignalHandler
