@@ -860,7 +860,7 @@ class Session implements ISession {
     }
 
     protected List<String> validateConfig0(Collection<String> processNames) {
-        def result = []
+        List<String> result = []
 
         if( !(config.process instanceof Map) )
             return result
