@@ -233,7 +233,8 @@ public class AmazonS3Client {
 			req.withCannedAccessControlList(cannedAcl);
 		}
 		if( storageEncryption != null ) {
-			ObjectMetadata meta = req.getNewObjectMetadata();
+			// getNewObjectMetada returns null if no object metadata has been specified.
+			ObjectMetadata meta = req.getNewObjectMetadata() != null ? req.getNewObjectMetadata() : new ObjectMetadata();
 			meta.setSSEAlgorithm(storageEncryption.toString());
 			req.setNewObjectMetadata(meta);
 		}
