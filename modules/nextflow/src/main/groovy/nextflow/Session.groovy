@@ -637,9 +637,10 @@ class Session implements ISession {
             shutdown0()
             log.trace "Session > after cleanup"
             // shutdown executors
-            executorFactory.shutdown()
+            executorFactory?.shutdown()
+            executorFactory = null
             // shutdown executor service
-            execService.shutdown()
+            execService?.shutdown()
             execService = null
             log.trace "Session > executor shutdown"
 
@@ -650,7 +651,7 @@ class Session implements ISession {
             Plugins.stop()
 
             // -- cleanup script classes dir
-            classesDir.deleteDir()
+            classesDir?.deleteDir()
         }
         finally {
             // -- update the history file
