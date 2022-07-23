@@ -164,11 +164,10 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	}
 
 	@Override
-	public FileSystem newFileSystem(URI uri, Map<String, ?> env)
-			throws IOException {
+	public FileSystem newFileSystem(URI uri, Map<String, ?> env) throws IOException {
 		Preconditions.checkNotNull(uri, "uri is null");
-		Preconditions.checkArgument(uri.getScheme().equals("s3"),
-				"uri scheme must be 's3': '%s'", uri);
+		Preconditions.checkArgument(uri.getScheme().equals("s3"), "uri scheme must be 's3': '%s'", uri);
+
 		// first try to load amazon props
 		props = loadAmazonProperties();
 		Object accessKey = props.getProperty(ACCESS_KEY);
@@ -198,8 +197,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		// if this instance already has a S3FileSystem, throw exception
 		// otherwise set
 		if (!fileSystem.compareAndSet(null, result)) {
-			throw new FileSystemAlreadyExistsException(
-					"S3 filesystem already exists. Use getFileSystem() instead");
+			throw new FileSystemAlreadyExistsException("S3 filesystem already exists. Use getFileSystem() instead");
 		}
 
 		return result;
@@ -210,8 +208,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		FileSystem fileSystem = this.fileSystem.get();
 
 		if (fileSystem == null) {
-			throw new FileSystemNotFoundException(
-					String.format("S3 filesystem not yet created. Use newFileSystem() instead"));
+			throw new FileSystemNotFoundException("S3 filesystem not yet created. Use newFileSystem() instead");
 		}
 
 		return fileSystem;
@@ -240,8 +237,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	}
 
     @Override
-    public DirectoryStream<Path> newDirectoryStream(Path dir,
-                                                    DirectoryStream.Filter<? super Path> filter) throws IOException {
+    public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
 
         Preconditions.checkArgument(dir instanceof S3Path,
                 "path must be an instance of %s", S3Path.class.getName());
