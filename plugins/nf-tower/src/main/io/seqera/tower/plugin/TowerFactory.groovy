@@ -38,7 +38,7 @@ class TowerFactory implements TraceObserverFactory {
     @Override
     Collection<TraceObserver> create(Session session) {
         final config = session.config
-        Boolean isEnabled = config.navigate('tower.enabled') as Boolean
+        Boolean isEnabled = config.navigate('tower.enabled') as Boolean || env.get('TOWER_WORKFLOW_ID')
         String endpoint = config.navigate('tower.endpoint') as String
         Duration requestInterval = config.navigate('tower.requestInterval') as Duration
         Duration aliveInterval = config.navigate('tower.aliveInterval') as Duration
@@ -58,7 +58,12 @@ class TowerFactory implements TraceObserverFactory {
         tower.maxRetries = config.navigate('tower.maxRetries', 5) as int
         tower.backOffBase = config.navigate('tower.backOffBase', SimpleHttpClient.DEFAULT_BACK_OFF_BASE) as int
         tower.backOffDelay = config.navigate('tower.backOffDelay', SimpleHttpClient.DEFAULT_BACK_OFF_DELAY  ) as int
-        tower.workspaceId = config.navigate('tower.workspaceId', env.get('TOWER_WORKSPACE_ID'))
+        // when 'TOWER_WORKFLOW_ID' is provided in the env, it's a tower made launch
+        // therefore the workspace should only be taken from the env
+        // otherwise check into the config file and fallback in the env
+        tower.workspaceId = env.get('TOWER_WORKFLOW_ID')
+                ? env.get('TOWER_WORKSPACE_ID')
+                : config.navigate('tower.workspaceId', env.get('TOWER_WORKSPACE_ID'))
         final result = new ArrayList(1)
         result.add(tower)
         // register auth provider
