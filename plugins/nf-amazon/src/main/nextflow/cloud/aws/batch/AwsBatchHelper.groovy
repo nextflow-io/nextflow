@@ -103,19 +103,13 @@ class AwsBatchHelper {
     }
 
     private String getContainerIdByClusterAndTaskArn(String clusterArn, String taskArn) {
-		DescribeTasksResult describeTasksResult;
+	DescribeTasksResult describeTasksResult;
         final describeTaskReq = new DescribeTasksRequest()
                 .withCluster(clusterArn)
                 .withTasks(taskArn)
         try {
             describeTasksResult = ecsClient.describeTasks(describeTaskReq)
-        }
-        catch (InvalidParameterException e) {
-            log.debug "Cannot find container id for clusterArn=$clusterArn and taskArn=$taskArn - The task is likely running on another cluster"
-            return null
-        }
-        if( describeTasksResult ) {
-            final containers = 
+	    final containers = 
                     describeTasksResult.getTasks()
                     *.getContainerInstanceArn()
             if( containers.size()==1 ) {
@@ -128,7 +122,10 @@ class AwsBatchHelper {
             else
                 throw new IllegalStateException("Found more than one container for taskArn=$taskArn")
         }
-        return null
+        catch (InvalidParameterException e) {
+            log.debug "Cannot find container id for clusterArn=$clusterArn and taskArn=$taskArn - The task is likely running on another cluster"
+            return null
+        }
     }
 
     private String getInstanceIdByClusterAndContainerId(String clusterArn, String containerId) {
