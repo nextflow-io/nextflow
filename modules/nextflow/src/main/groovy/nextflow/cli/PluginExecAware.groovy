@@ -17,27 +17,13 @@
 
 package nextflow.cli
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-
 /**
- * Deprecate - see {@link CmdPlugin} instead
+ * Define the interface for plugin commands
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@Deprecated
-@CompileStatic
-class CmdPlugins extends CmdPlugin {
+interface PluginExecAware {
 
-    @Override
-    String getName() {
-        return 'plugins'
-    }
+    int exec(Launcher launcher, List<String> args)
 
-    @Override
-    void run() {
-        log.info "Command 'plugins' has been deprecated - Use 'plugin' instead"
-        super.run()
-    }
 }

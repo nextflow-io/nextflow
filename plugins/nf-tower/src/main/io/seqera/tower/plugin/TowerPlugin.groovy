@@ -12,18 +12,24 @@
 package io.seqera.tower.plugin
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.plugin.BasePlugin
+import nextflow.cli.PluginExecAware
 import org.pf4j.PluginWrapper
 /**
  * Nextflow Tower plugin
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
-class TowerPlugin extends BasePlugin {
+class TowerPlugin extends BasePlugin implements PluginExecAware {
+
+    @Delegate private CacheCommand delegate
 
     TowerPlugin(PluginWrapper wrapper) {
         super(wrapper)
+        this.delegate = new CacheCommand()
     }
 
 }
