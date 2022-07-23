@@ -111,7 +111,7 @@ class AwsBatchHelper {
             describeTasksResult = ecsClient.describeTasks(describeTaskReq)
         }
         catch (InvalidParameterException e) {
-            log.debug "Cannot find container id for clusterArn=$clusterArn and taskArn=$taskArn.  Task is likely running on another cluster."
+            log.debug "Cannot find container id for clusterArn=$clusterArn and taskArn=$taskArn - The task is likely running on another cluster"
             return null
         }
         if( describeTasksResult ) {
