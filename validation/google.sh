@@ -20,18 +20,18 @@ export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
 
 [[ $TOWER_ACCESS_TOKEN ]] && OPTS='-with-tower' || OPTS=''
 set -x
-$NXF_CMD -C ./gls.config \
+$NXF_CMD -C ./google.config \
     run nextflow-io/rnaseq-nf \
     -with-report \
     -with-trace $OPTS
 
-$NXF_CMD -C ./gls.config \
+$NXF_CMD -C ./google.config \
     run ./test-readspair.nf \
     -with-report \
     -with-trace $OPTS
 
 ## complex paths test
-$NXF_CMD -C ./gls.config run ./test-complexpaths.nf
+$NXF_CMD -C ./google.config run ./test-complexpaths.nf
 # validate
 [[ -d foo ]] || false
 [[ -e 'foo/.alpha' ]] || false
@@ -46,7 +46,7 @@ $NXF_CMD -C ./gls.config run ./test-complexpaths.nf
 [[ -e 'foo/sample_(1 2).vcf' ]] || false
 
 rm -rf foo
-$NXF_CMD -C ./gls.config run ./test-complexpaths.nf -resume
+$NXF_CMD -C ./google.config run ./test-complexpaths.nf -resume
 [[ -d foo ]] || false
 [[ -e 'foo/.alpha' ]] || false
 [[ -e 'foo/01_A(R1).fastq' ]] || false
@@ -64,12 +64,8 @@ $NXF_CMD -C ./gls.config run ./test-subdirs.nf
 
 ## run publishDir overwrite
 $NXF_CMD -C ./gls.config run ./test-overwrite.nf
+
 ## re-executing should overwrite the published file
 [ `$NXF_CMD -C ./gls.config run ./test-overwrite.nf -resume | { grep 'Failed to publish file' -c || true; }` == 0 ] && echo OK || { echo 'Failed to publish file' && false; }
 
-## google batch
-$NXF_CMD -C ./googlebatch.config \
-    run nextflow-io/rnaseq-nf \
-    -with-report \
-    -with-trace $OPTS
 
