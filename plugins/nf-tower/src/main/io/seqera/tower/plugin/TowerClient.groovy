@@ -363,10 +363,12 @@ class TowerClient implements TraceObserver {
     }
 
     String getAccessToken() {
-        // access token
-        def token = session.config.navigate('tower.accessToken')
-        if( !token )
-            token = env.get('TOWER_ACCESS_TOKEN')
+        // when 'TOWER_WORKFLOW_ID' is provided in the env, it's a tower made launch
+        // therefore the access token should only be taken from the env
+        // otherwise check into the config file and fallback in the env
+        def token = env.get('TOWER_WORKFLOW_ID')
+                ? env.get('TOWER_ACCESS_TOKEN')
+                : session.config.navigate('tower.accessToken', env.get('TOWER_ACCESS_TOKEN'))
         if( !token )
             throw new AbortOperationException("Missing Nextflow Tower access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
         return token
