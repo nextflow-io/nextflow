@@ -102,7 +102,7 @@ class AwsBatchHelper {
         return instanceId ? getInfoByInstanceId(instanceId) : null
     }
 
-     private String getContainerIdByClusterAndTaskArn(String clusterArn, String taskArn) {
+    private String getContainerIdByClusterAndTaskArn(String clusterArn, String taskArn) {
 		DescribeTasksResult describeTasksResult;
         final describeTaskReq = new DescribeTasksRequest()
                 .withCluster(clusterArn)
