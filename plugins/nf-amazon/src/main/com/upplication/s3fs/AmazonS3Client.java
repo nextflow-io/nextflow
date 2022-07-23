@@ -44,7 +44,15 @@ package com.upplication.s3fs;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.FileVisitOption;
+import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -84,7 +92,6 @@ import com.amazonaws.services.s3.model.SSEAlgorithm;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.Tag;
 import com.amazonaws.services.s3.transfer.Download;
-import com.amazonaws.services.s3.transfer.MultipleFileDownload;
 import com.amazonaws.services.s3.transfer.MultipleFileUpload;
 import com.amazonaws.services.s3.transfer.ObjectCannedAclProvider;
 import com.amazonaws.services.s3.transfer.ObjectMetadataProvider;
@@ -510,14 +517,59 @@ public class AmazonS3Client {
 		}
 	}
 
-	public void downloadDirectory(S3Path source, File target) {
-		MultipleFileDownload download = transferManager()
-				.downloadDirectory(source.getBucket(), source.getKey(), target);
+	public void downloadDirectory(S3Path source, File targetFile) throws IOException {
+		//
+		// the download directory method provided by the TransferManager replicates
+		// the source files directory structure in the target path
+		// see https://github.com/aws/aws-sdk-java/issues/1321
+		//
+		// just traverse to source path a copy all files
+		// 
+		final Path target = targetFile.toPath();
+		final List<Download> allDownloads = new ArrayList<>();
+
+		FileVisitor<Path> visitor = new SimpleFileVisitor<Path>() {
+
+			public FileVisitResult preVisitDirectory(Path current, BasicFileAttributes attr) throws IOException {
+				// get the *delta* path against the source path
+				Path rel = source.relativize(current);
+				String delta = rel != null ? rel.toString() : null;
+				Path newFolder = delta != null ? target.resolve(delta) : target;
+				if(log.isTraceEnabled())
+					log.trace("Copy DIR: " + current + " -> " + newFolder);
+				// this `copy` creates the new folder, but does not copy the contained files
+				Files.createDirectory(newFolder);
+				return FileVisitResult.CONTINUE;
+			}
+
+			@Override
+			public FileVisitResult visitFile(Path current, BasicFileAttributes attr) {
+				// get the *delta* path against the source path
+				Path rel = source.relativize(current);
+				String delta = rel != null ? rel.toString() : null;
+				Path newFile = delta != null ? target.resolve(delta) : target;
+				if( log.isTraceEnabled())
+					log.trace("Copy file: " + current + " -> "+newFile.toUri());
+
+				String sourceKey = ((S3Path) current).getKey();
+				Download it = transferManager() .download(source.getBucket(), sourceKey, newFile.toFile());
+				allDownloads.add(it);
+
+				return FileVisitResult.CONTINUE;
+			}
+
+		};
+
+		Files.walkFileTree(source, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE, visitor);
+
 		try {
-			download.waitForCompletion();
+			while(allDownloads.size()>0) {
+				allDownloads.get(0).waitForCompletion();
+				allDownloads.remove(0);
+			}
 		}
 		catch (InterruptedException e) {
-			log.debug("S3 download directory: s3://{}/{} interrupted",source.getBucket(), source.getKey());
+			log.debug("S3 download directory: s3://{}/{} interrupted", source.getBucket(), source.getKey());
 			Thread.currentThread().interrupt();
 		}
 	}
