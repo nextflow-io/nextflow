@@ -25,7 +25,6 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.function.Consumer
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileDynamic
@@ -205,7 +204,13 @@ class Session implements ISession {
 
     private volatile Throwable error
 
-    private Queue<Closure<Void>> shutdownCallbacks = new ConcurrentLinkedQueue<>()
+    private volatile boolean shutdownInitiated
+
+    private volatile boolean awaitInitiated
+
+    private Queue<Runnable> shutdownCallbacks = new ConcurrentLinkedQueue<>()
+
+    private Queue<Runnable> waitCallbacks = new ConcurrentLinkedQueue<>()
 
     private int poolSize
 
@@ -622,8 +627,29 @@ class Session implements ISession {
         log.debug "Session await > all barriers passed"
         if( !aborted ) {
             joinAllOperators()
-            log.trace "Session > after processors join"
+            log.debug "Session > after processors join"
+            joinAllWaiters()
+            log.trace "Session > after waiters join"
         }
+    }
+
+    void onAwait( Runnable waiter ) {
+        if( awaitInitiated )
+            throw new IllegalStateException("Session await already initiated - hook cannot be added: $waiter")
+        waitCallbacks.add(waiter)
+    }
+
+    protected void joinAllWaiters() {
+        awaitInitiated = true
+        final threads = new ArrayList<Thread>()
+        while( waitCallbacks.size() ) {
+            final hook = waitCallbacks.poll()
+            final it = new Thread(hook)
+            threads.add(it)
+            it.start()
+        }
+        //
+        threads*.join()
     }
 
     void destroy() {
@@ -678,23 +704,28 @@ class Session implements ISession {
         }
     }
 
-
     final protected void shutdown0() {
         log.trace "Shutdown: $shutdownCallbacks"
+        shutdownInitiated = true
+        final threads = new ArrayList<Thread>()
         while( shutdownCallbacks.size() ) {
-            def hook = shutdownCallbacks.poll()
+            final hook = shutdownCallbacks.poll()
             try {
-                if( hook )
-                    hook.call()
+                final t = new Thread(hook)
+                threads.add(t)
+                t.start()
             }
             catch( Exception e ) {
                 log.debug "Failed to execute shutdown hook: $hook", e
             }
         }
-
+        log.debug "Before shutdown threads join"
+        // wait for thread to complete
+        threads*.join()
+        log.debug "Before shutdown notify complete"
         // -- invoke observers completion handlers
         notifyFlowComplete()
-
+        log.debug "Before shutdown global cleanup"
         // -- global
         Global.cleanUp()
     }
@@ -907,15 +938,12 @@ class Session implements ISession {
      * Register a shutdown hook to close services when the session terminates
      * @param Closure
      */
-    void onShutdown( Closure<Void> shutdown ) {
-        if( !shutdown )
+    void onShutdown( Runnable hook ) {
+        if( !hook )
             return
-
-        shutdownCallbacks << shutdown
-    }
-
-    void onShutdown( Consumer<Object> callback ) {
-        onShutdown( { callback.accept(it) } )
+        if( shutdownInitiated )
+            throw new IllegalStateException("Session shutdown already initiated - hook cannot be added: $hook")
+        shutdownCallbacks << hook
     }
 
     void notifyProcessCreate(TaskProcessor process) {

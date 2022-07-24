@@ -119,7 +119,7 @@ class TowerArchiverTest extends Specification {
         then:
         1 * archiver.archivePath(source) >> target
         and:sleep 100   // <-- sleep a bit to allow the task to enter in the exec pool
-        archiver.shutdown()
+        archiver.shutdown(false)
         and:
         target.exists()
     }

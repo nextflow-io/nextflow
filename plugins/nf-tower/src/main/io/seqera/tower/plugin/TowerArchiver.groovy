@@ -21,6 +21,7 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.Future
 import java.util.function.Predicate
 import java.util.regex.Pattern
 
@@ -38,7 +39,8 @@ import nextflow.util.Duration
 import nextflow.util.ThreadPoolBuilder
 import nextflow.util.ThreadPoolHelper
 /**
- * Helper class to resolve bucket archive paths
+ * This class stores all nextflow task '.command.*' files and pipeline reports
+ *  into a storage path specified via the NXF_ARCHIVE_DIR env variable
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -59,6 +61,7 @@ class TowerArchiver {
     private Double jitter
     private Duration maxAwait
     private String retryReason
+    private List<Future> transfers = new ArrayList<>()
 
     Path getBaseDir() { baseDir }
 
@@ -81,10 +84,13 @@ class TowerArchiver {
     }
 
     static TowerArchiver create(Session session, Map<String,String> env) {
-        def paths = parse(env.get('NXF_ARCHIVE_DIR'))
+        final paths = parse(env.get('NXF_ARCHIVE_DIR'))
         if( !paths )
             return null
-        new TowerArchiver(Path.of(paths[0]), FileHelper.asPath(paths[1]), session, env)
+        final result = new TowerArchiver(Path.of(paths[0]), FileHelper.asPath(paths[1]), session, env)
+        session.onAwait(() -> result.awaitTransfers() )
+        session.onShutdown(() -> result.shutdown(session.aborted))
+        return result
     }
 
     static protected List<String> parse(String archiveDef) {
@@ -160,7 +166,9 @@ class TowerArchiver {
             final target = archivePath(source)
             if( target==null )
                 return
-            executor.submit(submitArchive(source,target))
+            log.debug "Submit file archive request: ${source.toUriString()}"
+            final it = executor.submit(submitArchive(source,target))
+            transfers.add(it)
         }
         catch (Throwable t) {
             log.warn("Unable to archive file: $source -- cause: ${t.message ?: t}", t)
@@ -231,10 +239,27 @@ class TowerArchiver {
         return Failsafe.with(policy).get(action)
     }
 
-    void shutdown() throws IOException {
-        executor.shutdown()
-        final waitMsg = "Waiting file archiver to complete (%d files)"
-        final exitMsg = "Exiting before file archiver thread pool complete -- Some files maybe lost"
-        ThreadPoolHelper.await(executor, maxAwait, waitMsg, exitMsg)
+    void awaitTransfers() {
+        log.debug "Before await transfers=${transfers.size()}"
+        while(transfers.size()) {
+            if( transfers.get(0).isDone() ) {
+                transfers.remove(0)
+            }
+            else
+                sleep 100
+        }
+        log.debug "After await transfers=${transfers.size()}"
+    }
+
+    void shutdown(boolean hard) throws IOException {
+        if( hard ) {
+            executor.shutdownNow()
+        }
+        else {
+            executor.shutdown()
+            final waitMsg = "Waiting file archiver to complete (%d files)"
+            final exitMsg = "Exiting before file archiver thread pool complete -- Some files maybe lost"
+            ThreadPoolHelper.await(executor, maxAwait, waitMsg, exitMsg)
+        }
     }
 }
