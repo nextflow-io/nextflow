@@ -46,6 +46,9 @@ import nextflow.file.FileSystemPathFactory
 import nextflow.io.ByteBufferBackedInputStream
 import nextflow.util.CharsetHelper
 import nextflow.util.CheckHelper
+
+import static java.nio.file.attribute.PosixFilePermission.*
+
 /**
  * Add utility methods to standard classes {@code File} and {@code Path}
  *
@@ -1115,6 +1118,11 @@ class FilesEx {
         PosixFilePermissions.toString(perms)
     }
 
+    static String getPermissions(File self) {
+        def perms = Files.getPosixFilePermissions(self.toPath())
+        PosixFilePermissions.toString(perms)
+    }
+
     /**
      * Set the file Unix permissions using a string like {@code rw-r--r--}
      *
@@ -1213,6 +1221,98 @@ class FilesEx {
         setPermissions(self.toPath(), owner, group, other)
     }
 
+    static int getPermissionsMode( File self ) {
+        final perms = Files.getPosixFilePermissions(self.toPath())
+        return toOctalFileMode(perms)
+    }
+
+    static int getPermissionsMode( Path self ) {
+        final perms = Files.getPosixFilePermissions(self)
+        return toOctalFileMode(perms)
+    }
+
+    static void setPermissionsMode( File self, int mode ) {
+        final perms = toPosixFilePermission(mode)
+        Files.setPosixFilePermissions(self.toPath(), perms)
+    }
+
+    static void setPermissionsMode( Path self, int mode ) {
+        final perms = toPosixFilePermission(mode)
+        Files.setPosixFilePermissions(self, perms)
+    }
+
+    private static final int OWNER_READ_FILEMODE = 0400;
+    private static final int OWNER_WRITE_FILEMODE = 0200;
+    private static final int OWNER_EXEC_FILEMODE = 0100;
+    private static final int GROUP_READ_FILEMODE = 0040;
+    private static final int GROUP_WRITE_FILEMODE = 0020;
+    private static final int GROUP_EXEC_FILEMODE = 0010;
+    private static final int OTHERS_READ_FILEMODE = 0004;
+    private static final int OTHERS_WRITE_FILEMODE = 0002;
+    private static final int OTHERS_EXEC_FILEMODE = 0001;
+
+    static protected int toOctalFileMode(Set<PosixFilePermission> permissions) {
+        int result = 0;
+        for (PosixFilePermission permissionBit : permissions) {
+            switch (permissionBit) {
+                case OWNER_READ:
+                    result |= OWNER_READ_FILEMODE;
+                    break;
+                case OWNER_WRITE:
+                    result |= OWNER_WRITE_FILEMODE;
+                    break;
+                case OWNER_EXECUTE:
+                    result |= OWNER_EXEC_FILEMODE;
+                    break;
+                case GROUP_READ:
+                    result |= GROUP_READ_FILEMODE;
+                    break;
+                case GROUP_WRITE:
+                    result |= GROUP_WRITE_FILEMODE;
+                    break;
+                case GROUP_EXECUTE:
+                    result |= GROUP_EXEC_FILEMODE;
+                    break;
+                case OTHERS_READ:
+                    result |= OTHERS_READ_FILEMODE;
+                    break;
+                case OTHERS_WRITE:
+                    result |= OTHERS_WRITE_FILEMODE;
+                    break;
+                case OTHERS_EXECUTE:
+                    result |= OTHERS_EXEC_FILEMODE;
+                    break;
+            }
+        }
+        return result;
+    }
+
+    static protected Set<PosixFilePermission> toPosixFilePermission(int mode) {
+        final result = new HashSet<PosixFilePermission>()
+        // -- owner
+        if( mode & OWNER_READ_FILEMODE )
+            result.add(OWNER_READ)
+        if( mode & OWNER_WRITE_FILEMODE )
+            result.add(OWNER_WRITE)
+        if( mode & OWNER_EXEC_FILEMODE )
+            result.add(OWNER_EXECUTE)
+        // -- group
+        if( mode & GROUP_READ_FILEMODE )
+            result.add(GROUP_READ)
+        if( mode & GROUP_WRITE_FILEMODE )
+            result.add(GROUP_WRITE)
+        if( mode & GROUP_EXEC_FILEMODE )
+            result.add(GROUP_EXECUTE)
+        // -- other
+        if( mode & OTHERS_READ_FILEMODE )
+            result.add(OTHERS_READ)
+        if( mode & OTHERS_WRITE_FILEMODE )
+            result.add(OTHERS_WRITE)
+        if( mode & OTHERS_EXEC_FILEMODE )
+            result.add(OTHERS_EXECUTE)
+
+        return result
+    }
 
     static void deleteOnExit(Path self) {
         Runtime.getRuntime().addShutdownHook { self.delete() }

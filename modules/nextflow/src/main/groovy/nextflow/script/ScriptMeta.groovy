@@ -22,12 +22,15 @@ import java.lang.reflect.Modifier
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.exception.DuplicateModuleFunctionException
 import nextflow.exception.DuplicateModuleIncludeException
 import nextflow.exception.MissingModuleComponentException
+import nextflow.script.bundle.ModuleBundle
+
 /**
  * Holds a nextflow script meta-data such as the
  * defines processes and workflows, the included modules
@@ -306,6 +309,16 @@ class ScriptMeta {
         else {
             imports.put(name, component)
         }
+    }
+
+    @Memoized
+    ModuleBundle getModuleBundle() {
+        if( !scriptPath )
+            throw new IllegalStateException("Module scriptPath has not been defined yet")
+        if( scriptPath.getName()!='main.nf' )
+            return null
+        final bundlePath = scriptPath.resolveSibling('bundle')
+        return ModuleBundle.scan(bundlePath)
     }
 
 }

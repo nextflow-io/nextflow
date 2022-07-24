@@ -1,8 +1,12 @@
 package nextflow.script
 
+import java.nio.file.Files
+
 import groovy.transform.InheritConstructors
 import nextflow.exception.DuplicateModuleIncludeException
 import test.Dsl2Spec
+import test.TestHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -144,5 +148,29 @@ class ScriptMetaTest extends Dsl2Spec {
         1 * meta.getComponent('foo') >> comp1
 
         thrown(DuplicateModuleIncludeException)
+    }
+
+    def 'should get module bundle' () {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        and:
+        def mod = folder.resolve('mod1'); mod.mkdir()
+        mod.resolve('bundle').mkdir()
+        and:
+        def scriptPath = mod.resolve('main.nf')
+        def dockerPath = mod.resolve('Dockerfile')
+        Files.createFile(scriptPath)
+        Files.createFile(dockerPath)
+        Files.createFile(mod.resolve('bundle/foo.txt'))
+        Files.createFile(mod.resolve('bundle/bar.txt'))
+        and:
+        def meta = new ScriptMeta(scriptPath: scriptPath)
+
+        when:
+        def bundle = meta.getModuleBundle()
+        then:
+        bundle.dockerfile == dockerPath
+        bundle.getEntries() == ['foo.txt', 'bar.txt'] as Set
+
     }
 }
