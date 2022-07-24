@@ -10,7 +10,7 @@ fi
 # setup env
 #
 export NXF_IGNORE_RESUME_HISTORY=true
-export NXF_UUID=5825a663-97c4-42a2-a3d3-f7113b714d88
+export NXF_UUID=$(uuidgen | tr [:upper:] [:lower:])
 
 #
 # run normal mode
