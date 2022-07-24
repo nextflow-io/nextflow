@@ -911,8 +911,8 @@ class Session implements ISession {
         if( !hook )
             return
         if( shutdownInitiated )
-            throw new IllegalStateException("Session shutdown already initiated - hook cannot be added: $hook")
-        shutdownCallbacks << hook
+            throw new IllegalStateException("Session shutdown already initiated — Hook cannot be added: $hook")
+        shutdownCallbacks.add(hook)
     }
 
     void notifyProcessCreate(TaskProcessor process) {
