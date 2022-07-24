@@ -52,8 +52,10 @@ class CacheCommand implements PluginExecAware {
         // create the session object
         final sess = new Session(config)
         try {
-            if( cmd == 'cache-backup')
+            if( cmd == 'cache-backup') {
                 cacheBackup()
+                archiveLogs(sess)
+            }
             if( cmd == 'cache-restore' )
                 cacheRestore()
             return 0
@@ -70,6 +72,15 @@ class CacheCommand implements PluginExecAware {
     protected void cacheBackup() {
         log.debug "Running Nextflow cache backup"
         new CacheManager(System.getenv()).saveCacheFiles()
+    }
+
+    protected void archiveLogs(Session sess) {
+        // archive logs
+        final archiver = TowerArchiver.create(sess, System.getenv())
+        if( archiver ) {
+            log.debug "Running Nextflow logs archiver"
+            archiver.archiveLogs()
+        }
     }
 
     protected void cacheRestore() {

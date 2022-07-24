@@ -64,7 +64,6 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.RegionUtils;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.Headers;
@@ -135,14 +134,6 @@ public class AmazonS3Client {
 
 	public AmazonS3Client(AmazonS3 client){
 		this.client = client;
-	}
-
-	public AmazonS3Client(ClientConfiguration config) {
-		this.client = AmazonS3ClientBuilder.standard().withClientConfiguration(config).build();
-	}
-
-	public AmazonS3Client(ClientConfiguration config, AWSCredentials creds ) {
-		this(config, creds, Regions.DEFAULT_REGION.getName());
 	}
 
 	public AmazonS3Client(ClientConfiguration config, AWSCredentials creds, String region) {
@@ -492,15 +483,8 @@ public class AmazonS3Client {
 					.withMinimumUploadPartSize(uploadChunkSize)
 					.withExecutorFactory(() -> transferPool)
 					.build();
-
-			// add a shutdown hook
-			final Session sess = (Session) Global.getSession();
-			if( sess != null ) {
-				sess.onShutdown( (it) -> { showdown0(sess.isAborted()); });
-			}
-			else {
-				log.warn("Session not available -- S3 file transfer may not shutdown properly");
-			}
+			//
+			registerShutdownCallback();
 		}
 		return transferManager;
 	}
@@ -643,15 +627,14 @@ public class AmazonS3Client {
 		}
 	}
 
-
 	String getObjectKmsKeyId(String bucketName, String key) {
 		return getObjectMetadata(bucketName,key).getSSEAwsKmsKeyId();
 	}
 
-	void showdown0(boolean hard) {
+	protected void showdownTransferPool(boolean hard) {
 		log.debug("Initiating transfer manager shutdown (hard={})", hard);
 		if( hard ) {
-			transferManager.shutdownNow();
+			transferPool.shutdownNow();
 		}
 		else {
 			// await pool completion
@@ -662,4 +645,20 @@ public class AmazonS3Client {
 		}
 	}
 
+	protected void registerShutdownCallback() {
+		// add a shutdown hook
+		final Session sess = (Session) Global.getSession();
+		if( sess != null ) {
+			sess.onShutdown( () -> showdownTransferPool(sess.isAborted()) );
+		}
+		else {
+			log.debug("Session not available -- registering shutdown hook");
+			Runtime.getRuntime().addShutdownHook(new Thread() {
+				@Override
+				public void run() {
+					showdownTransferPool(false);
+				}
+			});
+		}
+	}
 }

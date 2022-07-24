@@ -80,11 +80,8 @@ class CollectFileOp {
         defineStoreDirAndFileName()
         defineHashingParams()
 
-        Global.onShutdown {
-            // make sure to delete the collector on termination
-            collector.safeClose()
-        }
-
+        // make sure to delete the collector on termination
+        Global.onShutdown(() -> collector.safeClose() )
     }
 
     protected FileCollector getCollector() {
