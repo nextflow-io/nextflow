@@ -52,7 +52,7 @@ class DataflowMathExtensionTest extends Specification {
         Channel.from("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
         Channel.from("hello","hi","hey").max { a,b -> a.size()<=>b.size() } .val == "hello"
         // this may fail randomly - the cause should be investigated
-        Channel.from("hello","hi","hey").max (makeComparator {{ a,b -> a.size()<=>b.size() }}) .val == "hello"
+        Channel.from("hello","hi","hey").max (makeComparator({ a,b -> a.size()<=>b.size() })) .val == "hello"
 
     }
 
