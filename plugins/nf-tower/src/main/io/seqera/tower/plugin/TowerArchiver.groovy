@@ -21,7 +21,6 @@ import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.Future
 import java.util.function.Predicate
 import java.util.regex.Pattern
 
@@ -35,9 +34,8 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.file.FileHelper
+import nextflow.file.FileTransferPool
 import nextflow.util.Duration
-import nextflow.util.ThreadPoolBuilder
-import nextflow.util.ThreadPoolHelper
 /**
  * This class stores all nextflow task '.command.*' files and pipeline reports
  *  into a storage path specified via the NXF_ARCHIVE_DIR env variable
@@ -54,20 +52,19 @@ class TowerArchiver {
     private final Path baseDir
     private final Path targetDir
 
-    private ExecutorService executor
     private Duration delay
     private Duration maxDelay
     private Integer maxAttempts
     private Double jitter
     private Duration maxAwait
     private String retryReason
-    private List<Future> transfers = new ArrayList<>()
+    private ExecutorService executor
 
     Path getBaseDir() { baseDir }
 
     Path getTargetDir() { targetDir }
 
-    protected TowerArchiver(Path baseDir, Path targetDir, Session session, Map<String,String> env=null) {
+    protected TowerArchiver(Path baseDir, Path targetDir, Session session, Map<String,String> env=null, ExecutorService executor=null) {
         log.debug "Creating tower archiver for base-dir: '$baseDir'; target-dir: '$targetDir'"
         this.baseDir = baseDir
         this.targetDir = targetDir
@@ -78,18 +75,16 @@ class TowerArchiver {
         this.jitter = session.config.navigate('tower.archiver.jitter', '0.25') as Double
         this.maxAwait = session.config.navigate('tower.archiver.shutdown.maxAwait', '1h') as Duration
         this.retryReason = session.config.navigate('tower.archiver.shutdown.retryReason', RETRY_REASON) as String
-        executor = ThreadPoolBuilder.io(10,10,1000, 'tower-archiver')
+        this.executor = executor!=null ? executor : FileTransferPool.getExecutorService()
         if( env!=null )
             this.env = env
     }
 
-    static TowerArchiver create(Session session, Map<String,String> env) {
+    static TowerArchiver create(Session session, Map<String,String> env, ExecutorService executor=null) {
         final paths = parse(env.get('NXF_ARCHIVE_DIR'))
         if( !paths )
             return null
-        final result = new TowerArchiver(Path.of(paths[0]), FileHelper.asPath(paths[1]), session, env)
-        session.onAwait(() -> result.awaitTransfers() )
-        session.onShutdown(() -> result.shutdown(session.aborted))
+        final result = new TowerArchiver(Path.of(paths[0]), FileHelper.asPath(paths[1]), session, env, executor)
         return result
     }
 
@@ -167,8 +162,7 @@ class TowerArchiver {
             if( target==null )
                 return
             log.debug "Submit file archive request: ${source.toUriString()}"
-            final it = executor.submit(submitArchive(source,target))
-            transfers.add(it)
+            executor.submit(submitArchive(source,target))
         }
         catch (Throwable t) {
             log.warn("Unable to archive file: $source -- cause: ${t.message ?: t}", t)
@@ -239,27 +233,4 @@ class TowerArchiver {
         return Failsafe.with(policy).get(action)
     }
 
-    void awaitTransfers() {
-        log.debug "Before await transfers=${transfers.size()}"
-        while(transfers.size()) {
-            if( transfers.get(0).isDone() ) {
-                transfers.remove(0)
-            }
-            else
-                sleep 100
-        }
-        log.debug "After await transfers=${transfers.size()}"
-    }
-
-    void shutdown(boolean hard) throws IOException {
-        if( hard ) {
-            executor.shutdownNow()
-        }
-        else {
-            executor.shutdown()
-            final waitMsg = "Waiting file archiver to complete (%d files)"
-            final exitMsg = "Exiting before file archiver thread pool complete -- Some files maybe lost"
-            ThreadPoolHelper.await(executor, maxAwait, waitMsg, exitMsg)
-        }
-    }
 }

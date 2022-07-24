@@ -43,7 +43,7 @@ class FileTransferPool {
     final static private DEFAULT_KEEP_ALIVE =  Duration.of('60sec')
     final DEFAULT_MAX_AWAIT = Duration.of('12 hour')
 
-    final private Integer minThreads
+    private Integer minThreads
     final private Integer maxThreads
     final private Integer maxQueueSize
     final private Duration keepAlive
@@ -54,8 +54,8 @@ class FileTransferPool {
     static private FileTransferPool instance0
 
     FileTransferPool(Map config) {
-        this.minThreads = config.navigate("threadPool.FileTransfer.minThreads", DEFAULT_MIN_THREAD) as Integer
         this.maxThreads = config.navigate("threadPool.FileTransfer.maxThreads", DEFAULT_MAX_THREAD) as Integer
+        this.minThreads = config.navigate("threadPool.FileTransfer.minThreads", DEFAULT_MIN_THREAD) as Integer
         this.maxQueueSize = config.navigate("threadPool.FileTransfer.maxQueueSize", DEFAULT_QUEUE) as Integer
         this.keepAlive = config.navigate("threadPool.FileTransfer.keepAlive", DEFAULT_KEEP_ALIVE) as Duration
         this.allowThreadTimeout = config.navigate("threadPool.FileTransfer.allowThreadTimeout", false) as Boolean
