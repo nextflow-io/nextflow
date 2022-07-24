@@ -29,7 +29,7 @@ import nextflow.util.ThreadPoolBuilder
 import nextflow.util.ThreadPoolHelper
 
 /**
- * Holder object for file transfrer thread pool
+ * Holder object for file transfer thread pool
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
