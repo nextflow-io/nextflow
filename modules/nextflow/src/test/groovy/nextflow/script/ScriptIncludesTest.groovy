@@ -160,6 +160,45 @@ class ScriptIncludesTest extends Dsl2Spec {
         MODULE.text = '''
         def foo(str='foo') {
           return str.reverse()
+        }
+        '''
+
+        SCRIPT.text = """  
+        include { foo } from "$MODULE" 
+        workflow {
+           emit:
+           channel.of('hello world').map { 
+            [ witharg : foo(it), withdefault : foo() ] 
+           }
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner() .setScript(SCRIPT).execute()
+        def map = result.val
+        then:
+        map
+        map.witharg == 'hello world'.reverse()
+        map.withdefault == 'foo'.reverse()
+        
+        cleanup:
+        NextflowMeta.instance.strictMode(false)
+    }
+
+    def 'should allows multiple signatures of function' () {
+        given:
+        NextflowMeta.instance.strictMode(true)
+        and:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        def foo( list=[1,2,3] ) {
+          return list
+        }
+        def foo(c1, c2){
+            return c1+"-"+c2
         }   
         '''
 
@@ -167,7 +206,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         include { foo } from "$MODULE" 
         workflow {
            emit:
-           channel.of('hello world').map { foo(it) }
+           channel.from( foo() ).flatMap { foo(it, it*2) } 
         }
         """
 
@@ -175,8 +214,10 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = new MockScriptRunner() .setScript(SCRIPT).execute()
 
         then:
-        result.val == 'hello world'.reverse()
-        
+        result.val == '1-2'
+        result.val == '2-4'
+        result.val == '3-6'
+
         cleanup:
         NextflowMeta.instance.strictMode(false)
     }
