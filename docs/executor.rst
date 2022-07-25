@@ -382,6 +382,15 @@ Resource requests and other job characteristics can be controlled via the follow
 * :ref:`process-queue`
 * :ref:`process-time`
 
+.. tip::
+  In Nextflow version 22.10 or later, it is possible to use ``clusterOptions`` with other resources directives such as
+  ``cpus`` and ``memory`` by specifying the cluster options dynamically::
+
+    clusterOptions = { "-l select=1:ncpus=${task.cpus}:mem=${task.memory.toMega()}mb:..." }
+
+  This technique allows you to specify ``clusterOptions`` once for all processes, including any options that are specific
+  to your cluster, and use the standard resource directives throughout the rest of your pipeline.
+
 
 .. _sge-executor:
 
