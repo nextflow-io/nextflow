@@ -17,6 +17,7 @@
 
 package nextflow.script
 
+import nextflow.exception.ScriptCompilationException
 import nextflow.extension.ChannelExtensionProvider
 import nextflow.plugin.Plugins
 
@@ -174,9 +175,16 @@ class IncludeDef {
 
         // check if exists a file with `.nf` extension
         if( !module.name.endsWith('.nf') ) {
-            def extendedName = module.resolveSibling( "${module.name}.nf" )
+            final extendedName = module.resolveSibling( "${module.name}.nf" )
             if( extendedName.exists() )
                 return extendedName
+        }
+        if( module.isDirectory() ) {
+            final target = module.resolve('main.nf')
+            if( target.exists() ) {
+                return target
+            }
+            throw new ScriptCompilationException("Include '$include' does not provide any module script -- the following path should contain a 'main.nf' script: '$module'" )
         }
 
         // check the file exists

@@ -1,6 +1,5 @@
 /*
  * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,31 +12,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.cli
+package io.seqera.wave.plugin
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.util.HistoryFile
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
+
 /**
- * CLI sub-command HISTORY
+ * Model a response for an augmented container
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@Deprecated
+@EqualsAndHashCode
+@ToString(includeNames = true, includePackage = false)
 @CompileStatic
-class CmdHistory extends CmdBase {
-
-    static final public NAME = 'history'
-
-    @Override
-    final String getName() { NAME }
-
-    @Override
-    void run() {
-        log.info "Command `history` has been deprecated -- Use `log` instead"
-        HistoryFile.DEFAULT.print()
-    }
+class SubmitContainerTokenResponse {
+    String containerToken
+    String targetImage
 }

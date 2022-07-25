@@ -29,7 +29,7 @@ import nextflow.util.ThreadPoolBuilder
 import nextflow.util.ThreadPoolHelper
 
 /**
- * Holder object for file transfrer thread pool
+ * Holder object for file transfer thread pool
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -43,7 +43,7 @@ class FileTransferPool {
     final static private DEFAULT_KEEP_ALIVE =  Duration.of('60sec')
     final DEFAULT_MAX_AWAIT = Duration.of('12 hour')
 
-    final private Integer minThreads
+    private Integer minThreads
     final private Integer maxThreads
     final private Integer maxQueueSize
     final private Duration keepAlive
