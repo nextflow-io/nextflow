@@ -18,8 +18,6 @@
 package nextflow.cloud.aws.batch
 
 import java.nio.file.Path
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
 import com.amazonaws.services.batch.AWSBatch
@@ -42,6 +40,7 @@ import nextflow.processor.TaskRun
 import nextflow.util.Duration
 import nextflow.util.RateUnit
 import nextflow.util.ServiceName
+import nextflow.util.ThreadPoolHelper
 import nextflow.util.ThrottlingExecutor
 import org.pf4j.ExtensionPoint
 /**
@@ -285,38 +284,9 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         // -- finally delete cleanup executor
         // start shutdown process
         reaper.shutdown()
-        await0(reaper, Duration.of('60min'))
-    }
-
-    private await0(ExecutorService pool, Duration maxAwait) {
-        final max = maxAwait.millis
-        final t0 = System.currentTimeMillis()
-        // wait for ongoing file transfer to complete
-        int count=0
-        while( true ) {
-            final terminated = pool.awaitTermination(5, TimeUnit.SECONDS)
-            if( terminated )
-                break
-
-            final delta = System.currentTimeMillis()-t0
-            if( delta > max ) {
-                log.warn "[AWS BATCH] Exiting before jobs reaper thread pool complete -- Some jobs may not be terminated"
-                break
-            }
-
-            final p1 = ((ThreadPoolExecutor)pool)
-            final pending = p1.getTaskCount() - p1.getCompletedTaskCount()
-            // log to console every 10 minutes (120 * 5 sec)
-            if( count % 120 == 0 ) {
-                log.info1 "[AWS BATCH] Waiting jobs reaper to complete (${pending} jobs to be terminated)"
-            }
-            // log to the debug file every minute (12 * 5 sec)
-            else if( count % 12 == 0 ) {
-                log.debug "[AWS BATCH] Waiting jobs reaper to complete (${pending} jobs to be terminated)"
-            }
-            // increment the count
-            count++
-        }
+        final waitMsg = "[AWS BATCH] Waiting jobs reaper to complete (%d jobs to be terminated)"
+        final exitMsg = "[AWS BATCH] Exiting before jobs reaper thread pool complete -- Some jobs may not be terminated"
+        ThreadPoolHelper.await(reaper, Duration.of('60min'), waitMsg, exitMsg, )
     }
 
 }

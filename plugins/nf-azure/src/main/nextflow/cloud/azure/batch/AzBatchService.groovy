@@ -764,6 +764,8 @@ class AzBatchService implements Closeable {
                 .build()
     }
 
+    private static List<String> RETRY_CODES = ['TooManyRequests', 'OperationTimedOut']
+
     /**
      * Carry out the invocation of the specified action using a retry policy
      * when {@code TooManyRequests} Azure Batch error is returned
@@ -772,7 +774,7 @@ class AzBatchService implements Closeable {
      * @return The result of the supplied action
      */
     protected <T> T apply(CheckedSupplier<T> action) {
-        final cond = (e -> e instanceof BatchErrorException && e.body().code() == 'TooManyRequests')  as Predicate<? extends Throwable>
+        final cond = (e -> e instanceof BatchErrorException && e.body().code() in RETRY_CODES)  as Predicate<? extends Throwable>
         final policy = retryPolicy(cond)
         return Failsafe.with(policy).get(action)
     }

@@ -57,7 +57,7 @@ class FilePorter {
 
     final Map<Path,FileTransfer> stagingTransfers = new HashMap<>()
 
-    @Lazy private ExecutorService threadPool = session.getFileTransferThreadPool()
+    @Lazy private ExecutorService threadPool = FileTransferPool.getExecutorService()
 
     private Duration pollTimeout
 

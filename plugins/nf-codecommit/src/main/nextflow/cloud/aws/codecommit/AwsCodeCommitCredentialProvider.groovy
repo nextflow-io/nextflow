@@ -49,6 +49,7 @@ import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.errors.UnsupportedCredentialItem
 import org.eclipse.jgit.transport.CredentialItem
 import org.eclipse.jgit.transport.CredentialsProvider
@@ -272,17 +273,15 @@ final class AwsCodeCommitCredentialProvider extends CredentialsProvider {
             }
             awsAccessKey = awsKey.toString()
         }
-        catch (Throwable t) {
-            log.warn("Unable to retrieve AWS Credentials", t)
-            return false;
+        catch (Exception e) {
+            throw new AbortOperationException("Unable to retrieve AWS Credentials", e)
         }
 
         try {
             codeCommitPassword = calculateCodeCommitPassword(uri, awsSecretKey, new Date());
         }
-        catch (Throwable t) {
-            log.warn("Error calculating the AWS CodeCommit password", t)
-            return false
+        catch (Exception e) {
+            throw new AbortOperationException("Error calculating AWS CodeCommit password", e)
         }
 
         for ( i in items ) {
@@ -302,8 +301,7 @@ final class AwsCodeCommitCredentialProvider extends CredentialsProvider {
                 log.trace("Returning password string " + codeCommitPassword);
                 continue;
             }
-            throw new UnsupportedCredentialItem(uri,
-                    i.getClass().getName() + ":" + i.getPromptText());
+            throw new UnsupportedCredentialItem(uri, i.getClass().getName() + ":" + i.getPromptText());
         }
 
         return true;
@@ -329,22 +327,8 @@ final class AwsCodeCommitCredentialProvider extends CredentialsProvider {
         this.awsCredentialsProvider = awsCredentialsProvider
     }
 
-    /**
-     * @param username the username to set
-     */
-    void setUsername(String username ) {
-        this.username = username
-    }
-
     String getUsername() {
         return username
-    }
-
-    /**
-     * @param password the password to set
-     */
-    void setPassword(String password) {
-        this.password = password
     }
 
     String getPassword() {

@@ -1,0 +1,10 @@
+nf-amazon changelog
+===================
+0.1.2 - 17 Jun 2022
+- Fix CodeCommit credentials usage
+
+0.1.1 - 16 Jun 2022
+- [INVALID]
+
+0.1.0 - 9 Jun 2022
+- AWS CodeCommit initial release

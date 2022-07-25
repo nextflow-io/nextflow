@@ -34,7 +34,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
@@ -56,6 +56,11 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.util.Base64;
 import com.upplication.s3fs.util.ByteBufferInputStream;
 import com.upplication.s3fs.util.S3MultipartOptions;
+import nextflow.Global;
+import nextflow.Session;
+import nextflow.util.Duration;
+import nextflow.util.ThreadPoolBuilder;
+import nextflow.util.ThreadPoolHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static java.util.Objects.requireNonNull;
@@ -70,33 +75,6 @@ import static java.util.Objects.requireNonNull;
 
 public final class S3OutputStream extends OutputStream {
 
-    /**
-     * Hack a LinkedBlockingQueue to make the offer method blocking
-     *
-     * http://stackoverflow.com/a/4522411/395921
-     *
-     * @param <E>
-     */
-    static class LimitedQueue<E> extends LinkedBlockingQueue<E>
-    {
-        public LimitedQueue(int maxSize)
-        {
-            super(maxSize);
-        }
-
-        @Override
-        public boolean offer(E e)
-        {
-            // turn offer() and add() into a blocking calls (unless interrupted)
-            try {
-                put(e);
-                return true;
-            } catch(InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            }
-            return false;
-        }
-    }
 
     private static final Logger log = LoggerFactory.getLogger(S3OutputStream.class);
 
@@ -179,6 +157,8 @@ public final class S3OutputStream extends OutputStream {
 
     private List<Tag> tags;
 
+    private AtomicInteger bufferCounter = new AtomicInteger();
+
     /**
      * Creates a new {@code S3OutputStream} that writes data directly into the S3 object with the given {@code objectId}.
      * No special object metadata or storage class will be attached to the object.
@@ -253,6 +233,9 @@ public final class S3OutputStream extends OutputStream {
      */
     @Override
     public void write (int b) throws IOException {
+        if( closed ){
+            throw new IOException("Can't write into a closed stream");
+        }
         if( buf == null ) {
             buf = allocate();
             md5 = createMd5();
@@ -301,6 +284,7 @@ public final class S3OutputStream extends OutputStream {
         }
         else {
             // allocate a new buffer
+            log.debug("Allocating new buffer of {} bytes, total buffers {}", request.getChunkSize(), bufferCounter.incrementAndGet());
             result = ByteBuffer.allocateDirect(request.getChunkSize());
         }
 
@@ -641,16 +625,21 @@ public final class S3OutputStream extends OutputStream {
      */
     static synchronized ExecutorService getOrCreateExecutor(int maxThreads) {
         if( executorSingleton == null ) {
-            ThreadPoolExecutor pool = new ThreadPoolExecutor(
+            ThreadPoolExecutor pool = ThreadPoolBuilder.io(
+                    1,
                     maxThreads,
-                    Integer.MAX_VALUE,
-                    60L, TimeUnit.SECONDS,
-                    new LimitedQueue<Runnable>(maxThreads *3),
-                    new ThreadPoolExecutor.CallerRunsPolicy() );
-
-            pool.allowCoreThreadTimeOut(true);
+                    maxThreads*3,
+                    "S3OutputStream");
             executorSingleton = pool;
             log.trace("Created singleton upload executor -- max-treads: {}", maxThreads);
+            // register shutdown hook
+            Session sess = (Session) Global.getSession();
+            if( sess != null ) {
+                sess.onShutdown(() -> shutdownExecutor(sess.isAborted()) );
+            }
+            else {
+                log.warn("Session not available -- S3 uploader may not shutdown properly");
+            }
         }
         return executorSingleton;
     }
@@ -658,27 +647,19 @@ public final class S3OutputStream extends OutputStream {
     /**
      * Shutdown the executor and clear the singleton
      */
-    public static synchronized void shutdownExecutor(boolean hard) {
-        log.trace("Uploader shutdown -- Executor: {}", executorSingleton);
-
-        if( executorSingleton != null ) {
-            if( hard )
-                executorSingleton.shutdownNow();
-            else
-                executorSingleton.shutdown();
+    static void shutdownExecutor(boolean hard) {
+        if( hard ) {
+            executorSingleton.shutdownNow();
+        }
+        else {
+            executorSingleton.shutdown();
             log.trace("Uploader await completion");
-            awaitExecutorCompletion();
-            executorSingleton = null;
+            final String waitMsg = "[AWS S3] Waiting stream uploader to complete (%d files)";
+            final String exitMsg = "[AWS S3] Exiting before stream uploader thread pool complete -- Some files maybe lost";
+            ThreadPoolHelper.await(executorSingleton, Duration.of("1h") ,waitMsg, exitMsg);
             log.trace("Uploader shutdown completed");
+            executorSingleton = null;
         }
     }
 
-    private static void awaitExecutorCompletion() {
-        try {
-            executorSingleton.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
-        }
-        catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
 }

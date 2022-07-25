@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.3.0 - 13 Jul 2022
+- Add support for Google Batch API v1 [4c116d58] [e85d87ee]
+
 1.2.0 - 25 May 2022
 - Add support for job timeout to Google LifeSciences executor
 
