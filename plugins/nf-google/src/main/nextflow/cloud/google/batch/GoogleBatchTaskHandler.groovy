@@ -158,6 +158,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
                 AllocationPolicy.Accelerator.newBuilder()
                     .setCount( task.config.getAccelerator().getRequest() )
                     .setType( task.config.getAccelerator().getType() )
+            )
 
         if( task.config.getDisk() )
             instancePolicy.addDisks(
