@@ -32,6 +32,7 @@ import com.amazonaws.services.batch.model.DescribeJobDefinitionsRequest
 import com.amazonaws.services.batch.model.DescribeJobDefinitionsResult
 import com.amazonaws.services.batch.model.DescribeJobsRequest
 import com.amazonaws.services.batch.model.DescribeJobsResult
+import com.amazonaws.services.batch.model.EFSVolumeConfiguration
 import com.amazonaws.services.batch.model.EvaluateOnExit
 import com.amazonaws.services.batch.model.Host
 import com.amazonaws.services.batch.model.JobDefinition
@@ -517,23 +518,47 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final volumes = new  ArrayList<Volume>(mountsMap.size())
         for( Map.Entry<String,String> entry : mountsMap.entrySet() ) {
             final mountName = entry.key
-            final parts = entry.value.tokenize(':')
-            final containerPath = parts[0]
-            final hostPath = parts.size()>1 ? parts[1] : containerPath
-            final readOnly = parts.size()>2 ? parts[2]=='ro' : false
-            if( parts.size()>3 )
-                throw new IllegalArgumentException("Not a valid volume mount syntax: $entry.value")
 
             def mount = new MountPoint()
                     .withSourceVolume(mountName)
-                    .withContainerPath(hostPath)
-                    .withReadOnly(readOnly)
-            mounts << mount
-
             def vol = new Volume()
                     .withName(mountName)
-                    .withHost(new Host()
-                    .withSourcePath(containerPath))
+
+            if( !entry.value.startsWith('efs://')) {
+                final parts = entry.value.tokenize(':')
+                final containerPath = parts[0]
+                final hostPath = parts.size()>1 ? parts[1] : containerPath
+                final readOnly = parts.size()>2 ? parts[2]=='ro' : false
+                if( parts.size()>3 )
+                    throw new IllegalArgumentException("Not a valid volume mount syntax: $entry.value")
+
+                mount = mount
+                        .withContainerPath(hostPath)
+                        .withReadOnly(readOnly)
+                vol = vol
+                        .withHost(new Host()
+                        .withSourcePath(containerPath))
+            } else {
+                // should be of format efs://<efs-id>:<mount-point>[:ro|rw]
+                // strip efs:// and tokenize.
+                final parts = entry.value.substring("efs://".size()).tokenize(':')
+                final efsId = parts[0]
+                final containerPath = parts[1]
+                final readOnly = parts.size()>2 ? parts[2]=='ro' : false
+                if( parts.size()>3 )
+                    throw new IllegalArgumentException("Not a valid volume mount syntax: $entry.value")
+
+                mount = mount
+                        .withContainerPath(containerPath)
+                        .withReadOnly(readOnly)
+                vol = vol
+                        .withEfsVolumeConfiguration(new EFSVolumeConfiguration()
+                        .withFileSystemId(efsId)
+                        .withTransitEncryption("ENABLED")) // TODO: can we enable this by default?
+            }
+
+
+            mounts << mount
             volumes << vol
         }
 
