@@ -19,6 +19,7 @@ package nextflow.cloud.google.batch
 
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.executor.res.AcceleratorResource
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
@@ -69,6 +70,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         runnable.getContainer().getOptions() == ''
         runnable.getContainer().getVolumesList() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
         and:
+        instancePolicy.getAcceleratorsCount() == 0
         instancePolicy.getDisksCount() == 0
         instancePolicy.getMachineType() == ''
         and:
@@ -81,6 +83,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         given:
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         and:
+        def ACCELERATOR = new AcceleratorResource(request: 1, type: 'nvidia-tesla-v100')
         def CONTAINER_IMAGE = 'ubuntu:22.1'
         def CONTAINER_OPTS = '--this --that'
         def CPUS = 4
@@ -105,6 +108,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getWorkDir() >> WORK_DIR
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
+                getAccelerator() >> ACCELERATOR
                 getContainerOptions() >> CONTAINER_OPTS
                 getCpus() >> CPUS
                 getDisk() >> DISK
@@ -134,6 +138,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         runnable.getContainer().getOptions() == CONTAINER_OPTS
         runnable.getContainer().getVolumesList() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
         and:
+        instancePolicy.getAccelerators(0).getCount() == 1
+        instancePolicy.getAccelerators(0).getType() == ACCELERATOR.type
         instancePolicy.getDisks(0).getNewDisk().getSizeGb() == DISK.toGiga()
         instancePolicy.getProvisioningModel().toString() == 'SPOT'
         instancePolicy.getMachineType() == MACHINE_TYPE
