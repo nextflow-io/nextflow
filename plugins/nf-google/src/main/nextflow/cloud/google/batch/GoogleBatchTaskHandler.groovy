@@ -119,6 +119,9 @@ class GoogleBatchTaskHandler extends TaskHandler {
         final taskSpec = TaskSpec.newBuilder()
         final computeResource = ComputeResource.newBuilder()
 
+        if( executor.config.bootDiskSize )
+            computeResource.setBootDiskMib( executor.config.bootDiskSize.getMega() )
+
         computeResource.setCpuMilli( task.config.getCpus() * 1000 )
 
         if( task.config.getMemory() )
@@ -159,6 +162,9 @@ class GoogleBatchTaskHandler extends TaskHandler {
                     .setCount( task.config.getAccelerator().getRequest() )
                     .setType( task.config.getAccelerator().getType() )
             )
+
+        if( executor.config.cpuPlatform )
+            instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
 
         if( task.config.getDisk() )
             instancePolicy.addDisks(

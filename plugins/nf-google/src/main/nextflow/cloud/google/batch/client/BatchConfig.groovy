@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.cloud.google.GoogleOpts
+import nextflow.util.MemoryUnit
 /**
  * Model Google Batch config settings
  *
@@ -33,6 +34,8 @@ class BatchConfig {
 
     private GoogleOpts googleOpts
     private GoogleCredentials credentials
+    private MemoryUnit bootDiskSize
+    private String cpuPlatform
     private boolean disableBinDir
     private boolean spot
     private boolean preemptible
@@ -43,6 +46,8 @@ class BatchConfig {
 
     GoogleOpts getGoogleOpts() { return googleOpts }
     GoogleCredentials getCredentials() { return credentials }
+    MemoryUnit getBootDiskSize() { bootDiskSize }
+    String getCpuPlatform() { cpuPlatform }
     boolean getDisableBinDir() { disableBinDir }
     boolean getPreemptible() { preemptible }
     boolean getSpot() { spot }
@@ -55,6 +60,8 @@ class BatchConfig {
         final result = new BatchConfig()
         result.googleOpts = GoogleOpts.create(session)
         result.credentials = result.googleOpts.credentials
+        result.bootDiskSize = session.config.navigate('google.batch.bootDiskSize') as MemoryUnit
+        result.cpuPlatform = session.config.navigate('google.batch.cpuPlatform')
         result.disableBinDir = session.config.navigate('google.batch.disableRemoteBinDir',false)
         result.spot = session.config.navigate('google.batch.spot',false)
         result.preemptible = session.config.navigate('google.batch.preemptible',false)

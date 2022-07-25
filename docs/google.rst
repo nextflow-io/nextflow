@@ -121,6 +121,8 @@ Name                                           Description
 google.project                                 The Google Project Id to use for the pipeline execution.
 google.location                                The Google *location* where the job executions are deployed (default: ``us-central1``).
 google.enableRequesterPaysBuckets              When ``true`` uses the configured Google project id as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See `Requester Pays on Google Cloud Storage documentation  <https://cloud.google.com/storage/docs/requester-pays>`_ (default: ``false``).
+google.batch.bootDiskSize                      Set the size of the virtual machine boot disk, e.g ``50.GB`` (default: none).
+google.batch.cpuPlatform                       Set the minimum CPU Platform, e.g. ``'Intel Skylake'``. See `Specifying a minimum CPU Platform for VM instances <https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications>`_ (default: none).
 google.batch.spot                              When ``true`` enables the usage of *spot* virtual machines or ``false`` otherwise (default: ``false``).
 google.batch.usePrivateAddress                 When ``true`` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: ``false``).
 google.batch.network                           Set network name to attach the VM's network interface to. The value will be prefixed with global/networks/ unless it contains a /, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used.
@@ -193,8 +195,8 @@ to add the following retry strategy to your config file to instruct Nextflow to 
 if the virtual machine was terminated preemptively::
 
     process {
-      errorStrategy = { task.exitStatus==14 ? 'retry' : 'terminate' }
-      maxRetries = 5
+        errorStrategy = { task.exitStatus==14 ? 'retry' : 'terminate' }
+        maxRetries = 5
     }
 
 Supported directives
@@ -291,10 +293,10 @@ google.region                                  The Google *region* where the com
 google.zone                                    The Google *zone* where the computation is executed in Compute Engine VMs. Multiple zones can be provided separating them by a comma. Do not specify if a region is provided. See  `available Compute Engine regions and zones <https://cloud.google.com/compute/docs/regions-zones/>`_
 google.location                                The Google *location* where the job executions are deployed to Cloud Life Sciences API. See  `available Cloud Life Sciences API locations <https://cloud.google.com/life-sciences/docs/concepts/locations>`_ (default: the same as the region or the zone specified).
 google.enableRequesterPaysBuckets              When ``true`` uses the configured Google project id as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See `Requester Pays on Google Cloud Storage documentation  <https://cloud.google.com/storage/docs/requester-pays>`_ (default: ``false``)
-google.lifeSciences.cpuPlatform                Set the minimum CPU Platform e.g. `'Intel Skylake'`. See `Specifying a minimum CPU Platform for VM instances <https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications>`_ (default: none).
-google.lifeSciences.bootDiskSize               Set the size of the virtual machine boot disk e.g `50.GB` (default: none).
+google.lifeSciences.bootDiskSize               Set the size of the virtual machine boot disk e.g ``50.GB`` (default: none).
 google.lifeSciences.copyImage                  The container image run to copy input and output files. It must include the ``gsutil`` tool (default: ``google/cloud-sdk:alpine``).
-google.lifeSciences.debug                      When ``true`` copies the `/google` debug directory in that task bucket directory (default: ``false``)
+google.lifeSciences.cpuPlatform                Set the minimum CPU Platform e.g. ``'Intel Skylake'``. See `Specifying a minimum CPU Platform for VM instances <https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications>`_ (default: none).
+google.lifeSciences.debug                      When ``true`` copies the ``/google`` debug directory in that task bucket directory (default: ``false``)
 google.lifeSciences.preemptible                When ``true`` enables the usage of *preemptible* virtual machines or ``false`` otherwise (default: ``true``)
 google.lifeSciences.usePrivateAddress          When ``true`` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: ``false``). Requires version ``20.03.0-edge`` or later.
 google.lifeSciences.network                    Set network name to attach the VM's network interface to. The value will be prefixed with global/networks/ unless it contains a /, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used. Requires version ``21.03.0-edge`` or later.
