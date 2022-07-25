@@ -51,6 +51,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     protected boolean readOnlyInputs
 
+    @Deprecated
     protected String entryPoint
 
     protected String runCommand

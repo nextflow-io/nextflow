@@ -394,8 +394,8 @@ class TraceRecord implements Serializable {
     }
 
     CharSequence renderJson(StringBuilder result = new StringBuilder()) {
-        def fields = []
-        def formats = []
+        List<String> fields = []
+        List<String> formats = []
         FIELDS.each { name, type -> fields << name; formats << type }
         renderJson(result, fields, formats)
     }
