@@ -180,6 +180,7 @@ class ScriptMeta {
             if( method.name.startsWith('super$')) continue
             if( method.name in INVALID_FUNCTION_NAMES ) continue
 
+            // If method is already into the list, maybe with other signature, it's not necessary to include it again
             if( result.find{it.name == method.name}) continue
             result.add(new FunctionDef(script, method.name))
         }
