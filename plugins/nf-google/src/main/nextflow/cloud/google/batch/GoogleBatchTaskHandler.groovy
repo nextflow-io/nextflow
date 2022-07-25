@@ -221,11 +221,18 @@ class GoogleBatchTaskHandler extends TaskHandler {
         final now = System.currentTimeMillis()
         final delta =  now - timestamp;
         if( !jobState || delta >= 1_000) {
-            def newState = client.getJobState(jobId)
+            final newStatus = client.getJobStatus(jobId)
+            final newState = client.getJobState(newStatus)
             if( newState ) {
                 log.trace "[GOOGLE BATCH] Get job=$jobId state=$newState"
                 jobState = newState
                 timestamp = now
+            }
+            if( newState == 'SCHEDULED' ) {
+                final eventsCount = newStatus.getStatusEventsCount()
+                final lastEvent = eventsCount > 0 ? newStatus.getStatusEvents(eventsCount - 1) : null
+                if( lastEvent?.getDescription().contains('CODE_GCE_QUOTA_EXCEEDED') )
+                    log.warn "[GOOGLE BATCH] job cannot be run: ${lastEvent.getDescription()}"
             }
         }
         return jobState
