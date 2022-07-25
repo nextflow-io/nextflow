@@ -16,11 +16,11 @@
 
 package nextflow.script
 
+import nextflow.exception.MissingProcessException
+
 import java.nio.file.Files
 
 import nextflow.NextflowMeta
-import nextflow.exception.DuplicateModuleFunctionException
-import nextflow.exception.DuplicateModuleIncludeException
 import nextflow.exception.ScriptCompilationException
 import spock.lang.Timeout
 import test.Dsl2Spec
@@ -217,6 +217,41 @@ class ScriptIncludesTest extends Dsl2Spec {
         result.val == '1-2'
         result.val == '2-4'
         result.val == '3-6'
+
+        cleanup:
+        NextflowMeta.instance.strictMode(false)
+    }
+
+    def 'should fails if no signatures of function founded' () {
+        given:
+        NextflowMeta.instance.strictMode(true)
+        and:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        def foo( list=[1,2,3] ) {
+          return list
+        }
+        def foo(c1, c2){
+            return c1+"-"+c2
+        }   
+        '''
+
+        SCRIPT.text = """  
+        include { foo } from "$MODULE" 
+        workflow {
+           emit:
+           channel.from( foo(1, 2, 3) ) 
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner() .setScript(SCRIPT).execute()
+
+        then:
+        thrown(MissingProcessException)
 
         cleanup:
         NextflowMeta.instance.strictMode(false)
