@@ -54,7 +54,7 @@ class FunctionDef extends ComponentDef implements ChainableDef {
     BaseScript getOwner() { owner }
 
     Object invoke_a(Object[] args) {
-        throw new MethodNotSupportedException()
+        invoke_o(args)
     }
 
     @Override

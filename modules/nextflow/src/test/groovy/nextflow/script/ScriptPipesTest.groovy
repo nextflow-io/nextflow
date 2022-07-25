@@ -316,6 +316,94 @@ class ScriptPipesTest extends Dsl2Spec {
 
     }
 
+    def 'should compose custom funs/3' () {
+        given:
+        def SCRIPT = """
+        process foo {
+          input:
+            val str
+          output: 
+            val x
+          exec: 
+            x=str.reverse()
+        }
+        
+        def init(str='hi'){
+            Channel.from(str)
+        }
+        
+        workflow {
+            emit: init | foo | view
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner().setScript(SCRIPT).execute()
+        then:
+        result.val == 'hi'.reverse()
+
+    }
+
+    def 'should compose custom funs/4' () {
+        given:
+        def SCRIPT = """
+        process foo {
+          input:
+            val str
+          output: 
+            val x
+          exec: 
+            x=str.reverse()
+        }
+        
+        def init(str='hi'){
+            Channel.from(str)
+        }
+        
+        workflow {
+            emit: init('hello') | foo | view
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner().setScript(SCRIPT).execute()
+        then:
+        result.val == 'hello'.reverse()
+
+    }
+
+    def 'should compose custom funs/5' () {
+        given:
+        def SCRIPT = """
+        process foo {
+          input:
+            val str
+          output: 
+            val x
+          exec: 
+            x=str.reverse()
+        }
+        
+        def init(str='hi'){
+            Channel.from(str)
+        }
+
+        def bar(ch1=null) {            
+          ch1.map{ it.toUpperCase() }
+        }
+
+        workflow {
+            emit: init | foo | bar | view
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner().setScript(SCRIPT).execute()
+        then:
+        result.val == 'HI'.reverse()
+
+    }
+
     def 'should compose imported funs' () {
         given:
         def folder = Files.createTempDirectory('test')
