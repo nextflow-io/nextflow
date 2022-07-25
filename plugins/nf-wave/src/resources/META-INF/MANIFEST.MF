@@ -3,4 +3,4 @@ Plugin-Class: io.seqera.wave.plugin.WavePlugin
 Plugin-Id: nf-wave
 Plugin-Version: 0.2.0
 Plugin-Provider: Seqera Labs
-Plugin-Requires: >=22.07.0-edge
+Plugin-Requires: >=22.08.0-SNAPSHOT
