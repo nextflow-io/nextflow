@@ -635,7 +635,7 @@ public final class S3OutputStream extends OutputStream {
             // register shutdown hook
             Session sess = (Session) Global.getSession();
             if( sess != null ) {
-                sess.onShutdown( (it) -> { shutdownExecutor(sess.isAborted()); } );
+                sess.onShutdown(() -> shutdownExecutor(sess.isAborted()) );
             }
             else {
                 log.warn("Session not available -- S3 uploader may not shutdown properly");

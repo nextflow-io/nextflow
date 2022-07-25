@@ -335,15 +335,16 @@ class PluginsFacade implements PluginStateListener {
         def specs = parseConf(config)
         if( isSelfContained() && specs ) {
             // custom plugins are not allowed for nextflow self-contained package
-            log.warn "Nextflow self-contained distribution only allows default plugins -- User config plugins will be ignored: ${specs.join(',')}"
+            log.warn "Nextflow self-contained distribution only allows core plugins -- User config plugins will be ignored: ${specs.join(',')}"
             return Collections.emptyList()
         }
         if( specs ) {
             log.debug "Plugins declared=$specs"
         }
-        else if( getPluginsDefault() ){
-            specs = defaultPluginsConf(config)
-            log.debug "Plugins default=$specs"
+        if( getPluginsDefault() ){
+            final defSpecs = defaultPluginsConf(config)
+            specs = mergePluginSpecs(specs, defSpecs)
+            log.debug "Plugins default=$defSpecs"
         }
 
         // add tower plugin when config contains tower options
@@ -351,6 +352,7 @@ class PluginsFacade implements PluginStateListener {
             specs << defaultPlugins.getPlugin('nf-tower')
         }
 
+        log.debug "Plugins resolved requirement=$specs"
         return specs
     }
 
@@ -417,5 +419,32 @@ class PluginsFacade implements PluginStateListener {
             start(pluginId)
             return true
         }
+    }
+
+    /**
+     * Merge two list of plugins requirement
+     *
+     * @param configPlugins
+     *      The list of plugins specified via the configuration file. This has higher priority
+     * @param defaultPlugins
+     *      The list of plugins specified via the environment
+     * @return
+     *      The list of plugins resulting from merging the twos
+     */
+    protected List<PluginSpec> mergePluginSpecs(List<PluginSpec> configPlugins, List<PluginSpec> defaultPlugins) {
+        final map = new LinkedHashMap<String,PluginSpec>(10)
+        // add all plugins in the 'configPlugins' argument
+        for( PluginSpec plugin : configPlugins ) {
+            map.put(plugin.id, plugin)
+        }
+        // add the plugin in the 'defaultPlugins' argument
+        // when the map contains already the plugin,
+        // override it only if it does not specify a version
+        for( PluginSpec plugin : defaultPlugins ) {
+            if( !map[plugin.id] || !map[plugin.id].version ) {
+                map.put(plugin.id, plugin)
+            }
+        }
+        return new ArrayList<PluginSpec>(map.values())
     }
 }

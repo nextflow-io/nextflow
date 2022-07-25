@@ -1,6 +1,5 @@
 /*
  * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,32 +12,25 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.cli
+package nextflow.container.resolver
 
-import com.beust.jcommander.Parameters
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
+import nextflow.plugin.Plugins
 
 /**
+ * Load an instance of {@link ContainerResolver}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@CompileStatic
-@Deprecated
-@Parameters
-class CmdLs extends CmdBase {
+class ContainerResolverProvider {
 
-    private CmdList target = new CmdList()
-
-    @Override
-    final String getName() { 'ls' }
-
-    @Override
-    void run() {
-        log.info "Command `ls` has been deprecated -- Use `list` instead"
-        target.run()
+    static ContainerResolver load() {
+        final resolvers = Plugins.getPriorityExtensions(ContainerResolver)
+        if( !resolvers )
+            throw new IllegalStateException("Cannot load ${ContainerResolver.class.simpleName}")
+        return resolvers.first()
     }
+
 }

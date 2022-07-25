@@ -25,7 +25,6 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.function.Consumer
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileDynamic
@@ -205,7 +204,9 @@ class Session implements ISession {
 
     private volatile Throwable error
 
-    private Queue<Closure<Void>> shutdownCallbacks = new ConcurrentLinkedQueue<>()
+    private volatile boolean shutdownInitiated
+
+    private Queue<Runnable> shutdownCallbacks = new ConcurrentLinkedQueue<>()
 
     private int poolSize
 
@@ -637,9 +638,10 @@ class Session implements ISession {
             shutdown0()
             log.trace "Session > after cleanup"
             // shutdown executors
-            executorFactory.shutdown()
+            executorFactory?.shutdown()
+            executorFactory = null
             // shutdown executor service
-            execService.shutdown()
+            execService?.shutdown()
             execService = null
             log.trace "Session > executor shutdown"
 
@@ -650,7 +652,7 @@ class Session implements ISession {
             Plugins.stop()
 
             // -- cleanup script classes dir
-            classesDir.deleteDir()
+            classesDir?.deleteDir()
         }
         finally {
             // -- update the history file
@@ -677,14 +679,13 @@ class Session implements ISession {
         }
     }
 
-
     final protected void shutdown0() {
         log.trace "Shutdown: $shutdownCallbacks"
+        shutdownInitiated = true
         while( shutdownCallbacks.size() ) {
-            def hook = shutdownCallbacks.poll()
+            final hook = shutdownCallbacks.poll()
             try {
-                if( hook )
-                    hook.call()
+                hook.run()
             }
             catch( Exception e ) {
                 log.debug "Failed to execute shutdown hook: $hook", e
@@ -860,7 +861,7 @@ class Session implements ISession {
     }
 
     protected List<String> validateConfig0(Collection<String> processNames) {
-        def result = []
+        List<String> result = []
 
         if( !(config.process instanceof Map) )
             return result
@@ -906,15 +907,12 @@ class Session implements ISession {
      * Register a shutdown hook to close services when the session terminates
      * @param Closure
      */
-    void onShutdown( Closure<Void> shutdown ) {
-        if( !shutdown )
+    void onShutdown( Runnable hook ) {
+        if( !hook )
             return
-
-        shutdownCallbacks << shutdown
-    }
-
-    void onShutdown( Consumer<Object> callback ) {
-        onShutdown( { callback.accept(it) } )
+        if( shutdownInitiated )
+            throw new IllegalStateException("Session shutdown already initiated — Hook cannot be added: $hook")
+        shutdownCallbacks.add(hook)
     }
 
     void notifyProcessCreate(TaskProcessor process) {

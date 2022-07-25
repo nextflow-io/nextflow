@@ -224,6 +224,7 @@ class ContainerHandler {
         return "docker://${img}"
     }
 
+    @Deprecated
     @Memoized(maxCacheSize = 1_000)
     static String proxyReg(String proxy, String image) {
         final p = image.lastIndexOf('/')

@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# setup env for integration tests
+#
 TEST_JDK=${TEST_JDK:=11}
 X_BRANCH=${TRAVIS_BRANCH:-${CIRCLE_BRANCH:-'master'}}
 X_PULL_REQUEST=${TRAVIS_PULL_REQUEST:-false}
@@ -21,6 +24,8 @@ export NXF_PLUGINS_DIR=$PWD/build/plugins
 export NXF_CMD=$PWD/nextflow;
 export CAPSULE_LOG=none
 export TEST_JDK
+export TEST_MODE
+
 unset JAVA_TOOL_OPTIONS # this variable mess-up Capsule loader Java version parsing
 (
  $NXF_CMD info

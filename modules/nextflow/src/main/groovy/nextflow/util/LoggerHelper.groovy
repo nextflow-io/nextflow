@@ -237,7 +237,9 @@ class LoggerHelper {
 
     protected Appender createConsoleAppender() {
 
-        final Appender result = daemon && opts.isBackground() ? null : ( opts.ansiLog ? new CaptureAppender() : new ConsoleAppender())
+        final Appender<ILoggingEvent> result = daemon && opts.isBackground()
+                ? (Appender<ILoggingEvent>) null
+                : (opts.ansiLog ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
         if( result )  {
             final filter = new ConsoleLoggerFilter( packages )
             filter.setContext(loggerContext)
