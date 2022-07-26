@@ -106,9 +106,4 @@ class BatchClient {
         return status ? status.getState().toString() : null
     }
 
-    String getJobState(String jobId) {
-        final status = getJobStatus(jobId)
-        return getJobState(status)
-    }
-
 }

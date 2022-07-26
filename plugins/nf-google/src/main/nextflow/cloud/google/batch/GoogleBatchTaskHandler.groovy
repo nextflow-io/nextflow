@@ -215,7 +215,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
     }
 
     /**
-     * @return Retrieve the submitted pod state
+     * @return Retrieve the submitted job state
      */
     protected String getJobState() {
         final now = System.currentTimeMillis()

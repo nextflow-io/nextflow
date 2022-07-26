@@ -133,9 +133,11 @@ class BatchLoggingTest extends Specification {
         uid
         
         when:
-        def state=null
+        def status = null
+        def state = null
         do {
-            state = batchClient.getJobState(jobId)
+            status = batchClient.getJobStatus(jobId)
+            state = batchClient.getJobState(status)
             log.debug "Test job state=$state"
             sleep 10_000
         } while( state !in ['SUCCEEDED', 'FAILED'] )
