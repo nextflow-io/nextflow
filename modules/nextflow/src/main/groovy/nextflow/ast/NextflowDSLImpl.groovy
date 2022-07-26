@@ -1254,7 +1254,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 unit.addError( new SyntaxException("Identifier `$name` is reserved for internal use", node.lineNumber, node.columnNumber+8) )
                 return true
             }
-            if( name in functionNames || name in workflowNames || name in processNames ) {
+            if( name in workflowNames || name in processNames ) {
                 unit.addError( new SyntaxException("Identifier `$name` is already used by another definition", node.lineNumber, node.columnNumber+8) )
                 return true
             }

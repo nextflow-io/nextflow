@@ -173,14 +173,16 @@ class ScriptMeta {
 
     static List<FunctionDef> definedFunctions0(BaseScript script) {
         final allMethods = script.class.getDeclaredMethods()
-        final result = new ArrayList(allMethods.length)
+        final result = new ArrayList<FunctionDef>(allMethods.length)
         for( Method method : allMethods ) {
             if( !Modifier.isPublic(method.getModifiers()) ) continue
             if( Modifier.isStatic(method.getModifiers())) continue
             if( method.name.startsWith('super$')) continue
             if( method.name in INVALID_FUNCTION_NAMES ) continue
 
-            result.add(new FunctionDef(script, method))
+            // If method is already into the list, maybe with other signature, it's not necessary to include it again
+            if( result.find{it.name == method.name}) continue
+            result.add(new FunctionDef(script, method.name))
         }
         return result
     }
@@ -297,12 +299,6 @@ class ScriptMeta {
         assert component
 
         final name = alias ?: component.name
-        final existing = getComponent(name)
-        if (existing) {
-            def msg = "A ${existing.type} with name '$name' is already defined in the current context"
-            throw new DuplicateModuleIncludeException(msg)
-        }
-
         if( name != component.name ) {
             imports.put(name, component.cloneWithName(name))
         }
