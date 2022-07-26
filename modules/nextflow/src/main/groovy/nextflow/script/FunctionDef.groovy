@@ -17,13 +17,9 @@
 
 package nextflow.script
 
-import groovy.transform.CompileStatic
-
-import javax.mail.MethodNotSupportedException
 import java.lang.reflect.Method
 
-import static ChannelOut.spreadToArray
-
+import groovy.transform.CompileStatic
 /**
  * Models a function component that can be included from a module script
  *
@@ -54,21 +50,14 @@ class FunctionDef extends ComponentDef implements ChainableDef {
     BaseScript getOwner() { owner }
 
     Object invoke_a(Object[] args) {
-        invoke_o(args)
-    }
-
-    @Override
-    Object invoke_o(Object args) {
-        final Object[] argsArr = args instanceof Object[] ?  args as Object[]
-                : args instanceof ChannelOut ? (args as List) as Object[]
-                : new Object[]{args};
-        def meta = owner.metaClass.getMetaMethod(name, argsArr)
+        final argsArr = ChannelOut.spread(args).toArray()
+        final meta = owner.metaClass.getMetaMethod(name, argsArr)
         if( meta == null )
-            throw new MissingMethodException(name, owner.getClass(), args)
+            throw new MissingMethodException(name, owner.getClass(), argsArr)
         Method callMethod = owner.getClass().getMethod(name, meta.getNativeParameterTypes())
         if( callMethod == null )
-            throw new MissingMethodException(name, owner.getClass(), args)
-        callMethod.invoke(owner, argsArr)
+            throw new MissingMethodException(name, owner.getClass(), argsArr)
+        return callMethod.invoke(owner, argsArr)
     }
 
     FunctionDef clone() {
