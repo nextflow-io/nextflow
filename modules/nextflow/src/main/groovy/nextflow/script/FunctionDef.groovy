@@ -20,8 +20,6 @@ package nextflow.script
 import java.lang.reflect.Method
 
 import groovy.transform.CompileStatic
-import static ChannelOut.spreadToArray
-
 /**
  * Models a function component that can be included from a module script
  *
@@ -33,37 +31,42 @@ class FunctionDef extends ComponentDef implements ChainableDef {
 
     private BaseScript owner
 
-    private Method method
-
     private String name
 
-    FunctionDef(BaseScript owner, Method method) {
+    private String alias
+
+    FunctionDef(BaseScript owner, String name) {
         this.owner = owner
-        this.method = method
-        this.name = method.name
+        this.name = name
+        this.alias = name
     }
 
     protected FunctionDef() { }
 
     String getType() { 'function' }
 
-    Method getMethod() { method }
-
-    String getName() { name }
+    String getName() { alias }
 
     BaseScript getOwner() { owner }
 
     Object invoke_a(Object[] args) {
-        method.invoke(owner, spreadToArray(args))
+        final argsArr = ChannelOut.spread(args).toArray()
+        final meta = owner.metaClass.getMetaMethod(name, argsArr)
+        if( meta == null )
+            throw new MissingMethodException(name, owner.getClass(), argsArr)
+        Method callMethod = owner.getClass().getMethod(name, meta.getNativeParameterTypes())
+        if( callMethod == null )
+            throw new MissingMethodException(name, owner.getClass(), argsArr)
+        return callMethod.invoke(owner, argsArr)
     }
 
     FunctionDef clone() {
-      return (FunctionDef)super.clone()
+        return (FunctionDef)super.clone()
     }
 
     FunctionDef cloneWithName(String name) {
         def result = clone()
-        result.@name = name
+        result.@alias = name
         return result
     }
 }
