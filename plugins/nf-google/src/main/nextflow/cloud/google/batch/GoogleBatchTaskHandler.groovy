@@ -232,7 +232,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
                 final eventsCount = newStatus.getStatusEventsCount()
                 final lastEvent = eventsCount > 0 ? newStatus.getStatusEvents(eventsCount - 1) : null
                 if( lastEvent?.getDescription().contains('CODE_GCE_QUOTA_EXCEEDED') )
-                    log.warn "[GOOGLE BATCH] job cannot be run: ${lastEvent.getDescription()}"
+                    log.warn1 "Batch job cannot be run: ${lastEvent.getDescription()}"
             }
         }
         return jobState
