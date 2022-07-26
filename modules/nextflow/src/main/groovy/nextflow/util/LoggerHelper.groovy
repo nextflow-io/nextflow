@@ -17,7 +17,6 @@
 
 package nextflow.util
 
-
 import static nextflow.Const.*
 
 import java.lang.reflect.Field
