@@ -1,5 +1,7 @@
 nf-amazon changelog
 ===================
+- Fix Unable to disable scratch attribute with AWS Batch [1770f73a]
+
 1.8.1 - 13 Jul 2022
 - Fix Exception when settings AWS Batch containerOptions #3019 [89312ad8] <Paolo Di Tommaso>
 - Add docs aws.client.s3PathStyleAccess config (#3000) [20005500] <Abhinav Sharma>
