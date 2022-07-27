@@ -269,6 +269,28 @@ class ChannelTest extends Specification {
         result == ['alpha.txt']
     }
 
+    def testRelative() {
+
+        setup:
+        def file1 = new File('alpha.txt')
+
+        when:
+        def result = Channel
+                .fromPath([relative:false], 'alpha.txt')
+                .toSortedList().getVal()
+        then:
+        result*.toString() == [ file1.absolutePath ]
+
+        when:
+        result = Channel
+                .fromPath([relative:true], 'alpha.txt')
+                .toSortedList().getVal()
+        then:
+        result*.toString() == [ 'alpha.txt' ]
+
+        cleanup:
+        file1.delete()
+    }
 
     def testGlobHiddenFiles() {
 
