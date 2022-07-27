@@ -43,6 +43,14 @@ class ModuleBundleTest extends Specification {
         Files.createFile(bundlePath.resolve('this/hola.txt'))
         Files.createFile(bundlePath.resolve('this/hello.txt'))
         Files.createFile(bundlePath.resolve('this/that/ciao.txt'))
+
+        bundlePath.resolve('main.nf').setPermissions(6,4,4)
+        bundlePath.resolve('this').setPermissions(7,5,5)
+        bundlePath.resolve('this/that').setPermissions(7,5,5)
+        bundlePath.resolve('this/hola.txt').setPermissions(6,4,4)
+        bundlePath.resolve('this/hello.txt').setPermissions(6,4,4)
+        bundlePath.resolve('this/that/ciao.txt').setPermissions(6,4,4)
+
         and:
         FileHelper.visitFiles([type:'any'], bundlePath, '**', { Path it -> it.setLastModified(LAST_MODIFIED) })
 
@@ -83,7 +91,7 @@ class ModuleBundleTest extends Specification {
         def bundlePath = folder.resolve('bundle')
         and:
         dockerPath.setLastModified(LAST_MODIFIED)
-
+        dockerPath.setPermissions(6,4,4)
         when:
         def bundle = ModuleBundle.scan(bundlePath)
         then:
