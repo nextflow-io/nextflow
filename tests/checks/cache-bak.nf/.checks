@@ -22,7 +22,7 @@ $NXF_RUN -name test_1 | tee .stdout
 # backup cache
 #
 NXF_WORK=s3://nextflow-ci/cache-test  \
-  $NXF_CMD -log .nextflow-backup.log plugin exec nf-tower cache-backup
+  $NXF_CMD -log .nextflow-backup.log plugin nf-tower:cache-backup
 
 #
 # remove it
@@ -33,7 +33,7 @@ rm -rf .nextflow
 # restore cache
 #
 NXF_WORK=s3://nextflow-ci/cache-test  \
-  $NXF_CMD -log .nextflow-restore.log plugin exec nf-tower cache-restore
+  $NXF_CMD -log .nextflow-restore.log plugin nf-tower:cache-restore
 
 #
 # run resume mode
