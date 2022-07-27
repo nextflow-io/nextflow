@@ -348,8 +348,11 @@ class PluginsFacade implements PluginStateListener {
         }
 
         // add tower plugin when config contains tower options
-        if( (config.containsKey('tower') || env.TOWER_ACCESS_TOKEN ) && !specs.find {it.id == 'tower' } ) {
+        if( (Bolts.navigate(config,'tower.enabled') || env.TOWER_ACCESS_TOKEN ) && !specs.find {it.id == 'nf-tower' } ) {
             specs << defaultPlugins.getPlugin('nf-tower')
+        }
+        if( Bolts.navigate(config,'wave.enabled') && !specs.find {it.id == 'nf-wave' } ) {
+            specs << defaultPlugins.getPlugin('nf-wave')
         }
 
         log.debug "Plugins resolved requirement=$specs"
