@@ -65,7 +65,7 @@ class WaveClient {
 
 
     WaveClient(Session session) {
-        this.config = new WaveConfig(session.config.wave as Map)
+        this.config = new WaveConfig(session.config.wave as Map ?: [:])
         this.endpoint = config.endpoint()
         log.debug "Wave server endpoint: ${endpoint}"
         this.httpClient = HttpClient.newBuilder()
@@ -167,6 +167,13 @@ class WaveClient {
     SubmitContainerTokenResponse sendRequest(ModuleBundle bundle, @Nullable String container, @Nullable ContainerConfig config) {
         final req = makeRequest(bundle, container, config)
         return sendRequest(req)
+    }
+
+    SubmitContainerTokenResponse sendRequest(String image) {
+        final configUrl = config().containerConfigUrl()
+        final ContainerConfig containerConfig = configUrl ? fetchContainerConfig(configUrl) : null
+        final request = new SubmitContainerTokenRequest(containerImage: image, containerConfig: containerConfig)
+        return sendRequest(request)
     }
 
     SubmitContainerTokenResponse sendRequest(SubmitContainerTokenRequest request) {

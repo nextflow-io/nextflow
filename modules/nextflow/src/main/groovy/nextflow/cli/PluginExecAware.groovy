@@ -24,6 +24,8 @@ package nextflow.cli
  */
 interface PluginExecAware {
 
-    int exec(Launcher launcher, List<String> args)
+    static final String CMD_SEP = ':'
+
+    int exec(Launcher launcher, String pluginId, String cmd, List<String> args)
 
 }
