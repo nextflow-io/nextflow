@@ -30,7 +30,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
-import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -228,17 +227,24 @@ class GoogleBatchTaskHandler extends TaskHandler {
     }
 
     /**
-     * @return Retrieve the submitted pod state
+     * @return Retrieve the submitted job state
      */
     protected String getJobState() {
         final now = System.currentTimeMillis()
         final delta =  now - timestamp;
         if( !jobState || delta >= 1_000) {
-            def newState = client.getJobState(jobId)
+            final status = client.getJobStatus(jobId)
+            final newState = status?.state as String
             if( newState ) {
                 log.trace "[GOOGLE BATCH] Get job=$jobId state=$newState"
                 jobState = newState
                 timestamp = now
+            }
+            if( newState == 'SCHEDULED' ) {
+                final eventsCount = status.getStatusEventsCount()
+                final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
+                if( lastEvent?.getDescription()?.contains('CODE_GCE_QUOTA_EXCEEDED') )
+                    log.warn1 "Batch job cannot be run: ${lastEvent.getDescription()}"
             }
         }
         return jobState
