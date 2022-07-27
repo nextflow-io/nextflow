@@ -22,6 +22,7 @@ import com.beust.jcommander.Parameter
 import groovy.transform.CompileStatic
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
+import static nextflow.cli.PluginExecAware.CMD_SEP
 
 /**
  * Plugin manager command
@@ -52,17 +53,20 @@ class CmdPlugin extends CmdBase {
             Plugins.pull(args[1].tokenize(','))
         }
         // plugin run command
-        else if( args[0] == 'exec' ) {
-            if( args.size()<2 )
-                throw new AbortOperationException("Missing plugin run target - usage: nextflow plugin exec <plugin name>")
-            final target = args[1]
+        else if( args[0].contains(CMD_SEP) ) {
+            final head = args.pop()
+            final items = head.tokenize(CMD_SEP)
+            final target = items[0]
+            final cmd = items[1] ? items[1..-1].join(CMD_SEP) : null
+
+            // push back the command as the first item
             Plugins.start(target)
             final wrapper = Plugins.manager.getPlugin(target)
             if( !wrapper )
                 throw new AbortOperationException("Cannot find target plugin: $target")
             final plugin = wrapper.getPlugin()
             if( plugin instanceof PluginExecAware ) {
-                final ret = plugin.exec(getLauncher(), args.subList(2, args.size()))
+                final ret = plugin.exec(getLauncher(), target, cmd, args)
                 // use explicit exit to invoke the system shutdown hooks
                 System.exit(ret)
             }
@@ -70,7 +74,7 @@ class CmdPlugin extends CmdBase {
                 throw new AbortOperationException("Invalid target plugin: $target")
         }
         else {
-            throw new AbortOperationException("Invalid plugin command")
+            throw new AbortOperationException("Invalid plugin command: ${args[0]}")
         }
     }
 

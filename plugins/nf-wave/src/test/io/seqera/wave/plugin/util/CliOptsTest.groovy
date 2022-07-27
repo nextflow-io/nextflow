@@ -15,24 +15,31 @@
  *
  */
 
-package io.seqera.wave.plugin
+package io.seqera.wave.plugin.util
 
-import nextflow.cli.PluginExecAware
-import nextflow.plugin.BasePlugin
-import org.pf4j.PluginWrapper
+import spock.lang.Specification
+
 /**
- * Wave plugin entrypoint
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class WavePlugin extends BasePlugin implements PluginExecAware {
+class CliOptsTest extends Specification {
 
-    @Delegate
-    private WaveCmdCli cli
+    def 'should parse cli' () {
 
-    WavePlugin(PluginWrapper wrapper) {
-        super(wrapper)
-        this.cli = new WaveCmdCli()
+        when:
+        def cli = CliOpts.parse(['-i','-v','x=y', 'nextflow', '--', 'this', '--that'])
+        then:
+        cli.options == ['-i':'','-v':'x=y']
+        cli.container == 'nextflow'
+        cli.args == ['this','--that']
+
+        when:
+        cli = CliOpts.parse(['-v','x=y', '-w', '$PWD', 'nextflow', '-it', '--', 'this', '--that'])
+        then:
+        cli.options == ['-v':'x=y', '-w':'$PWD', '-it':'']
+        cli.container == 'nextflow'
+        cli.args == ['this','--that']
     }
 
 }
