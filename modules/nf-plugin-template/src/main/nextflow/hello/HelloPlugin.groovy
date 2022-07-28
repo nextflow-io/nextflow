@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2021, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,23 +14,22 @@
  * limitations under the License.
  */
 
-rootProject.name = 'nextflow-prj'
+package nextflow.hello
 
-include 'nextflow'
-include 'nf-plugin-template'
-include 'nf-commons'
-include 'nf-httpfs'
+import groovy.transform.CompileStatic
+import nextflow.plugin.BasePlugin
+import nextflow.plugin.Scoped
+import org.pf4j.PluginWrapper
 
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/modules/$prj.name")
+/**
+ * Implements the Hello plugins entry point
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@CompileStatic
+class HelloPlugin extends BasePlugin {
+
+    HelloPlugin(PluginWrapper wrapper) {
+        super(wrapper)
+    }
 }
-
-include 'plugins'
-include 'plugins:nf-amazon'
-include 'plugins:nf-google'
-include 'plugins:nf-ga4gh'
-include 'plugins:nf-tower'
-include 'plugins:nf-console'
-include 'plugins:nf-azure'
-include 'plugins:nf-codecommit'
-include 'plugins:nf-wave'

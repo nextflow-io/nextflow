@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2021, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,23 +14,24 @@
  * limitations under the License.
  */
 
-rootProject.name = 'nextflow-prj'
+package nextflow.hello
 
-include 'nextflow'
-include 'nf-plugin-template'
-include 'nf-commons'
-include 'nf-httpfs'
+import groovy.transform.CompileStatic
+import nextflow.Session
+import nextflow.trace.TraceObserver
+import nextflow.trace.TraceObserverFactory
+/**
+ * Implements the validation observer factory
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@CompileStatic
+class HelloFactory implements TraceObserverFactory {
 
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/modules/$prj.name")
+    @Override
+    Collection<TraceObserver> create(Session session) {
+        final result = new ArrayList()
+        result.add( new HelloObserver() )
+        return result
+    }
 }
-
-include 'plugins'
-include 'plugins:nf-amazon'
-include 'plugins:nf-google'
-include 'plugins:nf-ga4gh'
-include 'plugins:nf-tower'
-include 'plugins:nf-console'
-include 'plugins:nf-azure'
-include 'plugins:nf-codecommit'
-include 'plugins:nf-wave'

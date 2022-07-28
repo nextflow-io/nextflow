@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2021, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,23 +14,23 @@
  * limitations under the License.
  */
 
-rootProject.name = 'nextflow-prj'
+package nextflow.hello
 
-include 'nextflow'
-include 'nf-plugin-template'
-include 'nf-commons'
-include 'nf-httpfs'
+import nextflow.Session
+import spock.lang.Specification
 
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/modules/$prj.name")
+/**
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+class HelloFactoryTest extends Specification {
+
+    def 'should return observer' () {
+        when:
+        def result = new HelloFactory().create(Mock(Session))
+        then:
+        result.size()==1
+        result[0] instanceof HelloObserver
+    }
+
 }
-
-include 'plugins'
-include 'plugins:nf-amazon'
-include 'plugins:nf-google'
-include 'plugins:nf-ga4gh'
-include 'plugins:nf-tower'
-include 'plugins:nf-console'
-include 'plugins:nf-azure'
-include 'plugins:nf-codecommit'
-include 'plugins:nf-wave'

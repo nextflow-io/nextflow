@@ -33,12 +33,12 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         SCRIPT.text = SCRIPT_TEXT
 
         when:
-        Plugins.setup([plugins: ['nf-hello@0.2.0']])
+        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
 
         def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
-        result.val == 'Bye bye folks'
+        result.val == 'Bye bye folks'.toUpperCase()
         result.val == Channel.STOP
 
         cleanup:
@@ -49,7 +49,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
 
         where:
         SCRIPT_TEXT << ['''
-            include { goodbye } from 'plugin/nf-hello'
+            include { goodbye } from 'plugin/nf-plugin-template'
 
             channel
               .of('Bye bye folks')
@@ -59,7 +59,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
             include { 
                 reverse;
                 goodbye; 
-            } from 'plugin/nf-hello'
+            } from 'plugin/nf-plugin-template'
 
             channel
               .of('Bye bye folks')
@@ -86,7 +86,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         SCRIPT.text = SCRIPT_TEXT
 
         when:
-        Plugins.setup([plugins: ['nf-hello@0.2.0']])
+        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
 
         def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
@@ -103,13 +103,13 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
 
         where:
         SCRIPT_TEXT << ['''
-            include { reverse } from 'plugin/nf-hello'                
+            include { reverse } from 'plugin/nf-plugin-template'                
 
             channel.reverse('a string')            
             ''','''
 
-            include { reverse;  } from 'plugin/nf-hello'
-            include { goodbye } from 'plugin/nf-hello'
+            include { reverse;  } from 'plugin/nf-plugin-template'
+            include { goodbye } from 'plugin/nf-plugin-template'
                 
             channel.reverse('a string')            
             '''
@@ -130,7 +130,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
 
         and:
         def SCRIPT_TEXT = '''
-            include { goodbye as myFunction } from 'plugin/nf-hello'
+            include { goodbye as myFunction } from 'plugin/nf-plugin-template'
 
             channel
               .of(100,200,300)
@@ -143,14 +143,14 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         SCRIPT.text = SCRIPT_TEXT
 
         when:
-        Plugins.setup([plugins: ['nf-hello@0.2.0']])
+        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
 
         def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
-        result.val == 100
-        result.val == 200
-        result.val == 300
+        result.val == "100"
+        result.val == "200"
+        result.val == "300"
         result.val == Channel.STOP
 
         cleanup:
@@ -175,7 +175,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         and:
         def SCRIPT_TEXT = '''
             nextflow.enable.dsl=2
-            include { reverse as myFunction } from 'plugin/nf-hello'
+            include { reverse as myFunction } from 'plugin/nf-plugin-template'
          
             channel.myFunction('reverse this string')            
             '''
@@ -186,7 +186,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         SCRIPT.text = SCRIPT_TEXT
 
         when:
-        Plugins.setup([plugins: ['nf-hello@0.2.0']])
+        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
 
         def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
 

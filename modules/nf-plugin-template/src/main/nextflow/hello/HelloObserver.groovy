@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2021, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,23 +14,29 @@
  * limitations under the License.
  */
 
-rootProject.name = 'nextflow-prj'
+package nextflow.hello
 
-include 'nextflow'
-include 'nf-plugin-template'
-include 'nf-commons'
-include 'nf-httpfs'
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.Session
+import nextflow.trace.TraceObserver
 
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/modules/$prj.name")
+/**
+ * Example pipeline events observer
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@Slf4j
+@CompileStatic
+class HelloObserver implements TraceObserver {
+
+    @Override
+    void onFlowCreate(Session session) {
+        log.info "Pipeline is starting! 🚀"
+    }
+
+    @Override
+    void onFlowComplete() {
+        log.info "Pipeline complete! 👋"
+    }
 }
-
-include 'plugins'
-include 'plugins:nf-amazon'
-include 'plugins:nf-google'
-include 'plugins:nf-ga4gh'
-include 'plugins:nf-tower'
-include 'plugins:nf-console'
-include 'plugins:nf-azure'
-include 'plugins:nf-codecommit'
-include 'plugins:nf-wave'
