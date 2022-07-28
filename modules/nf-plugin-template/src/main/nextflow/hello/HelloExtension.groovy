@@ -74,7 +74,7 @@ class HelloExtension extends ChannelExtensionPoint{
         final target = CH.createBy(source)
         final next = {
             goodbyeMessage = "$it".toString().toUpperCase()
-            target.bind(goodbyeMessage)
+            target.bind(it)
         }
         final done = {
             target.bind(Channel.STOP)

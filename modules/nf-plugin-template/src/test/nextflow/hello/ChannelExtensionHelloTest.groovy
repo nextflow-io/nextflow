@@ -3,7 +3,6 @@ package nextflow.hello
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Channel
 import nextflow.Session
-import nextflow.extension.ChannelExtensionDelegate
 import spock.lang.Specification
 
 
@@ -46,7 +45,7 @@ class ChannelExtensionHelloTest extends Specification{
         def result = helloExtension.goodbye(ch)
 
         then:
-        result.val == 'Goodbye folks'.toUpperCase()
+        result.val == 'Goodbye folks'
         result.val == Channel.STOP
         helloExtension.goodbyeMessage == 'Goodbye folks'.toUpperCase()
     }

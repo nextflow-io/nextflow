@@ -106,15 +106,16 @@ class ChannelExtensionProvider implements ExtensionProvider {
      */
     ChannelExtensionProvider loadPluginExtensionMethods(String pluginId, Map<String, String> includedNames){
         final extensions= Plugins.getExtensionsInPluginId(ChannelExtensionPoint, pluginId)
-        if( !extensions )
-            throw new AbortOperationException("Plugin '$pluginId' does not implement any extension point")
-        if( extensions.size()>1 )
-            throw new AbortOperationException("Plugin '$pluginId' implements more than one extension point: ${extensions.collect(it -> it.class.getSimpleName()).join(',')}")
-        loadPluginExtensionMethods(extensions.first(), includedNames)
+        // We can load plugin not only for ChannelExtensionPoint but for functions
+        if( extensions ) {
+            if (extensions.size() > 1)
+                throw new AbortOperationException("Plugin '$pluginId' implements more than one extension point: ${extensions.collect(it -> it.class.getSimpleName()).join(',')}")
+            loadPluginExtensionMethods(pluginId, extensions.first(), includedNames)
+        }
         return instance = this
     }
 
-    protected ChannelExtensionProvider loadPluginExtensionMethods(ChannelExtensionPoint ext, Map<String, String> includedNames){
+    protected ChannelExtensionProvider loadPluginExtensionMethods(String pluginId, ChannelExtensionPoint ext, Map<String, String> includedNames){
         // find all operators defined in the plugin
         final definedOperators= getDeclaredExtensionMethods0(ext.getClass())
         // final all factories defined in the plugin
@@ -124,7 +125,7 @@ class ChannelExtensionProvider implements ExtensionProvider {
             String aliasName = entry.value
             final reference = operatorExtensions.get(aliasName)
             if( reference ){
-                throw new IllegalStateException("Operator '$aliasName' conflict - it's defined by plugin ${reference.target.class.name}")
+                throw new IllegalStateException("Operator '$aliasName' conflict - it's defined by plugin ${pluginId}")
             }
             Object existing = operatorExtensions.get(aliasName)
             if (existing.is(OperatorEx.instance)) {
@@ -132,7 +133,7 @@ class ChannelExtensionProvider implements ExtensionProvider {
             }
             else if (existing != null) {
                 if( existing.getClass().getName() != ext.getClass().getName() ) {
-                    throw new IllegalStateException("Operator '$realName' conflict - it's defined by plugin ${existing.getClass().getName()} and ${ext.getClass().getName()}")
+                    throw new IllegalStateException("Operator '$realName' conflict - it's defined by plugin ${pluginId} and ${ext.getClass().getName()}")
                 }
             }
             if( definedOperators.contains(realName) ) {
@@ -144,7 +145,7 @@ class ChannelExtensionProvider implements ExtensionProvider {
                 factoryExtensions.put(aliasName, new PluginExtensionMethod(method:realName, target:factoryInstance))
             }
             else{
-                throw new IllegalStateException("Operator '$realName' it isn't defined by plugin ${existing.getClass().getName()}")
+                throw new IllegalStateException("Operator '$realName' it isn't defined by plugin ${pluginId}")
             }
         }
         return instance = this

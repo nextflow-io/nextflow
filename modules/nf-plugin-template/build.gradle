@@ -55,23 +55,14 @@ sourceSets {
 }
 
 dependencies {
-    // This dependency is exported to consumers, that is to say found on their compile classpath.
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:1.7.10'
     compileOnly 'org.pf4j:pf4j:3.4.1'
-    // add here plugins depepencies
 
-    // test configuration
-    testImplementation "org.codehaus.groovy:groovy:3.0.8"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.8"
-    testImplementation 'io.nextflow:nextflow:22.04.0'
-    testImplementation ("org.codehaus.groovy:groovy-test:3.0.8") { exclude group: 'org.codehaus.groovy' }
-    testImplementation ("cglib:cglib-nodep:3.3.0")
-    testImplementation ("org.objenesis:objenesis:3.1")
-    testImplementation ("org.spockframework:spock-core:2.0-M3-groovy-3.0") { exclude group: 'org.codehaus.groovy'; exclude group: 'net.bytebuddy' }
-    testImplementation ('org.spockframework:spock-junit4:2.0-M3-groovy-3.0') { exclude group: 'org.codehaus.groovy'; exclude group: 'net.bytebuddy' }
-    testImplementation ('com.google.jimfs:jimfs:1.1')
-
+    testImplementation(testFixtures(project(":nextflow")))
+    testImplementation project(':nextflow')
+    testImplementation "org.codehaus.groovy:groovy:3.0.12"
+    testImplementation "org.codehaus.groovy:groovy-nio:3.0.12"
     // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sec:module_replacement
     modules {
         module("commons-logging:commons-logging") { replacedBy("org.slf4j:jcl-over-slf4j") }

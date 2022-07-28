@@ -2,7 +2,10 @@ package nextflow.plugin
 
 import com.sun.net.httpserver.HttpServer
 import nextflow.Channel
+import nextflow.NextflowMeta
+import nextflow.exception.DuplicateModuleFunctionException
 import nextflow.extension.ChannelExtensionProvider
+import nextflow.extension.FunctionsExtensionProvider
 import test.Dsl2Spec
 import test.MockScriptRunner
 
@@ -12,9 +15,9 @@ import java.nio.file.Files
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
  */
-class PluginExtensionMethodsTest extends Dsl2Spec {
+class PluginFunctionsTest extends Dsl2Spec {
 
-    def 'should execute custom operator extension' () {
+    def 'should execute custom functions'() {
         given:
         HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
         server.createContext("/", new FakeIndexHandler());
@@ -33,12 +36,13 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         SCRIPT.text = SCRIPT_TEXT
 
         when:
+        FunctionsExtensionProvider.reset()
         Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
 
         def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
-        result.val == 'Bye bye folks'
+        result.val == EXPECTED
         result.val == Channel.STOP
 
         cleanup:
@@ -48,31 +52,98 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         Plugins.stop()
 
         where:
-        SCRIPT_TEXT << ['''
-            include { goodbye } from 'plugin/nf-plugin-template'
+        SCRIPT_TEXT                                                                           | EXPECTED
+        "include { sayHello } from 'plugin/nf-plugin-template'; channel.of( sayHello() )"     | 'hi'
+        "include { sayHello } from 'plugin/nf-plugin-template'; channel.of( sayHello('es') )" | 'hola'
+        "include { sayHello as hi } from 'plugin/nf-plugin-template'; channel.of( hi() )"     | 'hi'
 
-            channel
-              .of('Bye bye folks')
-              .goodbye()            
-            ''', '''
-
-            include { 
-                reverse;
-                goodbye; 
-            } from 'plugin/nf-plugin-template'
-
-            channel
-              .of('Bye bye folks')
-              .goodbye()             
-            '''
-        ]
     }
 
-    def 'should execute custom factory extension' () {
+    def 'should throw function not found'() {
         given:
         HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
         server.createContext("/", new FakeIndexHandler());
         server.start()
+
+        and:
+        def folder = Files.createTempDirectory('test')
+        Plugins.INSTANCE.mode = 'prod'
+        Plugins.INSTANCE.root = folder
+        Plugins.INSTANCE.env = [:]
+        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
+
+        and:
+        def SCRIPT = folder.resolve('main.nf')
+
+        SCRIPT.text = '''
+        include { sayHelloNotExist } from 'plugin/nf-plugin-template' 
+        
+        channel.of( sayHelloNotExist() )
+        '''
+
+        when:
+        FunctionsExtensionProvider.reset()
+        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
+
+        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+
+        then:
+        thrown(IllegalStateException)
+
+        cleanup:
+        folder?.deleteDir()
+        server?.stop(0)
+        ChannelExtensionProvider.reset()
+        Plugins.stop()
+    }
+
+    def 'should not allow to include an existing function'() {
+        given:
+        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        server.createContext("/", new FakeIndexHandler());
+        server.start()
+
+        and:
+        def folder = Files.createTempDirectory('test')
+        Plugins.INSTANCE.mode = 'prod'
+        Plugins.INSTANCE.root = folder
+        Plugins.INSTANCE.env = [:]
+        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
+
+        and:
+        def SCRIPT = folder.resolve('main.nf')
+
+        SCRIPT.text = '''
+        def sayHello(){ 'hi' }
+        
+        include { sayHello } from 'plugin/nf-plugin-template' 
+        
+        channel.of( sayHello() )
+        '''
+
+        when:
+        FunctionsExtensionProvider.reset()
+        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
+
+        NextflowMeta.instance.strictMode(true)
+        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+
+        then:
+        thrown(DuplicateModuleFunctionException)
+
+        cleanup:
+        folder?.deleteDir()
+        server?.stop(0)
+        ChannelExtensionProvider.reset()
+        Plugins.stop()
+    }
+
+    def 'should execute custom functions and channel extension at the same time'() {
+        given:
+        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        server.createContext("/", new FakeIndexHandler());
+        server.start()
+
         and:
         def folder = Files.createTempDirectory('test')
         Plugins.INSTANCE.mode = 'prod'
@@ -86,120 +157,25 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         SCRIPT.text = SCRIPT_TEXT
 
         when:
+        FunctionsExtensionProvider.reset()
         Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
 
         def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
-        result
-        result.val == 'a string'.reverse()
+        result.val == EXPECTED
         result.val == Channel.STOP
 
         cleanup:
         folder?.deleteDir()
         server?.stop(0)
-        Plugins.stop()
         ChannelExtensionProvider.reset()
+        Plugins.stop()
 
         where:
-        SCRIPT_TEXT << ['''
-            include { reverse } from 'plugin/nf-plugin-template'                
+        SCRIPT_TEXT                                                                                           | EXPECTED
+        "include { sayHello; goodbye } from 'plugin/nf-plugin-template'; channel.of( sayHello() ).goodbye() " | 'hi'
 
-            channel.reverse('a string')            
-            ''','''
-
-            include { reverse;  } from 'plugin/nf-plugin-template'
-            include { goodbye } from 'plugin/nf-plugin-template'
-                
-            channel.reverse('a string')            
-            '''
-        ]
-    }
-
-    def 'should execute custom operator as alias extension' () {
-        given:
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
-        server.createContext("/", new FakeIndexHandler());
-        server.start()
-        and:
-        def folder = Files.createTempDirectory('test')
-        Plugins.INSTANCE.mode = 'prod'
-        Plugins.INSTANCE.root = folder
-        Plugins.INSTANCE.env = [:]
-        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
-
-        and:
-        def SCRIPT_TEXT = '''
-            include { goodbye as myFunction } from 'plugin/nf-plugin-template'
-
-            channel
-              .of(100,200,300)
-              .myFunction()            
-            '''
-
-        and:
-        def SCRIPT = folder.resolve('main.nf')
-
-        SCRIPT.text = SCRIPT_TEXT
-
-        when:
-        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
-
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
-
-        then:
-        result.val == 100
-        result.val == 200
-        result.val == 300
-        result.val == Channel.STOP
-
-        cleanup:
-        folder?.deleteDir()
-        server?.stop(0)
-        Plugins.stop()
-        ChannelExtensionProvider.reset()
-    }
-
-    def 'should execute custom factory as alias extension' () {
-        given:
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
-        server.createContext("/", new FakeIndexHandler());
-        server.start()
-        and:
-        def folder = Files.createTempDirectory('test')
-        Plugins.INSTANCE.mode = 'prod'
-        Plugins.INSTANCE.root = folder
-        Plugins.INSTANCE.env = [:]
-        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
-
-        and:
-        def SCRIPT_TEXT = '''
-            nextflow.enable.dsl=2
-            include { reverse as myFunction } from 'plugin/nf-plugin-template'
-         
-            channel.myFunction('reverse this string')            
-            '''
-
-        and:
-        def SCRIPT = folder.resolve('main.nf')
-
-        SCRIPT.text = SCRIPT_TEXT
-
-        when:
-        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
-
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
-
-        then:
-        result
-        result.val == 'reverse this string'.reverse()
-        result.val == Channel.STOP
-
-        cleanup:
-        folder?.deleteDir()
-        server?.stop(0)
-        Plugins.stop()
-        ChannelExtensionProvider.reset()
     }
 
 }

@@ -202,6 +202,19 @@ class ScriptMeta {
         return this
     }
 
+    ScriptMeta addFunctionDefinition(FunctionDef method){
+        addDefinition(method)
+        incFunctionCount(method.name)
+        validate()
+    }
+
+    ScriptMeta addFunctionDefinition(FunctionDef... methods){
+        for( def method : methods){
+            addFunctionDefinition(method)
+        }
+        return this
+    }
+
     Collection<ComponentDef> getDefinitions() {
         return definitions.values()
     }

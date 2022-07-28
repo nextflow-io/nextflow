@@ -29,16 +29,20 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class FunctionDef extends ComponentDef implements ChainableDef {
 
-    private BaseScript owner
+    private Object owner
 
     private String name
 
     private String alias
 
-    FunctionDef(BaseScript owner, String name) {
+    FunctionDef(Object owner, String name) {
+        this(owner, name, name)
+    }
+
+    FunctionDef(Object owner, String name, String alias) {
         this.owner = owner
         this.name = name
-        this.alias = name
+        this.alias = alias
     }
 
     protected FunctionDef() { }
@@ -47,7 +51,7 @@ class FunctionDef extends ComponentDef implements ChainableDef {
 
     String getName() { alias }
 
-    BaseScript getOwner() { owner }
+    Object getOwner() { owner }
 
     Object invoke_a(Object[] args) {
         final argsArr = ChannelOut.spread(args).toArray()

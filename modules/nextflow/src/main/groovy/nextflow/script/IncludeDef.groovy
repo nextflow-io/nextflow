@@ -19,6 +19,7 @@ package nextflow.script
 
 import nextflow.exception.ScriptCompilationException
 import nextflow.extension.ChannelExtensionProvider
+import nextflow.extension.FunctionsExtensionProvider
 import nextflow.plugin.Plugins
 
 import java.nio.file.NoSuchFileException
@@ -218,8 +219,17 @@ class IncludeDef {
         if( !Plugins.isStarted(pluginId) )
             throw new IllegalArgumentException("Unable start plugin with Id '$pluginId'")
         final Map<String,String> declaredNames = this.modules.collectEntries {[it.name, it.alias ?: it.name]}
-        log.debug "Load included plugin extensions with names: $declaredNames; plugin Id: $pluginId"
-        ChannelExtensionProvider.INSTANCE().loadPluginExtensionMethods(pluginId, declaredNames)
+
+        log.debug "Load included plugin functions with names: $declaredNames; plugin Id: $pluginId"
+        final List<FunctionDef> functionsLoaded = FunctionsExtensionProvider.INSTANCE().loadPluginFunctions(pluginId, declaredNames)
+        meta.addFunctionDefinition(functionsLoaded as FunctionDef[])
+
+        // after load functions, remaining must be channel extensions
+        final Map<String,String> extensionsNames = declaredNames.findAll{declared ->
+            !functionsLoaded.find{ it.name == declared.value}
+        }
+        log.debug "Load included plugin extensions with names: $extensionsNames; plugin Id: $pluginId"
+        ChannelExtensionProvider.INSTANCE().loadPluginExtensionMethods(pluginId, extensionsNames)
     }
 
 }
