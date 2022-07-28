@@ -561,9 +561,17 @@ class ConfigBuilder {
             config.process[name] = parseValue(value)
         }
 
+        if( cmdRun.withoutConda && config.conda instanceof Map ) {
+            // disable docker execution
+            log.debug "Disabling execution in with Conda as requested by cli option `-without-conda`"
+            config.conda.enabled = false
+        }
+
         // -- apply the conda environment
         if( cmdRun.withConda ) {
-            config.process.conda = cmdRun.withConda
+            if( cmdRun.withConda != '-' )
+                config.process.conda = cmdRun.withConda
+            config.conda.enabled = true
         }
 
         // -- sets the resume option
