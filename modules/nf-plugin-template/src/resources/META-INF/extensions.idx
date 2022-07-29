@@ -1,3 +1,2 @@
 nextflow.hello.HelloFactory
 nextflow.hello.HelloExtension
-nextflow.hello.functions.HelloFunctions

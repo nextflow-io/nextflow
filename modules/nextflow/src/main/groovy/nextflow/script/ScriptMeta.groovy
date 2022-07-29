@@ -202,17 +202,14 @@ class ScriptMeta {
         return this
     }
 
-    ScriptMeta addFunctionDefinition(FunctionDef method){
-        addDefinition(method)
-        incFunctionCount(method.name)
-        validate()
-    }
-
-    ScriptMeta addFunctionDefinition(FunctionDef... methods){
-        for( def method : methods){
-            addFunctionDefinition(method)
+    ScriptMeta addFunctionDefinition(FunctionDef component) {
+        if( functionsCount.get(component.name)  ) {
+            final msg = "A function with name '$component.name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function with multiple signatures or arguments with a default value"
+            if (NF.isStrictMode())
+                throw new DuplicateModuleFunctionException(msg)
+            log.warn(msg)
         }
-        return this
+        addDefinition(component)
     }
 
     Collection<ComponentDef> getDefinitions() {

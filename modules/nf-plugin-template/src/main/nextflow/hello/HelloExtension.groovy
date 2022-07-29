@@ -11,6 +11,8 @@ import nextflow.extension.ChannelExtensionPoint
 import nextflow.extension.CH
 import nextflow.NF
 import nextflow.extension.DataflowHelper
+import nextflow.extension.Function
+import nextflow.hello.functions.HelloFunctions
 import nextflow.plugin.Scoped
 
 import java.util.concurrent.CompletableFuture
@@ -93,6 +95,23 @@ class HelloExtension extends ChannelExtensionPoint{
             businessLogicHere(channel, message)
         }
         channel
+    }
+
+    HelloFunctions functions = new HelloFunctions()
+
+    /**
+     * An annotate @Function function to be imported as a custom function by the parser
+     * @param lang
+     * @return
+     */
+    @Function
+    String sayHello(String lang='en'){
+        // sayHello is the entrypoint where we can write all the logic or delegate to other classes, ...
+        return functions.sayHello(lang)
+    }
+
+    String aNonImportedFunction(){
+        throw new IllegalAccessException("This function can't be imported")
     }
 
     /*

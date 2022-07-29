@@ -1,15 +1,15 @@
 package nextflow.hello.functions
 
-import nextflow.extension.FunctionExtensionPoint
+import nextflow.extension.Function
 
 
 /**
  * @author : jorge <jorge.aguilera@seqera.io>
  *
  */
-class HelloFunctions extends FunctionExtensionPoint{
+class HelloFunctions{
 
-    def sayHello(String lang='en'){
+    String sayHello(String lang='en'){
         switch( lang ){
             case 'es':
                 return 'hola'

@@ -18,6 +18,9 @@
 package nextflow.extension
 
 import groovy.transform.MapConstructor
+import groovy.transform.PackageScope
+import nextflow.script.FunctionDef
+import nextflow.script.ScriptMeta
 
 import java.lang.reflect.Modifier
 
@@ -106,20 +109,21 @@ class ChannelExtensionProvider implements ExtensionProvider {
      */
     ChannelExtensionProvider loadPluginExtensionMethods(String pluginId, Map<String, String> includedNames){
         final extensions= Plugins.getExtensionsInPluginId(ChannelExtensionPoint, pluginId)
-        // We can load plugin not only for ChannelExtensionPoint but for functions
-        if( extensions ) {
-            if (extensions.size() > 1)
-                throw new AbortOperationException("Plugin '$pluginId' implements more than one extension point: ${extensions.collect(it -> it.class.getSimpleName()).join(',')}")
-            loadPluginExtensionMethods(pluginId, extensions.first(), includedNames)
-        }
+        if( !extensions )
+            throw new AbortOperationException("Plugin '$pluginId' does not implement any extension point")
+        if( extensions.size()>1 )
+            throw new AbortOperationException("Plugin '$pluginId' implements more than one extension point: ${extensions.collect(it -> it.class.getSimpleName()).join(',')}")
+        loadPluginExtensionMethods(pluginId,extensions.first(), includedNames)
         return instance = this
     }
 
-    protected ChannelExtensionProvider loadPluginExtensionMethods(String pluginId, ChannelExtensionPoint ext, Map<String, String> includedNames){
+    protected ChannelExtensionProvider loadPluginExtensionMethods(String pluginId,ChannelExtensionPoint ext, Map<String, String> includedNames){
         // find all operators defined in the plugin
         final definedOperators= getDeclaredExtensionMethods0(ext.getClass())
-        // final all factories defined in the plugin
+        // find all factories defined in the plugin
         final definedFactories= getDeclaredFactoryExtensionMethods0(ext.getClass())
+        // find all functions defined in the plugin
+        final definedFunctions= getDeclaredFunctionsExtensionMethods0(ext.getClass())
         for(Map.Entry<String,String> entry : includedNames ) {
             String realName = entry.key
             String aliasName = entry.value
@@ -143,6 +147,10 @@ class ChannelExtensionProvider implements ExtensionProvider {
             else if( definedFactories.contains(realName) ){
                 ChannelFactoryInstance factoryInstance = new ChannelFactoryInstance(ext)
                 factoryExtensions.put(aliasName, new PluginExtensionMethod(method:realName, target:factoryInstance))
+            }
+            else if( definedFunctions.contains(realName) ){
+                FunctionDef functionDef = new FunctionDef(ext, realName, aliasName )
+                meta.addFunctionDefinition(functionDef)
             }
             else{
                 throw new IllegalStateException("Operator '$realName' it isn't defined by plugin ${pluginId}")
@@ -182,6 +190,24 @@ class ChannelExtensionProvider implements ExtensionProvider {
         }
         return result
     }
+
+    static private Set<String>getDeclaredFunctionsExtensionMethods0(Class clazz){
+        def result = new HashSet<String>(30)
+        def methods = clazz.getDeclaredMethods()
+        for( def handle : methods ) {
+            // skip non-public methods
+            if( !Modifier.isPublic(handle.getModifiers()) ) continue
+            // skip static methods
+            if( Modifier.isStatic(handle.getModifiers()) ) continue
+            // custom functions must to be annotated with @Function
+            if( !handle.isAnnotationPresent(Function)) continue
+            result.add(handle.name)
+        }
+        return result
+    }
+
+    @PackageScope
+    ScriptMeta getMeta() { ScriptMeta.current() }
 
     static boolean isReadChannel(Class clazz) {
         DataflowReadChannel.class.isAssignableFrom(clazz)

@@ -20,7 +20,6 @@ package nextflow
 import groovy.runtime.metaclass.NextflowDelegatingMetaClass
 import nextflow.extension.CH
 import nextflow.extension.ChannelExtensionProvider
-import nextflow.extension.FunctionsExtensionProvider
 import nextflow.script.ExecutionStack
 import nextflow.script.WorkflowBinding
 /**
