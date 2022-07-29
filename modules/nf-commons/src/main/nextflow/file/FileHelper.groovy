@@ -1041,7 +1041,7 @@ class FileHelper {
             return opts?.relative ? path : result
         }
 
-        throw new NoSuchFileException(FilesEx.toUriString(opts?.relative ? path : result))
+        throw new NoSuchFileException(opts?.relative ? path.toString() : FilesEx.toUriString(result))
     }
 
 
