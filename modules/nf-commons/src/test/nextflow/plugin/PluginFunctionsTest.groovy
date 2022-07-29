@@ -272,6 +272,82 @@ class PluginFunctionsTest extends Dsl2Spec {
         Plugins.stop()
     }
 
+    def 'should execute a function in two modules'() {
+        given:
+        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        server.createContext("/", new FakeIndexHandler());
+        server.start()
+
+        and:
+        def folder = Files.createTempDirectory('test')
+        Plugins.INSTANCE.mode = 'prod'
+        Plugins.INSTANCE.root = folder
+        Plugins.INSTANCE.env = [:]
+        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
+
+        and:
+        def SCRIPT = folder.resolve('main.nf')
+        def MODULE1 = folder.resolve('module1.nf')
+        def MODULE2 = folder.resolve('module2.nf')
+
+        MODULE1.text = '''
+        nextflow.enable.dsl=2
+                
+        include { sayHello } from 'plugin/nf-plugin-template' 
+
+        process foo {
+            input:
+              val lng
+            output:
+              stdout
+              
+            "${sayHello(lng)}"
+        }
+        '''
+
+        MODULE2.text = '''
+        nextflow.enable.dsl=2
+                
+        include { sayHello } from 'plugin/nf-plugin-template' 
+
+        process bar {
+            input:
+              val lng
+            output:
+              stdout
+              
+            "${sayHello('es')}"
+        }
+        '''
+
+        SCRIPT.text = '''
+        include { foo } from './module1.nf'        
+        include { bar } from './module2.nf'
+        
+        workflow{
+            main:
+                foo( 'en' ) | bar
+            emit:
+                bar.out
+        }
+        '''
+
+        when:
+        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
+
+        NextflowMeta.instance.strictMode(true)
+        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+
+        then:
+        result.val == 'hola'
+
+        cleanup:
+        folder?.deleteDir()
+        server?.stop(0)
+        ChannelExtensionProvider.reset()
+        Plugins.stop()
+    }
+
     def 'should execute custom functions and channel extension at the same time'() {
         given:
         HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
