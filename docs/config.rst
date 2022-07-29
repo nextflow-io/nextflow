@@ -337,14 +337,14 @@ Name                  Description
 ===================== =====================
 name                  The name of the executor to be used (default: ``local``).
 queueSize             The number of tasks the executor will handle in a parallel manner (default: ``100``).
-pollInterval          Determines how often to check for process termination.
+submitRateLimit       Determines the max rate of job submission per time unit, for example ``'10sec'`` (10 jobs per second) or ``'50/2min'`` (50 jobs every 2 minutes) (default: unlimited).
+pollInterval          Determines how often to check for process termination. Default varies for each executor.
 dumpInterval          Determines how often to log the executor status (default: ``5min``).
 queueStatInterval     Determines how often to fetch the queue status from the scheduler (default: ``1min``). Used only by grid executors.
 exitReadTimeout       Determines how long to wait before returning an error status when a process is terminated but the ``.exitcode`` file does not exist or is empty (default: ``270 sec``). Used only by grid executors.
 killBatchSize         Determines the number of jobs that can be killed in a single command execution (default: ``100``).
-submitRateLimit       Determines the max rate of job submission per time unit, for example ``'10sec'`` (10 jobs per second) or ``'50/2min'`` (50 jobs every 2 minutes) (default: unlimited).
 perJobMemLimit        Specifies Platform LSF *per-job* memory limit mode. See :ref:`lsf-executor`.
-jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }`` Note: when using this option you need to make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
+jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }``. Make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
 cpus                  The maximum number of CPUs made available by the underlying system. Used only by the ``local`` executor.
 memory                The maximum amount of memory made available by the underlying system. Used only by the ``local`` executor.
 retry.delay           (Version ``22.03.0-edge`` or later) Delay when retrying failed job submissions (default: ``500ms``). Used only by grid executors.
