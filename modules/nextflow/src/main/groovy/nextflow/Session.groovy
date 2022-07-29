@@ -36,6 +36,7 @@ import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
+import nextflow.conda.CondaConfig
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.dag.DAG
@@ -1135,6 +1136,12 @@ class Session implements ISession {
         }
     }
 
+    @Memoized
+    CondaConfig getCondaConfig() {
+        final cfg = config.conda as Map ?: Collections.emptyMap()
+        return new CondaConfig(cfg, getSystemEnv())
+    }
+
     /**
      * @return A {@link ContainerConfig} object representing the container engine configuration defined in config object
      */
@@ -1212,7 +1219,6 @@ class Session implements ISession {
     protected Map<String,String> getSystemEnv() {
         new HashMap<String, String>(System.getenv())
     }
-
 
     @CompileDynamic
     def fetchContainers() {

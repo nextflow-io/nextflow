@@ -224,6 +224,10 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-with-charliecloud', '-x') == ['run', '-with-charliecloud','-', '-x']
         launcher.normalizeArgs('run','-with-charliecloud', 'busybox') == ['run', '-with-charliecloud','busybox']
 
+        launcher.normalizeArgs('run','-with-conda') == ['run', '-with-conda','-']
+        launcher.normalizeArgs('run','-with-conda', '-x') == ['run', '-with-conda','-', '-x']
+        launcher.normalizeArgs('run','-with-conda', 'busybox') == ['run', '-with-conda','busybox']
+
         launcher.normalizeArgs('run','-dump-channels') == ['run', '-dump-channels','*']
         launcher.normalizeArgs('run','-dump-channels', '-x') == ['run', '-dump-channels','*', '-x']
         launcher.normalizeArgs('run','-dump-channels', 'foo,bar') == ['run', '-dump-channels','foo,bar']

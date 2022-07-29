@@ -26,7 +26,6 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.conda.CondaCache
-import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
 import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.ProcessException
@@ -563,11 +562,10 @@ class TaskRun implements Cloneable {
 
     @Memoized
     Path getCondaEnv() {
-        if( !config.conda )
+        if( !config.conda || !processor.session.getCondaConfig().isEnabled() )
             return null
 
-        final cfg = processor.session.config.conda as Map ?: Collections.emptyMap()
-        final cache = new CondaCache(new CondaConfig(cfg))
+        final cache = new CondaCache(processor.session.getCondaConfig())
         cache.getCachePathFor(config.conda as String)
     }
 
