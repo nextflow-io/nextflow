@@ -288,6 +288,13 @@ class ChannelTest extends Specification {
         then:
         result*.toString() == [ 'alpha.txt' ]
 
+        when:
+        result = Channel
+                .fromPath([:], 'alpha.txt') //no relative option set
+                .toSortedList().getVal()
+        then:
+        result*.toString() == [ file1.absolutePath ]
+
         cleanup:
         file1.delete()
     }
