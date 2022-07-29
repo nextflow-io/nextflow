@@ -146,19 +146,28 @@ class TowerClientTest extends Specification {
 
     def 'should get access token' () {
         given:
-        def ENV = [TOWER_ACCESS_TOKEN: 'xyz']
         def session = Mock(Session)
 
         when:
-        def observer = new TowerClient(session: session)
+        def observer = new TowerClient(session: session, env: [TOWER_ACCESS_TOKEN: 'xyz'])
         def result = observer.getAccessToken()
         then:
         session.getConfig() >> [tower:[accessToken: 'abc'] ]
         and:
+        // the token in the config overrides the one in the env
         result == 'abc'
 
         when:
-        observer = new TowerClient(session: session, env: ENV)
+        observer = new TowerClient(session: session, env: [TOWER_ACCESS_TOKEN: 'xyz', TOWER_WORKFLOW_ID: '111222333'])
+        result = observer.getAccessToken()
+        then:
+        session.getConfig() >> [tower:[accessToken: 'abc'] ]
+        and:
+        // the token from the env is taken because is a tower launch aka TOWER_WORKFLOW_ID is set
+        result == 'xyz'
+
+        when:
+        observer = new TowerClient(session: session, env: [TOWER_ACCESS_TOKEN: 'xyz'])
         result = observer.getAccessToken()
         then:
         session.getConfig() >> [:]
@@ -172,7 +181,6 @@ class TowerClientTest extends Specification {
         session.getConfig() >> [:]
         then:
         thrown(AbortOperationException)
-
     }
 
     def 'should post task records' () {

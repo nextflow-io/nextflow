@@ -202,7 +202,12 @@ class ScriptParser {
 
     ScriptParser runScript(Path scriptPath) {
         this.scriptPath = scriptPath
-        runScript(scriptPath.text)
+        try {
+            runScript(scriptPath.text)
+        }
+        catch (IOException e) {
+            throw new ScriptCompilationException("Unable to read script: '$scriptPath' -- cause: $e.message", e)
+        }
         return this
     }
 

@@ -310,17 +310,19 @@ Below the configurations for image reference/SKU combinations to select two popu
 
 * Ubuntu 20.04::
 
-	sku = "batch.node.ubuntu 20.04"
-	offer = "ubuntu-server-container"
-	publisher = "microsoft-azure-batch"
+	azure.batch.pools.<name>.sku = "batch.node.ubuntu 20.04"
+	azure.batch.pools.<name>.offer = "ubuntu-server-container"
+	azure.batch.pools.<name>.publisher = "microsoft-azure-batch"
 
 * CentOS 8 (default)::
 
-	sku = "batch.node.centos 8"
-	offer = "centos-container"
-	publisher = "microsoft-azure-batch"
+	azure.batch.pools.<name>.sku = "batch.node.centos 8"
+	azure.batch.pools.<name>.offer = "centos-container"
+	azure.batch.pools.<name>.publisher = "microsoft-azure-batch"
 
-See the `Advanced settings`_ below and `Azure Batch nodes <https://docs.microsoft.com/en-us/azure/batch/batch-linux-nodes>` documentation for more details.
+In the above snippet replace ``<name>`` with the name of your Azure node pool.
+
+See the `Advanced settings`_ below and `Azure Batch nodes <https://docs.microsoft.com/en-us/azure/batch/batch-linux-nodes>`_ documentation for more details.
 
 Private container registry
 --------------------------

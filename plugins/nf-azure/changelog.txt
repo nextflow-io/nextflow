@@ -1,5 +1,8 @@
-nf-amazon changelog
+nf-azure changelog
 ===================
+0.13.3 - 13 Jul 2022
+- Fix escape unstage outputs with double quotes #2912 #2904 #2790 [49ff02a6]
+
 0.13.2 - 15 May 2022
 - Update default SKU for Azure Batch 'batch.node.ubuntu 20.04' [be60fc14]
 
