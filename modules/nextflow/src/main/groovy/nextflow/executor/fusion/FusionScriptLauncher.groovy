@@ -41,7 +41,9 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     private Set<String> buckets = new HashSet<>()
 
     /* ONLY FOR TESTING - DO NOT USE */
-    protected FusionScriptLauncher() {}
+    protected FusionScriptLauncher() {
+        this.buckets = new HashSet<>()
+    }
 
     FusionScriptLauncher(TaskBean bean, Path remoteBinDir, Class<Path> type) {
         super(bean)
@@ -89,14 +91,14 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         return result
     }
 
-    protected Path toContainerMount(Path path) {
+    Path toContainerMount(Path path) {
         if( path == null )
             return null
         if( !type.isAssignableFrom(path.class) )
             throw new IllegalArgumentException("Unexpected path for Fusion task handler: ${path.toUriString()}")
 
         final p = BucketParser.from( FilesEx.toUriString(path) )
-        final result = "/fusion/$p.scheme/${p.bucket}${path}"
+        final result = "/fusion/$p.scheme/${p.bucket}${p.path}"
         buckets.add(p.bucket)
         return Path.of(result)
     }

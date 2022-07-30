@@ -35,6 +35,8 @@ class WaveConfig {
         this.enabled = opts.enabled
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
         this.containerConfigUrl = (opts.containerConfigUrl?.toString() ?: env.get('WAVE_CONTAINER_CONFIG_URL'))?.stripEnd('/')
+        if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
+            throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
     }
 
     Boolean enabled() { this.enabled }
