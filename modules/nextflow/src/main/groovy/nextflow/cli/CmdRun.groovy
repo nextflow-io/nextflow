@@ -306,6 +306,18 @@ class CmdRun extends CmdBase implements HubOptions {
         // check DSL syntax in the config
         launchInfo(config, scriptFile)
 
+        // Warn about setting NXF_ environment variables within nextflow
+        // config file
+        def nxfEnvs = config
+                .env
+                .findAll{
+                    it -> it.toString().startsWith('NXF_') && ! it.toString().startsWith('NXF_DEBUG')
+                }
+        if (nxfEnvs.size() > 0) {
+            log.warn "NXF environment variables are ignored in the env scope of nextflow.config. Check https://www.nextflow.io/docs/latest/config.html#scope-env"
+
+        }
+
         // -- load plugins
         final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
         Plugins.load(cfg)
