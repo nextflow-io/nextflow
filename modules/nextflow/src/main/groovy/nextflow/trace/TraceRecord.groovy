@@ -238,7 +238,7 @@ class TraceRecord implements Serializable {
     }
 
 
-    @PackageScope
+
     Map<String,Object> store
 
     @Memoized

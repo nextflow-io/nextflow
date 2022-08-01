@@ -16,6 +16,10 @@
  */
 package nextflow.cloud.google.lifesciences
 
+import spock.lang.IgnoreIf
+
+import java.text.SimpleDateFormat
+
 import static nextflow.cloud.google.lifesciences.GoogleLifeSciencesHelper.*
 
 import com.google.api.services.lifesciences.v2beta.CloudLifeSciences
@@ -439,10 +443,9 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
 
     def 'should create pipeline actions with keepalive' () {
         given:
-        def helper = Spy(GoogleLifeSciencesHelper)
-        helper.config = Mock(GoogleLifeSciencesConfig) {
-            getKeepAliveOnFailure() >> true
-        }
+        def helper = Spy(new GoogleLifeSciencesHelper( Mock(GoogleLifeSciencesConfig) {
+            isKeepAliveOnFailure() >> true
+        }))
         and:
         def req = Mock(GoogleLifeSciencesSubmitRequest)
 

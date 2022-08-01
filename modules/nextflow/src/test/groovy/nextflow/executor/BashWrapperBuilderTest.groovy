@@ -191,7 +191,7 @@ class BashWrapperBuilderTest extends Specification {
 
     def 'should create container env' () {
         given:
-        def bash = Spy(BashWrapperBuilder)
+        def bash = Spy(new BashWrapperBuilder(bean: Mock(TaskBean)))
 
         when:
         def builder = bash.createContainerBuilder(null)

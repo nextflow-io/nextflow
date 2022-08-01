@@ -17,6 +17,8 @@
 
 package nextflow.util
 
+import ch.qos.logback.core.encoder.Encoder
+
 import static nextflow.Const.*
 
 import java.lang.reflect.Field
@@ -291,7 +293,7 @@ class LoggerHelper {
             rollingPolicy.start()
 
             result.rollingPolicy = rollingPolicy
-            result.encoder = createEncoder()
+            result.encoder = createEncoder() as Encoder
             result.setContext(loggerContext)
             result.setTriggeringPolicy(new RollOnStartupPolicy())
             result.triggeringPolicy.start()
@@ -306,7 +308,7 @@ class LoggerHelper {
         FileAppender result = logFileName ? new FileAppender() : null
         if( result ) {
             result.file = logFileName
-            result.encoder = createEncoder()
+            result.encoder = createEncoder() as Encoder
             result.setContext(loggerContext)
             result.bufferSize = FileSize.valueOf('64KB')
             result.start()
@@ -669,10 +671,10 @@ class LoggerHelper {
     static private char OPEN_CH = '[' as char
     static private char CLOSE_CH = ']' as char
     static private char SLASH_CH = '/' as char
-    static private int ZERO_CH = '0' as char
-    static private int NINE_CH = '9' as char
-    static private int ALPHA_CH = 'a' as char
-    static private int EFFE_CH = 'f' as char
+    static private char ZERO_CH = '0' as char
+    static private char NINE_CH = '9' as char
+    static private char ALPHA_CH = 'a' as char
+    static private char EFFE_CH = 'f' as char
 
     static boolean isHashLogPrefix(String str) {
         if( str?.length()<10 )

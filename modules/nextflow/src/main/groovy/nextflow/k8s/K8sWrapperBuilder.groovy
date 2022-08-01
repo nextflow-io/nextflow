@@ -43,7 +43,7 @@ class K8sWrapperBuilder extends BashWrapperBuilder {
 
     @Override
     boolean fixOwnership() {
-        containerConfig.fixOwnership
+        containerConfig['fixOwnership']
     }
 
 }

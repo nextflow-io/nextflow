@@ -242,7 +242,7 @@ class K8sConfig implements Map<String,Object> {
                 client.volumeClaimRead(name)
             }
             catch (K8sResponseException e) {
-                if( e.response.code == 404 ) {
+                if( e.response['code'] == 404 ) {
                     throw new AbortOperationException("Unknown volume claim: $name -- make sure a persistent volume claim with the specified name is defined in your K8s cluster")
                 }
                 else throw e

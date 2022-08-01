@@ -16,6 +16,8 @@
  */
 package nextflow.cloud.google.lifesciences
 
+import spock.lang.IgnoreIf
+
 import java.nio.file.Paths
 
 import com.google.api.services.lifesciences.v2beta.model.Event
@@ -36,6 +38,8 @@ import nextflow.script.ProcessConfig
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
 import spock.lang.Shared
+
+import java.text.SimpleDateFormat
 
 class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
 
@@ -206,9 +210,9 @@ class GoogleLifeSciencesTaskHandlerTest extends GoogleSpecification {
                     getProject() >> 'my-project'
                     getZones() >> ['my-zone']
                     getRegions() >> ['my-region']
-                    getPreemptible() >> true
+                    isPreemptible() >> true
                     getBootDiskSize() >> MemoryUnit.of('20 GB')
-                    getUsePrivateAddress() >> true
+                    isUsePrivateAddress() >> true
                     getCpuPlatform() >> 'Intel Skylake'
                 }
             }

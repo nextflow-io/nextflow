@@ -17,6 +17,8 @@
 
 package nextflow.executor
 
+import groovy.xml.XmlSlurper
+
 import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
