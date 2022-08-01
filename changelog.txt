@@ -1,5 +1,45 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.08.0-edge - 1 Aug 2022
+- Add warning to env config docs (#3083) [ca933c16] <Ben Sherman>
+- Add -with-conda CLI option (#3073) [98b2ac80]
+- Add simple wave plugin cli commands [8888b866]
+- Add default wave plugin [7793a0ec]
+- Add boot disk, cpu platform to google batch (#3058) [17a8483d] <Ben Sherman>
+- Add support for GPU accelerator to Google Batch (#3056) [f34ad7f6] <Ben Sherman>
+- Add support for archive dir to tower plugin [c234681a]
+- Add support tower cache backup/restore [bc2f9d13]
+- Add disk directive to google batch (#3057) [ec6e290c] <Ben Sherman>
+- Add retry when Azure submit fails with OperationTimedOut [6a3f9742]
+- Add warning when Google Batch quota is exceeded (#3066) [6b9c52ad] <Ben Sherman>
+- Allow fully disabling history file [0a45f858]
+- Allow the support function overloading and default parameters (#3011) [042d3857] <Jorge Aguilera>
+- Improve S3 file upload/download via Transfer manager [7e8d2a5a] <Jorge Aguilera>
+- Prevent overriding container entrypoint [b3a4bf85]
+- Update FileTransfer pool settings [503aafce]
+- Remove deprecated commands [93228b4b]
+- Prevent nextflow config to break tower launch [e059a724]
+- Refactor Google Batch executor to use Java API (#3044) [31a6e85c] <Ben Sherman>
+- Fix Unable to disable scratch attribute with AWS Batch [1770f73a]
+- Fix unit test setting explicit permissions for test files [1c821139] <Jorge Aguilera>
+- Fix Default plugins are overriden by config plugins [46cf3bfa] <Paolo Di Tommaso>
+- Fix S3 transfer download directory [b7bf9fe5]
+- Fix NPE while setting S3 ObjectMetada #3031 [d6163431] <Jorge Aguilera>
+- Fix Unable to retrieve AWS batch instance type #1658 [3c4d4d3b]
+- Fix AWS Batch job definition conflict (#3048) [e5084418]
+- Fix JAVA_TOOL_OPTIONS breaking launch #1716 [0e7b416d]
+- Fix add ps shared objects to Dockerfile (#3033) [1c23b40a] <Ben Sherman>
+- Parallelize build integration tests [807800a3]
+- Bump google-cloud-nio:0.124.8 [dfaa9d19]
+- Bump groovy 3.0.12 [5c900b91]
+- Bump Moment.js 2.29.4 [a9ced868]
+- Bump gson@2.9.0 [12f17176]
+- Bump nf-azure@0.13.4 
+- Bump nf-google@1.4.0
+- Bump nf-tower@1.5.0
+- Bump nf-wave@0.2.1
+- Bump nf-amazon@1.9.0
+
 22.04.5 - 15 Jul 2022
 - Allow fully disabling history file [1a36c9bc]
 
