@@ -29,19 +29,42 @@ class WaveConfig {
     final private static String DEF_ENDPOINT = 'http://localhost:9090'
     final private Boolean enabled
     final private String endpoint
-    final private String containerConfigUrl
+    final private List<URL> containerConfigUrl
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
-        this.containerConfigUrl = (opts.containerConfigUrl?.toString() ?: env.get('WAVE_CONTAINER_CONFIG_URL'))?.stripEnd('/')
+        this.containerConfigUrl = parseConfig(opts, env)
     }
 
     Boolean enabled() { this.enabled }
 
     String endpoint() { this.endpoint }
 
-    URL containerConfigUrl() {
-        this.containerConfigUrl ? new URL(this.containerConfigUrl) : null
+    protected List<URL> parseConfig(Map opts, Map<String,String> env) {
+        List<String> result = new ArrayList<>(10)
+        if( !opts.containerConfigUrl && env.get('WAVE_CONTAINER_CONFIG_URL') ) {
+            result.add(checkUrl(env.get('WAVE_CONTAINER_CONFIG_URL')))
+        }
+        else if( opts.containerConfigUrl instanceof CharSequence ) {
+            result.add(checkUrl(opts.containerConfigUrl.toString()))
+        }
+        else if( opts.containerConfigUrl instanceof List ) {
+            for( def it : opts.containerConfigUrl ) {
+                result.add(checkUrl(it.toString()))
+            }
+        }
+
+        return result.collect(it -> new URL(it))
+    }
+
+    private String checkUrl(String value) {
+        if( value && (!value.startsWith('http://') && !value.startsWith('https://')))
+            throw new IllegalArgumentException("Wave container config URL should start with 'http:' or 'https:' protocol prefix - offending value: $value")
+        return value
+    }
+
+    List<URL> containerConfigUrl() {
+        return containerConfigUrl
     }
 }

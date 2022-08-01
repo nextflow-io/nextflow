@@ -95,7 +95,7 @@ class ModuleBundleTest extends Specification {
         when:
         def bundle = ModuleBundle.scan(bundlePath)
         then:
-        bundle.getDockerfile() == dockerPath
+        bundle.getDockerFile() == dockerPath
         and:
         bundle
         !bundle.hasEntries()

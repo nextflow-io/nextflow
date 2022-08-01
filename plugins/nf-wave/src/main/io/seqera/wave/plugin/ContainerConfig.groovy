@@ -20,14 +20,11 @@ package io.seqera.wave.plugin
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
-import groovy.transform.builder.Builder
-
 /**
  * Model a container configuration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Builder
 @Canonical
 @CompileStatic
 @ToString(includePackage = false, includeNames = true)
@@ -41,16 +38,57 @@ class ContainerConfig {
     List<ContainerLayer> layers
 
     ContainerConfig appendLayer(ContainerLayer it)  {
-        if( layers==null )
+        if( layers==null && it!=null )
             layers = new ArrayList<>(10)
         layers.add(it)
         return this
     }
 
     ContainerConfig prependLayer(ContainerLayer it)  {
-        if( layers==null )
+        if( layers==null && it!=null )
             layers = new ArrayList<>(10)
         layers.add(0, it)
         return this
+    }
+
+    ContainerConfig plus( ContainerConfig that ) {
+        new ContainerConfig(
+                entrypoint: that.entrypoint ?: this.entrypoint,
+                cmd: that.cmd ?: this.cmd,
+                env: mergeEnv(this.env, that.env),
+                workingDir: that.workingDir ?: this.workingDir,
+                layers: mergeLayers(this.layers, that.layers) )
+    }
+
+    protected List<String> mergeEnv(List<String> left, List<String> right) {
+        if( left==null && right==null )
+            return null
+        final result = new ArrayList<String>(10)
+        if( left )
+            result.addAll(left)
+        if( !right )
+            return result
+        // add the 'right' env to the result
+        for(String it : right) {
+            final pair = it.tokenize('=')
+            // remove existing var because the right list has priority
+            final p = result.findIndexOf { it.startsWith(pair[0]+'=')}
+            if( p!=-1 ) {
+                result.remove(p)
+                result.add(p, it)
+            }
+            else
+                result.add(it)
+        }
+        return result
+    }
+
+    protected List<ContainerLayer> mergeLayers(List<ContainerLayer> left, List<ContainerLayer> right) {
+        if( left==null && right==null )
+            return null
+        final result = new ArrayList<ContainerLayer>()
+        if( left ) result.addAll(left)
+        if( right ) result.addAll(right)
+        return result
     }
 }

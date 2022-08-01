@@ -343,6 +343,10 @@ class TaskRun implements Cloneable {
         return copy
     }
 
+    String getQuickName() {
+        return name ?: processor.getName()
+    }
+
     String getName() {
         if( name )
             return name

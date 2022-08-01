@@ -58,7 +58,8 @@ class WaveContainerResolver implements ContainerResolver {
 
         if( !imageName ) {
             // when no image name is provider the module bundle should include a
-            // Dockerfile to build an image on-fly with a automatically assigned name
+            // Dockerfile or a Conda recipe to build an image on-fly with an
+            // automatically assigned name
             return waveContainer(task, null)
         }
 
@@ -88,15 +89,27 @@ class WaveContainerResolver implements ContainerResolver {
         }
     }
 
-
-    synchronized String waveContainer(TaskRun task, String container) {
-        final bundle = task.getModuleBundle()
-        final configUrl = client().config().containerConfigUrl()
-        if( container || bundle?.dockerfile ) {
-            return client().fetchContainerImage(bundle, container, configUrl)
+    /**
+     * Given the target {@link TaskRun} and container image name
+     * creates a {@link io.seqera.wave.plugin.WaveAssets} object which holds
+     * the corresponding resources to submit container request to the Wave backend
+     *
+     * @param task
+     *      An instance of {@link TaskRun} task representing the current task
+     * @param container
+     *      The container image name specified by the task. Can be {@code null} if the task
+     *      provides a Dockerfile or a Conda recipe
+     * @return
+     *      The container image name returned by the Wave backend or {@code null}
+     *      when the task does not request any container or dockerfile to build
+     */
+    protected String waveContainer(TaskRun task, String container) {
+        final assets = client().resolveAssets(task, container)
+        if( assets ) {
+            return client().fetchContainerImage(assets)
         }
         // no container and no dockerfile, wave cannot do anything
-        log.trace "No container defined for task ${task.processor.name}"
+        log.trace "No container image or build recipe defined for task ${task.processor.name}"
         return null
     }
 }

@@ -4,7 +4,6 @@ import java.nio.file.Files
 
 import groovy.transform.InheritConstructors
 import nextflow.NF
-import nextflow.exception.DuplicateModuleIncludeException
 import test.Dsl2Spec
 import test.TestHelper
 
@@ -169,7 +168,7 @@ class ScriptMetaTest extends Dsl2Spec {
         when:
         def bundle = meta.getModuleBundle()
         then:
-        bundle.dockerfile == dockerPath
+        bundle.dockerFile == dockerPath
         bundle.getEntries() == ['foo.txt', 'bar.txt'] as Set
 
     }
