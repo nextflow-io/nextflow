@@ -325,7 +325,7 @@ Simply prefix your variable names with the ``env`` scope or surround them by cur
   you want these variables to be evaluated during task execution, escape them with ``\$``. This difference is important
   for variables like ``$PATH``, which may be different in the workflow environment versus the task environment.
 
-.. warn::
+.. warning::
   The ``env`` scope provides environment variables to *tasks*, not Nextflow itself. Nextflow environment variables
   such as ``NXF_VER`` should be set in the environment in which Nextflow is launched.
 
