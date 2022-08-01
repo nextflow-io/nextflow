@@ -1,5 +1,8 @@
 nf-azure changelog
 ===================
+0.13.4 - 1 Aug 2022
+- Add retry when Azure submit fails with OperationTimedOut [6a3f9742]
+
 0.13.3 - 13 Jul 2022
 - Fix escape unstage outputs with double quotes #2912 #2904 #2790 [49ff02a6]
 
