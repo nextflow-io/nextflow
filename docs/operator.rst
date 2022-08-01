@@ -1144,6 +1144,9 @@ taking two parameters that represent two emitted items to be compared. For examp
 merge
 -----
 
+.. warning::
+  The ``merge`` operator is deprecated and no longer available in DSL2 syntax. Use `join`_ instead.
+
 The ``merge`` operator lets you join items emitted by two (or more) channels into a new channel.
 
 For example, the following code merges two channels together: one which emits a series of odd integers
