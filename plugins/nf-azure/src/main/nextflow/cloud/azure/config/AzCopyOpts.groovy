@@ -26,20 +26,85 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class AzCopyOpts {
 
-    static public final String DEFAULT_BLOCK_SIZE = "4"
-    static public final String DEFAULT_BLOB_TIER = "None"
+    //-----------------------------------------------------
+    // Default values for azcopy CLI environment variables
+    //-----------------------------------------------------
 
+//    INFO: Name: AZCOPY_LOG_LOCATION
+//    Description: Overrides where the log files are stored, to avoid filling up a disk.
+
+//    INFO: Name: AZCOPY_CONCURRENCY_VALUE
+//    Description: Overrides how many HTTP connections work on transfers. By default, this number is determined based on the number of logical cores on the machine.
+
+//    INFO: Name: AZCOPY_CONCURRENT_FILES
+//    Description: Overrides the (approximate) number of files that are in progress at any one time, by controlling how many files we concurrently initiate transfers for.
+
+//    INFO: Name: AZCOPY_BUFFER_GB
+//    Description: Max number of GB that AzCopy should use for buffering data between network and disk. May include decimal point, e.g. 0.5. The default is based on machine size.
+
+//    INFO: Name: AZCOPY_REQUEST_TRY_TIMEOUT
+//    Description: Set time (in minutes) for how long AzCopy should try to upload files for each request before AzCopy times out.
+
+    //-----------------------------------------------------
+    // Default values for azcopy copy command options
+    //-----------------------------------------------------
+
+    //Use this block size (specified in MiB) when uploading/downloading to/from Azure Storage. Can be in decimals for eg. 0.25
+    static public final String DEFAULT_BLOCK_SIZE = "4"
     String blockSize
+
+    //Upload block blob to Azure Storage using this blob tier. (azcopy default: "None")
+    static public final String DEFAULT_BLOB_TIER = "None"
     String blobTier
+
+    static public final String DEFAULT_METADATA = ""
+    String metadata
+
+    static public final String DEFAULT_BLOB_TAGS = ""
+    String blobTags
+
+    //Define the log verbosity for the log file (azcopy default: "INFO").
+    //We set the default to NONE to save space on the device
+    static public final String DEFAULT_LOG_LEVEL = "NONE"
+    String logLevel
+
+    //Define the output verbosity (azcopy default: "default").
+    //We set the default
+    static public final String DEFAULT_OUTPUT_LEVEL = "quiet"
+    String outputLevel
+
+    //The azcopy default is true, which means upon `-resume` the data is uploaded again.
+    //Overwrite the conflicting files and blobs at the destination if this flag is set to true. (azcopy default: true)
+    static public final String DEFAULT_OVERWRITE = "true"
+    String overwrite
+
+    //The azcopy default is true, which means upon `-resume` the data is uploaded again.
+    static public final Boolean DEFAULT_RECURSIVE = false
+    String recursive
+
+    //Check the length of a file on the destination after the transfer.
+    //If there is a mismatch between source and destination, the transfer is marked as failed (azcopy default: true)
+    static public final Boolean DEFAULT_CHECK_LENGTH = true
+    Boolean checkLength
+
+    //The Azure Blob Storage service automatically computes MD5 sum for files less than 256 MB in size.
+    //Content-MD5 property of the destination blob or file. (azcopy default: false)
+    static public final Boolean DEFAULT_PUT_MD5 = true
+    Boolean putMD5
+
+    //Specifies how strictly MD5 hashes should be validated when downloading. (azcopy default: "FailIfDifferent")
+    static public final String DEFAULT_CHECK_MD5 = "FailIfDifferent"
+    Boolean checkMD5
+
 
     AzCopyOpts() {
         this.blockSize = DEFAULT_BLOCK_SIZE
-        this.blobTier =  DEFAULT_BLOB_TIER
+        this.blobTier = DEFAULT_BLOB_TIER
     }
 
 
     AzCopyOpts(Map config) {
-        assert config!=null
+        assert config != null
         this.blockSize = config.blockSize ?: DEFAULT_BLOCK_SIZE
         this.blobTier = config.blobTier ?: DEFAULT_BLOB_TIER
     }
