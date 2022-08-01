@@ -1,6 +1,11 @@
 nf-amazon changelog
 ===================
+1.9.0 - 1 Aug 2022
 - Fix Unable to disable scratch attribute with AWS Batch [1770f73a]
+- Fix NPE while setting S3 ObjectMetada #3031 [d6163431] <Jorge Aguilera>
+- Fix Unable to retrieve AWS batch instance type #1658 [3c4d4d3b] <Paolo Di Tommaso>
+- Fix AWS Batch job definition conflict (#3048) [e5084418] <Paolo Di Tommaso>
+- Improve S3 file upload/download via Transfer manager [7e8d2a5a] [b7bf9fe5] <Jorge Aguilera>
 
 1.8.1 - 13 Jul 2022
 - Fix Exception when settings AWS Batch containerOptions #3019 [89312ad8] <Paolo Di Tommaso>
