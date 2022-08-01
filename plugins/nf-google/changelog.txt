@@ -1,5 +1,13 @@
 nf-google changelog
 ===================
+1.4.0 - 1 Aug 2022
+- Report warning when Google Batch quota is exceeded (#3066) [6b9c52ad] <Ben Sherman>
+- Add boot disk, cpu platform to google batch (#3058) [17a8483d] <Ben Sherman>
+- Add support for GPU accelerator to Google Batch (#3056) [f34ad7f6] <Ben Sherman>
+- Add disk directive to google batch (#3057) [ec6e290c] <Ben Sherman>
+- Refactor google batch executor to use java api (#3044) [31a6e85c] <Ben Sherman>
+- Bump google-cloud-nio:0.124.8 [dfaa9d19] <Paolo Di Tommaso>
+
 1.3.0 - 13 Jul 2022
 - Add support for Google Batch API v1 [4c116d58] [e85d87ee]
 
