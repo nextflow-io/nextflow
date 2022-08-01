@@ -300,7 +300,7 @@ class PluginsFacade implements PluginStateListener {
             return
         }
 
-        start( defaultPlugins.getPlugin(pluginId) )
+        start(PluginSpec.parse(pluginId, defaultPlugins))
     }
 
     void start(PluginSpec plugin) {
