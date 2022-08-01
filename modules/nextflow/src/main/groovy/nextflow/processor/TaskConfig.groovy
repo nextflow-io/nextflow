@@ -17,6 +17,7 @@
 
 package nextflow.processor
 
+import nextflow.Nextflow
 import nextflow.util.CmdLineOptionMap
 
 import static nextflow.processor.TaskProcessor.*
@@ -649,6 +650,11 @@ class LazyMap implements Map<String,Object> {
         final result = new ArrayList<String>(allKeys.size())
         for( String key : allKeys ) { result << "$key: ${getProperty(key)}".toString() }
         result.join('; ')
+    }
+
+    void useWorkingDirInLocalThread(){
+        if( get('workDir') )
+            Nextflow.useWorkingDirInLocalThread(target.get('workDir') as Path)
     }
 
 }

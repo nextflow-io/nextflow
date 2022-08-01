@@ -624,4 +624,28 @@ class ScriptDslTest extends Dsl2Spec {
         result.val == 'Hello'
     }
 
+    def 'should use workdir as root' () {
+        when:
+        def result = dsl_eval '''
+            process hello {
+                echo true           
+                input:
+                    val world            
+                output:
+                    path 'test.txt'            
+                exec:                   
+                    file('test.txt').text = "hello $world"            
+            }            
+             workflow {
+                main:
+                 Channel.from('jupiter') | hello 
+                emit:
+                 hello.out
+             }
+        '''
+
+        then:
+        result.val.text == 'hello jupiter'
+        new File('test.txt').exists() == false
+    }
 }

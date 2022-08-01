@@ -688,6 +688,11 @@ class NextflowDSLImpl implements ASTTransformation {
                 final len = block.statements.size()
                 boolean done = false
                 if( execStatements ) {
+                    // Inject a call to Nextflow.useWorkingDir
+                    def callNextflowUseWorkingDir = new ExpressionStatement(
+                                    new MethodCallExpression(new VariableExpression("task"), "useWorkingDirInLocalThread", MethodCallExpression.NO_ARGUMENTS))
+                    execStatements.add(0, callNextflowUseWorkingDir)
+
                     // create a new Closure
                     def execBlock = new BlockStatement(execStatements, new VariableScope(block.variableScope))
                     def execClosure = new ClosureExpression( Parameter.EMPTY_ARRAY, execBlock )

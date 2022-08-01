@@ -43,6 +43,9 @@ import nextflow.util.ArrayTuple
 import nextflow.util.CacheHelper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+
+import java.nio.file.Paths
+
 import static nextflow.file.FileHelper.isGlobAllowed
 /**
  * Defines the main methods imported by default in the script scope
@@ -59,6 +62,12 @@ class Nextflow {
     public static final Logger log = LoggerFactory.getLogger(Nextflow)
 
     private static final Random random = new Random()
+
+    private static final ThreadLocal<Path> currentWorkDir = new ThreadLocal()
+
+    static void useWorkingDirInLocalThread(Path path){
+        currentWorkDir.set(path)
+    }
 
     /**
      * Create a {@code DataflowVariable} binding it to the specified value
@@ -141,11 +150,12 @@ class Nextflow {
      * @return An instance of {@link Path} when a single file is matched or a list of {@link Path}s
      */
     static file( Map options = null, def filePattern ) {
-
         if( !filePattern )
             throw new IllegalArgumentException("Argument of `file` function cannot be ${filePattern==null?'null':'empty'}")
 
-        final path = filePattern as Path
+        Path currentPath = currentWorkDir.get() as Path
+        Path originalPath = filePattern as Path
+        final path = currentPath ? Paths.get(currentPath.toString(), originalPath.toString()) : originalPath
         final glob = options?.containsKey('glob') ? options.glob as boolean : isGlobAllowed(path)
         if( !glob ) {
             return FileHelper.checkIfExists(path, options)
