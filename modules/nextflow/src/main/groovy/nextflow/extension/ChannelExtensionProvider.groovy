@@ -163,6 +163,14 @@ class ChannelExtensionProvider implements ExtensionProvider {
         def result = new HashSet<String>(30)
         def methods = clazz.getDeclaredMethods()
         for( def handle : methods ) {
+            // in a future only annotated methodS will be imported
+            if( handle.isAnnotationPresent(Operator)) {
+                def params=handle.getParameterTypes()
+                if( params.length>0 && isReadChannel(params[0]) ) {
+                    result.add(handle.name)
+                    continue
+                }
+            }
             // skip non-public methods
             if( !Modifier.isPublic(handle.getModifiers()) ) continue
             // skip static methods
@@ -179,6 +187,14 @@ class ChannelExtensionProvider implements ExtensionProvider {
         def result = new HashSet<String>(30)
         def methods = clazz.getDeclaredMethods()
         for( def handle : methods ) {
+            // in a future only annotated methodS will be imported
+            if( handle.isAnnotationPresent(Factory)) {
+                def returnType =handle.getReturnType()
+                if( isWriteChannel(returnType) ) {
+                    result.add(handle.name)
+                    continue
+                }
+            }
             // skip non-public methods
             if( !Modifier.isPublic(handle.getModifiers()) ) continue
             // skip static methods

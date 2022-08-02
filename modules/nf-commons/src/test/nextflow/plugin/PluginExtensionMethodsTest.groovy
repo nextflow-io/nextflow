@@ -202,4 +202,85 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         ChannelExtensionProvider.reset()
     }
 
+    def 'should not include operators without the right signature' () {
+        given:
+        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        server.createContext("/", new FakeIndexHandler());
+        server.start()
+        and:
+        def folder = Files.createTempDirectory('test')
+        Plugins.INSTANCE.mode = 'prod'
+        Plugins.INSTANCE.root = folder
+        Plugins.INSTANCE.env = [:]
+        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
+
+        and:
+        def SCRIPT_TEXT = '''
+            nextflow.enable.dsl=2
+            include { goodbyeWrongSignature } from 'plugin/nf-plugin-template'
+
+            channel
+              .of('Bye bye folks') | goodbyeWrongSignature                        
+            '''
+
+        and:
+        def SCRIPT = folder.resolve('main.nf')
+
+        SCRIPT.text = SCRIPT_TEXT
+
+        when:
+        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
+
+        new MockScriptRunner([:]).setScript(SCRIPT).execute()
+
+        then:
+        thrown(MissingMethodException)
+
+        cleanup:
+        folder?.deleteDir()
+        server?.stop(0)
+        Plugins.stop()
+        ChannelExtensionProvider.reset()
+    }
+
+    def 'should not include factories without the right signature' () {
+        given:
+        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        server.createContext("/", new FakeIndexHandler());
+        server.start()
+        and:
+        def folder = Files.createTempDirectory('test')
+        Plugins.INSTANCE.mode = 'prod'
+        Plugins.INSTANCE.root = folder
+        Plugins.INSTANCE.env = [:]
+        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
+
+        and:
+        def SCRIPT_TEXT = '''
+            nextflow.enable.dsl=2
+            include { reverseCantBeImportedBecauseWrongSignature } from 'plugin/nf-plugin-template'                
+
+            channel.reverseCantBeImportedBecauseWrongSignature('a string')                        
+            '''
+
+        and:
+        def SCRIPT = folder.resolve('main.nf')
+
+        SCRIPT.text = SCRIPT_TEXT
+
+        when:
+        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
+
+        new MockScriptRunner([:]).setScript(SCRIPT).execute()
+
+        then:
+        thrown(IllegalStateException)
+
+        cleanup:
+        folder?.deleteDir()
+        server?.stop(0)
+        Plugins.stop()
+        ChannelExtensionProvider.reset()
+    }
+
 }
