@@ -686,6 +686,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
         result.setContainerOverrides(container)
 
+        // set the share identifier
+        if( this.getAwsOptions().shareIdentifier )
+            result.setShareIdentifier(this.getAwsOptions().shareIdentifier)
+
         return result
     }
 
