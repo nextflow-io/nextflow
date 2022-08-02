@@ -625,10 +625,13 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         /*
          * create the request object
          */
-        def result = new SubmitJobRequest()
+        final result = new SubmitJobRequest()
         result.setJobName(normalizeJobName(task.name))
         result.setJobQueue(getJobQueue(task))
         result.setJobDefinition(getJobDefinition(task))
+        // set the share identifier
+        if( this.getAwsOptions().shareIdentifier )
+            result.setShareIdentifier(this.getAwsOptions().shareIdentifier)
 
         /*
          * retry on spot reclaim
