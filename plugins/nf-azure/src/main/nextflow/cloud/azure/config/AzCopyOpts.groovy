@@ -32,18 +32,26 @@ class AzCopyOpts {
 
 //    INFO: Name: AZCOPY_LOG_LOCATION
 //    Description: Overrides where the log files are stored, to avoid filling up a disk.
+    // String logLocation
 
 //    INFO: Name: AZCOPY_CONCURRENCY_VALUE
 //    Description: Overrides how many HTTP connections work on transfers. By default, this number is determined based on the number of logical cores on the machine.
+    // String concurrencyValue
 
 //    INFO: Name: AZCOPY_CONCURRENT_FILES
 //    Description: Overrides the (approximate) number of files that are in progress at any one time, by controlling how many files we concurrently initiate transfers for.
+    // String concurrentFiles
 
 //    INFO: Name: AZCOPY_BUFFER_GB
 //    Description: Max number of GB that AzCopy should use for buffering data between network and disk. May include decimal point, e.g. 0.5. The default is based on machine size.
+    // String bufferGB
 
 //    INFO: Name: AZCOPY_REQUEST_TRY_TIMEOUT
 //    Description: Set time (in minutes) for how long AzCopy should try to upload files for each request before AzCopy times out.
+    // static public final String AZCOPY_REQUEST_TRY_TIMEOUT = "4"
+    // String requestTryTimeout
+
+
 
     //-----------------------------------------------------
     // Default values for azcopy copy command options
@@ -57,16 +65,16 @@ class AzCopyOpts {
     static public final String DEFAULT_BLOB_TIER = "None"
     String blobTier
 
-    static public final String DEFAULT_METADATA = ""
-    String metadata
+    // static public final String DEFAULT_METADATA = ""
+    // String metadata
 
-    static public final String DEFAULT_BLOB_TAGS = ""
-    String blobTags
+    // static public final String DEFAULT_BLOB_TAGS = ""
+    // String blobTags
 
     //Define the log verbosity for the log file (azcopy default: "INFO").
     //We set the default to NONE to save space on the device
-    static public final String DEFAULT_LOG_LEVEL = "NONE"
-    String logLevel
+    // static public final String DEFAULT_LOG_LEVEL = "NONE"
+    // String logLevel
 
     //Define the output verbosity (azcopy default: "default").
     //We set the default
@@ -100,13 +108,26 @@ class AzCopyOpts {
     AzCopyOpts() {
         this.blockSize = DEFAULT_BLOCK_SIZE
         this.blobTier = DEFAULT_BLOB_TIER
+        this.putMD5 = DEFAULT_PUT_MD5
+        this.checkMD5 = DEFAULT_CHECK_MD5
+        this.recursive = DEFAULT_RECURSIVE
+        this.overwrite = DEFAULT_OVERWRITE
+        this.outputLevel = DEFAULT_OUTPUT_LEVEL
     }
 
 
     AzCopyOpts(Map config) {
         assert config != null
+
+
         this.blockSize = config.blockSize ?: DEFAULT_BLOCK_SIZE
         this.blobTier = config.blobTier ?: DEFAULT_BLOB_TIER
+        this.putMD5 = config.putMD5 ?: DEFAULT_PUT_MD5
+        this.checkMD5 = config.checkMD5 ?: DEFAULT_CHECK_MD5
+        this.recursive = config.recursive ?: DEFAULT_RECURSIVE
+        this.overwrite = config.overwrite ?: DEFAULT_OVERWRITE
+        this.outputLevel = config.outputLevel ?: DEFAULT_OUTPUT_LEVEL
+
     }
 
 }

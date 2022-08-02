@@ -31,6 +31,15 @@ class AzBashLib extends BashFunLib<AzBashLib> {
 
     private String blockSize = AzCopyOpts.DEFAULT_BLOCK_SIZE
     private String blobTier = AzCopyOpts.DEFAULT_BLOB_TIER
+    private String putMD5 = AzCopyOpts.DEFAULT_PUT_MD5
+    private String blockSize =AzCopyOpts.DEFAULT_BLOCK_SIZE
+    private String blobTier =AzCopyOpts.DEFAULT_BLOB_TIER
+    private String putMD5 =AzCopyOpts.DEFAULT_PUT_MD5
+    private String checkMD5 =AzCopyOpts.DEFAULT_CHECK_MD5
+    private String recursive =AzCopyOpts.DEFAULT_RECURSIVE
+    private String overwrite =AzCopyOpts.DEFAULT_OVERWRITE
+    private String outputLevel =AzCopyOpts.DEFAULT_OUTPUT_LEVEL
+
 
 
     AzBashLib withBlockSize(String value) {
