@@ -150,10 +150,10 @@ class ChannelExtensionProvider implements ExtensionProvider {
             }
             else if( definedFunctions.contains(realName) ){
                 FunctionDef functionDef = new FunctionDef(ext, realName, aliasName )
-                meta.addFunctionDefinition(functionDef)
+                meta.addDefinition(functionDef)
             }
             else{
-                throw new IllegalStateException("Operator '$realName' it isn't defined by plugin ${pluginId}")
+                throw new IllegalStateException("Extension '$realName' it isn't defined by plugin ${pluginId}")
             }
         }
         return instance = this

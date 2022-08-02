@@ -387,4 +387,122 @@ class PluginFunctionsTest extends Dsl2Spec {
 
     }
 
+    def 'should not allow a function with the same name as a process'() {
+        given:
+        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        server.createContext("/", new FakeIndexHandler());
+        server.start()
+
+        and:
+        def folder = Files.createTempDirectory('test')
+        Plugins.INSTANCE.mode = 'prod'
+        Plugins.INSTANCE.root = folder
+        Plugins.INSTANCE.env = [:]
+        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
+
+        and:
+        def SCRIPT = folder.resolve('main.nf')
+
+        SCRIPT.text = """
+        nextflow.enable.dsl=2
+                
+        include { sayHello } from 'plugin/nf-plugin-template' 
+
+        process sayHello {
+            input:
+              val lng
+            output:
+              stdout
+              
+            "Hi"
+        }
+        workflow{
+            main:
+                Channel.from('hi') | sayHello
+            emit:
+                sayHello.out
+        }
+        """.stripIndent()
+
+        when:
+        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
+        NextflowMeta.instance.strictMode(true)
+        new MockScriptRunner([:]).setScript(SCRIPT).execute()
+
+        then:
+        thrown(DuplicateModuleFunctionException)
+
+        cleanup:
+        folder?.deleteDir()
+        server?.stop(0)
+        ChannelExtensionProvider.reset()
+        Plugins.stop()
+    }
+
+    def 'should not allow a function and a process with the same from other module'() {
+        given:
+        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        server.createContext("/", new FakeIndexHandler());
+        server.start()
+
+        and:
+        def folder = Files.createTempDirectory('test')
+        Plugins.INSTANCE.mode = 'prod'
+        Plugins.INSTANCE.root = folder
+        Plugins.INSTANCE.env = [:]
+        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
+
+        and:
+        def SCRIPT = folder.resolve('main.nf')
+        def MODULE1 = folder.resolve('module1.nf')
+
+        MODULE1.text = '''
+        nextflow.enable.dsl=2
+
+        process sayHello {
+            input:
+              val lng
+            output:
+              stdout
+              
+            "$lng"
+        }
+        '''
+        SCRIPT.text = """
+        nextflow.enable.dsl=2
+    
+        include { sayHello } from 'plugin/nf-plugin-template'                 
+        include { sayHello } from './module1.nf' 
+
+        process foo {
+            input:
+              val lng
+            output:
+              stdout
+              
+            "Hi"
+        }
+        workflow{
+            main:
+                Channel.from('hi') | foo
+            emit:
+                foo.out
+        }
+        """.stripIndent()
+
+        when:
+        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
+        NextflowMeta.instance.strictMode(true)
+        new MockScriptRunner([:]).setScript(SCRIPT).execute()
+
+        then:
+        thrown(DuplicateModuleFunctionException)
+
+        cleanup:
+        folder?.deleteDir()
+        server?.stop(0)
+        ChannelExtensionProvider.reset()
+        Plugins.stop()
+    }
+
 }

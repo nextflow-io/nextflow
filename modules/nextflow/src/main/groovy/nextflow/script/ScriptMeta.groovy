@@ -111,7 +111,6 @@ class ScriptMeta {
         this.clazz = script.class
         for( def entry : definedFunctions0(script) ) {
             addDefinition(entry)
-            incFunctionCount(entry.name)
         }
     }
 
@@ -144,7 +143,24 @@ class ScriptMeta {
             log.warn(msg)
         }
     }
-    
+
+    void validateComponent(ComponentDef component, String name){
+        if( component instanceof ProcessDef || component instanceof FunctionDef) {
+            if (functionsCount.get(component.name)) {
+                final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
+                log.warn(msg)
+                if (NF.isStrictMode())
+                    throw new DuplicateModuleFunctionException(msg)
+            }
+            if (imports.get(component.name)) {
+                final msg = "A process with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
+                log.warn(msg)
+                if (NF.isStrictMode())
+                    throw new DuplicateModuleFunctionException(msg)
+            }
+        }
+    }
+
     /*
      * This method invocation is made by the NF AST transformer to pass
      * the process names declared in the workflow script. This is only required
@@ -191,7 +207,11 @@ class ScriptMeta {
         final name = component.name
         if( !module && NF.hasOperator(name) )
             log.warn "${component.type.capitalize()} with name '$name' overrides a built-in operator with the same name"
+        validateComponent(component, name)
         definitions.put(component.name, component)
+        if( component instanceof FunctionDef ){
+            incFunctionCount(name)
+        }
         return this
     }
 
@@ -200,16 +220,6 @@ class ScriptMeta {
             addDefinition(entry)
         }
         return this
-    }
-
-    ScriptMeta addFunctionDefinition(FunctionDef component) {
-        if( functionsCount.get(component.name)  ) {
-            final msg = "A function with name '$component.name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function with multiple signatures or arguments with a default value"
-            if (NF.isStrictMode())
-                throw new DuplicateModuleFunctionException(msg)
-            log.warn(msg)
-        }
-        addDefinition(component)
     }
 
     Collection<ComponentDef> getDefinitions() {
@@ -309,6 +319,7 @@ class ScriptMeta {
         assert component
 
         final name = alias ?: component.name
+        validateComponent(component, name)
         if( name != component.name ) {
             imports.put(name, component.cloneWithName(name))
         }
