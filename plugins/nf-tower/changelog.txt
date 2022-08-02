@@ -1,5 +1,11 @@
 nf-tower changelog
 ===================
+1.5.0 - 1 Aug 2022
+- Add simple wave plugin cli commands [8888b866]
+- Add support for archive dir to tower plugin [c234681a]
+- Add support tower cache backup/restore [bc2f9d13]
+- Prevent nextflow config to break tower launch [e059a724]
+
 1.4.0 - 6 Feb 2022
 - Add support for Tower reports #2523 [de3d76349]
 
