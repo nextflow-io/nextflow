@@ -60,7 +60,6 @@ class HelloExtension extends ChannelExtensionPoint{
     /*
      * this Factory can't be imported because has not the right signature
      */
-    @Factory
     String reverseCantBeImportedBecauseWrongSignature(String message){
         message
     }

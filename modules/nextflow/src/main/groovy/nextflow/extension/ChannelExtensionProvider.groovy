@@ -166,10 +166,11 @@ class ChannelExtensionProvider implements ExtensionProvider {
             // in a future only annotated methodS will be imported
             if( handle.isAnnotationPresent(Operator)) {
                 def params=handle.getParameterTypes()
-                if( params.length>0 && isReadChannel(params[0]) ) {
-                    result.add(handle.name)
-                    continue
+                if( params.length == 0 || !isReadChannel(params[0]) ) {
+                    throw new IllegalStateException("Extension method '$handle.name' in `$clazz.name` has not a valid signature")
                 }
+                result.add(handle.name)
+                continue
             }
             // skip non-public methods
             if( !Modifier.isPublic(handle.getModifiers()) ) continue
@@ -177,8 +178,10 @@ class ChannelExtensionProvider implements ExtensionProvider {
             if( Modifier.isStatic(handle.getModifiers()) ) continue
             // operator extension method must have a dataflow read channel type as first argument
             def params=handle.getParameterTypes()
-            if( params.length>0 && isReadChannel(params[0]) )
+            if( params.length>0 && isReadChannel(params[0]) ) {
+                log.trace("Detected extension method `$handle.name` in `$clazz.name`")
                 result.add(handle.name)
+            }
         }
         return result
     }
@@ -190,10 +193,11 @@ class ChannelExtensionProvider implements ExtensionProvider {
             // in a future only annotated methodS will be imported
             if( handle.isAnnotationPresent(Factory)) {
                 def returnType =handle.getReturnType()
-                if( isWriteChannel(returnType) ) {
-                    result.add(handle.name)
-                    continue
+                if( !isWriteChannel(returnType) ) {
+                    throw new IllegalStateException("Factory extension '$handle.name' in `$clazz.name` has not a valid signature")
                 }
+                result.add(handle.name)
+                continue
             }
             // skip non-public methods
             if( !Modifier.isPublic(handle.getModifiers()) ) continue
@@ -201,8 +205,10 @@ class ChannelExtensionProvider implements ExtensionProvider {
             if( Modifier.isStatic(handle.getModifiers()) ) continue
             // factory extension method must have a dataflow write channel type as return
             def returnType =handle.getReturnType()
-            if( isWriteChannel(returnType) )
+            if( isWriteChannel(returnType) ) {
+                log.trace("Detected factory extension `$handle.name` in `$clazz.name`")
                 result.add(handle.name)
+            }
         }
         return result
     }
