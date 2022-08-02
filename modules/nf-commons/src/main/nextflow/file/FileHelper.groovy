@@ -1038,10 +1038,10 @@ class FileHelper {
         final checkIfExists = opts?.checkIfExists as boolean
         final followLinks = opts?.followLinks == false ? [LinkOption.NOFOLLOW_LINKS] : Collections.emptyList()
         if( !checkIfExists || FilesEx.exists(result, followLinks as LinkOption[]) ) {
-            return result
+            return opts?.relative ? path : result
         }
 
-        throw new NoSuchFileException(FilesEx.toUriString(result))
+        throw new NoSuchFileException(opts?.relative ? path.toString() : FilesEx.toUriString(result))
     }
 
 
