@@ -81,7 +81,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder {
         // make it change to the task work dir
         bean.headerScript = headerScript(bean)
         // enable use of local scratch dir
-        if( !scratch )
+        if( scratch==null )
             scratch = true
     }
 
