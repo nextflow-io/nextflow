@@ -310,10 +310,7 @@ class CmdRun extends CmdBase implements HubOptions {
         final nxfEnvs = checkNxfEnv(config)
         if(nxfEnvs) {
             log.warn 'Environment variables in the `env` config scope are not applied to Nextflow -- See https://www.nextflow.io/docs/latest/config.html#scope-env'
-            log.warn 'The following variables should be exported in the environment:'
-            nxfEnvs.each {
-                log.warn it as String
-            }
+            log.warn "The following variables should be exported in the environment: ${nxfEnvs.join(', ')}"
         }
 
         // -- load plugins
