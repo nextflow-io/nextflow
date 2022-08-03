@@ -35,7 +35,7 @@ class AzBashLib extends BashFunLib<AzBashLib> {
     private String checkMD5 = AzCopyOpts.DEFAULT_CHECK_MD5
     private String overwrite = AzCopyOpts.DEFAULT_OVERWRITE
     private String outputLevel = AzCopyOpts.DEFAULT_OUTPUT_LEVEL
-
+    private String requestTryTimeout = AzCopyOpts.DEFAULT_AZCOPY_REQUEST_TRY_TIMEOUT
 
     AzBashLib withBlockSize(String value) {
         if (value)
@@ -72,47 +72,61 @@ class AzBashLib extends BashFunLib<AzBashLib> {
         return this
     }
 
-    protected String azLib() {
+    // Custom env variables are prefixed with underscore(_)
+    protected String setupAzCopyOpts() {
         """
-        nxf_az_upload() {
-            local name=\$1
-            local target=\${2%/} ## remove ending slash
-            local base_name="\$(basename "\$name")"
-            local dir_name="\$(dirname "\$name")"
+        # Env variables used for azcopy opts
+        export _AZCOPY_BLOCK_SIZE_MB=${blockSize}
+        export _AZCOPY_BLOCK_BLOB_TIER=${blobTier}
+        export _AZCOPY_PUT_MD5=${putMD5}
+        export _AZCOPY_CHECK_MD5=${checkMD5}
+        export _AZCOPY_OVERWRITE=${overwrite}
+        export _AZCOPY_OUTPUT_LEVEL=${outputLevel}
+        export AZCOPY_REQUEST_TRY_TIMEOUT=${requestTryTimeout}
+        """.stripIndent()
+    }
 
-            if [[ -d \$name ]]; then
-              if [[ "\$base_name" == "\$name" ]]; then
-                azcopy cp "\$name" "\$target?\$AZ_SAS" --recursive --block-blob-tier ${blobTier} --block-size-mb ${blockSize} --output-level ${outputLevel} ${putMD5}
+    protected String azLib() {
+        '''
+        nxf_az_upload() {
+            local name=$1
+            local target=${2%/} ## remove ending slash
+            local base_name="$(basename "$name")"
+            local dir_name="$(dirname "$name")"
+
+            if [[ -d $name ]]; then
+              if [[ "$base_name" == "$name" ]]; then
+                azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --output-level $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
               else
-                azcopy cp "\$name" "\$target/\$dir_name?\$AZ_SAS " --recursive ${blobTier} ${blockSize} --output-level ${outputLevel} ${putMD5}
+                azcopy cp "$name" "$target/$dir_name?$AZ_SAS " --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --output-level $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
               fi
             else
-              azcopy cp "\$name" "\$target/\$name?\$AZ_SAS" ${blobTier} ${blockSize} --output-level ${outputLevel} ${putMD5}
+              azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --output-level $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
             fi
         }
         
         nxf_az_download() {
-            local source=\$1
-            local target=\$2
-            local basedir=\$(dirname \$2)
+            local source=$1
+            local target=$2
+            local basedir=$(dirname $2)
             local ret
-            mkdir -p "\$basedir"
+            mkdir -p "$basedir"
         
-            ret=\$(azcopy cp "\$source?\$AZ_SAS" "\$target" 2>&1) || {
+            ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                 ## if fails check if it was trying to download a directory
-                mkdir -p \$target
-                azcopy cp "\$source/*?\$AZ_SAS" "\$target" --recursive --output-level ${outputLevel} --check-md5 ${checkMD5} --overwrite ${overwrite} >/dev/null || {
-                    rm -rf \$target
-                    >&2 echo "Unable to download path: \$source"
+                mkdir -p $target
+                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive --output-level $_AZCOPY_OVERWRITE --check-md5 $_AZCOPY_CHECK_MD5 --overwrite $_AZCOPY_OVERWRITE >/dev/null || {
+                    rm -rf $target
+                    >&2 echo "Unable to download path: $source"
                     exit 1
                 }
             }
         }
-        """.stripIndent()
+        '''.stripIndent()
     }
 
     String render() {
-        super.render() + azLib()
+        super.render() + setupAzCopyOpts() + azLib()
     }
 
     @Memoized

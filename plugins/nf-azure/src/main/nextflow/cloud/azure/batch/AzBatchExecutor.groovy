@@ -51,7 +51,7 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
     private AzBatchService batchService
 
     /**
-     * @return {@code true} to signal containers are managed directly the AWS Batch service
+     * @return {@code true} to signal containers are managed directly the AZ Batch service
      */
     final boolean isContainerNative() {
         return true
@@ -64,7 +64,7 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
 
     protected void validateWorkDir() {
         /*
-         * make sure the work dir is a S3 bucket
+         * make sure the work dir is an AZ bucket
          */
         if( !(workDir instanceof AzPath) ) {
             session.abort()
