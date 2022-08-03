@@ -355,14 +355,15 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.execute(scriptArgs, this.entryName)
     }
 
-    protected Collection checkNxfEnv(ConfigMap config) {
+    protected List<String> checkNxfEnv(ConfigMap config) {
         // Warn about setting NXF_ environment variables within env config scope
-        final nxfEnvs = config.env.findAll { it ->
-            it.toString().startsWith('NXF_') &&
-                    ! it.toString().startsWith('NXF_DEBUG')
+        final env = config.env as Map<String, String>
+        final nxfEnvs = env.findAll { Map.Entry<String, String> it ->
+            it.key.startsWith('NXF_') &&
+                    ! it.key.startsWith('NXF_DEBUG')
         }
-        nxfEnvs.collect {
-            it.toString().split('=')[0]
+        nxfEnvs.collect {  it ->
+            it.key
         }
     }
 
