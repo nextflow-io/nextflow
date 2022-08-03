@@ -606,7 +606,7 @@ class AzBatchService implements Closeable {
                 .withVirtualMachineConfiguration(poolVmConfig(spec.opts))
                 // https://docs.microsoft.com/en-us/azure/batch/batch-pool-vm-sizes
                 .withVmSize(spec.vmType.name)
-                // same as the num ofd cores
+                // same as the num of cores
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
                 .withStartTask(poolStartTask)
