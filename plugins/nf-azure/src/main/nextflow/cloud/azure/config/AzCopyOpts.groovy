@@ -30,27 +30,9 @@ class AzCopyOpts {
     // Default values for azcopy CLI environment variables
     //-----------------------------------------------------
 
-    //Description: Overrides where the log files are stored, to avoid filling up a disk.
-    //AZCOPY_LOG_LOCATION
-    // String logLocation
-
-    //Description: Overrides how many HTTP connections work on transfers. By default, this number is determined based on the number of logical cores on the machine.
-    //AZCOPY_CONCURRENCY_VALUE
-    // String concurrencyValue
-
-    //Description: Overrides the (approximate) number of files that are in progress at any one time, by controlling how many files we concurrently initiate transfers for.
-    //AZCOPY_CONCURRENT_FILES
-    // String concurrentFiles
-
-    //Description: Max number of GB that AzCopy should use for buffering data between network and disk. May include decimal point, e.g. 0.5. The default is based on machine size.
-    //AZCOPY_BUFFER_GB
-    // String bufferGB
-
-    //Description: Set time (in minutes) for how long AzCopy should try to upload files for each request before AzCopy times out.
-    //AZCOPY_REQUEST_TRY_TIMEOUT
-    // static public final String AZCOPY_REQUEST_TRY_TIMEOUT = "4"
-    // String requestTryTimeout
-
+    //Set time (in minutes) for how long AzCopy should try to upload files for each request before AzCopy times out.
+    static public final String DEFAULT_AZCOPY_REQUEST_TRY_TIMEOUT = "4"
+    String requestTryTimeout
 
     //-----------------------------------------------------
     // Default values for azcopy copy command options
@@ -64,17 +46,6 @@ class AzCopyOpts {
     static public final String DEFAULT_BLOB_TIER = "None"
     String blobTier
 
-    // static public final String DEFAULT_METADATA = ""
-    // String metadata
-
-    // static public final String DEFAULT_BLOB_TAGS = ""
-    // String blobTags
-
-    //Define the log verbosity for the log file (azcopy default: "INFO").
-    //We set the default to NONE to save space on the device
-    // static public final String DEFAULT_LOG_LEVEL = "NONE"
-    // String logLevel
-
     //Define the output verbosity (azcopy default: "default").
     //We set the default
     static public final String DEFAULT_OUTPUT_LEVEL = "quiet"
@@ -84,15 +55,6 @@ class AzCopyOpts {
     //Overwrite the conflicting files and blobs at the destination if this flag is set to true. (azcopy default: true)
     static public final String DEFAULT_OVERWRITE = "false"
     String overwrite
-
-    //The azcopy default is true, which means upon `-resume` the data is uploaded again.
-    //static public final Boolean DEFAULT_RECURSIVE = false
-    //String recursive
-
-    //Check the length of a file on the destination after the transfer.
-    //If there is a mismatch between source and destination, the transfer is marked as failed (azcopy default: true)
-    static public final Boolean DEFAULT_CHECK_LENGTH = true
-    Boolean checkLength
 
     //The Azure Blob Storage service automatically computes MD5 sum for files less than 256 MB in size.
     //Content-MD5 property of the destination blob or file. (azcopy default: false)
@@ -123,6 +85,7 @@ class AzCopyOpts {
         this.checkMD5 = config.checkMD5 ?: DEFAULT_CHECK_MD5
         this.overwrite = config.overwrite ?: DEFAULT_OVERWRITE
         this.outputLevel = config.outputLevel ?: DEFAULT_OUTPUT_LEVEL
+        this.requestTryTimeout = config.requestTryTimeout ?: DEFAULT_AZCOPY_REQUEST_TRY_TIMEOUT
 
     }
 
