@@ -17,6 +17,7 @@
 
 package nextflow.cli
 
+import nextflow.config.ConfigBuilder
 import java.nio.file.Files
 
 import nextflow.config.ConfigMap
@@ -333,5 +334,22 @@ class CmdRunTest extends Specification {
         and:
         // detect version from global default
         CmdRun.detectDslMode(new ConfigMap(), DSL2_SCRIPT, [:]) == '2'
+    }
+
+    def 'should filter NXF_ variables set in config.env' () {
+
+        when:
+        final config = new CmdRun().checkNxfEnv(new ConfigMap([env:MAP]))
+
+        then:
+        config == EXPECTED
+
+        where:
+        MAP | EXPECTED
+        [alpha : 'a1', HOME:"HOME:/some/path"] | []
+        [alpha : 'a1', NXF_DEBUG : 'true', HOME:"HOME:/some/path"] | []
+        [alpha : 'a1', NXF_DEBUG : 'true', NXF_ANSI_SUMMARY : 'false', NXF_ANSI_LOG : 'true', HOME:"HOME:/some/path"] | ['NXF_ANSI_SUMMARY', 'NXF_ANSI_LOG']
+        [alpha : 'a1', NXF_DEBUG : 'true', NXF_ANSI_SUMMARY : 'false', HOME:"HOME:/some/path"] | ['NXF_ANSI_SUMMARY']
+
     }
 }
