@@ -307,7 +307,14 @@ class CmdRun extends CmdBase implements HubOptions {
         launchInfo(config, scriptFile)
 
         // check if NXF_ variables are set in nextflow.config
-        checkNxfEnv(config)
+        final nxfEnvs = checkNxfEnv(config)
+        if(nxfEnvs) {
+            log.warn 'Environment variables in the `env` config scope are not applied to Nextflow -- See https://www.nextflow.io/docs/latest/config.html#scope-env'
+            log.warn 'The following variables should be exported in the environment:'
+            nxfEnvs.each {
+                log.warn it as String
+            }
+        }
 
         // -- load plugins
         final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
@@ -351,16 +358,14 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.execute(scriptArgs, this.entryName)
     }
 
-    protected void checkNxfEnv(ConfigMap config) {
+    protected Collection checkNxfEnv(ConfigMap config) {
         // Warn about setting NXF_ environment variables within env config scope
         final nxfEnvs = config.env.findAll { it ->
             it.toString().startsWith('NXF_') &&
                     ! it.toString().startsWith('NXF_DEBUG')
         }
-        if( nxfEnvs.size() > 0 ) {
-            log.warn 'Environment variables in the `env` config scope are not applied to Nextflow -- See https://www.nextflow.io/docs/latest/config.html#scope-env'
-            log.warn 'The following variables should be exported in the environment:'
-            nxfEnvs.each { log.warn it.toString().split('=')[0] }
+        nxfEnvs.collect {
+            it.toString().split('=')[0]
         }
     }
 
