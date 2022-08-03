@@ -39,6 +39,7 @@ import com.amazonaws.services.batch.model.JobDefinitionType
 import com.amazonaws.services.batch.model.JobDetail
 import com.amazonaws.services.batch.model.JobTimeout
 import com.amazonaws.services.batch.model.KeyValuePair
+import com.amazonaws.services.batch.model.LogConfiguration
 import com.amazonaws.services.batch.model.MountPoint
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
 import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
@@ -482,6 +483,17 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final jobRole = opts.getJobRole()
         if( jobRole )
             container.setJobRoleArn(jobRole)
+
+        final logsGroup = opts.getLogsGroup()
+        if( logsGroup )
+            container.setLogConfiguration(
+                new LogConfiguration()
+                    .withLogDriver('awslogs')
+                    .withOptions([
+                        'awslogs-region': opts.getRegion(),
+                        'awslogs-group': logsGroup
+                    ])
+            )
 
         final mountsMap = new LinkedHashMap( 10)
         final awscli = opts.cliPath
