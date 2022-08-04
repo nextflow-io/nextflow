@@ -177,11 +177,11 @@ class AzBashLibTest extends Specification {
         output
 
         when:
-        def expected = getClass().getResource("/azcopy_with_opts.sh").text.split('\n')
+        def expected = getClass().getResource("/azcopy_with_opts.sh").text
 
         then:
         output.split('\n').eachWithIndex{  entry, int i ->
-            entry == expected[i]
+            assert entry == expected.split('\n')[i]
         }
     }
 }
