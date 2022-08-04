@@ -11,7 +11,9 @@ import nextflow.extension.ChannelExtensionPoint
 import nextflow.extension.CH
 import nextflow.NF
 import nextflow.extension.DataflowHelper
+import nextflow.extension.Factory
 import nextflow.extension.Function
+import nextflow.extension.Operator
 import nextflow.hello.functions.HelloFunctions
 import nextflow.plugin.Scoped
 
@@ -55,6 +57,13 @@ class HelloExtension extends ChannelExtensionPoint{
         createReverseChannel(message)
     }
 
+    /*
+     * this Factory can't be imported because has not the right signature
+     */
+    String reverseCantBeImportedBecauseWrongSignature(String message){
+        message
+    }
+
     static String goodbyeMessage
 
     /*
@@ -83,6 +92,14 @@ class HelloExtension extends ChannelExtensionPoint{
         }
         DataflowHelper.subscribeImpl(source, [onNext: next, onComplete: done])
         target
+    }
+
+    /*
+    * this Operator can't be imported because has not the right signature
+     */
+    @Operator
+    String goodbyeWrongSignature(DataflowReadChannel source) {
+        source.val
     }
 
     protected DataflowWriteChannel createReverseChannel(final String message){

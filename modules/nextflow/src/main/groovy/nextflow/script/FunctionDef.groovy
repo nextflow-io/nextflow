@@ -51,8 +51,6 @@ class FunctionDef extends ComponentDef implements ChainableDef {
 
     String getName() { alias }
 
-    Object getOwner() { owner }
-
     Object invoke_a(Object[] args) {
         final argsArr = ChannelOut.spread(args).toArray()
         final meta = owner.metaClass.getMetaMethod(name, argsArr)
