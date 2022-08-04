@@ -163,7 +163,7 @@ class AzBashLibTest extends Specification {
     def 'should return script with config, with custom azcopy opts'() {
 
         expect:
-        AzBashLib.script(new AzCopyOpts([blobTier: "Hot", blockSize: "10", putMD5: true, checkMD5: "FailIfDifferent", overwrite: false, outputLevel: "quiet"]), 10, 20, Duration.of('30s')).replaceAll(' ', '') == '''\
+        AzBashLib.script(new AzCopyOpts([blobTier: "Hot", blockSize: "10", putMD5: true, checkMD5: "FailIfDifferent", overwrite: false]), 10, 20, Duration.of('30s')).replaceAll(' ', '') == '''\
             # bash helper functions
             nxf_cp_retry() {
                 local max_attempts=20
