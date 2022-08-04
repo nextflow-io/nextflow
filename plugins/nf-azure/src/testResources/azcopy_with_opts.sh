@@ -23,7 +23,7 @@ nxf_cp_retry() {
 }
 
 nxf_parallel() {
-    IFS=$'\\n'
+    IFS=$'\n'
     local cmd=("$@")
     local cpus=$(nproc 2>/dev/null || < /proc/cpuinfo grep '^process' -c)
     local max=$(if (( cpus>10 )); then echo 10; else echo $cpus; fi)
