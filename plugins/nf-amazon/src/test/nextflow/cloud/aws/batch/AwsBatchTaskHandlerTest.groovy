@@ -85,7 +85,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def req = handler.newSubmitRequest(task)
         then:
         1 * handler.maxSpotAttempts() >> 5
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        _ * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
@@ -107,7 +107,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req = handler.newSubmitRequest(task)
         then:
         1 * handler.maxSpotAttempts() >> 0
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', region: 'eu-west-1') }
+        _ * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', region: 'eu-west-1') }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
@@ -138,7 +138,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def req = handler.newSubmitRequest(task)
         then:
         1 * handler.maxSpotAttempts() >> 5
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', storageEncryption: 'AES256') }
+        _ * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', storageEncryption: 'AES256') }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> []
@@ -156,7 +156,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def req2 = handler.newSubmitRequest(task)
         then:
         1 * handler.maxSpotAttempts() >> 5
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', storageEncryption: 'AES256', debug: true) }
+        _ * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', storageEncryption: 'AES256', debug: true, shareIdentifier: 'priority/high') }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> []
@@ -169,7 +169,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req2.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
         req2.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
         req2.getContainerOverrides().getCommand().join(' ') == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws s3 cp --only-show-errors --sse AES256 --debug .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws s3 cp --only-show-errors --sse AES256 --debug s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()].join(' ')
-
+        req2.getShareIdentifier() == 'priority/high'
 
     }
 
@@ -540,16 +540,20 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
         result.parameters.'nf-token' == 'bfd3cc19ee9bdaea5b7edee94adf04bc'
+        !result.containerProperties.logConfiguration
         !result.containerProperties.mountPoints
 
         when:
         result = handler.makeJobDefRequest(IMAGE)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
-        1 * handler.getAwsOptions() >> new AwsOptions(cliPath: '/home/conda/bin/aws')
+        1 * handler.getAwsOptions() >> new AwsOptions(cliPath: '/home/conda/bin/aws', logsGroup: '/aws/batch', region: 'us-east-1')
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
-        result.parameters.'nf-token' == '38d950a380585c53b43d733a10bae3b4'
+        result.parameters.'nf-token' == 'af124f8899bcfc8a02037599f59a969a'
+        result.containerProperties.logConfiguration.'LogDriver' == 'awslogs'
+        result.containerProperties.logConfiguration.'Options'.'awslogs-region' == 'us-east-1'
+        result.containerProperties.logConfiguration.'Options'.'awslogs-group' == '/aws/batch'
         result.containerProperties.mountPoints[0].sourceVolume == 'aws-cli'
         result.containerProperties.mountPoints[0].containerPath == '/home/conda'
         result.containerProperties.mountPoints[0].readOnly
