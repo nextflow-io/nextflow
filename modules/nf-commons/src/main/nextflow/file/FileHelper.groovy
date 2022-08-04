@@ -794,6 +794,7 @@ class FileHelper {
         final includeFile = type in ['file','any']
         final syntax = options?.syntax ?: 'glob'
         final relative = options?.relative == true
+        final includeNonRegularFile = options?.includeNonRegularFile ?: false
 
         final matcher = getPathMatcherFor("$syntax:${filePattern}", folder.fileSystem)
         final singleParam = action.getMaximumNumberOfParameters() == 1
@@ -819,7 +820,7 @@ class FileHelper {
                 final path = folder.relativize(fullPath)
                 log.trace "visitFiles > file=$path; includeFile=$includeFile; matches=${matcher.matches(path)}; isRegularFile=${attrs.isRegularFile()}"
 
-                if (includeFile && matcher.matches(path) && attrs.isRegularFile() && (includeHidden || !isHidden(fullPath))) {
+                if (includeFile && matcher.matches(path) && (includeNonRegularFile || attrs.isRegularFile()) && (includeHidden || !isHidden(fullPath))) {
                     def result = relative ? path : fullPath
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }

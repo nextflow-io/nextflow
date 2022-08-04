@@ -1585,6 +1585,7 @@ class TaskProcessor {
         opts.followLinks = param.followLinks
         opts.maxDepth = param.maxDepth
         opts.type = param.type ? param.type : ( namePattern.contains('**') ? 'file' : 'any' )
+        opts.includeNonRegularFile = true
         return opts
     }
 
