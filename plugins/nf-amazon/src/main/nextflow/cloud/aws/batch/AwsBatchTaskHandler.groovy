@@ -39,6 +39,7 @@ import com.amazonaws.services.batch.model.JobDefinitionType
 import com.amazonaws.services.batch.model.JobDetail
 import com.amazonaws.services.batch.model.JobTimeout
 import com.amazonaws.services.batch.model.KeyValuePair
+import com.amazonaws.services.batch.model.LogConfiguration
 import com.amazonaws.services.batch.model.MountPoint
 import com.amazonaws.services.batch.model.RegisterJobDefinitionRequest
 import com.amazonaws.services.batch.model.RegisterJobDefinitionResult
@@ -50,6 +51,7 @@ import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.batch.model.Volume
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.container.ContainerNameValidator
@@ -483,6 +485,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( jobRole )
             container.setJobRoleArn(jobRole)
 
+        final logsGroup = opts.getLogsGroup()
+        if( logsGroup )
+            container.setLogConfiguration(getLogConfiguration(logsGroup, opts.getRegion()))
+
         final mountsMap = new LinkedHashMap( 10)
         final awscli = opts.cliPath
         if( awscli ) {
@@ -510,6 +516,16 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             hashingTokens.add(containerOpts)
 
         return result
+    }
+
+    @Memoized 
+    LogConfiguration getLogConfiguration(String name, String region) {
+        new LogConfiguration()
+            .withLogDriver('awslogs')
+            .withOptions([
+                'awslogs-region': region,
+                'awslogs-group': name
+            ])
     }
 
     protected void addVolumeMountsToContainer(Map<String,String> mountsMap, ContainerProperties container) {
