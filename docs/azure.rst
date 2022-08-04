@@ -358,8 +358,6 @@ azure.azcopy.blobTier                           The blob tier to be used while u
 azure.azcopy.putMD5                             Create an MD5 hash of each file during upload, and save the md5sum hash as the Content-MD5 property of the destination blob or file. (default: false)
 azure.azcopy.checkMD5                           Specifies how strictly MD5 hashes should be validated when downloading data. (default 'FailIfDifferent')
 azure.azcopy.overwrite                          Overwrite the conflicting files and blobs at the destination if this flag is set to true. (default: "false")
-azure.azcopy.outputLevel                        Output verbosity level of ``azcopy`` (default: "quiet")
-azure.azcopy.requestTryTimeout                  Set time (in minutes) for how long ``azcopy`` should try to upload files for each request before timing out. (default: "4")
 azure.storage.accountName                       The blob storage account name
 azure.storage.accountKey                        The blob storage account key
 azure.storage.sasToken                          The blob storage shared access signature token. This can be provided as an alternative to the ``accountKey`` setting.

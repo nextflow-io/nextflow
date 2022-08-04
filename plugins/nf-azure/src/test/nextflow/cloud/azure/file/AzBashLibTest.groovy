@@ -19,8 +19,6 @@ class AzBashLibTest extends Specification {
            export _AZCOPY_PUT_MD5=
            export _AZCOPY_CHECK_MD5=FailIfDifferent
            export _AZCOPY_OVERWRITE=false
-           export _AZCOPY_OUTPUT_LEVEL=quiet
-           export AZCOPY_REQUEST_TRY_TIMEOUT=4
 
             nxf_az_upload() {
                 local name=$1
@@ -30,12 +28,12 @@ class AzBashLibTest extends Specification {
 
                 if [[ -d $name ]]; then
                   if [[ "$base_name" == "$name" ]]; then
-                    azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --output-level $_AZCOPY_OUTPUT_LEVEL --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
+                    azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
                   else
-                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --output-level $_AZCOPY_OUTPUT_LEVEL --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
+                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
                   fi
                 else
-                  azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --output-level $_AZCOPY_OUTPUT_LEVEL --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
+                  azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
                 fi
             }
 
@@ -49,7 +47,7 @@ class AzBashLibTest extends Specification {
                 ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                     ## if fails check if it was trying to download a directory
                     mkdir -p $target
-                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive --output-level $_AZCOPY_OUTPUT_LEVEL --check-md5 $_AZCOPY_CHECK_MD5 --overwrite $_AZCOPY_OVERWRITE >/dev/null || {
+                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive --check-md5 $_AZCOPY_CHECK_MD5 --overwrite $_AZCOPY_OVERWRITE >/dev/null || {
                         rm -rf $target
                         >&2 echo "Unable to download path: $source"
                         exit 1
@@ -124,9 +122,7 @@ class AzBashLibTest extends Specification {
             export _AZCOPY_PUT_MD5=
             export _AZCOPY_CHECK_MD5=FailIfDifferent
             export _AZCOPY_OVERWRITE=false
-            export _AZCOPY_OUTPUT_LEVEL=quiet
-            export AZCOPY_REQUEST_TRY_TIMEOUT=4
-            
+
             nxf_az_upload() {
                 local name=$1
                 local target=${2%/} ## remove ending slash
@@ -135,12 +131,12 @@ class AzBashLibTest extends Specification {
     
                 if [[ -d $name ]]; then
                   if [[ "$base_name" == "$name" ]]; then
-                    azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --output-level $_AZCOPY_OUTPUT_LEVEL --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
+                    azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
                   else
-                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --output-level $_AZCOPY_OUTPUT_LEVEL --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
+                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
                   fi
                 else
-                  azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --output-level $_AZCOPY_OUTPUT_LEVEL --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
+                  azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
                 fi
             }
             
@@ -154,7 +150,7 @@ class AzBashLibTest extends Specification {
                 ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                     ## if fails check if it was trying to download a directory
                     mkdir -p $target
-                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive --output-level $_AZCOPY_OUTPUT_LEVEL --check-md5 $_AZCOPY_CHECK_MD5 --overwrite $_AZCOPY_OVERWRITE >/dev/null || {
+                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive --check-md5 $_AZCOPY_CHECK_MD5 --overwrite $_AZCOPY_OVERWRITE >/dev/null || {
                         rm -rf $target
                         >&2 echo "Unable to download path: $source"
                         exit 1
@@ -229,8 +225,6 @@ class AzBashLibTest extends Specification {
            export _AZCOPY_PUT_MD5=--put-md5
            export _AZCOPY_CHECK_MD5=FailIfDifferent
            export _AZCOPY_OVERWRITE=false
-           export _AZCOPY_OUTPUT_LEVEL=quiet
-           export AZCOPY_REQUEST_TRY_TIMEOUT=4
            
             nxf_az_upload() {
                 local name=$1
@@ -240,12 +234,12 @@ class AzBashLibTest extends Specification {
     
                 if [[ -d $name ]]; then
                   if [[ "$base_name" == "$name" ]]; then
-                    azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --output-level $_AZCOPY_OUTPUT_LEVEL --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
+                    azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
                   else
-                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --output-level $_AZCOPY_OUTPUT_LEVEL --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
+                    azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
                   fi
                 else
-                  azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --output-level $_AZCOPY_OUTPUT_LEVEL --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
+                  azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
                 fi
             }
             
@@ -259,7 +253,7 @@ class AzBashLibTest extends Specification {
                 ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                     ## if fails check if it was trying to download a directory
                     mkdir -p $target
-                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive --output-level $_AZCOPY_OUTPUT_LEVEL --check-md5 $_AZCOPY_CHECK_MD5 --overwrite $_AZCOPY_OVERWRITE >/dev/null || {
+                    azcopy cp "$source/*?$AZ_SAS" "$target" --recursive --check-md5 $_AZCOPY_CHECK_MD5 --overwrite $_AZCOPY_OVERWRITE >/dev/null || {
                         rm -rf $target
                         >&2 echo "Unable to download path: $source"
                         exit 1

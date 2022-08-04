@@ -30,9 +30,11 @@ class AzCopyOpts {
     // Default values for azcopy CLI environment variables
     //-----------------------------------------------------
 
+    /* DISABLED TILL WE UPGRADE TO azcopy v10.16.0
     //Set time (in minutes) for how long AzCopy should try to upload files for each request before AzCopy times out.
     static public final String DEFAULT_AZCOPY_REQUEST_TRY_TIMEOUT = "4"
     String requestTryTimeout
+    */
 
     //-----------------------------------------------------
     // Default values for azcopy copy command options
@@ -47,10 +49,12 @@ class AzCopyOpts {
     static public final String DEFAULT_BLOB_TIER = "None" // hot (None) | cool | archive
     String blobTier
 
+    /* DISABLED TILL WE UPGRADE TO azcopy v10.16.0
     //Define the output verbosity (azcopy default: "default").
     //Set the default to quiet to avoid azcopy logs within the .command.log files
     static public final String DEFAULT_OUTPUT_LEVEL = "quiet" // essential | quiet
     String outputLevel
+    */
 
     //Overwrite the conflicting files and blobs at the destination if this flag is set to true. (azcopy default: true)
     static public final String DEFAULT_OVERWRITE = "false" // true | false | prompt | ifSourceNewer
@@ -73,8 +77,8 @@ class AzCopyOpts {
         this.putMD5 = DEFAULT_PUT_MD5
         this.checkMD5 = DEFAULT_CHECK_MD5
         this.overwrite = DEFAULT_OVERWRITE
-        this.outputLevel = DEFAULT_OUTPUT_LEVEL
-        this.requestTryTimeout = DEFAULT_AZCOPY_REQUEST_TRY_TIMEOUT
+        //this.requestTryTimeout = DEFAULT_AZCOPY_REQUEST_TRY_TIMEOUT
+        //this.outputLevel = DEFAULT_OUTPUT_LEVEL
     }
 
 
@@ -86,8 +90,8 @@ class AzCopyOpts {
         this.putMD5 = config.putMD5 ?: DEFAULT_PUT_MD5
         this.checkMD5 = config.checkMD5 ?: DEFAULT_CHECK_MD5
         this.overwrite = config.overwrite ?: DEFAULT_OVERWRITE
-        this.outputLevel = config.outputLevel ?: DEFAULT_OUTPUT_LEVEL
-        this.requestTryTimeout = config.requestTryTimeout ?: DEFAULT_AZCOPY_REQUEST_TRY_TIMEOUT
+        //this.requestTryTimeout = config.requestTryTimeout ?: DEFAULT_AZCOPY_REQUEST_TRY_TIMEOUT
+        //this.outputLevel = config.outputLevel ?: DEFAULT_OUTPUT_LEVEL
 
     }
 

@@ -34,8 +34,8 @@ class AzBashLib extends BashFunLib<AzBashLib> {
     private String putMD5 = ''
     private String checkMD5 = AzCopyOpts.DEFAULT_CHECK_MD5
     private String overwrite = AzCopyOpts.DEFAULT_OVERWRITE
-    private String outputLevel = AzCopyOpts.DEFAULT_OUTPUT_LEVEL
-    private String requestTryTimeout = AzCopyOpts.DEFAULT_AZCOPY_REQUEST_TRY_TIMEOUT
+    //private String outputLevel = AzCopyOpts.DEFAULT_OUTPUT_LEVEL
+    //private String requestTryTimeout = AzCopyOpts.DEFAULT_AZCOPY_REQUEST_TRY_TIMEOUT
 
     AzBashLib withBlockSize(String value) {
         if (value)
@@ -66,6 +66,7 @@ class AzBashLib extends BashFunLib<AzBashLib> {
         return this
     }
 
+    /* //DISABLED TILL WE UPGRADE TO azcopy-v10.16.0
     AzBashLib withOutputLevel(String value) {
         if (value)
             this.outputLevel = value
@@ -77,6 +78,7 @@ class AzBashLib extends BashFunLib<AzBashLib> {
             this.requestTryTimeout = value
         return this
     }
+    */
 
     // Custom env variables are prefixed with underscore(_)
     protected String setupAzCopyOpts() {
@@ -87,8 +89,6 @@ class AzBashLib extends BashFunLib<AzBashLib> {
         export _AZCOPY_PUT_MD5=${putMD5}
         export _AZCOPY_CHECK_MD5=${checkMD5}
         export _AZCOPY_OVERWRITE=${overwrite}
-        export _AZCOPY_OUTPUT_LEVEL=${outputLevel}
-        export AZCOPY_REQUEST_TRY_TIMEOUT=${requestTryTimeout}
         """.stripIndent()
     }
 
@@ -102,12 +102,12 @@ class AzBashLib extends BashFunLib<AzBashLib> {
 
             if [[ -d $name ]]; then
               if [[ "$base_name" == "$name" ]]; then
-                azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --output-level $_AZCOPY_OUTPUT_LEVEL --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
+                azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
               else
-                azcopy cp "$name" "$target/$dir_name?$AZ_SAS " --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --output-level $_AZCOPY_OUTPUT_LEVEL --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
+                azcopy cp "$name" "$target/$dir_name?$AZ_SAS " --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
               fi
             else
-              azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --output-level $_AZCOPY_OUTPUT_LEVEL --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
+              azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
             fi
         }
         
@@ -121,7 +121,7 @@ class AzBashLib extends BashFunLib<AzBashLib> {
             ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                 ## if fails check if it was trying to download a directory
                 mkdir -p $target
-                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive --output-level $_AZCOPY_OUTPUT_LEVEL --check-md5 $_AZCOPY_CHECK_MD5 --overwrite $_AZCOPY_OVERWRITE >/dev/null || {
+                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive --check-md5 $_AZCOPY_CHECK_MD5 --overwrite $_AZCOPY_OVERWRITE >/dev/null || {
                     rm -rf $target
                     >&2 echo "Unable to download path: $source"
                     exit 1
@@ -147,8 +147,6 @@ class AzBashLib extends BashFunLib<AzBashLib> {
                 .withPutMD5(opts.putMD5)
                 .withCheckMD5(opts.checkMD5)
                 .withOverwrite(opts.overwrite)
-                .withOutputLevel(opts.outputLevel)
-                .withRequestTryTimeout(opts.requestTryTimeout)
                 .render()
     }
 
