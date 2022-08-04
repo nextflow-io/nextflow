@@ -540,16 +540,20 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
         result.parameters.'nf-token' == 'bfd3cc19ee9bdaea5b7edee94adf04bc'
+        !result.containerProperties.logConfiguration
         !result.containerProperties.mountPoints
 
         when:
         result = handler.makeJobDefRequest(IMAGE)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
-        1 * handler.getAwsOptions() >> new AwsOptions(cliPath: '/home/conda/bin/aws')
+        1 * handler.getAwsOptions() >> new AwsOptions(cliPath: '/home/conda/bin/aws', logsGroup: '/aws/batch', region: 'us-east-1')
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
-        result.parameters.'nf-token' == '38d950a380585c53b43d733a10bae3b4'
+        result.parameters.'nf-token' == 'af124f8899bcfc8a02037599f59a969a'
+        result.containerProperties.logConfiguration.'LogDriver' == 'awslogs'
+        result.containerProperties.logConfiguration.'Options'.'awslogs-region' == 'us-east-1'
+        result.containerProperties.logConfiguration.'Options'.'awslogs-group' == '/aws/batch'
         result.containerProperties.mountPoints[0].sourceVolume == 'aws-cli'
         result.containerProperties.mountPoints[0].containerPath == '/home/conda'
         result.containerProperties.mountPoints[0].readOnly
