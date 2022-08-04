@@ -24,7 +24,7 @@ sourceSets {
     main.resources.srcDirs = ['src/resources']
     test.groovy.srcDirs = ['src/test']
     test.java.srcDirs = ['src/testResources']
-    test.resources.srcDirs = []
+    test.resources.srcDirs = ['src/testResources']
 }
 
 configurations {
