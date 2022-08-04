@@ -52,9 +52,8 @@ class AzCopyOpts {
     static public final String DEFAULT_OUTPUT_LEVEL = "quiet" // essential | quiet
     String outputLevel
 
-    //The azcopy default is true, which means upon `-resume` the data is uploaded again.
     //Overwrite the conflicting files and blobs at the destination if this flag is set to true. (azcopy default: true)
-    static public final String DEFAULT_OVERWRITE = "false" // true | false| prompt | ifSourceNewer
+    static public final String DEFAULT_OVERWRITE = "false" // true | false | prompt | ifSourceNewer
     String overwrite
 
     //The Azure Blob Storage service automatically computes MD5 sum for files less than 64 MB in size.

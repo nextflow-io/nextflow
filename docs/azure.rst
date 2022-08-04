@@ -353,6 +353,13 @@ The following configuration options are available:
 ============================================== =================
 Name                                           Description
 ============================================== =================
+azure.azcopy.blockSize                          The block size (in MiB) when uploading to Azure Storage, and downloading from Azure Storage (default: , requires ``nf-azure@0.13.1``).
+azure.azcopy.blobTier                           The blob tier to be used while uploading to Azure Storage (default: , requires ``nf-azure@0.13.1``).
+azure.azcopy.putMD5                             Create an MD5 hash of each file during upload, and save the md5sum hash as the Content-MD5 property of the destination blob or file. (default: false)
+azure.azcopy.checkMD5                           Specifies how strictly MD5 hashes should be validated when downloading data. (default 'FailIfDifferent')
+azure.azcopy.overwrite                          Overwrite the conflicting files and blobs at the destination if this flag is set to true. (default: "false")
+azure.azcopy.outputLevel                        Output verbosity level of ``azcopy`` (default: "quiet")
+azure.azcopy.requestTryTimeout                  Set time (in minutes) for how long ``azcopy`` should try to upload files for each request before timing out. (default: "4")
 azure.storage.accountName                       The blob storage account name
 azure.storage.accountKey                        The blob storage account key
 azure.storage.sasToken                          The blob storage shared access signature token. This can be provided as an alternative to the ``accountKey`` setting.
@@ -365,7 +372,7 @@ azure.batch.autoPoolMode                        Enable the automatic creation of
 azure.batch.allowPoolCreation                   Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: ``false``).
 azure.batch.deleteJobsOnCompletion              Enable the automatic deletion of jobs created by the pipeline execution (default: ``true``).
 azure.batch.deletePoolsOnCompletion             Enable the automatic deletion of compute node pools upon pipeline completion (default: ``false``).
-azure.batch.copyToolInstallMode                 Specify where the `azcopy` tool used by Nextflow. When ``node`` is specified it's copied once during the pool creation. When ``task`` is provider, it's installed for each task execution (default: ``node``).
+azure.batch.copyToolInstallMode                 Specify where the ``azcopy`` tool used by Nextflow. When ``node`` is specified it's copied once during the pool creation. When ``task`` is provider, it's installed for each task execution (default: ``node``).
 azure.batch.pools.<name>.publisher              Specify the publisher of virtual machine type used by the pool identified with ``<name>`` (default: ``microsoft-azure-batch``, requires ``nf-azure@0.11.0``).
 azure.batch.pools.<name>.offer                  Specify the offer type of the virtual machine type used by the pool identified with ``<name>`` (default: ``centos-container``, requires ``nf-azure@0.11.0``).
 azure.batch.pools.<name>.sku                    Specify the ID of the Compute Node agent SKU which the pool identified with ``<name>`` supports (default: ``batch.node.centos 8``, requires ``nf-azure@0.11.0``).
