@@ -55,7 +55,7 @@ nxf_parallel() {
 
 # Env variables used for azcopy opts
 export _AZCOPY_BLOCK_SIZE_MB=10
-export _AZCOPY_BLOCK_BLOB_TIER=None
+export _AZCOPY_BLOCK_BLOB_TIER=Hot
 export _AZCOPY_PUT_MD5=--put-md5
 export _AZCOPY_CHECK_MD5=FailIfDifferent
 export _AZCOPY_OVERWRITE=false

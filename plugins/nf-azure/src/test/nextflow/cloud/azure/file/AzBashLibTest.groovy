@@ -167,10 +167,10 @@ class AzBashLibTest extends Specification {
 
         when:
         def output = AzBashLib.script(new AzCopyOpts([
-                blobTier: "Hot",
+                blobTier : "Hot",
                 blockSize: "10",
-                putMD5: true,
-                checkMD5: "FailIfDifferent",
+                putMD5   : true,
+                checkMD5 : "FailIfDifferent",
                 overwrite: false]), 10, 20, Duration.of('30s'))
 
         then:

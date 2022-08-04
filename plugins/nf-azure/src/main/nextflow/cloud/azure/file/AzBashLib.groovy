@@ -104,7 +104,7 @@ class AzBashLib extends BashFunLib<AzBashLib> {
               if [[ "$base_name" == "$name" ]]; then
                 azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
               else
-                azcopy cp "$name" "$target/$dir_name?$AZ_SAS " --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
+                azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
               fi
             else
               azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $_AZCOPY_BLOCK_BLOB_TIER --block-size-mb $_AZCOPY_BLOCK_SIZE_MB --overwrite $_AZCOPY_OVERWRITE $_AZCOPY_PUT_MD5
