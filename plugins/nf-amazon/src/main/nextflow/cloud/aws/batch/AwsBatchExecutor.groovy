@@ -185,12 +185,14 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
 
         final pollInterval = session.getPollInterval(name, Duration.of('10 sec'))
         final dumpInterval = session.getMonitorDumpInterval(name)
+        final capacity = session.getQueueSize(name, 1000)
 
         final def params = [
                 name: name,
                 session: session,
                 pollInterval: pollInterval,
-                dumpInterval: dumpInterval
+                dumpInterval: dumpInterval,
+                capacity: capacity
         ]
 
         log.debug "Creating parallel monitor for executor '$name' > pollInterval=$pollInterval; dumpInterval=$dumpInterval"
@@ -217,7 +219,8 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
      */
     private ThrottlingExecutor createExecutorService(String name) {
 
-        final qs = session.getQueueSize(name, 5_000)
+        // queue size can be overridden by submitter options below
+        final qs = 5_000
         final limit = session.getExecConfigProp(name,'submitRateLimit','50/s') as String
         final size = Runtime.runtime.availableProcessors() * 5
 
