@@ -72,6 +72,12 @@ class AzBashLib extends BashFunLib<AzBashLib> {
         return this
     }
 
+    AzBashLib withRequestTryTimeout(String value) {
+        if (value)
+            this.requestTryTimeout = value
+        return this
+    }
+
     // Custom env variables are prefixed with underscore(_)
     protected String setupAzCopyOpts() {
         """
@@ -142,7 +148,7 @@ class AzBashLib extends BashFunLib<AzBashLib> {
                 .withCheckMD5(opts.checkMD5)
                 .withOverwrite(opts.overwrite)
                 .withOutputLevel(opts.outputLevel)
-                .withOutputLevel(opts.requestTryTimeout)
+                .withRequestTryTimeout(opts.requestTryTimeout)
                 .render()
     }
 
