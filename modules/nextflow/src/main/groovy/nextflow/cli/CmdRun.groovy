@@ -306,6 +306,9 @@ class CmdRun extends CmdBase implements HubOptions {
         // check DSL syntax in the config
         launchInfo(config, scriptFile)
 
+        // check if NXF_ variables are set in nextflow.config
+        checkConfigEnv(config)
+
         // -- load plugins
         final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
         Plugins.load(cfg)
@@ -346,6 +349,17 @@ class CmdRun extends CmdBase implements HubOptions {
 
         // -- run it!
         runner.execute(scriptArgs, this.entryName)
+    }
+
+    protected checkConfigEnv(ConfigMap config) {
+        // Warn about setting NXF_ environment variables within env config scope
+        final env = config.env as Map<String, String>
+        for( String name : env.keySet() ) {
+            if( name.startsWith('NXF_') && name!='NXF_DEBUG' ) {
+                final msg = "Nextflow variables must be defined in the launching environment - The following variable set in the config file is going to be ignored: '$name'"
+                log.warn(msg)
+            }
+        }
     }
 
     protected void launchInfo(ConfigMap config, ScriptFile scriptFile) {
