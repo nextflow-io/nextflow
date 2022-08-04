@@ -219,7 +219,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
      */
     private ThrottlingExecutor createExecutorService(String name) {
 
-        final qs = session.getQueueSize(name, 5_000)
+        final qs = session.config.navigate("threadPool.${name}.maxQueueSize",5_000) as Integer
         final limit = session.getExecConfigProp(name,'submitRateLimit','50/s') as String
         final size = Runtime.runtime.availableProcessors() * 5
 
