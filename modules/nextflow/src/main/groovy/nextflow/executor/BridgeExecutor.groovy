@@ -32,8 +32,7 @@ import nextflow.processor.TaskRun
 @Slf4j
 class BridgeExecutor extends AbstractGridExecutor {
 
-    // code for slurm : static private Pattern SUBMIT_REGEX = ~/Submitted batch job (\d+)/
-    //  message following ccc_msub : Submitted Batch Session 1277017
+    //  submission pattern example: Submitted Batch Session 1277017
     static private Pattern SUBMIT_REGEX = ~/Submitted Batch Session (\d+)/
 
     /**
@@ -52,8 +51,7 @@ class BridgeExecutor extends AbstractGridExecutor {
         job_name = job_name.replace(")", "")
 
         result << '-r' << job_name 
-        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))     // -o OUTFILE and no -e option => stdout and stderr merged to stdout/OUTFILE
-        //result << '--no-requeue' << '' // note: directive need to be returned as pairs
+        result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG)) 
 
         if( task.config.cpus > 1 ) {
             result << '-c' << task.config.cpus.toString()
@@ -114,7 +112,6 @@ class BridgeExecutor extends AbstractGridExecutor {
             }
         }
 
-        // customised `sbatch` command can return only the jobid
         def id = text.trim()
         if( id.isLong() )
             return id
@@ -143,8 +140,7 @@ class BridgeExecutor extends AbstractGridExecutor {
     }
 
     /*
-     *  Maps SLURM job status to nextflow status
-     *  see http://slurm.schedmd.com/squeue.html#SECTION_JOB-STATE-CODES
+     *  Maps job status to nextflow status
      */
     static private Map STATUS_MAP = [
             'PD': QueueStatus.PENDING,  // (pending)
