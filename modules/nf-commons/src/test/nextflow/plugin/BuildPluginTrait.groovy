@@ -25,7 +25,7 @@ trait BuildPluginTrait {
         def manager = new LocalPluginManager(cacheDir)
         Plugins.INSTANCE.manager = manager
         def updater = new PluginUpdater(manager, cacheDir, new URL("file:${repoDir.resolve('plugins.json')}"))
-        updater.installPlugin( 'nf-plugin-template', '0.0.0' )
+        updater.installPlugin( name, version )
 
         NextflowMeta.instance.strictMode(true)
 
