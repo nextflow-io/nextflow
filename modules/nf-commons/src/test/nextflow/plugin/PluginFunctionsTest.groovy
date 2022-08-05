@@ -1,6 +1,5 @@
 package nextflow.plugin
 
-import com.sun.net.httpserver.HttpServer
 import nextflow.Channel
 import nextflow.NextflowMeta
 import nextflow.exception.DuplicateModuleFunctionException
@@ -10,45 +9,40 @@ import test.Dsl2Spec
 import test.MockScriptRunner
 
 import java.nio.file.Files
+import java.nio.file.Path
+
 
 /**
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
  */
-class PluginFunctionsTest extends Dsl2Spec {
+class PluginFunctionsTest extends Dsl2Spec implements BuildPluginTrait{
+
+    def folder
+
+    def setup() {
+        folder = buildPlugin( 'nf-plugin-template', '0.0.0', Path.of('../nf-plugin-template/build').toAbsolutePath())
+    }
+
+    def cleanup() {
+        folder?.deleteDir()
+        ChannelExtensionProvider.reset()
+        Plugins.stop()
+    }
+
 
     def 'should execute custom functions'() {
         given:
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
-        server.createContext("/", new FakeIndexHandler());
-        server.start()
-
-        and:
-        def folder = Files.createTempDirectory('test')
-        Plugins.INSTANCE.mode = 'prod'
-        Plugins.INSTANCE.root = folder
-        Plugins.INSTANCE.env = [:]
-        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
-
-        and:
         def SCRIPT = folder.resolve('main.nf')
 
         SCRIPT.text = SCRIPT_TEXT
 
         when:
-        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
-
         def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
         result.val == EXPECTED
         result.val == Channel.STOP
-
-        cleanup:
-        folder?.deleteDir()
-        server?.stop(0)
-        ChannelExtensionProvider.reset()
-        Plugins.stop()
 
         where:
         SCRIPT_TEXT                                                                           | EXPECTED
@@ -60,18 +54,6 @@ class PluginFunctionsTest extends Dsl2Spec {
 
     def 'should throw function not found'() {
         given:
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
-        server.createContext("/", new FakeIndexHandler());
-        server.start()
-
-        and:
-        def folder = Files.createTempDirectory('test')
-        Plugins.INSTANCE.mode = 'prod'
-        Plugins.INSTANCE.root = folder
-        Plugins.INSTANCE.env = [:]
-        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
-
-        and:
         def SCRIPT = folder.resolve('main.nf')
 
         SCRIPT.text = '''
@@ -81,34 +63,14 @@ class PluginFunctionsTest extends Dsl2Spec {
         '''
 
         when:
-        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
-
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
         thrown(IllegalStateException)
-
-        cleanup:
-        folder?.deleteDir()
-        server?.stop(0)
-        ChannelExtensionProvider.reset()
-        Plugins.stop()
     }
 
     def 'should not allow to include an existing function'() {
         given:
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
-        server.createContext("/", new FakeIndexHandler());
-        server.start()
-
-        and:
-        def folder = Files.createTempDirectory('test')
-        Plugins.INSTANCE.mode = 'prod'
-        Plugins.INSTANCE.root = folder
-        Plugins.INSTANCE.env = [:]
-        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
-
-        and:
         def SCRIPT = folder.resolve('main.nf')
 
         SCRIPT.text = '''
@@ -120,35 +82,14 @@ class PluginFunctionsTest extends Dsl2Spec {
         '''
 
         when:
-        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
-
-        NextflowMeta.instance.strictMode(true)
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
         thrown(DuplicateModuleFunctionException)
-
-        cleanup:
-        folder?.deleteDir()
-        server?.stop(0)
-        ChannelExtensionProvider.reset()
-        Plugins.stop()
     }
 
     def 'should allows to include an existing function but as alias'() {
         given:
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
-        server.createContext("/", new FakeIndexHandler());
-        server.start()
-
-        and:
-        def folder = Files.createTempDirectory('test')
-        Plugins.INSTANCE.mode = 'prod'
-        Plugins.INSTANCE.root = folder
-        Plugins.INSTANCE.env = [:]
-        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
-
-        and:
         def SCRIPT = folder.resolve('main.nf')
 
         SCRIPT.text = '''
@@ -160,36 +101,15 @@ class PluginFunctionsTest extends Dsl2Spec {
         '''
 
         when:
-        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
-
-        NextflowMeta.instance.strictMode(true)
         def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
         result.val == 'hi'
         result.val == Channel.STOP
-
-        cleanup:
-        folder?.deleteDir()
-        server?.stop(0)
-        ChannelExtensionProvider.reset()
-        Plugins.stop()
     }
 
     def 'should not include a non annotated function'() {
         given:
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
-        server.createContext("/", new FakeIndexHandler());
-        server.start()
-
-        and:
-        def folder = Files.createTempDirectory('test')
-        Plugins.INSTANCE.mode = 'prod'
-        Plugins.INSTANCE.root = folder
-        Plugins.INSTANCE.env = [:]
-        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
-
-        and:
         def SCRIPT = folder.resolve('main.nf')
 
         SCRIPT.text = '''      
@@ -199,35 +119,14 @@ class PluginFunctionsTest extends Dsl2Spec {
         '''
 
         when:
-        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
-
-        NextflowMeta.instance.strictMode(true)
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
         thrown(IllegalStateException)
-
-        cleanup:
-        folder?.deleteDir()
-        server?.stop(0)
-        ChannelExtensionProvider.reset()
-        Plugins.stop()
     }
 
     def 'should execute a function in a module'() {
         given:
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
-        server.createContext("/", new FakeIndexHandler());
-        server.start()
-
-        and:
-        def folder = Files.createTempDirectory('test')
-        Plugins.INSTANCE.mode = 'prod'
-        Plugins.INSTANCE.root = folder
-        Plugins.INSTANCE.env = [:]
-        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
-
-        and:
         def SCRIPT = folder.resolve('main.nf')
         def MODULE = folder.resolve('module.nf')
 
@@ -257,35 +156,14 @@ class PluginFunctionsTest extends Dsl2Spec {
         '''
 
         when:
-        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
-
-        NextflowMeta.instance.strictMode(true)
         def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
         result.val == 'hi'
-
-        cleanup:
-        folder?.deleteDir()
-        server?.stop(0)
-        ChannelExtensionProvider.reset()
-        Plugins.stop()
     }
 
     def 'should execute a function in two modules'() {
         given:
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
-        server.createContext("/", new FakeIndexHandler());
-        server.start()
-
-        and:
-        def folder = Files.createTempDirectory('test')
-        Plugins.INSTANCE.mode = 'prod'
-        Plugins.INSTANCE.root = folder
-        Plugins.INSTANCE.env = [:]
-        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
-
-        and:
         def SCRIPT = folder.resolve('main.nf')
         def MODULE1 = folder.resolve('module1.nf')
         def MODULE2 = folder.resolve('module2.nf')
@@ -333,53 +211,24 @@ class PluginFunctionsTest extends Dsl2Spec {
         '''
 
         when:
-        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
-
-        NextflowMeta.instance.strictMode(true)
         def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
         result.val == 'hola'
-
-        cleanup:
-        folder?.deleteDir()
-        server?.stop(0)
-        ChannelExtensionProvider.reset()
-        Plugins.stop()
     }
 
     def 'should execute custom functions and channel extension at the same time'() {
         given:
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
-        server.createContext("/", new FakeIndexHandler());
-        server.start()
-
-        and:
-        def folder = Files.createTempDirectory('test')
-        Plugins.INSTANCE.mode = 'prod'
-        Plugins.INSTANCE.root = folder
-        Plugins.INSTANCE.env = [:]
-        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
-
-        and:
         def SCRIPT = folder.resolve('main.nf')
 
         SCRIPT.text = SCRIPT_TEXT
 
         when:
-        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
-
         def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
         result.val == EXPECTED
         result.val == Channel.STOP
-
-        cleanup:
-        folder?.deleteDir()
-        server?.stop(0)
-        ChannelExtensionProvider.reset()
-        Plugins.stop()
 
         where:
         SCRIPT_TEXT                                                                                           | EXPECTED
@@ -389,18 +238,6 @@ class PluginFunctionsTest extends Dsl2Spec {
 
     def 'should not allow a function with the same name as a process'() {
         given:
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
-        server.createContext("/", new FakeIndexHandler());
-        server.start()
-
-        and:
-        def folder = Files.createTempDirectory('test')
-        Plugins.INSTANCE.mode = 'prod'
-        Plugins.INSTANCE.root = folder
-        Plugins.INSTANCE.env = [:]
-        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
-
-        and:
         def SCRIPT = folder.resolve('main.nf')
 
         SCRIPT.text = """
@@ -425,34 +262,14 @@ class PluginFunctionsTest extends Dsl2Spec {
         """.stripIndent()
 
         when:
-        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
-        NextflowMeta.instance.strictMode(true)
         new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
         thrown(DuplicateModuleFunctionException)
-
-        cleanup:
-        folder?.deleteDir()
-        server?.stop(0)
-        ChannelExtensionProvider.reset()
-        Plugins.stop()
     }
 
     def 'should not allow a function and a process with the same from other module'() {
         given:
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
-        server.createContext("/", new FakeIndexHandler());
-        server.start()
-
-        and:
-        def folder = Files.createTempDirectory('test')
-        Plugins.INSTANCE.mode = 'prod'
-        Plugins.INSTANCE.root = folder
-        Plugins.INSTANCE.env = [:]
-        Plugins.INSTANCE.indexUrl = 'http://localhost:9900/plugins.json'
-
-        and:
         def SCRIPT = folder.resolve('main.nf')
         def MODULE1 = folder.resolve('module1.nf')
 
@@ -491,18 +308,11 @@ class PluginFunctionsTest extends Dsl2Spec {
         """.stripIndent()
 
         when:
-        Plugins.setup([plugins: ['nf-plugin-template@0.0.0']])
-        NextflowMeta.instance.strictMode(true)
         new MockScriptRunner([:]).setScript(SCRIPT).execute()
 
         then:
         thrown(DuplicateModuleFunctionException)
 
-        cleanup:
-        folder?.deleteDir()
-        server?.stop(0)
-        ChannelExtensionProvider.reset()
-        Plugins.stop()
     }
 
 }
