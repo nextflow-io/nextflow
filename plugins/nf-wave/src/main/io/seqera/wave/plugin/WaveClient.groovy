@@ -26,6 +26,7 @@ import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 import java.time.Duration
 import java.util.concurrent.Callable
+import java.util.concurrent.TimeUnit
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
@@ -59,15 +60,18 @@ class WaveClient {
 
     final private String endpoint
 
-    private Cache<String, SubmitContainerTokenResponse> cache = CacheBuilder<String, SubmitContainerTokenResponse>
-            .newBuilder()
-            .build()
-
+    private Cache<String, SubmitContainerTokenResponse> cache
 
     WaveClient(Session session) {
         this.config = new WaveConfig(session.config.wave as Map ?: [:])
         this.endpoint = config.endpoint()
         log.debug "Wave server endpoint: ${endpoint}"
+        // create cache
+        cache = CacheBuilder<String, SubmitContainerTokenResponse>
+            .newBuilder()
+            .expireAfterWrite(config.tokensCacheMaxDuration().toSeconds(), TimeUnit.SECONDS)
+            .build()
+        // create http client
         this.httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NORMAL)
