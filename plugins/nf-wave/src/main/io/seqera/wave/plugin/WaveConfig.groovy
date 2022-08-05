@@ -18,6 +18,7 @@
 package io.seqera.wave.plugin
 
 import groovy.transform.CompileStatic
+import nextflow.util.Duration
 
 /**
  * Model Wave client configuration
@@ -30,16 +31,20 @@ class WaveConfig {
     final private Boolean enabled
     final private String endpoint
     final private String containerConfigUrl
+    final private Duration tokensCacheMaxDuration
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
         this.containerConfigUrl = (opts.containerConfigUrl?.toString() ?: env.get('WAVE_CONTAINER_CONFIG_URL'))?.stripEnd('/')
+        this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '15m') as Duration
     }
 
     Boolean enabled() { this.enabled }
 
     String endpoint() { this.endpoint }
+
+    Duration tokensCacheMaxDuration() { return tokensCacheMaxDuration }
 
     URL containerConfigUrl() {
         this.containerConfigUrl ? new URL(this.containerConfigUrl) : null
