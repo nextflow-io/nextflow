@@ -3,7 +3,6 @@ package nextflow.plugin
 import com.sun.net.httpserver.Headers
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
-import org.apache.commons.codec.digest.DigestUtils
 
 /**
  *
@@ -11,7 +10,7 @@ import org.apache.commons.codec.digest.DigestUtils
  */
 class FakeIndexHandler implements HttpHandler {
 
-    String PLUGINS = """
+    String PLUGINS = '''
         [
           {
             "id": "nf-console",
@@ -23,15 +22,15 @@ class FakeIndexHandler implements HttpHandler {
                 "sha512sum": "5875f1fd4c24ab9ecded06fa43a5b87b4e45f70085fe5c8f740da66b318ef3b45005b3dd9a15e69fff20bde52b4d42db8d25163ac49878f64d784d717102f295"
               }
             ]
-          },          
+          },
           {
-            "id": "nf-plugin-template",
+            "id": "nf-hello",
             "releases": [
               {
-                "version": "0.0.0",
-                "url": "http://localhost:9900/download/1.0.0/nf-plugin-template-0.0.0.zip",
+                "version": "0.2.0",
+                "url": "http://localhost:9900/download/1.0.0/nf-hello-0.2.0.zip",
                 "date": "2021-01-04T17:49:04.62+01:00",
-                "sha512sum": "${DigestUtils.sha512Hex(new File('../nf-plugin-template/build/libs/nf-plugin-template-0.0.0.zip').bytes)}"
+                "sha512sum": "c29fb06f785becc15117fc0587d8f50a313b92f07604a4770f1db9bf55f67a2c544a70588cf93fc1738cdaa43bb083ef9dfbf60e8dc1a7c2fdbce47cbb474441"
               }
             ]
           },
@@ -69,11 +68,10 @@ class FakeIndexHandler implements HttpHandler {
             ]
           }
         ]
-    """
+'''
 
-    File[] files = [
-            new File('src/testResources/nf-console-1.0.0.zip'),
-            new File('../nf-plugin-template/build/libs/nf-plugin-template-0.0.0.zip')  ]
+    File zip = new File('src/testResources/nf-console-1.0.0.zip')
+    File zip2 = new File('src/testResources/nf-hello-0.2.0.zip')
 
     @Override
     void handle(HttpExchange request) throws IOException {
@@ -82,8 +80,11 @@ class FakeIndexHandler implements HttpHandler {
         if( path.endsWith('plugins.json') ) {
             replyWithJson(request, PLUGINS)
         }
-        else if( files.find{ path.endsWith(it.name) }) {
-            replyWithZip(request, files.find{ path.endsWith(it.name) })
+        else if( path.endsWith(zip.name)) {
+            replyWithZip(request, zip)
+        }
+        else if( path.endsWith(zip2.name)) {
+            replyWithZip(request, zip2)
         }
         else {
             new IllegalArgumentException("Invalid request: $path")
