@@ -18,6 +18,7 @@
 package io.seqera.wave.plugin
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -61,4 +62,23 @@ class WaveConfigTest extends Specification {
         opts.enabled()
         opts.endpoint() == 'http://localhost/v1'
     }
+
+    @Unroll
+    def 'should add config urls'  () {
+        when:
+        def opts = new WaveConfig(OPTS, ENV)
+        then:
+        opts.containerConfigUrl() == EXPECTED
+
+        where:
+        OPTS                                                        | ENV                                                   | EXPECTED
+        [:]                                                         | [:]                                                   | []
+        [containerConfigUrl: 'http://foo.com']                      | [:]                                                   | [ new URL('http://foo.com')]
+        [containerConfigUrl: 'http://foo.com']                      | [WAVE_CONTAINER_CONFIG_URL:'http://something.com']    | [ new URL('http://foo.com')]
+        [:]                                                         | [WAVE_CONTAINER_CONFIG_URL:'http://something.com']    | [ new URL('http://something.com')]
+        [containerConfigUrl: ['http://foo.com','https://bar.com']]  | [:]                                                   | [ new URL('http://foo.com'), new URL('https://bar.com')]
+        [containerConfigUrl: ['http://foo.com','https://bar.com']]  | [WAVE_CONTAINER_CONFIG_URL:'http://boo.com']          | [ new URL('http://foo.com'), new URL('https://bar.com')]
+
+    }
+
 }
