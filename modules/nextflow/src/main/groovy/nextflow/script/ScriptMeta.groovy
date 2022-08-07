@@ -27,10 +27,8 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.exception.DuplicateModuleFunctionException
-import nextflow.exception.DuplicateModuleIncludeException
 import nextflow.exception.MissingModuleComponentException
 import nextflow.script.bundle.ModuleBundle
-
 /**
  * Holds a nextflow script meta-data such as the
  * defines processes and workflows, the included modules
@@ -144,20 +142,21 @@ class ScriptMeta {
         }
     }
 
-    void validateComponent(ComponentDef component, String name){
-        if( component instanceof ProcessDef || component instanceof FunctionDef) {
-            if (functionsCount.get(component.name)) {
-                final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
-                log.warn(msg)
-                if (NF.isStrictMode())
-                    throw new DuplicateModuleFunctionException(msg)
-            }
-            if (imports.get(component.name)) {
-                final msg = "A process with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
-                log.warn(msg)
-                if (NF.isStrictMode())
-                    throw new DuplicateModuleFunctionException(msg)
-            }
+    void checkComponentName(ComponentDef component, String name) {
+        if( component !instanceof ProcessDef && component !instanceof FunctionDef ) {
+            return
+        }
+        if (functionsCount.get(component.name)) {
+            final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
+            if (NF.isStrictMode())
+                throw new DuplicateModuleFunctionException(msg)
+            log.warn(msg)
+        }
+        if (imports.get(component.name)) {
+            final msg = "A process with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
+            if (NF.isStrictMode())
+                throw new DuplicateModuleFunctionException(msg)
+            log.warn(msg)
         }
     }
 
@@ -207,7 +206,7 @@ class ScriptMeta {
         final name = component.name
         if( !module && NF.hasOperator(name) )
             log.warn "${component.type.capitalize()} with name '$name' overrides a built-in operator with the same name"
-        validateComponent(component, name)
+        checkComponentName(component, name)
         definitions.put(component.name, component)
         if( component instanceof FunctionDef ){
             incFunctionCount(name)
@@ -319,7 +318,7 @@ class ScriptMeta {
         assert component
 
         final name = alias ?: component.name
-        validateComponent(component, name)
+        checkComponentName(component, name)
         if( name != component.name ) {
             imports.put(name, component.cloneWithName(name))
         }
