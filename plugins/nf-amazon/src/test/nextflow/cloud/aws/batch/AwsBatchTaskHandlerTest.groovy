@@ -35,10 +35,13 @@ import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
+import com.upplication.s3fs.S3Path
+import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
+import nextflow.executor.fusion.FusionScriptLauncher
 import nextflow.processor.BatchContext
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -542,7 +545,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.parameters.'nf-token' == 'bfd3cc19ee9bdaea5b7edee94adf04bc'
         !result.containerProperties.logConfiguration
         !result.containerProperties.mountPoints
-
+        !result.containerProperties.privileged
+        
         when:
         result = handler.makeJobDefRequest(IMAGE)
         then:
@@ -559,6 +563,27 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.mountPoints[0].readOnly
         result.containerProperties.volumes[0].host.sourcePath == '/home/conda'
         result.containerProperties.volumes[0].name == 'aws-cli'
+
+    }
+
+    def 'should create a job definition request object for fusion' () {
+        given:
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def handler = Spy(new AwsBatchTaskHandler(fusionEnabled: true)) {
+            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+        }
+        handler.@executor = Mock(AwsBatchExecutor) {}
+
+        when:
+        def result = handler.makeJobDefRequest(IMAGE)
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> new AwsOptions()
+        result.jobDefinitionName == JOB_NAME
+        result.type == 'container'
+        result.parameters.'nf-token' == '9da434654d8c698f87da973625f57489'
+        result.containerProperties.privileged
 
     }
 
@@ -818,6 +843,20 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug .command.log s3://work/log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug s3://work/run - | bash 2>&1 | tee .command.log'
 
+    }
+
+    def 'get fusion submit command' () {
+        given:
+        def launcher = new FusionScriptLauncher(type: S3Path)
+        def handler = Spy(new AwsBatchTaskHandler(fusionEnabled: true, fusionLauncher: launcher))
+
+        when:
+        def result =  handler.getSubmitCommand()
+        then:
+        handler.getLogFile() >> S3PathFactory.parse('s3://foo/command.log')
+        handler.getWrapperFile() >> S3PathFactory.parse('s3://foo/command.run')
+        and:
+        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; cp .command.log /fusion/s3/foo/command.log||true; exit $ret; }" EXIT; bash /fusion/s3/foo/command.run 2>&1 | tee .command.log'
     }
 
 }
