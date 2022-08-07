@@ -35,7 +35,7 @@ class HelloDslTest extends Specification{
         def ext = new PluginExtensionProvider(){
             def loadForTest(){
                 install()
-                loadPluginExtensionMethods("", new HelloExtension(), [reverse:'reverse', goodbye:'goodbye'])
+                loadPluginExtensionMethods("nf-foo", new HelloExtension(), [reverse:'reverse', goodbye:'goodbye'])
             }
         }
         ext.loadForTest()

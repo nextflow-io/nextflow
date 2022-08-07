@@ -82,7 +82,9 @@ class ChannelFactoryInstanceTest extends Specification {
     def 'should invoke custom plugin factory' () {
         given:
         def ext1 = new Ext1(); def ext2 = new Ext2()
-        new PluginExtensionProvider().install().loadPluginExtensionMethods("",ext1, ['alpha':'alpha'])
+        new PluginExtensionProvider()
+                .install()
+                .loadPluginExtensionMethods("nf-foo",ext1, ['alpha':'alpha'])
         and:
         def SCRIPT = '''
         Channel.alpha(['one','two','three'])
@@ -110,7 +112,9 @@ class ChannelFactoryInstanceTest extends Specification {
     def 'should invoke alias in custom plugin factory' () {
         given:
         def ext1 = new Ext1(); def ext2 = new Ext2()
-        new PluginExtensionProvider().install().loadPluginExtensionMethods("",ext1, ['alpha':'thisIsAnAliasToAlpha'])
+        new PluginExtensionProvider()
+                .install()
+                .loadPluginExtensionMethods("nf-foo",ext1, ['alpha':'thisIsAnAliasToAlpha'])
         and:
         def SCRIPT = '''
         Channel.thisIsAnAliasToAlpha(['one','two','three'])
@@ -140,8 +144,8 @@ class ChannelFactoryInstanceTest extends Specification {
         def ext1 = new Ext1(); def ext2 = new Ext2()
         new PluginExtensionProvider()
                 .install()
-                .loadPluginExtensionMethods("",ext1, ['alpha':'alpha'])
-                .loadPluginExtensionMethods("",ext2, ['omega':'omega'])
+                .loadPluginExtensionMethods("nf-foo",ext1, ['alpha':'alpha'])
+                .loadPluginExtensionMethods("nf-foo",ext2, ['omega':'omega'])
         and:
         def SCRIPT = '''
             def ch1 = channel.alpha([1,2,3])
@@ -180,7 +184,9 @@ class ChannelFactoryInstanceTest extends Specification {
     def 'should invoke operator extension' () {
         given:
         def ext1 = new Ext1();
-        new PluginExtensionProvider().install().loadPluginExtensionMethods("",ext1, ['plusOne':'plusOne'])
+        new PluginExtensionProvider()
+                .install()
+                .loadPluginExtensionMethods("nf-foo",ext1, ['plusOne':'plusOne'])
         and:
         def SCRIPT = '''
             channel
