@@ -33,7 +33,7 @@ import nextflow.NF
 import nextflow.Session
 import static nextflow.extension.DataflowHelper.newChannelBy
 /**
- * Implements the {@link OperatorEx#into} operators logic
+ * Implements the {@link OperatorImpl#into} operators logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

@@ -38,3 +38,4 @@ dependencies {
     testImplementation(testFixtures(project(":nextflow")))
     testFixturesImplementation(project(":nextflow"))
 }
+

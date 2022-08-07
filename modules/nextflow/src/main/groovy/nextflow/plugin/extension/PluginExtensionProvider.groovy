@@ -30,7 +30,7 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.extension.OpCall
-import nextflow.extension.OperatorEx
+import nextflow.extension.OperatorImpl
 import nextflow.plugin.Plugins
 import nextflow.script.ChannelOut
 import nextflow.script.FunctionDef
@@ -91,9 +91,9 @@ class PluginExtensionProvider implements ExtensionProvider {
      * @return The set of operator names
      */
     private Set<String> loadDefaultOperators() {
-        final result = getDeclaredOperatorExtensionMethods0(OperatorEx.class, true)
+        final result = getDeclaredOperatorExtensionMethods0(OperatorImpl.class, true)
         for( String it : result )
-            operatorExtensions.put(it, new PluginExtensionMethod(method: it, target: OperatorEx.instance))
+            operatorExtensions.put(it, new PluginExtensionMethod(method: it, target: OperatorImpl.instance))
         return result
     }
 
@@ -129,7 +129,7 @@ class PluginExtensionProvider implements ExtensionProvider {
             String aliasName = entry.value
             // check if it has already been included
             final existing = operatorExtensions.get(aliasName)
-            if (existing.is(OperatorEx.instance)) {
+            if (existing.is(OperatorImpl.instance)) {
                 throw new IllegalStateException("Operator '$realName' is already defined as a built-in operator - Offending plugin '$pluginId'")
             }
             else if (existing != null) {
