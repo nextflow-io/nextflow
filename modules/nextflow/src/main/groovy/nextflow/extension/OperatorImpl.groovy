@@ -55,9 +55,9 @@ import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
  */
 
 @Slf4j
-class OperatorEx  {
+class OperatorImpl {
 
-    static final public OperatorEx instance = new OperatorEx()
+    static final public OperatorImpl instance = new OperatorImpl()
 
     private static Session getSession() { Global.getSession() as Session }
 
@@ -812,7 +812,7 @@ class OperatorEx  {
 
             @Override
             boolean onException(final DataflowProcessor processor, final Throwable e) {
-                OperatorEx.log.error("@unknown", e)
+                OperatorImpl.log.error("@unknown", e)
                 session.abort(e)
                 return true;
             }
@@ -863,7 +863,7 @@ class OperatorEx  {
                 }
 
                 boolean onException(final DataflowProcessor processor, final Throwable e) {
-                    OperatorEx.log.error("@unknown", e)
+                    OperatorImpl.log.error("@unknown", e)
                     session.abort(e)
                     return true;
                 }
@@ -976,7 +976,7 @@ class OperatorEx  {
 
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
-                OperatorEx.log.error("@unknown", e)
+                OperatorImpl.log.error("@unknown", e)
                 session.abort(e)
                 return true
             }
