@@ -217,8 +217,8 @@ class PluginExtensionProvider implements ExtensionProvider {
             if( Modifier.isStatic(handle.getModifiers()) ) continue
             // factory extension method must have a dataflow write channel type as return
             final params=handle.getParameterTypes()
-            def returnType = handle.getReturnType()
-            if( isWriteChannel(returnType) && !isReadChannel(params[0]) ) {
+            final returnType = handle.getReturnType()
+            if( isWriteChannel(returnType) && (!params || !isReadChannel(params[0])) ) {
                 log.warn("Factory extension '$handle.name' in `$clazz.name` should be marked with the '@Factory' annotation")
                 result.add(handle.name)
             }
