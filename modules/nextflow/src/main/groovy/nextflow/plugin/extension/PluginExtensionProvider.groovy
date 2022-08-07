@@ -127,26 +127,23 @@ class PluginExtensionProvider implements ExtensionProvider {
         for( Map.Entry<String,String> entry : includedNames ) {
             String realName = entry.key
             String aliasName = entry.value
-            final reference = operatorExtensions.get(aliasName)
-            if( reference ){
-                throw new IllegalStateException("Operator '$aliasName' conflict - it's defined by plugin ${pluginId}")
-            }
-            Object existing = operatorExtensions.get(aliasName)
+            // check if it has already been included
+            final existing = operatorExtensions.get(aliasName)
             if (existing.is(OperatorEx.instance)) {
-                throw new IllegalStateException("Operator '$realName' is already defined as a built-in operator - Offending plugin class: $ext")
+                throw new IllegalStateException("Operator '$realName' is already defined as a built-in operator - Offending plugin '$pluginId'")
             }
             else if (existing != null) {
                 if( existing.getClass().getName() != ext.getClass().getName() ) {
-                    throw new IllegalStateException("Operator '$realName' conflict - it's defined by plugin ${pluginId} and ${ext.getClass().getName()}")
+                    throw new IllegalStateException("Operator '$realName' conflict - it's defined by plugin ${pluginId} and ${existing.pluginId}")
                 }
             }
             if( definedOperators.contains(realName) ) {
                 OPERATOR_NAMES = Collections.unmodifiableSet(OPERATOR_NAMES + [aliasName])
-                operatorExtensions.put(aliasName, new PluginExtensionMethod(method:realName, target:ext))
+                operatorExtensions.put(aliasName, new PluginExtensionMethod(method:realName, target:ext, pluginId:pluginId))
             }
             else if( definedFactories.contains(realName) ){
                 ChannelFactoryInstance factoryInstance = new ChannelFactoryInstance(ext)
-                factoryExtensions.put(aliasName, new PluginExtensionMethod(method:realName, target:factoryInstance))
+                factoryExtensions.put(aliasName, new PluginExtensionMethod(method:realName, target:factoryInstance, pluginId:pluginId))
             }
             else if( definedFunctions.contains(realName) ){
                 FunctionDef functionDef = new FunctionDef(ext, realName, aliasName )

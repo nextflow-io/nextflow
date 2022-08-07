@@ -33,4 +33,9 @@ class PluginExtensionMethod {
      * The target object on which the method is going to be invoked
      */
     Object target
+
+    /**
+     * The plugin holding this extension
+     */
+    String pluginId
 }
