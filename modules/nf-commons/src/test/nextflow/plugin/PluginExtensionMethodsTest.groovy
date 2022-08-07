@@ -1,53 +1,56 @@
 package nextflow.plugin
 
-import com.sun.net.httpserver.HttpServer
-import nextflow.Channel
-import nextflow.extension.ChannelExtensionProvider
-import test.Dsl2Spec
-import test.MockScriptRunner
-
-import java.nio.file.Files
 import java.nio.file.Path
 
+import nextflow.Channel
+import nextflow.extension.ChannelExtensionProvider
+import spock.lang.Shared
+import test.Dsl2Spec
 /**
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
  */
-class PluginExtensionMethodsTest extends Dsl2Spec implements BuildPluginTrait{
+class PluginExtensionMethodsTest extends Dsl2Spec {
 
-    def folder
+    @Shared String pluginsMode
 
     def setup() {
-        folder = buildPlugin( 'nf-plugin-template', '0.0.0', Path.of('../nf-plugin-template/build').toAbsolutePath())
+        // this need to be set *before* the plugin manager class is created
+        pluginsMode = System.getProperty('pf4j.mode')
+        System.setProperty('pf4j.mode', 'dev')
+        // the plugin root should
+        def root = Path.of('.').toAbsolutePath().normalize()
+        def manager = new TestPluginManager(root)
+        Plugins.init(root, 'dev', manager)
     }
 
     def cleanup() {
-        folder?.deleteDir()
-        ChannelExtensionProvider.reset()
         Plugins.stop()
+        ChannelExtensionProvider.reset()
+        pluginsMode ? System.setProperty('pf4j.mode',pluginsMode) : System.clearProperty('pf4j.mode')
     }
 
-    def 'should execute custom operator extension' () {
+    def 'should execute custom operator extension/1' () {
         given:
-        def SCRIPT = folder.resolve('main.nf')
-
-        SCRIPT.text = SCRIPT_TEXT
-
-        when:
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
-
-        then:
-        result.val == 'Bye bye folks'
-        result.val == Channel.STOP
-
-        where:
-        SCRIPT_TEXT << ['''
+        def  SCRIPT_TEXT = '''
             include { goodbye } from 'plugin/nf-plugin-template'
 
             channel
               .of('Bye bye folks')
               .goodbye()            
-            ''', '''
+            '''
+
+        when:
+        def result = dsl_eval(SCRIPT_TEXT)
+
+        then:
+        result.val == 'Bye bye folks'
+        result.val == Channel.STOP
+    }
+
+    def 'should execute custom operator extension/2' () {
+        given:
+        def SCRIPT_TEXT = '''
 
             include { 
                 reverse;
@@ -58,36 +61,51 @@ class PluginExtensionMethodsTest extends Dsl2Spec implements BuildPluginTrait{
               .of('Bye bye folks')
               .goodbye()             
             '''
-        ]
+        when:
+        def result = dsl_eval(SCRIPT_TEXT)
+
+        then:
+        result.val == 'Bye bye folks'
+        result.val == Channel.STOP
+
     }
 
-    def 'should execute custom factory extension' () {
+    def 'should execute custom factory extension/1' () {
         given:
-        def SCRIPT = folder.resolve('main.nf')
+        def SCRIPT_TEXT = '''
+            include { reverse } from 'plugin/nf-plugin-template'                
 
-        SCRIPT.text = SCRIPT_TEXT
+            channel.reverse('a string')            
+            '''
 
         when:
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        def result = dsl_eval(SCRIPT_TEXT)
 
         then:
         result
         result.val == 'a string'.reverse()
         result.val == Channel.STOP
 
-        where:
-        SCRIPT_TEXT << ['''
-            include { reverse } from 'plugin/nf-plugin-template'                
+    }
 
-            channel.reverse('a string')            
-            ''','''
+    def 'should execute custom factory extension/2' () {
+        given:
+        def SCRIPT_TEXT = '''
 
-            include { reverse;  } from 'plugin/nf-plugin-template'
+            include { reverse } from 'plugin/nf-plugin-template'
             include { goodbye } from 'plugin/nf-plugin-template'
                 
             channel.reverse('a string')            
             '''
-        ]
+
+        when:
+        def result = dsl_eval(SCRIPT_TEXT)
+
+        then:
+        result
+        result.val == 'a string'.reverse()
+        result.val == Channel.STOP
+
     }
 
     def 'should execute custom operator as alias extension' () {
@@ -100,13 +118,8 @@ class PluginExtensionMethodsTest extends Dsl2Spec implements BuildPluginTrait{
               .myFunction()            
             '''
 
-        and:
-        def SCRIPT = folder.resolve('main.nf')
-
-        SCRIPT.text = SCRIPT_TEXT
-
         when:
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        def result = dsl_eval(SCRIPT_TEXT)
 
         then:
         result.val == 100
@@ -124,13 +137,8 @@ class PluginExtensionMethodsTest extends Dsl2Spec implements BuildPluginTrait{
             channel.myFunction('reverse this string')            
             '''
 
-        and:
-        def SCRIPT = folder.resolve('main.nf')
-
-        SCRIPT.text = SCRIPT_TEXT
-
         when:
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        def result = dsl_eval(SCRIPT_TEXT)
 
         then:
         result
@@ -149,13 +157,8 @@ class PluginExtensionMethodsTest extends Dsl2Spec implements BuildPluginTrait{
               .of('Bye bye folks') | goodbyeWrongSignature                        
             '''
 
-        and:
-        def SCRIPT = folder.resolve('main.nf')
-
-        SCRIPT.text = SCRIPT_TEXT
-
         when:
-        new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        dsl_eval(SCRIPT_TEXT)
 
         then:
         thrown(MissingMethodException)
@@ -171,13 +174,8 @@ class PluginExtensionMethodsTest extends Dsl2Spec implements BuildPluginTrait{
             channel.reverseCantBeImportedBecauseWrongSignature('a string')                        
             '''
 
-        and:
-        def SCRIPT = folder.resolve('main.nf')
-
-        SCRIPT.text = SCRIPT_TEXT
-
         when:
-        new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        def result = dsl_eval(SCRIPT_TEXT)
 
         then:
         thrown(IllegalStateException)

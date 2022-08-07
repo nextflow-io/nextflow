@@ -36,7 +36,5 @@ dependencies {
 
     /* testImplementation inherited from top gradle build file */
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation(testFixtures(project(":nf-plugin-template")))
+    testFixturesImplementation(project(":nextflow"))
 }
-
-//test.dependsOn(":nf-plugin-template:makeZip")

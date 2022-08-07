@@ -1,6 +1,5 @@
 /*
  * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +12,29 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-rootProject.name = 'nextflow-prj'
+package nextflow.plugin
 
-include 'nextflow'
-include 'nf-commons'
-include 'nf-httpfs'
 
-rootProject.children.each { prj ->
-    prj.projectDir = new File("$rootDir/modules/$prj.name")
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import org.pf4j.BasePluginLoader
+import org.pf4j.PluginManager
+
+/**
+ * Plugin loader specialised for unit testing. The plugin must be defined
+ * in the sub-project 'testFixtures' source tree
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@Slf4j
+@CompileStatic
+class TestPluginLoader extends BasePluginLoader {
+
+    TestPluginLoader(PluginManager pluginManager) {
+        super(pluginManager, new TestPluginClasspath())
+    }
+
 }
-
-include 'plugins'
-include 'plugins:nf-amazon'
-include 'plugins:nf-google'
-include 'plugins:nf-ga4gh'
-include 'plugins:nf-tower'
-include 'plugins:nf-console'
-include 'plugins:nf-azure'
-include 'plugins:nf-codecommit'
-include 'plugins:nf-wave'

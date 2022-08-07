@@ -2,6 +2,7 @@ package nextflow.hello
 
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Channel
+import nextflow.Global
 import nextflow.Session
 import spock.lang.Specification
 
@@ -10,12 +11,12 @@ import spock.lang.Specification
  * @author : jorge <jorge.aguilera@seqera.io>
  *
  */
-class ChannelExtensionHelloTest extends Specification{
+class ChannelExtensionHelloTest extends Specification {
 
     def "should create a channel from hello"(){
-
         given:
         def session = Mock(Session)
+        Global.session = session
 
         and:
         def helloExtension = new HelloExtension(); helloExtension.init(session)
@@ -32,6 +33,7 @@ class ChannelExtensionHelloTest extends Specification{
 
         given:
         def session = Mock(Session)
+        Global.session = session
 
         and:
         def helloExtension = new HelloExtension(); helloExtension.init(session)

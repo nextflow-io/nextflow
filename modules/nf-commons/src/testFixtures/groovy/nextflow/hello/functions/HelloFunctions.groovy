@@ -1,8 +1,4 @@
 package nextflow.hello.functions
-
-import nextflow.extension.Function
-
-
 /**
  * @author : jorge <jorge.aguilera@seqera.io>
  *

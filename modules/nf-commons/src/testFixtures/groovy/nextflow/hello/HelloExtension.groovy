@@ -1,31 +1,28 @@
 package nextflow.hello
 
+import java.util.concurrent.CompletableFuture
+
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
-import groovyx.gpars.dataflow.expression.DataflowExpression
 import nextflow.Channel
 import nextflow.Global
-import nextflow.Session
-import nextflow.extension.ChannelExtensionPoint
-import nextflow.extension.CH
 import nextflow.NF
+import nextflow.Session
+import nextflow.extension.CH
+import nextflow.extension.ChannelExtensionPoint
 import nextflow.extension.DataflowHelper
-import nextflow.extension.Factory
 import nextflow.extension.Function
 import nextflow.extension.Operator
 import nextflow.hello.functions.HelloFunctions
 import nextflow.plugin.Scoped
-
-import java.util.concurrent.CompletableFuture
-
 /**
  * @author : jorge <jorge.aguilera@seqera.io>
  *
  */
 @Slf4j
 @Scoped('hello')
-class HelloExtension extends ChannelExtensionPoint{
+class HelloExtension extends ChannelExtensionPoint {
 
     /*
      * A session hold information about current execution of the script

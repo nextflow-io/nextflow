@@ -1,44 +1,46 @@
 package nextflow.plugin
 
-import nextflow.Channel
-import nextflow.NextflowMeta
-import nextflow.exception.DuplicateModuleFunctionException
-import nextflow.extension.ChannelExtensionProvider
 
-import test.Dsl2Spec
-import test.MockScriptRunner
-
-import java.nio.file.Files
 import java.nio.file.Path
 
-
+import nextflow.Channel
+import nextflow.exception.DuplicateModuleFunctionException
+import nextflow.extension.ChannelExtensionProvider
+import spock.lang.Shared
+import spock.lang.TempDir
+import test.Dsl2Spec
+import test.MockScriptRunner
 /**
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
  */
-class PluginFunctionsTest extends Dsl2Spec implements BuildPluginTrait{
+class PluginFunctionsTest extends Dsl2Spec {
 
-    def folder
+    @TempDir
+    @Shared
+    Path folder
+
+    @Shared String pluginsMode
 
     def setup() {
-        folder = buildPlugin( 'nf-plugin-template', '0.0.0', Path.of('../nf-plugin-template/build').toAbsolutePath())
+        // this need to be set *before* the plugin manager class is created
+        pluginsMode = System.getProperty('pf4j.mode')
+        System.setProperty('pf4j.mode', 'dev')
+        // the plugin root should
+        def root = Path.of('.').toAbsolutePath().normalize()
+        def manager = new TestPluginManager(root)
+        Plugins.init(root, 'dev', manager)
     }
 
     def cleanup() {
-        folder?.deleteDir()
-        ChannelExtensionProvider.reset()
         Plugins.stop()
+        ChannelExtensionProvider.reset()
+        pluginsMode ? System.setProperty('pf4j.mode',pluginsMode) : System.clearProperty('pf4j.mode')
     }
 
-
     def 'should execute custom functions'() {
-        given:
-        def SCRIPT = folder.resolve('main.nf')
-
-        SCRIPT.text = SCRIPT_TEXT
-
         when:
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        def result = dsl_eval(SCRIPT_TEXT)
 
         then:
         result.val == EXPECTED
@@ -54,16 +56,14 @@ class PluginFunctionsTest extends Dsl2Spec implements BuildPluginTrait{
 
     def 'should throw function not found'() {
         given:
-        def SCRIPT = folder.resolve('main.nf')
-
-        SCRIPT.text = '''
+        def SCRIPT_TEXT = '''
         include { sayHelloNotExist } from 'plugin/nf-plugin-template' 
         
         channel.of( sayHelloNotExist() )
         '''
 
         when:
-        new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        def result = dsl_eval(SCRIPT_TEXT)
 
         then:
         thrown(IllegalStateException)
@@ -71,9 +71,9 @@ class PluginFunctionsTest extends Dsl2Spec implements BuildPluginTrait{
 
     def 'should not allow to include an existing function'() {
         given:
-        def SCRIPT = folder.resolve('main.nf')
-
-        SCRIPT.text = '''
+        def SCRIPT_TEXT = '''
+        nextflow.enable.strict = true
+        
         def sayHello(){ 'hi' }
         
         include { sayHello } from 'plugin/nf-plugin-template' 
@@ -82,7 +82,7 @@ class PluginFunctionsTest extends Dsl2Spec implements BuildPluginTrait{
         '''
 
         when:
-        new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        dsl_eval(SCRIPT_TEXT)
 
         then:
         thrown(DuplicateModuleFunctionException)
@@ -90,9 +90,9 @@ class PluginFunctionsTest extends Dsl2Spec implements BuildPluginTrait{
 
     def 'should allows to include an existing function but as alias'() {
         given:
-        def SCRIPT = folder.resolve('main.nf')
-
-        SCRIPT.text = '''
+        def SCRIPT_TEXT= '''
+        nextflow.enable.strict = true
+        
         def sayHello(){ 'hi' }
         
         include { sayHello as anotherHello } from 'plugin/nf-plugin-template' 
@@ -101,7 +101,7 @@ class PluginFunctionsTest extends Dsl2Spec implements BuildPluginTrait{
         '''
 
         when:
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        def result = dsl_eval(SCRIPT_TEXT)
 
         then:
         result.val == 'hi'
@@ -110,16 +110,16 @@ class PluginFunctionsTest extends Dsl2Spec implements BuildPluginTrait{
 
     def 'should not include a non annotated function'() {
         given:
-        def SCRIPT = folder.resolve('main.nf')
-
-        SCRIPT.text = '''      
+        def SCRIPT_TEXT= '''      
+        nextflow.enable.strict = true
+        
         include { aNonImportedFunction } from 'plugin/nf-plugin-template' 
         
         channel.of( aNonImportedFunction() )
         '''
 
         when:
-        new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        dsl_eval(SCRIPT_TEXT)
 
         then:
         thrown(IllegalStateException)
@@ -131,7 +131,7 @@ class PluginFunctionsTest extends Dsl2Spec implements BuildPluginTrait{
         def MODULE = folder.resolve('module.nf')
 
         MODULE.text = '''
-        nextflow.enable.dsl=2
+        nextflow.enable.strict = true
                 
         include { sayHello } from 'plugin/nf-plugin-template' 
 
@@ -160,6 +160,7 @@ class PluginFunctionsTest extends Dsl2Spec implements BuildPluginTrait{
 
         then:
         result.val == 'hi'
+
     }
 
     def 'should execute a function in two modules'() {
@@ -169,7 +170,7 @@ class PluginFunctionsTest extends Dsl2Spec implements BuildPluginTrait{
         def MODULE2 = folder.resolve('module2.nf')
 
         MODULE1.text = '''
-        nextflow.enable.dsl=2
+        nextflow.enable.strict=true
                 
         include { sayHello } from 'plugin/nf-plugin-template' 
 
@@ -184,7 +185,7 @@ class PluginFunctionsTest extends Dsl2Spec implements BuildPluginTrait{
         '''
 
         MODULE2.text = '''
-        nextflow.enable.dsl=2
+        nextflow.enable.strict=true
                 
         include { sayHello } from 'plugin/nf-plugin-template' 
 
@@ -211,7 +212,7 @@ class PluginFunctionsTest extends Dsl2Spec implements BuildPluginTrait{
         '''
 
         when:
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        def result = dsl_eval(SCRIPT)
 
         then:
         result.val == 'hola'
@@ -241,7 +242,7 @@ class PluginFunctionsTest extends Dsl2Spec implements BuildPluginTrait{
         def SCRIPT = folder.resolve('main.nf')
 
         SCRIPT.text = """
-        nextflow.enable.dsl=2
+        nextflow.enable.strict=true
                 
         include { sayHello } from 'plugin/nf-plugin-template' 
 
@@ -274,7 +275,7 @@ class PluginFunctionsTest extends Dsl2Spec implements BuildPluginTrait{
         def MODULE1 = folder.resolve('module1.nf')
 
         MODULE1.text = '''
-        nextflow.enable.dsl=2
+        nextflow.enable.strict=true
 
         process sayHello {
             input:
@@ -286,7 +287,7 @@ class PluginFunctionsTest extends Dsl2Spec implements BuildPluginTrait{
         }
         '''
         SCRIPT.text = """
-        nextflow.enable.dsl=2
+        nextflow.enable.strict=true
     
         include { sayHello } from 'plugin/nf-plugin-template'                 
         include { sayHello } from './module1.nf' 
