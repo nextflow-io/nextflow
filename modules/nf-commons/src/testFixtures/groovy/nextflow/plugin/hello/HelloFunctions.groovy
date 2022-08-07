@@ -15,15 +15,24 @@
  *
  */
 
-package nextflow.extension
-
-import nextflow.plugin.extension.PluginExtensionPoint
-
+package nextflow.plugin.hello
 /**
- * This class is deprecated, use {@link PluginExtensionPoint} instead
+ * @author : jorge <jorge.aguilera@seqera.io>
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Deprecated
-abstract class ChannelExtensionPoint extends PluginExtensionPoint {
+class HelloFunctions{
+
+    String sayHello(String lang='en'){
+        switch( lang ){
+            case 'es':
+                return 'hola'
+            case 'en':
+                return 'hi'
+            case 'it':
+                return 'ciao'
+            default:
+                return '???'
+        }
+    }
+
 }

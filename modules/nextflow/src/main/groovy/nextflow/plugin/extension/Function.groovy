@@ -15,15 +15,22 @@
  *
  */
 
-package nextflow.extension
-
-import nextflow.plugin.extension.PluginExtensionPoint
+package nextflow.plugin.extension
 
 /**
- * This class is deprecated, use {@link PluginExtensionPoint} instead
+ * An annotation interface for functions that the plugin want to expose
+ * Nextflow will search for all methods annotated with @Functions in the ExtensionPoint and allow to the user imported them
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author : jorge <jorge.aguilera@seqera.io>
+ *
  */
-@Deprecated
-abstract class ChannelExtensionPoint extends PluginExtensionPoint {
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target([ElementType.METHOD])
+@interface Function {
+
 }

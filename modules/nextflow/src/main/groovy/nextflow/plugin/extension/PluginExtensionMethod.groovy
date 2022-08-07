@@ -15,15 +15,22 @@
  *
  */
 
-package nextflow.extension
+package nextflow.plugin.extension
 
-import nextflow.plugin.extension.PluginExtensionPoint
+import groovy.transform.MapConstructor
 
 /**
- * This class is deprecated, use {@link PluginExtensionPoint} instead
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * Hold a reference to a extension method provided by a Nextflow plugin
  */
-@Deprecated
-abstract class ChannelExtensionPoint extends PluginExtensionPoint {
+@MapConstructor
+class PluginExtensionMethod {
+    /**
+     * The name of the method that needs to be invoked
+     */
+    String method
+
+    /**
+     * The target object on which the method is going to be invoked
+     */
+    Object target
 }

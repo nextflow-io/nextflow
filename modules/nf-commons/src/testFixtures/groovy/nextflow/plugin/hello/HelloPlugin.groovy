@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,31 +12,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.hello
+package nextflow.plugin.hello
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.Session
-import nextflow.trace.TraceObserver
+import nextflow.plugin.BasePlugin
+import org.pf4j.PluginWrapper
 
 /**
- * Example pipeline events observer
+ * Implements the Hello plugins entry point
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
 @CompileStatic
-class HelloObserver implements TraceObserver {
+class HelloPlugin extends BasePlugin {
 
-    @Override
-    void onFlowCreate(Session session) {
-        log.info "Pipeline is starting! 🚀"
-    }
-
-    @Override
-    void onFlowComplete() {
-        log.info "Pipeline complete! 👋"
+    HelloPlugin(PluginWrapper wrapper) {
+        super(wrapper)
     }
 }

@@ -15,15 +15,29 @@
  *
  */
 
-package nextflow.extension
+package nextflow.plugin.hello
 
-import nextflow.plugin.extension.PluginExtensionPoint
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.Session
+import nextflow.trace.TraceObserver
 
 /**
- * This class is deprecated, use {@link PluginExtensionPoint} instead
+ * Example pipeline events observer
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Deprecated
-abstract class ChannelExtensionPoint extends PluginExtensionPoint {
+@Slf4j
+@CompileStatic
+class HelloObserver implements TraceObserver {
+
+    @Override
+    void onFlowCreate(Session session) {
+        log.info "Pipeline is starting! 🚀"
+    }
+
+    @Override
+    void onFlowComplete() {
+        log.info "Pipeline complete! 👋"
+    }
 }

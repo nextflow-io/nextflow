@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,26 +12,28 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.hello
+package nextflow.plugin.hello
 
-import groovy.transform.CompileStatic
 import nextflow.Session
-import nextflow.trace.TraceObserver
-import nextflow.trace.TraceObserverFactory
+import nextflow.plugin.hello.HelloFactory
+import nextflow.plugin.hello.HelloObserver
+import spock.lang.Specification
+
 /**
- * Implements the validation observer factory
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
-class HelloFactory implements TraceObserverFactory {
+class HelloFactoryTest extends Specification {
 
-    @Override
-    Collection<TraceObserver> create(Session session) {
-        final result = new ArrayList()
-        result.add( new HelloObserver() )
-        return result
+    def 'should return observer' () {
+        when:
+        def result = new HelloFactory().create(Mock(Session))
+        then:
+        result.size()==1
+        result[0] instanceof HelloObserver
     }
+
 }

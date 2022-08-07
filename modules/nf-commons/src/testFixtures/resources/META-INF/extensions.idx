@@ -1,2 +1,2 @@
-nextflow.hello.HelloFactory
-nextflow.hello.HelloExtension
+nextflow.plugin.hello.HelloFactory
+nextflow.plugin.hello.HelloExtension

@@ -1,4 +1,21 @@
-package nextflow.hello
+/*
+ * Copyright 2020-2022, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+package nextflow.plugin.hello
 
 import java.util.concurrent.CompletableFuture
 
@@ -10,19 +27,17 @@ import nextflow.Global
 import nextflow.NF
 import nextflow.Session
 import nextflow.extension.CH
-import nextflow.extension.ChannelExtensionPoint
 import nextflow.extension.DataflowHelper
-import nextflow.extension.Function
-import nextflow.extension.Operator
-import nextflow.hello.functions.HelloFunctions
-import nextflow.plugin.Scoped
+import nextflow.plugin.extension.Function
+import nextflow.plugin.extension.Operator
+import nextflow.plugin.extension.PluginExtensionPoint
+
 /**
  * @author : jorge <jorge.aguilera@seqera.io>
  *
  */
 @Slf4j
-@Scoped('hello')
-class HelloExtension extends ChannelExtensionPoint {
+class HelloExtension extends PluginExtensionPoint {
 
     /*
      * A session hold information about current execution of the script
@@ -61,8 +76,6 @@ class HelloExtension extends ChannelExtensionPoint {
         message
     }
 
-    static String goodbyeMessage
-
     /*
     * goodbye is a `consumer` method as it receives values from a channel to perform some logic.
     *
@@ -78,17 +91,17 @@ class HelloExtension extends ChannelExtensionPoint {
     *
     * in this case `goodbye` will consume a message and will store it as an upper case
     */
+    @Operator
     DataflowWriteChannel goodbye(DataflowReadChannel source) {
         final target = CH.createBy(source)
         final next = {
-            goodbyeMessage = "$it".toString().toUpperCase()
             target.bind(it)
         }
         final done = {
             target.bind(Channel.STOP)
         }
         DataflowHelper.subscribeImpl(source, [onNext: next, onComplete: done])
-        target
+        return target
     }
 
     /*

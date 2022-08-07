@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,24 +12,25 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.hello
-
-import groovy.transform.CompileStatic
-import nextflow.plugin.BasePlugin
-import nextflow.plugin.Scoped
-import org.pf4j.PluginWrapper
+package nextflow.plugin.extension
 
 /**
- * Implements the Hello plugins entry point
+ * An annotation interface for channel factories that the plugin want to expose
+ * Nextflow will search for all methods annotated with @Factory in the ExtensionPoint and allow to the user imported them
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author : jorge <jorge.aguilera@seqera.io>
+ *
  */
-@CompileStatic
-class HelloPlugin extends BasePlugin {
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-    HelloPlugin(PluginWrapper wrapper) {
-        super(wrapper)
-    }
+@Retention(RetentionPolicy.RUNTIME)
+@Target([ElementType.METHOD])
+@interface Factory {
+
 }

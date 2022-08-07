@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,25 +12,25 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.hello
-
-import nextflow.Session
-import spock.lang.Specification
+package nextflow.plugin.extension
 
 /**
+ * An annotation interface for operators that the plugin want to expose
+ * Nextflow will search for all methods annotated with @Operators in the ExtensionPoint and allow to the user imported them
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author : jorge <jorge.aguilera@seqera.io>
+ *
  */
-class HelloFactoryTest extends Specification {
+import java.lang.annotation.ElementType
+import java.lang.annotation.Retention
+import java.lang.annotation.RetentionPolicy
+import java.lang.annotation.Target
 
-    def 'should return observer' () {
-        when:
-        def result = new HelloFactory().create(Mock(Session))
-        then:
-        result.size()==1
-        result[0] instanceof HelloObserver
-    }
+@Retention(RetentionPolicy.RUNTIME)
+@Target([ElementType.METHOD])
+@interface Operator {
 
 }
