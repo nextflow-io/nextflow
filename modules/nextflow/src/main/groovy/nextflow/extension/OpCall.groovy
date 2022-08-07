@@ -58,7 +58,7 @@ class OpCall implements Callable {
 
     OpCall(String method, Object[] args ) {
         assert method
-        this.owner = OperatorEx.instance
+        this.owner = OperatorImpl.instance
         this.methodName = method
         this.args = ChannelOut.spread(args).toArray()
     }

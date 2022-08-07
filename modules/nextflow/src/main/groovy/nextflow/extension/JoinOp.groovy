@@ -31,7 +31,7 @@ import nextflow.NF
 import nextflow.exception.AbortOperationException
 import nextflow.util.CheckHelper
 /**
- * Implements {@link OperatorEx#join} operator logic
+ * Implements {@link OperatorImpl#join} operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

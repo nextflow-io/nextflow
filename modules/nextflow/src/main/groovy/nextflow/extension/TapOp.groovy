@@ -26,7 +26,7 @@ import groovyx.gpars.dataflow.operator.CopyChannelsClosure
 import nextflow.NF
 import static nextflow.extension.DataflowHelper.newOperator
 /**
- * Implements the {@link OperatorEx#tap} operator
+ * Implements the {@link OperatorImpl#tap} operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

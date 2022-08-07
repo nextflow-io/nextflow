@@ -40,7 +40,7 @@ import nextflow.dag.NodeMarker
 import nextflow.datasource.SraExplorer
 import nextflow.exception.AbortOperationException
 import nextflow.extension.CH
-import nextflow.extension.ChannelExtensionProvider
+import nextflow.plugin.extension.PluginExtensionProvider
 import nextflow.extension.GroupTupleOp
 import nextflow.extension.MapOp
 import nextflow.file.DirListener
@@ -79,7 +79,7 @@ class Channel  {
      * @return The method return value
      */
     static def $static_methodMissing(String name, Object args) {
-        ChannelExtensionProvider.INSTANCE().invokeFactoryExtensionMethod(name, InvokerHelper.asArray(args))
+        PluginExtensionProvider.INSTANCE().invokeFactoryExtensionMethod(name, InvokerHelper.asArray(args))
     }
 
     /**

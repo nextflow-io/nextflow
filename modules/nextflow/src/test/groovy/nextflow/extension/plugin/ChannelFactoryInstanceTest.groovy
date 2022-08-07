@@ -15,13 +15,16 @@
  *
  */
 
-package nextflow.extension
+package nextflow.extension.plugin
 
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.Session
+import nextflow.extension.CH
+import nextflow.plugin.extension.PluginExtensionPoint
+import nextflow.plugin.extension.PluginExtensionProvider
 import spock.lang.Specification
 import test.MockScriptRunner
 /**
@@ -30,7 +33,7 @@ import test.MockScriptRunner
  */
 class ChannelFactoryInstanceTest extends Specification {
 
-    class Ext1 extends ChannelExtensionPoint {
+    class Ext1 extends PluginExtensionPoint {
 
         int initCount
         Session initSession
@@ -60,7 +63,7 @@ class ChannelFactoryInstanceTest extends Specification {
         }
     }
 
-    class Ext2 extends ChannelExtensionPoint {
+    class Ext2 extends PluginExtensionPoint {
         int initCount
         Session initSession
 
@@ -79,7 +82,9 @@ class ChannelFactoryInstanceTest extends Specification {
     def 'should invoke custom plugin factory' () {
         given:
         def ext1 = new Ext1(); def ext2 = new Ext2()
-        new ChannelExtensionProvider().install().loadPluginExtensionMethods(ext1, ['alpha':'alpha'])
+        new PluginExtensionProvider()
+                .install()
+                .loadPluginExtensionMethods("nf-foo",ext1, ['alpha':'alpha'])
         and:
         def SCRIPT = '''
         Channel.alpha(['one','two','three'])
@@ -101,13 +106,15 @@ class ChannelFactoryInstanceTest extends Specification {
         ext2.initSession == null
 
         cleanup:
-        ChannelExtensionProvider.reset()
+        PluginExtensionProvider.reset()
     }
 
     def 'should invoke alias in custom plugin factory' () {
         given:
         def ext1 = new Ext1(); def ext2 = new Ext2()
-        new ChannelExtensionProvider().install().loadPluginExtensionMethods(ext1, ['alpha':'thisIsAnAliasToAlpha'])
+        new PluginExtensionProvider()
+                .install()
+                .loadPluginExtensionMethods("nf-foo",ext1, ['alpha':'thisIsAnAliasToAlpha'])
         and:
         def SCRIPT = '''
         Channel.thisIsAnAliasToAlpha(['one','two','three'])
@@ -129,16 +136,16 @@ class ChannelFactoryInstanceTest extends Specification {
         ext2.initSession == null
 
         cleanup:
-        ChannelExtensionProvider.reset()
+        PluginExtensionProvider.reset()
     }
 
     def 'should invoke multiple extensions' () {
         given:
         def ext1 = new Ext1(); def ext2 = new Ext2()
-        new ChannelExtensionProvider()
+        new PluginExtensionProvider()
                 .install()
-                .loadPluginExtensionMethods(ext1, ['alpha':'alpha'])
-                .loadPluginExtensionMethods(ext2, ['omega':'omega'])
+                .loadPluginExtensionMethods("nf-foo",ext1, ['alpha':'alpha'])
+                .loadPluginExtensionMethods("nf-foo",ext2, ['omega':'omega'])
         and:
         def SCRIPT = '''
             def ch1 = channel.alpha([1,2,3])
@@ -171,13 +178,15 @@ class ChannelFactoryInstanceTest extends Specification {
         ext2.initSession instanceof Session
 
         cleanup:
-        ChannelExtensionProvider.reset()
+        PluginExtensionProvider.reset()
     }
 
     def 'should invoke operator extension' () {
         given:
         def ext1 = new Ext1();
-        new ChannelExtensionProvider().install().loadPluginExtensionMethods(ext1, ['plusOne':'plusOne'])
+        new PluginExtensionProvider()
+                .install()
+                .loadPluginExtensionMethods("nf-foo",ext1, ['plusOne':'plusOne'])
         and:
         def SCRIPT = '''
             channel
@@ -198,7 +207,7 @@ class ChannelFactoryInstanceTest extends Specification {
         ext1.initSession instanceof Session
 
         cleanup:
-        ChannelExtensionProvider.reset()
+        PluginExtensionProvider.reset()
     }
 
 }

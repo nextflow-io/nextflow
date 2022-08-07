@@ -24,7 +24,7 @@ import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 /**
- * Implements {@link OperatorEx#map(groovyx.gpars.dataflow.DataflowReadChannel, groovy.lang.Closure)} operator
+ * Implements {@link OperatorImpl#map(groovyx.gpars.dataflow.DataflowReadChannel, groovy.lang.Closure)} operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

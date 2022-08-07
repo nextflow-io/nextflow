@@ -218,7 +218,7 @@ class PluginUpdaterTest extends Specification {
             """
     }
 
-    static private Path zipDir(final Path folder) throws IOException {
+    static Path zipDir(final Path folder) throws IOException {
 
         def zipFilePath = folder.resolveSibling( "${folder.name}.zip" )
 

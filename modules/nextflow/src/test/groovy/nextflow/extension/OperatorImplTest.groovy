@@ -19,8 +19,6 @@ package nextflow.extension
 
 import java.nio.file.Paths
 
-import groovyx.gpars.dataflow.DataflowQueue
-import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.Session
@@ -31,7 +29,7 @@ import spock.lang.Timeout
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Timeout(10)
-class OperatorExTest extends Specification {
+class OperatorImplTest extends Specification {
 
     def setupSpec() {
         new Session()
@@ -889,38 +887,38 @@ class OperatorExTest extends Specification {
     def testDefaultMappingClosure() {
 
         expect:
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [7, 8, 9] ) == 7
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [7, 8, 9], 2 ) == 9
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [] ) == null
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [], 2 ) == null
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [7, 8, 9] ) == 7
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [7, 8, 9], 2 ) == 9
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [] ) == null
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [], 2 ) == null
 
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [7, 8, 9] as Object[] ) == 7
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [7, 8, 9] as Object[], 1 ) == 8
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( ['alpha', 'beta'] as String[] ) == 'alpha'
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( ['alpha', 'beta'] as String[], 1 ) == 'beta'
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [7, 8, 9] as Object[] ) == 7
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [7, 8, 9] as Object[], 1 ) == 8
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( ['alpha', 'beta'] as String[] ) == 'alpha'
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( ['alpha', 'beta'] as String[], 1 ) == 'beta'
 
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [6, 7, 8, 9 ] as LinkedHashSet ) == 6
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [6, 7, 8, 9 ] as LinkedHashSet, 1 ) == 7
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [6, 7, 8, 9 ] as LinkedHashSet, 2 ) == 8
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [6, 7, 8, 9 ] as LinkedHashSet, 5 ) == null
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [6, 7, 8, 9 ] as LinkedHashSet ) == 6
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [6, 7, 8, 9 ] as LinkedHashSet, 1 ) == 7
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [6, 7, 8, 9 ] as LinkedHashSet, 2 ) == 8
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [6, 7, 8, 9 ] as LinkedHashSet, 5 ) == null
 
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9] ) == 1
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9], 1 ) == 2
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9], 2 ) == 9
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9], 3 ) == null
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9] ) == 1
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9], 1 ) == 2
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9], 2 ) == 9
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9], 3 ) == null
 
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(0) ) == 'a'
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(0), 1 ) == 1
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(0), 2 ) == null
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(0) ) == 'a'
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(0), 1 ) == 1
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(0), 2 ) == null
 
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(1) ) == 'b'
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(1), 1 ) == 2
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(1), 2 ) == null
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(1) ) == 'b'
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(1), 1 ) == 2
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [a:1, b:2, z:9].entrySet().getAt(1), 2 ) == null
 
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( [:] ) == null
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( [:] ) == null
 
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( 99 ) == 99
-        OperatorEx.DEFAULT_MAPPING_CLOSURE.call( 99, 2 ) == null
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( 99 ) == 99
+        OperatorImpl.DEFAULT_MAPPING_CLOSURE.call( 99, 2 ) == null
 
     }
 

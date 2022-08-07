@@ -25,7 +25,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 /**
- * Implements the {@link OperatorEx#cross} operator logic
+ * Implements the {@link OperatorImpl#cross} operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -37,7 +37,7 @@ class CrossOp {
 
     private DataflowReadChannel target
 
-    private Closure mapper = OperatorEx.DEFAULT_MAPPING_CLOSURE
+    private Closure mapper = OperatorImpl.DEFAULT_MAPPING_CLOSURE
 
     CrossOp(DataflowReadChannel source, DataflowReadChannel target) {
         assert source
@@ -48,7 +48,7 @@ class CrossOp {
     }
 
     CrossOp setMapper( Closure mapper ) {
-        this.mapper = mapper ?: OperatorEx.DEFAULT_MAPPING_CLOSURE
+        this.mapper = mapper ?: OperatorImpl.DEFAULT_MAPPING_CLOSURE
         return this
     }
 

@@ -350,7 +350,9 @@ class AnsiLogObserver implements TraceObserver {
     }
     
     protected void printAnsiLines(String lines) {
-        final text = lines.replace(NEWLINE,  ansi().eraseLine().toString() + NEWLINE)
+        final text = lines
+                .replace('\r','')
+                .replace(NEWLINE, ansi().eraseLine().toString() + NEWLINE)
         AnsiConsole.out.print(text)
     } 
 

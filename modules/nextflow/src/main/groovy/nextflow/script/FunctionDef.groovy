@@ -29,41 +29,48 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class FunctionDef extends ComponentDef implements ChainableDef {
 
-    private BaseScript owner
+    private Object target
 
     private String name
 
     private String alias
 
-    FunctionDef(BaseScript owner, String name) {
-        this.owner = owner
+    FunctionDef(Object target, String name) {
+        this(target, name, name)
+    }
+
+    FunctionDef(Object target, String name, String alias) {
+        this.target = target
         this.name = name
-        this.alias = name
+        this.alias = alias
     }
 
     protected FunctionDef() { }
 
+    @Override
     String getType() { 'function' }
 
+    @Override
     String getName() { alias }
 
-    BaseScript getOwner() { owner }
-
+    @Override
     Object invoke_a(Object[] args) {
-        final argsArr = ChannelOut.spread(args).toArray()
-        final meta = owner.metaClass.getMetaMethod(name, argsArr)
+        final arr = ChannelOut.spread(args).toArray()
+        final meta = target.metaClass.getMetaMethod(name, arr)
         if( meta == null )
-            throw new MissingMethodException(name, owner.getClass(), argsArr)
-        Method callMethod = owner.getClass().getMethod(name, meta.getNativeParameterTypes())
+            throw new MissingMethodException(name, target.getClass(), arr)
+        Method callMethod = target.getClass().getMethod(name, meta.getNativeParameterTypes())
         if( callMethod == null )
-            throw new MissingMethodException(name, owner.getClass(), argsArr)
-        return callMethod.invoke(owner, argsArr)
+            throw new MissingMethodException(name, target.getClass(), arr)
+        return callMethod.invoke(target, arr)
     }
 
+    @Override
     FunctionDef clone() {
         return (FunctionDef)super.clone()
     }
 
+    @Override
     FunctionDef cloneWithName(String name) {
         def result = clone()
         result.@alias = name
