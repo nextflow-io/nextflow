@@ -160,8 +160,14 @@ class PluginExtensionProvider implements ExtensionProvider {
         def result = new HashSet<String>(30)
         def methods = clazz.getDeclaredMethods()
         for( def handle : methods ) {
+            if( result.contains(handle.name))
+                continue
             // in a future only annotated methods will be imported
             if( !internal && handle.isAnnotationPresent(Operator)) {
+                if( !Modifier.isPublic(handle.getModifiers()) )
+                    throw new IllegalStateException("Operator extension '$handle.name' in `$clazz.name` should be declared public")
+                if( Modifier.isStatic(handle.getModifiers()) )
+                    throw new IllegalStateException("Operator extension '$handle.name' in `$clazz.name` cannot be not declared as a static method")
                 final params=handle.getParameterTypes()
                 if( params.length == 0 || !isReadChannel(params[0]) ) {
                     throw new IllegalStateException("Operator extension '$handle.name' in `$clazz.name` has not a valid signature")
@@ -171,14 +177,16 @@ class PluginExtensionProvider implements ExtensionProvider {
             }
 
             // skip non-public methods
-            if( !Modifier.isPublic(handle.getModifiers()) ) continue
+            if( !Modifier.isPublic(handle.getModifiers()) )
+                continue
             // skip static methods
-            if( Modifier.isStatic(handle.getModifiers()) ) continue
+            if( Modifier.isStatic(handle.getModifiers()) )
+                continue
             // operator extension method must have a dataflow read channel type as first argument
             final params=handle.getParameterTypes()
             if( params.length>0 && isReadChannel(params[0]) ) {
                 if( !internal )
-                    log.warn("Operator extension method `$handle.name` in `$clazz.name` should be marked with the '@Operator' annotation")
+                    log.warn("Operator extension `$handle.name` in `$clazz.name` should be marked with the '@Operator' annotation")
                 result.add(handle.name)
             }
         }
@@ -189,12 +197,17 @@ class PluginExtensionProvider implements ExtensionProvider {
         def result = new HashSet<String>(30)
         def methods = clazz.getDeclaredMethods()
         for( def handle : methods ) {
+            // skip duplicates
+            if( result.contains(handle.name)) continue
             // in a future only annotated methodS will be imported
             if( handle.isAnnotationPresent(Factory)) {
+                if( !Modifier.isPublic(handle.getModifiers()) )
+                    throw new IllegalStateException("Factory extension '$handle.name' in `$clazz.name` should be declared public")
+                if( Modifier.isStatic(handle.getModifiers()) )
+                    throw new IllegalStateException("Factory extension '$handle.name' in `$clazz.name` cannot be not declared as a static method")
                 final returnType = handle.getReturnType()
-                if( !isWriteChannel(returnType) ) {
+                if( !isWriteChannel(returnType) )
                     throw new IllegalStateException("Factory extension '$handle.name' in `$clazz.name` has not a valid signature")
-                }
                 result.add(handle.name)
                 continue
             }
@@ -203,9 +216,10 @@ class PluginExtensionProvider implements ExtensionProvider {
             // skip static methods
             if( Modifier.isStatic(handle.getModifiers()) ) continue
             // factory extension method must have a dataflow write channel type as return
+            final params=handle.getParameterTypes()
             def returnType = handle.getReturnType()
-            if( isWriteChannel(returnType) ) {
-                log.trace("Factory extension method `$handle.name` in `$clazz.name` should be marked with the '@Factory' annotation")
+            if( isWriteChannel(returnType) && !isReadChannel(params[0]) ) {
+                log.warn("Factory extension '$handle.name' in `$clazz.name` should be marked with the '@Factory' annotation")
                 result.add(handle.name)
             }
         }
@@ -216,12 +230,18 @@ class PluginExtensionProvider implements ExtensionProvider {
         def result = new HashSet<String>(30)
         def methods = clazz.getDeclaredMethods()
         for( def handle : methods ) {
-            // skip non-public methods
-            if( !Modifier.isPublic(handle.getModifiers()) ) continue
-            // skip static methods
-            if( Modifier.isStatic(handle.getModifiers()) ) continue
+            // skip duplicates
+            if( result.contains(handle.name))
+                continue
             // custom functions must to be annotated with @Function
-            if( !handle.isAnnotationPresent(Function)) continue
+            if( !handle.isAnnotationPresent(Function))
+                continue
+            // skip non-public methods
+            if( !Modifier.isPublic(handle.getModifiers()) )
+                throw new IllegalStateException("Function extension '$handle.name' in `$clazz.name` should be declared public")
+            // skip static methods
+            if( Modifier.isStatic(handle.getModifiers()) )
+                throw new IllegalStateException("Function extension '$handle.name' in `$clazz.name` cannot be not declared as a static method")
             result.add(handle.name)
         }
         return result
