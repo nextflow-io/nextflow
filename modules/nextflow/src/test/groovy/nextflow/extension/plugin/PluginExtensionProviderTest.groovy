@@ -15,30 +15,31 @@
  *
  */
 
-package nextflow.extension
+package nextflow.extension.plugin
 
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
+import nextflow.plugin.extension.PluginExtensionProvider
 import spock.lang.Specification
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ChannelExtensionProviderTest extends Specification {
+class PluginExtensionProviderTest extends Specification {
 
     def 'should check dataflow read channel' () {
         expect:
-        ChannelExtensionProvider.isReadChannel(DataflowVariable.class)
-        ChannelExtensionProvider.isReadChannel(DataflowQueue.class)
-        !ChannelExtensionProvider.isReadChannel(DataflowBroadcast.class)
+        PluginExtensionProvider.isReadChannel(DataflowVariable.class)
+        PluginExtensionProvider.isReadChannel(DataflowQueue.class)
+        !PluginExtensionProvider.isReadChannel(DataflowBroadcast.class)
     }
 
     def 'should check extension method' () {
         given:
-        def ext = ChannelExtensionProvider.INSTANCE()
+        def ext = PluginExtensionProvider.INSTANCE()
         expect:
         ext.isExtensionMethod(new DataflowVariable(), 'map')
         ext.isExtensionMethod(new DataflowVariable(), 'flatMap')
@@ -47,7 +48,7 @@ class ChannelExtensionProviderTest extends Specification {
 
     def 'should invoke ext method' () {
         given:
-        def ext = ChannelExtensionProvider.INSTANCE()
+        def ext = PluginExtensionProvider.INSTANCE()
         def ch = new DataflowQueue(); ch<<1<<2<<3
 
         when:
