@@ -17,7 +17,6 @@
 
 package io.seqera.wave.plugin
 
-import javax.annotation.Nullable
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -30,20 +29,21 @@ import java.util.concurrent.TimeUnit
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import com.google.common.util.concurrent.UncheckedExecutionException
 import groovy.json.JsonOutput
-import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import io.seqera.wave.plugin.util.DigestFunctions
 import nextflow.Session
+import nextflow.processor.TaskRun
 import nextflow.script.bundle.ModuleBundle
-import nextflow.util.CacheHelper
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-
 /**
  * Wave client service
  *
@@ -58,12 +58,15 @@ class WaveClient {
 
     final private WaveConfig config
 
+    final private FusionConfig fusion
+
     final private String endpoint
 
     private Cache<String, SubmitContainerTokenResponse> cache
 
     WaveClient(Session session) {
         this.config = new WaveConfig(session.config.wave as Map ?: [:])
+        this.fusion = new FusionConfig(session.config.fusion as Map ?: [:])
         this.endpoint = config.endpoint()
         log.debug "Wave server endpoint: ${endpoint}"
         // create cache
@@ -156,26 +159,31 @@ class WaveClient {
 
     }
 
-    SubmitContainerTokenRequest makeRequest(ModuleBundle bundle, @Nullable String container, @Nullable ContainerConfig config) {
-        if( config == null ) {
-            config = new ContainerConfig()
-        }
+    SubmitContainerTokenRequest makeRequest(WaveAssets assets) {
+        final containerConfig = assets.containerConfig ?: new ContainerConfig()
         // pre-prepend the bundle layer
-        if( bundle && bundle.hasEntries() ) {
-            config.prependLayer(layer(bundle))
+        if( assets.bundle && assets.bundle.hasEntries() ) {
+            containerConfig.prependLayer(layer(assets.bundle))
         }
-        final dockerContent = bundle?.dockerfile?.text?.bytes?.encodeBase64()?.toString()
-        return new SubmitContainerTokenRequest(containerImage: container, containerConfig: config, containerFile: dockerContent)
+
+        if( !assets.containerImage && !assets.dockerFileContent )
+            throw new IllegalArgumentException("Wave container request requires at least a image or container file to build")
+
+        return new SubmitContainerTokenRequest(
+                containerImage: assets.containerImage,
+                containerConfig: containerConfig,
+                containerFile: assets.dockerFileEncoded(),
+                condaFile: assets.condaFileEncoded()
+        )
     }
 
-    SubmitContainerTokenResponse sendRequest(ModuleBundle bundle, @Nullable String container, @Nullable ContainerConfig config) {
-        final req = makeRequest(bundle, container, config)
+    SubmitContainerTokenResponse sendRequest(WaveAssets assets) {
+        final req = makeRequest(assets)
         return sendRequest(req)
     }
 
     SubmitContainerTokenResponse sendRequest(String image) {
-        final configUrl = config().containerConfigUrl()
-        final ContainerConfig containerConfig = configUrl ? fetchContainerConfig(configUrl) : null
+        final ContainerConfig containerConfig = resolveContainerConfig()
         final request = new SubmitContainerTokenRequest(containerImage: image, containerConfig: containerConfig)
         return sendRequest(request)
     }
@@ -196,9 +204,34 @@ class WaveClient {
         final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
         if( resp.statusCode()==200 ) {
             log.debug "Wave response: ${resp.body()}"
-            return new JsonSlurper().parseText(resp.body()) as SubmitContainerTokenResponse
+            return jsonToSubmitResponse(resp.body())
         }
         throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
+    }
+
+    private SubmitContainerTokenResponse jsonToSubmitResponse(String body) {
+        final type = new TypeToken<SubmitContainerTokenResponse>(){}.getType()
+        return new Gson().fromJson(body, type)
+    }
+
+    private ContainerConfig jsonToContainerConfig(String json) {
+        final type = new TypeToken<ContainerConfig>(){}.getType()
+        return new Gson().fromJson(json, type)
+    }
+
+    ContainerConfig resolveContainerConfig() {
+        final urls = new ArrayList<URL>(config.containerConfigUrl())
+        if( fusion.enabled() && fusion.containerConfigUrl() ) {
+            urls.add( fusion.containerConfigUrl() )
+        }
+        if( !urls )
+            return null
+        def result = new ContainerConfig()
+        for( URL it : urls ) {
+            // append each config to the other - the last has priority
+            result += fetchContainerConfig(it)
+        }
+        return result
     }
 
     @Memoized
@@ -213,7 +246,7 @@ class WaveClient {
         final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
         if( resp.statusCode()==200 ) {
             log.debug "Wave container config response: ${resp.body()}"
-            return new JsonSlurper().parseText(resp.body()) as ContainerConfig
+            return jsonToContainerConfig(resp.body())
         }
         else {
             log.warn "Wave container config error response: [${resp.statusCode()}] ${resp.body()}"
@@ -221,21 +254,78 @@ class WaveClient {
         }
     }
 
-    @Memoized
-    protected String key0(ModuleBundle bundle, ContainerConfig containerConfig, String image) {
-        final allMeta = new ArrayList(10)
-        allMeta.add( bundle?.fingerprint() )
-        allMeta.add( containerConfig?.hashCode() )
-        allMeta.add( image )
-        return CacheHelper.hasher(allMeta).hash().toString()
+    WaveAssets resolveAssets(TaskRun task, String containerImage) {
+        final bundle = task.getModuleBundle()
+        // read the dockerfile defined in the module bundle
+        String dockerFileContent = null
+        if( bundle!=null && bundle.dockerfile ) {
+            dockerFileContent = bundle.dockerfile.text
+        }
+        // compute docker file + conda content
+        final condaRecipe = task.config.conda as String
+        if( dockerFileContent && condaRecipe ) {
+            throw new IllegalArgumentException("Process '${task.lazyName()}' declares both a 'conda' directive and a module bundle dockerfile that conflicts each other")
+        }
+        Path condaFile = null
+        if( condaRecipe ) {
+            // map the recipe to a dockerfile
+            if( isCondaFile(condaRecipe) ) {
+                condaFile = Path.of(condaRecipe)
+                dockerFileContent = condaFileToDockerFile()
+            }
+            else {
+                dockerFileContent = condaRecipeToDockerFile(condaRecipe)
+            }
+        }
+
+        if( dockerFileContent && containerImage ) {
+            throw new IllegalArgumentException("Process '${task.lazyName()}' declares both a 'container' directive and a module bundle dockerfile that conflicts each other")
+        }
+
+        if( !dockerFileContent && !containerImage ) {
+            // nothing to do
+            return null
+        }
+
+        // read the container config and go ahead
+        final containerConfig = resolveContainerConfig()
+        return new WaveAssets(containerImage, bundle, containerConfig, dockerFileContent, condaFile)
     }
 
-    String fetchContainerImage(ModuleBundle bundle, String container, URL configUrl) {
-        final ContainerConfig containerConfig = configUrl ? fetchContainerConfig(configUrl) : null
+    String fetchContainerImage(WaveAssets assets) {
         // go ahead
-        final key = key0(bundle, containerConfig, container)
-        final result = cache.get(key, { sendRequest(bundle, container, containerConfig) } as Callable )
-        return result.targetImage
+        try {
+            final key = assets.hashKey()
+            final result = cache.get(key, { sendRequest(assets) } as Callable )
+            return result.targetImage
+        }
+        catch ( UncheckedExecutionException e ) {
+            throw e.cause
+        }
     }
 
+    protected String condaFileToDockerFile() {
+        """\
+        FROM mambaorg/micromamba:0.25.0
+        COPY --chown=\$MAMBA_USER:\$MAMBA_USER conda.yml /tmp/conda.yml
+        RUN micromamba install -y -n base -f /tmp/conda.yml && \\
+            micromamba clean -a -y
+        """.stripIndent()
+    }
+
+    protected String condaRecipeToDockerFile(String recipe) {
+        """\
+        FROM mambaorg/micromamba:0.25.0
+        RUN \\
+           micromamba install -y -n base -c defaults -c conda-forge \\
+           $recipe \\
+           && micromamba clean -a -y
+        """.stripIndent()
+    }
+
+    protected boolean isCondaFile(String value) {
+        if( value.contains('\n') )
+            return false
+        return value.endsWith('.yaml') || value.endsWith('.yml') || value.endsWith('.txt')
+    }
 }

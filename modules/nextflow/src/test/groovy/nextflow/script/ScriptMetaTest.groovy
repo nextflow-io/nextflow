@@ -4,7 +4,6 @@ import java.nio.file.Files
 
 import groovy.transform.InheritConstructors
 import nextflow.NF
-import nextflow.exception.DuplicateModuleIncludeException
 import test.Dsl2Spec
 import test.TestHelper
 
