@@ -353,7 +353,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
     protected checkConfigEnv(ConfigMap config) {
         // Warn about setting NXF_ environment variables within env config scope
-        final env = config.env as Map<String, String>
+        final env = config.get("env") as Map<String, String>
         for( String name : env.keySet() ) {
             if( name.startsWith('NXF_') && name!='NXF_DEBUG' ) {
                 final msg = "Nextflow variables must be defined in the launching environment - The following variable set in the config file is going to be ignored: '$name'"
