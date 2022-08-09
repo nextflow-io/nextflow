@@ -34,8 +34,6 @@ class AzBashLib extends BashFunLib<AzBashLib> {
     private String putMD5 = ''
     private String checkMD5 = AzCopyOpts.DEFAULT_CHECK_MD5
     private String overwrite = AzCopyOpts.DEFAULT_OVERWRITE
-    //private String outputLevel = AzCopyOpts.DEFAULT_OUTPUT_LEVEL
-    //private String requestTryTimeout = AzCopyOpts.DEFAULT_AZCOPY_REQUEST_TRY_TIMEOUT
 
     AzBashLib withBlockSize(String value) {
         if (value)
@@ -65,20 +63,6 @@ class AzBashLib extends BashFunLib<AzBashLib> {
             this.overwrite = value
         return this
     }
-
-    /* //DISABLED TILL WE UPGRADE TO azcopy-v10.16.0
-    AzBashLib withOutputLevel(String value) {
-        if (value)
-            this.outputLevel = value
-        return this
-    }
-
-    AzBashLib withRequestTryTimeout(String value) {
-        if (value)
-            this.requestTryTimeout = value
-        return this
-    }
-    */
 
     // Custom env variables are prefixed with underscore(_)
     protected String setupAzCopyOpts() {
