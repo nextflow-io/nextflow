@@ -120,7 +120,7 @@ class BridgeExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    protected List<String> getKillCommand() { ['scancel'] }
+    protected List<String> getKillCommand() { ['ccc_mdel'] }
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
