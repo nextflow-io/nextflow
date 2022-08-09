@@ -44,8 +44,8 @@ class BridgeExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        //result << '-D' << quote(task.workDir)
         String job_name = ""
+        // parenthesis are not compatible with bridge submission commands
         job_name = getJobNameFor(task)
         job_name = job_name.replace("(", "")
         job_name = job_name.replace(")", "")
@@ -53,17 +53,18 @@ class BridgeExecutor extends AbstractGridExecutor {
         result << '-r' << job_name 
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG)) 
 
+        // number of cores per parallel task to allocate 
         if( task.config.cpus > 1 ) {
             result << '-c' << task.config.cpus.toString()
         }
 
+        // maximum walltime of the batch job in seconds
         if( task.config.time ) {
-            //result << '-T' << task.config.getTime().format('HH:mm:ss')
             result << '-T' << task.config.getTime().toSeconds() 
         }
 
+        // maximum memory amount required per allocated core in Mo (default is chosen by the underlying system)
         if( task.config.getMemory() ) {
-            //result << '--mem' << task.config.getMemory().toMega().toString() + 'M'
             result << '-M' << task.config.getMemory().toMega().toString() 
         }
 
@@ -72,7 +73,7 @@ class BridgeExecutor extends AbstractGridExecutor {
             result << '-q' << (task.config.queue.toString())
         }
 
-        // -- at the end append the command script wrapped file name
+        // other cluster options 
         if( task.config.clusterOptions ) {
             result << task.config.clusterOptions.toString() << ''
         }
