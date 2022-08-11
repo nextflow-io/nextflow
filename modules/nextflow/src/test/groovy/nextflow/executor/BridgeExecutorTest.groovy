@@ -1,6 +1,7 @@
 /*
  * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2022, CEA-CNRGH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,17 +64,9 @@ class BridgeExecutorTest extends Specification {
     }
 
     def testGetHeaders() {
-        // bridge example cpus 2; time '10h'; queue 'normal'; memory '8 GB' 
-        //#!/bin/bash
-        //#MSUB -r nf-virtual_digest
-        //#MSUB -o /env/export/v_cng_n04_scratch/v_scratchK/q_projet_CHROMAREGHUMAN_480/eb/pore_c_analysis/pore_c_nf/work/42/f14ac4374502557e9c32004f07217a/.command.log
-        //#MSUB -c 2
-        //#MSUB -T 36000
-        //#MSUB -M 8192
-        //#MSUB -q normal
 
         setup:
-        // LSF executor
+        // Bridge executor
         def executor = [:] as BridgeExecutor
 
         // mock process
@@ -110,13 +103,13 @@ class BridgeExecutorTest extends Specification {
         def executor = [:] as BridgeExecutor
         def text =
                 """
-                5 PD
-                6 PD
-                13 R
-                14 CA
-                15 F
-                4 R
-                22 S
+                5 pending
+                6 pending
+                13 running
+                15 failed
+                4 running
+                22 suspended
+                7 unknown
                 """.stripIndent().trim()
 
 
@@ -128,8 +121,8 @@ class BridgeExecutorTest extends Specification {
         result['5'] == AbstractGridExecutor.QueueStatus.PENDING
         result['6'] == AbstractGridExecutor.QueueStatus.PENDING
         result['13'] == AbstractGridExecutor.QueueStatus.RUNNING
-        result['14'] == AbstractGridExecutor.QueueStatus.ERROR
         result['15'] == AbstractGridExecutor.QueueStatus.ERROR
+        result['7'] == AbstractGridExecutor.QueueStatus.ERROR
         result['22'] == AbstractGridExecutor.QueueStatus.HOLD
 
     }

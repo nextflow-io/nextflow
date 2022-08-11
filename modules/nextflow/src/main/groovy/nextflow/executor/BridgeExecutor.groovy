@@ -1,6 +1,7 @@
 /*
  * Copyright 2020, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2022, CEA-CNRGH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +21,7 @@ import java.nio.file.Path
 import java.util.regex.Pattern
 
 import groovy.util.logging.Slf4j
+import groovy.transform.CompileStatic
 import nextflow.processor.TaskRun
 /**
  * Processor for BRIDGE resource manager (DRAFT)
@@ -98,7 +100,7 @@ class BridgeExecutor extends AbstractGridExecutor {
     }
 
     /**
-     * Parse the string returned by the {@code sbatch} command and extract the job ID string
+     * Parse the string returned by the {@code ccc_msub} command and extract the job ID string
      *
      * @param text The string returned when submitting the job
      * @return The actual job ID string
@@ -140,24 +142,19 @@ class BridgeExecutor extends AbstractGridExecutor {
         return result
     }
 
+
     /*
      *  Maps job status to nextflow status
      */
     static private Map STATUS_MAP = [
-            'PD': QueueStatus.PENDING,  // (pending)
-            'R': QueueStatus.RUNNING,   // (running)
-            'CA': QueueStatus.ERROR,    // (cancelled)
-            'CF': QueueStatus.PENDING,  // (configuring)
-            'CG': QueueStatus.RUNNING,  // (completing)
-            'CD': QueueStatus.DONE,     // (completed)
-            'F': QueueStatus.ERROR,     // (failed),
-            'TO': QueueStatus.ERROR,    // (timeout),
-            'NF': QueueStatus.ERROR,    // (node failure)
-            'S': QueueStatus.HOLD,      // (job suspended)
-            'ST': QueueStatus.HOLD,     // (stopped)
-            'PR': QueueStatus.ERROR,    // (Job terminated due to preemption)
-            'BF': QueueStatus.ERROR,    // (boot fail, Job terminated due to launch failure)
+            'pending': QueueStatus.PENDING, 
+            'running': QueueStatus.RUNNING,
+            'done': QueueStatus.DONE, 
+            'failed': QueueStatus.ERROR, 
+            'unknown': QueueStatus.ERROR,
+            'suspended': QueueStatus.HOLD,
     ]
+
 
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
