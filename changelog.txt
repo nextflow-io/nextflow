@@ -1,5 +1,26 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.08.1-edge - 11 Aug 2022
+- Add support for disabling config include [e0859a12]
+- Add experimental fusion support [1854f1f2]
+- Add support for plugin provided function extension (#3079) [16230c2b] <Jorge Aguilera>
+- Add support for AWS Batch logs group (#3092) [4ef043ac] <Ben Sherman>
+- Add share identifier to Aws Batch (#3089) [c0253aba] <Ben Sherman>
+- Improve Tower cache manager [0091afc5]
+- Improve S3 copy via xfer manager [02d2beae]
+- Reports a warning when using NXF vars in the config [009ec256]
+- Make wake token cache duration config [5f955fc9]
+- Patch unable to start non-core plugin [a55f58ff]
+- Increase S3 upload chunk size to 100 MB [9c94a080]
+- Change Google Batch disk directive to override boot disk size (#3097) [7e1c0686] <Ben Sherman>
+- Fix queueSize setting is not honoured by AWS Batch executor (#3093) [d07bb52b] <Ben Sherman>
+- Fix Allow disabling scratch with Google Batch [e8e5c721]
+- Fix Emit relative path when relative parameter is set (#3072) [39797759] <Jorge Aguilera>
+- Bump nf-wave@0.3.0 [e46d341d]
+- Bump nf-tower@1.5.1 [cdc2be53]
+- Bump nf-google@1.4.1 [c39935a5]
+- Bump nf-amazon@1.10.0 [ccdf62d0]
+
 22.08.0-edge - 1 Aug 2022
 - Add warning to env config docs (#3083) [ca933c16] <Ben Sherman>
 - Add -with-conda CLI option (#3073) [98b2ac80]
