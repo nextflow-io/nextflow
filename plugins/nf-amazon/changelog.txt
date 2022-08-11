@@ -1,5 +1,13 @@
 nf-amazon changelog
 ===================
+1.10.0 - 11 Aug
+- Improve S3 copy via xfer manager [02d2beae]
+- Add experimental fusion support [1854f1f2]
+- Increase S3 upload chunk size to 100 MB [9c94a080]
+- Add support for AWS Batch logs group (#3092) [4ef043ac]
+- Fix queueSize setting is not honoured by AWS Batch executor (#3093) [d07bb52b]
+- Add share identifier to Aws Batch (#3089) [c0253aba]
+
 1.9.0 - 1 Aug 2022
 - Fix Unable to disable scratch attribute with AWS Batch [1770f73a]
 - Fix NPE while setting S3 ObjectMetada #3031 [d6163431] <Jorge Aguilera>
