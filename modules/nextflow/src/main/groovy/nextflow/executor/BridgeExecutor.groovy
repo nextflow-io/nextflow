@@ -164,7 +164,7 @@ class BridgeExecutor extends AbstractGridExecutor {
 
         def result = [:]
 
-        text.eachLine { String line ->
+        for( String line : text.readLines() ) { 
             def cols = line.split(/\s+/)
             if( cols.size() == 2 ) {
                 result.put( cols[0], STATUS_MAP.get(cols[1]) )
