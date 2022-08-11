@@ -159,7 +159,9 @@ class BridgeExecutor extends AbstractGridExecutor {
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
-        def result = [:]
+        final result = new LinkedHashSet(100)
+        if( !text ) 
+           return result
 
         for( String line : text.readLines() ) { 
             def cols = line.split(/\s+/)
