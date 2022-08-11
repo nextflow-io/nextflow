@@ -21,7 +21,6 @@ import java.nio.file.Path
 import java.util.regex.Pattern
 
 import groovy.util.logging.Slf4j
-import groovy.transform.CompileStatic
 import nextflow.processor.TaskRun
 /**
  * Processor for BRIDGE resource manager (DRAFT)
@@ -159,11 +158,12 @@ class BridgeExecutor extends AbstractGridExecutor {
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
-        final result = new LinkedHashSet(100)
-        if( !text ) 
-           return result
+        def result = [:]
+        if( !text) 
+            return result
 
         for( String line : text.readLines() ) { 
+
             def cols = line.split(/\s+/)
             if( cols.size() == 2 ) {
                 result.put( cols[0], STATUS_MAP.get(cols[1]) )
