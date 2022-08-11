@@ -343,7 +343,10 @@ class ConfigBuilder {
     protected ConfigObject buildConfig0( Map env, List configEntries )  {
         assert env != null
 
-        final slurper = new ConfigParser().setRenderClosureAsString(showClosures)
+        final ignoreIncludes = options ? options.ignoreConfigIncludes : false
+        final slurper = new ConfigParser()
+                .setRenderClosureAsString(showClosures)
+                .setIgnoreIncludes(ignoreIncludes)
         ConfigObject result = new ConfigObject()
 
         if( cmdRun && (cmdRun.hasParams()) )
