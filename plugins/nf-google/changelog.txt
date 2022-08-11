@@ -1,5 +1,9 @@
 nf-google changelog
 ===================
+1.4.1 - 11 Aug 2022
+- Change google batch disk directive to override boot disk size (#3097) [7e1c0686]
+- Fix Allow disabling scratch with Google Batch [e8e5c721]>
+
 1.4.0 - 1 Aug 2022
 - Report warning when Google Batch quota is exceeded (#3066) [6b9c52ad] <Ben Sherman>
 - Add boot disk, cpu platform to google batch (#3058) [17a8483d] <Ben Sherman>
