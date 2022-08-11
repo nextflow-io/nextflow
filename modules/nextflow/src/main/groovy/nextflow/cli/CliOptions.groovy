@@ -43,6 +43,9 @@ class CliOptions {
     @Parameter(names=['-c','-config'], description = 'Add the specified file to configuration set')
     List<String> userConfig
 
+    @Parameter(names=['-config-ignore-includes'], description = 'Disable the parsing of config includes')
+    boolean ignoreConfigIncludes
+
     @Parameter(names=['-C'], description = 'Use the specified configuration file(s) overriding any defaults')
     List<String> config
 
