@@ -20,6 +20,7 @@ package nextflow.executor
 import java.nio.file.Path
 import java.util.regex.Pattern
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
 /**
@@ -31,6 +32,7 @@ import nextflow.processor.TaskRun
  * @author Eric Bonnet <eric.d.bonnet@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class BridgeExecutor extends AbstractGridExecutor {
 
     //  submission pattern example: Submitted Batch Session 1277017
@@ -61,7 +63,7 @@ class BridgeExecutor extends AbstractGridExecutor {
 
         // maximum walltime of the batch job in seconds
         if( task.config.time ) {
-            result << '-T' << task.config.getTime().toSeconds() 
+            result << '-T' << task.config.getTime().toSeconds().toString() 
         }
 
         // maximum memory amount required per allocated core in Mo (default is chosen by the underlying system)
