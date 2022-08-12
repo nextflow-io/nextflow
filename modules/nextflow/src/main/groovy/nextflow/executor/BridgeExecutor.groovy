@@ -127,10 +127,10 @@ class BridgeExecutor extends AbstractGridExecutor {
     @Override
     protected List<String> queueStatusCommand(Object queue) {
 
-        final result = ['squeue','--noheader','-o','%i %t', '-t', 'all']
+        final result = ['ccc_bsstat','-o','batchid,state']
 
         if( queue )
-            result << '-p' << queue.toString()
+            result << '-q' << queue.toString()
 
         final user = System.getProperty('user.name')
         if( user )
