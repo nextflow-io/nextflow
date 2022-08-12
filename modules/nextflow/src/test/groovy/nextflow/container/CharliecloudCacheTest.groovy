@@ -117,6 +117,7 @@ class CharliecloudCacheTest extends Specification {
         def TARGET_PATH = CACHE_PATH.resolve(LOCAL)
         and:
         def cache = Spy(CharliecloudCache)
+        TARGET_PATH.mkdirs()
 
         when:
         def result = cache.downloadCharliecloudImage(IMAGE)
