@@ -17,29 +17,29 @@
 
 package io.seqera.wave.plugin.util
 
+
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CliOptsTest extends Specification {
+class BasicCliOptsTest extends Specification {
 
-    def 'should parse cli' () {
-
+    @Unroll
+    def 'should parse options' () {
         when:
-        def cli = CliOpts.parse(['-i','-v','x=y', 'nextflow', '--', 'this', '--that'])
+        def cli = BasicCliOpts.parse(CLI?.tokenize(' '))
         then:
-        cli.options == ['-i':'','-v':'x=y']
-        cli.container == 'nextflow'
-        cli.args == ['this','--that']
-
-        when:
-        cli = CliOpts.parse(['-v','x=y', '-w', '$PWD', 'nextflow', '-it', '--', 'this', '--that'])
-        then:
-        cli.options == ['-v':'x=y', '-w':'$PWD', '-it':'']
-        cli.container == 'nextflow'
-        cli.args == ['this','--that']
+        cli.options == OPTS
+        cli.args == ARGS
+        
+        where:
+        CLI                                 | OPTS                                  | ARGS
+        null                                | [:]                                   | []
+        ''                                  | [:]                                   | []
+        'alpha=1 beta=2 foo delta=3 bar'    | [alpha:'1', beta:'2', delta:'3']      | ['foo','bar']
+        'alpha= foo'                        | [alpha:'']                            | ['foo']
     }
-
 }
