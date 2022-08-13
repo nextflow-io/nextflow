@@ -152,7 +152,7 @@ class ModuleBundle {
                 attrs.isRegularFile() ? attrs.size() : 0,
                 attrs.lastModifiedTime().toMillis(),
                 Integer.toOctalString(file.getPermissionsMode()) ]
-        log.debug "Module bundle entry=$meta"
+        log.trace "Module bundle entry=$meta"
         return meta
     }
 
