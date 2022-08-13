@@ -46,9 +46,9 @@ class WaveCmdCli implements PluginAbstractExec {
     }
 
     protected void getContainer(List<String> args) {
-        final image = args.pop()
-        if( !image )
+        if( !args )
             throw new AbortOperationException("Missing container image - usage: nextflow plugin exec nf-wave get-container <image>")
+        final image = args.pop()
         final target = resolveTargetImage(image)
         log.info """\
                 Source container: $image
@@ -56,10 +56,9 @@ class WaveCmdCli implements PluginAbstractExec {
     }
 
     protected void runContainer(List<String> args) {
-        final image = args.pop()
-        if( !image )
+        if( !args )
             throw new AbortOperationException("Missing container image - usage: nextflow plugin exec nf-wave container-run <image>")
-
+        final image = args.pop()
         final target = resolveTargetImage(image)
         log.info "Resolved image: '$image' => '$target'"
         final containerConfig = getSession().getContainerConfig()
