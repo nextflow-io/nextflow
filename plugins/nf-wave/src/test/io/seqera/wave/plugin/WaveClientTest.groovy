@@ -131,7 +131,7 @@ class WaveClientTest extends Specification {
         Files.getLastModifiedTime(result.resolve('main.nf')) == LAST_MODIFIED
         
         when:
-        def layer = wave.layer(bundle)
+        def layer = wave.makeLayer(bundle)
         then:
         layer.tarDigest == 'sha256:81200f6ad32793567d8070375dc51312a1711fedf6a1c6f5e4a97fa3014f3491'
         layer.gzipDigest == 'sha256:09a2deca4293245909223db505cf69affa1a8ff8acb745fe3cad38bc0b719110'

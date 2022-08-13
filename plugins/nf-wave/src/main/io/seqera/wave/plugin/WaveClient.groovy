@@ -20,28 +20,23 @@ package io.seqera.wave.plugin
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.attribute.BasicFileAttributes
 import java.time.Duration
 import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
+import com.google.common.util.concurrent.UncheckedExecutionException
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.google.common.util.concurrent.UncheckedExecutionException
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
-import io.seqera.wave.plugin.util.DigestFunctions
+import io.seqera.wave.plugin.packer.Packer
 import nextflow.Session
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ModuleBundle
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry
-import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
-import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -60,6 +55,8 @@ class WaveClient {
 
     final private FusionConfig fusion
 
+    final private Packer packer
+
     final private String endpoint
 
     private Cache<String, SubmitContainerTokenResponse> cache
@@ -69,6 +66,7 @@ class WaveClient {
         this.fusion = new FusionConfig(session.config.fusion as Map ?: [:])
         this.endpoint = config.endpoint()
         log.debug "Wave server endpoint: ${endpoint}"
+        this.packer = new Packer()
         // create cache
         cache = CacheBuilder<String, SubmitContainerTokenResponse>
             .newBuilder()
@@ -87,83 +85,30 @@ class WaveClient {
     Boolean enabled() { config.enabled() }
 
     protected <T extends OutputStream> T makeTar(ModuleBundle bundle, T target) {
-        try ( final archive = new TarArchiveOutputStream(target) ) {
-
-            for (String name : bundle.getEntries() ) {
-                final targetPath = bundle.path(name)
-                final attrs = Files.readAttributes(targetPath, BasicFileAttributes)
-                final entry = new TarArchiveEntry(targetPath, name)
-                entry.setIds(0,0)
-                entry.setGroupName("root")
-                entry.setUserName("root")
-                entry.setModTime(attrs.lastModifiedTime())
-                entry.setMode(getMode(targetPath))
-                // file permissions
-                archive.putArchiveEntry(entry)
-                if( !targetPath.isDirectory()) {
-                    Files.copy(targetPath, archive)
-                }
-                archive.closeArchiveEntry()
-            }
-            archive.finish()
-        }
-
-        return target
+        packer.makeTar(bundle.root, bundle.getPathsList(), target)
     }
 
-    /**
-     * See {@link TarArchiveEntry#DEFAULT_DIR_MODE}
-     */
-    private static final int DIR_MODE = 040000;
+    protected ContainerLayer makeLayer(ModuleBundle bundle) {
 
-    /**
-     * See {@link TarArchiveEntry#DEFAULT_FILE_MODE}
-     */
-    private static final int FILE_MODE = 0100000;
-
-    private int getMode(Path path) {
-        final mode = path.isDirectory() ? DIR_MODE : FILE_MODE
-        return mode + path.getPermissionsMode()
-    }
-
-    protected <T extends OutputStream> T makeGzip(InputStream source, T target) {
-        try (final compressed = new GzipCompressorOutputStream(target)) {
-            source.transferTo(compressed)
-            compressed.flush()
-        }
-        return target
-    }
-
-    protected ContainerLayer layer(ModuleBundle bundle) {
-        final tar = makeTar(bundle, new ByteArrayOutputStream()).toByteArray()
-        final tarDigest = DigestFunctions.digest(tar)
-        final gzip = makeGzip(new ByteArrayInputStream(tar), new ByteArrayOutputStream()).toByteArray()
-        final gzipSize = gzip.length
-        final gzipDigest = DigestFunctions.digest(gzip)
-        final data = 'data:' + gzip.encodeBase64()
+        final result = packer.layer(bundle.root, bundle.pathsList)
 
         log.debug """\
             Module bundle: ${bundle.root}
             - digest     : ${bundle.fingerprint()}    
-            - location   : $data
-            - tar digest : $tarDigest
-            - gzip digest: $gzipDigest
-            - gzip size  : $gzipSize
+            - location   : ${result.location}
+            - tar digest : ${result.tarDigest}
+            - gzip digest: ${result.gzipDigest}
+            - gzip size  : ${result.gzipSize}
             """.stripIndent().rightTrim()
 
-        return new ContainerLayer(
-                location: data,
-                tarDigest: tarDigest,
-                gzipSize: gzipSize,
-                gzipDigest: gzipDigest )
-
+        return result
     }
 
     SubmitContainerTokenRequest makeRequest(WaveAssets assets) {
         final containerConfig = assets.containerConfig ?: new ContainerConfig()
         // pre-prepend the bundle layer
         if( assets.bundle && assets.bundle.hasEntries() ) {
-            containerConfig.prependLayer(layer(assets.bundle))
+            containerConfig.prependLayer(makeLayer(assets.bundle))
         }
 
         if( !assets.containerImage && !assets.dockerFileContent )
