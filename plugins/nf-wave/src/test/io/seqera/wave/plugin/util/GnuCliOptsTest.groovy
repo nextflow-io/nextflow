@@ -17,15 +17,29 @@
 
 package io.seqera.wave.plugin.util
 
+import spock.lang.Specification
+
 /**
- * Simple CLI args & options interface
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface CliOpts {
+class GnuCliOptsTest extends Specification {
 
-    Map<String,String> getOptions()
+    def 'should parse cli' () {
 
-    List<String> getArgs()
+        when:
+        def cli = GnuCliOpts.parse(['-i', '-v', 'x=y', 'nextflow', '--', 'this', '--that'])
+        then:
+        cli.options == ['-i':'','-v':'x=y']
+        cli.container == 'nextflow'
+        cli.args == ['this','--that']
+
+        when:
+        cli = GnuCliOpts.parse(['-v', 'x=y', '-w', '$PWD', 'nextflow', '-it', '--', 'this', '--that'])
+        then:
+        cli.options == ['-v':'x=y', '-w':'$PWD', '-it':'']
+        cli.container == 'nextflow'
+        cli.args == ['this','--that']
+    }
 
 }
