@@ -16,7 +16,7 @@
  */
 
 package nextflow.processor
-import java.util.concurrent.ArrayBlockingQueue
+
 
 import nextflow.Session
 import nextflow.util.Duration
@@ -43,7 +43,6 @@ class TaskPollingMonitorTest extends Specification {
         monitor.pollIntervalMillis == Duration.of('1h').toMillis()
         monitor.capacity == 11
         monitor.dumpInterval ==  Duration.of('3h')
-        monitor.runningQueue instanceof ArrayBlockingQueue
 
     }
 
