@@ -17,7 +17,7 @@
 
 package nextflow.processor
 
-import java.util.concurrent.ArrayBlockingQueue
+
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
@@ -135,8 +135,8 @@ class TaskPollingMonitor implements TaskMonitor {
         this.dumpInterval = (params.dumpInterval as Duration) ?: Duration.of('5min')
         this.capacity = (params.capacity ?: 0) as int
 
-        this.pendingQueue = new LinkedBlockingQueue()
-        this.runningQueue = capacity ? new ArrayBlockingQueue<TaskHandler>(capacity) : new LinkedBlockingQueue<TaskHandler>()
+        this.pendingQueue = new LinkedBlockingQueue<TaskHandler>()
+        this.runningQueue = new LinkedBlockingQueue<TaskHandler>()
     }
 
     static TaskPollingMonitor create( Session session, String name, int defQueueSize, Duration defPollInterval ) {
