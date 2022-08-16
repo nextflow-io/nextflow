@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Plugin-Class: io.seqera.wave.plugin.WavePlugin
 Plugin-Id: nf-wave
-Plugin-Version: 0.3.0
+Plugin-Version: 0.3.1
 Plugin-Provider: Seqera Labs
 Plugin-Requires: >=22.08.0-edge
