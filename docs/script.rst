@@ -456,6 +456,9 @@ Remove the first number with its trailing whitespace from a string::
 Files and I/O
 ==============
 
+Opening files
+-------------
+
 To access and work with files, use the ``file`` method, which returns a file system object
 given a file path string::
 
@@ -490,6 +493,10 @@ maxDepth        Maximum number of directory levels to visit (default: `no limit`
 followLinks     When ``true`` follows symbolic links during directory tree traversal, otherwise treats them as files (default: ``true``)
 checkIfExists   When ``true`` throws an exception of the specified path do not exist in the file system (default: ``false``)
 =============== ===================
+
+.. note::
+  Nextflow also provides a ``files()`` method, which is identical to ``file()`` except that it always
+  returns a list, whereas ``file()`` only returns a list if it matches multiple files.
 
 .. tip::
   If you are a Java geek, you might be interested to know that the ``file`` method returns a
