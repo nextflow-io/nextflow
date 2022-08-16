@@ -1,5 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.08.2-edge - 16 Aug 2022
+- Fix queueSize setting is not honoured by AWS Batch executor (again) #3117 [1733bb2e]
+- Add `files()` method to docs (#3123) [00bb8896] <Ben Sherman>
+- Refactor wave packing [bc876986]
+- Improve logging [aa380d5f]
+- Update dockerfile [e6329282]
+
 22.08.1-edge - 11 Aug 2022
 - Add support for disabling config include [e0859a12]
 - Add experimental fusion support [1854f1f2]
