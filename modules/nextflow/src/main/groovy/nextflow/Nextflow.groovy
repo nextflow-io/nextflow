@@ -56,211 +56,24 @@ class Nextflow {
     // note: groovy `Slf4j` annotation causes a bizarre issue
     // https://issues.apache.org/jira/browse/GROOVY-7371
     // declare public so that can be accessed from the user script
-    public static final Logger log = LoggerFactory.getLogger(Nextflow)
+    static public final Logger log = LoggerFactory.getLogger(Nextflow)
 
-    private static final Random random = new Random()
+    static private final Random random = new Random()
 
     /**
-     * Create a {@code DataflowVariable} binding it to the specified value
+     * Marker method to create a closure to be passed to {@link OperatorImpl#branch(DataflowReadChannel, groovy.lang.Closure)}
+     * operator.
      *
-     * @param obj
+     * Despite apparently is doing nothing, this method is needed as marker to apply the {@link OpXform} AST
+     * transformation required to interpret the closure content as required for the branch evaluation.
+     *
+     * @see OperatorImpl#branch(DataflowReadChannel, Closure)
+     * @see OpXformImpl
+     *
+     * @param closure
      * @return
      */
-    @Deprecated
-    static <T> DataflowVariable<T> variable( T obj = null ) {
-        if( NF.dsl2 ) throw new DeprecationException("Method `variable` is not available any more")
-        obj != null ? CH.value(obj) : CH.value()
-    }
-
-    /**
-     * Create a {@code DataflowQueue} populating with the specified values
-     * <p>
-     * This 'queue' data structure can be viewed as a point-to-point (1 to 1, many to 1) communication channel.
-     * It allows one or more producers send messages to one reader.
-     *
-     * @param values
-     * @return
-     */
-    @Deprecated
-    static DataflowQueue channel( Collection values = null ) {
-        if( NF.dsl2 ) throw new DeprecationException("Method `channel` is not available any more")
-        def result = CH.queue()
-        if( values != null )
-            CH.emitAndClose(result, values)
-        return result
-    }
-
-    /**
-     * Create a {@code DataflowQueue} populating with a single value
-     * <p>
-     * This 'queue' data structure can be viewed as a point-to-point (1 to 1, many to 1) communication channel.
-     * It allows one or more producers send messages to one reader.
-     *
-     * @param item
-     * @return
-     */
-    @Deprecated
-    static DataflowQueue channel( Object... items ) {
-        return channel(items as List)
-    }
-
-    static private fileNamePattern( FilePatternSplitter splitter, Map opts, FileSystem fs ) {
-
-        final scheme = splitter.scheme
-        final folder = splitter.parent
-        final pattern = splitter.fileName
-
-        if( !fs )
-            fs = FileHelper.fileSystemForScheme(scheme)
-
-        if( opts == null ) opts = [:]
-        if( !opts.type ) opts.type = 'file'
-
-        def result = new LinkedList()
-        try {
-            FileHelper.visitFiles(opts, fs.getPath(folder), pattern) { Path it -> result.add(it) }
-        }
-        catch (NoSuchFileException e) {
-            log.debug "No such file: $folder -- Skipping visit"
-        }
-        return result
-
-    }
-
-    /**
-     * Get one or more file object given the specified path or glob pattern.
-     *
-     * @param options
-     *      A map holding one or more of the following options:
-     *      - type: Type of paths returned, either `file`, `dir` or `any` (default: `file`)
-     *      - hidden: When `true` includes hidden files in the resulting paths (default: `false`)
-     *      - maxDepth: Maximum number of directory levels to visit (default: no limit)
-     *      - followLinks: When `true` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: `true`)
-     *
-     * @param path A file path eventually including a glob pattern e.g. /some/path/file*.txt
-     * @return An instance of {@link Path} when a single file is matched or a list of {@link Path}s
-     */
-    static file( Map options = null, def filePattern ) {
-
-        if( !filePattern )
-            throw new IllegalArgumentException("Argument of `file` function cannot be ${filePattern==null?'null':'empty'}")
-
-        final path = filePattern as Path
-        final glob = options?.containsKey('glob') ? options.glob as boolean : isGlobAllowed(path)
-        if( !glob ) {
-            return FileHelper.checkIfExists(path, options)
-        }
-
-        // if it isn't a glob pattern simply return it a normalized absolute Path object
-        def splitter = FilePatternSplitter.glob().parse(path.toString())
-        if( !splitter.isPattern() ) {
-            def normalised = splitter.strip(path.toString())
-            if( path instanceof Path )  {
-                return FileHelper.checkIfExists(path.fileSystem.getPath(normalised), options)
-            }
-            else {
-                return FileHelper.checkIfExists(FileHelper.asPath(normalised), options)
-            }
-        }
-
-        // revolve the glob pattern returning all matches
-        return fileNamePattern(splitter, options, path.getFileSystem())
-    }
-
-    static files( Map options=null, def path ) {
-        def result = file(options, path)
-        return result instanceof List ? result : [result]
-    }
-
-
-    /**
-     * Creates a {@link ArrayTuple} object with the given open array items
-     *
-     * @param args The items used to created the tuple object
-     * @return An instance of {@link ArrayTuple} populated with the given argument(s)
-     */
-    static  ArrayTuple tuple( def value ) {
-        if( !value )
-            return new ArrayTuple()
-
-        new ArrayTuple( value instanceof Collection ? (Collection)value : [value] )
-    }
-
-    /**
-     * Creates a {@link ArrayTuple} object with the given open array items
-     *
-     * @param args The items used to created the tuple object
-     * @return An instance of {@link ArrayTuple} populated with the given argument(s)
-     */
-    static ArrayTuple tuple( Object ... args ) {
-        tuple( args as List )
-    }
-
-    /**
-     * Creates a FASTQ splitter handler for the given object
-     *
-     * @param obj The object to be managed as a FASTQ
-     * @return An instance of {@link FastqSplitter
-     */
-    static FastqSplitter fastq( obj ) {
-        (FastqSplitter)new FastqSplitter('fastq').target(obj)
-    }
-
-    /**
-     * Creates a FASTA splitter handler for the given object
-     *
-     * @param obj The object to be managed as a FASTA
-     * @return An instance of {@link FastqSplitter
-     */
-    static FastaSplitter fasta( obj ) {
-        (FastaSplitter)new FastaSplitter('fasta').target(obj)
-    }
-
-    /**
-     * Interrupts the iteration when using a split operators
-     */
-    static void stop() {
-        throw new StopSplitIterationException()
-    }
-
-
-    /**
-     * Stop the current execution returning an error code and message
-     *
-     * @param exitCode The exit code to be returned
-     * @param message The message that will be reported in the log file (optional)
-     */
-    static void exit(int exitCode, String message = null) {
-        if( session.aborted ) {
-            log.debug "Ignore exit because execution is already aborted -- message=$message"
-            return
-        }
-        
-        if ( exitCode && message ) {
-            log.error message
-        }
-        else if ( message ) {
-            log.info message
-        }
-        System.exit(exitCode)
-    }
-
-    /**
-     * Stop the current execution returning a 0 error code and the specified message
-     *
-     * @param message The message that will be reported in the log file
-     */
-    static void exit( String message ) {
-        exit(0, message)
-    }
-
-    /**
-     * Throws a script runtime error
-     * @param message An optional error message
-     */
-    static void error( String message = null ) {
-        throw message ? new ProcessUnrecoverableException(message) : new ProcessUnrecoverableException()
-    }
+    static Closure<TokenBranchDef> branchCriteria(Closure<TokenBranchDef> closure) { closure }
 
     /**
      * Create a folder for the given key. It guarantees to return the same folder name
@@ -317,44 +130,191 @@ class Nextflow {
     }
 
     /**
-     * This method is exposed as a public API to script, it should be removed
+     * Create a {@code DataflowQueue} populating with the specified values
+     * <p>
+     * This 'queue' data structure can be viewed as a point-to-point (1 to 1, many to 1) communication channel.
+     * It allows one or more producers send messages to one reader.
      *
-     * @return Create a temporary directory
+     * @param values
+     * @return
      */
     @Deprecated
-    static Path tempDir( String name = null, boolean create = true ) {
-        final session = (ISession)Global.session
-        if( !session )
-            throw new IllegalStateException("Invalid access to `tempDir` method -- Session object not yet defined")
-
-        def path = FileHelper.createTempFolder(session.workDir)
-        if( name )
-            path = path.resolve(name)
-
-        if( !path.exists() && create && !path.mkdirs() )
-            throw new IOException("Unable to create folder: $path -- Check file system permission" )
-
-        return path
+    static DataflowQueue channel( Collection values = null ) {
+        if( NF.dsl2 ) throw new DeprecationException("Method `channel` is not available any more")
+        def result = CH.queue()
+        if( values != null )
+            CH.emitAndClose(result, values)
+        return result
     }
 
     /**
-     * This method is exposed as a public API to script, it should be removed
+     * Create a {@code DataflowQueue} populating with a single value
+     * <p>
+     * This 'queue' data structure can be viewed as a point-to-point (1 to 1, many to 1) communication channel.
+     * It allows one or more producers send messages to one reader.
      *
-     * @return Create a temporary file
+     * @param item
+     * @return
      */
     @Deprecated
-    static Path tempFile( String name = null, boolean create = false ) {
-
-        if( !name )
-            name = 'file.tmp'
-
-        def folder = tempDir()
-        def result = folder.resolve(name)
-        if( create )
-            Files.createFile(result)
-
-        return result
+    static DataflowQueue channel( Object... items ) {
+        return channel(items as List)
     }
+
+    /**
+     * Throws a script runtime error
+     * @param message An optional error message
+     */
+    static void error( String message = null ) {
+        throw message ? new ProcessUnrecoverableException(message) : new ProcessUnrecoverableException()
+    }
+
+    /**
+     * Stop the current execution returning an error code and message
+     *
+     * @param exitCode The exit code to be returned
+     * @param message The message that will be reported in the log file (optional)
+     */
+    static void exit(int exitCode, String message = null) {
+        if( session.aborted ) {
+            log.debug "Ignore exit because execution is already aborted -- message=$message"
+            return
+        }
+
+        if ( exitCode && message ) {
+            log.error message
+        }
+        else if ( message ) {
+            log.info message
+        }
+        System.exit(exitCode)
+    }
+
+    /**
+     * Stop the current execution returning a 0 error code and the specified message
+     *
+     * @param message The message that will be reported in the log file
+     */
+    static void exit( String message ) {
+        exit(0, message)
+    }
+
+    /**
+     * Creates a FASTA splitter handler for the given object
+     *
+     * @param obj The object to be managed as a FASTA
+     * @return An instance of {@link FastqSplitter
+     */
+    static FastaSplitter fasta( obj ) {
+        (FastaSplitter)new FastaSplitter('fasta').target(obj)
+    }
+
+    /**
+     * Creates a FASTQ splitter handler for the given object
+     *
+     * @param obj The object to be managed as a FASTQ
+     * @return An instance of {@link FastqSplitter
+     */
+    static FastqSplitter fastq( obj ) {
+        (FastqSplitter)new FastqSplitter('fastq').target(obj)
+    }
+
+    /**
+     * Get one or more file object given the specified path or glob pattern.
+     *
+     * @param options
+     *      A map holding one or more of the following options:
+     *      - type: Type of paths returned, either `file`, `dir` or `any` (default: `file`)
+     *      - hidden: When `true` includes hidden files in the resulting paths (default: `false`)
+     *      - maxDepth: Maximum number of directory levels to visit (default: no limit)
+     *      - followLinks: When `true` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: `true`)
+     *
+     * @param path A file path eventually including a glob pattern e.g. /some/path/file*.txt
+     * @return An instance of {@link Path} when a single file is matched or a list of {@link Path}s
+     */
+    static file( Map options = null, def filePattern ) {
+
+        if( !filePattern )
+            throw new IllegalArgumentException("Argument of `file` function cannot be ${filePattern==null?'null':'empty'}")
+
+        final path = filePattern as Path
+        final glob = options?.containsKey('glob') ? options.glob as boolean : isGlobAllowed(path)
+        if( !glob ) {
+            return FileHelper.checkIfExists(path, options)
+        }
+
+        // if it isn't a glob pattern simply return it a normalized absolute Path object
+        def splitter = FilePatternSplitter.glob().parse(path.toString())
+        if( !splitter.isPattern() ) {
+            def normalised = splitter.strip(path.toString())
+            if( path instanceof Path )  {
+                return FileHelper.checkIfExists(path.fileSystem.getPath(normalised), options)
+            }
+            else {
+                return FileHelper.checkIfExists(FileHelper.asPath(normalised), options)
+            }
+        }
+
+        // revolve the glob pattern returning all matches
+        return fileNamePattern(splitter, options, path.getFileSystem())
+    }
+
+    static files( Map options=null, def path ) {
+        def result = file(options, path)
+        return result instanceof List ? result : [result]
+    }
+
+    static private fileNamePattern( FilePatternSplitter splitter, Map opts, FileSystem fs ) {
+
+        final scheme = splitter.scheme
+        final folder = splitter.parent
+        final pattern = splitter.fileName
+
+        if( !fs )
+            fs = FileHelper.fileSystemForScheme(scheme)
+
+        if( opts == null ) opts = [:]
+        if( !opts.type ) opts.type = 'file'
+
+        def result = new LinkedList()
+        try {
+            FileHelper.visitFiles(opts, fs.getPath(folder), pattern) { Path it -> result.add(it) }
+        }
+        catch (NoSuchFileException e) {
+            log.debug "No such file: $folder -- Skipping visit"
+        }
+        return result
+
+    }
+
+    @Deprecated
+    static Closure<TokenMultiMapDef> forkCriteria(Closure<TokenBranchDef> closure) { closure }
+
+    /**
+     * Creates a groupTuple dynamic key
+     *
+     * @param key
+     * @param size
+     * @return
+     */
+    static GroupKey groupKey(key, int size) {
+        new GroupKey(key,size)
+    }
+
+    /**
+     * Marker method to create a closure to be passed to {@link OperatorImpl#fork(DataflowReadChannel, Closure)}
+     * operator.
+     *
+     * Despite apparently is doing nothing, this method is needed as marker to apply the {@link OpXform} AST
+     * transformation required to interpret the closure content as required for the branch evaluation.
+     *
+     * @see OperatorImpl#multiMap(groovyx.gpars.dataflow.DataflowReadChannel, groovy.lang.Closure) (DataflowReadChannel, Closure)
+     * @see OpXformImpl
+     *
+     * @param closure
+     * @return
+     */
+    static Closure<TokenMultiMapDef> multiMapCriteria(Closure<TokenBranchDef> closure) { closure }
 
     /**
      * Implements built-in send mail functionality
@@ -401,46 +361,85 @@ class Nextflow {
     }
 
     /**
-     * Creates a groupTuple dynamic key
-     *
-     * @param key
-     * @param size
-     * @return
+     * Interrupts the iteration when using a split operators
      */
-    static GroupKey groupKey(key, int size) {
-        new GroupKey(key,size)
+    static void stop() {
+        throw new StopSplitIterationException()
     }
 
     /**
-     * Marker method to create a closure to be passed to {@link OperatorImpl#branch(DataflowReadChannel, groovy.lang.Closure)}
-     * operator.
+     * This method is exposed as a public API to script, it should be removed
      *
-     * Despite apparently is doing nothing, this method is needed as marker to apply the {@link OpXform} AST
-     * transformation required to interpret the closure content as required for the branch evaluation.
-     *
-     * @see OperatorImpl#branch(DataflowReadChannel, Closure)
-     * @see OpXformImpl
-     *
-     * @param closure
-     * @return
+     * @return Create a temporary directory
      */
-    static Closure<TokenBranchDef> branchCriteria(Closure<TokenBranchDef> closure) { closure }
+    @Deprecated
+    static Path tempDir( String name = null, boolean create = true ) {
+        final session = (ISession)Global.session
+        if( !session )
+            throw new IllegalStateException("Invalid access to `tempDir` method -- Session object not yet defined")
+
+        def path = FileHelper.createTempFolder(session.workDir)
+        if( name )
+            path = path.resolve(name)
+
+        if( !path.exists() && create && !path.mkdirs() )
+            throw new IOException("Unable to create folder: $path -- Check file system permission" )
+
+        return path
+    }
 
     /**
-     * Marker method to create a closure to be passed to {@link OperatorImpl#fork(DataflowReadChannel, Closure)}
-     * operator.
+     * This method is exposed as a public API to script, it should be removed
      *
-     * Despite apparently is doing nothing, this method is needed as marker to apply the {@link OpXform} AST
-     * transformation required to interpret the closure content as required for the branch evaluation.
+     * @return Create a temporary file
+     */
+    @Deprecated
+    static Path tempFile( String name = null, boolean create = false ) {
+
+        if( !name )
+            name = 'file.tmp'
+
+        def folder = tempDir()
+        def result = folder.resolve(name)
+        if( create )
+            Files.createFile(result)
+
+        return result
+    }
+
+    /**
+     * Creates a {@link ArrayTuple} object with the given open array items
      *
-     * @see OperatorImpl#multiMap(groovyx.gpars.dataflow.DataflowReadChannel, groovy.lang.Closure) (DataflowReadChannel, Closure)
-     * @see OpXformImpl
+     * @param args The items used to created the tuple object
+     * @return An instance of {@link ArrayTuple} populated with the given argument(s)
+     */
+    static ArrayTuple tuple( def value ) {
+        if( !value )
+            return new ArrayTuple()
+
+        new ArrayTuple( value instanceof Collection ? (Collection)value : [value] )
+    }
+
+    /**
+     * Creates a {@link ArrayTuple} object with the given open array items
      *
-     * @param closure
+     * @param args The items used to created the tuple object
+     * @return An instance of {@link ArrayTuple} populated with the given argument(s)
+     */
+    static ArrayTuple tuple( Object ... args ) {
+        tuple( args as List )
+    }
+
+    /**
+     * Create a {@code DataflowVariable} binding it to the specified value
+     *
+     * @param obj
      * @return
      */
-    static Closure<TokenMultiMapDef> multiMapCriteria(Closure<TokenBranchDef> closure) { closure }
-
     @Deprecated
-    static Closure<TokenMultiMapDef> forkCriteria(Closure<TokenBranchDef> closure) { closure }
+    static <T> DataflowVariable<T> variable( T obj = null ) {
+        if( NF.dsl2 ) throw new DeprecationException("Method `variable` is not available any more")
+        obj != null ? CH.value(obj) : CH.value()
+    }
+
 }

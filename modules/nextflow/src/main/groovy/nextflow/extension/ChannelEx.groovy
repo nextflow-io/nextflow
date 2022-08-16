@@ -43,35 +43,6 @@ import static nextflow.util.LoggerHelper.fmtType
 @CompileStatic
 class ChannelEx {
 
-//    static void set(ChannelOut source, Closure holder) {
-//        final names = CaptureProperties.capture(holder)
-//        if( names.size() > source.size() )
-//            throw new IllegalArgumentException("Operation `set` expects ${names.size()} channels but only ${source.size()} are provided")
-//
-//        for( int i=0; i<source.size(); i++ ) {
-//            final ch = source[i]
-//            final nm = names[i]
-//            NF.binding.setVariable(nm, ch)
-//        }
-//    }
-
-    static DataflowWriteChannel dump(final DataflowWriteChannel source, Closure closure = null) {
-        dump(source, Collections.emptyMap(), closure)
-    }
-
-    static DataflowWriteChannel dump(final DataflowWriteChannel source, Map opts, Closure closure = null) {
-        def op = new DumpOp(opts, closure)
-        if( op.isEnabled() ) {
-            op.setSource(source)
-            def target = op.apply()
-            NodeMarker.addOperatorNode('dump', source, target)
-            return target
-        }
-        else {
-            return source
-        }
-    }
-
     /**
      * Creates a channel emitting the entries in the collection to which is applied
      *
@@ -96,29 +67,21 @@ class ChannelEx {
         return CH.close0(source)
     }
 
-    /**
-     * INTERNAL ONLY API
-     * <p>
-     * Add the {@code update} method to an {@code Agent} so that it call implicitly
-     * the {@code Agent#updateValue} method
-     */
-    @CompileDynamic
-    static void update(Agent self, Closure message ) {
-        assert message != null
-
-        self.send {
-            message.call(it)
-            updateValue(it)
-        }
-
+    static DataflowWriteChannel dump(final DataflowWriteChannel source, Closure closure = null) {
+        dump(source, Collections.emptyMap(), closure)
     }
 
-    static private void checkContext(String method, Object operand) {
-        if( !NF.isDsl2() )
-            throw new MissingMethodException(method, operand.getClass())
-
-        if( operand instanceof ComponentDef && !ExecutionStack.withinWorkflow() )
-            throw new IllegalArgumentException("Process invocation are only allowed within a workflow context")
+    static DataflowWriteChannel dump(final DataflowWriteChannel source, Map opts, Closure closure = null) {
+        def op = new DumpOp(opts, closure)
+        if( op.isEnabled() ) {
+            op.setSource(source)
+            def target = op.apply()
+            NodeMarker.addOperatorNode('dump', source, target)
+            return target
+        }
+        else {
+            return source
+        }
     }
 
     /**
@@ -221,6 +184,31 @@ class ChannelEx {
         checkContext('and', left)
         checkContext('and', right)
         left.add(right)
+    }
+
+    static private void checkContext(String method, Object operand) {
+        if( !NF.isDsl2() )
+            throw new MissingMethodException(method, operand.getClass())
+
+        if( operand instanceof ComponentDef && !ExecutionStack.withinWorkflow() )
+            throw new IllegalArgumentException("Process invocation are only allowed within a workflow context")
+    }
+
+    /**
+     * INTERNAL ONLY API
+     * <p>
+     * Add the {@code update} method to an {@code Agent} so that it call implicitly
+     * the {@code Agent#updateValue} method
+     */
+    @CompileDynamic
+    static void update(Agent self, Closure message ) {
+        assert message != null
+
+        self.send {
+            message.call(it)
+            updateValue(it)
+        }
+
     }
 
 }

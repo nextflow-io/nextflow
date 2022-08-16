@@ -57,32 +57,60 @@ import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 @Slf4j
 class OperatorImpl {
 
-    static final public OperatorImpl instance = new OperatorImpl()
+    static public final OperatorImpl instance = new OperatorImpl()
 
-    private static Session getSession() { Global.getSession() as Session }
+    static private Session getSession() { Global.getSession() as Session }
 
     /**
-     * Subscribe *onNext* event
+     * Implements `branch` operator
      *
      * @param source
-     * @param closure
+     * @param action
      * @return
      */
-    DataflowReadChannel subscribe(final DataflowReadChannel source, final Closure closure) {
-        subscribeImpl( source, [onNext: closure] )
-        return source
+    ChannelOut branch(DataflowReadChannel source, Closure<TokenBranchDef> action) {
+        new BranchOp(source, action)
+                .apply()
+                .getOutput()
     }
 
     /**
-     * Subscribe *onNext*, *onError* and *onComplete*
+     * The ``buffer( )`` operator gathers the items emitted by the source channel into bundles and
+     * and emits these bundles as its own emissions.
      *
-     * @param source
-     * @param closure
-     * @return
+     * @param source The dataflow channel from where the values are gathered
+     * @param closingCriteria A condition that has to be verified to close
+     * @return A newly created dataflow queue which emitted the gathered values as bundles
      */
-    DataflowReadChannel subscribe(final DataflowReadChannel source, final Map<String,Closure> events ) {
-        subscribeImpl(source, events)
-        return source
+    DataflowWriteChannel buffer( final DataflowReadChannel source, Map params=null, Object closingCriteria ) {
+
+        def target = new BufferOp(source)
+                        .setParams(params)
+                        .setCloseCriteria(closingCriteria)
+                        .apply()
+        return target
+    }
+
+    DataflowWriteChannel buffer( final DataflowReadChannel source, Object startingCriteria, Object closingCriteria ) {
+        assert startingCriteria != null
+        assert closingCriteria != null
+
+        def target = new BufferOp(source)
+                .setStartCriteria(startingCriteria)
+                .setCloseCriteria(closingCriteria)
+                .apply()
+
+        return target
+    }
+
+    DataflowWriteChannel buffer( DataflowReadChannel source, Map<String,?> params ) {
+        checkParams( 'buffer', params, 'size','skip','remainder' )
+
+        def target = new BufferOp(source)
+                        .setParams(params)
+                        .apply()
+
+        return target
     }
 
     /**
@@ -111,108 +139,86 @@ class OperatorImpl {
         return target;
     }
 
-    /**
-     * Transform the items emitted by a channel by applying a function to each of them
-     *
-     * @param channel
-     * @param closure
-     * @return
-     */
-    DataflowWriteChannel map(final DataflowReadChannel source, final Closure closure) {
-        assert source != null
-        assert closure
-        return new MapOp(source, closure).apply()
+    void choice(final DataflowReadChannel source, final List<DataflowWriteChannel> outputs, final Closure<Integer> code) {
+        new ChoiceOp(source,outputs,code).apply()
     }
 
-    /**
-     * Transform the items emitted by a channel by applying a function to each of them and then flattens the results of that function.
-     *
-     * @param source The source channel
-     * @param closure The closure mapping the values emitted by the source channel
-     * @return The channel emitting the mapped values
-     */
-    DataflowWriteChannel flatMap(final DataflowReadChannel<?> source, final Closure closure=null) {
-        assert source != null
+    DataflowWriteChannel collate( DataflowReadChannel source, int size, boolean keepRemainder = true ) {
+        if( size <= 0 ) {
+            throw new IllegalArgumentException("Illegal argument 'size' for operator 'collate' -- it must be greater than zero: $size")
+        }
 
+        def target = new BufferOp(source)
+                        .setParams( size: size, remainder: keepRemainder )
+                        .apply()
+
+        return target
+    }
+
+    DataflowWriteChannel collate( DataflowReadChannel source, int size, int step, boolean keepRemainder = true ) {
+        if( size <= 0 ) {
+            throw new IllegalArgumentException("Illegal argument 'size' for operator 'collate' -- it must be greater than zero: $size")
+        }
+
+        if( step <= 0 ) {
+            throw new IllegalArgumentException("Illegal argument 'step' for operator 'collate' -- it must be greater than zero: $step")
+        }
+
+        // the result queue
         final target = CH.create()
-        final listener = stopErrorListener(source,target)
 
-        newOperator(source, target, listener) {  item ->
+        // the list holding temporary collected elements
+        List<List<?>> allBuffers = []
 
-            def result = closure != null ? closure.call(item) : item
-            def proc = ((DataflowProcessor) getDelegate())
+        // -- intercepts the PoisonPill and sent out the items remaining in the buffer when the 'remainder' flag is true
+        def listener = new DataflowEventAdapter() {
 
-            switch( result ) {
-                case Collection:
-                    result.each { it -> proc.bindOutput(it) }
-                    break
+            Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
+                if( message instanceof PoisonPill && keepRemainder && allBuffers.size() ) {
+                    allBuffers.each {
+                        target.bind( it )
+                    }
+                }
 
-                case (Object[]):
-                    result.each { it -> proc.bindOutput(it) }
-                    break
-
-                case Map:
-                    result.each { it -> proc.bindOutput(it) }
-                    break
-
-                case Map.Entry:
-                    proc.bindOutput( (result as Map.Entry).key )
-                    proc.bindOutput( (result as Map.Entry).value )
-                    break
-
-                case Channel.VOID:
-                    break
-
-                default:
-                    proc.bindOutput(result)
+                return message;
             }
+
+            @Override
+            boolean onException(DataflowProcessor processor, Throwable e) {
+                OperatorImpl.log.error("@unknown", e)
+                session.abort(e)
+                return true
+            }
+        }
+
+        int index = 0
+
+        // -- the operator collecting the elements
+        newOperator( inputs: [source], outputs: [target], listeners: [listener]) {
+
+            if( index++ % step == 0 ) {
+                allBuffers.add( [] )
+            }
+
+            allBuffers.each { List list -> list.add(it) }
+
+            def buf = allBuffers.head()
+            if( buf.size() == size )  {
+                ((DataflowProcessor) getDelegate()).bindOutput(buf)
+                allBuffers = allBuffers.tail()
+            }
+
         }
 
         return target
     }
 
-    /**
-     *
-     * The reduce( ) operator applies a function of your choosing to the first item emitted by a source channel,
-     * then feeds the result of that function along with the second item emitted by the source channel into the same
-     * function, then feeds the result of that function along with the third item into the same function, and so on until
-     * all items have been emitted by the source channel.
-     *
-     * Finally it emits the final result from the final call to your function as the sole output from the returned channel.
-     *
-     * @param source
-     * @param closure
-     * @return
-     */
-    DataflowWriteChannel reduce(final DataflowReadChannel source, final Closure closure) {
-        if( source instanceof DataflowExpression )
-            throw new IllegalArgumentException('Operator `reduce` cannot be applied to a value channel')
-
-        final target = new DataflowVariable()
-        reduceImpl( source, target, null, closure )
-        return target
+    DataflowWriteChannel collect(final DataflowReadChannel source, Closure action=null) {
+        collect(source,Collections.emptyMap(),action)
     }
 
-    /**
-     *
-     * The reduce( ) operator applies a function of your choosing to the first item emitted by a source channel,
-     * then feeds the result of that function along with the second item emitted by the source channel into the same
-     * function, then feeds the result of that function along with the third item into the same function, and so on until
-     * all items have been emitted by the source channel.
-     *
-     * Finally it emits the final result from the final call to your function as the sole output from the returned channel.
-     *
-     * @param source
-     * @parama seed
-     * @param closure
-     * @return
-     */
-    DataflowWriteChannel reduce(final DataflowReadChannel<?> source, Object seed, final Closure closure) {
-        if( source instanceof DataflowExpression )
-            throw new IllegalArgumentException('Operator `reduce` cannot be applied to a value channel')
-
-        final target = new DataflowVariable()
-        reduceImpl( source, target, seed, closure )
+    DataflowWriteChannel collect(final DataflowReadChannel source, Map opts, Closure action=null) {
+        final target = new CollectOp(source,action,opts).apply()
         return target
     }
 
@@ -226,9 +232,180 @@ class OperatorImpl {
         return result
     }
 
-    DataflowWriteChannel groupTuple( final DataflowReadChannel source, final Map params=null ) {
-        def result = new GroupTupleOp(params, source).apply()
+    DataflowWriteChannel combine( DataflowReadChannel left, Object right ) {
+        combine(left, null, right)
+    }
+
+    DataflowWriteChannel combine( DataflowReadChannel left, Map params, Object right ) {
+        checkParams('combine', params, [flat:Boolean, by: [List,Integer]])
+
+        final op = new CombineOp(left,right)
+        OpCall.current.get().inputs.addAll(op.inputs)
+        if( params?.by != null ) op.pivot = params.by
+        final target = op.apply()
+        return target
+    }
+
+    /**
+     * Creates a channel that emits the items in same order as they are emitted by two or more channel
+     *
+     * @param source
+     * @param others
+     * @return
+     */
+    DataflowWriteChannel concat( DataflowReadChannel source, DataflowReadChannel... others ) {
+
+        def target = new ConcatOp(source, others).apply()
+
+        def allSources = [source]
+        if(others) allSources.addAll(others)
+
+        return target
+    }
+
+    /**
+     * Counts the number of occurrences of the given value inside this collection.
+     *
+     * @param source
+     * @param value
+     * @return
+     */
+    DataflowWriteChannel count(final DataflowReadChannel source ) {
+        final target = count0(source, null)
+        return target
+    }
+
+    /**
+     * Counts the number of occurrences which satisfy the given closure from inside this collection
+     *
+     * @param source
+     * @param criteria
+     * @return
+     */
+    DataflowWriteChannel count(final DataflowReadChannel source, final Object criteria ) {
+        final target = count0(source, criteria)
+        return target
+    }
+
+    static private DataflowVariable count0(DataflowReadChannel<?> source, Object criteria) {
+
+        final target = new DataflowVariable()
+        final discriminator = criteria != null ? new BooleanReturningMethodInvoker("isCase") : null
+
+        if( source instanceof DataflowExpression) {
+            source.whenBound { item ->
+                discriminator == null || discriminator.invoke(criteria, item) ? target.bind(1) : target.bind(0)
+            }
+        }
+        else {
+            reduceImpl(source, target, 0) { current, item ->
+                discriminator == null || discriminator.invoke(criteria, item) ? current+1 : current
+            }
+        }
+
+        return target
+    }
+
+    /**
+     * Groups the items emitted by the source channel into groups determined by the supplied mapping closure and counts the frequency of the created groups
+     * @param source The source channel
+     * @return A {@code DataflowVariable} returning the a {@code Map} containing the counting values for each key
+     */
+    @Deprecated
+    DataflowWriteChannel<Map> countBy(final DataflowReadChannel source ) {
+        countBy(source, { it })
+    }
+
+    /**
+     * Sorts all collection members into groups determined by the supplied mapping closure and counts the group size
+     *
+     * @param source
+     * @param criteria
+     * @return
+     */
+    @Deprecated
+    DataflowWriteChannel<Map> countBy(final DataflowReadChannel source, final Closure criteria ) {
+
+        final target = new DataflowVariable()
+
+        reduceImpl(source, target, [:]) { Map map, item ->
+                def key = criteria.call(item)
+                def value = map.containsKey(key) ? map.get(key)+1 : 1
+                map.put(key, value)
+                return map
+        }
+
+        return target
+    }
+
+    DataflowWriteChannel countFasta(DataflowReadChannel source, Map opts=null) {
+        final splitter = new FastaSplitter()
+        final result = countOverChannel( source, splitter, opts )
         return result
+    }
+
+    DataflowWriteChannel countFastq(DataflowReadChannel source, Map opts=null) {
+        final splitter = new FastqSplitter()
+        final result = countOverChannel( source, splitter, opts )
+        return result
+    }
+
+    DataflowWriteChannel countLines(DataflowReadChannel source, Map opts=null) {
+        final splitter = new TextSplitter()
+        final result = countOverChannel( source, splitter, opts )
+        return result
+    }
+
+    @Deprecated
+    DataflowWriteChannel countText(DataflowReadChannel source) {
+        countLines(source)
+    }
+
+    DataflowWriteChannel cross( DataflowReadChannel source, DataflowReadChannel other, Closure mapper = null ) {
+
+        def target = new CrossOp(source, other)
+                    .setMapper(mapper)
+                    .apply()
+
+        return target
+    }
+
+    /**
+     * Suppress duplicate consecutive items emitted by the source Observable
+     *
+     * See https://github.com/Netflix/RxJava/wiki/Filtering-Observables#suppress-duplicate-consecutive-items-emitted-by-the-source-observable
+     *
+     *
+     * @return
+     */
+    DataflowWriteChannel distinct( final DataflowReadChannel source ) {
+        distinct(source) {it}
+    }
+
+    /**
+     * suppress duplicate consecutive items emitted by the source Observable
+     *
+     * See https://github.com/Netflix/RxJava/wiki/Filtering-Observables#suppress-duplicate-consecutive-items-emitted-by-the-source-observable
+     *
+     * @return
+     */
+    DataflowWriteChannel distinct( final DataflowReadChannel source, Closure comparator ) {
+
+        def previous = null
+        final target = CH.createBy(source)
+        Closure filter = { it ->
+
+            def key = comparator.call(it)
+            if( key == previous ) {
+                return Channel.VOID
+            }
+            previous = key
+            return it
+        }
+
+        chainImpl(source, target, [:], filter)
+
+        return target
     }
 
     /**
@@ -281,100 +458,6 @@ class OperatorImpl {
                 if( result ) target.bind(it)
             })
         }
-
-        return target
-    }
-
-    DataflowWriteChannel until(DataflowReadChannel source, final Closure<Boolean> closure) {
-        return new UntilOp(source,closure).apply()
-    }
-
-
-    /**
-     * Modifies this collection to remove all duplicated items, using the default comparator.
-     *
-     * assert [1,3] == [1,3,3].unique()
-     *
-     * @param source
-     * @return
-     */
-    DataflowWriteChannel unique(final DataflowReadChannel source) {
-        unique(source) { it }
-    }
-
-    /**
-     * A convenience method for making a collection unique using a Closure to determine duplicate (equal) items. If the closure takes a single parameter, the argument passed will be each element, and the closure should return a value used for comparison (either using Comparable#compareTo or Object#equals). If the closure takes two parameters, two items from the collection will be passed as arguments, and the closure should return an int value (with 0 indicating the items are not unique).
-     * assert [1,4] == [1,3,4,5].unique { it % 2 }
-     * assert [2,3,4] == [2,3,3,4].unique { a, b -> a <=> b }
-     *
-     * @param source
-     * @param comparator
-     * @return
-     */
-    DataflowWriteChannel unique(final DataflowReadChannel source, Closure comparator ) {
-
-        def history = [:]
-        def target = CH.createBy(source)
-
-        // when the operator stop clear the history map
-        def events = new DataflowEventAdapter() {
-            void afterStop(final DataflowProcessor processor) {
-                history.clear()
-                history = null
-            }
-        }
-
-        def filter = {
-            def key = comparator.call(it)
-            if( history.containsKey(key) ) {
-                return Channel.VOID
-            }
-            else {
-                history.put(key,true)
-                return it
-            }
-        }  as Closure
-
-        // filter removing all duplicates
-        chainImpl(source, target, [listeners: [events]], filter )
-
-        return target
-    }
-
-    /**
-     * Suppress duplicate consecutive items emitted by the source Observable
-     *
-     * See https://github.com/Netflix/RxJava/wiki/Filtering-Observables#suppress-duplicate-consecutive-items-emitted-by-the-source-observable
-     *
-     *
-     * @return
-     */
-    DataflowWriteChannel distinct( final DataflowReadChannel source ) {
-        distinct(source) {it}
-    }
-
-    /**
-     * suppress duplicate consecutive items emitted by the source Observable
-     *
-     * See https://github.com/Netflix/RxJava/wiki/Filtering-Observables#suppress-duplicate-consecutive-items-emitted-by-the-source-observable
-     *
-     * @return
-     */
-    DataflowWriteChannel distinct( final DataflowReadChannel source, Closure comparator ) {
-
-        def previous = null
-        final target = CH.createBy(source)
-        Closure filter = { it ->
-
-            def key = comparator.call(it)
-            if( key == previous ) {
-                return Channel.VOID
-            }
-            previous = key
-            return it
-        }
-
-        chainImpl(source, target, [:], filter)
 
         return target
     }
@@ -435,20 +518,268 @@ class OperatorImpl {
     }
 
     /**
+     * Transform the items emitted by a channel by applying a function to each of them and then flattens the results of that function.
      *
-     * emit only the first n items emitted by an Observable
-     *
-     * See https://github.com/Netflix/RxJava/wiki/Filtering-Observables#take
+     * @param source The source channel
+     * @param closure The closure mapping the values emitted by the source channel
+     * @return The channel emitting the mapped values
+     */
+    DataflowWriteChannel flatMap(final DataflowReadChannel<?> source, final Closure closure=null) {
+        assert source != null
+
+        final target = CH.create()
+        final listener = stopErrorListener(source,target)
+
+        newOperator(source, target, listener) {  item ->
+
+            def result = closure != null ? closure.call(item) : item
+            def proc = ((DataflowProcessor) getDelegate())
+
+            switch( result ) {
+                case Collection:
+                    result.each { it -> proc.bindOutput(it) }
+                    break
+
+                case (Object[]):
+                    result.each { it -> proc.bindOutput(it) }
+                    break
+
+                case Map:
+                    result.each { it -> proc.bindOutput(it) }
+                    break
+
+                case Map.Entry:
+                    proc.bindOutput( (result as Map.Entry).key )
+                    proc.bindOutput( (result as Map.Entry).value )
+                    break
+
+                case Channel.VOID:
+                    break
+
+                default:
+                    proc.bindOutput(result)
+            }
+        }
+
+        return target
+    }
+
+    DataflowWriteChannel flatten( final DataflowReadChannel source )  {
+
+        final listeners = []
+        final target = CH.create()
+
+        if( source instanceof DataflowExpression ) {
+            listeners << new DataflowEventAdapter() {
+                @Override
+                void afterRun(final DataflowProcessor processor, final List<Object> messages) {
+                    processor.bindOutput( Channel.STOP )
+                    processor.terminate()
+                }
+
+                boolean onException(final DataflowProcessor processor, final Throwable e) {
+                    OperatorImpl.log.error("@unknown", e)
+                    session.abort(e)
+                    return true;
+                }
+            }
+        }
+
+        newOperator(inputs: [source], outputs: [target], listeners: listeners) {  item ->
+
+            def proc = ((DataflowProcessor) getDelegate())
+            switch( item ) {
+                case Collection:
+                    ((Collection)item).flatten().each { value -> proc.bindOutput(value) }
+                    break
+
+                case (Object[]):
+                    ((Collection)item).flatten().each { value -> proc.bindOutput(value) }
+                    break
+
+                case Channel.VOID:
+                    break
+
+                default:
+                    proc.bindOutput(item)
+            }
+        }
+
+        return target
+    }
+
+    @Deprecated
+    ChannelOut fork(DataflowReadChannel source, Closure<TokenMultiMapDef> action) {
+        log.warn "Operator `fork` has been renamed to `multiMap`"
+        multiMap(source, action)
+    }
+
+    /**
+     * Implements the default mapping strategy, having the following strategy:
+     * <pre>
+     *     Map -> first entry key
+     *     Map.Entry -> the entry key
+     *     Collection -> first item
+     *     Array -> first item
+     *     Object -> the object itself
+     * </pre>
+     * @param obj
+     * @return
+     */
+    @PackageScope
+    static public Closure DEFAULT_MAPPING_CLOSURE = { obj, int index=0 ->
+
+        switch( obj ) {
+
+            case List:
+                def values = (List)obj
+                return values.size() ? values.get(index) : null
+
+            case (Object[]):
+                def values = (Object[])obj
+                return values.size() ? values[index] : null
+
+            case Map:
+                obj = ((Map)obj).values()
+                // note: fallback into the following case
+
+            case Collection:
+                def itr = ((Collection)obj) .iterator()
+                def count=0
+                while( itr.hasNext() ) {
+                    def value = itr.next()
+                    if( count++ == index ) return value
+                }
+                return null
+
+            case Map.Entry:
+                def entry = (Map.Entry) obj
+                return (index == 0 ? entry.key :
+                        index == 1 ? entry.value : null)
+
+            default:
+                return index==0 ? obj : null
+        }
+
+    }
+
+    /**
+     * Sorts all collection members into groups determined by the supplied mapping closure
      *
      * @param source
-     * @param n The number of items to be taken. The value {@code -1} has a special semantic for all
-     * @return The resulting channel emitting the taken values
+     * @param mapper
+     * @return
      */
-    DataflowWriteChannel take( final DataflowReadChannel source, int n ) {
-        if( source instanceof DataflowExpression )
-            throw new IllegalArgumentException("Operator `take` cannot be applied to a value channel")
+    @Deprecated
+    DataflowWriteChannel<Map> groupBy(final DataflowReadChannel source, final params = null ) {
+        int index = 0
+        Closure mapper = DEFAULT_MAPPING_CLOSURE
 
-        return new TakeOp(source,n).apply()
+        if( params instanceof Closure )
+            mapper = params
+
+        else if( params instanceof Number ) {
+            index = params as int
+        }
+        else if( params != null ) {
+            throw new IllegalArgumentException("Not a valid `group` argument: $params")
+        }
+
+        final target = new DataflowVariable()
+        final int len = mapper.getMaximumNumberOfParameters()
+        reduceImpl(source, target, [:]) { Map map, item ->
+            def key = len == 2 ? mapper.call(item,index) : mapper.call(item)
+            def list = map.get(key)
+            list = list ? list << item : [item]
+            map.put(key, list)
+            return map
+        }
+
+        return target
+    }
+
+    DataflowWriteChannel groupTuple( final DataflowReadChannel source, final Map params=null ) {
+        def result = new GroupTupleOp(params, source).apply()
+        return result
+    }
+
+    /**
+     * Empty the specified value only if the source channel to which is applied is empty i.e. do not emit
+     * any value.
+     *
+     * @param source The channel to which the operator is applied
+     * @param value The value to emit when the source channel is empty. If a closure is used the the value returned by its invocation is used.
+     * @return The resulting channel emitting the source items or the default value when the channel is empty
+     */
+    DataflowWriteChannel ifEmpty( DataflowReadChannel source, value ) {
+
+        boolean empty = true
+        final result = CH.createBy(source)
+        final singleton = result instanceof DataflowExpression
+        final next = { result.bind(it); empty=false }
+        final complete = {
+            if(empty)
+                result.bind( value instanceof Closure ? value() : value )
+            if( !singleton )
+                result.bind(Channel.STOP)
+        }
+
+        subscribeImpl(source, [onNext: next, onComplete: complete])
+
+        return result
+    }
+
+    @DeprecatedDsl2
+    void into( DataflowReadChannel source, final DataflowWriteChannel... targets ) {
+        new IntoOp(source, targets as List<DataflowWriteChannel>).apply()
+    }
+
+    @DeprecatedDsl2
+    List<DataflowReadChannel> into( final DataflowReadChannel source, int n ) {
+        def outputs = new IntoOp(source,n).apply().getOutputs()
+        return outputs
+    }
+
+    /**
+     * Forward source dataflow channel *into* one or more dataflow channels. For example:
+     * <pre>
+     *     Channel.from( ... )
+     *            .map { ... }
+     *            .into { foo; bar }
+     * </pre>
+     *
+     * It creates two new dataflow variables named {@code foo} and {@code bar} and copied the map
+     * result into them.
+     *
+     * @param source The source dataflow channel which items are copied into newly created dataflow variables.
+     * @param holder A closure that defines one or more variable names into which source items are copied.
+     */
+    @DeprecatedDsl2
+    void into( DataflowReadChannel source, Closure holder ) {
+        def outputs = new IntoOp(source,holder).apply().getOutputs()
+        OpCall.current.get().outputs.addAll(outputs)
+    }
+
+    DataflowWriteChannel join( DataflowReadChannel left, right ) {
+        if( right==null ) throw new IllegalArgumentException("Operator `join` argument cannot be null")
+        if( !(right instanceof DataflowReadChannel) ) throw new IllegalArgumentException("Invalid operator `join` argument [${right.getClass().getName()}] -- it must be a channel type")
+        // due to issue #582 the right channel cannot be provided in the join method signature
+        // therefore the channel need to be added `'manually` to the inputs list
+        // fixes #1346
+        OpCall.current.get().inputs.add(right)
+        def target = new JoinOp(left,right) .apply()
+        return target
+    }
+
+    DataflowWriteChannel join( DataflowReadChannel left, Map opts, right ) {
+        if( right==null ) throw new IllegalArgumentException("Operator `join` argument cannot be null")
+        if( !(right instanceof DataflowReadChannel) ) throw new IllegalArgumentException("Invalid operator `join` argument [${right.getClass().getName()}] -- it must be a channel type")
+        // due to issue #582 the right channel cannot be provided in the join method signature
+        // therefore the channel need to be added `'manually` to the inputs list
+        // fixes #1346
+        OpCall.current.get().inputs.add(right)
+        def target = new JoinOp(left,right,opts) .apply()
+        return target
     }
 
     /**
@@ -465,162 +796,17 @@ class OperatorImpl {
         return target
     }
 
-    DataflowWriteChannel collect(final DataflowReadChannel source, Closure action=null) {
-        collect(source,Collections.emptyMap(),action)
-    }
-
-    DataflowWriteChannel collect(final DataflowReadChannel source, Map opts, Closure action=null) {
-        final target = new CollectOp(source,action,opts).apply()
-        return target
-    }
-
-
     /**
-     * Convert a {@code DataflowQueue} alias *channel* to a Java {@code List}
+     * Transform the items emitted by a channel by applying a function to each of them
      *
-     * @param source The channel to be converted
-     * @return A list holding all the items send over the channel
-     */
-    DataflowWriteChannel toList(final DataflowReadChannel source) {
-        final target = ToListOp.apply(source)
-        return target
-    }
-
-    /**
-     * Convert a {@code DataflowReadChannel} alias *channel* to a Java {@code List} sorting its content
-     *
-     * @param source The channel to be converted
-     * @return A list holding all the items send over the channel
-     */
-    DataflowWriteChannel toSortedList(final DataflowReadChannel source, Closure closure = null) {
-        final target = new ToListOp(source, closure ?: true).apply()
-        return target as DataflowVariable
-    }
-
-    /**
-     * Counts the number of occurrences of the given value inside this collection.
-     *
-     * @param source
-     * @param value
+     * @param channel
+     * @param closure
      * @return
      */
-    DataflowWriteChannel count(final DataflowReadChannel source ) {
-        final target = count0(source, null)
-        return target
-    }
-
-    /**
-     * Counts the number of occurrences which satisfy the given closure from inside this collection
-     *
-     * @param source
-     * @param criteria
-     * @return
-     */
-    DataflowWriteChannel count(final DataflowReadChannel source, final Object criteria ) {
-        final target = count0(source, criteria)
-        return target
-    }
-
-    private static DataflowVariable count0(DataflowReadChannel<?> source, Object criteria) {
-
-        final target = new DataflowVariable()
-        final discriminator = criteria != null ? new BooleanReturningMethodInvoker("isCase") : null
-
-        if( source instanceof DataflowExpression) {
-            source.whenBound { item ->
-                discriminator == null || discriminator.invoke(criteria, item) ? target.bind(1) : target.bind(0)
-            }
-        }
-        else {
-            reduceImpl(source, target, 0) { current, item ->
-                discriminator == null || discriminator.invoke(criteria, item) ? current+1 : current
-            }
-        }
-
-        return target
-    }
-
-
-    /**
-     * Groups the items emitted by the source channel into groups determined by the supplied mapping closure and counts the frequency of the created groups
-     * @param source The source channel
-     * @return A {@code DataflowVariable} returning the a {@code Map} containing the counting values for each key
-     */
-    @Deprecated
-    DataflowWriteChannel<Map> countBy(final DataflowReadChannel source ) {
-        countBy(source, { it })
-    }
-
-    /**
-     * Sorts all collection members into groups determined by the supplied mapping closure and counts the group size
-     *
-     * @param source
-     * @param criteria
-     * @return
-     */
-    @Deprecated
-    DataflowWriteChannel<Map> countBy(final DataflowReadChannel source, final Closure criteria ) {
-
-        final target = new DataflowVariable()
-
-        reduceImpl(source, target, [:]) { Map map, item ->
-                def key = criteria.call(item)
-                def value = map.containsKey(key) ? map.get(key)+1 : 1
-                map.put(key, value)
-                return map
-        }
-
-        return target
-    }
-
-    /**
-     * The min operator waits until the source channel completes, and then emits the value that had the lowest value
-     *
-     * @param source The source channel
-     * @return A {@code DataflowVariable} returning the minimum value
-     */
-    DataflowWriteChannel min(final DataflowReadChannel source) {
-        final target = new DataflowVariable()
-        reduceImpl(source, target, null) { min, val -> val<min ? val : min }
-        return target
-    }
-
-    /**
-     * The min operator waits until the source channel completes, and then emits the value that had the lowest value
-     *
-     * @param source The source channel
-     * @param comparator If the closure has two parameters it is used like a traditional Comparator. I.e. it should compare
-     *      its two parameters for order, returning a negative integer, zero, or a positive integer when the first parameter
-     *      is less than, equal to, or greater than the second respectively. Otherwise, the Closure is assumed to take a single
-     *      parameter and return a Comparable (typically an Integer) which is then used for further comparison.
-     * @return  A {@code DataflowVariable} returning the minimum value
-     */
-    DataflowWriteChannel min(final DataflowReadChannel source, Closure comparator) {
-
-        def action
-        if( comparator.getMaximumNumberOfParameters() == 1 ) {
-            action = (Closure){ min, item -> comparator.call(item) < comparator.call(min) ? item : min  }
-        }
-        else if( comparator.getMaximumNumberOfParameters() == 2 ) {
-            action = (Closure){ a, b ->  comparator.call(a,b) < 0 ? a : b  }
-        }
-
-        final target = new DataflowVariable()
-        reduceImpl(source, target, null, action)
-        return target
-    }
-
-    /**
-     * The min operator waits until the source channel completes, and then emits the value that had the lowest value
-     *
-     * @param source The source channel
-     * @param comparator The a {@code Comparator} object
-     * @return A {@code DataflowVariable} returning the minimum value
-     */
-    DataflowWriteChannel min(final DataflowReadChannel source, Comparator comparator) {
-        final target = new DataflowVariable()
-        reduceImpl(source, target, null) { a, b -> comparator.compare(a,b)<0 ? a : b }
-        return target
+    DataflowWriteChannel map(final DataflowReadChannel source, final Closure closure) {
+        assert source != null
+        assert closure
+        return new MapOp(source, closure).apply()
     }
 
     /**
@@ -676,21 +862,91 @@ class OperatorImpl {
         return target
     }
 
-    /**
-     * The sum operators crates a channel that emits the sum of all values emitted by the source channel to which is applied
-     *
-     * @param source  The source channel providing the values to sum
-     * @param closure  A closure that given an entry returns the value to sum
-     * @return A {@code DataflowVariable} emitting the final sum value
-     */
-    DataflowWriteChannel sum(final DataflowReadChannel source, Closure closure = null) {
+    // NO DAG
+    @DeprecatedDsl2
+    DataflowWriteChannel merge(final DataflowReadChannel source, final DataflowReadChannel other, final Closure closure=null) {
+        final result = CH.createBy(source)
+        final inputs = [source, other]
+        final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(inputs.size())
+        final listener = stopErrorListener(source,result)
+        final params = createOpParams(inputs, result, listener)
+        newOperator(params, action)
+        return result;
+    }
 
-        def target = new DataflowVariable()
-        def aggregate = new Aggregate(name: 'sum', action: closure)
-        subscribeImpl(source, [onNext: aggregate.&process, onComplete: { target.bind( aggregate.result ) }])
+    // NO DAG
+    DataflowWriteChannel merge(final DataflowReadChannel source, final DataflowReadChannel... others) {
+        new MergeOp(source,others as List).apply()
+    }
+
+    // NO DAG
+    DataflowWriteChannel merge(final DataflowReadChannel source, final List<DataflowReadChannel> others, final Closure closure=null) {
+        new MergeOp(source,others,closure).apply()
+    }
+
+    /**
+     * The min operator waits until the source channel completes, and then emits the value that had the lowest value
+     *
+     * @param source The source channel
+     * @return A {@code DataflowVariable} returning the minimum value
+     */
+    DataflowWriteChannel min(final DataflowReadChannel source) {
+        final target = new DataflowVariable()
+        reduceImpl(source, target, null) { min, val -> val<min ? val : min }
         return target
     }
 
+    /**
+     * The min operator waits until the source channel completes, and then emits the value that had the lowest value
+     *
+     * @param source The source channel
+     * @param comparator If the closure has two parameters it is used like a traditional Comparator. I.e. it should compare
+     *      its two parameters for order, returning a negative integer, zero, or a positive integer when the first parameter
+     *      is less than, equal to, or greater than the second respectively. Otherwise, the Closure is assumed to take a single
+     *      parameter and return a Comparable (typically an Integer) which is then used for further comparison.
+     * @return  A {@code DataflowVariable} returning the minimum value
+     */
+    DataflowWriteChannel min(final DataflowReadChannel source, Closure comparator) {
+
+        def action
+        if( comparator.getMaximumNumberOfParameters() == 1 ) {
+            action = (Closure){ min, item -> comparator.call(item) < comparator.call(min) ? item : min  }
+        }
+        else if( comparator.getMaximumNumberOfParameters() == 2 ) {
+            action = (Closure){ a, b ->  comparator.call(a,b) < 0 ? a : b  }
+        }
+
+        final target = new DataflowVariable()
+        reduceImpl(source, target, null, action)
+        return target
+    }
+
+    /**
+     * The min operator waits until the source channel completes, and then emits the value that had the lowest value
+     *
+     * @param source The source channel
+     * @param comparator The a {@code Comparator} object
+     * @return A {@code DataflowVariable} returning the minimum value
+     */
+    DataflowWriteChannel min(final DataflowReadChannel source, Comparator comparator) {
+        final target = new DataflowVariable()
+        reduceImpl(source, target, null) { a, b -> comparator.compare(a,b)<0 ? a : b }
+        return target
+    }
+
+    /**
+     * Similar to https://github.com/Netflix/RxJava/wiki/Combining-Observables#merge
+     *
+     * @param source
+     * @param others
+     * @return
+     */
+    DataflowWriteChannel mix( DataflowReadChannel source, DataflowReadChannel[] others ) {
+        if( others.size()==0 )
+            throw new IllegalArgumentException("Operator 'mix' should have at least one right operand")
+
+        return new MixOp(source,others).apply()
+    }
 
     DataflowWriteChannel mean(final DataflowReadChannel source, Closure closure = null) {
 
@@ -700,80 +956,212 @@ class OperatorImpl {
         return target
     }
 
-
-    private static class Aggregate {
-
-        def accum
-        long count = 0
-        boolean mean
-        Closure action
-        String name
-
-        def process(it) {
-            if( it == null || it == Channel.VOID )
-                return
-
-            count++
-
-            def item = action != null ? action.call(it) : it
-            if( accum == null )
-                accum = item
-
-            else if( accum instanceof Number )
-                accum += item
-
-            else if( accum instanceof List && item instanceof List)
-                for( int i=0; i<accum.size() && i<item.size(); i++ )
-                    accum[i] += item.get(i)
-
-            else
-                throw new IllegalArgumentException("Invalid `$name` item: $item [${item.class.simpleName}]")
-        }
-
-        def getResult() {
-            if( !mean || count == 0 )
-                return accum
-
-            if( accum instanceof List )
-                return accum.collect { it / count }
-            else
-                return accum / count
-        }
+    ChannelOut multiMap(DataflowReadChannel source, Closure<TokenMultiMapDef> action) {
+        new MultiMapOp(source, action)
+                .apply()
+                .getOutput()
     }
 
     /**
-     * Sorts all collection members into groups determined by the supplied mapping closure
+     * Phase channels
      *
      * @param source
+     * @param other
      * @param mapper
      * @return
      */
-    @Deprecated
-    DataflowWriteChannel<Map> groupBy(final DataflowReadChannel source, final params = null ) {
-        int index = 0
-        Closure mapper = DEFAULT_MAPPING_CLOSURE
+    DataflowWriteChannel phase( DataflowReadChannel source, Map opts, DataflowReadChannel other, Closure mapper = null ) {
 
-        if( params instanceof Closure )
-            mapper = params
-
-        else if( params instanceof Number ) {
-            index = params as int
-        }
-        else if( params != null ) {
-            throw new IllegalArgumentException("Not a valid `group` argument: $params")
-        }
-
-        final target = new DataflowVariable()
-        final int len = mapper.getMaximumNumberOfParameters()
-        reduceImpl(source, target, [:]) { Map map, item ->
-            def key = len == 2 ? mapper.call(item,index) : mapper.call(item)
-            def list = map.get(key)
-            list = list ? list << item : [item]
-            map.put(key, list)
-            return map
-        }
+        def target = new PhaseOp(source,other)
+                        .setMapper(mapper)
+                        .setOpts(opts)
+                        .apply()
 
         return target
+    }
+
+    DataflowWriteChannel phase( DataflowReadChannel source, DataflowReadChannel other, Closure mapper = null ) {
+
+        def target = new PhaseOp(source,other)
+                        .setMapper(mapper)
+                        .apply()
+
+        return target
+    }
+
+    /**
+     * Print the channel content to the console standard output
+     * @param source
+     * @param closure
+     */
+    @DeprecatedDsl2(message='Operator `print` is deprecated -- Use `view` instead')
+    void print(final DataflowReadChannel<?> source, Closure closure = null) {
+        final print0 = { def obj = closure ? closure.call(it) : it; session.printConsole(obj?.toString(),false) }
+        subscribeImpl(source, [onNext: print0])
+    }
+
+    /**
+     * Print the channel content to the console standard output
+     * @param source
+     * @param closure
+     */
+    @DeprecatedDsl2(message='Operator `println` is deprecated -- Use `view` instead')
+    void println(final DataflowReadChannel<?> source, Closure closure = null) {
+        final print0 = { def obj = closure ? closure.call(it) : it; session.printConsole(obj?.toString(),true) }
+        subscribeImpl(source, [onNext: print0])
+    }
+
+    DataflowWriteChannel randomSample(DataflowReadChannel source, int n, Long seed = null) {
+        if( source instanceof DataflowExpression )
+            throw new IllegalArgumentException("Operator `randomSample` cannot be applied to a value channel")
+
+        final result = new RandomSampleOp(source,n, seed).apply()
+        return result
+    }
+
+    /**
+     *
+     * The reduce( ) operator applies a function of your choosing to the first item emitted by a source channel,
+     * then feeds the result of that function along with the second item emitted by the source channel into the same
+     * function, then feeds the result of that function along with the third item into the same function, and so on until
+     * all items have been emitted by the source channel.
+     *
+     * Finally it emits the final result from the final call to your function as the sole output from the returned channel.
+     *
+     * @param source
+     * @param closure
+     * @return
+     */
+    DataflowWriteChannel reduce(final DataflowReadChannel source, final Closure closure) {
+        if( source instanceof DataflowExpression )
+            throw new IllegalArgumentException('Operator `reduce` cannot be applied to a value channel')
+
+        final target = new DataflowVariable()
+        reduceImpl( source, target, null, closure )
+        return target
+    }
+
+    /**
+     *
+     * The reduce( ) operator applies a function of your choosing to the first item emitted by a source channel,
+     * then feeds the result of that function along with the second item emitted by the source channel into the same
+     * function, then feeds the result of that function along with the third item into the same function, and so on until
+     * all items have been emitted by the source channel.
+     *
+     * Finally it emits the final result from the final call to your function as the sole output from the returned channel.
+     *
+     * @param source
+     * @parama seed
+     * @param closure
+     * @return
+     */
+    DataflowWriteChannel reduce(final DataflowReadChannel<?> source, Object seed, final Closure closure) {
+        if( source instanceof DataflowExpression )
+            throw new IllegalArgumentException('Operator `reduce` cannot be applied to a value channel')
+
+        final target = new DataflowVariable()
+        reduceImpl( source, target, seed, closure )
+        return target
+    }
+
+    /**
+     * When the items emitted by the source channel are tuples of values, the operator separate allows you to specify a
+     * list of channels as parameters, so that the value i-th in a tuple will be assigned to the target channel
+     * with the corresponding position index.
+     *
+     * @param source The source channel
+     * @param outputs An open array of target channels
+     */
+    @DeprecatedDsl2
+    void separate( DataflowReadChannel source, final DataflowWriteChannel... outputs ) {
+        new SeparateOp(source, outputs as List<DataflowWriteChannel>).apply()
+    }
+
+    @DeprecatedDsl2
+    void separate(final DataflowReadChannel source, final List<DataflowWriteChannel> outputs) {
+        new SeparateOp(source, outputs).apply()
+    }
+
+    @DeprecatedDsl2
+    void separate(final DataflowReadChannel source, final List<DataflowWriteChannel> outputs, final Closure<List> code) {
+        new SeparateOp(source, outputs, code).apply()
+    }
+
+    @DeprecatedDsl2
+    List<DataflowReadChannel> separate( final DataflowReadChannel source, int n ) {
+        def outputs = new SeparateOp(source, n).apply()
+        return outputs
+    }
+
+    @DeprecatedDsl2
+    List<DataflowReadChannel> separate( final DataflowReadChannel source, int n, Closure mapper  ) {
+        def outputs = new SeparateOp(source, n, mapper).apply()
+        return outputs
+    }
+
+    /**
+     * Implement a `set` operator e.g.
+     * <pre>
+     *     SomeProcess.out | set { channelName }
+     * </pre>
+     *
+     * @param source The channel instance to be bound in the context
+     * @param holder A closure defining a variable identifier
+     */
+
+    void set(DataflowReadChannel source, Closure holder) {
+        set0(source, holder)
+    }
+
+    void set(DataflowBroadcast source, Closure holder) {
+        set0(source, holder)
+    }
+
+    void set(ChannelOut source, Closure holder) {
+        set0(source, holder)
+    }
+
+    private void set0(source, Closure holder) {
+        final name = CaptureProperties.capture(holder)
+        if( !name )
+            throw new IllegalArgumentException("Missing name to which set the channel variable")
+
+        if( name.size()>1 )
+            throw new IllegalArgumentException("Operation `set` does not allow more than one target name")
+
+        NF.binding.setVariable(name[0], source)
+        // do not add this nod in the DAG because it's not a real operator
+        // since it's not transforming the channel
+        OpCall.current.get().ignoreDagNode = true
+    }
+
+    DataflowWriteChannel splitCsv(DataflowReadChannel source, Map opts=null) {
+        final result = new SplitOp( source, 'splitCsv', opts ).apply()
+        return result
+    }
+
+    DataflowWriteChannel splitFasta(DataflowReadChannel source, Map opts=null) {
+        final result = new SplitOp( source, 'splitFasta', opts ).apply()
+        return result
+    }
+
+    DataflowWriteChannel splitFastq(DataflowReadChannel source, Map opts=null) {
+        final result = new SplitOp( source, 'splitFastq', opts ).apply()
+        return result
+    }
+
+    DataflowWriteChannel splitText(DataflowReadChannel source, Map opts=null) {
+        final result = new SplitOp( source, 'splitText', opts ).apply()
+        return result
+    }
+
+    DataflowWriteChannel splitText(DataflowReadChannel source, Map opts=null, Closure action) {
+        if( opts==null && action ) {
+            opts = new HashMap<>(5)
+        }
+        opts.put('each', action)
+        final result = new SplitOp( source, 'splitText', opts ).apply()
+        return result
     }
 
     @Deprecated
@@ -835,386 +1223,61 @@ class OperatorImpl {
         return target
     }
 
-    DataflowWriteChannel combine( DataflowReadChannel left, Object right ) {
-        combine(left, null, right)
-    }
-
-    DataflowWriteChannel combine( DataflowReadChannel left, Map params, Object right ) {
-        checkParams('combine', params, [flat:Boolean, by: [List,Integer]])
-
-        final op = new CombineOp(left,right)
-        OpCall.current.get().inputs.addAll(op.inputs)
-        if( params?.by != null ) op.pivot = params.by
-        final target = op.apply()
-        return target
-    }
-
-    DataflowWriteChannel flatten( final DataflowReadChannel source )  {
-
-        final listeners = []
-        final target = CH.create()
-
-        if( source instanceof DataflowExpression ) {
-            listeners << new DataflowEventAdapter() {
-                @Override
-                void afterRun(final DataflowProcessor processor, final List<Object> messages) {
-                    processor.bindOutput( Channel.STOP )
-                    processor.terminate()
-                }
-
-                boolean onException(final DataflowProcessor processor, final Throwable e) {
-                    OperatorImpl.log.error("@unknown", e)
-                    session.abort(e)
-                    return true;
-                }
-            }
-        }
-
-
-        newOperator(inputs: [source], outputs: [target], listeners: listeners) {  item ->
-
-            def proc = ((DataflowProcessor) getDelegate())
-            switch( item ) {
-                case Collection:
-                    ((Collection)item).flatten().each { value -> proc.bindOutput(value) }
-                    break
-
-                case (Object[]):
-                    ((Collection)item).flatten().each { value -> proc.bindOutput(value) }
-                    break
-
-                case Channel.VOID:
-                    break
-
-                default:
-                    proc.bindOutput(item)
-            }
-        }
-
-        return target
-    }
-
     /**
-     * The ``buffer( )`` operator gathers the items emitted by the source channel into bundles and
-     * and emits these bundles as its own emissions.
-     *
-     * @param source The dataflow channel from where the values are gathered
-     * @param closingCriteria A condition that has to be verified to close
-     * @return A newly created dataflow queue which emitted the gathered values as bundles
-     */
-    DataflowWriteChannel buffer( final DataflowReadChannel source, Map params=null, Object closingCriteria ) {
-
-        def target = new BufferOp(source)
-                        .setParams(params)
-                        .setCloseCriteria(closingCriteria)
-                        .apply()
-        return target
-    }
-
-    DataflowWriteChannel buffer( final DataflowReadChannel source, Object startingCriteria, Object closingCriteria ) {
-        assert startingCriteria != null
-        assert closingCriteria != null
-
-        def target = new BufferOp(source)
-                .setStartCriteria(startingCriteria)
-                .setCloseCriteria(closingCriteria)
-                .apply()
-
-        return target
-    }
-
-    DataflowWriteChannel buffer( DataflowReadChannel source, Map<String,?> params ) {
-        checkParams( 'buffer', params, 'size','skip','remainder' )
-
-        def target = new BufferOp(source)
-                        .setParams(params)
-                        .apply()
-
-        return target
-    }
-
-
-    DataflowWriteChannel collate( DataflowReadChannel source, int size, boolean keepRemainder = true ) {
-        if( size <= 0 ) {
-            throw new IllegalArgumentException("Illegal argument 'size' for operator 'collate' -- it must be greater than zero: $size")
-        }
-
-        def target = new BufferOp(source)
-                        .setParams( size: size, remainder: keepRemainder )
-                        .apply()
-
-        return target
-    }
-
-    DataflowWriteChannel collate( DataflowReadChannel source, int size, int step, boolean keepRemainder = true ) {
-        if( size <= 0 ) {
-            throw new IllegalArgumentException("Illegal argument 'size' for operator 'collate' -- it must be greater than zero: $size")
-        }
-
-        if( step <= 0 ) {
-            throw new IllegalArgumentException("Illegal argument 'step' for operator 'collate' -- it must be greater than zero: $step")
-        }
-
-        // the result queue
-        final target = CH.create()
-
-        // the list holding temporary collected elements
-        List<List<?>> allBuffers = []
-
-        // -- intercepts the PoisonPill and sent out the items remaining in the buffer when the 'remainder' flag is true
-        def listener = new DataflowEventAdapter() {
-
-            Object controlMessageArrived(final DataflowProcessor processor, final DataflowReadChannel<Object> channel, final int index, final Object message) {
-                if( message instanceof PoisonPill && keepRemainder && allBuffers.size() ) {
-                    allBuffers.each {
-                        target.bind( it )
-                    }
-                }
-
-                return message;
-            }
-
-            @Override
-            boolean onException(DataflowProcessor processor, Throwable e) {
-                OperatorImpl.log.error("@unknown", e)
-                session.abort(e)
-                return true
-            }
-        }
-
-
-        int index = 0
-
-        // -- the operator collecting the elements
-        newOperator( inputs: [source], outputs: [target], listeners: [listener]) {
-
-            if( index++ % step == 0 ) {
-                allBuffers.add( [] )
-            }
-
-            allBuffers.each { List list -> list.add(it) }
-
-            def buf = allBuffers.head()
-            if( buf.size() == size )  {
-                ((DataflowProcessor) getDelegate()).bindOutput(buf)
-                allBuffers = allBuffers.tail()
-            }
-
-        }
-
-        return target
-    }
-
-
-    /**
-     * Similar to https://github.com/Netflix/RxJava/wiki/Combining-Observables#merge
+     * Subscribe *onNext* event
      *
      * @param source
-     * @param others
+     * @param closure
      * @return
      */
-    DataflowWriteChannel mix( DataflowReadChannel source, DataflowReadChannel[] others ) {
-        if( others.size()==0 )
-            throw new IllegalArgumentException("Operator 'mix' should have at least one right operand")
-
-        return new MixOp(source,others).apply()
+    DataflowReadChannel subscribe(final DataflowReadChannel source, final Closure closure) {
+        subscribeImpl( source, [onNext: closure] )
+        return source
     }
-
-    DataflowWriteChannel join( DataflowReadChannel left, right ) {
-        if( right==null ) throw new IllegalArgumentException("Operator `join` argument cannot be null")
-        if( !(right instanceof DataflowReadChannel) ) throw new IllegalArgumentException("Invalid operator `join` argument [${right.getClass().getName()}] -- it must be a channel type")
-        // due to issue #582 the right channel cannot be provided in the join method signature
-        // therefore the channel need to be added `'manually` to the inputs list
-        // fixes #1346
-        OpCall.current.get().inputs.add(right)
-        def target = new JoinOp(left,right) .apply()
-        return target
-    }
-
-    DataflowWriteChannel join( DataflowReadChannel left, Map opts, right ) {
-        if( right==null ) throw new IllegalArgumentException("Operator `join` argument cannot be null")
-        if( !(right instanceof DataflowReadChannel) ) throw new IllegalArgumentException("Invalid operator `join` argument [${right.getClass().getName()}] -- it must be a channel type")
-        // due to issue #582 the right channel cannot be provided in the join method signature
-        // therefore the channel need to be added `'manually` to the inputs list
-        // fixes #1346
-        OpCall.current.get().inputs.add(right)
-        def target = new JoinOp(left,right,opts) .apply()
-        return target
-    }
-
 
     /**
-     * Phase channels
+     * Subscribe *onNext*, *onError* and *onComplete*
      *
      * @param source
-     * @param other
-     * @param mapper
+     * @param closure
      * @return
      */
-    DataflowWriteChannel phase( DataflowReadChannel source, Map opts, DataflowReadChannel other, Closure mapper = null ) {
-
-        def target = new PhaseOp(source,other)
-                        .setMapper(mapper)
-                        .setOpts(opts)
-                        .apply()
-
-        return target
+    DataflowReadChannel subscribe(final DataflowReadChannel source, final Map<String,Closure> events ) {
+        subscribeImpl(source, events)
+        return source
     }
 
-    DataflowWriteChannel phase( DataflowReadChannel source, DataflowReadChannel other, Closure mapper = null ) {
+    /**
+     * The sum operators crates a channel that emits the sum of all values emitted by the source channel to which is applied
+     *
+     * @param source  The source channel providing the values to sum
+     * @param closure  A closure that given an entry returns the value to sum
+     * @return A {@code DataflowVariable} emitting the final sum value
+     */
+    DataflowWriteChannel sum(final DataflowReadChannel source, Closure closure = null) {
 
-        def target = new PhaseOp(source,other)
-                        .setMapper(mapper)
-                        .apply()
-
+        def target = new DataflowVariable()
+        def aggregate = new Aggregate(name: 'sum', action: closure)
+        subscribeImpl(source, [onNext: aggregate.&process, onComplete: { target.bind( aggregate.result ) }])
         return target
     }
 
     /**
-     * Implements the default mapping strategy, having the following strategy:
-     * <pre>
-     *     Map -> first entry key
-     *     Map.Entry -> the entry key
-     *     Collection -> first item
-     *     Array -> first item
-     *     Object -> the object itself
-     * </pre>
-     * @param obj
-     * @return
-     */
-
-    @PackageScope
-    static public Closure DEFAULT_MAPPING_CLOSURE = { obj, int index=0 ->
-
-        switch( obj ) {
-
-            case List:
-                def values = (List)obj
-                return values.size() ? values.get(index) : null
-
-            case (Object[]):
-                def values = (Object[])obj
-                return values.size() ? values[index] : null
-
-            case Map:
-                obj = ((Map)obj).values()
-                // note: fallback into the following case
-
-            case Collection:
-                def itr = ((Collection)obj) .iterator()
-                def count=0
-                while( itr.hasNext() ) {
-                    def value = itr.next()
-                    if( count++ == index ) return value
-                }
-                return null
-
-            case Map.Entry:
-                def entry = (Map.Entry) obj
-                return (index == 0 ? entry.key :
-                        index == 1 ? entry.value : null)
-
-            default:
-                return index==0 ? obj : null
-        }
-
-    }
-
-
-    DataflowWriteChannel cross( DataflowReadChannel source, DataflowReadChannel other, Closure mapper = null ) {
-
-        def target = new CrossOp(source, other)
-                    .setMapper(mapper)
-                    .apply()
-
-        return target
-    }
-
-
-    /**
-     * Creates a channel that emits the items in same order as they are emitted by two or more channel
+     *
+     * emit only the first n items emitted by an Observable
+     *
+     * See https://github.com/Netflix/RxJava/wiki/Filtering-Observables#take
      *
      * @param source
-     * @param others
-     * @return
+     * @param n The number of items to be taken. The value {@code -1} has a special semantic for all
+     * @return The resulting channel emitting the taken values
      */
-    DataflowWriteChannel concat( DataflowReadChannel source, DataflowReadChannel... others ) {
+    DataflowWriteChannel take( final DataflowReadChannel source, int n ) {
+        if( source instanceof DataflowExpression )
+            throw new IllegalArgumentException("Operator `take` cannot be applied to a value channel")
 
-        def target = new ConcatOp(source, others).apply()
-
-        def allSources = [source]
-        if(others) allSources.addAll(others)
-
-        return target
+        return new TakeOp(source,n).apply()
     }
-
-
-    /**
-     * When the items emitted by the source channel are tuples of values, the operator separate allows you to specify a
-     * list of channels as parameters, so that the value i-th in a tuple will be assigned to the target channel
-     * with the corresponding position index.
-     *
-     * @param source The source channel
-     * @param outputs An open array of target channels
-     */
-    @DeprecatedDsl2
-    void separate( DataflowReadChannel source, final DataflowWriteChannel... outputs ) {
-        new SeparateOp(source, outputs as List<DataflowWriteChannel>).apply()
-    }
-
-    @DeprecatedDsl2
-    void separate(final DataflowReadChannel source, final List<DataflowWriteChannel> outputs) {
-        new SeparateOp(source, outputs).apply()
-    }
-
-    @DeprecatedDsl2
-    void separate(final DataflowReadChannel source, final List<DataflowWriteChannel> outputs, final Closure<List> code) {
-        new SeparateOp(source, outputs, code).apply()
-    }
-
-    @DeprecatedDsl2
-    List<DataflowReadChannel> separate( final DataflowReadChannel source, int n ) {
-        def outputs = new SeparateOp(source, n).apply()
-        return outputs
-    }
-
-    @DeprecatedDsl2
-    List<DataflowReadChannel> separate( final DataflowReadChannel source, int n, Closure mapper  ) {
-        def outputs = new SeparateOp(source, n, mapper).apply()
-        return outputs
-    }
-
-    @DeprecatedDsl2
-    void into( DataflowReadChannel source, final DataflowWriteChannel... targets ) {
-        new IntoOp(source, targets as List<DataflowWriteChannel>).apply()
-    }
-
-    @DeprecatedDsl2
-    List<DataflowReadChannel> into( final DataflowReadChannel source, int n ) {
-        def outputs = new IntoOp(source,n).apply().getOutputs()
-        return outputs
-    }
-
-    /**
-     * Forward source dataflow channel *into* one or more dataflow channels. For example:
-     * <pre>
-     *     Channel.from( ... )
-     *            .map { ... }
-     *            .into { foo; bar }
-     * </pre>
-     *
-     * It creates two new dataflow variables named {@code foo} and {@code bar} and copied the map
-     * result into them.
-     *
-     * @param source The source dataflow channel which items are copied into newly created dataflow variables.
-     * @param holder A closure that defines one or more variable names into which source items are copied.
-     */
-    @DeprecatedDsl2
-    void into( DataflowReadChannel source, Closure holder ) {
-        def outputs = new IntoOp(source,holder).apply().getOutputs()
-        OpCall.current.get().outputs.addAll(outputs)
-    }
-
 
     /**
      * Implements a tap that create implicitly a new dataflow variable in the global script context.
@@ -1241,55 +1304,103 @@ class OperatorImpl {
         return tap.result
     }
 
+    DataflowWriteChannel toDouble(final DataflowReadChannel source) {
+        return chain(source, { it -> it as Double })
+    }
+
+    DataflowWriteChannel toFloat(final DataflowReadChannel source) {
+        return chain(source, { it -> it as Float })
+    }
+
+    DataflowWriteChannel toInteger(final DataflowReadChannel source) {
+        return chain(source, { it -> it as Integer })
+    }
 
     /**
-     * Empty the specified value only if the source channel to which is applied is empty i.e. do not emit
-     * any value.
+     * Convert a {@code DataflowQueue} alias *channel* to a Java {@code List}
      *
-     * @param source The channel to which the operator is applied
-     * @param value The value to emit when the source channel is empty. If a closure is used the the value returned by its invocation is used.
-     * @return The resulting channel emitting the source items or the default value when the channel is empty
+     * @param source The channel to be converted
+     * @return A list holding all the items send over the channel
      */
-    DataflowWriteChannel ifEmpty( DataflowReadChannel source, value ) {
+    DataflowWriteChannel toList(final DataflowReadChannel source) {
+        final target = ToListOp.apply(source)
+        return target
+    }
 
-        boolean empty = true
-        final result = CH.createBy(source)
-        final singleton = result instanceof DataflowExpression
-        final next = { result.bind(it); empty=false }
-        final complete = {
-            if(empty)
-                result.bind( value instanceof Closure ? value() : value )
-            if( !singleton )
-                result.bind(Channel.STOP)
-        }
+    DataflowWriteChannel toLong(final DataflowReadChannel source) {
+        return chain(source, { it -> it as Long })
+    }
 
-        subscribeImpl(source, [onNext: next, onComplete: complete])
+    /**
+     * Convert a {@code DataflowReadChannel} alias *channel* to a Java {@code List} sorting its content
+     *
+     * @param source The channel to be converted
+     * @return A list holding all the items send over the channel
+     */
+    DataflowWriteChannel toSortedList(final DataflowReadChannel source, Closure closure = null) {
+        final target = new ToListOp(source, closure ?: true).apply()
+        return target as DataflowVariable
+    }
 
+    DataflowWriteChannel transpose( final DataflowReadChannel source, final Map params=null ) {
+        def result = new TransposeOp(source,params).apply()
         return result
     }
 
     /**
-     * Print the channel content to the console standard output
+     * Modifies this collection to remove all duplicated items, using the default comparator.
+     *
+     * assert [1,3] == [1,3,3].unique()
+     *
      * @param source
-     * @param closure
+     * @return
      */
-    @DeprecatedDsl2(message='Operator `print` is deprecated -- Use `view` instead')
-    void print(final DataflowReadChannel<?> source, Closure closure = null) {
-        final print0 = { def obj = closure ? closure.call(it) : it; session.printConsole(obj?.toString(),false) }
-        subscribeImpl(source, [onNext: print0])
+    DataflowWriteChannel unique(final DataflowReadChannel source) {
+        unique(source) { it }
     }
 
     /**
-     * Print the channel content to the console standard output
+     * A convenience method for making a collection unique using a Closure to determine duplicate (equal) items. If the closure takes a single parameter, the argument passed will be each element, and the closure should return a value used for comparison (either using Comparable#compareTo or Object#equals). If the closure takes two parameters, two items from the collection will be passed as arguments, and the closure should return an int value (with 0 indicating the items are not unique).
+     * assert [1,4] == [1,3,4,5].unique { it % 2 }
+     * assert [2,3,4] == [2,3,3,4].unique { a, b -> a <=> b }
+     *
      * @param source
-     * @param closure
+     * @param comparator
+     * @return
      */
-    @DeprecatedDsl2(message='Operator `println` is deprecated -- Use `view` instead')
-    void println(final DataflowReadChannel<?> source, Closure closure = null) {
-        final print0 = { def obj = closure ? closure.call(it) : it; session.printConsole(obj?.toString(),true) }
-        subscribeImpl(source, [onNext: print0])
+    DataflowWriteChannel unique(final DataflowReadChannel source, Closure comparator ) {
+
+        def history = [:]
+        def target = CH.createBy(source)
+
+        // when the operator stop clear the history map
+        def events = new DataflowEventAdapter() {
+            void afterStop(final DataflowProcessor processor) {
+                history.clear()
+                history = null
+            }
+        }
+
+        def filter = {
+            def key = comparator.call(it)
+            if( history.containsKey(key) ) {
+                return Channel.VOID
+            }
+            else {
+                history.put(key,true)
+                return it
+            }
+        }  as Closure
+
+        // filter removing all duplicates
+        chainImpl(source, target, [listeners: [events]], filter )
+
+        return target
     }
 
+    DataflowWriteChannel until(DataflowReadChannel source, final Closure<Boolean> closure) {
+        return new UntilOp(source,closure).apply()
+    }
 
     static private final Map PARAMS_VIEW = [newLine: Boolean]
 
@@ -1324,171 +1435,45 @@ class OperatorImpl {
         view(source, Collections.emptyMap(), closure)
     }
 
-    void choice(final DataflowReadChannel source, final List<DataflowWriteChannel> outputs, final Closure<Integer> code) {
-        new ChoiceOp(source,outputs,code).apply()
-    }
 
-    // NO DAG
-    @DeprecatedDsl2
-    DataflowWriteChannel merge(final DataflowReadChannel source, final DataflowReadChannel other, final Closure closure=null) {
-        final result = CH.createBy(source)
-        final inputs = [source, other]
-        final action = closure ? new ChainWithClosure<>(closure) : new DefaultMergeClosure(inputs.size())
-        final listener = stopErrorListener(source,result)
-        final params = createOpParams(inputs, result, listener)
-        newOperator(params, action)
-        return result;
-    }
+    static private class Aggregate {
 
-    // NO DAG
-    DataflowWriteChannel merge(final DataflowReadChannel source, final DataflowReadChannel... others) {
-        new MergeOp(source,others as List).apply()
-    }
+        def accum
+        long count = 0
+        boolean mean
+        Closure action
+        String name
 
-    // NO DAG
-    DataflowWriteChannel merge(final DataflowReadChannel source, final List<DataflowReadChannel> others, final Closure closure=null) {
-        new MergeOp(source,others,closure).apply()
-    }
+        def process(it) {
+            if( it == null || it == Channel.VOID )
+                return
 
-    DataflowWriteChannel randomSample(DataflowReadChannel source, int n, Long seed = null) {
-        if( source instanceof DataflowExpression )
-            throw new IllegalArgumentException("Operator `randomSample` cannot be applied to a value channel")
+            count++
 
-        final result = new RandomSampleOp(source,n, seed).apply()
-        return result
-    }
+            def item = action != null ? action.call(it) : it
+            if( accum == null )
+                accum = item
 
-    DataflowWriteChannel toInteger(final DataflowReadChannel source) {
-        return chain(source, { it -> it as Integer })
-    }
+            else if( accum instanceof Number )
+                accum += item
 
-    DataflowWriteChannel toLong(final DataflowReadChannel source) {
-        return chain(source, { it -> it as Long })
-    }
+            else if( accum instanceof List && item instanceof List)
+                for( int i=0; i<accum.size() && i<item.size(); i++ )
+                    accum[i] += item.get(i)
 
-    DataflowWriteChannel toFloat(final DataflowReadChannel source) {
-        return chain(source, { it -> it as Float })
-    }
-
-    DataflowWriteChannel toDouble(final DataflowReadChannel source) {
-        return chain(source, { it -> it as Double })
-    }
-
-    DataflowWriteChannel transpose( final DataflowReadChannel source, final Map params=null ) {
-        def result = new TransposeOp(source,params).apply()
-        return result
-    }
-
-    DataflowWriteChannel splitText(DataflowReadChannel source, Map opts=null) {
-        final result = new SplitOp( source, 'splitText', opts ).apply()
-        return result
-    }
-
-    DataflowWriteChannel splitText(DataflowReadChannel source, Map opts=null, Closure action) {
-        if( opts==null && action ) {
-            opts = new HashMap<>(5)
+            else
+                throw new IllegalArgumentException("Invalid `$name` item: $item [${item.class.simpleName}]")
         }
-        opts.put('each', action)
-        final result = new SplitOp( source, 'splitText', opts ).apply()
-        return result
+
+        def getResult() {
+            if( !mean || count == 0 )
+                return accum
+
+            if( accum instanceof List )
+                return accum.collect { it / count }
+            else
+                return accum / count
+        }
     }
 
-    DataflowWriteChannel splitCsv(DataflowReadChannel source, Map opts=null) {
-        final result = new SplitOp( source, 'splitCsv', opts ).apply()
-        return result
-    }
-
-    DataflowWriteChannel splitFasta(DataflowReadChannel source, Map opts=null) {
-        final result = new SplitOp( source, 'splitFasta', opts ).apply()
-        return result
-    }
-
-    DataflowWriteChannel splitFastq(DataflowReadChannel source, Map opts=null) {
-        final result = new SplitOp( source, 'splitFastq', opts ).apply()
-        return result
-    }
-
-    DataflowWriteChannel countLines(DataflowReadChannel source, Map opts=null) {
-        final splitter = new TextSplitter()
-        final result = countOverChannel( source, splitter, opts )
-        return result
-    }
-
-    DataflowWriteChannel countFasta(DataflowReadChannel source, Map opts=null) {
-        final splitter = new FastaSplitter()
-        final result = countOverChannel( source, splitter, opts )
-        return result
-    }
-
-    DataflowWriteChannel countFastq(DataflowReadChannel source, Map opts=null) {
-        final splitter = new FastqSplitter()
-        final result = countOverChannel( source, splitter, opts )
-        return result
-    }
-
-    @Deprecated
-    DataflowWriteChannel countText(DataflowReadChannel source) {
-        countLines(source)
-    }
-
-    /**
-     * Implement a `set` operator e.g.
-     * <pre>
-     *     SomeProcess.out | set { channelName }
-     * </pre>
-     *
-     * @param source The channel instance to be bound in the context
-     * @param holder A closure defining a variable identifier
-     */
-
-    void set(DataflowReadChannel source, Closure holder) {
-        set0(source, holder)
-    }
-
-    void set(DataflowBroadcast source, Closure holder) {
-        set0(source, holder)
-    }
-
-    void set(ChannelOut source, Closure holder) {
-        set0(source, holder)
-    }
-
-    private void set0(source, Closure holder) {
-        final name = CaptureProperties.capture(holder)
-        if( !name )
-            throw new IllegalArgumentException("Missing name to which set the channel variable")
-
-        if( name.size()>1 )
-            throw new IllegalArgumentException("Operation `set` does not allow more than one target name")
-
-        NF.binding.setVariable(name[0], source)
-        // do not add this nod in the DAG because it's not a real operator
-        // since it's not transforming the channel
-        OpCall.current.get().ignoreDagNode = true
-    }
-
-    /**
-     * Implements `branch` operator
-     *
-     * @param source
-     * @param action
-     * @return
-     */
-    ChannelOut branch(DataflowReadChannel source, Closure<TokenBranchDef> action) {
-        new BranchOp(source, action)
-                .apply()
-                .getOutput()
-    }
-
-    ChannelOut multiMap(DataflowReadChannel source, Closure<TokenMultiMapDef> action) {
-        new MultiMapOp(source, action)
-                .apply()
-                .getOutput()
-    }
-
-    @Deprecated
-    ChannelOut fork(DataflowReadChannel source, Closure<TokenMultiMapDef> action) {
-        log.warn "Operator `fork` has been renamed to `multiMap`"
-        multiMap(source, action)
-    }
 }
