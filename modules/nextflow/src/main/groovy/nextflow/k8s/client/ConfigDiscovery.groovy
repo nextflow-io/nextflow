@@ -22,6 +22,7 @@ import javax.net.ssl.KeyManagerFactory
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.security.KeyStore
 
 import groovy.util.logging.Slf4j
 import org.yaml.snakeyaml.Yaml
@@ -119,14 +120,32 @@ class ConfigDiscovery {
         return config
     }
 
+    protected KeyStore createKeyStore0(byte[] clientCert, byte[] clientKey, char[] passphrase, String alg) {
+        def cert = new ByteArrayInputStream(clientCert)
+        def key = new ByteArrayInputStream(clientKey)
+        return SSLUtils.createKeyStore(cert, key, alg, passphrase, null, null)
+    }
 
+    protected KeyStore createKeyStore(byte[] clientCert, byte[] clientKey, char[] passphrase) {
+        try {
+            // try first RSA algorithm
+            return createKeyStore0(clientCert, clientKey, passphrase, "RSA")
+        }
+        catch (Exception e1) {
+            // fallback to EC algorithm
+            try {
+                return createKeyStore0(clientCert, clientKey, passphrase, "EC")
+            }
+            catch (Exception e2) {
+                // if still fails, throws the first exception
+                throw e1
+            }
+        }
+    }
 
     protected KeyManager[] createKeyManagers(byte[] clientCert, byte[] clientKey) {
-
         final passphrase = "".toCharArray()
-        final cert = new ByteArrayInputStream(clientCert)
-        final key = new ByteArrayInputStream(clientKey)
-        final keyStore = SSLUtils.createKeyStore( cert, key, "RSA", passphrase, null, null);
+        final keyStore = createKeyStore(clientCert, clientKey, passphrase)
         final kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         kmf.init(keyStore, passphrase);
         return kmf.getKeyManagers();
