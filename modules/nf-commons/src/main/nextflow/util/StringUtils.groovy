@@ -21,10 +21,6 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
-
-import java.util.stream.Collectors
-import java.util.stream.IntStream
-
 /**
  * String helper routines
  *
