@@ -103,15 +103,15 @@ class Packer {
                 gzipDigest: gzipDigest )
     }
 
-    ContainerLayer createContainerPack(Path root) {
+    ContainerLayer createContainerPack(Path root, String targetName) {
         final opts = [type: 'any', hidden: true, relative: false]
         final files = new ArrayList(100)
         FileHelper.visitFiles(opts, root, '**') { files.add(it) }
-        return createContainerPack0(root, files)
+        return createContainerPack0(root, files, targetName)
     }
 
-    ContainerLayer createContainerPack0(Path root, List<Path> files) {
-        final name = root.getName()
+    ContainerLayer createContainerPack0(Path root, List<Path> files, String targetName=null) {
+        final name = targetName ?: root.getName()
         // create the tar file
         final tarFilePath = root.resolveSibling(name + '.tar')
         makeTar(root, files, new FileOutputStream(tarFilePath.toFile()))
