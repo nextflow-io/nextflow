@@ -1144,9 +1144,12 @@ taking two parameters that represent two emitted items to be compared. For examp
 merge
 -----
 
+.. warning::
+  The ``merge`` operator is deprecated and no longer available in DSL2 syntax. Use `join`_ instead.
+
 The ``merge`` operator lets you join items emitted by two (or more) channels into a new channel.
 
-For example the following code merges two channels together, one which emits a series of odd integers
+For example, the following code merges two channels together: one which emits a series of odd integers
 and the other which emits a series of even integers::
 
     odds  = Channel.from([1, 3, 5, 7, 9]);
@@ -1162,7 +1165,7 @@ and the other which emits a series of even integers::
     [3, 4]
     [5, 6]
 
-An option closure can be provide to customise the items emitted by the resulting merged channel. For example::
+An optional closure can be provided to customise the items emitted by the resulting merged channel. For example::
 
     odds  = Channel.from([1, 3, 5, 7, 9]);
     evens = Channel.from([2, 4, 6]);
@@ -1172,12 +1175,13 @@ An option closure can be provide to customise the items emitted by the resulting
         .view()
 
 .. danger::
-    When this operator is used to *merge* the outputs of two processes, keep in mind that the resulting merged channel
-    will have non-deterministic behavior and may cause your pipeline execution to not resume properly.
-    Because each process is executed in parallel and produces its outputs independently, there is no guarantee
-    that they will be executed in the same order. Therefore the content of the resulting merged channel
-    may have a different order on each run and may cause the resume to not work
-    properly. For a better alternative use the `join`_ operator instead.
+    In general, the use of the ``merge`` operator is discouraged. Processes and channel operators are not
+    guaranteed to emit items in the order that they were received, due to their parallel and asynchronous
+    nature. Therefore, if you try to merge output channels from different processes, the resulting channel
+    may be different on each run, which will cause resumed runs to not work properly.
+
+    You should always use a matching key (e.g. sample ID) to merge multiple channels, so that they are
+    combined in a deterministic way. For this purpose, you can use the `join`_ operator.
 
 
 .. _operator-min:
@@ -1264,12 +1268,12 @@ multiMap
 
 .. note:: Requires Nextflow version ``19.11.0-edge`` or later.
 
-The multiMap operator allows you to forward the items emitted by a source channel to two
-or more output channels mapping each input value as a separate element.
+The ``multiMap`` operator allows you to forward the items emitted by a source channel to two
+or more output channels, mapping each input value as a separate element.
 
-The mapping criteria is defined by specifying a :ref:`closure <script-closure>` that specify the
-target channels labelled by a unique identifier followed by an expression statement that
-evaluates the value to be assigned to such channel.
+The mapping criteria is defined with a :ref:`closure <script-closure>` that specifies the
+target channels (labelled with a unique identifier) followed by an expression that maps each
+item from the input channel to the target channel.
 
 For example::
 
@@ -1295,7 +1299,7 @@ It prints::
     bar 9
     bar 16
 
-The statement expression can be omitted when the value to be emitted is the same as
+The mapping expression can be omitted when the value to be emitted is the same as
 the following one. If you just need to forward the same value to multiple channels,
 you can use the following shorthand::
 
@@ -1304,10 +1308,10 @@ you can use the following shorthand::
         .multiMap { it -> foo: bar: it }
         .set { result }
 
-As before this creates two channels but now both of them receive the same source items.
+As before, this creates two channels, but now both of them receive the same source items.
 
-To create a multi-map criteria as a variable that can be passed as an argument to more than one
-``multiMap`` operator use the ``multiMapCriteria`` built-in method as shown below::
+You can use the ``multiMapCriteria`` method to create a multi-map criteria as a variable
+that can be passed as an argument to one or more ``multiMap`` operations, as shown below::
 
     def criteria = multiMapCriteria {
         small: it < 10
@@ -1316,6 +1320,13 @@ To create a multi-map criteria as a variable that can be passed as an argument t
 
     Channel.from(1,2,30).multiMap(criteria).set { ch1 }
     Channel.from(10,20,1).multiMap(criteria).set { ch2 }
+
+.. note::
+    If you use ``multiMap`` to split a tuple or map into multiple channels, it is
+    recommended that you retain a matching key (e.g. sample ID) with *each* new
+    channel, so that you can re-combine these channels later on if needed. In general,
+    you should not expect to be able to merge channels correctly without a matching key,
+    due to the parallel and asynchronous nature of Nextflow pipelines.
 
 
 .. _operator-phase:
