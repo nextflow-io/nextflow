@@ -383,8 +383,8 @@ Resource requests and other job characteristics can be controlled via the follow
 * :ref:`process-time`
 
 .. tip::
-  In Nextflow version 22.10 or later, it is possible to use ``clusterOptions`` with other resources directives such as
-  ``cpus`` and ``memory`` by specifying the cluster options dynamically::
+  In Nextflow version 22.10 or later, it is possible to specify resource settings with both ``clusterOptions`` and other
+  directives such as ``cpus`` and ``memory`` by specifying the cluster options dynamically::
 
     clusterOptions = { "-l select=1:ncpus=${task.cpus}:mem=${task.memory.toMega()}mb:..." }
 
