@@ -37,7 +37,7 @@ class ClientConfig {
 
     String namespace
 
-    Integer maxErrorRetry
+    Integer maxErrorRetry = 5
 
     /**
      * k8s service account name
