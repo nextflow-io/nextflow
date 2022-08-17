@@ -28,6 +28,7 @@ import org.junit.Rule
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.TempDir
+import spock.lang.Unroll
 import test.OutputCapture
 /**
  *
@@ -70,10 +71,10 @@ class WaveCmdTest extends Specification implements TarHelper {
         and:
         def json = new JsonSlurper().parseText(result)
         and:
-        json.gzipSize == Files.size(gzipFile)
-        json.location == gzipFile.toUri().toString()
-        json.tarDigest == 'sha256:81200f6ad32793567d8070375dc51312a1711fedf6a1c6f5e4a97fa3014f3491'
-        json.gzipDigest == 'sha256:09a2deca4293245909223db505cf69affa1a8ff8acb745fe3cad38bc0b719110'
+        json.layers[0].gzipSize == Files.size(gzipFile)
+        json.layers[0].location == gzipFile.toUri().toString()
+        json.layers[0].tarDigest == 'sha256:81200f6ad32793567d8070375dc51312a1711fedf6a1c6f5e4a97fa3014f3491'
+        json.layers[0].gzipDigest == 'sha256:09a2deca4293245909223db505cf69affa1a8ff8acb745fe3cad38bc0b719110'
         
         when:
         def tar = uncompress(Files.readAllBytes(gzipFile))
@@ -85,4 +86,20 @@ class WaveCmdTest extends Specification implements TarHelper {
         untarPath.resolve('this/that/ciao.txt').text == rootPath.resolve('this/that/ciao.txt').text
     }
 
+    @Unroll
+    def 'should find base name' () {
+        expect:
+        WaveCmd.baseName(PATH) == EXPECTED
+
+        where:
+        PATH                        | EXPECTED
+        null                        | null
+        '/some/name'                | 'name'
+        'http://some/name.tar'      | 'name'
+        '/some/name.tar.gz'         | 'name'
+        '/some/name.tar.gzip'       | 'name'
+        'http://some/name.tar.gz'   | 'name'
+        'http://some/'              | null
+        'http://some'               | null
+    }
 }
