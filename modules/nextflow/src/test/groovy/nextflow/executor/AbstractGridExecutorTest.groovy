@@ -67,6 +67,24 @@ class AbstractGridExecutorTest extends Specification {
 
     }
 
+    def 'should return a sanitized custom job name'() {
+
+        given:
+        def exec = [:] as AbstractGridExecutor
+        exec.session = [:] as Session
+        exec.session.config = [:]
+
+        expect:
+        exec.resolveCustomJobName(Mock(TaskRun)) == null
+
+        when:
+        exec.session = [:] as Session
+        exec.session.config = [ executor: [jobName: { task.name.replace("_", " ") }  ] ]
+        then:
+        exec.resolveCustomJobName(new TaskRun(config: [name: 'task_name'])) == 'task name'
+        exec.getJobNameFor(new TaskRun(config: [name: 'task_name'])) == 'task_name'
+    }
+
     def 'should return job submit name' () {
 
         given:

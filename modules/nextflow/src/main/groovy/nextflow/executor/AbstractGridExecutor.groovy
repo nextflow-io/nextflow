@@ -140,21 +140,19 @@ abstract class AbstractGridExecutor extends Executor {
 
         // -- check for a custom `jobName` defined in the nextflow config file
         def customName = resolveCustomJobName(task)
-        if( customName )
-            return sanitizeJobName(customName)
-
         // -- if not available fallback on the custom naming strategy
-
-        final result = new StringBuilder("nf-")
-        final name = task.getName()
-        for( int i=0; i<name.size(); i++ ) {
-            final ch = name[i]
-            result.append( INVALID_NAME_CHARS.contains(ch) ? "_" : ch )
-        }
-        return sanitizeJobName(result.toString())
+        sanitizeJobName(customName ?: ("nf-" + task.getName()))
     }
 
     protected String sanitizeJobName(String name) {
+        trimJobName(replaceInvalidChars(name))
+    }
+
+    protected String replaceInvalidChars(String name) {
+        name.collectReplacements(({ INVALID_NAME_CHARS.contains(it) ? "_" : it } as Closure<String>))
+    }
+
+    protected String trimJobName(String name) {
         name.size() > 256 ? name.substring(0,256) : name
     }
 
