@@ -17,7 +17,6 @@
 
 package nextflow.processor
 
-
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -27,17 +26,18 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.conda.CondaCache
-import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
-import nextflow.container.ContainerHandler
+import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
+import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
+import nextflow.script.bundle.ModuleBundle
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
@@ -342,6 +342,10 @@ class TaskRun implements Cloneable {
         return copy
     }
 
+    String lazyName() {
+        return name ?: processor.getName()
+    }
+
     String getName() {
         if( name )
             return name
@@ -562,11 +566,10 @@ class TaskRun implements Cloneable {
 
     @Memoized
     Path getCondaEnv() {
-        if( !config.conda )
+        if( !config.conda || !processor.session.getCondaConfig().isEnabled() )
             return null
 
-        final cfg = processor.session.config.conda as Map ?: Collections.emptyMap()
-        final cache = new CondaCache(new CondaConfig(cfg))
+        final cache = new CondaCache(processor.session.getCondaConfig())
         cache.getCachePathFor(config.conda as String)
     }
 
@@ -574,21 +577,24 @@ class TaskRun implements Cloneable {
      * The name of a docker container where the task is supposed to run when provided
      */
     String getContainer() {
-        // set the docker container to be used
-        String imageName
-        if( !config.container ) {
+        // fetch the container image from the config
+        def imageImage = config.getContainer()
+        // the boolean `false` literal can be provided
+        // to signal the absence of the container
+        if( imageImage == false )
             return null
-        }
-        else {
-            imageName = config.container as String
-        }
+        if( !imageImage )
+            imageImage = null
 
-        final cfg = getContainerConfig()
-        final handler = new ContainerHandler(cfg)
-        final result = handler.normalizeImageName(imageName)
+        final res = ContainerResolverProvider.load()
+        final target = res.resolveImage(this, imageImage as String)
+        return target
+    }
 
-        final proxy = System.getenv('NXF_PROXY_REG')
-        return proxy ? ContainerHandler.proxyReg(proxy, result) : result
+    ModuleBundle getModuleBundle() {
+        final script = this.getProcessor().getOwnerScript()
+        final meta = ScriptMeta.get(script)
+        return meta != null ? meta.getModuleBundle() : null
     }
 
     /**
@@ -597,7 +603,6 @@ class TaskRun implements Cloneable {
     ContainerConfig getContainerConfig() {
         processor.getSession().getContainerConfig()
     }
-
 
     /**
      * @return {@true} when the process must run within a container and the docker engine is enabled
@@ -612,7 +617,7 @@ class TaskRun implements Cloneable {
     }
 
     boolean isContainerEnabled() {
-        getConfig().container && (getContainerConfig().enabled || isContainerNative())
+        (getContainerConfig().enabled || isContainerNative()) && getContainer()!=null
     }
 
     boolean isSecretNative() {

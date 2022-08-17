@@ -21,6 +21,7 @@ import static nextflow.Const.*
 
 import java.lang.reflect.Field
 import java.nio.file.DirectoryNotEmptyException
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
@@ -236,7 +237,9 @@ class LoggerHelper {
 
     protected Appender createConsoleAppender() {
 
-        final Appender result = daemon && opts.isBackground() ? null : ( opts.ansiLog ? new CaptureAppender() : new ConsoleAppender())
+        final Appender<ILoggingEvent> result = daemon && opts.isBackground()
+                ? (Appender<ILoggingEvent>) null
+                : (opts.ansiLog ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
         if( result )  {
             final filter = new ConsoleLoggerFilter( packages )
             filter.setContext(loggerContext)
@@ -456,6 +459,9 @@ class LoggerHelper {
         }
         else if( fail instanceof NoSuchFileException ) {
             buffer.append("No such file: ${normalize(fail.message)}")
+        }
+        else if( fail instanceof FileAlreadyExistsException ) {
+            buffer.append("File already exist: $fail.message")
         }
         else if( fail instanceof ClassNotFoundException ) {
             buffer.append("Class not found: ${normalize(fail.message)}")

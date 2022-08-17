@@ -892,6 +892,66 @@ class PodSpecBuilderTest extends Specification {
         ]
     }
 
+    def 'should create pod spec with activeDeadlineSeconds' () {
 
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withWorkDir('/some/work/dir')
+                .withCommand(['echo', 'hello'])
+                .withActiveDeadline(100)
+                .build()
+
+        then:
+        spec ==  [ apiVersion: 'v1',
+                   kind: 'Pod',
+                   metadata: [name:'foo', namespace:'default'],
+                   spec: [
+                           restartPolicy:'Never',
+                           activeDeadlineSeconds: 100,
+                           containers:[
+                                   [name:'foo',
+                                    image:'busybox',
+                                    command:['echo', 'hello'],
+                                    workingDir:'/some/work/dir'
+                                   ]
+                           ]
+                   ]
+        ]
+
+    }
+
+    def 'should create job spec with activeDeadlineSeconds' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand(['echo', 'hello'])
+                .withActiveDeadline(100)
+                .buildAsJob()
+
+        then:
+        spec ==  [ apiVersion: 'batch/v1',
+                   kind: 'Job',
+                   metadata: [name:'foo', namespace:'default'],
+                   spec: [
+                           backoffLimit: 0,
+                           template: [
+                                   spec: [
+                                           restartPolicy:'Never',
+                                           activeDeadlineSeconds: 100,
+                                           containers:[
+                                                   [name:'foo',
+                                                    image:'busybox',
+                                                    command:['echo', 'hello'],
+                                                   ]
+                                           ]
+                                   ]
+                           ]
+                   ]
+        ]
+    }
 
 }

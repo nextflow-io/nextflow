@@ -11,6 +11,7 @@
 
 package io.seqera.tower.plugin
 
+
 import java.nio.file.Path
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -37,7 +38,6 @@ import nextflow.util.Duration
 import nextflow.util.LoggerHelper
 import nextflow.util.ProcessHelper
 import nextflow.util.SimpleHttpClient
-
 /**
  * Send out messages via HTTP to a configured URL on different workflow
  * execution events.
@@ -130,6 +130,8 @@ class TowerClient implements TraceObserver {
 
     private TowerReports reports
 
+    private TowerArchiver archiver
+
     /**
      * Constructor that consumes a URL and creates
      * a basic HTTP client.
@@ -141,6 +143,7 @@ class TowerClient implements TraceObserver {
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         this.reports = new TowerReports(session)
+        this.archiver = TowerArchiver.create(session, env)
     }
 
     TowerClient withEnvironment(Map env) {
@@ -363,10 +366,12 @@ class TowerClient implements TraceObserver {
     }
 
     String getAccessToken() {
-        // access token
-        def token = session.config.navigate('tower.accessToken')
-        if( !token )
-            token = env.get('TOWER_ACCESS_TOKEN')
+        // when 'TOWER_WORKFLOW_ID' is provided in the env, it's a tower made launch
+        // therefore the access token should only be taken from the env
+        // otherwise check into the config file and fallback in the env
+        def token = env.get('TOWER_WORKFLOW_ID')
+                ? env.get('TOWER_ACCESS_TOKEN')
+                : session.config.navigate('tower.accessToken', env.get('TOWER_ACCESS_TOKEN'))
         if( !token )
             throw new AbortOperationException("Missing Nextflow Tower access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
         return token
@@ -430,6 +435,8 @@ class TowerClient implements TraceObserver {
         synchronized (this) {
             aggregator.aggregate(trace)
         }
+
+        archiver?.archiveTaskLogs(trace.workDir)
     }
 
     @Override
@@ -465,7 +472,9 @@ class TowerClient implements TraceObserver {
      */
     @Override
     void onFilePublish(Path destination) {
-        reports.filePublish(destination)
+        final result = reports.filePublish(destination)
+        if( result && archiver )
+            archiver.archiveFile(destination)
     }
 
     protected void refreshToken(String refresh) {

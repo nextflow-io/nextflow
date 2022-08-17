@@ -77,7 +77,7 @@ class CmdRun extends CmdBase implements HubOptions {
         }
     }
 
-    static final public NAME = 'run'
+    static final public String NAME = 'run'
 
     private Map<String,String> sysEnv = System.getenv()
 
@@ -219,6 +219,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-with-conda'], description = 'Use the specified Conda environment package or file (must end with .yml|.yaml suffix)')
     String withConda
 
+    @Parameter(names=['-without-conda'], description = 'Disable the use of Conda environments')
+    Boolean withoutConda
+
     @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
     boolean offline = System.getenv('NXF_OFFLINE')=='true'
 
@@ -276,6 +279,9 @@ class CmdRun extends CmdBase implements HubOptions {
         if( withDocker && withoutDocker )
             throw new AbortOperationException("Command line options `-with-docker` and `-without-docker` cannot be specified at the same time")
 
+        if( withConda && withoutConda )
+            throw new AbortOperationException("Command line options `-with-conda` and `-without-conda` cannot be specified at the same time")
+
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
 
@@ -299,6 +305,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
         // check DSL syntax in the config
         launchInfo(config, scriptFile)
+
+        // check if NXF_ variables are set in nextflow.config
+        checkConfigEnv(config)
 
         // -- load plugins
         final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
@@ -342,6 +351,17 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.execute(scriptArgs, this.entryName)
     }
 
+    protected checkConfigEnv(ConfigMap config) {
+        // Warn about setting NXF_ environment variables within env config scope
+        final env = config.env as Map<String, String>
+        for( String name : env.keySet() ) {
+            if( name.startsWith('NXF_') && name!='NXF_DEBUG' ) {
+                final msg = "Nextflow variables must be defined in the launching environment - The following variable set in the config file is going to be ignored: '$name'"
+                log.warn(msg)
+            }
+        }
+    }
+
     protected void launchInfo(ConfigMap config, ScriptFile scriptFile) {
         // -- determine strict mode
         final defStrict = sysEnv.get('NXF_ENABLE_STRICT') ?: false
@@ -355,7 +375,8 @@ class CmdRun extends CmdBase implements HubOptions {
         NextflowMeta.instance.enableDsl(dsl)
         // -- show launch info
         final ver = NF.dsl2 ? DSL2 : DSL1
-        final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$scriptFile.repository`"
+        final repo = scriptFile.repository ?: scriptFile.source
+        final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$repo`"
         if( scriptFile.repository )
             log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
         else
@@ -374,7 +395,7 @@ class CmdRun extends CmdBase implements HubOptions {
             return scriptDsl
         }
         else if( dsl ) {
-            log.debug("Applied DSL=$scriptDsl from config declaration")
+            log.debug("Applied DSL=$dsl from config declaration")
             return dsl
         }
         // -- if still unknown try probing for DSL1
@@ -401,16 +422,14 @@ class CmdRun extends CmdBase implements HubOptions {
             throw new AbortOperationException("Not a valid run name: `$runName` -- It must match the pattern $RUN_NAME_PATTERN")
 
         if( !runName ) {
+            if( HistoryFile.disabled() )
+                throw new AbortOperationException("Missing workflow run name")
             // -- make sure the generated name does not exist already
             runName = HistoryFile.DEFAULT.generateNextName()
         }
 
-        else if( HistoryFile.DEFAULT.checkExistsByName(runName) && !ignoreHistory() )
+        else if( !HistoryFile.disabled() && HistoryFile.DEFAULT.checkExistsByName(runName) )
             throw new AbortOperationException("Run name `$runName` has been already used -- Specify a different one")
-    }
-
-    private static boolean ignoreHistory() {
-        System.getenv('NXF_IGNORE_RESUME_HISTORY')=='true'
     }
 
     static protected boolean matchRunName(String name) {

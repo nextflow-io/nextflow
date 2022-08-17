@@ -17,8 +17,13 @@
 
 package nextflow.cloud.aws.codecommit
 
+import com.amazonaws.SdkClientException
+import com.amazonaws.auth.AWSStaticCredentialsProvider
+import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.amazonaws.services.codecommit.AWSCodeCommit
 import com.amazonaws.services.codecommit.AWSCodeCommitClientBuilder
+import com.amazonaws.services.codecommit.model.AWSCodeCommitException
 import com.amazonaws.services.codecommit.model.GetFileRequest
 import com.amazonaws.services.codecommit.model.GetRepositoryRequest
 import com.amazonaws.services.codecommit.model.RepositoryMetadata
@@ -26,8 +31,11 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import nextflow.exception.MissingCredentialsException
 import nextflow.scm.ProviderConfig
 import nextflow.scm.RepositoryProvider
+import nextflow.util.StringUtils
+import org.eclipse.jgit.api.errors.TransportException
 import org.eclipse.jgit.transport.CredentialsProvider
 /**
  * Implements a repository provider for AWS CodeCommit
@@ -45,7 +53,7 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
         this.config = config
         this.region = config.region
         this.repositoryName = project.tokenize('/')[-1]
-        this.client = AWSCodeCommitClientBuilder.standard().withRegion(region).build()
+        this.client = createClient(config)
     }
 
     private String region
@@ -53,11 +61,27 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
     private String repositoryName
 
 
+    protected AWSCodeCommit createClient(AwsCodeCommitProviderConfig config) {
+        final builder = AWSCodeCommitClientBuilder
+                .standard()
+                .withRegion(region)
+        if( config.user && config.password ) {
+            final creds = new BasicAWSCredentials(config.user, config.password)
+            log.debug "AWS CodeCommit using username=$config.user; password=${StringUtils.redact(config.password)}"
+            builder.withCredentials( new AWSStaticCredentialsProvider(creds) )
+        }
+        else {
+            log.debug "AWS CodeCommit using default credentials chain"
+            builder.withCredentials( new DefaultAWSCredentialsProviderChain() )
+        }
+        builder.build()
+    }
+
     /** {@inheritDoc} **/
     @Memoized
     @Override
     CredentialsProvider getGitCredentials() {
-        return new AwsCodeCommitCredentialProvider()
+        return new AwsCodeCommitCredentialProvider(username: user, password: password)
     }
 
     private RepositoryMetadata getRepositoryMetadata() {
@@ -125,8 +149,30 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
                     .getFileContent()?.array()
         }
         catch (Exception e) {
+            checkMissingCredsException(e)
             log.debug "AWS CodeCommit unable to retrieve file: $path from repo: $repositoryName"
             return null
+        }
+    }
+
+    protected void checkMissingCredsException(Exception e) {
+        final errs = [
+                "Failed to connect to service endpoint",
+                "Unable to load AWS credentials",
+                "The security token included in the request is invalid",
+                "The request signature we calculated does not match the signature you provided"]
+        if( e !instanceof SdkClientException )
+            return
+        if( e instanceof AWSCodeCommitException && e.message?.startsWith("Could not find path") ) {
+            // it cannot find the request file
+            return
+        }
+        if( errs.find(it-> e.message?.startsWith(it))) {
+            final msg = e.message?.split(/\.|\(|:/)[0].trim()
+            throw new MissingCredentialsException("Missing or invalid AWS CodeCommit credentials - $msg", e)
+        }
+        else {
+            throw new AbortOperationException("Unexpected error while connecting repository - $e.message", e)
         }
     }
 
@@ -138,7 +184,35 @@ class AwsCodeCommitRepositoryProvider extends RepositoryProvider {
             getRepositoryMetadata()
         }
         catch( IOException e ) {
-            throw new AbortOperationException("Cannot find ${getEndpointUrl()} -- Make sure a repository exists for it in AWS CodeCommit")
+            throw new AbortOperationException("Cannot access ${getEndpointUrl()} - Make sure a repository exists for it in AWS CodeCommit")
+        }
+    }
+
+    private String errMsg(Exception e) {
+        def msg = "Unable to access Git repository"
+        if( e.message )
+            msg + " - ${e.message}"
+        else
+            msg += ": " + getCloneUrl()
+        return msg
+    }
+    @Override
+    List<BranchInfo> getBranches() {
+        try {
+            return super.getBranches()
+        }
+        catch (TransportException e) {
+            throw new AbortOperationException(errMsg(e), e)
+        }
+    }
+
+    @Override
+    List<TagInfo> getTags() {
+        try {
+            return super.getTags()
+        }
+        catch (TransportException e) {
+            throw new AbortOperationException(errMsg(e), e)
         }
     }
 
