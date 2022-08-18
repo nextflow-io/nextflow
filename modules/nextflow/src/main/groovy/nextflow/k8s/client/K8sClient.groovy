@@ -612,7 +612,7 @@ class K8sClient {
      */
     protected K8sResponseApi makeRequest(String method, String path, String body=null) throws K8sResponseException {
 
-        final int maxTrials = config.maxRequestRetries
+        final int maxTrials = config.maxErrorRetry
         int trial = 0
 
         while ( trial < maxTrials ) {
