@@ -1,0 +1,1155 @@
+~ Test 'ampa-dsl2.nf' run failed
+   + /Users/naineshmp/work/nextflow/nextflow -q run ../../ampa-dsl2.nf -with-docker --out result.txt
+   + tee .stdout
+   Error executing process > 'ampaTask (3)'
+   
+   Caused by:
+     Process `ampaTask (3)` terminated with an error exit status (125)
+   
+   Command executed:
+   
+     AMPA.pl -in=sample.3.fa -noplot -rf=result -df=data
+   
+   Command exit status:
+     125
+   
+   Command output:
+     (empty)
+   
+   Command error:
+     docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+     See 'docker run --help'.
+   
+   Work dir:
+     /Users/naineshmp/work/nextflow/tests/checks/scratch/f2/4537cb1f225e7a7a26c038b4db8b59
+   
+   Tip: you can replicate the issue by changing to the process work dir and entering the command `bash .command.run`
+   
+   
+   WARN: Killing running tasks (1)
+   ++ grep INFO .nextflow.log
+   ++ grep -c 'Submitted process'
+   + [[ 5 == 5 ]]
+   + cmp .expected /dev/fd/63
+   ++ sort .stdout
+   .expected /dev/fd/63 differ: char 6, line 6
+   + false
+
+Aug-17 18:57:51.602 [main] DEBUG nextflow.cli.Launcher - $> nextflow -q run ../../ampa-dsl2.nf -with-docker --out result.txt
+Aug-17 18:57:51.673 [main] INFO  nextflow.cli.CmdRun - N E X T F L O W  ~  version 22.06.0-edge
+Aug-17 18:57:51.694 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/Users/naineshmp/work/nextflow/build/plugins; core-plugins: nf-amazon@1.8.0,nf-azure@0.13.2,nf-codecommit@0.1.0,nf-console@1.0.3,nf-ga4gh@1.0.3,nf-google@1.2.1,nf-sqldb@0.4.1,nf-tower@1.4.0
+Aug-17 18:57:51.709 [main] INFO  org.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+Aug-17 18:57:51.710 [main] INFO  org.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+Aug-17 18:57:51.713 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.4.1 in 'deployment' mode
+Aug-17 18:57:51.724 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+Aug-17 18:57:51.741 [main] DEBUG nextflow.config.ConfigBuilder - Found config base: /Users/naineshmp/work/nextflow/tests/nextflow.config
+Aug-17 18:57:51.743 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /Users/naineshmp/work/nextflow/tests/nextflow.config
+Aug-17 18:57:51.767 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `standard`
+Aug-17 18:57:52.403 [main] DEBUG nextflow.config.ConfigBuilder - Enabling execution in Docker container as requested by cli option `-with-docker -`
+Aug-17 18:57:52.410 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=2 by global default
+Aug-17 18:57:52.427 [main] INFO  nextflow.cli.CmdRun - Launching `null` [lethal_edison] DSL2 - revision: ff4a73807b
+Aug-17 18:57:52.428 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
+Aug-17 18:57:52.504 [main] DEBUG nextflow.Session - Session uuid: a83795ce-881e-448f-abe2-39f5e57e3516
+Aug-17 18:57:52.504 [main] DEBUG nextflow.Session - Run name: lethal_edison
+Aug-17 18:57:52.505 [main] DEBUG nextflow.Session - Executor pool size: 12
+Aug-17 18:57:52.534 [main] DEBUG nextflow.cli.CmdRun - 
+  Version: 22.06.0-edge build 5710
+  Created: 09-06-2022 15:14 UTC (08:14 PDT)
+  System: Mac OS X 11.4
+  Runtime: Groovy 3.0.10 on OpenJDK 64-Bit Server VM 17.0.1+12
+  Encoding: UTF-8 (UTF-8)
+  Process: 24042@Naineshs-MacBook-Pro.local [127.0.0.1]
+  CPUs: 12 - Mem: 16 GB (281.2 MB) - Swap: 2 GB (1.4 GB)
+Aug-17 18:57:52.554 [main] DEBUG nextflow.Session - Work-dir: /Users/naineshmp/work/nextflow/tests/checks/scratch [Mac OS X]
+Aug-17 18:57:52.574 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
+Aug-17 18:57:52.587 [main] DEBUG nextflow.Session - Observer factory: DefaultObserverFactory
+Aug-17 18:57:52.609 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
+Aug-17 18:57:52.634 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 13; maxThreads: 1000
+Aug-17 18:57:52.737 [main] DEBUG nextflow.Session - Session start invoked
+Aug-17 18:57:53.023 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
+Aug-17 18:57:53.200 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-17 18:57:53.201 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-17 18:57:53.207 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
+Aug-17 18:57:53.213 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=12; memory=16 GB; capacity=12; pollInterval=100ms; dumpInterval=5m
+Aug-17 18:57:53.300 [main] DEBUG nextflow.Session - Workflow process names [dsl2]: ampaTask
+Aug-17 18:57:53.301 [main] DEBUG nextflow.Session - Ignite dataflow network (2)
+Aug-17 18:57:53.308 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > ampaTask
+Aug-17 18:57:53.308 [main] DEBUG nextflow.script.ScriptRunner - > Await termination 
+Aug-17 18:57:53.308 [main] DEBUG nextflow.Session - Session await
+Aug-17 18:57:53.323 [Actor Thread 4] DEBUG n.splitter.AbstractTextSplitter - Splitter `Fasta` collector path: nextflow.splitter.TextFileCollector$CachePath(/Users/naineshmp/work/nextflow/tests/checks/scratch/1d/52491a159f1e46bc06c05a4d0749c9/sample.fa, null)
+Aug-17 18:57:53.500 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:57:53.505 [Task submitter] INFO  nextflow.Session - [f2/4537cb] Submitted process > ampaTask (3)
+Aug-17 18:57:53.515 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:57:53.515 [Task submitter] INFO  nextflow.Session - [52/8beb04] Submitted process > ampaTask (4)
+Aug-17 18:57:53.528 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:57:53.529 [Task submitter] INFO  nextflow.Session - [d8/772faa] Submitted process > ampaTask (1)
+Aug-17 18:57:53.543 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:57:53.543 [Task submitter] INFO  nextflow.Session - [1a/9f8bfc] Submitted process > ampaTask (5)
+Aug-17 18:57:53.554 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:57:53.555 [Task submitter] INFO  nextflow.Session - [ee/4b2236] Submitted process > ampaTask (2)
+Aug-17 18:57:54.735 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 3; name: ampaTask (3); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/f2/4537cb1f225e7a7a26c038b4db8b59]
+Aug-17 18:57:54.760 [Task monitor] ERROR nextflow.processor.TaskProcessor - Error executing process > 'ampaTask (3)'
+
+Caused by:
+  Process `ampaTask (3)` terminated with an error exit status (125)
+
+Command executed:
+
+  AMPA.pl -in=sample.3.fa -noplot -rf=result -df=data
+
+Command exit status:
+  125
+
+Command output:
+  (empty)
+
+Command error:
+  docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+  See 'docker run --help'.
+
+Work dir:
+  /Users/naineshmp/work/nextflow/tests/checks/scratch/f2/4537cb1f225e7a7a26c038b4db8b59
+
+Tip: you can replicate the issue by changing to the process work dir and entering the command `bash .command.run`
+Aug-17 18:57:54.766 [Task monitor] DEBUG nextflow.Session - Session aborted -- Cause: Process `ampaTask (3)` terminated with an error exit status (125)
+Aug-17 18:57:54.778 [Task monitor] DEBUG nextflow.Session - The following nodes are still active:
+  [operator] view
+
+Aug-17 18:57:54.782 [main] DEBUG nextflow.Session - Session await > all process finished
+Aug-17 18:57:54.782 [main] DEBUG nextflow.Session - Session await > all barriers passed
+Aug-17 18:57:54.783 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 4; name: ampaTask (4); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/52/8beb04a73dd92dd8de97f0cb0be349]
+Aug-17 18:57:54.785 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 1; name: ampaTask (1); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/d8/772faa27a8ebeeba3e38fb113f8ebd]
+Aug-17 18:57:54.787 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 5; name: ampaTask (5); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/1a/9f8bfc19aa18f10655712d8c6d258c]
+Aug-17 18:57:54.787 [main] WARN  n.processor.TaskPollingMonitor - Killing running tasks (1)
+Aug-17 18:57:54.788 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 2; name: ampaTask (2); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/ee/4b2236bb64c271e61aa4d22a4329d2]
+Aug-17 18:57:54.794 [main] DEBUG nextflow.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=0; failedCount=5; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=0; succeedDuration=0ms; failedDuration=5.9s; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=5; peakCpus=5; peakMemory=0; ]
+Aug-17 18:57:54.800 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
+Aug-17 18:57:54.808 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye
+
+~ Test 'ampa.nf' run failed
+   + /Users/naineshmp/work/nextflow/nextflow -q run ../../ampa.nf -with-docker --out result.txt
+   + tee .stdout
+   Error executing process > 'ampaTask (3)'
+   
+   Caused by:
+     Process `ampaTask (3)` terminated with an error exit status (125)
+   
+   Command executed:
+   
+     AMPA.pl -in=input.1 -noplot -rf=result -df=data
+   
+   Command exit status:
+     125
+   
+   Command output:
+     (empty)
+   
+   Command error:
+     docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+     See 'docker run --help'.
+   
+   Work dir:
+     /Users/naineshmp/work/nextflow/tests/checks/scratch/ae/93363c71b0eb7ea132ad1959f445ec
+   
+   Tip: you can replicate the issue by changing to the process work dir and entering the command `bash .command.run`
+   
+   
+   WARN: Killing running tasks (1)
+   ++ grep INFO .nextflow.log
+   ++ grep -c 'Submitted process'
+   + [[ 5 == 5 ]]
+   + cmp .expected /dev/fd/63
+   ++ sort .stdout
+   .expected /dev/fd/63 differ: char 6, line 6
+   + false
+
+Aug-17 18:57:56.237 [main] DEBUG nextflow.cli.Launcher - $> nextflow -q run ../../ampa.nf -with-docker --out result.txt
+Aug-17 18:57:56.303 [main] INFO  nextflow.cli.CmdRun - N E X T F L O W  ~  version 22.06.0-edge
+Aug-17 18:57:56.325 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/Users/naineshmp/work/nextflow/build/plugins; core-plugins: nf-amazon@1.8.0,nf-azure@0.13.2,nf-codecommit@0.1.0,nf-console@1.0.3,nf-ga4gh@1.0.3,nf-google@1.2.1,nf-sqldb@0.4.1,nf-tower@1.4.0
+Aug-17 18:57:56.337 [main] INFO  org.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+Aug-17 18:57:56.339 [main] INFO  org.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+Aug-17 18:57:56.343 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.4.1 in 'deployment' mode
+Aug-17 18:57:56.354 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+Aug-17 18:57:56.371 [main] DEBUG nextflow.config.ConfigBuilder - Found config base: /Users/naineshmp/work/nextflow/tests/nextflow.config
+Aug-17 18:57:56.373 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /Users/naineshmp/work/nextflow/tests/nextflow.config
+Aug-17 18:57:56.396 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `standard`
+Aug-17 18:57:57.036 [main] DEBUG nextflow.config.ConfigBuilder - Enabling execution in Docker container as requested by cli option `-with-docker -`
+Aug-17 18:57:57.042 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=1 from script declararion
+Aug-17 18:57:57.060 [main] INFO  nextflow.cli.CmdRun - Launching `null` [silly_pauling] DSL1 - revision: 8ee8bd3fea
+Aug-17 18:57:57.061 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
+Aug-17 18:57:57.132 [main] DEBUG nextflow.Session - Session uuid: dc8ba48a-f3d1-4c4f-afc7-c25ff6228abf
+Aug-17 18:57:57.132 [main] DEBUG nextflow.Session - Run name: silly_pauling
+Aug-17 18:57:57.132 [main] DEBUG nextflow.Session - Executor pool size: 12
+Aug-17 18:57:57.162 [main] DEBUG nextflow.cli.CmdRun - 
+  Version: 22.06.0-edge build 5710
+  Created: 09-06-2022 15:14 UTC (08:14 PDT)
+  System: Mac OS X 11.4
+  Runtime: Groovy 3.0.10 on OpenJDK 64-Bit Server VM 17.0.1+12
+  Encoding: UTF-8 (UTF-8)
+  Process: 24257@Naineshs-MacBook-Pro.local [127.0.0.1]
+  CPUs: 12 - Mem: 16 GB (334 MB) - Swap: 2 GB (1.4 GB)
+Aug-17 18:57:57.183 [main] DEBUG nextflow.Session - Work-dir: /Users/naineshmp/work/nextflow/tests/checks/scratch [Mac OS X]
+Aug-17 18:57:57.202 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
+Aug-17 18:57:57.214 [main] DEBUG nextflow.Session - Observer factory: DefaultObserverFactory
+Aug-17 18:57:57.233 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
+Aug-17 18:57:57.244 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 13; maxThreads: 1000
+Aug-17 18:57:57.333 [main] DEBUG nextflow.Session - Session start invoked
+Aug-17 18:57:57.591 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
+Aug-17 18:57:57.734 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-17 18:57:57.734 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-17 18:57:57.739 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
+Aug-17 18:57:57.744 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=12; memory=16 GB; capacity=12; pollInterval=100ms; dumpInterval=5m
+Aug-17 18:57:57.814 [main] DEBUG nextflow.Session - Workflow process names [dsl1]: ampaTask
+Aug-17 18:57:57.815 [main] DEBUG nextflow.script.ScriptRunner - > Await termination 
+Aug-17 18:57:57.815 [main] DEBUG nextflow.Session - Session await
+Aug-17 18:57:57.992 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:57:57.997 [Task submitter] INFO  nextflow.Session - [ae/93363c] Submitted process > ampaTask (3)
+Aug-17 18:57:58.007 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:57:58.008 [Task submitter] INFO  nextflow.Session - [6e/4e8b16] Submitted process > ampaTask (1)
+Aug-17 18:57:58.021 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:57:58.022 [Task submitter] INFO  nextflow.Session - [aa/2f3b27] Submitted process > ampaTask (4)
+Aug-17 18:57:58.035 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:57:58.035 [Task submitter] INFO  nextflow.Session - [3a/57398f] Submitted process > ampaTask (2)
+Aug-17 18:57:58.045 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:57:58.046 [Task submitter] INFO  nextflow.Session - [ff/7afe84] Submitted process > ampaTask (5)
+Aug-17 18:57:58.585 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 3; name: ampaTask (3); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/ae/93363c71b0eb7ea132ad1959f445ec]
+Aug-17 18:57:58.614 [Task monitor] ERROR nextflow.processor.TaskProcessor - Error executing process > 'ampaTask (3)'
+
+Caused by:
+  Process `ampaTask (3)` terminated with an error exit status (125)
+
+Command executed:
+
+  AMPA.pl -in=input.1 -noplot -rf=result -df=data
+
+Command exit status:
+  125
+
+Command output:
+  (empty)
+
+Command error:
+  docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+  See 'docker run --help'.
+
+Work dir:
+  /Users/naineshmp/work/nextflow/tests/checks/scratch/ae/93363c71b0eb7ea132ad1959f445ec
+
+Tip: you can replicate the issue by changing to the process work dir and entering the command `bash .command.run`
+Aug-17 18:57:58.621 [Task monitor] DEBUG nextflow.Session - Session aborted -- Cause: Process `ampaTask (3)` terminated with an error exit status (125)
+Aug-17 18:57:58.632 [Task monitor] DEBUG nextflow.Session - The following nodes are still active:
+  [operator] subscribe
+
+Aug-17 18:57:58.637 [main] DEBUG nextflow.Session - Session await > all process finished
+Aug-17 18:57:58.637 [main] DEBUG nextflow.Session - Session await > all barriers passed
+Aug-17 18:57:58.637 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 1; name: ampaTask (1); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/6e/4e8b16eb5602c35acc838b04ebe92d]
+Aug-17 18:57:58.639 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 4; name: ampaTask (4); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/aa/2f3b275b144e437620797bb35f056a]
+Aug-17 18:57:58.640 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 2; name: ampaTask (2); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/3a/57398fb9438c269811061bb96dc376]
+Aug-17 18:57:58.641 [main] WARN  n.processor.TaskPollingMonitor - Killing running tasks (1)
+Aug-17 18:57:58.642 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 5; name: ampaTask (5); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/ff/7afe848bc60ed88da6dc9b006f22f9]
+Aug-17 18:57:58.647 [main] DEBUG nextflow.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=0; failedCount=5; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=0; succeedDuration=0ms; failedDuration=2.8s; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=5; peakCpus=5; peakMemory=0; ]
+Aug-17 18:57:58.692 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
+Aug-17 18:57:58.699 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye
+
+~ Test 'blast-dsl2.nf' run failed
+   + set -e
+   + /Users/naineshmp/work/nextflow/nextflow -q run ../../blast-dsl2.nf -with-docker
+   + tee .stdout
+   Error executing process > 'blast (5)'
+   
+   Caused by:
+     Process `blast (5)` terminated with an error exit status (125)
+   
+   Command executed:
+   
+     blastp -db /Users/naineshmp/work/nextflow/tests/blast-db/tiny -query seq.fa -outfmt 6 > out
+   
+   Command exit status:
+     125
+   
+   Command output:
+     (empty)
+   
+   Command error:
+     docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+     See 'docker run --help'.
+   
+   Work dir:
+     /Users/naineshmp/work/nextflow/tests/checks/scratch/71/5e8ae68f9dbccd0a66ff11d27d6f0d
+   
+   Tip: you can try to figure out what's wrong by changing to the process work dir and showing the script file named `.command.sh`
+   
+   
+   WARN: Killing running tasks (1)
+   ++ grep INFO .nextflow.log
+   ++ grep -c 'Submitted process > blast'
+   + [[ 5 == 5 ]]
+   ++ grep INFO .nextflow.log
+   ++ grep -c 'Submitted process > sort'
+   + [[ 0 == 1 ]]
+   + false
+
+Aug-17 18:58:13.879 [main] DEBUG nextflow.cli.Launcher - $> nextflow -q run ../../blast-dsl2.nf -with-docker
+Aug-17 18:58:13.953 [main] INFO  nextflow.cli.CmdRun - N E X T F L O W  ~  version 22.06.0-edge
+Aug-17 18:58:13.976 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/Users/naineshmp/work/nextflow/build/plugins; core-plugins: nf-amazon@1.8.0,nf-azure@0.13.2,nf-codecommit@0.1.0,nf-console@1.0.3,nf-ga4gh@1.0.3,nf-google@1.2.1,nf-sqldb@0.4.1,nf-tower@1.4.0
+Aug-17 18:58:13.990 [main] INFO  org.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+Aug-17 18:58:13.991 [main] INFO  org.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+Aug-17 18:58:13.994 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.4.1 in 'deployment' mode
+Aug-17 18:58:14.009 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+Aug-17 18:58:14.029 [main] DEBUG nextflow.config.ConfigBuilder - Found config base: /Users/naineshmp/work/nextflow/tests/nextflow.config
+Aug-17 18:58:14.031 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /Users/naineshmp/work/nextflow/tests/nextflow.config
+Aug-17 18:58:14.055 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `standard`
+Aug-17 18:58:14.686 [main] DEBUG nextflow.config.ConfigBuilder - Enabling execution in Docker container as requested by cli option `-with-docker -`
+Aug-17 18:58:14.702 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=2 by global default
+Aug-17 18:58:14.720 [main] INFO  nextflow.cli.CmdRun - Launching `null` [cheeky_easley] DSL2 - revision: f527d74906
+Aug-17 18:58:14.720 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
+Aug-17 18:58:14.810 [main] DEBUG nextflow.Session - Session uuid: 6a9bf8a5-524b-4d40-8987-9fc850bf2481
+Aug-17 18:58:14.810 [main] DEBUG nextflow.Session - Run name: cheeky_easley
+Aug-17 18:58:14.811 [main] DEBUG nextflow.Session - Executor pool size: 12
+Aug-17 18:58:14.839 [main] DEBUG nextflow.cli.CmdRun - 
+  Version: 22.06.0-edge build 5710
+  Created: 09-06-2022 15:14 UTC (08:14 PDT)
+  System: Mac OS X 11.4
+  Runtime: Groovy 3.0.10 on OpenJDK 64-Bit Server VM 17.0.1+12
+  Encoding: UTF-8 (UTF-8)
+  Process: 25028@Naineshs-MacBook-Pro.local [127.0.0.1]
+  CPUs: 12 - Mem: 16 GB (260.7 MB) - Swap: 2 GB (1.4 GB)
+Aug-17 18:58:14.859 [main] DEBUG nextflow.Session - Work-dir: /Users/naineshmp/work/nextflow/tests/checks/scratch [Mac OS X]
+Aug-17 18:58:14.878 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
+Aug-17 18:58:14.891 [main] DEBUG nextflow.Session - Observer factory: DefaultObserverFactory
+Aug-17 18:58:14.910 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
+Aug-17 18:58:14.922 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 13; maxThreads: 1000
+Aug-17 18:58:14.991 [main] DEBUG nextflow.Session - Session start invoked
+Aug-17 18:58:15.316 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
+Aug-17 18:58:15.476 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-17 18:58:15.476 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-17 18:58:15.481 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
+Aug-17 18:58:15.487 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=12; memory=16 GB; capacity=12; pollInterval=100ms; dumpInterval=5m
+Aug-17 18:58:15.581 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-17 18:58:15.581 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-17 18:58:15.587 [main] DEBUG nextflow.Session - Workflow process names [dsl2]: sort, blast
+Aug-17 18:58:15.587 [main] DEBUG nextflow.Session - Ignite dataflow network (3)
+Aug-17 18:58:15.595 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > blast
+Aug-17 18:58:15.596 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > sort
+Aug-17 18:58:15.596 [main] DEBUG nextflow.script.ScriptRunner - > Await termination 
+Aug-17 18:58:15.596 [main] DEBUG nextflow.Session - Session await
+Aug-17 18:58:15.603 [Actor Thread 4] DEBUG n.splitter.AbstractTextSplitter - Splitter `Fasta` collector path: nextflow.splitter.TextFileCollector$CachePath(/Users/naineshmp/work/nextflow/tests/checks/scratch/70/4cd853d362042f75eb4f2db7a23aee/sample.fa, null)
+Aug-17 18:58:15.705 [Actor Thread 9] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:15.705 [Actor Thread 10] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:15.705 [Actor Thread 11] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:15.705 [Actor Thread 13] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:15.705 [Actor Thread 8] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:15.791 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:15.795 [Task submitter] INFO  nextflow.Session - [6f/f30a96] Submitted process > blast (4)
+Aug-17 18:58:15.804 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:15.805 [Task submitter] INFO  nextflow.Session - [71/5e8ae6] Submitted process > blast (5)
+Aug-17 18:58:15.815 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:15.816 [Task submitter] INFO  nextflow.Session - [c5/8b0396] Submitted process > blast (1)
+Aug-17 18:58:15.826 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:15.826 [Task submitter] INFO  nextflow.Session - [30/927ca7] Submitted process > blast (2)
+Aug-17 18:58:15.835 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:15.835 [Task submitter] INFO  nextflow.Session - [b2/b564a1] Submitted process > blast (3)
+Aug-17 18:58:16.391 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 5; name: blast (5); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/71/5e8ae68f9dbccd0a66ff11d27d6f0d]
+Aug-17 18:58:16.419 [Task monitor] ERROR nextflow.processor.TaskProcessor - Error executing process > 'blast (5)'
+
+Caused by:
+  Process `blast (5)` terminated with an error exit status (125)
+
+Command executed:
+
+  blastp -db /Users/naineshmp/work/nextflow/tests/blast-db/tiny -query seq.fa -outfmt 6 > out
+
+Command exit status:
+  125
+
+Command output:
+  (empty)
+
+Command error:
+  docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+  See 'docker run --help'.
+
+Work dir:
+  /Users/naineshmp/work/nextflow/tests/checks/scratch/71/5e8ae68f9dbccd0a66ff11d27d6f0d
+
+Tip: you can try to figure out what's wrong by changing to the process work dir and showing the script file named `.command.sh`
+Aug-17 18:58:16.426 [Task monitor] DEBUG nextflow.Session - Session aborted -- Cause: Process `blast (5)` terminated with an error exit status (125)
+Aug-17 18:58:16.438 [Task monitor] DEBUG nextflow.Session - The following nodes are still active:
+[process] sort
+  status=ACTIVE
+  port 0: (value) OPEN  ; channel: hits_*
+  port 1: (cntrl) -     ; channel: $
+
+Aug-17 18:58:16.442 [main] DEBUG nextflow.Session - Session await > all process finished
+Aug-17 18:58:16.442 [main] DEBUG nextflow.Session - Session await > all barriers passed
+Aug-17 18:58:16.443 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 1; name: blast (1); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/c5/8b039646e013f85eee7c462544a00c]
+Aug-17 18:58:16.445 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 2; name: blast (2); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/30/927ca774d90cedc1105efad9ebb0e5]
+Aug-17 18:58:16.446 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 3; name: blast (3); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/b2/b564a1ddac0919eb51c4258b65b8f2]
+Aug-17 18:58:16.447 [main] WARN  n.processor.TaskPollingMonitor - Killing running tasks (1)
+Aug-17 18:58:16.458 [main] DEBUG nextflow.executor.LocalTaskHandler - Unable to kill blast (4) -- command: kill -TERM 25056; exit: 1 
+ bash: line 1: kill: (25056) - No such process
+
+Aug-17 18:58:16.462 [main] DEBUG nextflow.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=0; failedCount=4; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=1; succeedDuration=0ms; failedDuration=2.1s; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=5; peakCpus=5; peakMemory=0; ]
+Aug-17 18:58:16.467 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
+Aug-17 18:58:16.477 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye
+
+~ Test 'blast-parallel-dsl2.nf' run failed
+   + set -e
+   + /Users/naineshmp/work/nextflow/nextflow -q run ../../blast-parallel-dsl2.nf -with-docker
+
+Aug-17 18:58:17.871 [main] DEBUG nextflow.cli.Launcher - $> nextflow -q run ../../blast-parallel-dsl2.nf -with-docker
+Aug-17 18:58:17.941 [main] INFO  nextflow.cli.CmdRun - N E X T F L O W  ~  version 22.06.0-edge
+Aug-17 18:58:17.964 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/Users/naineshmp/work/nextflow/build/plugins; core-plugins: nf-amazon@1.8.0,nf-azure@0.13.2,nf-codecommit@0.1.0,nf-console@1.0.3,nf-ga4gh@1.0.3,nf-google@1.2.1,nf-sqldb@0.4.1,nf-tower@1.4.0
+Aug-17 18:58:17.978 [main] INFO  org.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+Aug-17 18:58:17.979 [main] INFO  org.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+Aug-17 18:58:17.983 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.4.1 in 'deployment' mode
+Aug-17 18:58:17.994 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+Aug-17 18:58:18.015 [main] DEBUG nextflow.config.ConfigBuilder - Found config base: /Users/naineshmp/work/nextflow/tests/nextflow.config
+Aug-17 18:58:18.017 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /Users/naineshmp/work/nextflow/tests/nextflow.config
+Aug-17 18:58:18.039 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `standard`
+Aug-17 18:58:18.730 [main] DEBUG nextflow.config.ConfigBuilder - Enabling execution in Docker container as requested by cli option `-with-docker -`
+Aug-17 18:58:18.747 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=2 by global default
+Aug-17 18:58:18.784 [main] INFO  nextflow.cli.CmdRun - Launching `null` [hopeful_mayer] DSL2 - revision: ed1ef97509
+Aug-17 18:58:18.786 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
+Aug-17 18:58:18.868 [main] DEBUG nextflow.Session - Session uuid: eb46ad4e-57da-48ea-bce0-54d53661fac5
+Aug-17 18:58:18.868 [main] DEBUG nextflow.Session - Run name: hopeful_mayer
+Aug-17 18:58:18.868 [main] DEBUG nextflow.Session - Executor pool size: 12
+Aug-17 18:58:18.899 [main] DEBUG nextflow.cli.CmdRun - 
+  Version: 22.06.0-edge build 5710
+  Created: 09-06-2022 15:14 UTC (08:14 PDT)
+  System: Mac OS X 11.4
+  Runtime: Groovy 3.0.10 on OpenJDK 64-Bit Server VM 17.0.1+12
+  Encoding: UTF-8 (UTF-8)
+  Process: 25237@Naineshs-MacBook-Pro.local [127.0.0.1]
+  CPUs: 12 - Mem: 16 GB (254.9 MB) - Swap: 2 GB (1.4 GB)
+Aug-17 18:58:18.920 [main] DEBUG nextflow.Session - Work-dir: /Users/naineshmp/work/nextflow/tests/checks/scratch [Mac OS X]
+Aug-17 18:58:18.942 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
+Aug-17 18:58:18.956 [main] DEBUG nextflow.Session - Observer factory: DefaultObserverFactory
+Aug-17 18:58:18.976 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
+Aug-17 18:58:18.989 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 13; maxThreads: 1000
+Aug-17 18:58:19.069 [main] DEBUG nextflow.Session - Session start invoked
+Aug-17 18:58:19.384 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
+Aug-17 18:58:19.555 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-17 18:58:19.555 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-17 18:58:19.561 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
+Aug-17 18:58:19.567 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=12; memory=16 GB; capacity=12; pollInterval=100ms; dumpInterval=5m
+Aug-17 18:58:19.655 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-17 18:58:19.655 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-17 18:58:19.704 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-17 18:58:19.705 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-17 18:58:19.711 [main] DEBUG nextflow.Session - Workflow process names [dsl2]: extract, align, blast
+Aug-17 18:58:19.711 [main] DEBUG nextflow.Session - Ignite dataflow network (4)
+Aug-17 18:58:19.718 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > blast
+Aug-17 18:58:19.719 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > extract
+Aug-17 18:58:19.719 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > align
+Aug-17 18:58:19.719 [main] DEBUG nextflow.script.ScriptRunner - > Await termination 
+Aug-17 18:58:19.719 [main] DEBUG nextflow.Session - Session await
+Aug-17 18:58:19.725 [Actor Thread 3] DEBUG n.splitter.AbstractTextSplitter - Splitter `Fasta` collector path: nextflow.splitter.TextFileCollector$CachePath(/Users/naineshmp/work/nextflow/tests/checks/scratch/c4/1a110b99b1ce4963b32a1d9ea79bb1/sample.fa, null)
+Aug-17 18:58:19.829 [Actor Thread 9] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:19.829 [Actor Thread 10] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:19.829 [Actor Thread 8] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:19.829 [Actor Thread 11] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:19.829 [Actor Thread 13] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:19.898 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:19.902 [Task submitter] INFO  nextflow.Session - [d1/aeb8d3] Submitted process > blast (2)
+Aug-17 18:58:19.912 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:19.912 [Task submitter] INFO  nextflow.Session - [b5/330122] Submitted process > blast (3)
+Aug-17 18:58:19.922 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:19.922 [Task submitter] INFO  nextflow.Session - [c5/60658a] Submitted process > blast (5)
+Aug-17 18:58:19.935 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:19.936 [Task submitter] INFO  nextflow.Session - [2c/fd0cf3] Submitted process > blast (4)
+Aug-17 18:58:19.949 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:19.950 [Task submitter] INFO  nextflow.Session - [06/4a340e] Submitted process > blast (1)
+Aug-17 18:58:20.518 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 2; name: blast (2); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/d1/aeb8d345a39507a8b58623ac473964]
+Aug-17 18:58:20.548 [Task monitor] ERROR nextflow.processor.TaskProcessor - Error executing process > 'blast (2)'
+
+Caused by:
+  Process `blast (2)` terminated with an error exit status (125)
+
+Command executed:
+
+  blastp -db /Users/naineshmp/work/nextflow/tests/blast-db/tiny -query query.fa -outfmt 6 > blast_result
+  cat blast_result | head -n 10 | cut -f 2 > top_hits
+
+Command exit status:
+  125
+
+Command output:
+  (empty)
+
+Command error:
+  docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+  See 'docker run --help'.
+
+Work dir:
+  /Users/naineshmp/work/nextflow/tests/checks/scratch/d1/aeb8d345a39507a8b58623ac473964
+
+Tip: you can replicate the issue by changing to the process work dir and entering the command `bash .command.run`
+Aug-17 18:58:20.556 [Task monitor] DEBUG nextflow.Session - Session aborted -- Cause: Process `blast (2)` terminated with an error exit status (125)
+Aug-17 18:58:20.567 [Task monitor] DEBUG nextflow.Session - The following nodes are still active:
+[process] extract
+  status=ACTIVE
+  port 0: (queue) OPEN  ; channel: top_hits
+  port 1: (cntrl) -     ; channel: $
+
+[process] align
+  status=ACTIVE
+  port 0: (queue) OPEN  ; channel: all_seq
+  port 1: (cntrl) -     ; channel: $
+
+Aug-17 18:58:20.572 [main] DEBUG nextflow.Session - Session await > all process finished
+Aug-17 18:58:20.572 [main] DEBUG nextflow.Session - Session await > all barriers passed
+Aug-17 18:58:20.572 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 3; name: blast (3); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/b5/330122a9f63aed748b1035678b6bc8]
+Aug-17 18:58:20.574 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 5; name: blast (5); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/c5/60658ad9966212778b6659ea46a6dd]
+Aug-17 18:58:20.575 [Actor Thread 9] DEBUG nextflow.file.SortFileCollector - FileCollector temp dir not removed: null
+Aug-17 18:58:20.576 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 4; name: blast (4); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/2c/fd0cf3d388e0e0edadbdcd6a047f1f]
+Aug-17 18:58:20.577 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 1; name: blast (1); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/06/4a340eb148ee1a112c268ec6cec929]
+Aug-17 18:58:20.580 [main] DEBUG nextflow.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=0; failedCount=4; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=1; retriesCount=0; abortedCount=0; succeedDuration=0ms; failedDuration=2.3s; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=5; peakCpus=5; peakMemory=0; ]
+Aug-17 18:58:20.587 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
+Aug-17 18:58:20.595 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye
+
+~ Test 'blast-parallel.nf' run failed
+   + set -e
+   + /Users/naineshmp/work/nextflow/nextflow -q run ../../blast-parallel.nf -with-docker
+
+Aug-17 18:58:21.979 [main] DEBUG nextflow.cli.Launcher - $> nextflow -q run ../../blast-parallel.nf -with-docker
+Aug-17 18:58:22.071 [main] INFO  nextflow.cli.CmdRun - N E X T F L O W  ~  version 22.06.0-edge
+Aug-17 18:58:22.096 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/Users/naineshmp/work/nextflow/build/plugins; core-plugins: nf-amazon@1.8.0,nf-azure@0.13.2,nf-codecommit@0.1.0,nf-console@1.0.3,nf-ga4gh@1.0.3,nf-google@1.2.1,nf-sqldb@0.4.1,nf-tower@1.4.0
+Aug-17 18:58:22.110 [main] INFO  org.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+Aug-17 18:58:22.111 [main] INFO  org.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+Aug-17 18:58:22.115 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.4.1 in 'deployment' mode
+Aug-17 18:58:22.126 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+Aug-17 18:58:22.146 [main] DEBUG nextflow.config.ConfigBuilder - Found config base: /Users/naineshmp/work/nextflow/tests/nextflow.config
+Aug-17 18:58:22.148 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /Users/naineshmp/work/nextflow/tests/nextflow.config
+Aug-17 18:58:22.172 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `standard`
+Aug-17 18:58:22.831 [main] DEBUG nextflow.config.ConfigBuilder - Enabling execution in Docker container as requested by cli option `-with-docker -`
+Aug-17 18:58:22.848 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=1 by probing script field
+Aug-17 18:58:22.867 [main] INFO  nextflow.cli.CmdRun - Launching `null` [compassionate_wing] DSL1 - revision: d21677fb33
+Aug-17 18:58:22.868 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
+Aug-17 18:58:22.939 [main] DEBUG nextflow.Session - Session uuid: 9c281150-a34f-4882-b48b-fb3d5c00c1dd
+Aug-17 18:58:22.939 [main] DEBUG nextflow.Session - Run name: compassionate_wing
+Aug-17 18:58:22.940 [main] DEBUG nextflow.Session - Executor pool size: 12
+Aug-17 18:58:22.969 [main] DEBUG nextflow.cli.CmdRun - 
+  Version: 22.06.0-edge build 5710
+  Created: 09-06-2022 15:14 UTC (08:14 PDT)
+  System: Mac OS X 11.4
+  Runtime: Groovy 3.0.10 on OpenJDK 64-Bit Server VM 17.0.1+12
+  Encoding: UTF-8 (UTF-8)
+  Process: 25439@Naineshs-MacBook-Pro.local [127.0.0.1]
+  CPUs: 12 - Mem: 16 GB (283.1 MB) - Swap: 2 GB (1.4 GB)
+Aug-17 18:58:22.989 [main] DEBUG nextflow.Session - Work-dir: /Users/naineshmp/work/nextflow/tests/checks/scratch [Mac OS X]
+Aug-17 18:58:23.009 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
+Aug-17 18:58:23.021 [main] DEBUG nextflow.Session - Observer factory: DefaultObserverFactory
+Aug-17 18:58:23.050 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
+Aug-17 18:58:23.062 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 13; maxThreads: 1000
+Aug-17 18:58:23.132 [main] DEBUG nextflow.Session - Session start invoked
+Aug-17 18:58:23.431 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
+Aug-17 18:58:23.595 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-17 18:58:23.595 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-17 18:58:23.600 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
+Aug-17 18:58:23.606 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=12; memory=16 GB; capacity=12; pollInterval=100ms; dumpInterval=5m
+Aug-17 18:58:23.680 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-17 18:58:23.680 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-17 18:58:23.707 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-17 18:58:23.708 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-17 18:58:23.717 [main] DEBUG nextflow.Session - Workflow process names [dsl1]: extract, align, blast
+Aug-17 18:58:23.717 [main] DEBUG nextflow.script.ScriptRunner - > Await termination 
+Aug-17 18:58:23.717 [main] DEBUG nextflow.Session - Session await
+Aug-17 18:58:23.785 [Actor Thread 13] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:23.785 [Actor Thread 9] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:23.785 [Actor Thread 11] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:23.785 [Actor Thread 7] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:23.785 [Actor Thread 5] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:23.886 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:23.890 [Task submitter] INFO  nextflow.Session - [04/85c00c] Submitted process > blast (5)
+Aug-17 18:58:23.902 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:23.903 [Task submitter] INFO  nextflow.Session - [07/731075] Submitted process > blast (4)
+Aug-17 18:58:23.914 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:23.914 [Task submitter] INFO  nextflow.Session - [bc/ad3389] Submitted process > blast (2)
+Aug-17 18:58:23.930 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:23.930 [Task submitter] INFO  nextflow.Session - [26/06707a] Submitted process > blast (3)
+Aug-17 18:58:23.943 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:23.944 [Task submitter] INFO  nextflow.Session - [5b/fd997b] Submitted process > blast (1)
+Aug-17 18:58:24.476 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 5; name: blast (5); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/04/85c00c49faedb2208163b785ecb985]
+Aug-17 18:58:24.502 [Task monitor] ERROR nextflow.processor.TaskProcessor - Error executing process > 'blast (5)'
+
+Caused by:
+  Process `blast (5)` terminated with an error exit status (125)
+
+Command executed:
+
+  blastp -db /Users/naineshmp/work/nextflow/tests/blast-db/tiny -query query.fa -outfmt 6 > blast_result
+  cat blast_result | head -n 10 | cut -f 2 > top_hits
+
+Command exit status:
+  125
+
+Command output:
+  (empty)
+
+Command error:
+  docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+  See 'docker run --help'.
+
+Work dir:
+  /Users/naineshmp/work/nextflow/tests/checks/scratch/04/85c00c49faedb2208163b785ecb985
+
+Tip: when you have fixed the problem you can continue the execution adding the option `-resume` to the run command line
+Aug-17 18:58:24.509 [Task monitor] DEBUG nextflow.Session - Session aborted -- Cause: Process `blast (5)` terminated with an error exit status (125)
+Aug-17 18:58:24.521 [Task monitor] DEBUG nextflow.Session - The following nodes are still active:
+[process] extract
+  status=ACTIVE
+  port 0: (queue) OPEN  ; channel: top_hits
+  port 1: (cntrl) -     ; channel: $
+
+[process] align
+  status=ACTIVE
+  port 0: (queue) OPEN  ; channel: all_seq
+  port 1: (cntrl) -     ; channel: $
+
+Aug-17 18:58:24.525 [main] DEBUG nextflow.Session - Session await > all process finished
+Aug-17 18:58:24.526 [main] DEBUG nextflow.Session - Session await > all barriers passed
+Aug-17 18:58:24.526 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 4; name: blast (4); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/07/731075527b2b2070e9939ea23af409]
+Aug-17 18:58:24.528 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 2; name: blast (2); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/bc/ad3389cd0dbac35ca4d5adfa8713a1]
+Aug-17 18:58:24.529 [Actor Thread 9] DEBUG nextflow.file.SortFileCollector - FileCollector temp dir not removed: null
+Aug-17 18:58:24.530 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 3; name: blast (3); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/26/06707af9655ce3a2004440f2901b3b]
+Aug-17 18:58:24.531 [main] WARN  n.processor.TaskPollingMonitor - Killing running tasks (1)
+Aug-17 18:58:24.531 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 1; name: blast (1); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/5b/fd997b08b94abd2f68c3954b9068cd]
+Aug-17 18:58:24.539 [main] DEBUG nextflow.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=0; failedCount=5; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=0; succeedDuration=0ms; failedDuration=2.8s; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=5; peakCpus=5; peakMemory=0; ]
+Aug-17 18:58:24.584 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
+Aug-17 18:58:24.611 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye
+
+~ Test 'blast.nf' run failed
+   + set -e
+   + /Users/naineshmp/work/nextflow/nextflow -q run ../../blast.nf -with-docker
+   + tee .stdout
+   Error executing process > 'blast (3)'
+   
+   Caused by:
+     Process `blast (3)` terminated with an error exit status (125)
+   
+   Command executed:
+   
+     blastp -db /Users/naineshmp/work/nextflow/tests/blast-db/tiny -query seq.fa -outfmt 6 > out
+   
+   Command exit status:
+     125
+   
+   Command output:
+     (empty)
+   
+   Command error:
+     docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+     See 'docker run --help'.
+   
+   Work dir:
+     /Users/naineshmp/work/nextflow/tests/checks/scratch/ff/7f02872273aafa1bad49a96fda6a57
+   
+   Tip: you can try to figure out what's wrong by changing to the process work dir and showing the script file named `.command.sh`
+   
+   
+   WARN: Killing running tasks (1)
+   ++ grep INFO .nextflow.log
+   ++ grep -c 'Submitted process > blast'
+   + [[ 5 == 5 ]]
+   ++ grep INFO .nextflow.log
+   ++ grep -c 'Submitted process > sort'
+   + [[ 0 == 1 ]]
+   + false
+
+Aug-17 18:58:26.164 [main] DEBUG nextflow.cli.Launcher - $> nextflow -q run ../../blast.nf -with-docker
+Aug-17 18:58:26.234 [main] INFO  nextflow.cli.CmdRun - N E X T F L O W  ~  version 22.06.0-edge
+Aug-17 18:58:26.261 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/Users/naineshmp/work/nextflow/build/plugins; core-plugins: nf-amazon@1.8.0,nf-azure@0.13.2,nf-codecommit@0.1.0,nf-console@1.0.3,nf-ga4gh@1.0.3,nf-google@1.2.1,nf-sqldb@0.4.1,nf-tower@1.4.0
+Aug-17 18:58:26.275 [main] INFO  org.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+Aug-17 18:58:26.276 [main] INFO  org.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+Aug-17 18:58:26.280 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.4.1 in 'deployment' mode
+Aug-17 18:58:26.294 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+Aug-17 18:58:26.313 [main] DEBUG nextflow.config.ConfigBuilder - Found config base: /Users/naineshmp/work/nextflow/tests/nextflow.config
+Aug-17 18:58:26.314 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /Users/naineshmp/work/nextflow/tests/nextflow.config
+Aug-17 18:58:26.337 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `standard`
+Aug-17 18:58:27.068 [main] DEBUG nextflow.config.ConfigBuilder - Enabling execution in Docker container as requested by cli option `-with-docker -`
+Aug-17 18:58:27.096 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=1 by probing script field
+Aug-17 18:58:27.122 [main] INFO  nextflow.cli.CmdRun - Launching `null` [nauseous_turing] DSL1 - revision: e934602a46
+Aug-17 18:58:27.124 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
+Aug-17 18:58:27.240 [main] DEBUG nextflow.Session - Session uuid: f0242a7e-e7df-4736-befd-83be074c5bfd
+Aug-17 18:58:27.241 [main] DEBUG nextflow.Session - Run name: nauseous_turing
+Aug-17 18:58:27.243 [main] DEBUG nextflow.Session - Executor pool size: 12
+Aug-17 18:58:27.297 [main] DEBUG nextflow.cli.CmdRun - 
+  Version: 22.06.0-edge build 5710
+  Created: 09-06-2022 15:14 UTC (08:14 PDT)
+  System: Mac OS X 11.4
+  Runtime: Groovy 3.0.10 on OpenJDK 64-Bit Server VM 17.0.1+12
+  Encoding: UTF-8 (UTF-8)
+  Process: 25640@Naineshs-MacBook-Pro.local [127.0.0.1]
+  CPUs: 12 - Mem: 16 GB (224 MB) - Swap: 2 GB (1.4 GB)
+Aug-17 18:58:27.336 [main] DEBUG nextflow.Session - Work-dir: /Users/naineshmp/work/nextflow/tests/checks/scratch [Mac OS X]
+Aug-17 18:58:27.367 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
+Aug-17 18:58:27.380 [main] DEBUG nextflow.Session - Observer factory: DefaultObserverFactory
+Aug-17 18:58:27.400 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
+Aug-17 18:58:27.411 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 13; maxThreads: 1000
+Aug-17 18:58:27.481 [main] DEBUG nextflow.Session - Session start invoked
+Aug-17 18:58:27.827 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
+Aug-17 18:58:27.980 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-17 18:58:27.980 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-17 18:58:27.986 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
+Aug-17 18:58:27.991 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=12; memory=16 GB; capacity=12; pollInterval=100ms; dumpInterval=5m
+Aug-17 18:58:28.078 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-17 18:58:28.078 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-17 18:58:28.085 [main] DEBUG nextflow.Session - Workflow process names [dsl1]: sort, blast
+Aug-17 18:58:28.085 [main] DEBUG nextflow.script.ScriptRunner - > Await termination 
+Aug-17 18:58:28.085 [main] DEBUG nextflow.Session - Session await
+Aug-17 18:58:28.154 [Actor Thread 4] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:28.154 [Actor Thread 8] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:28.154 [Actor Thread 6] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:28.154 [Actor Thread 12] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:28.154 [Actor Thread 10] DEBUG nextflow.util.CacheHelper - Unable to get file attributes file: /Users/naineshmp/work/nextflow/tests/blast-db/tiny -- Cause: java.nio.file.NoSuchFileException: /Users/naineshmp/work/nextflow/tests/blast-db/tiny
+Aug-17 18:58:28.229 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:28.234 [Task submitter] INFO  nextflow.Session - [9f/b6bc46] Submitted process > blast (5)
+Aug-17 18:58:28.244 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:28.244 [Task submitter] INFO  nextflow.Session - [ff/7f0287] Submitted process > blast (3)
+Aug-17 18:58:28.253 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:28.254 [Task submitter] INFO  nextflow.Session - [7b/1c90c5] Submitted process > blast (2)
+Aug-17 18:58:28.264 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:28.264 [Task submitter] INFO  nextflow.Session - [da/80cc6a] Submitted process > blast (1)
+Aug-17 18:58:28.275 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 18:58:28.276 [Task submitter] INFO  nextflow.Session - [76/88afcd] Submitted process > blast (4)
+Aug-17 18:58:28.917 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 3; name: blast (3); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/ff/7f02872273aafa1bad49a96fda6a57]
+Aug-17 18:58:28.945 [Task monitor] ERROR nextflow.processor.TaskProcessor - Error executing process > 'blast (3)'
+
+Caused by:
+  Process `blast (3)` terminated with an error exit status (125)
+
+Command executed:
+
+  blastp -db /Users/naineshmp/work/nextflow/tests/blast-db/tiny -query seq.fa -outfmt 6 > out
+
+Command exit status:
+  125
+
+Command output:
+  (empty)
+
+Command error:
+  docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+  See 'docker run --help'.
+
+Work dir:
+  /Users/naineshmp/work/nextflow/tests/checks/scratch/ff/7f02872273aafa1bad49a96fda6a57
+
+Tip: you can try to figure out what's wrong by changing to the process work dir and showing the script file named `.command.sh`
+Aug-17 18:58:28.952 [Task monitor] DEBUG nextflow.Session - Session aborted -- Cause: Process `blast (3)` terminated with an error exit status (125)
+Aug-17 18:58:28.965 [Task monitor] DEBUG nextflow.Session - The following nodes are still active:
+[process] sort
+  status=ACTIVE
+  port 0: (value) OPEN  ; channel: hits_*
+  port 1: (cntrl) -     ; channel: $
+
+Aug-17 18:58:28.970 [main] DEBUG nextflow.Session - Session await > all process finished
+Aug-17 18:58:28.970 [main] DEBUG nextflow.Session - Session await > all barriers passed
+Aug-17 18:58:28.971 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 2; name: blast (2); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/7b/1c90c5382a1d3316567d7452badd15]
+Aug-17 18:58:28.972 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 1; name: blast (1); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/da/80cc6af9c5b4a9915cad973cbd5b03]
+Aug-17 18:58:28.974 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 4; name: blast (4); status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/76/88afcdfba754ae163bacc53f460522]
+Aug-17 18:58:28.975 [main] WARN  n.processor.TaskPollingMonitor - Killing running tasks (1)
+Aug-17 18:58:28.987 [main] DEBUG nextflow.executor.LocalTaskHandler - Unable to kill blast (5) -- command: kill -TERM 25668; exit: 1 
+ bash: line 1: kill: (25668) - No such process
+
+Aug-17 18:58:28.991 [main] DEBUG nextflow.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=0; failedCount=4; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=1; succeedDuration=0ms; failedDuration=2.6s; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=5; peakCpus=5; peakMemory=0; ]
+Aug-17 18:58:29.021 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
+Aug-17 18:58:29.032 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye
+
+~ Test 'env-container.nf' run failed
+   + set -e
+   + export NXF_ANSI_LOG=false
+   + NXF_ANSI_LOG=false
+   + mkdir -p bin
+   + echo 'echo Hola mundo'
+   + chmod +x bin/hello.sh
+   + cat
+   + cat
+   + /Users/naineshmp/work/nextflow/nextflow run foo.nf
+   + tee stdout
+   N E X T F L O W  ~  version 22.06.0-edge
+   Launching `null` [goofy_heisenberg] DSL1 - revision: 685bb4cd59
+   WARN: The `echo` directive has been deprecated - use to `debug` instead
+   [d9/ac09d5] Submitted process > foo
+   AWS_PROFILE=global
+   BAR=Hello World!
+   CAPSULE_CACHE_DIR=/Users/naineshmp/.nextflow/capsule
+   CAPSULE_LOG=none
+   COLUMNS=80
+   COMMAND_MODE=unix2003
+   DEV_KAFKA_BROKERS=b-2.msk-dev-blue.kaeenm.c9.kafka.us-east-1.amazonaws.com:9092,b-1.msk-dev-blue.kaeenm.c9.kafka.us-east-1.amazonaws.com:9092,b-3.msk-dev-blue.kaeenm.c9.kafka.us-east-1.amazonaws.com:9092
+   DEV_KAFKA_TOPIC=dev.wes.public.runs
+   FOO=HOLA
+   GOPATH=/Users/naineshmp/go
+   HOME=/Users/naineshmp
+   JAVA_CMD=/Users/naineshmp/.sdkman/candidates/java/current/bin/java
+   JAVA_HOME=/Users/naineshmp/.sdkman/candidates/java/current
+   JAVA_MAIN_CLASS_31445=nextflow.cli.Launcher
+   LC_CTYPE=en_US.UTF-8
+   LESS=-R
+   LOGIN_SHELL=1
+   LOGNAME=naineshmp
+   LSCOLORS=Gxfxcxdxbxegedabagacad
+   NAMESPACE=local
+   NXF_ANSI_LOG=false
+   NXF_CLI=/Users/naineshmp/work/nextflow/nextflow run foo.nf
+   NXF_CMD=/Users/naineshmp/work/nextflow/nextflow
+   NXF_HOME=/Users/naineshmp/.nextflow
+   NXF_IGNORE_WARN_DSL2=true
+   NXF_ORG=nextflow-io
+   NXF_PACK=one
+   NXF_PLUGINS_DIR=/Users/naineshmp/work/nextflow/build/plugins
+   NXF_RUN=/Users/naineshmp/work/nextflow/nextflow -q run ../../env-container.nf
+   NXF_SCRIPT=../../env-container.nf
+   NXF_WORK=/Users/naineshmp/work/nextflow/tests/checks/scratch
+   P9K_SSH=0
+   P9K_TTY=old
+   PAGER=less
+   PATH=/Users/naineshmp/work/nextflow/tests/checks/env-container.nf/bin:/usr/local/opt/postgresql@13/bin:/Users/naineshmp/go/bin:/Users/naineshmp/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/share/dotnet:~/.dotnet/tools
+   POD_NAME=PLACE_HOLDER
+   PWD=/Users/naineshmp/work/nextflow/tests/checks/scratch/d9/ac09d58a16407ff470adf2e07feb4f
+   SDKMAN_CANDIDATES_API=https://api.sdkman.io/2
+   SDKMAN_CANDIDATES_DIR=/Users/naineshmp/.sdkman/candidates
+   SDKMAN_DIR=/Users/naineshmp/.sdkman
+   SDKMAN_PLATFORM=darwinx64
+   SDKMAN_VERSION=5.13.1
+   SHELL=/bin/zsh
+   SHLVL=6
+   SSH_AUTH_SOCK=/private/tmp/com.apple.launchd.owXC9wGnWD/Listeners
+   TERM=xterm-256color
+   TERMINAL_EMULATOR=JetBrains-JediTerm
+   TERM_SESSION_ID=71e0f7f9-ef8f-4d1e-95db-971b30d23d29
+   TEST_JDK=11
+   TEST_KAFKA_BROKERS=b-1.msk-test.467i3h.c3.kafka.us-west-2.amazonaws.com:9092,b-2.msk-test.467i3h.c3.kafka.us-west-2.amazonaws.com:9092,b-3.msk-test.467i3h.c3.kafka.us-west-2.amazonaws.com:9092
+   TMPDIR=/var/folders/vp/92n65b4x2z5_qqxt_zxh9rlw0000gn/T/
+   USER=naineshmp
+   WITH_DOCKER=-with-docker
+   XPC_FLAGS=0x0
+   XPC_SERVICE_NAME=0
+   ZSH=/Users/naineshmp/.oh-my-zsh
+   _=/usr/bin/env
+   _P9K_TTY=/dev/ttys002
+   __CFBundleIdentifier=com.jetbrains.intellij
+   __CF_USER_TEXT_ENCODING=0x1F5:0x0:0x0
+   __INTELLIJ_COMMAND_HISTFILE__=/Users/naineshmp/Library/Caches/JetBrains/IntelliJIdea2021.3/terminal/history/nextflow-history
+   Hola mundo
+   ++ grep INFO .nextflow.log
+   ++ grep -c 'Submitted process'
+   + [[ 1 == 1 ]]
+   ++ grep -c FOO=HOLA
+   + [[ 1 == 1 ]]
+   ++ grep -c 'BAR=Hello World!'
+   + [[ 1 == 1 ]]
+   ++ grep -c 'Hola mundo'
+   + [[ 1 == 1 ]]
+   + /Users/naineshmp/work/nextflow/nextflow run foo.nf -with-trace
+   + tee stdout
+   N E X T F L O W  ~  version 22.06.0-edge
+   Launching `null` [lonely_venter] DSL1 - revision: 685bb4cd59
+   WARN: The `echo` directive has been deprecated - use to `debug` instead
+   WARN: Task runtime metrics are not reported when using macOS without a container engine
+   [85/b6287a] Submitted process > foo
+   AWS_PROFILE=global
+   BAR=Hello World!
+   CAPSULE_CACHE_DIR=/Users/naineshmp/.nextflow/capsule
+   CAPSULE_LOG=none
+   COLUMNS=80
+   COMMAND_MODE=unix2003
+   DEV_KAFKA_BROKERS=b-2.msk-dev-blue.kaeenm.c9.kafka.us-east-1.amazonaws.com:9092,b-1.msk-dev-blue.kaeenm.c9.kafka.us-east-1.amazonaws.com:9092,b-3.msk-dev-blue.kaeenm.c9.kafka.us-east-1.amazonaws.com:9092
+   DEV_KAFKA_TOPIC=dev.wes.public.runs
+   FOO=HOLA
+   GOPATH=/Users/naineshmp/go
+   HOME=/Users/naineshmp
+   JAVA_CMD=/Users/naineshmp/.sdkman/candidates/java/current/bin/java
+   JAVA_HOME=/Users/naineshmp/.sdkman/candidates/java/current
+   JAVA_MAIN_CLASS_31506=nextflow.cli.Launcher
+   LC_CTYPE=en_US.UTF-8
+   LESS=-R
+   LOGIN_SHELL=1
+   LOGNAME=naineshmp
+   LSCOLORS=Gxfxcxdxbxegedabagacad
+   NAMESPACE=local
+   NXF_ANSI_LOG=false
+   NXF_CLI=/Users/naineshmp/work/nextflow/nextflow run foo.nf -with-trace
+   NXF_CMD=/Users/naineshmp/work/nextflow/nextflow
+   NXF_HOME=/Users/naineshmp/.nextflow
+   NXF_IGNORE_WARN_DSL2=true
+   NXF_ORG=nextflow-io
+   NXF_PACK=one
+   NXF_PLUGINS_DIR=/Users/naineshmp/work/nextflow/build/plugins
+   NXF_RUN=/Users/naineshmp/work/nextflow/nextflow -q run ../../env-container.nf
+   NXF_SCRIPT=../../env-container.nf
+   NXF_WORK=/Users/naineshmp/work/nextflow/tests/checks/scratch
+   P9K_SSH=0
+   P9K_TTY=old
+   PAGER=less
+   PATH=/Users/naineshmp/work/nextflow/tests/checks/env-container.nf/bin:/usr/local/opt/postgresql@13/bin:/Users/naineshmp/go/bin:/Users/naineshmp/.sdkman/candidates/java/current/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/share/dotnet:~/.dotnet/tools
+   POD_NAME=PLACE_HOLDER
+   PWD=/Users/naineshmp/work/nextflow/tests/checks/scratch/85/b6287aa06c035e41767e60df4bab83
+   SDKMAN_CANDIDATES_API=https://api.sdkman.io/2
+   SDKMAN_CANDIDATES_DIR=/Users/naineshmp/.sdkman/candidates
+   SDKMAN_DIR=/Users/naineshmp/.sdkman
+   SDKMAN_PLATFORM=darwinx64
+   SDKMAN_VERSION=5.13.1
+   SHELL=/bin/zsh
+   SHLVL=7
+   SSH_AUTH_SOCK=/private/tmp/com.apple.launchd.owXC9wGnWD/Listeners
+   TERM=xterm-256color
+   TERMINAL_EMULATOR=JetBrains-JediTerm
+   TERM_SESSION_ID=71e0f7f9-ef8f-4d1e-95db-971b30d23d29
+   TEST_JDK=11
+   TEST_KAFKA_BROKERS=b-1.msk-test.467i3h.c3.kafka.us-west-2.amazonaws.com:9092,b-2.msk-test.467i3h.c3.kafka.us-west-2.amazonaws.com:9092,b-3.msk-test.467i3h.c3.kafka.us-west-2.amazonaws.com:9092
+   TMPDIR=/var/folders/vp/92n65b4x2z5_qqxt_zxh9rlw0000gn/T/
+   USER=naineshmp
+   WITH_DOCKER=-with-docker
+   XPC_FLAGS=0x0
+   XPC_SERVICE_NAME=0
+   ZSH=/Users/naineshmp/.oh-my-zsh
+   _=/usr/bin/env
+   _P9K_TTY=/dev/ttys002
+   __CFBundleIdentifier=com.jetbrains.intellij
+   __CF_USER_TEXT_ENCODING=0x1F5:0x0:0x0
+   __INTELLIJ_COMMAND_HISTFILE__=/Users/naineshmp/Library/Caches/JetBrains/IntelliJIdea2021.3/terminal/history/nextflow-history
+   Hola mundo
+   ++ grep INFO .nextflow.log
+   ++ grep -c 'Submitted process'
+   + [[ 1 == 1 ]]
+   ++ grep -c FOO=HOLA
+   + [[ 1 == 1 ]]
+   ++ grep -c 'BAR=Hello World!'
+   + [[ 1 == 1 ]]
+   ++ grep -c 'Hola mundo'
+   + [[ 1 == 1 ]]
+   + /Users/naineshmp/work/nextflow/nextflow run foo.nf -with-docker
+   + tee stdout
+   N E X T F L O W  ~  version 22.06.0-edge
+   Launching `null` [sleepy_jang] DSL1 - revision: 685bb4cd59
+   WARN: The `echo` directive has been deprecated - use to `debug` instead
+   [ab/44ed84] Submitted process > foo
+   Error executing process > 'foo'
+   
+   Caused by:
+     Process `foo` terminated with an error exit status (125)
+   
+   Command executed:
+   
+     env | sort 
+     hello.sh
+   
+   Command exit status:
+     125
+   
+   Command output:
+     (empty)
+   
+   Command error:
+     docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+     See 'docker run --help'.
+   
+   Work dir:
+     /Users/naineshmp/work/nextflow/tests/checks/scratch/ab/44ed844d9cd336e54353d7226a38bc
+   
+   Tip: view the complete command output by changing to the process work dir and entering the command `cat .command.out`
+   
+   
+   ++ grep INFO .nextflow.log
+   ++ grep -c 'Submitted process'
+   + [[ 1 == 1 ]]
+   ++ grep -c FOO=HOLA
+   + [[ 0 == 1 ]]
+   + false
+
+Aug-17 19:01:07.113 [main] DEBUG nextflow.cli.Launcher - $> nextflow run foo.nf -with-docker
+Aug-17 19:01:07.194 [main] INFO  nextflow.cli.CmdRun - N E X T F L O W  ~  version 22.06.0-edge
+Aug-17 19:01:07.212 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/Users/naineshmp/work/nextflow/build/plugins; core-plugins: nf-amazon@1.8.0,nf-azure@0.13.2,nf-codecommit@0.1.0,nf-console@1.0.3,nf-ga4gh@1.0.3,nf-google@1.2.1,nf-sqldb@0.4.1,nf-tower@1.4.0
+Aug-17 19:01:07.224 [main] INFO  org.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+Aug-17 19:01:07.225 [main] INFO  org.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+Aug-17 19:01:07.229 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.4.1 in 'deployment' mode
+Aug-17 19:01:07.239 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+Aug-17 19:01:07.257 [main] DEBUG nextflow.config.ConfigBuilder - Found config local: /Users/naineshmp/work/nextflow/tests/checks/env-container.nf/nextflow.config
+Aug-17 19:01:07.258 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /Users/naineshmp/work/nextflow/tests/checks/env-container.nf/nextflow.config
+Aug-17 19:01:07.279 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `standard`
+Aug-17 19:01:07.875 [main] DEBUG nextflow.config.ConfigBuilder - Enabling execution in Docker container as requested by cli option `-with-docker -`
+Aug-17 19:01:07.905 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=null from config declaration
+Aug-17 19:01:07.921 [main] INFO  nextflow.cli.CmdRun - Launching `null` [sleepy_jang] DSL1 - revision: 685bb4cd59
+Aug-17 19:01:07.921 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
+Aug-17 19:01:07.986 [main] DEBUG nextflow.Session - Session uuid: 21077c5a-b75f-49be-9e59-ffb7538a5824
+Aug-17 19:01:07.987 [main] DEBUG nextflow.Session - Run name: sleepy_jang
+Aug-17 19:01:07.987 [main] DEBUG nextflow.Session - Executor pool size: 12
+Aug-17 19:01:08.013 [main] DEBUG nextflow.cli.CmdRun - 
+  Version: 22.06.0-edge build 5710
+  Created: 09-06-2022 15:14 UTC (08:14 PDT)
+  System: Mac OS X 11.4
+  Runtime: Groovy 3.0.10 on OpenJDK 64-Bit Server VM 17.0.1+12
+  Encoding: UTF-8 (UTF-8)
+  Process: 31883@Naineshs-MacBook-Pro.local [127.0.0.1]
+  CPUs: 12 - Mem: 16 GB (169.6 MB) - Swap: 2 GB (1.4 GB)
+Aug-17 19:01:08.027 [main] DEBUG nextflow.Session - Work-dir: /Users/naineshmp/work/nextflow/tests/checks/scratch [Mac OS X]
+Aug-17 19:01:08.048 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
+Aug-17 19:01:08.058 [main] DEBUG nextflow.Session - Observer factory: DefaultObserverFactory
+Aug-17 19:01:08.074 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
+Aug-17 19:01:08.085 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 13; maxThreads: 1000
+Aug-17 19:01:08.155 [main] DEBUG nextflow.Session - Session start invoked
+Aug-17 19:01:08.360 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
+Aug-17 19:01:08.411 [main] WARN  nextflow.script.ProcessConfig - The `echo` directive has been deprecated - use to `debug` instead
+Aug-17 19:01:08.466 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-17 19:01:08.466 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-17 19:01:08.472 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
+Aug-17 19:01:08.477 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=12; memory=16 GB; capacity=12; pollInterval=100ms; dumpInterval=5m
+Aug-17 19:01:08.580 [main] DEBUG nextflow.Session - Workflow process names [dsl1]: foo
+Aug-17 19:01:08.581 [main] DEBUG nextflow.script.ScriptRunner - > Await termination 
+Aug-17 19:01:08.581 [main] DEBUG nextflow.Session - Session await
+Aug-17 19:01:08.719 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 19:01:08.724 [Task submitter] INFO  nextflow.Session - [ab/44ed84] Submitted process > foo
+Aug-17 19:01:09.747 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 1; name: foo; status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/ab/44ed844d9cd336e54353d7226a38bc]
+Aug-17 19:01:09.772 [Task monitor] ERROR nextflow.processor.TaskProcessor - Error executing process > 'foo'
+
+Caused by:
+  Process `foo` terminated with an error exit status (125)
+
+Command executed:
+
+  env | sort 
+  hello.sh
+
+Command exit status:
+  125
+
+Command output:
+  (empty)
+
+Command error:
+  docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+  See 'docker run --help'.
+
+Work dir:
+  /Users/naineshmp/work/nextflow/tests/checks/scratch/ab/44ed844d9cd336e54353d7226a38bc
+
+Tip: view the complete command output by changing to the process work dir and entering the command `cat .command.out`
+Aug-17 19:01:09.777 [main] DEBUG nextflow.Session - Session await > all process finished
+Aug-17 19:01:09.778 [Task monitor] DEBUG nextflow.Session - Session aborted -- Cause: Process `foo` terminated with an error exit status (125)
+Aug-17 19:01:09.801 [main] DEBUG nextflow.Session - Session await > all barriers passed
+Aug-17 19:01:09.806 [main] DEBUG nextflow.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=0; failedCount=1; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=0; succeedDuration=0ms; failedDuration=951ms; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=1; peakCpus=1; peakMemory=0; ]
+Aug-17 19:01:09.845 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
+Aug-17 19:01:09.853 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye
+
+~ Test 'rnaseq-toy-dsl2.nf' run failed
+   + set -e
+   + export NXF_ANSI_LOG=false
+   + NXF_ANSI_LOG=false
+   + export IMG=quay.io/nextflow/rnatoy:1.3
+   + IMG=quay.io/nextflow/rnatoy:1.3
+   + /Users/naineshmp/work/nextflow/nextflow -q run ../../rnaseq-toy-dsl2.nf -with-docker quay.io/nextflow/rnatoy:1.3
+   + tee stdout
+   Error executing process > 'buildIndex'
+   
+   Caused by:
+     Process `buildIndex` terminated with an error exit status (125)
+   
+   Command executed:
+   
+     bowtie2-build ggal_1_48850000_49020000.Ggal71.500bpflank.fa genome.index
+   
+   Command exit status:
+     125
+   
+   Command output:
+     (empty)
+   
+   Command error:
+     docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+     See 'docker run --help'.
+   
+   Work dir:
+     /Users/naineshmp/work/nextflow/tests/checks/scratch/c1/399f9d03844039aba022fe0c0cb912
+   
+   Tip: you can try to figure out what's wrong by changing to the process work dir and showing the script file named `.command.sh`
+   
+   
+   ++ grep INFO .nextflow.log
+   ++ grep -c 'Submitted process > mapping'
+   + [[ 0 == 2 ]]
+   + false
+
+Aug-17 19:05:50.174 [main] DEBUG nextflow.cli.Launcher - $> nextflow -q run ../../rnaseq-toy-dsl2.nf -with-docker 'quay.io/nextflow/rnatoy:1.3'
+Aug-17 19:05:50.245 [main] INFO  nextflow.cli.CmdRun - N E X T F L O W  ~  version 22.06.0-edge
+Aug-17 19:05:50.268 [main] DEBUG nextflow.plugin.PluginsFacade - Setting up plugin manager > mode=prod; embedded=false; plugins-dir=/Users/naineshmp/work/nextflow/build/plugins; core-plugins: nf-amazon@1.8.0,nf-azure@0.13.2,nf-codecommit@0.1.0,nf-console@1.0.3,nf-ga4gh@1.0.3,nf-google@1.2.1,nf-sqldb@0.4.1,nf-tower@1.4.0
+Aug-17 19:05:50.281 [main] INFO  org.pf4j.DefaultPluginStatusProvider - Enabled plugins: []
+Aug-17 19:05:50.282 [main] INFO  org.pf4j.DefaultPluginStatusProvider - Disabled plugins: []
+Aug-17 19:05:50.286 [main] INFO  org.pf4j.DefaultPluginManager - PF4J version 3.4.1 in 'deployment' mode
+Aug-17 19:05:50.296 [main] INFO  org.pf4j.AbstractPluginManager - No plugins
+Aug-17 19:05:50.313 [main] DEBUG nextflow.config.ConfigBuilder - Found config base: /Users/naineshmp/work/nextflow/tests/nextflow.config
+Aug-17 19:05:50.314 [main] DEBUG nextflow.config.ConfigBuilder - Parsing config file: /Users/naineshmp/work/nextflow/tests/nextflow.config
+Aug-17 19:05:50.340 [main] DEBUG nextflow.config.ConfigBuilder - Applying config profile: `standard`
+Aug-17 19:05:51.131 [main] DEBUG nextflow.config.ConfigBuilder - Enabling execution in Docker container as requested by cli option `-with-docker quay.io/nextflow/rnatoy:1.3`
+Aug-17 19:05:51.149 [main] DEBUG nextflow.cli.CmdRun - Applied DSL=2 by global default
+Aug-17 19:05:51.168 [main] INFO  nextflow.cli.CmdRun - Launching `null` [lethal_baekeland] DSL2 - revision: 12065c5e08
+Aug-17 19:05:51.169 [main] DEBUG nextflow.plugin.PluginsFacade - Plugins default=[]
+Aug-17 19:05:51.257 [main] DEBUG nextflow.Session - Session uuid: 3df41c0a-b3b3-4af2-99a9-63efa1b62153
+Aug-17 19:05:51.257 [main] DEBUG nextflow.Session - Run name: lethal_baekeland
+Aug-17 19:05:51.258 [main] DEBUG nextflow.Session - Executor pool size: 12
+Aug-17 19:05:51.292 [main] DEBUG nextflow.cli.CmdRun - 
+  Version: 22.06.0-edge build 5710
+  Created: 09-06-2022 15:14 UTC (08:14 PDT)
+  System: Mac OS X 11.4
+  Runtime: Groovy 3.0.10 on OpenJDK 64-Bit Server VM 17.0.1+12
+  Encoding: UTF-8 (UTF-8)
+  Process: 40407@Naineshs-MacBook-Pro.local [127.0.0.1]
+  CPUs: 12 - Mem: 16 GB (147 MB) - Swap: 2 GB (1.3 GB)
+Aug-17 19:05:51.312 [main] DEBUG nextflow.Session - Work-dir: /Users/naineshmp/work/nextflow/tests/checks/scratch [Mac OS X]
+Aug-17 19:05:51.332 [main] DEBUG nextflow.executor.ExecutorFactory - Extension executors providers=[]
+Aug-17 19:05:51.346 [main] DEBUG nextflow.Session - Observer factory: DefaultObserverFactory
+Aug-17 19:05:51.370 [main] DEBUG nextflow.cache.CacheFactory - Using Nextflow cache factory: nextflow.cache.DefaultCacheFactory
+Aug-17 19:05:51.384 [main] DEBUG nextflow.util.CustomThreadPool - Creating default thread pool > poolSize: 13; maxThreads: 1000
+Aug-17 19:05:51.454 [main] DEBUG nextflow.Session - Session start invoked
+Aug-17 19:05:51.799 [main] DEBUG nextflow.script.ScriptRunner - > Launching execution
+Aug-17 19:05:52.007 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-17 19:05:52.008 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-17 19:05:52.012 [main] DEBUG nextflow.executor.Executor - [warm up] executor > local
+Aug-17 19:05:52.018 [main] DEBUG n.processor.LocalPollingMonitor - Creating local task monitor for executor 'local' > cpus=12; memory=16 GB; capacity=12; pollInterval=100ms; dumpInterval=5m
+Aug-17 19:05:52.107 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-17 19:05:52.107 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-17 19:05:52.127 [main] DEBUG nextflow.executor.ExecutorFactory - << taskConfig executor: null
+Aug-17 19:05:52.127 [main] DEBUG nextflow.executor.ExecutorFactory - >> processorType: 'local'
+Aug-17 19:05:52.131 [main] DEBUG nextflow.Session - Workflow process names [dsl2]: mapping, makeTranscript, buildIndex
+Aug-17 19:05:52.132 [main] DEBUG nextflow.Session - Ignite dataflow network (4)
+Aug-17 19:05:52.138 [PathVisitor-1] DEBUG nextflow.file.PathVisitor - files for syntax: glob; folder: /Users/naineshmp/work/nextflow/tests/data/ggal/; pattern: *_{1,2}.fq; options: [checkIfExists:true]
+Aug-17 19:05:52.139 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > buildIndex
+Aug-17 19:05:52.140 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > mapping
+Aug-17 19:05:52.141 [main] DEBUG nextflow.processor.TaskProcessor - Starting process > makeTranscript
+Aug-17 19:05:52.141 [main] DEBUG nextflow.script.ScriptRunner - > Await termination 
+Aug-17 19:05:52.141 [main] DEBUG nextflow.Session - Session await
+Aug-17 19:05:52.281 [Task submitter] DEBUG nextflow.executor.LocalTaskHandler - Launch cmd line: /bin/bash -ue .command.run
+Aug-17 19:05:52.285 [Task submitter] INFO  nextflow.Session - [c1/399f9d] Submitted process > buildIndex
+Aug-17 19:05:53.278 [Task monitor] DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 1; name: buildIndex; status: COMPLETED; exit: 125; error: -; workDir: /Users/naineshmp/work/nextflow/tests/checks/scratch/c1/399f9d03844039aba022fe0c0cb912]
+Aug-17 19:05:53.305 [Task monitor] ERROR nextflow.processor.TaskProcessor - Error executing process > 'buildIndex'
+
+Caused by:
+  Process `buildIndex` terminated with an error exit status (125)
+
+Command executed:
+
+  bowtie2-build ggal_1_48850000_49020000.Ggal71.500bpflank.fa genome.index
+
+Command exit status:
+  125
+
+Command output:
+  (empty)
+
+Command error:
+  docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+  See 'docker run --help'.
+
+Work dir:
+  /Users/naineshmp/work/nextflow/tests/checks/scratch/c1/399f9d03844039aba022fe0c0cb912
+
+Tip: you can try to figure out what's wrong by changing to the process work dir and showing the script file named `.command.sh`
+Aug-17 19:05:53.311 [main] DEBUG nextflow.Session - Session await > all process finished
+Aug-17 19:05:53.312 [Task monitor] DEBUG nextflow.Session - Session aborted -- Cause: Process `buildIndex` terminated with an error exit status (125)
+Aug-17 19:05:53.326 [main] DEBUG nextflow.Session - Session await > all barriers passed
+Aug-17 19:05:53.331 [main] DEBUG nextflow.trace.WorkflowStatsObserver - Workflow completed > WorkflowStats[succeededCount=0; failedCount=1; ignoredCount=0; cachedCount=0; pendingCount=0; submittedCount=0; runningCount=0; retriesCount=0; abortedCount=0; succeedDuration=0ms; failedDuration=941ms; cachedDuration=0ms;loadCpus=0; loadMemory=0; peakRunning=1; peakCpus=1; peakMemory=0; ]
+Aug-17 19:05:53.383 [main] DEBUG nextflow.cache.CacheDB - Closing CacheDB done
+Aug-17 19:05:53.395 [main] DEBUG nextflow.script.ScriptRunner - > Execution complete -- Goodbye
+

@@ -1,0 +1,26 @@
+Error executing process > 'blast (5)'
+
+Caused by:
+  Process `blast (5)` terminated with an error exit status (125)
+
+Command executed:
+
+  blastp -db /Users/naineshmp/work/nextflow/tests/blast-db/tiny -query seq.fa -outfmt 6 > out
+
+Command exit status:
+  125
+
+Command output:
+  (empty)
+
+Command error:
+  docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+  See 'docker run --help'.
+
+Work dir:
+  /Users/naineshmp/work/nextflow/tests/checks/scratch/71/5e8ae68f9dbccd0a66ff11d27d6f0d
+
+Tip: you can try to figure out what's wrong by changing to the process work dir and showing the script file named `.command.sh`
+
+
+WARN: Killing running tasks (1)

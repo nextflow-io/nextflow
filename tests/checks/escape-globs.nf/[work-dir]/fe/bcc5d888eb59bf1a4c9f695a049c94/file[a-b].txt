@@ -1,0 +1,1 @@
+/Users/naineshmp/work/nextflow/tests/data/file[a-b].txt

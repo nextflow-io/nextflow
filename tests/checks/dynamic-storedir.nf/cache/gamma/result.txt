@@ -1,0 +1,1 @@
+/Users/naineshmp/work/nextflow/tests/checks/scratch/tmp/45/7ef2062b0e5362abacd55fbc02aa2b/input.1

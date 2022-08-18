@@ -1,0 +1,26 @@
+Error executing process > 'ampaTask (3)'
+
+Caused by:
+  Process `ampaTask (3)` terminated with an error exit status (125)
+
+Command executed:
+
+  AMPA.pl -in=input.1 -noplot -rf=result -df=data
+
+Command exit status:
+  125
+
+Command output:
+  (empty)
+
+Command error:
+  docker: Cannot connect to the Docker daemon at unix:///var/run/docker.sock. Is the docker daemon running?.
+  See 'docker run --help'.
+
+Work dir:
+  /Users/naineshmp/work/nextflow/tests/checks/scratch/ae/93363c71b0eb7ea132ad1959f445ec
+
+Tip: you can replicate the issue by changing to the process work dir and entering the command `bash .command.run`
+
+
+WARN: Killing running tasks (1)

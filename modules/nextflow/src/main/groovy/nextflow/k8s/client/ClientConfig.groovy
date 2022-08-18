@@ -55,6 +55,8 @@ class ClientConfig {
 
     KeyManager[] keyManagers
 
+    Integer maxRequestRetries = 5
+
     /**
      * When true signal that the configuration was retrieved from within a K8s cluster
      */
@@ -67,7 +69,7 @@ class ClientConfig {
     }
 
     String toString() {
-        "${this.class.getSimpleName()}[ server=$server, namespace=$namespace, token=${cut(token)}, sslCert=${cut(sslCert)}, clientCert=${cut(clientCert)}, clientKey=${cut(clientKey)}, verifySsl=$verifySsl, fromFile=$isFromCluster ]"
+        "${this.class.getSimpleName()}[ server=$server, namespace=$namespace, token=${cut(token)}, sslCert=${cut(sslCert)}, clientCert=${cut(clientCert)}, clientKey=${cut(clientKey)}, verifySsl=$verifySsl, fromFile=$isFromCluster, maxRequestRetries=$maxRequestRetries ]"
     }
 
     private String cut(String str) {
@@ -115,8 +117,8 @@ class ClientConfig {
         else if( map.clientKeyFile )
             result.clientKey = Paths.get(map.clientKeyFile.toString()).bytes
 
-        if ( map.maxErrorRetry )
-            result.maxErrorRetry = map.maxErrorRetry
+        if( map.maxRequestRetries )
+            result.maxRequestRetries = map.maxRequestRetries as Integer
 
         return result
     }
