@@ -353,8 +353,8 @@ The following configuration options are available:
 ============================================== =================
 Name                                           Description
 ============================================== =================
-azure.azcopy.blockSize                          The block size (in MiB) when uploading to Azure Storage, and downloading from Azure Storage (default: , requires ``nf-azure@0.13.1``).
-azure.azcopy.blobTier                           The blob tier to be used while uploading to Azure Storage (default: , requires ``nf-azure@0.13.1``).
+azure.azcopy.blockSize                          The block size (in MiB) when uploading to Azure Storage, and downloading from Azure Storage (default: 4 , requires ``nf-azure@0.13.1``).
+azure.azcopy.blobTier                           The blob tier to be used while uploading to Azure Storage (default: 'None' , requires ``nf-azure@0.13.1``).
 azure.azcopy.putMD5                             Create an MD5 hash of each file during upload, and save the md5sum hash as the Content-MD5 property of the destination blob or file. (default: false)
 azure.azcopy.checkMD5                           Specifies how strictly MD5 hashes should be validated when downloading data. (default 'FailIfDifferent')
 azure.azcopy.overwrite                          Overwrite the conflicting files and blobs at the destination if this flag is set to true. (default: "false")
