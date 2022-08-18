@@ -17,6 +17,8 @@
 
 package nextflow
 
+import ch.qos.logback.classic.LoggerContext
+
 import java.nio.file.FileSystem
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
@@ -242,6 +244,9 @@ class Nextflow {
         else if ( message ) {
             log.info message
         }
+        //let loggers time to flush
+        (LoggerFactory.getILoggerFactory() as LoggerContext).reset()
+        sleep(1000)
         System.exit(exitCode)
     }
 
