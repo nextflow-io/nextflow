@@ -44,4 +44,22 @@ class ContainerConfigTest extends Specification {
 
     }
 
+    def 'should validate legacy entry point' () {
+
+        when:
+        def cfg = new ContainerConfig(OPTS, ENV)
+        then:
+        cfg.entrypointOverride() == EXPECTED
+        
+        where:
+        OPTS                            | ENV          | EXPECTED
+        [:]                             | [:]          | false
+        [entrypointOverride: false]     | [:]          | false
+        [entrypointOverride: true]      | [:]          | true
+        and:
+        [:]                             | [NXF_CONTAINER_ENTRYPOINT_OVERRIDE: 'true']  | true
+        [entrypointOverride: false]     | [NXF_CONTAINER_ENTRYPOINT_OVERRIDE: 'true']  | false
+
+    }
+
 }

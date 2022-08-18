@@ -90,11 +90,9 @@ class Launcher {
                 new CmdClone(),
                 new CmdConsole(),
                 new CmdFs(),
-                new CmdHistory(),
                 new CmdInfo(),
                 new CmdList(),
                 new CmdLog(),
-                new CmdLs(),
                 new CmdPull(),
                 new CmdRun(),
                 new CmdKubeRun(),
@@ -104,7 +102,8 @@ class Launcher {
                 new CmdView(),
                 new CmdHelp(),
                 new CmdSelfUpdate(),
-                new CmdPlugins()
+                new CmdPlugins(),
+                new CmdPlugin()
         ]
 
         if(SecretsLoader.isEnabled())
@@ -200,7 +199,7 @@ class Launcher {
     @PackageScope
     List<String> normalizeArgs( String ... args ) {
 
-        def normalized = []
+        List<String> normalized = []
         int i=0
         while( true ) {
             if( i==args.size() ) { break }
@@ -254,6 +253,10 @@ class Launcher {
             }
 
             else if( current == '-with-charliecloud' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
+            else if( current == '-with-conda' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '-'
             }
 

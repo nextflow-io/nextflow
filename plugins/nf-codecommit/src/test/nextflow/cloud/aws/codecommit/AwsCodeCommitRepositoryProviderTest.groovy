@@ -18,7 +18,6 @@
 
 package nextflow.cloud.aws.codecommit
 
-
 import nextflow.scm.RepositoryProvider
 import spock.lang.IgnoreIf
 import spock.lang.Requires
@@ -51,7 +50,7 @@ class AwsCodeCommitRepositoryProviderTest extends Specification {
 
         expect:
         provider.readText('main.nf') == '''\
-                #!/bin/env nextflow
+                nextflow.enable.dsl=2
                 
                 workflow {
                   sayHello()
@@ -103,8 +102,9 @@ class AwsCodeCommitRepositoryProviderTest extends Specification {
         def result = provider.getBranches() as Set
         then:
         result == [
-                new RepositoryProvider.BranchInfo('master', 'c673d3d55be190c54db2056690b71e285fe5b3d8'),
+                new RepositoryProvider.BranchInfo('master', 'c820e0904d9ce4404e005e3cc910502300b36ba3'),
                 new RepositoryProvider.BranchInfo('dev1', 'c90422a1b4823f1c0980bbf8cab261e45a351622')] as Set
 
     }
+
 }
