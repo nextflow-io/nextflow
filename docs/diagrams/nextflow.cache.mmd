@@ -1,0 +1,18 @@
+classDiagram
+    %%
+    %% nextflow.cache
+    %%
+    Session --* CacheDB
+
+    CacheDB --* CacheStore
+
+    CacheStore <|-- DefaultCacheStore
+
+    class DefaultCacheStore {
+        db : DB
+        uniqueId : UUID
+        runName : String
+        baseDir : Path
+        dataDir : Path
+        indexFile : Path
+    }

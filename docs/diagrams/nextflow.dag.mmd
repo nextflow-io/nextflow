@@ -1,0 +1,33 @@
+classDiagram
+    %%
+    %% nextflow.dag
+    %%
+    Session --* DAG
+
+    class DAG {
+        vertices : List~Vertex~
+        edges : List~Edge~
+    }
+    DAG "1" --* "*" Vertex
+    DAG "1" --* "*" Edge
+
+    class Vertex {
+        label : String
+        type : Type
+        operators : List~DataflowProcessor~
+        process : TaskProcessor
+    }
+
+    class Edge {
+        channel : Object
+        from : Vertex
+        to : Vertex
+        label : String
+    }
+
+    %% DagRenderer <|-- CytoscapeHtmlRenderer
+    %% DagRenderer <|-- CytoscapeJsRenderer
+    %% DagRenderer <|-- DotRenderer
+    %% DagRenderer <|-- GexfRenderer
+    %% DagRenderer <|-- GraphvizRenderer
+    %% DagRenderer <|-- MermaidRenderer

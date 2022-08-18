@@ -1,0 +1,9 @@
+classDiagram
+    %%
+    %% nextflow.ast
+    %%
+    ScriptParser --> NextflowDSLImpl : parse
+    ScriptParser --> NextflowXformImpl : parse
+    ScriptParser --> OpXformImpl : parse
+
+    NextflowDSLImpl --> IncludeDef : visitExpressionStatement

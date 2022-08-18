@@ -1,0 +1,24 @@
+classDiagram
+    %%
+    %% nextflow.scm
+    %%
+    CmdRun --> AssetManager : run
+
+    class AssetManager {
+        project : String
+        localPath : File
+        mainScript : String
+        repositoryProvider : RepositoryProvider
+        hub : String
+        providerConfigs : List~ProviderConfig~
+    }
+    AssetManager --* RepositoryProvider
+    AssetManager "1" --* "*" ProviderConfig
+
+    RepositoryProvider <|-- AzureRepositoryProvider
+    RepositoryProvider <|-- BitbucketRepositoryProvider
+    RepositoryProvider <|-- BitbucketServerRepositoryProvider
+    RepositoryProvider <|-- GiteaRepositoryProvider
+    RepositoryProvider <|-- GithubRepositoryProvider
+    RepositoryProvider <|-- GitlabRepositoryProvider
+    RepositoryProvider <|-- LocalRepositoryProvider

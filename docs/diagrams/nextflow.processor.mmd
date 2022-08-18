@@ -1,0 +1,100 @@
+classDiagram
+    %%
+    %% nextflow.processor
+    %%
+    %% ProcessDef --> TaskProcessor : run
+
+    class TaskProcessor {
+        config : ProcessConfig
+        executor : Executor
+        id : int
+        name : String
+        taskBody : BodyDef
+    }
+    TaskProcessor --> TaskRun : run
+    TaskProcessor --> TaskHandler : run
+    TaskProcessor --> PublishDir : finalizeTask
+
+    class TaskRun {
+        config : TaskConfig
+        context : TaskContext
+        hash : HashCode
+        id : TaskId
+        index : int
+        inputs : Map~InParam,Object~
+        name : String
+        outputs : Map~OutParam,Object~
+        runType : RunType
+        type : ScriptType
+        workDir : Path
+    }
+    TaskRun --* TaskConfig
+    TaskRun --* TaskContext
+    TaskRun --> TaskBean : toTaskBean
+
+    %% class TaskBean {
+    %%     name : String
+    %%     input : Object
+    %%     scratch : Object
+    %%     environment : Map~String,String~
+    %%     headerScript : String
+    %%     containerImage : String
+    %%     condaEnv : Path
+    %%     moduleNames : List~String~
+    %%     workDir : Path
+    %%     targetDir : Path
+    %%     script : String
+    %%     shell : List~String~
+    %%     containerConfig : ContainerConfig
+    %%     containerCpuset : String
+    %%     containerCpus : Float
+    %%     containerMemory : MemoryUnit
+    %%     containerMount : Path
+    %%     statsEnabled : boolean
+    %%     outputEnvNames : List~String~
+    %%     beforeScript : String
+    %%     afterScript : String
+    %%     containerNative : boolean
+    %%     containerEnabled : boolean
+    %%     containerOptions : String
+    %%     inputFiles : Map~String,Path~
+    %%     outputFiles : List~String~
+    %%     stageInMode : String
+    %%     stageOutMode : String
+    %%     binDir : Path
+    %%     cleanup : Object
+    %%     secretNative : boolean
+    %%     secretNames : List~String~
+    %% }
+
+    class TaskConfig {
+        target : Map~String,Object~
+        binding : Map
+    }
+
+    class TaskContext {
+        holder : Map~String,Object~
+        script : Script
+        name : String
+    }
+
+    class TaskHandler {
+        task : TaskRun
+    }
+
+    TaskMonitor <|-- TaskPollingMonitor
+
+    class TaskPollingMonitor {
+        capacity : int
+        submitRateLimit : RateLimiter
+        pollIntervalMillis : long
+        dumpInterval : Duration
+    }
+
+    TaskPollingMonitor <|-- LocalPollingMonitor
+    TaskPollingMonitor <|-- ParallelPollingMonitor
+
+    class LocalPollingMonitor {
+        maxCpus : int
+        maxMemory : long
+    }

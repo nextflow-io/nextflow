@@ -1,0 +1,16 @@
+classDiagram
+    %%
+    %% nextflow.cloud.aws
+    %%
+    Executor <|-- AwsBatchExecutor
+    %% TaskHandler <|-- AwsBatchTaskHandler
+    %% BashWrapperBuilder <|-- AwsBatchScriptLauncher
+
+    AwsBatchExecutor --* AwsOptions
+
+    AwsBatchExecutor --> ParallelPollingMonitor : init
+    AwsBatchExecutor --> AwsBatchTaskHandler : submit
+    AwsBatchTaskHandler --> AwsBatchScriptLauncher : submit
+
+    %% SimpleFileCopyStrategy <|-- AwsBatchFileCopyStrategy
+    AwsBatchScriptLauncher --* AwsBatchFileCopyStrategy

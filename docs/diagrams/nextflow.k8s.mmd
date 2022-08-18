@@ -1,0 +1,56 @@
+classDiagram
+    %%
+    %% nextflow.k8s
+    %%
+    CmdKubeRun --> K8sDriverLauncher : run
+
+    class K8sDriverLauncher {
+        args : List~String~
+        cmd : CmdKubeRun
+        config : ConfigObject
+        configMapName : String
+        headCpus : int
+        headImage : String
+        headMemory : String
+        headPreScript : String
+        paramsFile : String
+        pipelineName : String
+        runName : String
+    }
+    K8sDriverLauncher --* K8sClient
+    K8sDriverLauncher --* K8sConfig
+
+    K8sClient --* ClientConfig
+    %% ConfigDiscovery --> ClientConfig : discover
+
+    class K8sConfig {
+        target : Map~String,Object~
+        podOptions : PodOptions
+    }
+    K8sConfig --* PodOptions
+
+    class PodOptions {
+        affinity : Map
+        annotations : Map~String,String~
+        automountServiceAccountToken : boolean
+        configMaps : Collection~PodMountConfig~
+        envVars : Collection~PodEnv~
+        imagePullPolicy : String
+        imagePullSecret : String
+        labels : Map~String,String~
+        nodeSelector : PodNodeSelector
+        priorityClassName : String
+        privileged : Boolean
+        secrets : Collection~PodMountSecret~
+        securityContext : PodSecurityContext
+        tolerations : List~Map~
+        volumeClaims : Collection~PodVolumeClaim~
+    }
+
+    Executor <|-- K8sExecutor
+    %% TaskHandler <|-- K8sTaskHandler
+    %% BashWrapperBuilder <|-- K8sWrapperBuilder
+
+    K8sExecutor --> TaskPollingMonitor : init
+    K8sExecutor --> K8sTaskHandler : submit
+    K8sTaskHandler --> K8sWrapperBuilder : submit
