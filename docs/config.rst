@@ -415,6 +415,7 @@ storageSubPath      The path in the persistent volume to be mounted (default: ro
 computeResourceType Define whether use Kubernetes ``Pod`` or ``Job`` resource type to carry out Nextflow tasks (default: ``Pod``).
 fetchNodeName       If you trace the hostname, activate this option (default: ``false``, requires version ``22.05.0-edge`` or later).
 volumeClaims        (deprecated)
+maxRequestRetries   Defines the Kubernetes API max request retries (default is set to 5)
 =================== ================
 
 See the :ref:`k8s-page` documentation for more details.
