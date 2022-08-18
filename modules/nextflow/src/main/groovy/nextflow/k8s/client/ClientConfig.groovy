@@ -53,6 +53,14 @@ class ClientConfig {
 
     KeyManager[] keyManagers
 
+    //Timeout when reading from Input stream when a connection is established to a resource.
+    //If the timeout expires before there is data available for read, a java.net. SocketTimeoutException is raised
+    Integer requestHttpReadTimeoutInMilliSeconds = 60 * 1000 //60 seconds
+
+    //Timeout when opening a communications link to the resource referenced by K8sClient request connection
+    //If the timeout expires before there is data available for read, a java.net. SocketTimeoutException is raised
+    Integer requestHttpConnectionTimeoutInMilliSeconds = 60 * 1000 //60 seconds
+
     /**
      * When true signal that the configuration was retrieved from within a K8s cluster
      */
@@ -65,7 +73,7 @@ class ClientConfig {
     }
 
     String toString() {
-        "${this.class.getSimpleName()}[ server=$server, namespace=$namespace, token=${cut(token)}, sslCert=${cut(sslCert)}, clientCert=${cut(clientCert)}, clientKey=${cut(clientKey)}, verifySsl=$verifySsl, fromFile=$isFromCluster ]"
+        "${this.class.getSimpleName()}[ server=$server, namespace=$namespace, token=${cut(token)}, sslCert=${cut(sslCert)}, clientCert=${cut(clientCert)}, clientKey=${cut(clientKey)}, verifySsl=$verifySsl, fromFile=$isFromCluster, requestHttpConnectionTimeoutInMilliSeconds=$requestHttpConnectionTimeoutInMilliSeconds, requestHttpReadTimeoutInMilliSeconds=$requestHttpReadTimeoutInMilliSeconds ]"
     }
 
     private String cut(String str) {
@@ -112,6 +120,12 @@ class ClientConfig {
             result.clientKey = map.clientKey.toString().decodeBase64()
         else if( map.clientKeyFile )
             result.clientKey = Paths.get(map.clientKeyFile.toString()).bytes
+
+        if( map.requestHttpConnectionTimeoutInSecond )
+            result.requestHttpConnectionTimeoutInMilliSeconds = map.requestHttpConnectionTimeoutInSecond as Integer
+
+        if( map.requestHttpReadTimeoutInSecond )
+            result.requestHttpReadTimeoutInMilliSeconds = map.requestHttpReadTimeoutInSecond as Integer
 
         return result
     }
