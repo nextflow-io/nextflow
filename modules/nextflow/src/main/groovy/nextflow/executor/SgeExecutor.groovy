@@ -96,6 +96,10 @@ class SgeExecutor extends AbstractGridExecutor {
 
     protected String getHeaderToken() { '#$' }
 
+    protected String sanitizeJobName(String name) {
+        def sanitized = name.size() > 256 ? name.substring(0,256) : name
+        replaceInvalidChars(sanitized)
+    }
 
     /**
      * Parse the string returned by the {@code qsub} command and extract the job ID string

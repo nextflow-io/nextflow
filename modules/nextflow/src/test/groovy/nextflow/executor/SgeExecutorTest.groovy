@@ -16,6 +16,9 @@
  */
 
 package nextflow.executor
+
+import nextflow.Session
+
 import java.nio.file.Paths
 
 import nextflow.processor.TaskConfig
@@ -379,6 +382,24 @@ class SgeExecutorTest extends Specification {
         executor.queueStatusCommand(null) == ['qstat']
         executor.queueStatusCommand('long') == ['qstat','-q','long']
 
+    }
+
+    def 'should return a sanitized custom job name'() {
+
+        given:
+        def exec = [:] as SgeExecutor
+        exec.session = [:] as Session
+        exec.session.config = [:]
+
+        expect:
+        exec.resolveCustomJobName(Mock(TaskRun)) == null
+
+        when:
+        exec.session = [:] as Session
+        exec.session.config = [ executor: [jobName: { task.name.replace("_", " ") }  ] ]
+        then:
+        exec.resolveCustomJobName(new TaskRun(config: [name: 'task_name'])) == 'task name'
+        exec.getJobNameFor(new TaskRun(config: [name: 'task_name'])) == 'task_name'
     }
 
 }
