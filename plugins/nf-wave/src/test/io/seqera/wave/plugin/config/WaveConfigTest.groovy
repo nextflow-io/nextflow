@@ -15,8 +15,9 @@
  *
  */
 
-package io.seqera.wave.plugin
+package io.seqera.wave.plugin.config
 
+import io.seqera.wave.plugin.config.WaveConfig
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -81,4 +82,18 @@ class WaveConfigTest extends Specification {
 
     }
 
+    def 'should get mamba config' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.mambaOpts().from == 'mambaorg/micromamba:0.25.1'
+        opts.mambaOpts().user == null
+
+        when:
+        opts = new WaveConfig([build:[mamba:[from:'mambaorg/foo:1', user:'hola']]])
+        then:
+        opts.mambaOpts().from == 'mambaorg/foo:1'
+        opts.mambaOpts().user == 'hola'
+        
+    }
 }
