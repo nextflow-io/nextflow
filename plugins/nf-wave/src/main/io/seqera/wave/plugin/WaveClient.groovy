@@ -33,6 +33,7 @@ import com.google.gson.reflect.TypeToken
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.packer.Packer
 import nextflow.Session
 import nextflow.processor.TaskRun
@@ -250,22 +251,32 @@ class WaveClient {
     }
 
     protected String condaFileToDockerFile() {
-        """\
-        FROM mambaorg/micromamba:0.25.0
+        def result = """\
+        FROM ${config.mambaOpts().from}
         COPY --chown=\$MAMBA_USER:\$MAMBA_USER conda.yml /tmp/conda.yml
         RUN micromamba install -y -n base -f /tmp/conda.yml && \\
             micromamba clean -a -y
         """.stripIndent()
+
+        return addUser(result)
+    }
+
+    protected String addUser(String result) {
+        if( config.mambaOpts().user )
+            result += "USER ${config.mambaOpts().user}\n"
+        return result
     }
 
     protected String condaRecipeToDockerFile(String recipe) {
-        """\
-        FROM mambaorg/micromamba:0.25.0
+        def result = """\
+        FROM ${config.mambaOpts().from}
         RUN \\
            micromamba install -y -n base -c defaults -c conda-forge \\
            $recipe \\
            && micromamba clean -a -y
         """.stripIndent()
+
+        return addUser(result)
     }
 
     protected boolean isCondaFile(String value) {
