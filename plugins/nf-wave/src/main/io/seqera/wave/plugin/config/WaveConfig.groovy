@@ -15,7 +15,7 @@
  *
  */
 
-package io.seqera.wave.plugin
+package io.seqera.wave.plugin.config
 
 import groovy.transform.CompileStatic
 import nextflow.util.Duration
@@ -32,6 +32,7 @@ class WaveConfig {
     final private String endpoint
     final private List<URL> containerConfigUrl
     final private Duration tokensCacheMaxDuration
+    final private MambaOpts mambaOpts
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
@@ -40,11 +41,14 @@ class WaveConfig {
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '15m') as Duration
         if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
+        this.mambaOpts = opts.navigate('build.mamba', Collections.emptyMap()) as MambaOpts
     }
 
     Boolean enabled() { this.enabled }
 
     String endpoint() { this.endpoint }
+
+    MambaOpts mambaOpts() { this.mambaOpts }
 
     protected List<URL> parseConfig(Map opts, Map<String,String> env) {
         List<String> result = new ArrayList<>(10)
