@@ -35,7 +35,6 @@ import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
-import com.upplication.s3fs.S3Path
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
@@ -847,7 +846,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     def 'get fusion submit command' () {
         given:
-        def launcher = new FusionScriptLauncher(type: S3Path)
+        def launcher = new FusionScriptLauncher(scheme: 's3')
         def handler = Spy(new AwsBatchTaskHandler(fusionEnabled: true, fusionLauncher: launcher))
 
         when:

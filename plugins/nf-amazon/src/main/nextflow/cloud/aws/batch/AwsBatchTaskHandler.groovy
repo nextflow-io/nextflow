@@ -134,11 +134,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         this.client = executor.client
         this.environment = System.getenv()
         this.fusionEnabled = executor.isFusionEnabled()
+        this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
         this.scriptFile = task.workDir.resolve(TaskRun.CMD_SCRIPT)
         this.inputFile =  task.workDir.resolve(TaskRun.CMD_INFILE)
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
-        this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         this.traceFile = task.workDir.resolve(TaskRun.CMD_TRACE)
@@ -623,7 +623,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return "nf-" + result
     }
 
-    protected String classicSubmitCmd() {
+    protected String classicSubmitCli() {
         // the cmd list to launch it
         final opts = getAwsOptions()
         final cli = opts.getAwsCli()
@@ -644,7 +644,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     protected List<String> getSubmitCommand() {
         // final launcher command
-        final cmd = fusionEnabled ? fusionSubmitCmd() : classicSubmitCmd()
+        final cmd = fusionEnabled ? fusionSubmitCmd() : classicSubmitCli()
         return ['bash','-o','pipefail','-c', cmd.toString() ]
     }
 
