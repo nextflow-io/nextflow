@@ -43,16 +43,14 @@ cli=''; for x in "$@"; do cli+="'$x' "; done
 if [[ "$NXF_USRMAP" ]]; then
 # create a `nextflow` user with the provided ID 
 # then change the docker socker ownership to `nextflow` user 
+
 addgroup docker
 adduser -u $NXF_USRMAP -G docker -s /bin/bash nextflow
+
 chown nextflow /var/run/docker.sock  
 # finally run the target command with `nextflow` user
-su nextflow << EOF
-[[ "$NXF_DEBUG_ENTRY" ]] && set -x
-exec bash -c "$cli"
-EOF
 
-# otherwise just execute the command
-else 
-exec bash -c "$cli"
+su nextflow
+cd /home/nextflow
+bash -c "$cli"
 fi
