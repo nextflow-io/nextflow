@@ -24,6 +24,7 @@ import java.util.function.Predicate
 
 import com.microsoft.azure.batch.BatchClient
 import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials
+import com.microsoft.azure.batch.auth.BatchApplicationTokenCredentials
 import com.microsoft.azure.batch.protocol.models.AutoUserScope
 import com.microsoft.azure.batch.protocol.models.AutoUserSpecification
 import com.microsoft.azure.batch.protocol.models.AzureFileShareConfiguration
@@ -252,16 +253,32 @@ class AzBatchService implements Closeable {
 
     protected BatchClient createBatchClient() {
         log.debug "[AZURE BATCH] Executor options=${config.batch()}"
-        // Create batch client
-        if( !config.batch().endpoint )
-            throw new IllegalArgumentException("Missing Azure Batch endpoint -- Specify it in the nextflow.config file using the setting 'azure.batch.endpoint'")
-        if( !config.batch().accountName )
-            throw new IllegalArgumentException("Missing Azure Batch account name -- Specify it in the nextflow.config file using the setting 'azure.batch.accountName'")
-        if( !config.batch().accountKey )
-            throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKet'")
 
-        final cred = new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey)
-        final client = BatchClient.open(cred)
+        def cred
+
+        if (config.batch().endpoint || config.batch().accountKey || config.batch().accountName ) {
+             // Create batch client
+            if( !config.batch().endpoint )
+                throw new IllegalArgumentException("Missing Azure Batch endpoint -- Specify it in the nextflow.config file using the setting 'azure.batch.endpoint'")
+            if( !config.batch().accountName )
+                throw new IllegalArgumentException("Missing Azure Batch account name -- Specify it in the nextflow.config file using the setting 'azure.batch.accountName'")
+            if( !config.batch().accountKey )
+                throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKet'")
+
+            cred = new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey)
+        } else {
+
+            final batchEndpoint = config.batch().batchEndpoint ?: "https://batch.core.windows.net/";
+            final authenticationEndpoint =  config.batch().authenticationEndpoint ?: "https://login.microsoftonline.com/";
+            final batchServiceEndpoint = config.batch().batchEndpoint
+            final tenantId = config.batch().tenantId
+            final clientId = config.batch().clientId
+            final clientSecret = config.batch().clientSecret
+            cred = new BatchApplicationTokenCredentials(batchServiceEndpoint, clientId, clientSecret, tenantId, batchEndpoint, authenticationEndpoint)
+        }
+
+
+        def client = BatchClient.open(cred)
         final sess = Global.session as Session
         sess.onShutdown { client.protocolLayer().restClient().close() }
         return client
