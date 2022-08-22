@@ -2,6 +2,7 @@ package nextflow.cloud.azure.batch
 
 import java.util.function.Predicate
 
+import com.google.common.hash.HashCode
 import com.microsoft.azure.batch.protocol.models.CloudPool
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzPoolOpts
@@ -450,5 +451,71 @@ class AzBatchServiceTest extends Specification {
         expect:
         svc.apply(() -> 'Hello') == 'Hello'
 
+    }
+
+    def 'should create task for submit' () {
+        given:
+        def POOL_ID = 'my-pool'
+        def SAS = '123'
+        def CONFIG = [storage: [sasToken: SAS]]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        AzBatchService azure = Spy(new AzBatchService(exec))
+        and:
+        def TASK = Mock(TaskRun) {
+            getHash() >> HashCode.fromInt(1)
+            getContainer() >> 'ubuntu:latest'
+            getConfig() >> Mock(TaskConfig)
+        }
+        and:
+        def SPEC = new AzVmPoolSpec(poolId: POOL_ID, vmType: Mock(AzVmType), opts: new AzPoolOpts([:]))
+
+        when:
+        def result = azure.createTask(POOL_ID, 'salmon', TASK)
+        then:
+        1 * azure.getPoolSpec(POOL_ID) >> SPEC
+        1 * azure.computeSlots(TASK, SPEC) >> 4
+        1 * azure.resourceFileUrls(TASK, SAS) >> []
+        1 * azure.outputFileUrls(TASK, SAS) >> []
+        and:
+        result.id() == 'nf-01000000'
+        result.requiredSlots() == 4
+        and:
+        result.commandLine() == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
+        and:
+        result.containerSettings().imageName() == 'ubuntu:latest'
+        result.containerSettings().containerRunOptions() == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro '
+    }
+
+    def 'should create task for submit with mounts' () {
+        given:
+        def POOL_ID = 'my-pool'
+        def SAS = '123'
+        def CONFIG = [storage: [sasToken: SAS, fileShares: [file1: [mountOptions: 'mountOptions1', mountPath: 'mountPath1']]]]
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(CONFIG) }
+        AzBatchService azure = Spy(new AzBatchService(exec))
+        and:
+        def TASK = Mock(TaskRun) {
+            getHash() >> HashCode.fromInt(2)
+            getContainer() >> 'ubuntu:latest'
+            getConfig() >> Mock(TaskConfig) {getContainerOptions() >> '-v /foo:/foo' }
+        }
+        and:
+        def SPEC = new AzVmPoolSpec(poolId: POOL_ID, vmType: Mock(AzVmType), opts: new AzPoolOpts([:]))
+
+        when:
+        def result = azure.createTask(POOL_ID, 'salmon', TASK)
+        then:
+        1 * azure.getPoolSpec(POOL_ID) >> SPEC
+        1 * azure.computeSlots(TASK, SPEC) >> 4
+        1 * azure.resourceFileUrls(TASK, SAS) >> []
+        1 * azure.outputFileUrls(TASK, SAS) >> []
+        and:
+        result.id() == 'nf-02000000'
+        result.requiredSlots() == 4
+        and:
+        result.commandLine() == "sh -c 'bash .command.run 2>&1 | tee .command.log'"
+        and:
+        result.containerSettings().imageName() == 'ubuntu:latest'
+        result.containerSettings().containerRunOptions() == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro -v /mnt/batch/tasks/fsmounts/file1:mountPath1:rw -v /foo:/foo '
     }
 }
