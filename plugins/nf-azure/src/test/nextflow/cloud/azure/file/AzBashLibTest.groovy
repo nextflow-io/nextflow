@@ -63,7 +63,7 @@ class AzBashLibTest extends Specification {
     def 'should return script with config, with default azcopy opts'() {
 
         expect:
-        AzBashLib.script(new AzCopyOpts(), 10, 20, Duration.of('30s')).replaceAll(' ', '') == '''\
+        AzBashLib.script(new AzCopyOpts(), 10, 20, Duration.of('30s')) == '''\
             # bash helper functions
             nxf_cp_retry() {
                 local max_attempts=20
@@ -160,7 +160,7 @@ class AzBashLibTest extends Specification {
                     }
                 }
             }
-            '''.stripIndent().replaceAll(' ', '')
+            '''.stripIndent()
     }
 
     def 'should return script with config, with custom azcopy opts'() {
