@@ -47,7 +47,7 @@ class StateObj implements Serializable, Cloneable {
      */
     void incSubmitted() {
         if( poisoned )
-            log.debug "Oops.. Cannot process more messages after Poison-Pill was received"
+            log.debug "Oops... Cannot process more messages after Poison-Pill was received"
         else
             submitted++
     }
@@ -57,7 +57,7 @@ class StateObj implements Serializable, Cloneable {
      */
     void incCompleted() {
         if( completed >= submitted ) {
-            log.debug "Oops.. Processed messages ($submitted) should not overcome received messages ($submitted) count"
+            log.debug "Oops... Processed messages ($submitted) should not overcome received messages ($submitted) count"
         }
         completed++
     }

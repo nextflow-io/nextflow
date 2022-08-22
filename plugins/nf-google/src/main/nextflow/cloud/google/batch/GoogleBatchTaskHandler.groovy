@@ -295,7 +295,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
             client.deleteJob(jobId)
         }
         else {
-            log.debug "[GOOGLE BATCH] Oops.. invalid delete action"
+            log.debug "[GOOGLE BATCH] Oops... invalid delete action"
         }
     }
 

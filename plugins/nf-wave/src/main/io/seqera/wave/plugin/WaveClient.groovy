@@ -210,7 +210,7 @@ class WaveClient {
         // compute docker file + conda content
         final condaRecipe = task.config.conda as String
         if( dockerFileContent && condaRecipe ) {
-            throw new IllegalArgumentException("Process '${task.lazyName()}' declares both a 'conda' directive and a module bundle dockerfile that conflicts each other")
+            throw new IllegalArgumentException("Process '${task.lazyName()}' declares both a 'conda' directive and a module bundle dockerfile that conflict with each other")
         }
         Path condaFile = null
         if( condaRecipe ) {
@@ -225,7 +225,7 @@ class WaveClient {
         }
 
         if( dockerFileContent && containerImage ) {
-            throw new IllegalArgumentException("Process '${task.lazyName()}' declares both a 'container' directive and a module bundle dockerfile that conflicts each other")
+            throw new IllegalArgumentException("Process '${task.lazyName()}' declares both a 'container' directive and a module bundle dockerfile that conflict with each other")
         }
 
         if( !dockerFileContent && !containerImage ) {

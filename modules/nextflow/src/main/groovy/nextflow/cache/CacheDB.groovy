@@ -226,9 +226,9 @@ class CacheDB implements Closeable {
      */
     @Override
     void close() {
-        log.trace "Closing CacheDB.."
+        log.trace "Closing CacheDB..."
         writer.await()
-        log.trace "Closing CacheDB index"
+        log.trace "Closing CacheDB index..."
         store.close()
         log.debug "Closing CacheDB done"
     }

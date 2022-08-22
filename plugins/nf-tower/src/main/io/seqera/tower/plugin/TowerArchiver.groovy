@@ -96,12 +96,12 @@ class TowerArchiver {
             return Collections.<String>emptyList()
 
         if( paths.size()!=2 )
-            throw new IllegalArgumentException("Invalid NXF_ARCHIVE_DIR format - expected exactly two paths separated by a command - offending value: ${System.getenv('NXF_ARCHIVE_DIR')}")
+            throw new IllegalArgumentException("Invalid NXF_ARCHIVE_DIR format - expected exactly two paths separated by a comma - offending value: ${System.getenv('NXF_ARCHIVE_DIR')}")
         if( !paths[0].startsWith('/') )
             throw new IllegalArgumentException("Invalid NXF_ARCHIVE_DIR base path - it must start with a slash character - offending value: '${paths[0]}'")
         final scheme = FileHelper.getUrlProtocol(paths[1])
         if ( !scheme && !paths[1].startsWith('/') )
-            throw new IllegalArgumentException("Invalid NXF_ARCHIVE_DIR target path - it must start be a remote path - offending value: '${paths[1]}'")
+            throw new IllegalArgumentException("Invalid NXF_ARCHIVE_DIR target path - it must be a remote path - offending value: '${paths[1]}'")
 
         return paths
     }

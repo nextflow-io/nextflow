@@ -49,7 +49,7 @@ class TesExecutor extends Executor implements ExtensionPoint {
     protected void register() {
         if( session.binDir && !session.binDir.empty() ) {
             session.abort()
-            throw new AbortOperationException("ERROR: TES executor does not allow the use of custom scripts in the `bin` folder")
+            throw new AbortOperationException("TES executor does not allow the use of custom scripts in the `bin` folder")
         }
 
         super.register()

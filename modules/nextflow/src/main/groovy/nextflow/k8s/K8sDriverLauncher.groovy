@@ -188,7 +188,7 @@ class K8sDriverLauncher {
                 }
             }
             catch( Exception e ) {
-                log.warn "Caught exception waiting for ${resourceType.lower()} to stop running"
+                log.warn "Caught exception while waiting for ${resourceType.lower()} to stop running"
             }
         }
     }
@@ -222,10 +222,10 @@ class K8sDriverLauncher {
     protected void deleteConfigMap() {
         try {
             k8sClient.configDelete(configMapName)
-            log.debug "Deleted K8s configMap with name: $configMapName"
+            log.debug "Deleted K8s ConfigMap with name: $configMapName"
         }
         catch ( Exception e ) {
-            log.warn "Unable to delete configMap: $configMapName", e
+            log.warn "Unable to delete ConfigMap: $configMapName", e
         }
     }
 
@@ -384,7 +384,7 @@ class K8sDriverLauncher {
     private void checkUnsupportedOption(String name) {
         def field = getField(cmd,name)
         if( !field ) {
-            log.warn "Unknown cli option to check: $name"
+            log.warn "Unknown command-line option to check: $name"
             return
         }
         field.setAccessible(true)
@@ -627,7 +627,7 @@ class K8sDriverLauncher {
         // create the config map
         configMapName = makeConfigMapName(configMap)
         tryCreateConfigMap(configMapName, configMap)
-        log.debug "Created K8s configMap with name: $configMapName"
+        log.debug "Created K8s ConfigMap with name: $configMapName"
         k8sConfig.getPodOptions().getMountConfigMaps().add( new PodMountConfig(configMapName, '/etc/nextflow') )
     }
 

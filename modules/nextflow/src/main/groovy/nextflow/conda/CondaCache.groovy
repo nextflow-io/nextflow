@@ -140,7 +140,7 @@ class CondaCache {
         }
 
         if( !cacheDir.exists() && !cacheDir.mkdirs() ) {
-            throw new IOException("Failed to create Conda cache directory: $cacheDir -- Make sure a file with the same does not exist and you have write permission")
+            throw new IOException("Failed to create Conda cache directory: $cacheDir -- Make sure a file with the same name does not exist and you have write permission")
         }
 
         return cacheDir
@@ -207,7 +207,7 @@ class CondaCache {
         else if( condaEnv.contains('/') ) {
             final prefix = condaEnv as Path
             if( !prefix.isDirectory() )
-                throw new IllegalArgumentException("Conda prefix path does not exist or it's not a directory: $prefix")
+                throw new IllegalArgumentException("Conda prefix path does not exist or is not a directory: $prefix")
             if( prefix.fileSystem != FileSystems.default )
                 throw new IllegalArgumentException("Conda prefix path must be a POSIX file path: $prefix")
 

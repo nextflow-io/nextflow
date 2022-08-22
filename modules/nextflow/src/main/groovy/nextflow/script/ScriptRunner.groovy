@@ -218,7 +218,7 @@ class ScriptRunner {
      * @return The value as returned by the user provided script
      */
     protected run() {
-        log.debug "> Launching execution"
+        log.debug "> Executing script"
         assert scriptParser, "Missing script instance to run"
         // -- launch the script execution
         scriptParser.runScript()
@@ -231,7 +231,7 @@ class ScriptRunner {
     protected await() {
         if( preview )
             return
-        log.debug "> Await termination "
+        log.debug "> Awaiting termination "
         session.await()
     }
 
@@ -281,7 +281,7 @@ class ScriptRunner {
             }
 
             if( pos >= size() ) {
-                throw new AbortOperationException("Arguments index out of range: $pos -- You may have not entered all arguments required by the pipeline")
+                throw new AbortOperationException("Arguments index out of range: $pos -- You may not have entered all arguments required by the pipeline")
             }
 
             super.get(pos)
