@@ -26,7 +26,9 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessException
+import nextflow.executor.fusion.FusionScriptLauncher
 import nextflow.processor.LocalPollingMonitor
+import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
@@ -43,6 +45,8 @@ import nextflow.util.ProcessHelper
 @CompileStatic
 @SupportedScriptTypes( [ScriptType.SCRIPTLET, ScriptType.GROOVY] )
 class LocalExecutor extends Executor {
+
+    private Map<String,String> sysEnv = System.getenv()
 
     @Override
     protected TaskMonitor createTaskMonitor() {
@@ -63,11 +67,19 @@ class LocalExecutor extends Executor {
 
     }
 
+    boolean isFusionEnabled() {
+        def result = session.config.navigate('fusion.enabled')
+        if( result == null )
+            result = sysEnv.get('NXF_FUSION_ENABLED')
+        return result!=null ? result.toString()=='true' : false
+    }
+
     @Override
     protected void register() {
         super.register()
-        if( workDir.fileSystem != FileSystems.default ) {
-            log.warn "Local executor only supports default file system -- Check work directory: ${getWorkDir().toUriString()}"
+
+        if( workDir.fileSystem != FileSystems.default && !isFusionEnabled() ) {
+            log.warn "Local executor only supports non-default file system if Fusion is enabled -- Check work directory: ${getWorkDir().toUriString()}"
         }
     }
 }
@@ -84,13 +96,15 @@ class LocalTaskHandler extends TaskHandler {
 
     private final Path exitFile
 
-    private final Long wallTimeMillis
-
     private final Path wrapperFile
 
     private final Path outputFile
 
     private final Path errorFile
+
+    private final Path logFile
+
+    private final Long wallTimeMillis
 
     private Process process
 
@@ -100,6 +114,10 @@ class LocalTaskHandler extends TaskHandler {
 
     private Session session
 
+    private boolean fusionEnabled
+
+    private FusionScriptLauncher fusionLauncher
+
     private volatile result
 
 
@@ -107,21 +125,23 @@ class LocalTaskHandler extends TaskHandler {
         super(task)
         // create the task handler
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
+        this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
-        this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
+        this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
         this.wallTimeMillis = task.config.getTime()?.toMillis()
         this.executor = executor
         this.session = executor.session
+        this.fusionEnabled = executor.isFusionEnabled()
     }
 
     @Override
     void submit() {
         // create the wrapper script
-        new BashWrapperBuilder(task) .build()
+        createTaskWrapper().build()
 
-        // the cmd list to launch it
-        def cmd = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
+        // create the launch command
+        final cmd = getSubmitCommand()
         log.debug "Launch cmd line: ${cmd.join(' ')}"
 
         session.getExecService().submit( {
@@ -129,14 +149,7 @@ class LocalTaskHandler extends TaskHandler {
             try {
                 // NOTE: make sure to redirect process output to a file otherwise
                 // execution can hang when stdout/stderr is bigger than 64k
-                final workDir = task.workDir.toFile()
-                final logFile = new File(workDir, TaskRun.CMD_LOG)
-
-                ProcessBuilder builder = new ProcessBuilder()
-                        .redirectErrorStream(true)
-                        .redirectOutput(logFile)
-                        .directory(workDir)
-                        .command(cmd)
+                ProcessBuilder builder = new ProcessBuilder().command(cmd)
 
                 // -- start the execution and notify the event to the monitor
                 process = builder.start()
@@ -156,6 +169,32 @@ class LocalTaskHandler extends TaskHandler {
         status = TaskStatus.SUBMITTED
     }
 
+    protected BashWrapperBuilder createTaskWrapper() {
+        final bean = new TaskBean(task)
+        return fusionEnabled
+                ? fusionLauncher = new FusionScriptLauncher(bean, null, 's3')
+                : new BashWrapperBuilder(bean)
+    }
+
+    protected String classicSubmitCmd() {
+        final workDir = task.workDir.toFile()
+
+        "cd ${workDir} && ${BashWrapperBuilder.BASH.join(' ')} ${wrapperFile.getName()} 2>&1 > ${logFile.getName()}"
+    }
+
+    protected String fusionSubmitCmd() {
+        final aws = "aws s3 cp --only-show-errors"
+        final wrapperFile = fusionLauncher.toContainerMount(this.wrapperFile)
+        final logFile = fusionLauncher.toContainerMount(this.logFile)
+        
+        "$aws s3:/${wrapperFile} - | ${BashWrapperBuilder.BASH.join(' ')} 2>&1 | $aws - s3:/${logFile}"
+    }
+
+    protected List<String> getSubmitCommand() {
+        final cmd = fusionEnabled ? fusionSubmitCmd() : classicSubmitCmd()
+
+        ["bash", "-c", "\'${cmd}\'".toString()]
+    }
 
     long elapsedTimeMillis() {
         startTimeMillis ? System.currentTimeMillis() - startTimeMillis : 0

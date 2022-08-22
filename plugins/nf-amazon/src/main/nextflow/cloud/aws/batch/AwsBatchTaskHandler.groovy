@@ -50,7 +50,6 @@ import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
 import com.amazonaws.services.batch.model.Volume
-import com.upplication.s3fs.S3Path
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -135,11 +134,11 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         this.client = executor.client
         this.environment = System.getenv()
         this.fusionEnabled = executor.isFusionEnabled()
-        this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
         this.scriptFile = task.workDir.resolve(TaskRun.CMD_SCRIPT)
         this.inputFile =  task.workDir.resolve(TaskRun.CMD_INFILE)
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
+        this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         this.traceFile = task.workDir.resolve(TaskRun.CMD_TRACE)
@@ -334,7 +333,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     protected BashWrapperBuilder createTaskWrapper() {
         return fusionEnabled
-                ? fusionLauncher = new FusionScriptLauncher(bean, executor.getRemoteBinDir(), S3Path)
+                ? fusionLauncher = new FusionScriptLauncher(bean, executor.getRemoteBinDir(), 's3')
                 : new AwsBatchScriptLauncher(bean, getAwsOptions())
     }
 
@@ -624,7 +623,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return "nf-" + result
     }
 
-    protected String classicSubmitCli() {
+    protected String classicSubmitCmd() {
         // the cmd list to launch it
         final opts = getAwsOptions()
         final cli = opts.getAwsCli()
@@ -645,7 +644,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     protected List<String> getSubmitCommand() {
         // final launcher command
-        final cmd = fusionEnabled ? fusionSubmitCmd() : classicSubmitCli()
+        final cmd = fusionEnabled ? fusionSubmitCmd() : classicSubmitCmd()
         return ['bash','-o','pipefail','-c', cmd.toString() ]
     }
 

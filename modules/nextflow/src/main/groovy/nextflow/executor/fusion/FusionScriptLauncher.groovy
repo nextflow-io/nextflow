@@ -36,7 +36,7 @@ import nextflow.util.Escape
 @CompileStatic
 class FusionScriptLauncher extends BashWrapperBuilder {
 
-    private Class<Path> type
+    private String scheme
     private Path remoteWorkDir
     private Path remoteBinDir
     private Set<String> buckets = new HashSet<>()
@@ -46,10 +46,10 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         this.buckets = new HashSet<>()
     }
 
-    FusionScriptLauncher(TaskBean bean, Path remoteBinDir, Class<Path> type) {
+    FusionScriptLauncher(TaskBean bean, Path remoteBinDir, String scheme) {
         super(bean)
         // keep track the google storage work dir
-        this.type = type
+        this.scheme = scheme
         this.remoteWorkDir = bean.workDir
         this.remoteBinDir = toContainerMount(remoteBinDir)
 
@@ -95,10 +95,12 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     Path toContainerMount(Path path) {
         if( path == null )
             return null
-        if( !type.isAssignableFrom(path.class) )
-            throw new IllegalArgumentException("Unexpected path for Fusion task handler: ${path.toUriString()}")
 
         final p = BucketParser.from( FilesEx.toUriString(path) )
+
+        if( p.scheme != scheme )
+            throw new IllegalArgumentException("Unexpected path for Fusion script launcher: ${path.toUriString()}")
+
         final result = "/fusion/$p.scheme/${p.bucket}${p.path}"
         buckets.add(p.bucket)
         return Path.of(result)
