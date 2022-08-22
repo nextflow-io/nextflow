@@ -6,3 +6,4 @@ nf-azure@0.13.4
 nf-tower@1.5.1
 nf-ga4gh@1.0.3
 nf-codecommit@0.1.2
+nf-ignite@1.2.3
