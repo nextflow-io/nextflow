@@ -44,9 +44,7 @@ if [[ "$NXF_USRMAP" ]]; then
 # create a `nextflow` user with the provided ID 
 # then change the docker socker ownership to `nextflow` user 
 
-# addgroup docker
 groupadd docker
-# adduser -u $NXF_USRMAP -G docker -s /bin/bash -D nextflow
 useradd -u $NXF_USRMAP -G docker -s /bin/bash nextflow
 
 chown nextflow /var/run/docker.sock  
