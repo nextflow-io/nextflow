@@ -58,6 +58,26 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     protected boolean mountWorkDir = true
 
+    static ContainerBuilder create(String engine, String containerImage) {
+        /*
+         * create a builder instance given the container engine
+         */
+        if( engine == 'docker' )
+            return new DockerBuilder(containerImage)
+        if( engine == 'podman' )
+            return new PodmanBuilder(containerImage)
+        if( engine == 'singularity' )
+            return new SingularityBuilder(containerImage)
+        if( engine == 'udocker' )
+            return new UdockerBuilder(containerImage)
+        if( engine == 'shifter' )
+            return new ShifterBuilder(containerImage)
+        if( engine == 'charliecloud' )
+            return new CharliecloudBuilder(containerImage)
+        //
+        throw new IllegalArgumentException("Unknown container engine: $engine")
+    }
+
     V addRunOptions(String str) {
         runOptions.add(str)
         return (V)this

@@ -25,6 +25,7 @@ import java.util.concurrent.Future
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.container.ContainerBuilder
 import nextflow.exception.ProcessException
 import nextflow.executor.fusion.FusionScriptLauncher
 import nextflow.processor.LocalPollingMonitor
@@ -82,6 +83,11 @@ class LocalExecutor extends Executor {
             log.warn "Local executor only supports non-default file system if Fusion is enabled -- Check work directory: ${getWorkDir().toUriString()}"
         }
     }
+
+    @Override
+    boolean isContainerNative() {
+        return isFusionEnabled()
+    }
 }
 
 
@@ -96,6 +102,8 @@ class LocalTaskHandler extends TaskHandler {
 
     private final Path exitFile
 
+    private final Long wallTimeMillis
+
     private final Path wrapperFile
 
     private final Path outputFile
@@ -103,8 +111,6 @@ class LocalTaskHandler extends TaskHandler {
     private final Path errorFile
 
     private final Path logFile
-
-    private final Long wallTimeMillis
 
     private Process process
 
@@ -125,9 +131,9 @@ class LocalTaskHandler extends TaskHandler {
         super(task)
         // create the task handler
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
-        this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
+        this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         this.logFile = task.workDir.resolve(TaskRun.CMD_LOG)
         this.wallTimeMillis = task.config.getTime()?.toMillis()
         this.executor = executor
@@ -138,20 +144,14 @@ class LocalTaskHandler extends TaskHandler {
     @Override
     void submit() {
         // create the wrapper script
-        createTaskWrapper().build()
+        createTaskWrapper()
 
-        // create the launch command
-        final cmd = getSubmitCommand()
-        log.debug "Launch cmd line: ${cmd.join(' ')}"
+        // the cmd list to launch it
+        final builder = createLaunchProcessBuilder()
 
         session.getExecService().submit( {
-
             try {
-                // NOTE: make sure to redirect process output to a file otherwise
-                // execution can hang when stdout/stderr is bigger than 64k
-                ProcessBuilder builder = new ProcessBuilder().command(cmd)
-
-                // -- start the execution and notify the event to the monitor
+                // start the execution and notify the event to the monitor
                 process = builder.start()
                 result = process.waitFor()
             }
@@ -169,31 +169,73 @@ class LocalTaskHandler extends TaskHandler {
         status = TaskStatus.SUBMITTED
     }
 
-    protected BashWrapperBuilder createTaskWrapper() {
+    protected void createTaskWrapper() {
         final bean = new TaskBean(task)
-        return fusionEnabled
-                ? fusionLauncher = new FusionScriptLauncher(bean, null, 's3')
+        final wrapper = fusionEnabled
+                ? fusionLauncher = new FusionScriptLauncher(bean, null, task.workDir.scheme)
                 : new BashWrapperBuilder(bean)
+        //
+        wrapper.build()
     }
 
-    protected String classicSubmitCmd() {
+    protected ProcessBuilder classicProcessBuilder() {
+        final cmd = new ArrayList<String>(BashWrapperBuilder.BASH) << wrapperFile.getName()
+        log.debug "Launch cmd line: ${cmd.join(' ')}"
+        
+        // NOTE: make sure to redirect process output to a file otherwise
+        // execution can hang when stdout/stderr is bigger than 64k
         final workDir = task.workDir.toFile()
+        final logFile = new File(workDir, TaskRun.CMD_LOG)
 
-        "cd ${workDir} && ${BashWrapperBuilder.BASH.join(' ')} ${wrapperFile.getName()} 2>&1 > ${logFile.getName()}"
+        return new ProcessBuilder()
+                .redirectErrorStream(true)
+                .redirectOutput(logFile)
+                .directory(workDir)
+                .command(cmd)
     }
 
     protected String fusionSubmitCmd() {
-        final aws = "aws s3 cp --only-show-errors"
-        final wrapperFile = fusionLauncher.toContainerMount(this.wrapperFile)
-        final logFile = fusionLauncher.toContainerMount(this.logFile)
-        
-        "$aws s3:/${wrapperFile} - | ${BashWrapperBuilder.BASH.join(' ')} 2>&1 | $aws - s3:/${logFile}"
+        final logFile = fusionLauncher.toContainerMount(logFile)
+        final runFile = fusionLauncher.toContainerMount(wrapperFile)
+        final cmd = "trap \"{ ret=\$?; cp ${TaskRun.CMD_LOG} ${logFile}||true; exit \$ret; }\" EXIT; bash ${runFile} 2>&1 | tee ${TaskRun.CMD_LOG}"
+        return "sh -c '$cmd'"
     }
 
-    protected List<String> getSubmitCommand() {
-        final cmd = fusionEnabled ? fusionSubmitCmd() : classicSubmitCmd()
+    protected ProcessBuilder fusionProcessBuilder() {
+        final submit = fusionSubmitCmd()
+        final cmd = runWithContainer(task.getContainer(), submit)
+        log.debug "Launch cmd line: ${cmd.join(' ')}"
 
-        ["bash", "-c", "\'${cmd}\'".toString()]
+        return new ProcessBuilder()
+                .redirectErrorStream(true)
+                .command(cmd)
+    }
+
+    protected ProcessBuilder createLaunchProcessBuilder() {
+        return fusionEnabled
+                ? fusionProcessBuilder()
+                : classicProcessBuilder()
+    }
+
+    protected List<String> runWithContainer(String container, String runCmd) {
+        final containerConfig = session.getContainerConfig()
+        final engine = containerConfig.getEngine()
+        final containerBuilder = ContainerBuilder.create(engine, container)
+                .params(containerConfig)
+
+        //
+        final buckets = fusionLauncher.fusionBuckets().join(',')
+        containerBuilder.addEnv("NXF_FUSION_BUCKETS=$buckets")
+        
+        // add env variables
+        for( String env : containerConfig.getEnvWhitelist())
+            containerBuilder.addEnv(env)
+        // assemble the final command
+        final containerCmd = containerBuilder
+                .build()
+                .getRunCommand(runCmd)
+
+        return ['sh', '-c', containerCmd]
     }
 
     long elapsedTimeMillis() {
