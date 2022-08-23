@@ -220,7 +220,8 @@ class WaveClientTest extends Specification {
 
     def 'should create dockerfile content with custom config' () {
         given:
-        def session = Mock(Session) { getConfig() >> [wave:[build:[mamba:[from:'my-base:123', user:'my-user']]]]}
+        def CONDA_OPTS = [baseImage:'my-base:123', commands: ['USER my-user', 'RUN apt-get update -y && apt-get install -y procps']]
+        def session = Mock(Session) { getConfig() >> [wave:[build:[conda:CONDA_OPTS]]]}
         def RECIPE = 'bwa=0.7.15 salmon=1.1.1'
         when:
         def client = new WaveClient(session)
@@ -232,6 +233,7 @@ class WaveClientTest extends Specification {
                    bwa=0.7.15 salmon=1.1.1 \\
                    && micromamba clean -a -y
                 USER my-user
+                RUN apt-get update -y && apt-get install -y procps
                 '''.stripIndent()
     }
 
