@@ -734,7 +734,7 @@ class ConfigBuilder {
         }
 
         if( !hasContainerDirective(config.process) )
-            throw new AbortOperationException("You have requested to run with ${engine.capitalize()} but no image were specified")
+            throw new AbortOperationException("You have requested to run with ${engine.capitalize()} but no image was specified")
 
     }
 
