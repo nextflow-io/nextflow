@@ -23,11 +23,13 @@ import java.nio.file.Path
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.wave.plugin.ContainerConfig
 import io.seqera.wave.plugin.WaveClient
 import io.seqera.wave.plugin.util.BasicCliOpts
 import nextflow.cli.PluginAbstractExec
 import nextflow.container.DockerBuilder
 import nextflow.exception.AbortOperationException
+import nextflow.io.BucketParser
 /**
  * Implements Wave CLI tool
  *
@@ -50,7 +52,7 @@ class WaveCmd implements PluginAbstractExec {
                 runContainer(args)
                 break
             case 'pack':
-                packContainer(args)
+                println packContainer(args)
                 break
             default:
                 throw new AbortOperationException("Unknown wave command: $cmd")
@@ -69,9 +71,39 @@ class WaveCmd implements PluginAbstractExec {
             throw new AbortOperationException("Path target path does not exist: $root")
         if( !Files.isDirectory(root) )
             throw new AbortOperationException("Path target path is not a directory: $root")
-        // list the content of the dir
-        final result = packer.createContainerPack(root)
-        return JsonOutput.prettyPrint(JsonOutput.toJson(result))
+        // determine target location form CLI option
+        final location = cli.options.location
+        // pack the layer
+        final containerConfig = new ContainerConfig()
+        final layer = packer.createContainerPack(root, baseName(location))
+        containerConfig.appendLayer(layer)
+        // set the target location
+        if( location )
+            layer.location = location
+        // set entrypoint
+        if( cli.options.entrypoint )
+            containerConfig.entrypoint = [cli.options.entrypoint]
+        // set work dir
+        if( cli.options.workingDir )
+            containerConfig.workingDir = cli.options.workingDir
+        // set entrypoint
+        if( cli.options.cmd )
+            containerConfig.cmd = [cli.options.cmd]
+        // render final object
+        return JsonOutput.prettyPrint(JsonOutput.toJson(containerConfig))
+    }
+
+    static protected String baseName(String path) {
+        if( !path )
+            return null
+        def name = BucketParser.from(path).getPath().getName()
+        if( !name )
+            return null
+        return name
+                .replaceAll(/\.gz$/,'')
+                .replaceAll(/\.gzip$/,'')
+                .replaceAll(/\.tar$/,'')
+                .replaceAll(/\.json$/,'')
     }
 
     protected void getContainer(List<String> args) {

@@ -15,28 +15,33 @@
  *
  */
 
-package io.seqera.wave.plugin
+package nextflow.container.resolver
 
-import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
-import groovy.transform.ToString
+import spock.lang.Specification
 
 /**
- * Model a response for an augmented container
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@EqualsAndHashCode
-@ToString(includeNames = true, includePackage = false)
-@CompileStatic
-class SubmitContainerTokenResponse {
-    /**
-     * A unique authorization token assigned to this request
-     */
-    String containerToken
+class ContainerInfoTest extends Specification {
 
-    /**
-     * The fully qualified wave container name to be used
-     */
-    String targetImage
+    def 'should create container info' () {
+        when:
+        def info = new ContainerInfo('a','b','c')
+        then:
+        info.source == 'a'
+        info.target == 'b'
+        info.hashKey == 'c'
+    }
+
+    def 'should check truth' () {
+        expect:
+        new ContainerInfo('a')
+        new ContainerInfo(null,'b')
+        new ContainerInfo(null,null,'c')
+        new ContainerInfo('a','b','c')
+        and:
+        !ContainerInfo.EMPTY
+        !new ContainerInfo()
+    }
 }

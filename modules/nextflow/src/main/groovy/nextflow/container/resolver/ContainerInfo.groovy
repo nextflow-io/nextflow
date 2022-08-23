@@ -15,28 +15,25 @@
  *
  */
 
-package io.seqera.wave.plugin
+package nextflow.container.resolver
 
-import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
-import groovy.transform.ToString
+import groovy.transform.Canonical
 
 /**
- * Model a response for an augmented container
+ * Model a container resolver meta info
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@EqualsAndHashCode
-@ToString(includeNames = true, includePackage = false)
-@CompileStatic
-class SubmitContainerTokenResponse {
-    /**
-     * A unique authorization token assigned to this request
-     */
-    String containerToken
+@Canonical
+class ContainerInfo {
 
-    /**
-     * The fully qualified wave container name to be used
-     */
-    String targetImage
+    public static final ContainerInfo EMPTY = new ContainerInfo()
+
+    final String source
+    final String target
+    final String hashKey
+
+    boolean asBoolean() {
+        source || target || hashKey
+    }
 }

@@ -15,28 +15,23 @@
  *
  */
 
-package io.seqera.wave.plugin
-
-import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
-import groovy.transform.ToString
+package io.seqera.wave.plugin.config
 
 /**
- * Model a response for an augmented container
+ * Conda build options
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@EqualsAndHashCode
-@ToString(includeNames = true, includePackage = false)
-@CompileStatic
-class SubmitContainerTokenResponse {
-    /**
-     * A unique authorization token assigned to this request
-     */
-    String containerToken
+class CondaOpts {
 
-    /**
-     * The fully qualified wave container name to be used
-     */
-    String targetImage
+    final public String DEFAULT_BASE_IMAGE = 'mambaorg/micromamba:0.25.1'
+
+    final String baseImage
+    final List<String> commands
+
+    CondaOpts(Map opts) {
+        this.baseImage = opts.baseImage ?: DEFAULT_BASE_IMAGE
+        this.commands = opts.commands as List<String>
+    }
+
 }

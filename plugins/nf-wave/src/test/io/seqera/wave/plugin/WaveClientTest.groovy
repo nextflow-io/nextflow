@@ -210,11 +210,30 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaRecipeToDockerFile(RECIPE) == '''\
-                FROM mambaorg/micromamba:0.25.0
+                FROM mambaorg/micromamba:0.25.1
                 RUN \\
                    micromamba install -y -n base -c defaults -c conda-forge \\
                    bwa=0.7.15 salmon=1.1.1 \\
                    && micromamba clean -a -y
+                '''.stripIndent()
+    }
+
+    def 'should create dockerfile content with custom config' () {
+        given:
+        def CONDA_OPTS = [baseImage:'my-base:123', commands: ['USER my-user', 'RUN apt-get update -y && apt-get install -y procps']]
+        def session = Mock(Session) { getConfig() >> [wave:[build:[conda:CONDA_OPTS]]]}
+        def RECIPE = 'bwa=0.7.15 salmon=1.1.1'
+        when:
+        def client = new WaveClient(session)
+        then:
+        client.condaRecipeToDockerFile(RECIPE) == '''\
+                FROM my-base:123
+                RUN \\
+                   micromamba install -y -n base -c defaults -c conda-forge \\
+                   bwa=0.7.15 salmon=1.1.1 \\
+                   && micromamba clean -a -y
+                USER my-user
+                RUN apt-get update -y && apt-get install -y procps
                 '''.stripIndent()
     }
 
@@ -225,7 +244,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaFileToDockerFile()== '''\
-                FROM mambaorg/micromamba:0.25.0
+                FROM mambaorg/micromamba:0.25.1
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                     micromamba clean -a -y
@@ -280,7 +299,7 @@ class WaveClientTest extends Specification {
         def session = Mock(Session) { getConfig() >> [:]}
         def task = Mock(TaskRun) { getConfig() >> [:]; getModuleBundle() >> BUNDLE }
         and:
-        def client = Spy(new WaveClient(session))
+        WaveClient client = Spy(WaveClient, constructorArgs:[session])
 
         when:
         def assets = client.resolveAssets(task, IMAGE)
@@ -334,7 +353,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:0.25.0
+                    FROM mambaorg/micromamba:0.25.1
                     RUN \\
                        micromamba install -y -n base -c defaults -c conda-forge \\
                        salmon=1.2.3 \\
@@ -361,7 +380,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:0.25.0
+                    FROM mambaorg/micromamba:0.25.1
                     COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                     RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                         micromamba clean -a -y
@@ -377,6 +396,63 @@ class WaveClientTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should resolve conflicts' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def result = client.resolveConflicts([:], [])
+        then:
+        result == [:]
+
+        when:
+        result = client.resolveConflicts([dockerfile:'x',conda:'y',container:'z'], ['conda'])
+        then:
+        result == [conda:'y']
+
+        when:
+        result = client.resolveConflicts([dockerfile:'x',conda:'y',container:'z'], ['conda','dockerfile'])
+        then:
+        result == [conda:'y']
+
+        when:
+        result = client.resolveConflicts([dockerfile:'x',container:'z'], ['conda','dockerfile'])
+        then:
+        result == [dockerfile:'x']
+    }
+
+    def 'should check conflicts' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        client.checkConflicts([:], 'foo')
+        then:
+        noExceptionThrown()
+
+        when:
+        client.checkConflicts([conda:'this', container:'that'], 'foo')
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both 'container' and 'conda' directives that conflicts each other"
+
+        when:
+        client.checkConflicts([conda:'this', dockerfile:'that'], 'foo')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both a 'conda' directive and a module bundle dockerfile that conflicts each other"
+
+        when:
+        client.checkConflicts([container:'this', dockerfile:'that'], 'foo')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both a 'container' directive and a module bundle dockerfile that conflicts each other"
+
+    }
 
     // launch web server
     @Shared
@@ -429,4 +505,5 @@ class WaveClientTest extends Specification {
           fusion: [enabled: true, containerConfigUrl: 'http://localhost:9901/bar.json']]\
                                                     | CONFIG_RESP.get('combined')
     }
+
 }
