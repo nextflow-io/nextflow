@@ -96,4 +96,33 @@ class WaveConfigTest extends Specification {
         opts.mambaOpts().user == 'hola'
         
     }
+
+    def 'should set strategy' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.strategy() == []
+
+        when:
+        opts = new WaveConfig([strategy:STRATEGY])
+        then:
+        opts.strategy() == EXPECTED
+
+        where:
+        STRATEGY                | EXPECTED
+        null                    | []
+        'dockerfile'            | ['dockerfile']
+        'conda,container'       | ['conda','container']
+        'conda , container'     | ['conda','container']
+        ['conda','container']   | ['conda','container']
+        [' conda',' container'] | ['conda','container']
+    }
+
+    def 'should fail to set strategy' () {
+        when:
+        new WaveConfig([strategy:['foo']])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Invalid value for 'wave.strategy' configuration attribute - offending value: foo"
+    }
 }
