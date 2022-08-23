@@ -1,0 +1,50 @@
+flowchart LR
+    %%
+    %% nextflow.cloud.aws.batch.AwsBatchTaskHandler
+    %%
+    checkIfRunning --> describeJob
+    describeJob --> jobIdsToString
+
+    checkIfCompleted --> describeJob
+    checkIfCompleted --> errReason
+
+    kill --> terminateJob
+    terminateJob --> bypassProxy
+
+    submit --> buildTaskWrapper
+    submit --> newSubmitRequest
+    submit --> bypassProxy
+    submit --> submit0
+    
+    buildTaskWrapper --> createTaskWrapper
+    
+    newSubmitRequest --> normalizeJobName
+    newSubmitRequest --> getJobQueue
+    newSubmitRequest --> getJobDefinition
+    newSubmitRequest --> getSubmitCommand
+    newSubmitRequest --> createGpuResource
+    newSubmitRequest --> getEnvironmentVars
+
+    getJobDefinition --> resolveJobDefinition
+    resolveJobDefinition --> resolveJobDefinition0
+    resolveJobDefinition0 --> makeJobDefRequest
+    resolveJobDefinition0 --> findJobDef
+    resolveJobDefinition0 --> createJobDef
+
+    makeJobDefRequest --> configJobDefRequest
+    makeJobDefRequest --> computeUniqueToken
+    configJobDefRequest --> normalizeJobDefinitionName
+    configJobDefRequest --> createContainerProperties
+    configJobDefRequest --> getLogConfiguration
+    configJobDefRequest --> addVolumeMountsToContainer
+
+    findJobDef --> bypassProxy
+    findJobDef --> describeJobDefinitions0
+
+    createJobDef --> bypassProxy
+    createJobDef --> createJobDef0
+
+    getSubmitCommand --> classicSubmitCmd
+    getSubmitCommand --> fusionSubmitCmd
+
+    getTraceRecord --> getMachineInfo

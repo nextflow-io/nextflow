@@ -1,0 +1,79 @@
+flowchart LR
+    %%
+    %% nextflow.processor.TaskProcessor
+    %%
+    run --> terminateProcess
+    run --> createOperator
+
+    terminateProcess --> sendPoisonPill
+
+    createOperator --> start
+    start --> invokeTask
+
+    invokeTask --> createTaskRun
+    invokeTask --> validateInputSets
+    invokeTask --> makeTaskContextStage1
+    invokeTask --> makeTaskContextStage2
+    invokeTask --> checkWhenGuard
+    invokeTask --> checkStoredOutput
+    invokeTask --> createTaskHashKey
+    invokeTask --> checkCachedOrLaunchTask
+
+    makeTaskContextStage2 --> normalizeInputToFiles
+    makeTaskContextStage2 --> expandWildcards
+    makeTaskContextStage2 --> singleItemOrList
+
+    normalizeInputToFiles --> normalizeToPath
+    normalizeInputToFiles --> normalizeInputToFile
+
+    expandWildcards --> expandWildcards0
+    expandWildcards0 --> replaceStarWildcards
+    expandWildcards0 --> replaceQuestionMarkWildcards
+
+    singleItemOrList --> makePath
+
+    checkStoredOutput --> collectOutputs
+    checkStoredOutput --> finalizeTask0
+
+    createTaskHashKey --> getTaskGlobalVars
+    createTaskHashKey --> getTaskBinEntries
+    createTaskHashKey --> computeHash
+    createTaskHashKey --> traceInputsHashes
+
+    getTaskGlobalVars --> getTaskDirectiveVars
+
+    checkCachedOrLaunchTask --> checkCachedOutput
+    checkCachedOrLaunchTask --> submitTask
+
+    checkCachedOutput --> collectOutputs
+    checkCachedOutput --> finalizeTask0
+
+    submitTask --> makeTaskContextStage3
+
+    finalizeTask --> collectOutputs
+    finalizeTask --> resumeOrDie
+    finalizeTask --> finalizeTask0
+
+    collectOutputs --> collectStdOut
+    collectOutputs --> collectOutFiles
+    collectOutputs --> collectOutValues
+    collectOutputs --> collectOutEnvParam
+
+    collectOutFiles --> fetchResultFiles
+    collectOutFiles --> filterByRemovingStagedInputs
+    fetchResultFiles --> visitOptions
+    collectOutEnvParam --> collectOutEnvMap
+
+    resumeOrDie --> checkCachedOrLaunchTask
+    resumeOrDie --> checkErrorStrategy
+    resumeOrDie --> formatTaskError
+    resumeOrDie --> formatGuardError
+    resumeOrDie --> formatErrorCause
+
+    formatTaskError --> getRndTip
+
+    finalizeTask0 --> bindOutputs
+    finalizeTask0 --> publishOutputs
+
+    bindOutputs --> bindOutParam
+    publishOutputs --> publishOutputs0
