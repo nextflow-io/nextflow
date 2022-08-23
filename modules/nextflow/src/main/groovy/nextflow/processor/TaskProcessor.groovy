@@ -1981,7 +1981,7 @@ class TaskProcessor {
         List keys = [ session.uniqueId, name, task.source ]
 
         if( task.isContainerEnabled() )
-            keys << task.container
+            keys << task.getContainerFingerprint()
 
         // add all the input name-value pairs to the key generator
         for( Map.Entry<InParam,Object> it : task.inputs ) {

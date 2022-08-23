@@ -24,6 +24,7 @@ import ch.grengine.Grengine
 import nextflow.Session
 import nextflow.ast.TaskCmdXform
 import nextflow.container.ContainerConfig
+import nextflow.container.resolver.ContainerInfo
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
@@ -354,6 +355,19 @@ class TaskRunTest extends Specification {
         false             | null
         'debian:latest'   | 'debian:latest'
 
+    }
+
+    def 'should return container fingerprint' () {
+        given:
+        def HASH = '12345'
+        def task = Spy(TaskRun)
+
+        when:
+        def result = task.getContainerFingerprint()
+        then:
+        task.getContainerInfo0() >> new ContainerInfo('a','b',HASH)
+        and:
+        result == '12345'
     }
 
 
