@@ -22,6 +22,7 @@ import java.nio.file.Path
 import java.util.concurrent.Callable
 import java.util.concurrent.Future
 
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -100,6 +101,21 @@ class LocalExecutor extends Executor {
 @Slf4j
 class LocalTaskHandler extends TaskHandler {
 
+    @Canonical
+    static class TaskResult {
+        Integer exitStatus
+        String logs
+        Throwable error
+        TaskResult(int exitStatus, String logs) {
+            this.logs = logs
+            this.exitStatus = exitStatus
+        }
+        TaskResult(Throwable error) {
+            this.error = error
+            this.logs = this.error.message
+        }
+    }
+
     private final Path exitFile
 
     private final Long wallTimeMillis
@@ -124,7 +140,7 @@ class LocalTaskHandler extends TaskHandler {
 
     private FusionScriptLauncher fusionLauncher
 
-    private volatile result
+    private volatile TaskResult result
 
 
     LocalTaskHandler( TaskRun task, LocalExecutor executor  ) {
@@ -153,11 +169,11 @@ class LocalTaskHandler extends TaskHandler {
             try {
                 // start the execution and notify the event to the monitor
                 process = builder.start()
-                result = process.waitFor()
+                final status = process.waitFor()
+                result = new TaskResult(status, process.inputStream.text)
             }
             catch( Throwable ex ) {
-                log.trace("Failed to execute command: ${cmd.join(' ')}", ex)
-                result = ex
+                result = new TaskResult(ex)
             }
             finally {
                 executor.getTaskMonitor().signal()
@@ -222,7 +238,7 @@ class LocalTaskHandler extends TaskHandler {
         final engine = containerConfig.getEngine()
         final containerBuilder = ContainerBuilder.create(engine, container)
                 .params(containerConfig)
-
+                .params(privileged: true)
         //
         final buckets = fusionLauncher.fusionBuckets().join(',')
         containerBuilder.addEnv("NXF_FUSION_BUCKETS=$buckets")
@@ -265,10 +281,10 @@ class LocalTaskHandler extends TaskHandler {
         if( !isRunning() ) { return false }
 
         if( result != null ) {
-            task.exitStatus = result instanceof Integer ? result : Integer.MAX_VALUE
-            task.error = result instanceof Throwable ? result : null
+            task.exitStatus = result.exitStatus!=null ? result.exitStatus : Integer.MAX_VALUE
+            task.error = result.error
             task.stdout = outputFile
-            task.stderr = errorFile
+            task.stderr = result.exitStatus && result.logs ? result.logs : errorFile
             status = TaskStatus.COMPLETED
             destroy()
             return true

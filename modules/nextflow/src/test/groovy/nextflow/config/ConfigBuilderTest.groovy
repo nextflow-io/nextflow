@@ -25,6 +25,13 @@ import nextflow.cli.CmdConfig
 import nextflow.cli.CmdNode
 import nextflow.cli.CmdRun
 import nextflow.cli.Launcher
+import nextflow.container.CharliecloudBuilder
+import nextflow.container.ContainerBuilder
+import nextflow.container.DockerBuilder
+import nextflow.container.PodmanBuilder
+import nextflow.container.ShifterBuilder
+import nextflow.container.SingularityBuilder
+import nextflow.container.UdockerBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.trace.WebLogObserver
@@ -2229,5 +2236,37 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    @Unroll
+    def 'should create builder for given engine' () {
+        given:
+        def IMAGE = 'foo:latest'
+
+        when:
+        def builder = ContainerBuilder.create(ENGINE,IMAGE)
+        then:
+        builder.class == CLAZZ
+        builder.getImage() == IMAGE
+
+        where:
+        ENGINE              | CLAZZ
+        'docker'            | DockerBuilder
+        'podman'            | PodmanBuilder
+        'singularity'       | SingularityBuilder
+        'shifter'           | ShifterBuilder
+        'charliecloud'      | CharliecloudBuilder
+        'udocker'           | UdockerBuilder
+
+    }
+
+    def 'should throw illegal arg' () {
+
+        when:
+        ContainerBuilder.create('foo','image:any')
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == 'Unknown container engine: foo'
+        
+    }
 }
 
