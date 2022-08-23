@@ -116,6 +116,9 @@ class WaveClient {
         if( !assets.containerImage && !assets.dockerFileContent )
             throw new IllegalArgumentException("Wave container request requires at least a image or container file to build")
 
+        if( assets.containerImage && assets.dockerFileContent )
+            throw new IllegalArgumentException("Wave container image and container file cannot be specified in the same request")
+
         return new SubmitContainerTokenRequest(
                 containerImage: assets.containerImage,
                 containerConfig: containerConfig,
@@ -201,43 +204,78 @@ class WaveClient {
         }
     }
 
+    protected void checkConflicts(Map<String,String> attrs, String name) {
+        if( attrs.dockerfile && attrs.conda ) {
+            throw new IllegalArgumentException("Process '${name}' declares both a 'conda' directive and a module bundle dockerfile that conflicts each other")
+        }
+        if( attrs.container && attrs.dockerfile ) {
+            throw new IllegalArgumentException("Process '${name}' declares both a 'container' directive and a module bundle dockerfile that conflicts each other")
+        }
+        if( attrs.container && attrs.conda ) {
+            throw new IllegalArgumentException("Process '${name}' declares both 'container' and 'conda' directives that conflicts each other")
+        }
+    }
+
+    Map<String,String> resolveConflicts(Map<String,String> attrs, List<String> strategy) {
+        final result = new HashMap<String,String>()
+        for( String it : strategy ) {
+            if( attrs.get(it) ) {
+                return [(it): attrs.get(it)]
+            }
+        }
+        return result
+    }
+
     @Memoized
     WaveAssets resolveAssets(TaskRun task, String containerImage) {
+        // get the bundle
         final bundle = task.getModuleBundle()
-        // read the dockerfile defined in the module bundle
-        String dockerFileContent = null
+        // compose the request attributes
+        def attrs = new HashMap<String,String>()
+        attrs.container = containerImage
+        attrs.conda = task.config.conda as String
         if( bundle!=null && bundle.dockerfile ) {
-            dockerFileContent = bundle.dockerfile.text
+            attrs.dockerfile = bundle.dockerfile.text
         }
-        // compute docker file + conda content
-        final condaRecipe = task.config.conda as String
-        if( dockerFileContent && condaRecipe ) {
-            throw new IllegalArgumentException("Process '${task.lazyName()}' declares both a 'conda' directive and a module bundle dockerfile that conflicts each other")
-        }
+
+        // validate request attributes
+        if( config().strategy() )
+            attrs = resolveConflicts(attrs, config().strategy())
+        else
+            checkConflicts(attrs, task.lazyName())
+
+        //  resolve the wave assets
+        return resolveAssets0(attrs, bundle)
+    }
+
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ModuleBundle bundle) {
+
+        String dockerScript = attrs.dockerfile
+        final containerImage = attrs.container
+
         Path condaFile = null
-        if( condaRecipe ) {
+        if( attrs.conda ) {
+            if( dockerScript )
+                throw new IllegalArgumentException("Unexpected conda and dockerfile conflict")
+
             // map the recipe to a dockerfile
-            if( isCondaFile(condaRecipe) ) {
-                condaFile = Path.of(condaRecipe)
-                dockerFileContent = condaFileToDockerFile()
+            if( isCondaFile(attrs.conda) ) {
+                condaFile = Path.of(attrs.conda)
+                dockerScript = condaFileToDockerFile()
             }
             else {
-                dockerFileContent = condaRecipeToDockerFile(condaRecipe)
+                dockerScript = condaRecipeToDockerFile(attrs.conda)
             }
         }
 
-        if( dockerFileContent && containerImage ) {
-            throw new IllegalArgumentException("Process '${task.lazyName()}' declares both a 'container' directive and a module bundle dockerfile that conflicts each other")
-        }
-
-        if( !dockerFileContent && !containerImage ) {
+        if( !dockerScript && !containerImage ) {
             // nothing to do
             return null
         }
 
         // read the container config and go ahead
         final containerConfig = this.resolveContainerConfig()
-        return new WaveAssets(containerImage, bundle, containerConfig, dockerFileContent, condaFile)
+        return new WaveAssets(containerImage, bundle, containerConfig, dockerScript, condaFile)
     }
 
     ContainerInfo fetchContainerImage(WaveAssets assets) {

@@ -33,6 +33,7 @@ class WaveConfig {
     final private List<URL> containerConfigUrl
     final private Duration tokensCacheMaxDuration
     final private MambaOpts mambaOpts
+    final private List<String> strategy
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
@@ -42,6 +43,7 @@ class WaveConfig {
         if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
         this.mambaOpts = opts.navigate('build.mamba', Collections.emptyMap()) as MambaOpts
+        this.strategy = parseStrategy(opts.strategy)
     }
 
     Boolean enabled() { this.enabled }
@@ -49,6 +51,25 @@ class WaveConfig {
     String endpoint() { this.endpoint }
 
     MambaOpts mambaOpts() { this.mambaOpts }
+
+    List<String> strategy() { this.strategy }
+
+    protected List<String> parseStrategy(value) {
+        if( !value )
+            return Collections.<String>emptyList()
+        List<String> result
+        if( value instanceof CharSequence )
+            result = value.tokenize(',') .collect(it -> it.toString().trim())
+        else if( value instanceof List )
+            result = value.collect(it -> it.toString().trim())
+        else
+            throw new IllegalArgumentException("Invalid value for 'wave.strategy' configuration attribute - offending value: $value")
+        for( String it : result ) {
+            if( it !in ['conda','dockerfile','container'])
+                throw new IllegalArgumentException("Invalid value for 'wave.strategy' configuration attribute - offending value: $it")
+        }
+        return result
+    }
 
     protected List<URL> parseConfig(Map opts, Map<String,String> env) {
         List<String> result = new ArrayList<>(10)

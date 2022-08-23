@@ -394,6 +394,63 @@ class WaveClientTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should resolve conflicts' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def result = client.resolveConflicts([:], [])
+        then:
+        result == [:]
+
+        when:
+        result = client.resolveConflicts([dockerfile:'x',conda:'y',container:'z'], ['conda'])
+        then:
+        result == [conda:'y']
+
+        when:
+        result = client.resolveConflicts([dockerfile:'x',conda:'y',container:'z'], ['conda','dockerfile'])
+        then:
+        result == [conda:'y']
+
+        when:
+        result = client.resolveConflicts([dockerfile:'x',container:'z'], ['conda','dockerfile'])
+        then:
+        result == [dockerfile:'x']
+    }
+
+    def 'should check conflicts' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        client.checkConflicts([:], 'foo')
+        then:
+        noExceptionThrown()
+
+        when:
+        client.checkConflicts([conda:'this', container:'that'], 'foo')
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both 'container' and 'conda' directives that conflicts each other"
+
+        when:
+        client.checkConflicts([conda:'this', dockerfile:'that'], 'foo')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both a 'conda' directive and a module bundle dockerfile that conflicts each other"
+
+        when:
+        client.checkConflicts([container:'this', dockerfile:'that'], 'foo')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both a 'container' directive and a module bundle dockerfile that conflicts each other"
+
+    }
 
     // launch web server
     @Shared
@@ -446,4 +503,5 @@ class WaveClientTest extends Specification {
           fusion: [enabled: true, containerConfigUrl: 'http://localhost:9901/bar.json']]\
                                                     | CONFIG_RESP.get('combined')
     }
+
 }
