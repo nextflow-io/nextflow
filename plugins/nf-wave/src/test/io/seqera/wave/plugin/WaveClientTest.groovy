@@ -297,7 +297,7 @@ class WaveClientTest extends Specification {
         def session = Mock(Session) { getConfig() >> [:]}
         def task = Mock(TaskRun) { getConfig() >> [:]; getModuleBundle() >> BUNDLE }
         and:
-        def client = Spy(new WaveClient(session))
+        WaveClient client = Spy(WaveClient, constructorArgs:[session])
 
         when:
         def assets = client.resolveAssets(task, IMAGE)

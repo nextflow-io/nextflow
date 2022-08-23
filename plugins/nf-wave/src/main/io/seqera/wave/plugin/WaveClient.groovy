@@ -36,6 +36,7 @@ import groovy.transform.Memoized
 import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.packer.Packer
 import nextflow.Session
+import nextflow.container.resolver.ContainerInfo
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ModuleBundle
 import org.slf4j.Logger
@@ -200,6 +201,7 @@ class WaveClient {
         }
     }
 
+    @Memoized
     WaveAssets resolveAssets(TaskRun task, String containerImage) {
         final bundle = task.getModuleBundle()
         // read the dockerfile defined in the module bundle
@@ -234,16 +236,18 @@ class WaveClient {
         }
 
         // read the container config and go ahead
-        final containerConfig = resolveContainerConfig()
+        final containerConfig = this.resolveContainerConfig()
         return new WaveAssets(containerImage, bundle, containerConfig, dockerFileContent, condaFile)
     }
 
-    String fetchContainerImage(WaveAssets assets) {
-        // go ahead
+    ContainerInfo fetchContainerImage(WaveAssets assets) {
         try {
+            // compute a unique hash for this request assets
             final key = assets.hashKey()
-            final result = cache.get(key, { sendRequest(assets) } as Callable )
-            return result.targetImage
+            // get from cache or submit a new request
+            final response = cache.get(key, { sendRequest(assets) } as Callable )
+            // assemble the container info response
+            return new ContainerInfo(assets.containerImage, response.targetImage, key)
         }
         catch ( UncheckedExecutionException e ) {
             throw e.cause
