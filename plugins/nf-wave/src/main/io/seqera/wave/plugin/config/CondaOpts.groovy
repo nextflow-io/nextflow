@@ -18,19 +18,20 @@
 package io.seqera.wave.plugin.config
 
 /**
+ * Conda build options
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class MambaOpts {
+class CondaOpts {
 
-    final public String DEFAULT_FROM = 'mambaorg/micromamba:0.25.1'
+    final public String DEFAULT_BASE_IMAGE = 'mambaorg/micromamba:0.25.1'
 
-    final String from
-    final String user
+    final String baseImage
+    final List<String> commands
 
-    MambaOpts(Map opts) {
-        this.from = opts.from ?: DEFAULT_FROM
-        this.user = opts.user
+    CondaOpts(Map opts) {
+        this.baseImage = opts.baseImage ?: DEFAULT_BASE_IMAGE
+        this.commands = opts.commands as List<String>
     }
 
 }

@@ -294,31 +294,34 @@ class WaveClient {
 
     protected String condaFileToDockerFile() {
         def result = """\
-        FROM ${config.mambaOpts().from}
+        FROM ${config.condaOpts().baseImage}
         COPY --chown=\$MAMBA_USER:\$MAMBA_USER conda.yml /tmp/conda.yml
         RUN micromamba install -y -n base -f /tmp/conda.yml && \\
             micromamba clean -a -y
         """.stripIndent()
 
-        return addUser(result)
+        return addCommands(result)
     }
 
-    protected String addUser(String result) {
-        if( config.mambaOpts().user )
-            result += "USER ${config.mambaOpts().user}\n"
+    protected String addCommands(String result) {
+        if( !config.condaOpts().commands )
+            return result
+        for( String cmd : config.condaOpts().commands ) {
+            result += cmd + "\n"
+        }
         return result
     }
 
     protected String condaRecipeToDockerFile(String recipe) {
         def result = """\
-        FROM ${config.mambaOpts().from}
+        FROM ${config.condaOpts().baseImage}
         RUN \\
            micromamba install -y -n base -c defaults -c conda-forge \\
            $recipe \\
            && micromamba clean -a -y
         """.stripIndent()
 
-        return addUser(result)
+        return addCommands(result)
     }
 
     protected boolean isCondaFile(String value) {

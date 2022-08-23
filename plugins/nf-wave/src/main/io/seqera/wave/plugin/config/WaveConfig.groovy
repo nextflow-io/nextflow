@@ -32,7 +32,7 @@ class WaveConfig {
     final private String endpoint
     final private List<URL> containerConfigUrl
     final private Duration tokensCacheMaxDuration
-    final private MambaOpts mambaOpts
+    final private CondaOpts condaOpts
     final private List<String> strategy
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
@@ -42,7 +42,7 @@ class WaveConfig {
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '15m') as Duration
         if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
-        this.mambaOpts = opts.navigate('build.mamba', Collections.emptyMap()) as MambaOpts
+        this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
         this.strategy = parseStrategy(opts.strategy)
     }
 
@@ -50,7 +50,7 @@ class WaveConfig {
 
     String endpoint() { this.endpoint }
 
-    MambaOpts mambaOpts() { this.mambaOpts }
+    CondaOpts condaOpts() { this.condaOpts }
 
     List<String> strategy() { this.strategy }
 
