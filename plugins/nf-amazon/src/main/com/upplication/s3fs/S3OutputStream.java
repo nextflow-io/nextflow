@@ -29,11 +29,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.Phaser;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonClientException;
@@ -158,6 +154,8 @@ public final class S3OutputStream extends OutputStream {
     private List<Tag> tags;
 
     private AtomicInteger bufferCounter = new AtomicInteger();
+
+    static private boolean closeExecutorManually = false;
 
     /**
      * Creates a new {@code S3OutputStream} that writes data directly into the S3 object with the given {@code objectId}.
@@ -387,6 +385,11 @@ public final class S3OutputStream extends OutputStream {
 
             // -- complete upload process
             completeMultipartUpload();
+        }
+
+        // If session was not ready at init it will not execute the callback to close executor, so close manually
+        if( closeExecutorManually ) {
+            shutdownExecutor(true);
         }
 
         closed = true;
@@ -634,11 +637,13 @@ public final class S3OutputStream extends OutputStream {
             log.trace("Created singleton upload executor -- max-treads: {}", maxThreads);
             // register shutdown hook
             Session sess = (Session) Global.getSession();
-            if( sess != null ) {
+            // if shutdown session is in progress we can't attach any listener so let executor finish the task
+            if( sess != null && !sess.isShutdownInitiated() ) {
                 sess.onShutdown(() -> shutdownExecutor(sess.isAborted()) );
             }
             else {
-                log.warn("Session not available -- S3 uploader may not shutdown properly");
+                log.warn("Session not available or shutdown is in progress -- S3 uploader may not shutdown properly");
+                closeExecutorManually = true;
             }
         }
         return executorSingleton;
@@ -648,6 +653,9 @@ public final class S3OutputStream extends OutputStream {
      * Shutdown the executor and clear the singleton
      */
     static void shutdownExecutor(boolean hard) {
+        if( executorSingleton == null){
+            return;
+        }
         if( hard ) {
             executorSingleton.shutdownNow();
         }
@@ -658,8 +666,8 @@ public final class S3OutputStream extends OutputStream {
             final String exitMsg = "[AWS S3] Exiting before stream uploader thread pool complete -- Some files maybe lost";
             ThreadPoolHelper.await(executorSingleton, Duration.of("1h") ,waitMsg, exitMsg);
             log.trace("Uploader shutdown completed");
-            executorSingleton = null;
         }
+        executorSingleton = null;
     }
 
 }

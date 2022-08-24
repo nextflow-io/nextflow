@@ -1156,4 +1156,21 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         local?.deleteDir()
         deleteBucket(bucketName)
     }
+
+    def 'should close executor after upload when no session' () {
+        given:
+        def bucketName = createBucket()
+        and:
+        final path = Paths.get(new URI("s3:///$bucketName/file.txt"))
+
+        when:
+        def writer = Files.newBufferedWriter(path, Charset.forName('UTF-8'))
+        (0..(11*1024)).each { writer.write(it) }
+        writer.close()
+        then:
+        existsPath(path)
+
+        cleanup:
+        deleteBucket(bucketName)
+    }
 }

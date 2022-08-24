@@ -631,7 +631,10 @@ public class AmazonS3Client {
 		return getObjectMetadata(bucketName,key).getSSEAwsKmsKeyId();
 	}
 
-	protected void showdownTransferPool(boolean hard) {
+	protected void shutdownTransferPool(boolean hard) {
+		if( transferPool == null){
+			return;
+		}
 		log.debug("Initiating transfer manager shutdown (hard={})", hard);
 		if( hard ) {
 			transferPool.shutdownNow();
@@ -643,20 +646,21 @@ public class AmazonS3Client {
 			final String exitMsg = "[AWS S3] Exiting before FileTransfer thread pool complete -- Some files maybe lost";
 			ThreadPoolHelper.await(transferPool, Duration.of("1h"), waitMsg, exitMsg);
 		}
+		transferPool=null;
 	}
 
 	protected void registerShutdownCallback() {
 		// add a shutdown hook
 		final Session sess = (Session) Global.getSession();
-		if( sess != null ) {
-			sess.onShutdown( () -> showdownTransferPool(sess.isAborted()) );
+		if( sess != null && !sess.isShutdownInitiated()) {
+			sess.onShutdown( () -> shutdownTransferPool(sess.isAborted()) );
 		}
 		else {
 			log.debug("Session not available -- registering shutdown hook");
 			Runtime.getRuntime().addShutdownHook(new Thread() {
 				@Override
 				public void run() {
-					showdownTransferPool(false);
+					shutdownTransferPool(false);
 				}
 			});
 		}

@@ -686,6 +686,10 @@ class Session implements ISession {
         }
     }
 
+    final boolean isShutdownInitiated(){
+        shutdownInitiated
+    }
+
     final protected void shutdown0() {
         log.trace "Shutdown: $shutdownCallbacks"
         shutdownInitiated = true
