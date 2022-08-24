@@ -76,7 +76,7 @@ class IntoOp {
         if( !names )
             throw new IllegalArgumentException("Missing target channel names in `into` operator")
         if( names.size() == 1 )
-            log.warn("The `into` operator should be used to connect two or more target channels -- consider to replace it with `.set { ${names[0]} }`")
+            log.warn("The `into` operator should be used to connect two or more target channels -- consider replacing it with `.set { ${names[0]} }`")
 
         List<DataflowWriteChannel> targets = []
         names.each { identifier ->

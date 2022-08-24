@@ -101,7 +101,7 @@ class SplitOp {
 
         // -- validate options
         if( params.containsKey('autoClose') )
-            throw new IllegalArgumentException('Parameter `autoClose` do not supported')
+            throw new IllegalArgumentException('Parameter `autoClose` is not supported')
         // turn off channel auto-close
         params.autoClose = false
 

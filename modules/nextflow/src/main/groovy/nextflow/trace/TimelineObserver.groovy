@@ -81,13 +81,13 @@ class TimelineObserver implements TraceObserver {
      */
     @Override
     void onFlowComplete() {
-        log.debug "Flow completing -- rendering html timeline"
+        log.debug "Workflow completed -- rendering execution timeline"
         endMillis = System.currentTimeMillis()
         try {
             renderHtml()
         }
         catch (Exception e) {
-            log.warn "Failed to render execution report -- see the log file for details", e
+            log.warn "Failed to render execution timeline -- see the log file for details", e
         }
     }
 

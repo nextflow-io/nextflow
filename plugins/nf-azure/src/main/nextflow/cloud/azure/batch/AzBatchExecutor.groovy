@@ -68,7 +68,7 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
          */
         if( !(workDir instanceof AzPath) ) {
             session.abort()
-            throw new AbortOperationException("When using `$name` executor an Azure bucket must be provided as working directory either using -bucket-dir or -work-dir command line option")
+            throw new AbortOperationException("When using `$name` executor an Azure bucket must be provided as working directory using either the `-bucket-dir` or `-work-dir` command line option")
         }
     }
 

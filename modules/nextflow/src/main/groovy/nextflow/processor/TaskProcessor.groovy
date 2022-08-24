@@ -772,7 +772,7 @@ class TaskProcessor {
                 if( resumeDir != workDir )
                     exists = workDir.exists()
                 if( !exists && !workDir.mkdirs() )
-                    throw new IOException("Unable to create folder=$workDir -- check file system permission")
+                    throw new IOException("Unable to create directory=$workDir -- check file system permissions")
             }
             finally {
                 lock.release()
@@ -1561,7 +1561,7 @@ class TaskProcessor {
             FileHelper.visitFiles(opts, workDir, namePattern) { Path it -> files.add(it) }
         }
         catch( NoSuchFileException e ) {
-            throw new MissingFileException("Cannot access folder: '$workDir'", e)
+            throw new MissingFileException("Cannot access directory: '$workDir'", e)
         }
 
         return files.sort()
@@ -2029,7 +2029,7 @@ class TaskProcessor {
             return CacheHelper.hasher(keys, mode).hash()
         }
         catch (Throwable e) {
-            final msg = "Oops.. something wrong happened while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
+            final msg = "Oops.. something went wrong while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
             throw new UnexpectedException(msg,e)
         }
     }

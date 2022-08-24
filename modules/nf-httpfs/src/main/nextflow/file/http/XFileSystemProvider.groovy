@@ -423,7 +423,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     @Override
     Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-        throw new UnsupportedOperationException("Read file attributes no supported by ${getScheme().toUpperCase()} file system provider")
+        throw new UnsupportedOperationException("Read file attributes not supported by ${getScheme().toUpperCase()} file system provider")
     }
 
     @Override

@@ -202,7 +202,7 @@ class AwsBatchHelper {
     String getTaskLogStream(String jobId) {
         final streamId = getLogStreamId(jobId)
         if( !streamId ) {
-            log.debug "Unable to find cloudwatch log stream for batch job id=$jobId"
+            log.debug "Unable to find CloudWatch log stream for batch job id=$jobId"
             return null
         }
 

@@ -341,7 +341,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
     private RateLimiter newRateLimiter( String X, String Y, String limit ) {
         if( !X.isInteger() )
-            throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- It must be provide using the following format `num request / duration` eg. 10/1s")
+            throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- It must be provided using the following format `num request / duration` eg. 10/1s")
 
         final num = Integer.parseInt(X)
         final duration = Y.isInteger() ? Duration.of( Y+'sec' ) : ( Y[0].isInteger() ? Duration.of(Y) : Duration.of('1'+Y) )
@@ -349,7 +349,7 @@ class TaskPollingMonitor implements TaskMonitor {
         if( !seconds )
             throw new IllegalArgumentException("Invalid submit-rate-limit value: $limit -- The interval must be at least 1 second")
 
-        log.debug "Creating submit rate limit of $num reqs by $seconds seconds"
+        log.debug "Creating submit rate limit of $num submissions per $seconds seconds"
         return RateLimiter.create( num / seconds as double )
     }
 

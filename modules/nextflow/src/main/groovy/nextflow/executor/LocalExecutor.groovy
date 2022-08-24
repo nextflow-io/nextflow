@@ -122,7 +122,7 @@ class LocalTaskHandler extends TaskHandler {
 
         // the cmd list to launch it
         def cmd = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
-        log.debug "Launch cmd line: ${cmd.join(' ')}"
+        log.debug "Launch command line: ${cmd.join(' ')}"
 
         session.getExecService().submit( {
 
