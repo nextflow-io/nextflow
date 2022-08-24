@@ -88,8 +88,8 @@ class FileTransferPool {
 
         executorService.shutdown()
         // wait for ongoing file transfer to complete
-        final waitMsg = "Waiting files transfer to complete (%d files)"
-        final exitMsg = "Exiting before FileTransfer thread pool complete -- Some files maybe lost"
+        final waitMsg = "Waiting for file transfers to complete (%d files)"
+        final exitMsg = "Exiting before FileTransfer thread pool complete -- Some files may be lost"
         ThreadPoolHelper.await(executorService, maxAwait, waitMsg, exitMsg)
     }
 

@@ -72,7 +72,7 @@ class TapOp {
         names.each { item ->
             def channel = CH.createBy(source)
             if( binding.hasVariable(item) )
-                log.warn "A variable named '${item}' already exists in script global context -- Consider renaming it "
+                log.warn "A variable named '${item}' already exists in the script global context -- Consider renaming it "
 
             binding.setVariable(item, channel)
             outputs << channel
