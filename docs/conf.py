@@ -102,8 +102,7 @@ html_theme = "sphinx_rtd_theme"
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-  'display_version': False,
-  "analytics_id": "UA-364526-10"
+  'display_version': False
 }
 
 html_context = {
@@ -116,6 +115,10 @@ html_context = {
 
 # Nextflow theme
 html_css_files = ['theme.css']
+html_js_files = [
+    ("https://www.googletagmanager.com/gtag/js?id=G-244N3GEN75", {"async": "async"}),
+    "google_analytics.js"
+]
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []
