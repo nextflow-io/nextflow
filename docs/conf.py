@@ -103,7 +103,7 @@ html_theme = "sphinx_rtd_theme"
 # documentation.
 html_theme_options = {
   'display_version': False,
-  "analytics_id": "UA-364526-10"
+  "analytics_id": "G-244N3GEN75"
 }
 
 html_context = {
