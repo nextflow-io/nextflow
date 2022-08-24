@@ -468,7 +468,7 @@ class K8sTaskHandler extends TaskHandler {
             if ( k8sConfig.fetchNodeName() && !runsOnNode )
                 runsOnNode = client.getNodeOfPod( podName )
         } catch ( Exception e ){
-            log.warn ("Unable to fetch pod: $podName its node -- see the log file for details", e)
+            log.warn ("Unable to get the node name of pod $podName -- see the log file for details", e)
         }
     }
 

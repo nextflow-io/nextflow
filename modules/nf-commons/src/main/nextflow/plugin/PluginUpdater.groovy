@@ -182,7 +182,7 @@ class PluginUpdater extends UpdateManager {
             Files.move(source, target, ATOMIC_MOVE, REPLACE_EXISTING)
         }
         catch (IOException e) {
-            log.debug "Failed atomic move for pluging $source -> $target - Reason: ${e.message ?: e} - Fallback on safe move"
+            log.debug "Failed atomic move for plugin $source -> $target - Reason: ${e.message ?: e} - Fallback on safe move"
             safeMove0(source, target)
         }
     }
@@ -197,7 +197,7 @@ class PluginUpdater extends UpdateManager {
             FileHelper.deletePath(source)
         }
         catch (IOException e) {
-            log.warn("Unable to deleting plugin directory: $source", e)
+            log.warn("Unable to delete plugin directory: $source", e)
         }
     }
 
@@ -314,7 +314,7 @@ class PluginUpdater extends UpdateManager {
 
     protected boolean shouldUpdate(String pluginId, String version, PluginWrapper current) {
         if( pluginManager.runtimeMode == RuntimeMode.DEVELOPMENT ) {
-            log.debug "Update not support during dev"
+            log.debug "Update not supported during development mode"
             return false
         }
 

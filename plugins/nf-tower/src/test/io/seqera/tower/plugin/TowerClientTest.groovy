@@ -128,7 +128,7 @@ class TowerClientTest extends Specification {
         observer.checkUrl('ftp://localhost')
         then:
         def e = thrown(IllegalArgumentException)
-        e.message == 'Only http or https are supported protocols -- The given URL was: ftp://localhost'
+        e.message == 'Only http and https are supported -- The given URL was: ftp://localhost'
     }
 
     def 'should get watch url' () {

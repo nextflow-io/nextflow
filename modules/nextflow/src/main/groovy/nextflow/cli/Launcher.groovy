@@ -180,7 +180,7 @@ class Launcher {
             colsString.toShort()
         }
         catch( Exception e ) {
-            log.debug "Oops .. not a valid \$COLUMNS value: $colsString"
+            log.debug "Oops.. not a valid \$COLUMNS value: $colsString"
             return 0
         }
     }

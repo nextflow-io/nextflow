@@ -211,7 +211,7 @@ class TowerClient implements TraceObserver {
                 url = url[0..-2]
             return url
         }
-        throw new IllegalArgumentException("Only http or https are supported protocols -- The given URL was: ${url}")
+        throw new IllegalArgumentException("Only http and https are supported -- The given URL was: ${url}")
     }
 
     protected String getHostUrl(String endpoint) {
@@ -361,7 +361,7 @@ class TowerClient implements TraceObserver {
         final payload = parseTowerResponse(resp)
         this.watchUrl = payload.watchUrl
         this.sender = Thread.start('Tower-thread', this.&sendTasks0)
-        final msg = "Monitor the execution with Nextflow Tower using this url ${watchUrl}"
+        final msg = "Monitor the execution with Nextflow Tower using this URL: ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)
     }
 
@@ -535,7 +535,7 @@ class TowerClient implements TraceObserver {
                 return new Response(httpClient.responseCode, httpClient.getResponse())
             }
             catch( ConnectException e ) {
-                String msg = "Unable to connect Tower host: ${getHostUrl(url)}"
+                String msg = "Unable to connect to Tower API: ${getHostUrl(url)}"
                 return new Response(0, msg)
             }
             catch (IOException e) {

@@ -98,7 +98,7 @@ class ProviderConfig {
             attr.platform = 'file'
 
         if( !attr.platform ) {
-            throw new AbortOperationException("Missing `platform` attribute for `$name` scm provider configuration -- Check file: ${getScmConfigPath().toUriString()}")
+            throw new AbortOperationException("Missing `platform` attribute for `$name` SCM provider configuration -- Check file: ${getScmConfigPath().toUriString()}")
         }
 
         if( attr.auth ) {

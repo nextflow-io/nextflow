@@ -122,7 +122,7 @@ class ReportSummary {
      */
     Map<String,?> compute(String name) {
         if( !names.contains(name) )
-            throw new IllegalArgumentException("Invalid status status field name: $name -- it must be one of the following: ${names.join(',')}")
+            throw new IllegalArgumentException("Invalid status field name: $name -- it must be one of the following: ${names.join(',')}")
 
         return series[name].compute()
     }

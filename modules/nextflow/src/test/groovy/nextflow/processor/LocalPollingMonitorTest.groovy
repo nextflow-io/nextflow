@@ -180,7 +180,7 @@ class LocalPollingMonitorTest extends Specification {
         monitor.canSubmit(handler)
         then:
         def e1 = thrown(ProcessUnrecoverableException)
-        e1.message == 'Process requirement exceed available CPUs -- req: 12; avail: 10'
+        e1.message == 'Process requirement exceeds available CPUs -- req: 12; avail: 10'
 
 
     }
@@ -208,7 +208,7 @@ class LocalPollingMonitorTest extends Specification {
         monitor.canSubmit(handler)
         then:
         def e2 = thrown(ProcessUnrecoverableException)
-        e2.message == 'Process requirement exceed available memory -- req: 22 GB; avail: 20 GB'
+        e2.message == 'Process requirement exceeds available memory -- req: 22 GB; avail: 20 GB'
 
     }
 

@@ -33,7 +33,7 @@ class WorkflowDefTest extends Dsl2Spec {
                 f.set(this, sess)
             }
             catch (GroovyCastException e) {
-                log.warn "Cant inject session - not a ScriptBinding context object"
+                log.warn "Can't inject session -- not a ScriptBinding context object"
             }
         }
 

@@ -95,7 +95,7 @@ class GitUrl {
             return
         }
 
-        throw new IllegalArgumentException("Malformed repository url: $url")
+        throw new IllegalArgumentException("Malformed repository URL: $url")
     }
 
     private parse0( String url, int p ) {

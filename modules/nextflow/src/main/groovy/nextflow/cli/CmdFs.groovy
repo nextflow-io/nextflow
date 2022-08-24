@@ -178,7 +178,7 @@ class CmdFs extends CmdBase implements UsageAware {
     private void run0() {
         final cmd = findCmd(args[0])
         if( !cmd ) {
-            throw new AbortOperationException("Unknow file system command: `$cmd`")
+            throw new AbortOperationException("Unknown file system command: `$cmd`")
         }
 
         Path target

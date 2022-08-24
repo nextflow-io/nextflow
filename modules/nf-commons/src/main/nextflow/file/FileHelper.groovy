@@ -214,7 +214,7 @@ class FileHelper {
                 continue
             }
             if( !FilesEx.mkdirs(result) ) {
-                throw new IOException("Unable to create temporary part: $result -- Verify file system access permissions or if a file having the same name exists")
+                throw new IOException("Unable to create temporary directory: $result -- Make sure a file with the same name doesn't already exist and you have write permissions")
             }
 
             return result.toAbsolutePath()
@@ -250,9 +250,9 @@ class FileHelper {
         if( !str )
             throw new IllegalArgumentException("Path string cannot be empty")
         if( str != Bolts.leftTrim(str) )
-            throw new IllegalArgumentException("Path string cannot start with blank or a special characters -- Offending path: '${Escape.blanks(str)}'")
+            throw new IllegalArgumentException("Path string cannot start with a blank or special characters -- Offending path: '${Escape.blanks(str)}'")
         if( str != Bolts.rightTrim(str) )
-            throw new IllegalArgumentException("Path string cannot ends with blank or a special characters -- Offending path: '${Escape.blanks(str)}'")
+            throw new IllegalArgumentException("Path string cannot ends with a blank or special characters -- Offending path: '${Escape.blanks(str)}'")
 
         if( !str.contains(':/') ) {
             return Paths.get(str)
@@ -376,7 +376,7 @@ class FileHelper {
     static FileSystem getWorkDirFileSystem() {
         def result = Global.session?.workDir?.getFileSystem()
         if( !result ) {
-            log.warn "Session working file system not defined -- fallback on JVM default file system"
+            log.warn "Session working directory file system not defined -- fallback on JVM default file system"
             result = FileSystems.getDefault()
         }
         result

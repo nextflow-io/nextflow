@@ -56,7 +56,7 @@ class FastaSplitter extends AbstractTextSplitter {
         super.options(options)
 
         if( options.size && options.by )
-            throw new AbortOperationException("Parameter `by` and `size` conflicts -- check operator `$operatorName`")
+            throw new AbortOperationException("Parameters `by` and `size` conflict -- check operator `$operatorName`")
 
         if( options.size ) {
             final size = parseChunkSize(options.size)

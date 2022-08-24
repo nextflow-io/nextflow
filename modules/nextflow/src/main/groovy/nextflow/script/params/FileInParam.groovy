@@ -83,7 +83,7 @@ class FileInParam extends BaseInParam implements PathQualifier {
     @Override
     BaseInParam bind( obj ) {
         if( pathQualifier && obj instanceof Map )
-            throw new IllegalArgumentException("Input `path` does not allow such argument: ${obj.entrySet().collect{"${it.key}:${it.value}"}.join(',')}")
+            throw new IllegalArgumentException("Input `path` does not allow such arguments: ${obj.entrySet().collect{"${it.key}:${it.value}"}.join(',')}")
         super.bind(obj)
         return this
     }

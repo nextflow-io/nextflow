@@ -1456,7 +1456,7 @@ class OperatorImpl {
     private void set0(source, Closure holder) {
         final name = CaptureProperties.capture(holder)
         if( !name )
-            throw new IllegalArgumentException("Missing name to which set the channel variable")
+            throw new IllegalArgumentException("Missing name with which to set the channel variable")
 
         if( name.size()>1 )
             throw new IllegalArgumentException("Operation `set` does not allow more than one target name")

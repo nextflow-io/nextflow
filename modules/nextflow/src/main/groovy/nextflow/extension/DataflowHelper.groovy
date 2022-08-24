@@ -225,7 +225,7 @@ class DataflowHelper {
     static checkSubscribeHandlers( Map handlers ) {
 
         if( !handlers ) {
-            throw new IllegalArgumentException("You must specify at least an event between: onNext, onComplete, onError")
+            throw new IllegalArgumentException("You must specify at least one of the following events: onNext, onComplete, onError")
         }
 
         handlers.keySet().each {

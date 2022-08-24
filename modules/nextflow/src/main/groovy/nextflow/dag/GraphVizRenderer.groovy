@@ -54,7 +54,7 @@ class GraphvizRenderer implements DagRenderer {
         if( exitStatus == 128 ) {
             target = target.resolveSibling( "${target.baseName}.dot" )
             temp.copyTo(target)
-            log.warn "To render the execution DAG in the required format it is required to install Graphviz -- See http://www.graphviz.org for more info."
+            log.warn "Graphviz is required to render the execution DAG in the given format -- See http://www.graphviz.org for more info."
         }
         else if( exitStatus>0 ) {
             log.debug("Graphviz error -- command `$cmd` -- exit status: $exitStatus\n${process.text?.indent()}")

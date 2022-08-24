@@ -188,7 +188,7 @@ class K8sDriverLauncher {
                 }
             }
             catch( Exception e ) {
-                log.warn "Caught exception waiting for ${resourceType.lower()} to stop running"
+                log.warn "Caught exception while waiting for ${resourceType.lower()} to stop running"
             }
         }
     }
@@ -384,7 +384,7 @@ class K8sDriverLauncher {
     private void checkUnsupportedOption(String name) {
         def field = getField(cmd,name)
         if( !field ) {
-            log.warn "Unknown cli option to check: $name"
+            log.warn "Unknown command-line option to check: $name"
             return
         }
         field.setAccessible(true)

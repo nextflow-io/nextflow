@@ -105,7 +105,7 @@ class SingularityCache {
     Path checkDir(String str) {
         def result = Paths.get(str)
         if( !result.exists() && !result.mkdirs() ) {
-            throw new IOException("Failed to create Singularity cache directory: $str -- Make sure a file with the same does not exist and you have write permission")
+            throw new IOException("Failed to create Singularity cache directory: $str -- Make sure a file with the same name does not exist and you have write permission")
         }
         return result.toAbsolutePath()
     }

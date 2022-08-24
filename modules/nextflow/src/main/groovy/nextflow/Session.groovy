@@ -315,7 +315,7 @@ class Session implements ISession {
         else {
            uniqueId = systemEnv.get('NXF_UUID') ? UUID.fromString(systemEnv.get('NXF_UUID')) : UUID.randomUUID()
         }
-        log.debug "Session uuid: $uniqueId"
+        log.debug "Session UUID: $uniqueId"
 
         // -- set the run name
         this.runName = config.runName ?: NameGenerator.next()
@@ -468,13 +468,13 @@ class Session implements ISession {
     }
 
     private void callIgniters() {
-        log.debug "Ignite dataflow network (${igniters.size()})"
+        log.debug "Igniting dataflow network (${igniters.size()})"
         for( Closure action : igniters ) {
             try {
                 action.call()
             }
             catch( Exception e ) {
-                log.error(e.message ?: "Failed to trigger dataflow network", e)
+                log.error(e.message ?: "Failed to ignite dataflow network", e)
                 abort(e)
                 break
             }
@@ -492,13 +492,13 @@ class Session implements ISession {
             msg ? "The following nodes are still active:\n" + msg : null
         }
         catch( Exception e ) {
-            log.debug "Unexpected error dumping DGA status", e
+            log.debug "Unexpected error while dumping DAG status", e
             return null
         }
     }
 
     Session start() {
-        log.debug "Session start invoked"
+        log.debug "Session start"
 
         // register shut-down cleanup hooks
         registerSignalHandlers()
@@ -618,13 +618,13 @@ class Session implements ISession {
     void await() {
         log.debug "Session await"
         processesBarrier.awaitCompletion()
-        log.debug "Session await > all process finished"
+        log.debug "Session await > all processes finished"
         terminated = true
         monitorsBarrier.awaitCompletion()
         log.debug "Session await > all barriers passed"
         if( !aborted ) {
             joinAllOperators()
-            log.trace "Session > after processors join"
+            log.trace "Session > all operators finished"
         }
     }
 

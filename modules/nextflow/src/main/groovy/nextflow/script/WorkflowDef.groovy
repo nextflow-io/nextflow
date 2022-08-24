@@ -128,7 +128,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         final params = ChannelOut.spread(args)
         if( params.size() != declaredInputs.size() ) {
             final prefix = name ? "Workflow `$name`" : "Main workflow"
-            throw new IllegalArgumentException("$prefix declares ${declaredInputs.size()} input channels but ${params.size()} were specified")
+            throw new IllegalArgumentException("$prefix declares ${declaredInputs.size()} input channels but ${params.size()} were given")
         }
 
         // attach declared inputs with the invocation arguments
@@ -141,7 +141,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
     protected ChannelOut collectOutputs(List<String> emissions) {
         // make sure feedback channel cardinality matches
         if( feedbackChannels && feedbackChannels.size() != emissions.size() )
-            throw new ScriptRuntimeException("Workflow `$name` inputs and outputs cardinality does not match - Feedback loop is not supported"  )
+            throw new ScriptRuntimeException("Workflow `$name` inputs and outputs do not have the same cardinality - Feedback loop is not supported"  )
 
         final channels = new LinkedHashMap<String, DataflowWriteChannel>(emissions.size())
         for( int i=0; i<emissions.size(); i++ ) {
@@ -164,7 +164,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
             else {
                 if( feedbackChannels!=null )
-                    throw new ScriptRuntimeException("Workflow `$name` static outout is not allowed when using recursion - Check output: $targetName")
+                    throw new ScriptRuntimeException("Workflow `$name` static output is not allowed when using recursion - Check output: $targetName")
                 final value = CH.create(true)
                 value.bind(obj)
                 channels.put(targetName, value)

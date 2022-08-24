@@ -218,7 +218,7 @@ class IncludeDef {
         if( !Plugins.isStarted(pluginId) )
             throw new IllegalArgumentException("Unable start plugin with Id '$pluginId'")
         final Map<String,String> declaredNames = this.modules.collectEntries {[it.name, it.alias ?: it.name]}
-        log.debug "Load included plugin extensions with names: $declaredNames; plugin Id: $pluginId"
+        log.debug "Loading included plugin extensions with names: $declaredNames; plugin Id: $pluginId"
         PluginExtensionProvider.INSTANCE().loadPluginExtensionMethods(pluginId, declaredNames)
     }
 

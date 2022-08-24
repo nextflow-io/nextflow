@@ -143,7 +143,7 @@ class AzBatchService implements Closeable {
     }
 
     AzVmType guessBestVm(String location, int cpus, MemoryUnit mem, String family) {
-        log.debug "[AZURE BATCH] guess best VM given location=$location; cpus=$cpus; mem=$mem; family=$family"
+        log.debug "[AZURE BATCH] guessing best VM given location=$location; cpus=$cpus; mem=$mem; family=$family"
         if( !family.contains('*') && !family.contains('?') )
             return findBestVm(location, cpus, mem, family)
 
@@ -496,7 +496,7 @@ class AzBatchService implements Closeable {
 
         final vmType = guessBestVm(loc, cpus, mem, type)
         if( !vmType ) {
-            def msg = "Cannot find a VM for task '${task.name}' matching this requirements: type=$type, cpus=${cpus}, mem=${mem?:'-'}, location=${loc}"
+            def msg = "Cannot find a VM for task '${task.name}' matching these requirements: type=$type, cpus=${cpus}, mem=${mem?:'-'}, location=${loc}"
             throw new IllegalArgumentException(msg)
         }
 
@@ -519,7 +519,7 @@ class AzBatchService implements Closeable {
 
     protected void checkPoolId(String poolId) {
         if( !poolId.matches(/^[\w\-]+$/) )
-            throw new IllegalArgumentException("Invalid Azure Batch pool Id '$poolId' - It can only contains alphanumeric, hyphen and undershore characters")
+            throw new IllegalArgumentException("Invalid Azure Batch pool Id '$poolId' - It can only contain alphanumeric, hyphen and underscore characters")
     }
 
     protected AzVmPoolSpec specForTask(TaskRun task) {
@@ -528,7 +528,7 @@ class AzBatchService implements Closeable {
             // the process queue is used as poolId
             poolId = task.config.queue as String
             if( !poolId ) {
-                throw new IllegalArgumentException("No Azure Batch pool was specified for task '${task.name}' - Either specify the pool name using the 'queue' diretive or enable the 'autoPoolMode' option")
+                throw new IllegalArgumentException("No Azure Batch pool was specified for task '${task.name}' - Either specify the pool name using the 'queue' directive or enable the 'autoPoolMode' option")
             }
             // sanity check
             checkPoolId(poolId)
@@ -558,7 +558,7 @@ class AzBatchService implements Closeable {
                 createPool(spec)
             }
             else {
-                throw new IllegalArgumentException("Can't find Azure Batch pool '$spec.poolId' - Make sure it exists or enablethe use `allowPoolCreation=true` in the nextflow config file")
+                throw new IllegalArgumentException("Can't find Azure Batch pool '$spec.poolId' - Make sure it exists or set `allowPoolCreation=true` in the nextflow config file")
             }
         }
         else {

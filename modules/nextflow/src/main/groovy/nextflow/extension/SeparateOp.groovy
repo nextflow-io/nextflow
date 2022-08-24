@@ -74,7 +74,7 @@ class SeparateOp {
 
             else {
                 if( count++ == 0 )
-                    log.warn "The target channels number ($size) for the 'into' operator do not match the items number (${tuple.size()}) of the receveid tuple: $tuple"
+                    log.warn "The number of target channels ($size) for the 'into' operator does not match the  number of items (${tuple.size()}) of the received tuple: $tuple"
 
                 def result = new ArrayList(size)
                 for( int i=0; i<size; i++ ) {

@@ -92,7 +92,7 @@ class GoogleLifeSciencesExecutor extends Executor implements ExtensionPoint {
         }
 
         if( !config.project ) {
-            throw new AbortOperationException("Missing Google project Id -- Specify it adding the setting `google.project='your-project-id'` in the nextflow.config file")
+            throw new AbortOperationException("Missing Google project Id -- Specify it by setting `google.project='your-project-id'` in the nextflow.config file")
         }
 
     }

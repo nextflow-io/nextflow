@@ -61,7 +61,7 @@ class TestPluginManager extends DevPluginManager {
         def repos = new CompoundPluginRepository()
         // main dev repo
         final root = getPluginsRoot()
-        log.debug "Add plugin root repository: ${root}"
+        log.debug "Added plugin root repository: ${root}"
         repos.add( new PluginRepository() {
             @Override
             List<Path> getPluginPaths() {

@@ -284,7 +284,7 @@ class ConfigBuilder {
             env.putAll(System.getenv())
         }
         if( vars ) {
-            log.debug "Adding following variables to session environment: $vars"
+            log.debug "Adding the following variables to session environment: $vars"
             env.putAll(vars)
         }
 
@@ -566,7 +566,7 @@ class ConfigBuilder {
 
         if( cmdRun.withoutConda && config.conda instanceof Map ) {
             // disable docker execution
-            log.debug "Disabling execution in with Conda as requested by cli option `-without-conda`"
+            log.debug "Disabling execution with Conda as requested by command-line option `-without-conda`"
             config.conda.enabled = false
         }
 
@@ -693,7 +693,7 @@ class ConfigBuilder {
 
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution
-            log.debug "Disabling execution in Docker contained as requested by cli option `-without-docker`"
+            log.debug "Disabling execution in Docker container as requested by command-line option `-without-docker`"
             config.docker.enabled = false
         }
 
@@ -715,7 +715,7 @@ class ConfigBuilder {
     }
 
     private void configContainer(ConfigObject config, String engine, def cli) {
-        log.debug "Enabling execution in ${engine.capitalize()} container as requested by cli option `-with-$engine ${cmdRun.withDocker}`"
+        log.debug "Enabling execution in ${engine.capitalize()} container as requested by command-line option `-with-$engine ${cmdRun.withDocker}`"
 
         if( !config.containsKey(engine) )
             config.put(engine, [:])

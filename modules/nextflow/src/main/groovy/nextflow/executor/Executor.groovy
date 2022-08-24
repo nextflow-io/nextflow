@@ -133,7 +133,7 @@ abstract class Executor {
             path = path.resolve(name)
 
         if( !path.exists() && create && !path.mkdirs() )
-            throw new IOException("Unable to create folder: $path -- Check file system permission" )
+            throw new IOException("Unable to create directory: $path -- Check file system permission" )
 
         return path
     }

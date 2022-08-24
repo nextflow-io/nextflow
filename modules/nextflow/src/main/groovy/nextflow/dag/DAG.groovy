@@ -398,7 +398,7 @@ class DAG {
         TaskProcessor process
 
         /**
-         * Create an DGA vertex instance
+         * Create a DAG vertex instance
          *
          * @param type A {@link Type} value
          * @param label A descriptive string to label this vertex
