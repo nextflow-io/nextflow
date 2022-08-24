@@ -68,9 +68,9 @@ class WaveCmd implements PluginAbstractExec {
             throw new AbortOperationException("Missing pack target directory")
         final root = Path.of(cli.args.pop())
         if( !Files.exists(root) )
-            throw new AbortOperationException("Path target path does not exist: $root")
+            throw new AbortOperationException("Pack target path does not exist: $root")
         if( !Files.isDirectory(root) )
-            throw new AbortOperationException("Path target path is not a directory: $root")
+            throw new AbortOperationException("Pack target path is not a directory: $root")
         // determine target location form CLI option
         final location = cli.options.location
         // pack the layer
