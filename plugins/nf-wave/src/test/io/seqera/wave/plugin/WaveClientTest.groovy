@@ -33,7 +33,7 @@ import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
-import nextflow.script.bundle.ModuleBundle
+import nextflow.script.bundle.ResourcesBundle
 import org.apache.commons.compress.archivers.ArchiveStreamFactory
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
@@ -110,7 +110,7 @@ class WaveClientTest extends Specification {
         def wave = new WaveClient(sess)
 
         when:
-        def bundle = ModuleBundle.scan(bundlePath)
+        def bundle = ResourcesBundle.scan(bundlePath)
         def layer = wave.makeLayer(bundle)
         then:
         layer.tarDigest == 'sha256:81200f6ad32793567d8070375dc51312a1711fedf6a1c6f5e4a97fa3014f3491'
@@ -131,7 +131,7 @@ class WaveClientTest extends Specification {
          * create a bundle using different base directory
          */
         when:
-        bundle = ModuleBundle.scan(bundlePath, [baseDirectory: 'usr/local'])
+        bundle = ResourcesBundle.scan(bundlePath, [baseDirectory: 'usr/local'])
         layer = wave.makeLayer(bundle)
         then:
         def gzip2 = layer.location.replace('data:','').decodeBase64()
@@ -202,7 +202,7 @@ class WaveClientTest extends Specification {
 
     def 'should  create request with module resources' () {
         given:
-        def MODULE_RES = Mock(ModuleBundle) {hasEntries() >> true }
+        def MODULE_RES = Mock(ResourcesBundle) {hasEntries() >> true }
         def MODULE_LAYER = Mock(ContainerLayer)
 
         and:
@@ -222,10 +222,10 @@ class WaveClientTest extends Specification {
 
     def 'should  create request with module and project resources' () {
         given:
-        def MODULE_RES = Mock(ModuleBundle) {hasEntries() >> true }
+        def MODULE_RES = Mock(ResourcesBundle) {hasEntries() >> true }
         def MODULE_LAYER = Mock(ContainerLayer)
         and:
-        def PROJECT_RES = Mock(ModuleBundle) { hasEntries() >> true }
+        def PROJECT_RES = Mock(ResourcesBundle) { hasEntries() >> true }
         def PROJECT_LAYER = Mock(ContainerLayer)
         and:
         def session = Mock(Session) { getConfig() >> [:]}
@@ -316,7 +316,7 @@ class WaveClientTest extends Specification {
     def 'should create asset with image and bundle' () {
         given:
         def IMAGE = 'foo:latest'
-        def BUNDLE = Mock(ModuleBundle)
+        def BUNDLE = Mock(ResourcesBundle)
         and:
         def session = Mock(Session) { getConfig() >> [:]}
         def task = Mock(TaskRun) { getConfig() >> [:]; getModuleBundle() >> BUNDLE }
@@ -337,7 +337,7 @@ class WaveClientTest extends Specification {
     def 'should create asset with image and bundle and container config' () {
         given:
         def IMAGE = 'foo:latest'
-        def BUNDLE = Mock(ModuleBundle)
+        def BUNDLE = Mock(ResourcesBundle)
         def CONTAINER_CONFIG = new ContainerConfig(entrypoint: ['entry.sh'], layers: [new ContainerLayer(location: 'http://somewhere')])
         and:
         def session = Mock(Session) { getConfig() >> [:]}
@@ -367,7 +367,7 @@ class WaveClientTest extends Specification {
         def DOCKERFILE = folder.resolve('Dockerfile')
         DOCKERFILE.text = 'FROM foo\nRUN this/that'
         and:
-        def BUNDLE = Mock(ModuleBundle) { getDockerfile() >> DOCKERFILE }
+        def BUNDLE = Mock(ResourcesBundle) { getDockerfile() >> DOCKERFILE }
         and:
         def task = Mock(TaskRun) {getModuleBundle() >> BUNDLE; getConfig() >> [:] }
         and:
@@ -446,8 +446,8 @@ class WaveClientTest extends Specification {
 
     def 'should create assets with project resources' () {
         given:
-        def MODULE_RES = Mock(ModuleBundle)
-        def PROJECT_RES = Mock(ModuleBundle)
+        def MODULE_RES = Mock(ResourcesBundle)
+        def PROJECT_RES = Mock(ResourcesBundle)
         def CONTAINER_CONFIG = Mock(ContainerConfig)
         def BIN_DIR = Path.of('/something/bin')
         and:
