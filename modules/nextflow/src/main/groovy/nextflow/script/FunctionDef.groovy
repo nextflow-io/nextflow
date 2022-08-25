@@ -20,8 +20,6 @@ package nextflow.script
 import java.lang.reflect.Method
 
 import groovy.transform.CompileStatic
-import static ChannelOut.spreadToArray
-
 /**
  * Models a function component that can be included from a module script
  *
@@ -31,39 +29,51 @@ import static ChannelOut.spreadToArray
 @CompileStatic
 class FunctionDef extends ComponentDef implements ChainableDef {
 
-    private BaseScript owner
-
-    private Method method
+    private Object target
 
     private String name
 
-    FunctionDef(BaseScript owner, Method method) {
-        this.owner = owner
-        this.method = method
-        this.name = method.name
+    private String alias
+
+    FunctionDef(Object target, String name) {
+        this(target, name, name)
+    }
+
+    FunctionDef(Object target, String name, String alias) {
+        this.target = target
+        this.name = name
+        this.alias = alias
     }
 
     protected FunctionDef() { }
 
+    @Override
     String getType() { 'function' }
 
-    Method getMethod() { method }
+    @Override
+    String getName() { alias }
 
-    String getName() { name }
-
-    BaseScript getOwner() { owner }
-
+    @Override
     Object invoke_a(Object[] args) {
-        method.invoke(owner, spreadToArray(args))
+        final arr = ChannelOut.spread(args).toArray()
+        final meta = target.metaClass.getMetaMethod(name, arr)
+        if( meta == null )
+            throw new MissingMethodException(name, target.getClass(), arr)
+        Method callMethod = target.getClass().getMethod(name, meta.getNativeParameterTypes())
+        if( callMethod == null )
+            throw new MissingMethodException(name, target.getClass(), arr)
+        return callMethod.invoke(target, arr)
     }
 
+    @Override
     FunctionDef clone() {
-      return (FunctionDef)super.clone()
+        return (FunctionDef)super.clone()
     }
 
+    @Override
     FunctionDef cloneWithName(String name) {
         def result = clone()
-        result.@name = name
+        result.@alias = name
         return result
     }
 }

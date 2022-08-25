@@ -77,7 +77,7 @@ class CmdRun extends CmdBase implements HubOptions {
         }
     }
 
-    static final public NAME = 'run'
+    static final public String NAME = 'run'
 
     private Map<String,String> sysEnv = System.getenv()
 
@@ -219,6 +219,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-with-conda'], description = 'Use the specified Conda environment package or file (must end with .yml|.yaml suffix)')
     String withConda
 
+    @Parameter(names=['-without-conda'], description = 'Disable the use of Conda environments')
+    Boolean withoutConda
+
     @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
     boolean offline = System.getenv('NXF_OFFLINE')=='true'
 
@@ -276,6 +279,9 @@ class CmdRun extends CmdBase implements HubOptions {
         if( withDocker && withoutDocker )
             throw new AbortOperationException("Command line options `-with-docker` and `-without-docker` cannot be specified at the same time")
 
+        if( withConda && withoutConda )
+            throw new AbortOperationException("Command line options `-with-conda` and `-without-conda` cannot be specified at the same time")
+
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
 
@@ -299,6 +305,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
         // check DSL syntax in the config
         launchInfo(config, scriptFile)
+
+        // check if NXF_ variables are set in nextflow.config
+        checkConfigEnv(config)
 
         // -- load plugins
         final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
@@ -342,6 +351,17 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.execute(scriptArgs, this.entryName)
     }
 
+    protected checkConfigEnv(ConfigMap config) {
+        // Warn about setting NXF_ environment variables within env config scope
+        final env = config.env as Map<String, String>
+        for( String name : env.keySet() ) {
+            if( name.startsWith('NXF_') && name!='NXF_DEBUG' ) {
+                final msg = "Nextflow variables must be defined in the launching environment - The following variable set in the config file is going to be ignored: '$name'"
+                log.warn(msg)
+            }
+        }
+    }
+
     protected void launchInfo(ConfigMap config, ScriptFile scriptFile) {
         // -- determine strict mode
         final defStrict = sysEnv.get('NXF_ENABLE_STRICT') ?: false
@@ -379,7 +399,7 @@ class CmdRun extends CmdBase implements HubOptions {
             return dsl
         }
         // -- if still unknown try probing for DSL1
-        if( NextflowMeta.probeDls1(scriptText) ) {
+        if( NextflowMeta.probeDsl1(scriptText) ) {
             log.debug "Applied DSL=1 by probing script field"
             return DSL1
         }
@@ -455,7 +475,7 @@ class CmdRun extends CmdBase implements HubOptions {
                 throw new AbortOperationException("Cannot access `stdin` stream")
 
             if( revision )
-                throw new AbortOperationException("Revision option cannot be used running a local script")
+                throw new AbortOperationException("Revision option cannot be used when running a script from stdin")
 
             return new ScriptFile(file)
         }
@@ -470,7 +490,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         if( script.exists() ) {
             if( revision )
-                throw new AbortOperationException("Revision option cannot be used running a script")
+                throw new AbortOperationException("Revision option cannot be used when running a local script")
             return new ScriptFile(script)
         }
 

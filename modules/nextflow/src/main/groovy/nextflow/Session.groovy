@@ -25,7 +25,6 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.function.Consumer
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileDynamic
@@ -37,6 +36,7 @@ import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
+import nextflow.conda.CondaConfig
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.dag.DAG
@@ -205,7 +205,9 @@ class Session implements ISession {
 
     private volatile Throwable error
 
-    private Queue<Closure<Void>> shutdownCallbacks = new ConcurrentLinkedQueue<>()
+    private volatile boolean shutdownInitiated
+
+    private Queue<Runnable> shutdownCallbacks = new ConcurrentLinkedQueue<>()
 
     private int poolSize
 
@@ -313,7 +315,7 @@ class Session implements ISession {
         else {
            uniqueId = systemEnv.get('NXF_UUID') ? UUID.fromString(systemEnv.get('NXF_UUID')) : UUID.randomUUID()
         }
-        log.debug "Session uuid: $uniqueId"
+        log.debug "Session UUID: $uniqueId"
 
         // -- set the run name
         this.runName = config.runName ?: NameGenerator.next()
@@ -466,13 +468,13 @@ class Session implements ISession {
     }
 
     private void callIgniters() {
-        log.debug "Ignite dataflow network (${igniters.size()})"
+        log.debug "Igniting dataflow network (${igniters.size()})"
         for( Closure action : igniters ) {
             try {
                 action.call()
             }
             catch( Exception e ) {
-                log.error(e.message ?: "Failed to trigger dataflow network", e)
+                log.error(e.message ?: "Failed to ignite dataflow network", e)
                 abort(e)
                 break
             }
@@ -490,13 +492,13 @@ class Session implements ISession {
             msg ? "The following nodes are still active:\n" + msg : null
         }
         catch( Exception e ) {
-            log.debug "Unexpected error dumping DGA status", e
+            log.debug "Unexpected error while dumping DAG status", e
             return null
         }
     }
 
     Session start() {
-        log.debug "Session start invoked"
+        log.debug "Session start"
 
         // register shut-down cleanup hooks
         registerSignalHandlers()
@@ -616,13 +618,13 @@ class Session implements ISession {
     void await() {
         log.debug "Session await"
         processesBarrier.awaitCompletion()
-        log.debug "Session await > all process finished"
+        log.debug "Session await > all processes finished"
         terminated = true
         monitorsBarrier.awaitCompletion()
         log.debug "Session await > all barriers passed"
         if( !aborted ) {
             joinAllOperators()
-            log.trace "Session > after processors join"
+            log.trace "Session > all operators finished"
         }
     }
 
@@ -637,9 +639,10 @@ class Session implements ISession {
             shutdown0()
             log.trace "Session > after cleanup"
             // shutdown executors
-            executorFactory.shutdown()
+            executorFactory?.shutdown()
+            executorFactory = null
             // shutdown executor service
-            execService.shutdown()
+            execService?.shutdown()
             execService = null
             log.trace "Session > executor shutdown"
 
@@ -650,7 +653,7 @@ class Session implements ISession {
             Plugins.stop()
 
             // -- cleanup script classes dir
-            classesDir.deleteDir()
+            classesDir?.deleteDir()
         }
         finally {
             // -- update the history file
@@ -677,14 +680,13 @@ class Session implements ISession {
         }
     }
 
-
     final protected void shutdown0() {
         log.trace "Shutdown: $shutdownCallbacks"
+        shutdownInitiated = true
         while( shutdownCallbacks.size() ) {
-            def hook = shutdownCallbacks.poll()
+            final hook = shutdownCallbacks.poll()
             try {
-                if( hook )
-                    hook.call()
+                hook.run()
             }
             catch( Exception e ) {
                 log.debug "Failed to execute shutdown hook: $hook", e
@@ -860,7 +862,7 @@ class Session implements ISession {
     }
 
     protected List<String> validateConfig0(Collection<String> processNames) {
-        def result = []
+        List<String> result = []
 
         if( !(config.process instanceof Map) )
             return result
@@ -906,15 +908,12 @@ class Session implements ISession {
      * Register a shutdown hook to close services when the session terminates
      * @param Closure
      */
-    void onShutdown( Closure<Void> shutdown ) {
-        if( !shutdown )
+    void onShutdown( Runnable hook ) {
+        if( !hook )
             return
-
-        shutdownCallbacks << shutdown
-    }
-
-    void onShutdown( Consumer<Object> callback ) {
-        onShutdown( { callback.accept(it) } )
+        if( shutdownInitiated )
+            throw new IllegalStateException("Session shutdown already initiated — Hook cannot be added: $hook")
+        shutdownCallbacks.add(hook)
     }
 
     void notifyProcessCreate(TaskProcessor process) {
@@ -942,10 +941,11 @@ class Session implements ISession {
     }
 
     void notifyTaskPending( TaskHandler handler ) {
+        final trace = handler.getTraceRecord()
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessPending(handler, handler.getTraceRecord())
+                observer.onProcessPending(handler, trace)
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -962,10 +962,11 @@ class Session implements ISession {
         // -- save a record in the cache index
         cache.putIndexAsync(handler)
 
+        final trace = handler.getTraceRecord()
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessSubmit(handler, handler.getTraceRecord())
+                observer.onProcessSubmit(handler, trace)
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -977,10 +978,11 @@ class Session implements ISession {
      * Notifies task start event
      */
     void notifyTaskStart( TaskHandler handler ) {
+        final trace = handler.getTraceRecord()
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessStart(handler, handler.getTraceRecord())
+                observer.onProcessStart(handler, trace)
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -995,7 +997,7 @@ class Session implements ISession {
      */
     void notifyTaskComplete( TaskHandler handler ) {
         // save the completed task in the cache DB
-        final trace = handler.getTraceRecord()
+        final trace = handler.safeTraceRecord()
         cache.putTaskAsync(handler, trace)
 
         // notify the event to the observers
@@ -1078,10 +1080,11 @@ class Session implements ISession {
      */
     void notifyError( TaskHandler handler ) {
 
+        final trace = handler?.safeTraceRecord()
         for ( int i=0; i<observers?.size(); i++){
             try{
                 final observer = observers.get(i)
-                observer.onFlowError(handler, handler?.getTraceRecord())
+                observer.onFlowError(handler, trace)
             } catch ( Throwable e ) {
                 log.debug(e.getMessage(), e)
             }
@@ -1091,7 +1094,7 @@ class Session implements ISession {
             return
 
         try {
-            errorAction.call( handler?.getTraceRecord() )
+            errorAction.call(trace)
         }
         catch( Throwable e ) {
             log.debug(e.getMessage(), e)
@@ -1135,6 +1138,12 @@ class Session implements ISession {
         finally {
             db.close()
         }
+    }
+
+    @Memoized
+    CondaConfig getCondaConfig() {
+        final cfg = config.conda as Map ?: Collections.emptyMap()
+        return new CondaConfig(cfg, getSystemEnv())
     }
 
     /**
@@ -1214,7 +1223,6 @@ class Session implements ISession {
     protected Map<String,String> getSystemEnv() {
         new HashMap<String, String>(System.getenv())
     }
-
 
     @CompileDynamic
     def fetchContainers() {

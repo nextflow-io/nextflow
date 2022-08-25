@@ -765,10 +765,10 @@ In the latter example for any sequence input file emitted by the ``sequences`` c
 3 using the ``regular`` method against each library files, and other 3 by using the ``expresso`` method always
 against the same library files.
 
-.. tip::
-  If you need to repeat the execution of a process over an n-tuple of elements instead of simple values or files,
-  create a channel combining the input values as needed to trigger the process execution multiple times.
-  Refer to the :ref:`operator-combine`, :ref:`operator-cross` and :ref:`operator-phase` operators for more details.
+.. note::
+  Input repeaters currently do not support tuples. However, you can emulate an input repeater on a channel of
+  tuples by using the :ref:`operator-combine` or :ref:`operator-cross` operator with other input channels to
+  produce all of the desired input combinations.
 
 
 .. _process-understand-how-multiple-input-channels-work:
@@ -838,6 +838,12 @@ channel. It prints::
   1 and a
   1 and b
   1 and c
+
+.. note::
+  In general, multiple input channels should be used to process *combinations* of different inputs,
+  using the ``each`` qualifier or value channels. Having multiple queue channels as inputs is equivalent
+  to using the ``merge`` operator, which is not recommended as it may lead to inputs being combined in
+  a non-deterministic way.
 
 See also: :ref:`channel-types`.
 

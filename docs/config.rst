@@ -139,7 +139,7 @@ storageEncryption           The S3 server side encryption to be used when saving
 storageKmsKeyId             The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket (requires version ``22.05.0-edge`` or later).
 userAgent                   The HTTP user agent header passed with all HTTP requests.
 uploadMaxThreads            The maximum number of threads used for multipart upload.
-uploadChunkSize             The size of a single part in a multipart upload (default: `20 MB`).
+uploadChunkSize             The size of a single part in a multipart upload (default: `100 MB`).
 uploadStorageClass          The S3 storage class applied to stored objects, one of [`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`] (default: `STANDARD`).
 uploadMaxAttempts           The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
 uploadRetrySleep            The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
@@ -166,11 +166,13 @@ Name                        Description
 =========================== ================
 cliPath                     The path where the AWS command line tool is installed in the host AMI.
 jobRole                     The AWS Job Role ARN that needs to be used to execute the Batch Job.
+logsGroup                   The name of the logs group used by Batch Jobs (default: ``/aws/batch``, requires ``22.09.0-edge`` or later).
 volumes                     One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. ``/host/path:/mount/path[:ro|rw]``. Multiple mounts can be specifid separating them with a comma or using a list object.
 delayBetweenAttempts        Delay between download attempts from S3 (default `10 sec`).
 maxParallelTransfers        Max parallel upload/download transfer operations *per job* (default: ``4``).
 maxTransferAttempts         Max number of downloads attempts from S3 (default: `1`).
 maxSpotAttempts             Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: ``5``, requires ``22.04.0`` or later)
+shareIdentifier             The share identifier for all tasks when using `fair-share scheduling for AWS Batch <https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/>`_ (requires ``22.09.0-edge`` or later)
 =========================== ================
 
 
@@ -324,6 +326,10 @@ Simply prefix your variable names with the ``env`` scope or surround them by cur
   In the above example, variables like ``$HOME`` and ``$PATH`` are evaluated when the workflow is launched. If
   you want these variables to be evaluated during task execution, escape them with ``\$``. This difference is important
   for variables like ``$PATH``, which may be different in the workflow environment versus the task environment.
+
+.. warning::
+  The ``env`` scope provides environment variables to *tasks*, not Nextflow itself. Nextflow environment variables
+  such as ``NXF_VER`` should be set in the environment in which Nextflow is launched.
 
 
 .. _config-executor:
@@ -961,6 +967,7 @@ NXF_CHARLIECLOUD_CACHEDIR       Directory where remote Charliecloud images are s
 NXF_CLASSPATH                   Allows the extension of the Java runtime classpath with extra JAR files or class folders.
 NXF_CLOUD_DRIVER                Defines the default cloud driver to be used if not specified in the config file or as command line option, either ``aws`` or ``google``.
 NXF_CONDA_CACHEDIR              Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all compute nodes.
+NXF_CONDA_ENABLED               Enable the use of Conda recipes defined by using the :ref:process-conda directive. (default: ``false``, requires version ``22.08.0-edge`` or later).
 NXF_DEBUG                       Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
 NXF_DEFAULT_DSL                 Defines the DSL version version that should be used in not specified otherwise in the script of config file (default: ``2``, requires version ``22.03.0-edge`` or later)
 NXF_DISABLE_JOBS_CANCELLATION   Disables the cancellation of child jobs on workflow execution termination (requires version ``21.12.0-edge`` or later).

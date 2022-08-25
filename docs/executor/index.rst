@@ -19,6 +19,7 @@ or the cloud by simply changing the executor definition in the Nextflow configur
 
    aws
    azure
+   bridge
    ga4gh
    google
    htcondor

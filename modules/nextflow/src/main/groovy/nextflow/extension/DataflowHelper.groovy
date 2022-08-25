@@ -93,7 +93,7 @@ class DataflowHelper {
     static DEF_ERROR_LISTENER = new DataflowEventAdapter() {
         @Override
         boolean onException(final DataflowProcessor processor, final Throwable e) {
-            OperatorEx.log.error("@unknown", e)
+            OperatorImpl.log.error("@unknown", e)
             session?.abort(e)
             return true;
         }
@@ -225,7 +225,7 @@ class DataflowHelper {
     static checkSubscribeHandlers( Map handlers ) {
 
         if( !handlers ) {
-            throw new IllegalArgumentException("You must specify at least an event between: onNext, onComplete, onError")
+            throw new IllegalArgumentException("You must specify at least one of the following events: onNext, onComplete, onError")
         }
 
         handlers.keySet().each {
@@ -255,7 +255,7 @@ class DataflowHelper {
                     events.onComplete.call(processor)
                 }
                 catch( Exception e ) {
-                    OperatorEx.log.error("@unknown", e)
+                    OperatorImpl.log.error("@unknown", e)
                     session.abort(e)
                 }
             }

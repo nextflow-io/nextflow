@@ -119,6 +119,7 @@ class GoogleOpts {
         return config
     }
 
+    @Memoized // make memoized to prevent multiple access to the creds file
     GoogleCredentials getCredentials() {
         return makeCreds(credsFile)
     }
@@ -127,7 +128,7 @@ class GoogleOpts {
         GoogleCredentials result
         if( credsFile ) {
             log.debug "Google auth via application credentials file: $credsFile"
-            result = GoogleCredentials .fromStream(new FileInputStream(credsFile))
+            result = GoogleCredentials.fromStream(new FileInputStream(credsFile))
         }
         else {
             log.debug "Google auth via application DEFAULT"

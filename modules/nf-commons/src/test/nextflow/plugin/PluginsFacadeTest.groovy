@@ -67,7 +67,8 @@ class PluginsFacadeTest extends Specification {
         def defaults = new DefaultPlugins(plugins: [
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
-                'nf-tower': new PluginSpec('nf-tower', '0.1.0')
+                'nf-tower': new PluginSpec('nf-tower', '0.1.0'),
+                'nf-wave': new PluginSpec('nf-wave', '0.1.0')
         ])
         and:
         def handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
@@ -85,6 +86,12 @@ class PluginsFacadeTest extends Specification {
 
         when:
         handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
+        result = handler.pluginsRequirement([tower:[enabled:false]])
+        then:
+        result == []
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
         result = handler.pluginsRequirement([tower:[enabled:true]])
         then:
         result == [ new PluginSpec('nf-tower', '0.1.0') ]
@@ -94,6 +101,43 @@ class PluginsFacadeTest extends Specification {
         result = handler.pluginsRequirement([:])
         then:
         result == [ new PluginSpec('nf-tower', '0.1.0') ]
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        result = handler.pluginsRequirement([wave:[enabled:true]])
+        then:
+        result == [ new PluginSpec('nf-wave', '0.1.0') ]
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        result = handler.pluginsRequirement([plugins: [ 'foo@1.2.3']])
+        then:
+        result == [ new PluginSpec('foo', '1.2.3') ]
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        result = handler.pluginsRequirement([plugins: [ 'nf-amazon@1.2.3']])
+        then:
+        result == [ new PluginSpec('nf-amazon', '1.2.3') ]
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        result = handler.pluginsRequirement([plugins: [ 'nf-amazon']])
+        then:
+        result == [ new PluginSpec('nf-amazon', '0.1.0') ] // <-- config is taken from the default config
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'nf-google@2.0.0'])
+        result = handler.pluginsRequirement([plugins: [ 'nf-amazon@1.2.3']])
+        then:
+        result == [ new PluginSpec('nf-amazon', '1.2.3'), new PluginSpec('nf-google','2.0.0') ]
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'nf-google@2.0.0'])
+        result = handler.pluginsRequirement([:])
+        then:
+        result == [ new PluginSpec('nf-google','2.0.0') ]
+
     }
 
     def 'should return default plugins given config' () {
@@ -282,6 +326,31 @@ class PluginsFacadeTest extends Specification {
         [:]                                 | Paths.get('plugins')
     }
 
+    @Unroll
+    def 'should merge plugins' () {
+        given:
+        def facade = new PluginsFacade()
+        def configPlugins = CONFIG.tokenize(',').collect { PluginSpec.parse(it) }
+        def defaultPlugins = DEFAULT.tokenize(',').collect { PluginSpec.parse(it) }
+        def expectedPlugins = EXPECTED.tokenize(',').collect { PluginSpec.parse(it) }
+
+        expect:
+        facade.mergePluginSpecs(configPlugins, defaultPlugins) == expectedPlugins
+
+        where:
+        CONFIG                  | DEFAULT               | EXPECTED
+        ''                      | ''                    | ''
+        'alpha,delta'           | ''                    | 'alpha,delta'
+        ''                      | 'alpha,delta'         | 'alpha,delta'
+        'alpha'                 | 'delta'               | 'alpha,delta'
+        'delta'                 | 'alpha'               | 'delta,alpha'
+        'delta'                 | 'delta'               | 'delta'
+        'delta@1.0.0'           | 'delta'               | 'delta@1.0.0'
+        'delta'                 | 'delta@2.0.0'         | 'delta@2.0.0'
+        'delta@1.0.0'           | 'delta@2.0.0'         | 'delta@1.0.0'     // <-- config has priority
+        'alpha,beta@1.0.0'      | 'delta@2.0.0'         | 'alpha,beta@1.0.0,delta@2.0.0'
+
+    }
 
     // -- check Priority annotation
 

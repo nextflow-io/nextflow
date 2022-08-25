@@ -69,12 +69,12 @@ class CsvParser {
         if( !str )
             return 0 as char
         if( str.size()>1 )
-            throw new IllegalArgumentException("Not a valid CVS character: $str")
+            throw new IllegalArgumentException("Not a valid CSV character: $str")
         str.charAt(0)
     }
 
     List<String> parse( String line ) {
-        def result = []
+        List<String> result = []
         while( line != null ) {
             if( !line ) {
                 result.add(empty)

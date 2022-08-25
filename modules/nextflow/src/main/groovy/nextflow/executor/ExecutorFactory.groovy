@@ -51,6 +51,7 @@ class ExecutorFactory {
             'pbs': PbsExecutor,
             'pbspro': PbsProExecutor,
             'slurm': SlurmExecutor,
+            'bridge': BridgeExecutor,
             'crg': CrgExecutor,
             'bsc': LsfExecutor,
             'condor': CondorExecutor,
