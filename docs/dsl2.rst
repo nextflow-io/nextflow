@@ -371,6 +371,10 @@ against the *including* script location.
 .. note::
     Relative paths must begin with the ``./`` prefix. Also, the ``include`` statement must be defined **outside** of the workflow definition.
 
+.. warning::
+    From version 22.05.0 `include` directive can be used to import operators and functions from plugin if the path
+    match the pattern `plugin/<plugin-id>` so avoid to use `plugin` as folder for your module
+
 
 Multiple inclusions
 -------------------

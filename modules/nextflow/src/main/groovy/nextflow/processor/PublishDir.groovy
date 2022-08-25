@@ -38,6 +38,7 @@ import nextflow.NF
 import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
+import nextflow.file.FileTransferPool
 import nextflow.file.TagAwareFile
 import nextflow.util.PathTrie
 /**
@@ -109,7 +110,7 @@ class PublishDir {
     private String taskName
 
     @Lazy
-    private ExecutorService threadPool = (Global.session as Session).getFileTransferThreadPool()
+    private ExecutorService threadPool = FileTransferPool.getExecutorService()
 
     void setPath( Closure obj ) {
         setPath( obj.call() as Path )
@@ -398,7 +399,7 @@ class PublishDir {
         final t1 = real0(target)
         final s1 = real0(sourceDir)
         if( t1.startsWith(s1) ) {
-            def msg = "Refuse to publish file since destination path conflicts with the task work directory!"
+            def msg = "Refusing to publish file since destination path conflicts with the task work directory!"
             if( taskName )
                 msg += "\n- offending task  : $taskName"
             msg += "\n- offending file  : $target"

@@ -57,7 +57,7 @@ class FilePorter {
 
     final Map<Path,FileTransfer> stagingTransfers = new HashMap<>()
 
-    @Lazy private ExecutorService threadPool = session.getFileTransferThreadPool()
+    @Lazy private ExecutorService threadPool = FileTransferPool.getExecutorService()
 
     private Duration pollTimeout
 
@@ -371,7 +371,7 @@ class FilePorter {
         def result = workDir.resolve( "$bucket/${hash.substring(2)}")
 
         if( !FilesEx.mkdirs(result) ) {
-            throw new IOException("Unable to create cache directory: $result -- Verify file system access permissions or if a file having the same name exists")
+            throw new IOException("Unable to create cache directory: $result -- Make sure a file with the same name doesn't exist and you have write permissions")
         }
         return result.toAbsolutePath()
     }

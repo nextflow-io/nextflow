@@ -62,14 +62,14 @@ class NextflowMetaTest extends Specification {
     def 'should probe dsl1' () {
 
         expect:
-        NextflowMeta.probeDls1('''
+        NextflowMeta.probeDsl1('''
             process foo {
                 input:
                 file transcriptome from transcriptome_file
             }
             ''')
         and:
-        NextflowMeta.probeDls1('''
+        NextflowMeta.probeDsl1('''
             process foo {
                 input:
                 file transcriptome 
@@ -77,7 +77,7 @@ class NextflowMetaTest extends Specification {
             }
             ''')
 
-        NextflowMeta.probeDls1('''
+        NextflowMeta.probeDsl1('''
             process foo {
                 input: file transcriptome from transcriptome_file
             }
@@ -85,14 +85,14 @@ class NextflowMetaTest extends Specification {
 
 
         and:
-        NextflowMeta.probeDls1('''
+        NextflowMeta.probeDsl1('''
             process foo {
                 output:
                 file transcriptome into transcriptome_file
             }
             ''')
         and:
-        NextflowMeta.probeDls1('''
+        NextflowMeta.probeDsl1('''
             process foo {
                 output:
                 file transcriptome 
@@ -100,14 +100,14 @@ class NextflowMetaTest extends Specification {
             }
             ''')
 
-        NextflowMeta.probeDls1('''
+        NextflowMeta.probeDsl1('''
             process foo {
                 output: file transcriptome into transcriptome_file
             }
             ''')
 
         and:
-        NextflowMeta.probeDls1('''
+        NextflowMeta.probeDsl1('''
             process foo {
                 input: 
                 file transcriptome from transcriptome_file
@@ -117,7 +117,7 @@ class NextflowMetaTest extends Specification {
             ''')
 
         and:
-        !NextflowMeta.probeDls1('''
+        !NextflowMeta.probeDsl1('''
             process foo {
                 input: 
                 file transcriptome 
@@ -127,7 +127,7 @@ class NextflowMetaTest extends Specification {
             ''')
 
         and:
-        !NextflowMeta.probeDls1('''
+        !NextflowMeta.probeDsl1('''
             process foo {
                 input: 
                 file transcriptome from transcriptome_file
@@ -141,7 +141,7 @@ class NextflowMetaTest extends Specification {
             ''')
 
         and:
-        !NextflowMeta.probeDls1('''
+        !NextflowMeta.probeDsl1('''
             process foo {
                 input: 
                 file transcriptome from transcriptome_file
@@ -153,7 +153,7 @@ class NextflowMetaTest extends Specification {
             ''')
 
         and:
-        !NextflowMeta.probeDls1('''
+        !NextflowMeta.probeDsl1('''
             process foo {
                 input: 
                 file transcriptome from transcriptome_file

@@ -702,7 +702,7 @@ class ConfigBuilderTest extends Specification {
         new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         def e = thrown(AbortOperationException)
-        e.message == 'You have requested to run with Docker but no image were specified'
+        e.message == 'You have requested to run with Docker but no image was specified'
 
         when:
         file.text =
@@ -714,7 +714,7 @@ class ConfigBuilderTest extends Specification {
         new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         e = thrown(AbortOperationException)
-        e.message == 'You have requested to run with Docker but no image were specified'
+        e.message == 'You have requested to run with Docker but no image was specified'
 
     }
 
@@ -1089,6 +1089,74 @@ class ConfigBuilderTest extends Specification {
         config.tower.enabled
         config.tower.endpoint == 'http://bar.com'
 
+    }
+
+    def 'should enable conda env' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.conda
+
+        when:
+        config = new ConfigObject()
+        config.conda.createOptions = 'something'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.conda instanceof Map
+        !config.conda.enabled
+        config.conda.createOptions == 'something'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withConda: 'my-recipe.yml'))
+        then:
+        config.conda instanceof Map
+        config.conda.enabled
+        config.process.conda == 'my-recipe.yml'
+
+        when:
+        config = new ConfigObject()
+        config.conda.enabled = true
+        builder.configRunOptions(config, env, new CmdRun(withConda: 'my-recipe.yml'))
+        then:
+        config.conda instanceof Map
+        config.conda.enabled
+        config.process.conda == 'my-recipe.yml'
+
+        when:
+        config = new ConfigObject()
+        config.process.conda = 'my-recipe.yml'
+        builder.configRunOptions(config, env, new CmdRun(withConda: '-'))
+        then:
+        config.conda instanceof Map
+        config.conda.enabled
+        config.process.conda == 'my-recipe.yml'
+    }
+
+    def 'should disable conda env' () {
+        given:
+        def file = Files.createTempFile('test','config')
+        file.deleteOnExit()
+        file.text =
+                '''
+                conda {
+                    enabled = true
+                }
+                '''
+
+        when:
+        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        def run = new CmdRun(withoutConda: true)
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        then:
+        !config.conda.enabled
+        !config.process.conda
     }
 
     def 'SHOULD SET `RESUME` OPTION'() {

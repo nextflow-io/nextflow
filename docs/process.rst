@@ -783,10 +783,10 @@ three with the ``regular`` method against each library file, and three with the 
 .. note::
   When multiple repeaters are defined, the process is executed for each *combination* of them.
 
-.. tip::
-  If you need to repeat the execution of a process over an `n`-tuple of elements instead of simple values or files,
-  create a channel to combine the input values as needed to trigger the process execution multiple times.
-  Refer to the :ref:`operator-combine` and :ref:`operator-cross` operators for more details.
+.. note::
+  Input repeaters currently do not support tuples. However, you can emulate an input repeater on a channel of
+  tuples by using the :ref:`operator-combine` or :ref:`operator-cross` operator with other input channels to
+  produce all of the desired input combinations.
 
 
 .. _process-multiple-input-channels:
@@ -863,6 +863,12 @@ It outputs::
   1 and a
   1 and b
   1 and c
+
+.. note::
+  In general, multiple input channels should be used to process *combinations* of different inputs,
+  using the ``each`` qualifier or value channels. Having multiple queue channels as inputs is equivalent
+  to using the ``merge`` operator, which is not recommended as it may lead to inputs being combined in
+  a non-deterministic way.
 
 See also: :ref:`channel-types`.
 
