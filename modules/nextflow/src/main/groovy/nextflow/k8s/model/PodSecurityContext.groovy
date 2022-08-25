@@ -36,6 +36,7 @@ class PodSecurityContext {
 
     private Map spec
 
+    @Deprecated
     PodSecurityContext(def user) {
         spec = [runAsUser: user]
     }

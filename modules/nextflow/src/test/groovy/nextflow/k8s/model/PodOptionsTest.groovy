@@ -199,7 +199,7 @@ class PodOptionsTest extends Specification {
                 [secret: 'secret/key', mountPath: '/etc/secret'],
                 [config: 'data/key', mountPath: '/data/file.txt'],
                 [volumeClaim: 'pvc', mountPath: '/mnt/claim'],
-                [runAsUser: 500]
+                [securityContext: [runAsUser: 500]]
         ]
 
         def list2 = [
@@ -243,26 +243,26 @@ class PodOptionsTest extends Specification {
         opts = new PodOptions(list1) + new PodOptions()
         then:
         opts == new PodOptions(list1)
-        opts.securityContext.toSpec() == [runAsUser:500]
+        opts.securityContext.toSpec() == [runAsUser: 500]
 
         when:
         opts = new PodOptions() + new PodOptions(list1)
         then:
         opts == new PodOptions(list1)
-        opts.securityContext.toSpec() == [runAsUser:500]
+        opts.securityContext.toSpec() == [runAsUser: 500]
 
         when:
         opts = new PodOptions(list1) + new PodOptions(list1)
         then:
         opts == new PodOptions(list1)
-        opts.securityContext.toSpec() == [runAsUser:500]
+        opts.securityContext.toSpec() == [runAsUser: 500]
 
 
         when:
         opts = new PodOptions(list1) + new PodOptions(list2)
         then:
         opts == new PodOptions(list1 + list2)
-        opts.securityContext.toSpec() == [runAsUser:500]
+        opts.securityContext.toSpec() == [runAsUser: 500]
 
         when:
         opts = new PodOptions(list1) + new PodOptions(list3)
@@ -410,19 +410,19 @@ class PodOptionsTest extends Specification {
 
     def 'should create user security context' () {
         when:
-        def opts = new PodOptions([ [runAsUser: 1000] ])
+        def opts = new PodOptions([ [securityContext: [runAsUser: 1000]] ])
         then:
-        opts.getSecurityContext() == new PodSecurityContext(1000)
+        opts.getSecurityContext() == new PodSecurityContext([runAsUser: 1000])
 
         when:
-        opts = new PodOptions([ [runAsUser: 'foo'] ])
+        opts = new PodOptions([ [securityContext: [runAsUser: 'foo']] ])
         then:
-        opts.getSecurityContext() == new PodSecurityContext('foo')
+        opts.getSecurityContext() == new PodSecurityContext([runAsUser: 'foo'])
 
         when:
-        opts = new PodOptions([ [runAsUser: 'foo'] ])
+        opts = new PodOptions([ [securityContext: [runAsUser: 'foo']] ])
         then:
-        opts.getSecurityContext() != new PodSecurityContext('bar')
+        opts.getSecurityContext() != new PodSecurityContext([runAsUser: 'bar'])
 
         when:
         def ctx = [runAsUser: 500, fsGroup: 200, allowPrivilegeEscalation: true, seLinuxOptions: [level: "s0:c123,c456"]]
