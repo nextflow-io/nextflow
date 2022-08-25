@@ -118,13 +118,13 @@ with the directory in the volume to be mounted (default: ``/``).
     one specified in your Nextflow configuration file.
     Note also that the ``run`` command does not support the ``-v`` option.
 
-.. tip:: It is also possible to mount multiple volumes using the ``pod`` directive, setting such as ``k8s.pod = [ [volumeClaim: "other-pvc", mountPath: "/other" ]]``
+.. tip:: It is also possible to mount multiple volumes using the ``podOptions`` directive, setting such as ``k8s.podOptions = [ [volumeClaim: "other-pvc", mountPath: "/other" ]]``
 
-Pod settings
-============
+Pod options
+===========
 
-The process :ref:`process-pod` directive allows the definition of pods specific settings, such as environment variables,
-secrets and config maps when using the :ref:`k8s-executor` executor. See the :ref:`process-pod` directive for more details.
+The process :ref:`process-podOptions` directive allows the definition of pod-specific options, such as environment variables,
+secrets and config maps when using the :ref:`k8s-executor` executor. See the :ref:`process-podOptions` directive for more details.
 
 Limitation
 ==========

@@ -49,7 +49,16 @@ class K8sConfig implements Map<String,Object> {
     K8sConfig(Map<String,Object> config) {
         target = config ?: Collections.<String,Object>emptyMap()
 
-        this.podOptions = createPodOptions(target.pod)
+        // -- backward compatibility
+        if( target.pod ) {
+            log.warn "Process directive 'pod' has been renamed to 'podOptions'"
+            target.put('podOptions', target.pod)
+        }
+
+        // -- initialize pod options
+        this.podOptions = createPodOptions(target.podOptions)
+
+        // -- add pod volume claim
         if( getStorageClaimName() ) {
             final name = getStorageClaimName()
             final mount = getStorageMountPath()

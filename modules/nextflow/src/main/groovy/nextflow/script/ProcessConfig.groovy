@@ -61,9 +61,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'errorStrategy',
             'executor',
             'ext',
-            'machineType',
-            'queue',
             'label',
+            'machineType',
             'maxErrors',
             'maxForks',
             'maxRetries',
@@ -71,7 +70,9 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'module',
             'penv',
             'pod',
+            'podOptions',
             'publishDir',
+            'queue',
             'scratch',
             'shell',
             'storeDir',
@@ -94,7 +95,13 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      * Names of directives that can be used more than once in the process definition
      */
     @PackageScope
-    static final List<String> repeatableDirectives = ['label','module','pod','publishDir']
+    static final List<String> repeatableDirectives = [
+        'label',
+        'module',
+        'pod',
+        'podOptions',
+        'publishDir'
+    ]
 
     /**
      * Default directives values
@@ -835,22 +842,22 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     }
 
     /**
-     * Allow use to specify K8s `pod` options
+     * Allow the user to specify K8s pod options
      *
      * @param entry
      *      A map object representing pod config options
      * @return
      *      The {@link ProcessConfig} instance itself
      */
-    ProcessConfig pod( Map entry ) {
+    ProcessConfig podOptions( Map entry ) {
 
         if( !entry )
             return this
 
-        def allOptions = (List)configProperties.get('pod')
+        def allOptions = (List)configProperties.get('podOptions')
         if( !allOptions ) {
             allOptions = new ConfigList()
-            configProperties.put('pod', allOptions)
+            configProperties.put('podOptions', allOptions)
         }
 
         allOptions.add(entry)

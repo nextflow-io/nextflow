@@ -1246,7 +1246,7 @@ The directives are:
 * `memory`_
 * `module`_
 * `penv`_
-* `pod`_
+* `podOptions`_
 * `publishDir`_
 * `queue`_
 * `scratch`_
@@ -1873,19 +1873,18 @@ cluster documentation or contact your admin to learn more about this.
 
 See also: `cpus`_, `memory`_, `time`_
 
+.. _process-podOptions:
 
-.. _process-pod:
+podOptions
+----------
 
-pod
----
-
-The ``pod`` directive allows the definition of pods specific settings, such as environment variables, secrets
+The ``podOptions`` directive allows the definition of pod-specific options, such as environment variables, secrets
 and config maps when using the :ref:`k8s-executor` executor.
 
 For example::
 
   process your_task {
-    pod env: 'FOO', value: 'bar'
+    podOptions env: 'FOO', value: 'bar'
 
     '''
     echo $FOO
@@ -1894,7 +1893,7 @@ For example::
 
 The above snippet defines an environment variable named ``FOO`` which value is ``bar``.
 
-The ``pod`` directive allows the definition of the following options:
+The ``podOptions`` directive supports the following options:
 
 ================================================= =================================================
 ``label: <K>, value: <V>``                        Defines a pod label with key ``K`` and value ``V``.
@@ -1918,17 +1917,20 @@ The ``pod`` directive allows the definition of the following options:
 ``privileged: <B>``                               Whenever the process task should run as a *privileged* container (default: ``false``)
 ================================================= =================================================
 
-When defined in the Nextflow configuration file, a pod setting can be defined using the canonical
+When defined in the Nextflow configuration file, a pod option can be defined using the canonical
 associative array syntax. For example::
 
   process {
-    pod = [env: 'FOO', value: 'bar']
+    podOptions = [env: 'FOO', value: 'bar']
   }
 
-When more than one setting needs to be provides they must be enclosed in a list definition as shown below::
+When more than one option needs to be provided they must be enclosed in a list as shown below::
 
   process {
-    pod = [ [env: 'FOO', value: 'bar'], [secret: 'my-secret/key1', mountPath: '/etc/file.txt'] ]
+    podOptions = [
+      [env: 'FOO', value: 'bar'],
+      [secret: 'my-secret/key1', mountPath: '/etc/file.txt']
+    ]
   }
 
 Some settings, including environment variables, configs, secrets, volume claims, and tolerations, can be specified multiple times for different values.

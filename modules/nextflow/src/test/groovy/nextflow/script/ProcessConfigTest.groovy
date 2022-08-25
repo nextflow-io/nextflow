@@ -544,27 +544,27 @@ class ProcessConfigTest extends Specification {
     }
 
 
-    def 'should apply pod configs' () {
+    def 'should apply pod options' () {
 
         when:
         def process =  new ProcessConfig([:])
-        process.applyConfigDefaults( pod: [secret: 'foo', mountPath: '/there'] )
+        process.applyConfigDefaults( podOptions: [secret: 'foo', mountPath: '/there'] )
         then:
-        process.pod == [
-                [secret: 'foo', mountPath: '/there']
+        process.podOptions == [
+            [secret: 'foo', mountPath: '/there']
         ]
 
         when:
         process =  new ProcessConfig([:])
-        process.applyConfigDefaults( pod: [
-                [secret: 'foo', mountPath: '/here'],
-                [secret: 'bar', mountPath: '/there']
+        process.applyConfigDefaults( podOptions: [
+            [secret: 'foo', mountPath: '/here'],
+            [secret: 'bar', mountPath: '/there']
         ] )
 
         then:
-        process.pod == [
-                [secret: 'foo', mountPath: '/here'],
-                [secret: 'bar', mountPath: '/there']
+        process.podOptions == [
+            [secret: 'foo', mountPath: '/here'],
+            [secret: 'bar', mountPath: '/there']
         ]
 
     }
