@@ -19,6 +19,7 @@ package io.seqera.wave.plugin
 
 import nextflow.Session
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -26,7 +27,8 @@ import spock.lang.Specification
  */
 class WaveFactoryTest extends Specification {
 
-    def 'should not change config/1' () {
+    @Unroll
+    def 'should not change config' () {
         given:
         def session = Mock(Session) { getConfig() >> CONFIG }
         def factory = new WaveFactory()
@@ -35,12 +37,14 @@ class WaveFactoryTest extends Specification {
         factory.create(session)
         then:
         CONFIG == EXPECTED
+        and:
+        DISABLED * session.setDisableRemoteBinDir(true) >> null
 
         where:
-        CONFIG                      | EXPECTED
-        [:]                         | [:]
-        [wave:[enabled:true]]       | [wave:[enabled:true]]
-        [wave:[enabled:true], fusion:[enabled:true]]     | [disableRemoteBinDir: true, wave:[enabled:true,bundleProjectResources:true], fusion:[enabled:true]]
+        CONFIG                      | EXPECTED                  | DISABLED
+        [:]                         | [:]                       | 0
+        [wave:[enabled:true]]       | [wave:[enabled:true]]     | 0
+        [wave:[enabled:true], fusion:[enabled:true]]     | [wave:[enabled:true,bundleProjectResources:true], fusion:[enabled:true]] | 1
     }
 
 }

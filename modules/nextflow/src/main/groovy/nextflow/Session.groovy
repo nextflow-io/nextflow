@@ -171,6 +171,11 @@ class Session implements ISession {
      */
     String commitId
 
+    /*
+     * Disable the upload of project 'bin' directory when using cloud executor
+     */
+    boolean disableRemoteBinDir
+
     /**
      * Local path where script generated classes are saved
      */
@@ -370,6 +375,7 @@ class Session implements ISession {
         }
 
         // set the byte-code target directory
+        this.disableRemoteBinDir = getExecConfigProp(null, 'disableRemoteBinDir', false)
         this.classesDir = FileHelper.createLocalDir()
         this.executorFactory = new ExecutorFactory(Plugins.manager)
         this.observers = createObservers()
