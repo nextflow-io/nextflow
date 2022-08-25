@@ -36,7 +36,6 @@ class BatchConfig {
     private GoogleCredentials credentials
     private MemoryUnit bootDiskSize
     private String cpuPlatform
-    private boolean disableBinDir
     private boolean spot
     private boolean preemptible
     private boolean usePrivateAddress
@@ -48,7 +47,6 @@ class BatchConfig {
     GoogleCredentials getCredentials() { return credentials }
     MemoryUnit getBootDiskSize() { bootDiskSize }
     String getCpuPlatform() { cpuPlatform }
-    boolean getDisableBinDir() { disableBinDir }
     boolean getPreemptible() { preemptible }
     boolean getSpot() { spot }
     boolean getUsePrivateAddress() { usePrivateAddress }
@@ -62,7 +60,6 @@ class BatchConfig {
         result.credentials = result.googleOpts.credentials
         result.bootDiskSize = session.config.navigate('google.batch.bootDiskSize') as MemoryUnit
         result.cpuPlatform = session.config.navigate('google.batch.cpuPlatform')
-        result.disableBinDir = session.config.navigate('google.batch.disableRemoteBinDir',false)
         result.spot = session.config.navigate('google.batch.spot',false)
         result.preemptible = session.config.navigate('google.batch.preemptible',false)
         result.usePrivateAddress = session.config.navigate('google.batch.usePrivateAddress',false)
@@ -74,7 +71,7 @@ class BatchConfig {
 
     @Override
     String toString(){
-        return "BatchConfig[googleOpts=$googleOpts; disableBinDir=$disableBinDir]"
+        return "BatchConfig[googleOpts=$googleOpts"
     }
 
 }

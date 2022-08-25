@@ -33,6 +33,7 @@ import com.google.gson.reflect.TypeToken
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import io.seqera.wave.plugin.config.FusionConfig
 import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.packer.Packer
 import nextflow.Session
@@ -63,7 +64,10 @@ class WaveClient {
 
     private Cache<String, SubmitContainerTokenResponse> cache
 
+    private Session session
+
     WaveClient(Session session) {
+        this.session = session
         this.config = new WaveConfig(session.config.wave as Map ?: [:])
         this.fusion = new FusionConfig(session.config.fusion as Map ?: [:])
         this.endpoint = config.endpoint()
@@ -84,33 +88,22 @@ class WaveClient {
 
     WaveConfig config() { return config }
 
-    Boolean enabled() { config.enabled() }
-
-    protected <T extends OutputStream> T makeTar(ModuleBundle bundle, T target) {
-        packer.makeTar(bundle.root, bundle.getPathsList(), target)
-    }
+    Boolean enabled() { return config.enabled() }
 
     protected ContainerLayer makeLayer(ModuleBundle bundle) {
-
-        final result = packer.layer(bundle.root, bundle.pathsList)
-
-        log.debug """\
-            Module bundle: ${bundle.root}
-            - digest     : ${bundle.fingerprint()}    
-            - location   : ${result.location}
-            - tar digest : ${result.tarDigest}
-            - gzip digest: ${result.gzipDigest}
-            - gzip size  : ${result.gzipSize}
-            """.stripIndent().rightTrim()
-
+        final result = packer.layer(bundle.content())
         return result
     }
 
     SubmitContainerTokenRequest makeRequest(WaveAssets assets) {
         final containerConfig = assets.containerConfig ?: new ContainerConfig()
-        // pre-prepend the bundle layer
-        if( assets.bundle && assets.bundle.hasEntries() ) {
-            containerConfig.prependLayer(makeLayer(assets.bundle))
+        // prepend the bundle layer
+        if( assets.moduleResources!=null && assets.moduleResources.hasEntries() ) {
+            containerConfig.prependLayer(makeLayer(assets.moduleResources))
+        }
+        // prepend project resources bundle
+        if( assets.projectResources!=null && assets.projectResources.hasEntries() ) {
+            containerConfig.prependLayer(makeLayer(assets.projectResources))
         }
 
         if( !assets.containerImage && !assets.dockerFileContent )
@@ -185,7 +178,7 @@ class WaveClient {
     }
 
     @Memoized
-    ContainerConfig fetchContainerConfig(URL configUrl) {
+    synchronized protected ContainerConfig fetchContainerConfig(URL configUrl) {
         log.debug "Wave request container config: $configUrl"
         final req = HttpRequest.newBuilder()
                 .uri(configUrl.toURI())
@@ -253,6 +246,10 @@ class WaveClient {
         String dockerScript = attrs.dockerfile
         final containerImage = attrs.container
 
+        /*
+         * If 'conda' directive is specified use it to create a Dockefile
+         * to assemble the target container
+         */
         Path condaFile = null
         if( attrs.conda ) {
             if( dockerScript )
@@ -268,14 +265,41 @@ class WaveClient {
             }
         }
 
+        /*
+         * The process should declare at least a container image name via 'container' directive
+         * or a dockerfile file to build, otherwise there's no job to be done by wave
+         */
         if( !dockerScript && !containerImage ) {
-            // nothing to do
             return null
         }
 
+        /*
+         * project level resources i.e. `ROOT/bin/` directory files
+         * are only uploaded when using fusion
+         */
+        final projectRes = config.bundleProjectResources() && session.binDir
+                    ? projectResources(session.binDir)
+                    : null
+
         // read the container config and go ahead
         final containerConfig = this.resolveContainerConfig()
-        return new WaveAssets(containerImage, bundle, containerConfig, dockerScript, condaFile)
+        return new WaveAssets(
+                    containerImage,
+                    bundle,
+                    containerConfig,
+                    dockerScript,
+                    condaFile,
+                    projectRes)
+    }
+
+    @Memoized
+    protected ModuleBundle projectResources(Path path) {
+        log.debug "Wave assets bundle bin resources: $path"
+        // place project 'bin' resources under '/usr/local'
+        // see https://unix.stackexchange.com/questions/8656/usr-bin-vs-usr-local-bin-on-linux
+        return path && path.parent
+                ? ModuleBundle.scan( path.parent, [filePattern: "$path.name/**", baseDirectory:'usr/local'] )
+                : null
     }
 
     ContainerInfo fetchContainerImage(WaveAssets assets) {

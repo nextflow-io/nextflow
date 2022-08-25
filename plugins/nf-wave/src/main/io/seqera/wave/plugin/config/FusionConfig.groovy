@@ -15,7 +15,7 @@
  *
  */
 
-package io.seqera.wave.plugin
+package io.seqera.wave.plugin.config
 
 import groovy.transform.CompileStatic
 

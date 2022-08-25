@@ -1647,7 +1647,7 @@ class TaskProcessor {
 
 
         // pre-pend the 'bin' folder to the task environment
-        if( executor.binDir ) {
+        if( executor.binDir && executor.binDir.fileSystem==FileSystems.default ) {
             if( result.containsKey('PATH') ) {
                 // note: do not escape potential blanks in the bin path because the PATH
                 // variable is enclosed in `"` when in rendered in the launcher script -- see #630

@@ -143,6 +143,16 @@ abstract class TaskHandler {
         return this.status.toString()
     }
 
+    TraceRecord safeTraceRecord() {
+        try {
+            return getTraceRecord()
+        }
+        catch (Exception e) {
+                log.debug "Unable to get task trace record -- cause: ${e.message}", e
+            return null
+        }
+    }
+    
     /**
      * @return An {@link TraceRecord} instance holding task runtime information
      */
@@ -158,7 +168,7 @@ abstract class TaskHandler {
         record.process = task.processor.getName()
         record.tag = task.config.tag
         record.module = task.config.module
-        record.container = task.container
+        record.container = task.getContainer()
         record.attempt = task.config.attempt
 
         record.script = task.getScript()

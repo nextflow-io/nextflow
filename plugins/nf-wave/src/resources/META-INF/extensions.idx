@@ -9,4 +9,5 @@
 # defined by the Mozilla Public License, v. 2.0.
 #
 
+io.seqera.wave.plugin.WaveFactory
 io.seqera.wave.plugin.resolver.WaveContainerResolver

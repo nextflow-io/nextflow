@@ -32,7 +32,7 @@ import spock.lang.Specification
 class PackerTest extends Specification implements TarHelper {
 
 
-    def 'should tar file' () {
+    def 'should tar bundle' () {
         given:
         def LAST_MODIFIED = FileTime.fromMillis(1_000_000_000_000)
         def folder = Files.createTempDirectory('test')

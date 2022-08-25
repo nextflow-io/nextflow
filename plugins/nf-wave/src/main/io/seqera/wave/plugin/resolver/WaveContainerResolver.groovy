@@ -45,8 +45,6 @@ class WaveContainerResolver implements ContainerResolver {
     private final String DOCKER_PREFIX = 'docker://'
     private WaveClient client0
 
-    private Map<String,String> resolveBack = new HashMap<>()
-
     synchronized protected WaveClient client() {
         if( client0 )
             return client0

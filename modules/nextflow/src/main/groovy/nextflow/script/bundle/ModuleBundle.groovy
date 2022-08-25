@@ -44,10 +44,11 @@ class ModuleBundle {
     public static MemoryUnit MAX_BUNDLE_SIZE = MemoryUnit.of('5MB')
 
     private Path root
-    private Map<String,Path> content = new LinkedHashMap<>(100)
+    private LinkedHashMap<String,Path> content = new LinkedHashMap<>(100)
     private Path dockerfile
     private MemoryUnit maxFileSize = MAX_FILE_SIZE
     private MemoryUnit maxBundleSize = MAX_BUNDLE_SIZE
+    private String baseDirectory
 
     ModuleBundle(Path root) {
         this.root = root
@@ -65,6 +66,8 @@ class ModuleBundle {
     }
 
     Path getRoot() { root }
+
+    Map<String,Path> content() { content }
 
     static private Path dockefile0(Path path) {
         return path?.exists() ? path : null
@@ -85,7 +88,10 @@ class ModuleBundle {
                 throw new IllegalArgumentException("Module total size cannot exceed $maxBundleSize")
             }
 
-            final name = root.relativize(it).toString()
+            final relPath = root.relativize(it)
+            final name = baseDirectory
+                    ? Path.of(baseDirectory).resolve(relPath).toString()
+                    : relPath.toString()
             content.put(name, it)
         }
         return this
@@ -99,6 +105,7 @@ class ModuleBundle {
         return new HashSet<Path>(content.values())
     }
 
+    @Deprecated
     List<Path> getPathsList() {
         final result = new ArrayList<Path>(content.size())
         for( String name : getEntries() )
@@ -144,10 +151,14 @@ class ModuleBundle {
             result.maxFileSize = config.maxFileSize as MemoryUnit
         if( config.maxBundleSize )
             result.maxBundleSize = config.maxBundleSize as MemoryUnit
+        if( config.baseDirectory )
+            result.baseDirectory = config.baseDirectory as String
+        
         // load bundle files
         final files = new HashSet(10)
+        final pattern = config.filePattern as String ?: '**'
         final opts = [type: 'any', hidden: true, relative: false]
-        FileHelper.visitFiles(opts, bundleRoot, '**') { files.add(it) }
+        FileHelper.visitFiles(opts, bundleRoot, pattern) { files.add(it) }
         result.withPaths(files)
         return result
     }
