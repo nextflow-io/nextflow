@@ -22,7 +22,7 @@ import java.nio.file.Path
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
-import nextflow.script.bundle.ModuleBundle
+import nextflow.script.bundle.ResourcesBundle
 import nextflow.util.CacheHelper
 /**
  * Hold assets required to fulfill wave container image build
@@ -33,11 +33,11 @@ import nextflow.util.CacheHelper
 @CompileStatic
 class WaveAssets {
     final String containerImage
-    final ModuleBundle moduleResources
+    final ResourcesBundle moduleResources
     final ContainerConfig containerConfig
     final String dockerFileContent
     final Path condaFile
-    final ModuleBundle projectResources
+    final ResourcesBundle projectResources
 
     static fromImage(String containerImage) {
         new WaveAssets(containerImage)
