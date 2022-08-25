@@ -218,7 +218,7 @@ class K8sConfigTest extends Specification {
 
 
         when:
-        opts = new K8sConfig(podOptions: [ [pullPolicy: 'Always'], [env: 'HELLO', value: 'WORLD'] ]).getPodOptions()
+        opts = new K8sConfig(podOptions: [ [imagePullPolicy: 'Always'], [env: 'HELLO', value: 'WORLD'] ]).getPodOptions()
         then:
         opts.getImagePullPolicy() == 'Always'
         opts.getEnvVars() == [ PodEnv.value('HELLO','WORLD') ] as Set
