@@ -38,7 +38,6 @@ class FusionScriptLauncher extends BashWrapperBuilder {
 
     private Class<Path> type
     private Path remoteWorkDir
-    private Path remoteBinDir
     private Set<String> buckets = new HashSet<>()
 
     /* ONLY FOR TESTING - DO NOT USE */
@@ -46,12 +45,11 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         this.buckets = new HashSet<>()
     }
 
-    FusionScriptLauncher(TaskBean bean, Path remoteBinDir, Class<Path> type) {
+    FusionScriptLauncher(TaskBean bean, Class<Path> type) {
         super(bean)
         // keep track the google storage work dir
         this.type = type
         this.remoteWorkDir = bean.workDir
-        this.remoteBinDir = toContainerMount(remoteBinDir)
 
         // map bean work and target dirs to container mount
         // this needed to create the command launcher using container local file paths
@@ -83,13 +81,7 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     }
 
     protected String headerScript(TaskBean bean) {
-        def result = "NXF_CHDIR=${Escape.path(bean.workDir)}\n"
-        if( remoteBinDir ) {
-            result += "cp -r $remoteBinDir \$HOME/.nextflow-bin\n"
-            result += 'chmod +x $HOME/.nextflow-bin/*\n'
-            result += 'export PATH=$PATH:$HOME/.nextflow-bin\n'
-        }
-        return result
+        return "NXF_CHDIR=${Escape.path(bean.workDir)}\n"
     }
 
     Path toContainerMount(Path path) {

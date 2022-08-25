@@ -126,8 +126,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         /*
          * upload local binaries
          */
-        def disableBinDir = session.getExecConfigProp(name, 'disableRemoteBinDir', false)
-        if( session.binDir && !session.binDir.empty() && !disableBinDir ) {
+        if( session.binDir && !session.binDir.empty() && !session.disableRemoteBinDir ) {
             def s3 = getTempDir()
             log.info "Uploading local `bin` scripts folder to ${s3.toUriString()}/bin"
             remoteBinDir = FilesEx.copyTo(session.binDir, s3)
