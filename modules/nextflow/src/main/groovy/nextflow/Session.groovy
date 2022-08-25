@@ -941,10 +941,11 @@ class Session implements ISession {
     }
 
     void notifyTaskPending( TaskHandler handler ) {
+        final trace = handler.getTraceRecord()
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessPending(handler, handler.getTraceRecord())
+                observer.onProcessPending(handler, trace)
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -961,10 +962,11 @@ class Session implements ISession {
         // -- save a record in the cache index
         cache.putIndexAsync(handler)
 
+        final trace = handler.getTraceRecord()
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessSubmit(handler, handler.getTraceRecord())
+                observer.onProcessSubmit(handler, trace)
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -976,10 +978,11 @@ class Session implements ISession {
      * Notifies task start event
      */
     void notifyTaskStart( TaskHandler handler ) {
+        final trace = handler.getTraceRecord()
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessStart(handler, handler.getTraceRecord())
+                observer.onProcessStart(handler, trace)
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -994,7 +997,7 @@ class Session implements ISession {
      */
     void notifyTaskComplete( TaskHandler handler ) {
         // save the completed task in the cache DB
-        final trace = handler.getTraceRecord()
+        final trace = handler.safeTraceRecord()
         cache.putTaskAsync(handler, trace)
 
         // notify the event to the observers
@@ -1077,10 +1080,11 @@ class Session implements ISession {
      */
     void notifyError( TaskHandler handler ) {
 
+        final trace = handler?.safeTraceRecord()
         for ( int i=0; i<observers?.size(); i++){
             try{
                 final observer = observers.get(i)
-                observer.onFlowError(handler, handler?.getTraceRecord())
+                observer.onFlowError(handler, trace)
             } catch ( Throwable e ) {
                 log.debug(e.getMessage(), e)
             }
@@ -1090,7 +1094,7 @@ class Session implements ISession {
             return
 
         try {
-            errorAction.call( handler?.getTraceRecord() )
+            errorAction.call(trace)
         }
         catch( Throwable e ) {
             log.debug(e.getMessage(), e)

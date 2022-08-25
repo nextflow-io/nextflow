@@ -71,7 +71,8 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     }
 
     protected void uploadBinDir() {
-        if( session.binDir && !config.disableBinDir ) {
+        final disableBinDir = session.getExecConfigProp(name, 'disableRemoteBinDir', false)
+        if( session.binDir && !session.binDir.empty() && !disableBinDir ) {
             final cloudPath = getTempDir()
             log.info "Uploading local `bin` scripts folder to ${cloudPath.toUriString()}/bin"
             this.remoteBinDir = FilesEx.copyTo(session.binDir, cloudPath)
