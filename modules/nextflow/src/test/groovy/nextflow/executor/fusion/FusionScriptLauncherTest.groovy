@@ -20,8 +20,8 @@ package nextflow.executor.fusion
 import java.nio.file.Path
 
 import nextflow.file.http.XPath
+import nextflow.processor.TaskBean
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -47,9 +47,17 @@ class FusionScriptLauncherTest extends Specification {
         then:
         result == Path.of('/fusion/http/bar/z.txt')
 
-
         expect:
         fusion.fusionBuckets() == [ 'foo', 'bar' ] as Set
 
+    }
+
+    def 'should get header script' () {
+        given:
+        def fusion = new FusionScriptLauncher(type: XPath)
+        def task = Mock(TaskBean) { getWorkDir() >> Path.of('/some/work/dir')}
+
+        expect:
+        fusion.headerScript(task) == 'NXF_CHDIR=/some/work/dir\n'
     }
 }

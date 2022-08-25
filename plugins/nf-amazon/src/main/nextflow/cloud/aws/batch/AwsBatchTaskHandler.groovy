@@ -334,7 +334,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     protected BashWrapperBuilder createTaskWrapper() {
         return fusionEnabled
-                ? fusionLauncher = new FusionScriptLauncher(bean, executor.getRemoteBinDir(), S3Path)
+                ? fusionLauncher = new FusionScriptLauncher(bean, S3Path)
                 : new AwsBatchScriptLauncher(bean, getAwsOptions())
     }
 

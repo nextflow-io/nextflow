@@ -83,8 +83,7 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
         /*
          * upload local binaries
          */
-        def disableBinDir = session.getExecConfigProp(name, 'disableRemoteBinDir', false)
-        if( session.binDir && !session.binDir.empty() && !disableBinDir ) {
+        if( session.binDir && !session.binDir.empty() && !session.disableRemoteBinDir ) {
             final remote = getTempDir()
             log.info "Uploading local `bin` scripts folder to ${remote.toUriString()}/bin"
             remoteBinDir = FilesEx.copyTo(session.binDir, remote)

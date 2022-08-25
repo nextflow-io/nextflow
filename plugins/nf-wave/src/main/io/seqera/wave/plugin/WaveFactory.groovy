@@ -24,7 +24,7 @@ class WaveFactory implements TraceObserverFactory {
             if( !wave?.enabled ) throw new AbortRunException("Fusion feature requires enabling Wave service")
             log.debug "Detected Fusion enabled -- Enabling bundle project resources -- Disabling upload of remote bin directory"
             wave.bundleProjectResources = true
-            config.disableRemoteBinDir = true
+            session.disableRemoteBinDir = true
         }
         return Collections.emptyList()
     }
