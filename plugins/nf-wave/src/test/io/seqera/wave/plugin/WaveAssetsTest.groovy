@@ -17,7 +17,7 @@
 
 package io.seqera.wave.plugin
 
-import nextflow.script.bundle.ModuleBundle
+import nextflow.script.bundle.ResourcesBundle
 import nextflow.util.CacheHelper
 import spock.lang.Specification
 /**
@@ -29,7 +29,7 @@ class WaveAssetsTest extends Specification {
     def 'should compute hash key' () {
         given:
         def IMAGE = 'foo:latest'
-        def BUNDLE = Mock(ModuleBundle) { fingerprint() >> '12345' }
+        def BUNDLE = Mock(ResourcesBundle) { fingerprint() >> '12345' }
         
         expect:
         new WaveAssets(IMAGE).hashKey() == CacheHelper.hasher([IMAGE]).hash().toString()

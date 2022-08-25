@@ -39,7 +39,7 @@ import io.seqera.wave.plugin.packer.Packer
 import nextflow.Session
 import nextflow.container.resolver.ContainerInfo
 import nextflow.processor.TaskRun
-import nextflow.script.bundle.ModuleBundle
+import nextflow.script.bundle.ResourcesBundle
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -90,7 +90,7 @@ class WaveClient {
 
     Boolean enabled() { return config.enabled() }
 
-    protected ContainerLayer makeLayer(ModuleBundle bundle) {
+    protected ContainerLayer makeLayer(ResourcesBundle bundle) {
         final result = packer.layer(bundle.content())
         return result
     }
@@ -241,7 +241,7 @@ class WaveClient {
         return resolveAssets0(attrs, bundle)
     }
 
-    protected WaveAssets resolveAssets0(Map<String,String> attrs, ModuleBundle bundle) {
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle) {
 
         String dockerScript = attrs.dockerfile
         final containerImage = attrs.container
@@ -293,12 +293,12 @@ class WaveClient {
     }
 
     @Memoized
-    protected ModuleBundle projectResources(Path path) {
+    protected ResourcesBundle projectResources(Path path) {
         log.debug "Wave assets bundle bin resources: $path"
         // place project 'bin' resources under '/usr/local'
         // see https://unix.stackexchange.com/questions/8656/usr-bin-vs-usr-local-bin-on-linux
         return path && path.parent
-                ? ModuleBundle.scan( path.parent, [filePattern: "$path.name/**", baseDirectory:'usr/local'] )
+                ? ResourcesBundle.scan( path.parent, [filePattern: "$path.name/**", baseDirectory:'usr/local'] )
                 : null
     }
 

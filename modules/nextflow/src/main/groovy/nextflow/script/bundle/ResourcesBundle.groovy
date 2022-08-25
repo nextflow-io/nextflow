@@ -38,7 +38,7 @@ import nextflow.util.MemoryUnit
 @Slf4j
 @Canonical
 @CompileStatic
-class ModuleBundle {
+class ResourcesBundle {
 
     public static MemoryUnit MAX_FILE_SIZE = MemoryUnit.of('1MB')
     public static MemoryUnit MAX_BUNDLE_SIZE = MemoryUnit.of('5MB')
@@ -50,17 +50,17 @@ class ModuleBundle {
     private MemoryUnit maxBundleSize = MAX_BUNDLE_SIZE
     private String baseDirectory
 
-    ModuleBundle(Path root) {
+    ResourcesBundle(Path root) {
         this.root = root
         this.dockerfile = dockefile0(root.resolveSibling('Dockerfile'))
     }
 
-    ModuleBundle withMaxFileSize(MemoryUnit mem) {
+    ResourcesBundle withMaxFileSize(MemoryUnit mem) {
         this.maxFileSize = mem
         return this
     }
 
-    ModuleBundle withBundleSize(MemoryUnit mem) {
+    ResourcesBundle withBundleSize(MemoryUnit mem) {
         this.maxBundleSize = mem
         return this
     }
@@ -73,7 +73,7 @@ class ModuleBundle {
         return path?.exists() ? path : null
     }
 
-    ModuleBundle withPaths(Collection<Path> paths) {
+    ResourcesBundle withPaths(Collection<Path> paths) {
         this.content = new LinkedHashMap<String,Path>(100)
         long totSize = 0
         for( Path it : paths ) {
@@ -130,16 +130,16 @@ class ModuleBundle {
     }
 
     /**
-     * Creates a {@link ModuleBundle} object populated with the set of files in the root directory
+     * Creates a {@link ResourcesBundle} object populated with the set of files in the root directory
      *
      * @param bundleRoot
      *      The bundle root path
      * @return
-     *      An instance of {@link ModuleBundle} holding the set of files that are container
+     *      An instance of {@link ResourcesBundle} holding the set of files that are container
      *      in the bundle directory
      */
-    static ModuleBundle scan(Path bundleRoot, Map config=[:]) {
-        final result = new ModuleBundle(bundleRoot)
+    static ResourcesBundle scan(Path bundleRoot, Map config=[:]) {
+        final result = new ResourcesBundle(bundleRoot)
         if( !bundleRoot.exists() )
             return result
         if( !bundleRoot.isDirectory() ) {

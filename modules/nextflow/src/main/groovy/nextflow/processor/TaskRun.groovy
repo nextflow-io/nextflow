@@ -38,7 +38,7 @@ import nextflow.script.BodyDef
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
-import nextflow.script.bundle.ModuleBundle
+import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
@@ -603,7 +603,7 @@ class TaskRun implements Cloneable {
         return info?.hashKey
     }
 
-    ModuleBundle getModuleBundle() {
+    ResourcesBundle getModuleBundle() {
         final script = this.getProcessor().getOwnerScript()
         final meta = ScriptMeta.get(script)
         return meta != null ? meta.getModuleBundle() : null

@@ -154,14 +154,14 @@ class ScriptMetaTest extends Dsl2Spec {
         def folder = TestHelper.createInMemTempDir()
         and:
         def mod = folder.resolve('mod1'); mod.mkdir()
-        mod.resolve('bundle').mkdir()
+        mod.resolve('resources').mkdir()
         and:
         def scriptPath = mod.resolve('main.nf')
         def dockerPath = mod.resolve('Dockerfile')
         Files.createFile(scriptPath)
         Files.createFile(dockerPath)
-        Files.createFile(mod.resolve('bundle/foo.txt'))
-        Files.createFile(mod.resolve('bundle/bar.txt'))
+        Files.createFile(mod.resolve('resources/foo.txt'))
+        Files.createFile(mod.resolve('resources/bar.txt'))
         and:
         def meta = new ScriptMeta(scriptPath: scriptPath)
 

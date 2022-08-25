@@ -31,7 +31,7 @@ import spock.lang.TempDir
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class ModuleBundleTest extends Specification {
+class ResourcesBundleTest extends Specification {
 
     def LAST_MODIFIED = 1_000_000_000_000
 
@@ -58,7 +58,7 @@ class ModuleBundleTest extends Specification {
         FileHelper.visitFiles([type:'any'], bundlePath, '**', { Path it -> it.setLastModified(LAST_MODIFIED) })
 
         when:
-        def bundle = ModuleBundle.scan(bundlePath)
+        def bundle = ResourcesBundle.scan(bundlePath)
         then:
         bundle
         bundle.hasEntries()
@@ -92,7 +92,7 @@ class ModuleBundleTest extends Specification {
         dockerPath.setLastModified(LAST_MODIFIED)
         dockerPath.setPermissions(6,4,4)
         when:
-        def bundle = ModuleBundle.scan(bundlePath)
+        def bundle = ResourcesBundle.scan(bundlePath)
         then:
         bundle.getDockerfile() == dockerPath
         and:
@@ -121,7 +121,7 @@ class ModuleBundleTest extends Specification {
         root.resolve('main.nf').text = "I'm the main file"
 
         when:
-        ModuleBundle.scan(root, [maxFileSize: MemoryUnit.of(5)])
+        ResourcesBundle.scan(root, [maxFileSize: MemoryUnit.of(5)])
         then:
         thrown(IllegalArgumentException)
 
@@ -133,7 +133,7 @@ class ModuleBundleTest extends Specification {
         root.resolve('main.nf').text = "I'm the main file"
 
         when:
-        ModuleBundle.scan(root, [maxBundleSize: MemoryUnit.of(5)])
+        ResourcesBundle.scan(root, [maxBundleSize: MemoryUnit.of(5)])
         then:
         def e = thrown(IllegalArgumentException)
         e.message == 'Module total size cannot exceed 5 B'
@@ -149,7 +149,7 @@ class ModuleBundleTest extends Specification {
         Files.createSymbolicLink(link, main)
         assert !Files.isRegularFile(link, LinkOption.NOFOLLOW_LINKS)
         when:
-        ModuleBundle.scan(root)
+        ResourcesBundle.scan(root)
         then:
         def e = thrown(IllegalArgumentException)
         e.message.startsWith('Module bundle does not allow link files')
@@ -176,7 +176,7 @@ class ModuleBundleTest extends Specification {
         root.resolve('bar/bbb').text = 'bbb'
 
         when:
-        def module = ModuleBundle.scan(root, [filePattern: '{bin,bin/**}', baseDirectory: '/usr/local'])
+        def module = ResourcesBundle.scan(root, [filePattern: '{bin,bin/**}', baseDirectory: '/usr/local'])
         then:
         module.getEntries() == [
                 '/usr/local/bin',
