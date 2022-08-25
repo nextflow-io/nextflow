@@ -34,16 +34,18 @@ class WaveConfig {
     final private Duration tokensCacheMaxDuration
     final private CondaOpts condaOpts
     final private List<String> strategy
+    final private bundleProjectResources
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
         this.containerConfigUrl = parseConfig(opts, env)
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '15m') as Duration
-        if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
-            throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
         this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
         this.strategy = parseStrategy(opts.strategy)
+        this.bundleProjectResources = opts.bundleProjectResources
+        if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
+            throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
     }
 
     Boolean enabled() { this.enabled }
@@ -53,6 +55,8 @@ class WaveConfig {
     CondaOpts condaOpts() { this.condaOpts }
 
     List<String> strategy() { this.strategy }
+
+    boolean bundleProjectResources() { bundleProjectResources }
 
     protected List<String> parseStrategy(value) {
         if( !value )

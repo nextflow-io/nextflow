@@ -25,6 +25,8 @@ import java.nio.file.Path
 import nextflow.file.FileHelper
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
+import spock.lang.TempDir
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -33,10 +35,11 @@ class ModuleBundleTest extends Specification {
 
     def LAST_MODIFIED = 1_000_000_000_000
 
+    @TempDir
+    Path folder
+
     def 'should scan bundle files' () {
         given:
-        def folder = Files.createTempDirectory('test')
-        and:
         def bundlePath = folder.resolve('mod1'); bundlePath.mkdir()
         bundlePath.resolve('main.nf').text = "I'm the main file"
         bundlePath.resolve('this/that').mkdirs()
@@ -79,14 +82,10 @@ class ModuleBundleTest extends Specification {
         and:
         bundle.fingerprint() == 'c063b8f42cfd65f4eb8efe7c30c108bc'
 
-        cleanup:
-        folder?.deleteDir()
     }
 
     def 'should get dockerfile' () {
         given:
-        def folder = Files.createTempDirectory('test')
-        and:
         def dockerPath = folder.resolve('Dockerfile'); dockerPath.text = "I'm the main file"
         def bundlePath = folder.resolve('bundle')
         and:
@@ -114,14 +113,10 @@ class ModuleBundleTest extends Specification {
         then:
         bundle.fingerprint() == '41bd15592039e3a198bef861800d3cd6'
         
-        cleanup:
-        folder?.deleteDir()
     }
 
     def 'should check max file size'() {
         given:
-        def folder = Files.createTempDirectory('test')
-        and:
         def root = folder.resolve('mod1'); root.mkdir()
         root.resolve('main.nf').text = "I'm the main file"
 
@@ -130,14 +125,10 @@ class ModuleBundleTest extends Specification {
         then:
         thrown(IllegalArgumentException)
 
-        cleanup:
-        folder?.deleteDir()
     }
 
     def 'should check max bundle size'() {
         given:
-        def folder = Files.createTempDirectory('test')
-        and:
         def root = folder.resolve('mod1'); root.mkdir()
         root.resolve('main.nf').text = "I'm the main file"
 
@@ -147,14 +138,10 @@ class ModuleBundleTest extends Specification {
         def e = thrown(IllegalArgumentException)
         e.message == 'Module total size cannot exceed 5 B'
 
-        cleanup:
-        folder?.deleteDir()
     }
 
-    def 'should symlink not allowd'() {
+    def 'should symlink not allowed'() {
         given:
-        def folder = Files.createTempDirectory('test')
-        and:
         def root = folder.resolve('mod1'); root.mkdir()
         def main = root.resolve('main.nf'); main.text = "I'm the main file"
         and:
@@ -167,7 +154,39 @@ class ModuleBundleTest extends Specification {
         def e = thrown(IllegalArgumentException)
         e.message.startsWith('Module bundle does not allow link files')
 
-        cleanup:
-        folder?.deleteDir()
     }
+
+    def 'should find files for the given pattern' () {
+        given:
+        def root = folder.resolve('mod1'); root.mkdir()
+        def main = root.resolve('main.nf'); main.text = "I'm the main file"
+        and:
+        root.resolve('bin').mkdirs()
+        root.resolve('bin/hola.sh').text = 'hola'
+        root.resolve('bin/sub1').mkdirs()
+        root.resolve('bin/sub1/file1').text = 'file1'
+        root.resolve('bin/sub2').mkdirs()
+        root.resolve('bin/sub2/file2').text = 'file2'
+        root.resolve('bin/sub2/file22').text = 'file22'
+        and:
+        root.resolve('foo').mkdirs()
+        root.resolve('foo/aaa').text = 'aaa'
+        and:
+        root.resolve('bar').mkdirs()
+        root.resolve('bar/bbb').text = 'bbb'
+
+        when:
+        def module = ModuleBundle.scan(root, [filePattern: '{bin,bin/**}', baseDirectory: '/usr/local'])
+        then:
+        module.getEntries() == [
+                '/usr/local/bin',
+                '/usr/local/bin/hola.sh',
+                '/usr/local/bin/sub1',
+                '/usr/local/bin/sub1/file1',
+                '/usr/local/bin/sub2',
+                '/usr/local/bin/sub2/file2',
+                '/usr/local/bin/sub2/file22',
+        ] as Set
+    }
+
 }
