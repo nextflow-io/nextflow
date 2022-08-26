@@ -72,6 +72,9 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
         if( params.containsKey('mountFlags') )
             this.mountFlags0 = params.mountFlags
 
+        if( params.containsKey('privileged') )
+            this.privileged = params.privileged?.toString() == 'true'
+
         return this
     }
 
@@ -108,6 +111,9 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
         if( runOptions )
             result << runOptions.join(' ') << ' '
 
+        if( privileged )
+            result << '--privileged '
+
         if( cpus ) {
             result << "--cpus ${String.format(Locale.ROOT, "%.1f", cpus)} "
         }
@@ -115,7 +121,6 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
         if( memory ) {
             result << "--memory ${memory} "
         }
-
 
         // the name is after the user option so it has precedence over any options provided by the user
         if ( name )

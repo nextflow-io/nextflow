@@ -35,7 +35,6 @@ import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
-import com.upplication.s3fs.S3Path
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
@@ -87,13 +86,12 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def req = handler.newSubmitRequest(task)
         then:
+        1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
         _ * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
-        1 * handler.wrapperFile >> Paths.get('/bucket/test/.command.run')
-        1 * handler.getLogFile() >> Paths.get('/bucket/test/.command.log')
 
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
@@ -101,7 +99,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
         req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
-        req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws s3 cp --only-show-errors .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()]
+        req.getContainerOverrides().getCommand() == ['bash', '-c', 'something']
         req.getRetryStrategy() == new RetryStrategy()
                 .withAttempts(5)
                 .withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnStatusReason('Host EC2*'), new EvaluateOnExit().withOnReason('*').withAction('EXIT') )
@@ -109,13 +107,12 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         req = handler.newSubmitRequest(task)
         then:
+        1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 0
         _ * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', region: 'eu-west-1') }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
-        1 * handler.wrapperFile >> Paths.get('/bucket/test/.command.run')
-        1 * handler.getLogFile() >> Paths.get('/bucket/test/.command.log')
 
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
@@ -123,7 +120,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
         req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
-        req.getContainerOverrides().getCommand() == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws --region eu-west-1 s3 cp --only-show-errors .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws --region eu-west-1 s3 cp --only-show-errors s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()]
+        req.getContainerOverrides().getCommand() == ['bash', '-c', 'something']
         req.getRetryStrategy() == null  // <-- retry is managed by NF, hence this must be null
 
     }
@@ -140,38 +137,36 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def req = handler.newSubmitRequest(task)
         then:
+        1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
         _ * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', storageEncryption: 'AES256') }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> []
-        1 * handler.wrapperFile >> Paths.get('/bucket/test/.command.run')
-        1 * handler.getLogFile() >> Paths.get('/bucket/test/.command.log')
 
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
         req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
         req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
-        req.getContainerOverrides().getCommand().join(' ') == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws s3 cp --only-show-errors --sse AES256 .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws s3 cp --only-show-errors --sse AES256 s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()].join(' ')
+        req.getContainerOverrides().getCommand() == ['bash', '-c', 'something']
 
         when:
         def req2 = handler.newSubmitRequest(task)
         then:
+        1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
         _ * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', storageEncryption: 'AES256', debug: true, shareIdentifier: 'priority/high') }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> []
-        1 * handler.wrapperFile >> Paths.get('/bucket/test/.command.run')
-        1 * handler.getLogFile() >> Paths.get('/bucket/test/.command.log')
 
         req2.getJobName() == 'batchtask'
         req2.getJobQueue() == 'queue1'
         req2.getJobDefinition() == 'job-def:1'
         req2.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
         req2.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
-        req2.getContainerOverrides().getCommand().join(' ') == ['bash', '-o','pipefail','-c', "trap \"{ ret=\$?; /bin/aws s3 cp --only-show-errors --sse AES256 --debug .command.log s3://bucket/test/.command.log||true; exit \$ret; }\" EXIT; /bin/aws s3 cp --only-show-errors --sse AES256 --debug s3://bucket/test/.command.run - | bash 2>&1 | tee .command.log".toString()].join(' ')
+        req2.getContainerOverrides().getCommand() ==['bash', '-c', 'something']
         req2.getShareIdentifier() == 'priority/high'
 
     }
@@ -190,6 +185,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', region: 'eu-west-1') }
         and:
+        _ * handler.fusionEnabled() >> false
         1 * handler.maxSpotAttempts() >> 0
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
@@ -216,6 +212,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getConfig() >> new TaskConfig()
         handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
         and:
+        _ * handler.fusionEnabled() >> false
         1 * handler.maxSpotAttempts() >> 0
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
@@ -225,7 +222,6 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobDefinition() == 'job-def:1'
         req.getTimeout() == null
 
-
         when:
         req = handler.newSubmitRequest(task)
         then:
@@ -233,6 +229,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getConfig() >> new TaskConfig(time: '5 sec')
         handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
         and:
+        _ * handler.fusionEnabled() >> false
         1 * handler.maxSpotAttempts() >> 0
         1 * handler.getJobQueue(task) >> 'queue2'
         1 * handler.getJobDefinition(task) >> 'job-def:2'
@@ -251,6 +248,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getConfig() >> new TaskConfig(time: '1 hour')
         handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
         and:
+        _ * handler.fusionEnabled() >> false
         1 * handler.maxSpotAttempts() >> 0
         1 * handler.getJobQueue(task) >> 'queue3'
         1 * handler.getJobDefinition(task) >> 'job-def:3'
@@ -280,11 +278,11 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', retryMode: 'adaptive', maxTransferAttempts: 10) }
         and:
+        _ * handler.fusionEnabled() >> false
+        1 * handler.getSubmitCommand() >> ['bash','-c','foo']
         1 * handler.maxSpotAttempts() >> 3
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
-        1 * handler.wrapperFile >> Paths.get('/bucket/test/.command.run')
-        1 * handler.getLogFile() >> Paths.get('/bucket/test/.command.log')
         and:
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
@@ -343,8 +341,8 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     def 'should return job envs'() {
         given:
-
         def handler = Spy(new AwsBatchTaskHandler(environment: ENV)) {
+            fusionEnabled() >> false
             getAwsOptions() >> Mock(AwsOptions) {
                 getRetryMode() >> RETRY_MODE
                 getMaxTransferAttempts() >> MAX_ATTEMPTS
@@ -362,6 +360,19 @@ class AwsBatchTaskHandlerTest extends Specification {
         'adaptive'  | null          | [FOO:'hello']                         | [kv('AWS_RETRY_MODE','adaptive')]
         'legacy'    | null          | [FOO:'hello']                         | [kv('AWS_RETRY_MODE','legacy')]
         'built-in'  | null          | [FOO:'hello']                         | []
+    }
+
+    def 'should return job envs for fusion'() {
+        given:
+        def handler = Spy(AwsBatchTaskHandler) {
+            getAwsOptions() >> Mock(AwsOptions)
+            getTask() >> Mock(TaskRun) {getWorkDir() >> S3PathFactory.parse('s3://my-bucket/work/dir') }
+            fusionEnabled() >> true
+            fusionLauncher() >> Mock(FusionScriptLauncher) { fusionBuckets() >> ['FOO','BAR'] }
+        }
+
+        expect:
+        handler.getEnvironmentVars() == [kv('NXF_FUSION_BUCKETS','s3://FOO,s3://BAR')]
     }
 
     def 'should strip invalid chars for job definition name' () {
@@ -532,6 +543,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_NAME = 'nf-foo-bar-1-0'
         def handler = Spy(AwsBatchTaskHandler) {
             getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+            fusionEnabled() >> false
         }
         handler.@executor = Mock(AwsBatchExecutor)
 
@@ -570,8 +582,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         given:
         def IMAGE = 'foo/bar:1.0'
         def JOB_NAME = 'nf-foo-bar-1-0'
-        def handler = Spy(new AwsBatchTaskHandler(fusionEnabled: true)) {
+        AwsBatchTaskHandler handler = Spy(AwsBatchTaskHandler) {
             getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+            fusionEnabled() >> true
         }
         handler.@executor = Mock(AwsBatchExecutor) {}
 
@@ -595,6 +608,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def opts = Mock(AwsOptions)
         def handler = Spy(AwsBatchTaskHandler) {
             getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+            fusionEnabled() >> false
         }
         handler.@executor = executor
 
@@ -625,7 +639,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         def opts = Mock(AwsOptions)
         def executor = Mock(AwsBatchExecutor)
         def handler = Spy(AwsBatchTaskHandler) {
-            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig) }
+            fusionEnabled() >> false
         }
         handler.@executor = executor
 
@@ -649,7 +664,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         def taskConfig = new TaskConfig(containerOptions: '--privileged --user foo')
         def executor = Mock(AwsBatchExecutor)
         def handler = Spy(AwsBatchTaskHandler) {
-            getTask() >> Mock(TaskRun) { getConfig() >> taskConfig  }
+            getTask() >> Mock(TaskRun) { getConfig() >> taskConfig }
+            fusionEnabled() >> false
         }
         handler.@executor = executor
 
@@ -818,7 +834,9 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     def 'should render submit command' () {
         given:
-        def handler = Spy(AwsBatchTaskHandler)
+        def handler = Spy(AwsBatchTaskHandler) {
+            fusionEnabled() >> false
+        }
 
         when:
         def result =  handler.getSubmitCommand()
@@ -847,16 +865,18 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     def 'get fusion submit command' () {
         given:
-        def launcher = new FusionScriptLauncher(type: S3Path)
-        def handler = Spy(new AwsBatchTaskHandler(fusionEnabled: true, fusionLauncher: launcher))
+        def handler = Spy(AwsBatchTaskHandler) {
+            fusionEnabled() >> true
+            fusionLauncher() >> new FusionScriptLauncher(scheme: 's3')
+            getTask() >> Mock(TaskRun) {
+                getWorkDir() >> S3PathFactory.parse('s3://my-bucket/work/dir')
+            }
+        }
 
         when:
         def result =  handler.getSubmitCommand()
         then:
-        handler.getLogFile() >> S3PathFactory.parse('s3://foo/command.log')
-        handler.getWrapperFile() >> S3PathFactory.parse('s3://foo/command.run')
-        and:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; cp .command.log /fusion/s3/foo/command.log||true; exit $ret; }" EXIT; bash /fusion/s3/foo/command.run 2>&1 | tee .command.log'
+        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; cp .command.log /fusion/s3/my-bucket/work/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/s3/my-bucket/work/dir/.command.run 2>&1 | tee .command.log'
     }
 
 }

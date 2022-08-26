@@ -18,6 +18,7 @@
 package nextflow.container
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -63,4 +64,36 @@ class ContainerBuilderTest extends Specification {
 
     }
 
+    @Unroll
+    def 'should create builder for given engine' () {
+        given:
+        def IMAGE = 'foo:latest'
+
+        when:
+        def builder = ContainerBuilder.create(ENGINE,IMAGE)
+        then:
+        builder.class == CLAZZ
+        builder.getImage() == IMAGE
+
+        where:
+        ENGINE              | CLAZZ
+        'docker'            | DockerBuilder
+        'podman'            | PodmanBuilder
+        'singularity'       | SingularityBuilder
+        'shifter'           | ShifterBuilder
+        'charliecloud'      | CharliecloudBuilder
+        'udocker'           | UdockerBuilder
+
+    }
+
+    def 'should throw illegal arg' () {
+
+        when:
+        ContainerBuilder.create('foo','image:any')
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == 'Unknown container engine: foo'
+
+    }
 }

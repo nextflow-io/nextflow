@@ -1472,7 +1472,7 @@ class TaskProcessor {
         }
 
         if( stdout instanceof Path && !stdout.exists() ) {
-            throw new MissingFileException("Missing 'stdout' file: ${stdout} for process > ${task.name}")
+            throw new MissingFileException("Missing 'stdout' file: ${stdout.toUriString()} for process > ${task.name}")
         }
 
         task.setOutput(param, stdout)

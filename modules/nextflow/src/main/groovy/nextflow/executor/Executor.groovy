@@ -169,6 +169,13 @@ abstract class Executor {
     }
 
     /**
+     * @return {@code true} when the executor uses fusion file system 
+     */
+    boolean isFusionEnabled() {
+        return false
+    }
+
+    /**
      * Allow graceful termination of executor resources
      */
     void shutdown() { }

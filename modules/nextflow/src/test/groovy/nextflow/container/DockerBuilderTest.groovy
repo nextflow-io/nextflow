@@ -182,6 +182,11 @@ class DockerBuilderTest extends Specification {
                 .build()
                 .runCommand == 'docker run -i --cpuset-cpus 1-3 --memory 100m -v "$PWD":"$PWD" -w "$PWD" fedora'
 
+        new DockerBuilder('fedora')
+                .params(privileged: true)
+                .build()
+                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --privileged fedora'
+
     }
 
     def 'test add mount'() {
