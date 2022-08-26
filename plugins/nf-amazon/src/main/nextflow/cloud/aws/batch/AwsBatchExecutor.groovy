@@ -32,6 +32,7 @@ import nextflow.cloud.aws.AmazonClientFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
+import nextflow.executor.fusion.FusionHelper
 import nextflow.extension.FilesEx
 import nextflow.processor.ParallelPollingMonitor
 import nextflow.processor.TaskHandler
@@ -246,11 +247,9 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         session.config?.executor?.submitter as Map
     }
 
+    @Override
     boolean isFusionEnabled() {
-        def result = session.config.navigate('fusion.enabled')
-        if( result == null )
-            result = sysEnv.get('NXF_FUSION_ENABLED')
-        return result!=null ? result.toString()=='true' : false
+        return FusionHelper.isFusionEnabled(session, sysEnv)
     }
 
     protected void logRateLimitChange(RateUnit rate) {

@@ -30,7 +30,7 @@ class FusionScriptLauncherTest extends Specification {
 
     def 'should get container mount' () {
         given:
-        def fusion = new FusionScriptLauncher(type: XPath)
+        def fusion = new FusionScriptLauncher(scheme: 'http')
 
         when:
         def result = fusion.toContainerMount(XPath.get('http://foo/a/b/c.txt'))
@@ -54,7 +54,7 @@ class FusionScriptLauncherTest extends Specification {
 
     def 'should get header script' () {
         given:
-        def fusion = new FusionScriptLauncher(type: XPath)
+        def fusion = new FusionScriptLauncher(scheme: 's3')
         def task = Mock(TaskBean) { getWorkDir() >> Path.of('/some/work/dir')}
 
         expect:

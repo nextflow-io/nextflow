@@ -1,6 +1,5 @@
 /*
  * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,66 +12,27 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.executor
+package nextflow.executor.local
 
-import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.Callable
-import java.util.concurrent.Future
 
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessException
-import nextflow.processor.LocalPollingMonitor
+import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.fusion.FusionAwareTask
+import nextflow.executor.fusion.FusionHelper
 import nextflow.processor.TaskHandler
-import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
-import nextflow.script.ScriptType
 import nextflow.trace.TraceRecord
 import nextflow.util.ProcessHelper
-/**
- * Executes the specified task on the locally exploiting the underlying Java thread pool
- *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
- */
-@Slf4j
-@CompileStatic
-@SupportedScriptTypes( [ScriptType.SCRIPTLET, ScriptType.GROOVY] )
-class LocalExecutor extends Executor {
-
-    @Override
-    protected TaskMonitor createTaskMonitor() {
-
-        return LocalPollingMonitor.create(session, name)
-
-    }
-
-    @Override
-    TaskHandler createTaskHandler(TaskRun task) {
-        assert task
-        assert task.workDir
-
-        if( task.type == ScriptType.GROOVY )
-            return new NativeTaskHandler(task,this)
-        else
-            return new LocalTaskHandler(task,this)
-
-    }
-
-    @Override
-    protected void register() {
-        super.register()
-        if( workDir.fileSystem != FileSystems.default ) {
-            log.warn "Local executor only supports default file system -- Check work directory: ${getWorkDir().toUriString()}"
-        }
-    }
-}
-
-
 /**
  * A process wrapper adding the ability to access to the Posix PID
  * and the {@code hasExited} flag
@@ -80,7 +40,22 @@ class LocalExecutor extends Executor {
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class LocalTaskHandler extends TaskHandler {
+@CompileStatic
+class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
+
+    @Canonical
+    static class TaskResult {
+        Integer exitStatus
+        File logs
+        Throwable error
+        TaskResult(int exitStatus, File logs) {
+            this.logs = logs
+            this.exitStatus = exitStatus
+        }
+        TaskResult(Throwable error) {
+            this.error = error
+        }
+    }
 
     private final Path exitFile
 
@@ -100,10 +75,9 @@ class LocalTaskHandler extends TaskHandler {
 
     private Session session
 
-    private volatile result
+    private volatile TaskResult result
 
-
-    LocalTaskHandler( TaskRun task, LocalExecutor executor  ) {
+    LocalTaskHandler(TaskRun task, LocalExecutor executor) {
         super(task)
         // create the task handler
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
@@ -118,33 +92,22 @@ class LocalTaskHandler extends TaskHandler {
     @Override
     void submit() {
         // create the wrapper script
-        new BashWrapperBuilder(task) .build()
+        buildTaskWrapper()
 
-        // the cmd list to launch it
-        def cmd = new ArrayList(BashWrapperBuilder.BASH) << wrapperFile.getName()
-        log.debug "Launch command line: ${cmd.join(' ')}"
-
+        // create the process builder to run the task in the local computer
+        final builder = createLaunchProcessBuilder()
+        final logFile = builder.redirectOutput().file()
+        
+        // run async via thread pool
         session.getExecService().submit( {
-
             try {
-                // NOTE: make sure to redirect process output to a file otherwise
-                // execution can hang when stdout/stderr is bigger than 64k
-                final workDir = task.workDir.toFile()
-                final logFile = new File(workDir, TaskRun.CMD_LOG)
-
-                ProcessBuilder builder = new ProcessBuilder()
-                        .redirectErrorStream(true)
-                        .redirectOutput(logFile)
-                        .directory(workDir)
-                        .command(cmd)
-
-                // -- start the execution and notify the event to the monitor
+                // start the execution and notify the event to the monitor
                 process = builder.start()
-                result = process.waitFor()
+                final status = process.waitFor()
+                result = new TaskResult(status, logFile)
             }
             catch( Throwable ex ) {
-                log.trace("Failed to execute command: ${cmd.join(' ')}", ex)
-                result = ex
+                result = new TaskResult(ex)
             }
             finally {
                 executor.getTaskMonitor().signal()
@@ -156,6 +119,50 @@ class LocalTaskHandler extends TaskHandler {
         status = TaskStatus.SUBMITTED
     }
 
+    protected void buildTaskWrapper() {
+        final wrapper = fusionEnabled()
+                ? fusionLauncher()
+                : new BashWrapperBuilder(task.toTaskBean())
+        // create the bash command wrapper and store in the task work dir
+        wrapper.build()
+    }
+
+    protected ProcessBuilder localProcessBuilder() {
+        final cmd = new ArrayList<String>(BashWrapperBuilder.BASH) << wrapperFile.getName()
+        log.debug "Launch cmd line: ${cmd.join(' ')}"
+
+        // NOTE: make sure to redirect process output to a file otherwise
+        // execution can hang when stdout/stderr is bigger than 64k
+        final workDir = task.workDir.toFile()
+        final logFile = new File(workDir, TaskRun.CMD_LOG)
+
+        return new ProcessBuilder()
+                .redirectErrorStream(true)
+                .redirectOutput(logFile)
+                .directory(workDir)
+                .command(cmd)
+    }
+
+    protected ProcessBuilder fusionProcessBuilder() {
+        final submit = fusionSubmitCli()
+        final launcher = fusionLauncher()
+        final config = session.containerConfig
+        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), submit)
+        log.debug "Launch cmd line: ${cmd.join(' ')}"
+
+        final logPath = Files.createTempFile('nf-task','.log')
+
+        return new ProcessBuilder()
+                .redirectErrorStream(true)
+                .redirectOutput(logPath.toFile())
+                .command(cmd)
+    }
+
+    protected ProcessBuilder createLaunchProcessBuilder() {
+        return fusionEnabled()
+                ? fusionProcessBuilder()
+                : localProcessBuilder()
+    }
 
     long elapsedTimeMillis() {
         startTimeMillis ? System.currentTimeMillis() - startTimeMillis : 0
@@ -184,12 +191,14 @@ class LocalTaskHandler extends TaskHandler {
         if( !isRunning() ) { return false }
 
         if( result != null ) {
-            task.exitStatus = result instanceof Integer ? result : Integer.MAX_VALUE
-            task.error = result instanceof Throwable ? result : null
+            task.exitStatus = result.exitStatus!=null ? result.exitStatus : Integer.MAX_VALUE
+            task.error = result.error
             task.stdout = outputFile
-            task.stderr = errorFile
+            task.stderr = result.exitStatus && result.logs.size() ? result.logs.tail(50) : errorFile
             status = TaskStatus.COMPLETED
             destroy()
+            // fusion uses a temporary file, clean it up
+            if( fusionEnabled() ) result.logs.delete()
             return true
         }
 
@@ -247,9 +256,8 @@ class LocalTaskHandler extends TaskHandler {
         destroyed = true
     }
 
-
     /**
-     * @return An {@link TraceRecord} instance holding task runtime information
+     * @return An {@link nextflow.trace.TraceRecord} instance holding task runtime information
      */
     @Override
     TraceRecord getTraceRecord() {
@@ -260,86 +268,3 @@ class LocalTaskHandler extends TaskHandler {
     }
 
 }
-
-/**
- * Executes a native piece of groovy code
- */
-@Slf4j
-@CompileStatic
-class NativeTaskHandler extends TaskHandler {
-
-    Future<Object> result
-
-    private Session session
-
-    private Executor executor
-
-    private class TaskSubmit implements Callable {
-
-        final TaskRun task
-
-        TaskSubmit( TaskRun obj ) { task = obj }
-
-        @Override
-        Object call() throws Exception {
-            try  {
-                return task.code.call()
-            }
-            catch( Throwable error ) {
-                return error
-            }
-            finally {
-                executor.getTaskMonitor().signal()
-            }
-        }
-    }
-
-    protected NativeTaskHandler(TaskRun task, Executor executor) {
-        super(task)
-        this.executor = executor
-        this.session = executor.session
-    }
-
-
-    @Override
-    void submit() {
-        // submit for execution by using session executor service
-        // it returns an error when everything is OK
-        // of the exception throw in case of error
-        result = session.getExecService().submit(new TaskSubmit(task))
-        status = TaskStatus.SUBMITTED
-    }
-
-    @Override
-    boolean checkIfRunning() {
-        if( isSubmitted() && result != null ) {
-            status = TaskStatus.RUNNING
-            return true
-        }
-
-        return false
-    }
-
-    @Override
-    boolean checkIfCompleted() {
-        if( isRunning() && result.isDone() ) {
-            status = TaskStatus.COMPLETED
-            if( result.get() instanceof Throwable ) {
-                task.error = (Throwable)result.get()
-            }
-            else {
-                task.stdout = result.get()
-            }
-            return true
-        }
-        return false
-    }
-
-    @Override
-    void kill() {
-        if( result ) result.cancel(true)
-    }
-
-}
-
-
