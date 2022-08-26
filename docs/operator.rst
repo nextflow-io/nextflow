@@ -1145,9 +1145,6 @@ taking two parameters that represent two emitted items to be compared. For examp
 merge
 -----
 
-.. warning::
-  The ``merge`` operator is deprecated and no longer available in DSL2 syntax. Use `join`_ instead.
-
 The ``merge`` operator lets you join items emitted by two (or more) channels into a new channel.
 
 For example, the following code merges two channels together: one which emits a series of odd integers
@@ -1692,7 +1689,8 @@ each::
         .splitFasta( by: 10 )
         .view()
 
-.. warning:: Chunks are stored in memory by default. When splitting large files, specify the parameter ``file: true`` to save the
+.. warning::
+  Chunks are stored in memory by default. When splitting large files, specify the parameter ``file: true`` to save the
   chunks into files in order to avoid an ``OutOfMemoryException``. See the parameter table below for details.
 
 A second version of the ``splitFasta`` operator allows you to split a FASTA content into record objects, instead
@@ -1742,6 +1740,9 @@ sequence    The sequence data as a multi-line string (always ending with a `newl
 width       Define the length of a single line when the ``sequence`` field is used, after that the sequence data continues on a new line.
 =========== ============================
 
+.. tip::
+  You can also use ``countFasta`` to count the number of entries in the FASTA file(s).
+
 
 splitFastq
 ----------
@@ -1759,7 +1760,8 @@ sequences each::
         .splitFastq( by: 10 )
         .view()
 
-.. warning:: Chunks are stored in memory by default. When splitting large files, specify the parameter ``file: true`` to save the
+.. warning::
+  Chunks are stored in memory by default. When splitting large files, specify the parameter ``file: true`` to save the
   chunks into files in order to avoid an ``OutOfMemoryException``. See the parameter table below for details.
 
 A second version of the ``splitFastq`` operator allows you to split a FASTQ formatted content into record objects,
@@ -1782,10 +1784,12 @@ which emits tuples containing at least two elements that are the files to be spl
         .splitFastq(by: 100_000, pe: true, file: true)
         .view()
 
-.. note:: The ``fromFilePairs`` requires the ``flat: true`` option in order to emit the file pairs as separate elements
+.. note::
+  The ``fromFilePairs`` requires the ``flat: true`` option in order to emit the file pairs as separate elements
   in the produced tuples.
 
-.. note:: This operator assumes that the order of the paired-end reads correspond with each other and both files contain
+.. note::
+  This operator assumes that the order of the paired-end reads correspond with each other and both files contain
   the same number of reads.
 
 Available parameters:
@@ -1814,6 +1818,9 @@ readString      The raw sequence data
 qualityHeader   Base quality header (it may be empty)
 qualityString   Quality values for the sequence
 =============== ============================
+
+.. tip::
+  You can also use ``countFastq`` to count the number of entries in the FASTQ file(s).
 
 
 splitText
@@ -1851,7 +1858,8 @@ The following example shows how to split text files into chunks of 10 lines and 
         .splitText( by: 10 ) { it.toUpperCase() }
         .view()
 
-.. note:: Text chunks returned by the operator ``splitText`` are always terminated by a ``\n`` newline character.
+.. note::
+  Text chunks returned by the ``splitText`` operator are always terminated by a ``\n`` newline character.
 
 Available parameters:
 
@@ -1867,6 +1875,9 @@ file        When ``true`` saves each split to a file. Use a string instead of ``
 elem        The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element).
 keepHeader  Parses the first line as header and prepends it to each emitted chunk.
 =========== ============================
+
+.. tip::
+  You can also use ``countLines`` to count the number of lines in the text file(s).
 
 
 .. _operator-spread:
@@ -2017,6 +2028,8 @@ example::
         .sum()
         .view()
 
+.. tip::
+  You can also use ``toLong``, ``toFloat``, and ``toDouble`` to convert to other numerical types.
 
 toList
 ------
