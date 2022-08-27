@@ -59,7 +59,7 @@ class ClientConfig {
 
     //Timeout when opening a communications link to the resource referenced by K8sClient request connection
     //If the timeout expires before there is data available for read, a java.net. SocketTimeoutException is raised
-    Integer requestHttpConnectionTimeoutInMilliSeconds = 60 * 1000 //60 seconds
+    Duration httpConnectionTimeout 
 
     /**
      * When true signal that the configuration was retrieved from within a K8s cluster
