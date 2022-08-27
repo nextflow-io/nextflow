@@ -157,6 +157,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = ['-with-tower'], description = 'Monitor workflow execution with Seqera Tower service')
     String withTower
 
+    @Parameter(names = ['-with-wave'], hidden = true)
+    String withWave
+
     @Parameter(names = ['-with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
     String withWebLog
 
