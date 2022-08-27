@@ -16,6 +16,9 @@
  */
 
 package nextflow.k8s.client
+
+import nextflow.util.Duration
+
 import javax.net.ssl.KeyManager
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -73,7 +76,7 @@ class ClientConfig {
     }
 
     String toString() {
-        "${this.class.getSimpleName()}[ server=$server, namespace=$namespace, token=${cut(token)}, sslCert=${cut(sslCert)}, clientCert=${cut(clientCert)}, clientKey=${cut(clientKey)}, verifySsl=$verifySsl, fromFile=$isFromCluster, requestHttpConnectionTimeoutInMilliSeconds=$requestHttpConnectionTimeoutInMilliSeconds, requestHttpReadTimeoutInMilliSeconds=$requestHttpReadTimeoutInMilliSeconds ]"
+        "${this.class.getSimpleName()}[ server=$server, namespace=$namespace, token=${cut(token)}, sslCert=${cut(sslCert)}, clientCert=${cut(clientCert)}, clientKey=${cut(clientKey)}, verifySsl=$verifySsl, fromFile=$isFromCluster, httpReadTimeout=$httpReadTimeout, httpConnectionTimeout=$httpConnectionTimeout ]"
     }
 
     private String cut(String str) {
@@ -121,11 +124,11 @@ class ClientConfig {
         else if( map.clientKeyFile )
             result.clientKey = Paths.get(map.clientKeyFile.toString()).bytes
 
-        if( map.requestHttpConnectionTimeoutInSecond )
-            result.requestHttpConnectionTimeoutInMilliSeconds = map.requestHttpConnectionTimeoutInSecond as Integer
+        if( map.httpConnectionTimeout )
+            result.httpConnectionTimeout = map.httpConnectionTimeout as Duration
 
-        if( map.requestHttpReadTimeoutInSecond )
-            result.requestHttpReadTimeoutInMilliSeconds = map.requestHttpReadTimeoutInSecond as Integer
+        if( map.httpReadTimeout )
+            result.httpReadTimeout = map.httpReadTimeout as Duration
 
         return result
     }

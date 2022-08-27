@@ -590,8 +590,12 @@ class K8sClient {
     }
 
     protected void setupHttpsConn( HttpsURLConnection conn ) {
-        conn.setReadTimeout(config.requestHttpReadTimeoutInMilliSeconds)
-        conn.setConnectTimeout(config.requestHttpConnectionTimeoutInMilliSeconds)
+        if (config.httpReadTimeout != null) {
+            conn.setReadTimeout(config.httpReadTimeout.toMillis() as int)
+        }
+        if (config.httpConnectionTimeout != null) {
+            conn.setConnectTimeout(config.httpConnectionTimeout.toMillis() as int)
+        }
         if (config.keyManagers != null || trustManagers != null) {
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(config.keyManagers, trustManagers, new SecureRandom());
