@@ -674,7 +674,10 @@ class ConfigBuilder {
             if( !(config.tower instanceof Map) )
                 config.tower = [:]
             config.tower.enabled = true
-            config.tower.endpoint = cmdRun.withTower
+            if( cmdRun.withTower != '-' )
+                config.tower.endpoint = cmdRun.withTower
+            else if( !config.tower.endpoint )
+                config.tower.endpoint = 'https://api.tower.nf'
         }
 
         // -- nextflow setting
