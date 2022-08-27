@@ -140,4 +140,14 @@ class HyperQueueExecutorTest extends Specification {
             '''
             .stripIndent().leftTrim()
     }
+
+    def 'should sanitize job name' () {
+        given:
+        def LONG = 'abcd' * 100
+        def exec = Spy(HyperQueueExecutor)
+
+        expect:
+        exec.sanitizeJobName('foo') == 'foo'
+        exec.sanitizeJobName(LONG) == LONG.substring(0,40)
+    }
 }
