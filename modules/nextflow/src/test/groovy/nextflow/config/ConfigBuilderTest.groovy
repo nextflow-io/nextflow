@@ -1089,6 +1089,22 @@ class ConfigBuilderTest extends Specification {
         config.tower.enabled
         config.tower.endpoint == 'http://bar.com'
 
+        when:
+        config = new ConfigObject()
+        config.tower.endpoint = 'http://foo.com'
+        builder.configRunOptions(config, env, new CmdRun(withTower: '-'))
+        then:
+        config.tower instanceof Map
+        config.tower.enabled
+        config.tower.endpoint == 'http://foo.com'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withTower: '-'))
+        then:
+        config.tower instanceof Map
+        config.tower.enabled
+        config.tower.endpoint == 'https://api.tower.nf'
     }
 
     def 'should enable conda env' () {
