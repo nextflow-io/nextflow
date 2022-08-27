@@ -107,7 +107,7 @@ class AzPoolOpts implements CacheFunnel {
         return hasher
     }
 
-    def buildFileShareRootPath() {
+    String buildFileShareRootPath() {
         if (this.sku ==~ /.*centos.*/)
             return "/mnt/resource/batch/tasks/fsmounts"
         else if (this.sku ==~ /.*ubuntu.*/)

@@ -15,7 +15,7 @@
  *
  */
 
-package io.seqera.wave.plugin
+package io.seqera.wave.plugin.config
 
 import groovy.transform.CompileStatic
 import nextflow.util.Duration
@@ -32,12 +32,18 @@ class WaveConfig {
     final private String endpoint
     final private List<URL> containerConfigUrl
     final private Duration tokensCacheMaxDuration
+    final private CondaOpts condaOpts
+    final private List<String> strategy
+    final private bundleProjectResources
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
         this.containerConfigUrl = parseConfig(opts, env)
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '15m') as Duration
+        this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
+        this.strategy = parseStrategy(opts.strategy)
+        this.bundleProjectResources = opts.bundleProjectResources
         if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
     }
@@ -45,6 +51,29 @@ class WaveConfig {
     Boolean enabled() { this.enabled }
 
     String endpoint() { this.endpoint }
+
+    CondaOpts condaOpts() { this.condaOpts }
+
+    List<String> strategy() { this.strategy }
+
+    boolean bundleProjectResources() { bundleProjectResources }
+
+    protected List<String> parseStrategy(value) {
+        if( !value )
+            return Collections.<String>emptyList()
+        List<String> result
+        if( value instanceof CharSequence )
+            result = value.tokenize(',') .collect(it -> it.toString().trim())
+        else if( value instanceof List )
+            result = value.collect(it -> it.toString().trim())
+        else
+            throw new IllegalArgumentException("Invalid value for 'wave.strategy' configuration attribute - offending value: $value")
+        for( String it : result ) {
+            if( it !in ['conda','dockerfile','container'])
+                throw new IllegalArgumentException("Invalid value for 'wave.strategy' configuration attribute - offending value: $it")
+        }
+        return result
+    }
 
     protected List<URL> parseConfig(Map opts, Map<String,String> env) {
         List<String> result = new ArrayList<>(10)

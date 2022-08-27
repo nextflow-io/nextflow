@@ -702,7 +702,7 @@ class ConfigBuilderTest extends Specification {
         new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         def e = thrown(AbortOperationException)
-        e.message == 'You have requested to run with Docker but no image were specified'
+        e.message == 'You have requested to run with Docker but no image was specified'
 
         when:
         file.text =
@@ -714,7 +714,7 @@ class ConfigBuilderTest extends Specification {
         new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         e = thrown(AbortOperationException)
-        e.message == 'You have requested to run with Docker but no image were specified'
+        e.message == 'You have requested to run with Docker but no image was specified'
 
     }
 

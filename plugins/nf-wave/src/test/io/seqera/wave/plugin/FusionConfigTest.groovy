@@ -17,6 +17,7 @@
 
 package io.seqera.wave.plugin
 
+import io.seqera.wave.plugin.config.FusionConfig
 import spock.lang.Specification
 import spock.lang.Unroll
 

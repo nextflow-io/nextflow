@@ -171,6 +171,11 @@ class Session implements ISession {
      */
     String commitId
 
+    /*
+     * Disable the upload of project 'bin' directory when using cloud executor
+     */
+    boolean disableRemoteBinDir
+
     /**
      * Local path where script generated classes are saved
      */
@@ -315,7 +320,7 @@ class Session implements ISession {
         else {
            uniqueId = systemEnv.get('NXF_UUID') ? UUID.fromString(systemEnv.get('NXF_UUID')) : UUID.randomUUID()
         }
-        log.debug "Session uuid: $uniqueId"
+        log.debug "Session UUID: $uniqueId"
 
         // -- set the run name
         this.runName = config.runName ?: NameGenerator.next()
@@ -370,6 +375,7 @@ class Session implements ISession {
         }
 
         // set the byte-code target directory
+        this.disableRemoteBinDir = getExecConfigProp(null, 'disableRemoteBinDir', false)
         this.classesDir = FileHelper.createLocalDir()
         this.executorFactory = new ExecutorFactory(Plugins.manager)
         this.observers = createObservers()
@@ -468,13 +474,13 @@ class Session implements ISession {
     }
 
     private void callIgniters() {
-        log.debug "Ignite dataflow network (${igniters.size()})"
+        log.debug "Igniting dataflow network (${igniters.size()})"
         for( Closure action : igniters ) {
             try {
                 action.call()
             }
             catch( Exception e ) {
-                log.error(e.message ?: "Failed to trigger dataflow network", e)
+                log.error(e.message ?: "Failed to ignite dataflow network", e)
                 abort(e)
                 break
             }
@@ -492,13 +498,13 @@ class Session implements ISession {
             msg ? "The following nodes are still active:\n" + msg : null
         }
         catch( Exception e ) {
-            log.debug "Unexpected error dumping DGA status", e
+            log.debug "Unexpected error while dumping DAG status", e
             return null
         }
     }
 
     Session start() {
-        log.debug "Session start invoked"
+        log.debug "Session start"
 
         // register shut-down cleanup hooks
         registerSignalHandlers()
@@ -618,13 +624,13 @@ class Session implements ISession {
     void await() {
         log.debug "Session await"
         processesBarrier.awaitCompletion()
-        log.debug "Session await > all process finished"
+        log.debug "Session await > all processes finished"
         terminated = true
         monitorsBarrier.awaitCompletion()
         log.debug "Session await > all barriers passed"
         if( !aborted ) {
             joinAllOperators()
-            log.trace "Session > after processors join"
+            log.trace "Session > all operators finished"
         }
     }
 
@@ -941,10 +947,11 @@ class Session implements ISession {
     }
 
     void notifyTaskPending( TaskHandler handler ) {
+        final trace = handler.getTraceRecord()
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessPending(handler, handler.getTraceRecord())
+                observer.onProcessPending(handler, trace)
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -961,10 +968,11 @@ class Session implements ISession {
         // -- save a record in the cache index
         cache.putIndexAsync(handler)
 
+        final trace = handler.getTraceRecord()
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessSubmit(handler, handler.getTraceRecord())
+                observer.onProcessSubmit(handler, trace)
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -976,10 +984,11 @@ class Session implements ISession {
      * Notifies task start event
      */
     void notifyTaskStart( TaskHandler handler ) {
+        final trace = handler.getTraceRecord()
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessStart(handler, handler.getTraceRecord())
+                observer.onProcessStart(handler, trace)
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -994,7 +1003,7 @@ class Session implements ISession {
      */
     void notifyTaskComplete( TaskHandler handler ) {
         // save the completed task in the cache DB
-        final trace = handler.getTraceRecord()
+        final trace = handler.safeTraceRecord()
         cache.putTaskAsync(handler, trace)
 
         // notify the event to the observers
@@ -1077,10 +1086,11 @@ class Session implements ISession {
      */
     void notifyError( TaskHandler handler ) {
 
+        final trace = handler?.safeTraceRecord()
         for ( int i=0; i<observers?.size(); i++){
             try{
                 final observer = observers.get(i)
-                observer.onFlowError(handler, handler?.getTraceRecord())
+                observer.onFlowError(handler, trace)
             } catch ( Throwable e ) {
                 log.debug(e.getMessage(), e)
             }
@@ -1090,7 +1100,7 @@ class Session implements ISession {
             return
 
         try {
-            errorAction.call( handler?.getTraceRecord() )
+            errorAction.call(trace)
         }
         catch( Throwable e ) {
             log.debug(e.getMessage(), e)

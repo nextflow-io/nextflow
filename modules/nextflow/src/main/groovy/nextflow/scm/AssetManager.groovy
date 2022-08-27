@@ -204,7 +204,7 @@ class AssetManager {
 
         // checks that the selected hub matches with the one defined in the git config file
         if( hub != configProvider ) {
-            throw new AbortOperationException("A project with name: `$localPath` has been already download from a different provider: `$configProvider`")
+            throw new AbortOperationException("A project with name: `$localPath` has already been downloaded from a different provider: `$configProvider`")
         }
 
     }
@@ -476,7 +476,7 @@ class AssetManager {
             }
             catch (Exception e) {
                 provider.validateRepo()
-                log.debug "Cannot retried remote config file -- likely does not exist"
+                log.debug "Cannot retrieve remote config file -- likely it does not exist"
                 return null
             }
         }
@@ -636,7 +636,7 @@ class AssetManager {
         def revInfo = getCurrentRevisionAndName()
 
         if ( revInfo.type == RevisionInfo.Type.COMMIT ) {
-            log.debug("Repo appears to be checked out to a commit hash, but not a TAG, so we are NOT pulling the repo and assuming it is already up to date!")
+            log.debug("Repo appears to be checked out to a commit hash, but not a TAG, so we will assume the repo is already up to date and NOT pull it!")
             return MergeResult.MergeStatus.ALREADY_UP_TO_DATE.toString()
         }
 
@@ -907,7 +907,7 @@ class AssetManager {
         def current = getCurrentRevision()
         if( current != defaultBranch ) {
             if( !revision ) {
-                throw new AbortOperationException("Project `$project` currently is sticked on revision: $current -- you need to specify explicitly a revision with the option `-r` to use it")
+                throw new AbortOperationException("Project `$project` is currently stickied on revision: $current -- you need to explicitly specify a revision with the option `-r` in order to use it")
             }
         }
         if( !revision || revision == current ) {
