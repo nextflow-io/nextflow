@@ -1107,6 +1107,53 @@ class ConfigBuilderTest extends Specification {
         config.tower.endpoint == 'https://api.tower.nf'
     }
 
+    def 'should set wave options' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.wave
+
+        when:
+        config = new ConfigObject()
+        config.wave.endpoint = 'http://foo.com'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.wave instanceof Map
+        !config.wave.enabled
+        config.wave.endpoint == 'http://foo.com'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withWave: 'http://bar.com'))
+        then:
+        config.wave instanceof Map
+        config.wave.enabled
+        config.wave.endpoint == 'http://bar.com'
+
+        when:
+        config = new ConfigObject()
+        config.wave.endpoint = 'http://foo.com'
+        builder.configRunOptions(config, env, new CmdRun(withWave: '-'))
+        then:
+        config.wave instanceof Map
+        config.wave.enabled
+        config.wave.endpoint == 'http://foo.com'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withWave: '-'))
+        then:
+        config.wave instanceof Map
+        config.wave.enabled
+        config.wave.endpoint == 'https://default.host'
+    }
+
     def 'should enable conda env' () {
 
         given:

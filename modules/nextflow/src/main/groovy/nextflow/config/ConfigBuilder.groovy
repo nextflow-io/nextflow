@@ -680,6 +680,17 @@ class ConfigBuilder {
                 config.tower.endpoint = 'https://api.tower.nf'
         }
 
+        // -- set wave options
+        if( cmdRun.withWave ) {
+            if( !(config.wave instanceof Map) )
+                config.wave = [:]
+            config.wave.enabled = true
+            if( cmdRun.withWave != '-' )
+                config.wave.endpoint = cmdRun.withWave
+            else if( !config.wave.endpoint )
+                config.wave.endpoint = 'https://default.host'
+        }
+
         // -- nextflow setting
         if( cmdRun.dsl1 || cmdRun.dsl2 ) {
             if( config.nextflow !instanceof Map )
