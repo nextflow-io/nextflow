@@ -141,8 +141,8 @@ class K8sConfigTest extends Specification {
         client.server == 'http://foo'
         client.namespace == 'this'
         client.serviceAccount == 'that'
-        client.httpConnectionTimeout == null // testing default
-        client.httpReadTimeout == null // testing default
+        client.httpConnectionTimeout == null // testing default null
+        client.httpReadTimeout == null // testing default null
 
     }
 
