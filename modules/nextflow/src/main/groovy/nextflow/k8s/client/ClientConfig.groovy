@@ -55,7 +55,7 @@ class ClientConfig {
 
     //Timeout when reading from Input stream when a connection is established to a resource.
     //If the timeout expires before there is data available for read, a java.net. SocketTimeoutException is raised
-    Integer requestHttpReadTimeoutInMilliSeconds = 60 * 1000 //60 seconds
+    Duration httpReadTimeout
 
     //Timeout when opening a communications link to the resource referenced by K8sClient request connection
     //If the timeout expires before there is data available for read, a java.net. SocketTimeoutException is raised
