@@ -30,6 +30,7 @@ import nextflow.k8s.model.PodOptions
 import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
 import nextflow.k8s.model.ResourceType
+import nextflow.util.Duration
 
 /**
  * Model Kubernetes specific settings defined in the nextflow
@@ -219,6 +220,12 @@ class K8sConfig implements Map<String,Object> {
         if( target.serviceAccount ) {
             result.serviceAccount = target.serviceAccount as String
         }
+
+        if( target.httpConnectionTimeout )
+            result.httpConnectionTimeout = target.httpConnectionTimeout as Duration
+
+        if( target.httpReadTimeout )
+            result.httpReadTimeout = target.httpReadTimeout as Duration
 
         return result
     }

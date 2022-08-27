@@ -62,7 +62,7 @@ class ClientConfig {
 
     //Timeout when opening a communications link to the resource referenced by K8sClient request connection
     //If the timeout expires before there is data available for read, a java.net. SocketTimeoutException is raised
-    Duration httpConnectionTimeout 
+    Duration httpConnectionTimeout
 
     /**
      * When true signal that the configuration was retrieved from within a K8s cluster
@@ -123,12 +123,6 @@ class ClientConfig {
             result.clientKey = map.clientKey.toString().decodeBase64()
         else if( map.clientKeyFile )
             result.clientKey = Paths.get(map.clientKeyFile.toString()).bytes
-
-        if( map.httpConnectionTimeout )
-            result.httpConnectionTimeout = map.httpConnectionTimeout as Duration
-
-        if( map.httpReadTimeout )
-            result.httpReadTimeout = map.httpReadTimeout as Duration
 
         return result
     }

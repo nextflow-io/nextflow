@@ -152,7 +152,9 @@ class K8sConfigTest extends Specification {
         def CONFIG = [
                 namespace: 'this',
                 serviceAccount: 'that',
-                client: [server: 'http://foo', httpReadTimeout: '20s', httpConnectionTimeout: '25s']
+                client: [server: 'http://foo'],
+                httpReadTimeout: '20s',
+                httpConnectionTimeout: '25s'
         ]
 
         when:
