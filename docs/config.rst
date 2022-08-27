@@ -424,7 +424,7 @@ computeResourceType Define whether use Kubernetes ``Pod`` or ``Job`` resource ty
 fetchNodeName       If you trace the hostname, activate this option (default: ``false``, requires version ``22.05.0-edge`` or later).
 volumeClaims        (deprecated)
 httpReadTimeout    Defines the Kubernetes client request HTTP connection read timeout e.g. ``'60s'``
-requestHttpConnectionTimeoutInMilliSeconds  Defines the Kubernetes client request http connection timeout (default 60000ms)
+httpConnectionTimeout  Defines the Kubernetes client request HTTP connection timeout e.g. ``'60s'``'
 =================== ================
 
 See the :ref:`k8s-page` documentation for more details.
