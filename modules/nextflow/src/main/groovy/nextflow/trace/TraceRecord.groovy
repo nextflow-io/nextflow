@@ -232,7 +232,7 @@ class TraceRecord implements Serializable {
 
         }
         catch( Exception e ) {
-            log.debug "Not a valid percentual value: '$value'"
+            log.debug "Not a valid percentage value: '$value'"
             return NA
         }
     }

@@ -15,7 +15,8 @@
  *
  */
 
-package io.seqera.wave.plugin
+package io.seqera.wave.plugin.config
+
 
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -81,4 +82,47 @@ class WaveConfigTest extends Specification {
 
     }
 
+    def 'should get mamba config' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.condaOpts().baseImage == 'mambaorg/micromamba:0.25.1'
+        opts.condaOpts().commands == null
+
+        when:
+        opts = new WaveConfig([build:[conda:[baseImage:'mambaorg/foo:1', commands:['USER hola']]]])
+        then:
+        opts.condaOpts().baseImage == 'mambaorg/foo:1'
+        opts.condaOpts().commands == ['USER hola']
+        
+    }
+
+    def 'should set strategy' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.strategy() == []
+
+        when:
+        opts = new WaveConfig([strategy:STRATEGY])
+        then:
+        opts.strategy() == EXPECTED
+
+        where:
+        STRATEGY                | EXPECTED
+        null                    | []
+        'dockerfile'            | ['dockerfile']
+        'conda,container'       | ['conda','container']
+        'conda , container'     | ['conda','container']
+        ['conda','container']   | ['conda','container']
+        [' conda',' container'] | ['conda','container']
+    }
+
+    def 'should fail to set strategy' () {
+        when:
+        new WaveConfig([strategy:['foo']])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Invalid value for 'wave.strategy' configuration attribute - offending value: foo"
+    }
 }

@@ -28,7 +28,7 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.exception.DuplicateModuleFunctionException
 import nextflow.exception.MissingModuleComponentException
-import nextflow.script.bundle.ModuleBundle
+import nextflow.script.bundle.ResourcesBundle
 /**
  * Holds a nextflow script meta-data such as the
  * defines processes and workflows, the included modules
@@ -328,13 +328,13 @@ class ScriptMeta {
     }
 
     @Memoized
-    ModuleBundle getModuleBundle() {
+    ResourcesBundle getModuleBundle() {
         if( !scriptPath )
             throw new IllegalStateException("Module scriptPath has not been defined yet")
         if( scriptPath.getName()!='main.nf' )
             return null
-        final bundlePath = scriptPath.resolveSibling('bundle')
-        return ModuleBundle.scan(bundlePath)
+        final bundlePath = scriptPath.resolveSibling('resources')
+        return ResourcesBundle.scan(bundlePath)
     }
 
 }
