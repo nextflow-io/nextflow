@@ -82,7 +82,7 @@ class CondaCache {
         return "conda"
     }
 
-    /** Only for debugging purpose - do not use */
+    /** Only for testing purpose - do not use */
     @PackageScope
     CondaCache() {}
 

@@ -36,9 +36,8 @@ import nextflow.util.Escape
 @CompileStatic
 class FusionScriptLauncher extends BashWrapperBuilder {
 
-    private Class<Path> type
+    private String scheme
     private Path remoteWorkDir
-    private Path remoteBinDir
     private Set<String> buckets = new HashSet<>()
 
     /* ONLY FOR TESTING - DO NOT USE */
@@ -46,12 +45,11 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         this.buckets = new HashSet<>()
     }
 
-    FusionScriptLauncher(TaskBean bean, Path remoteBinDir, Class<Path> type) {
+    FusionScriptLauncher(TaskBean bean, String scheme) {
         super(bean)
         // keep track the google storage work dir
-        this.type = type
+        this.scheme = scheme
         this.remoteWorkDir = bean.workDir
-        this.remoteBinDir = toContainerMount(remoteBinDir)
 
         // map bean work and target dirs to container mount
         // this needed to create the command launcher using container local file paths
@@ -83,22 +81,18 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     }
 
     protected String headerScript(TaskBean bean) {
-        def result = "NXF_CHDIR=${Escape.path(bean.workDir)}\n"
-        if( remoteBinDir ) {
-            result += "cp -r $remoteBinDir \$HOME/.nextflow-bin\n"
-            result += 'chmod +x $HOME/.nextflow-bin/*\n'
-            result += 'export PATH=$PATH:$HOME/.nextflow-bin\n'
-        }
-        return result
+        return "NXF_CHDIR=${Escape.path(bean.workDir)}\n"
     }
 
     Path toContainerMount(Path path) {
         if( path == null )
             return null
-        if( !type.isAssignableFrom(path.class) )
-            throw new IllegalArgumentException("Unexpected path for Fusion task handler: ${path.toUriString()}")
 
         final p = BucketParser.from( FilesEx.toUriString(path) )
+
+        if( p.scheme != scheme )
+            throw new IllegalArgumentException("Unexpected path for Fusion script launcher: ${path.toUriString()}")
+
         final result = "/fusion/$p.scheme/${p.bucket}${p.path}"
         buckets.add(p.bucket)
         return Path.of(result)
@@ -106,10 +100,6 @@ class FusionScriptLauncher extends BashWrapperBuilder {
 
     Set<String> fusionBuckets() {
         return buckets
-    }
-
-    String getWorkDirMount() {
-        return workDir.toString()
     }
 
     @Override

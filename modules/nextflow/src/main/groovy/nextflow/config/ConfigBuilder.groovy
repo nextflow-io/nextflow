@@ -674,7 +674,21 @@ class ConfigBuilder {
             if( !(config.tower instanceof Map) )
                 config.tower = [:]
             config.tower.enabled = true
-            config.tower.endpoint = cmdRun.withTower
+            if( cmdRun.withTower != '-' )
+                config.tower.endpoint = cmdRun.withTower
+            else if( !config.tower.endpoint )
+                config.tower.endpoint = 'https://api.tower.nf'
+        }
+
+        // -- set wave options
+        if( cmdRun.withWave ) {
+            if( !(config.wave instanceof Map) )
+                config.wave = [:]
+            config.wave.enabled = true
+            if( cmdRun.withWave != '-' )
+                config.wave.endpoint = cmdRun.withWave
+            else if( !config.wave.endpoint )
+                config.wave.endpoint = 'https://default.host'
         }
 
         // -- nextflow setting
