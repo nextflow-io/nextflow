@@ -35,9 +35,11 @@ import nextflow.secret.SecretsProvider
 @Parameters(commandDescription = "Manage pipeline secrets (preview)")
 class CmdSecret extends CmdBase implements UsageAware {
 
+    private PrintStream out = System.out
+
     interface SubCmd {
         String getName()
-        void apply()
+        void apply(List<String> result)
         void usage(List<String> result)
     }
 
@@ -48,12 +50,6 @@ class CmdSecret extends CmdBase implements UsageAware {
     String getName() {
         return NAME
     }
-
-    @Parameter(names=['-n','-name'], description = 'Secret name')
-    String secretName
-
-    @Parameter(names=['-v','-value'], description = 'Secret value')
-    String secretValue
 
     @Parameter(hidden = true)
     List<String> args
@@ -99,7 +95,7 @@ class CmdSecret extends CmdBase implements UsageAware {
             }
         }
 
-        println result.join('\n').toString()
+        out.println result.join('\n').toString()
     }
 
     /**
@@ -118,7 +114,7 @@ class CmdSecret extends CmdBase implements UsageAware {
 
         // run the command
         try {
-            getCmd(args).apply()
+            getCmd(args).apply(args.drop(1))
         }
         finally {
             // close the provider
@@ -160,21 +156,22 @@ class CmdSecret extends CmdBase implements UsageAware {
         String getName() { 'put' }
 
         @Override
-        void apply() {
-            if( !secretName )
+        void apply(List<String> result) {
+            if( result.size() < 1 )
                 throw new AbortOperationException("Missing secret name")
-            if( !secretValue )
+            if( result.size() < 2 )
                 throw new AbortOperationException("Missing secret value")
+
+            String secretName = result.first()
+            String secretValue = result.last()
             provider.putSecret(secretName, secretValue)
         }
 
         @Override
         void usage(List<String> result) {
             result << 'Put a key-pair in the secret store'
-            result << "Usage: nextflow secret $name -name <NAME> -value <VALUE>".toString()
+            result << "Usage: nextflow secret $name <NAME> <VALUE>".toString()
             result << ''
-            addOption('secretName', result)
-            addOption('secretValue', result)
             result << ''
         }
     }
@@ -185,18 +182,20 @@ class CmdSecret extends CmdBase implements UsageAware {
         String getName() { 'get' }
 
         @Override
-        void apply() {
+        void apply(List<String> result) {
+            if( result.size() != 1 )
+                throw new AbortOperationException("Wrong number of arguments")
+
+            String secretName = result.first()
             if( !secretName )
                 throw new AbortOperationException("Missing secret name")
-            println provider.getSecret(secretName)?.value
+            out.println provider.getSecret(secretName)?.value
         }
 
         @Override
         void usage(List<String> result) {
             result << 'Get a secret value with the name'
-            result << "Usage: nextflow secret $name -name <NAME>".toString()
-            result << ''
-            addOption('secretName', result)
+            result << "Usage: nextflow secret $name <NAME>".toString()
             result << ''
         }
     }
@@ -209,15 +208,18 @@ class CmdSecret extends CmdBase implements UsageAware {
         String getName() { 'list' }
 
         @Override
-        void apply() {
+        void apply(List<String> result) {
+            if( result.size()  )
+                throw new AbortOperationException("Wrong number of arguments")
+
             final names = new ArrayList(provider.listSecretsNames()).sort()
             if( names ) {
                 for( String it : names ) {
-                    println it
+                    out.println it
                 }
             }
             else {
-                println "no secrets available"
+                out.println "no secrets available"
             }
         }
 
@@ -237,7 +239,12 @@ class CmdSecret extends CmdBase implements UsageAware {
         String getName() { 'delete' }
 
         @Override
-        void apply() {
+        void apply(List<String> result) {
+            if( result.size() != 1 )
+                throw new AbortOperationException("Wrong number of arguments")
+
+            String secretName = result.first()
+
             if( !secretName )
                 throw new AbortOperationException("Missing secret name")
             provider.removeSecret(secretName)
@@ -246,7 +253,7 @@ class CmdSecret extends CmdBase implements UsageAware {
         @Override
         void usage(List<String> result) {
             result << 'Delete an entry from the secret store'
-            result << "Usage: nextflow secret $name -name".toString()
+            result << "Usage: nextflow secret $name".toString()
             result << ''
             addOption('secretName', result)
             result << ''
