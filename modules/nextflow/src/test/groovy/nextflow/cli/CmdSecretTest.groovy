@@ -17,16 +17,16 @@
 
 package nextflow.cli
 
+import java.nio.file.Files
+import java.nio.file.Path
+
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import org.junit.Rule
 import spock.lang.Shared
 import spock.lang.Specification
 import test.OutputCapture
-
-import java.nio.file.Files
-import java.nio.file.Path
-
 /**
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
@@ -49,14 +49,11 @@ class CmdSecretTest extends Specification {
     def setupSpec(){
         tempDir = Files.createTempDirectory('test').toAbsolutePath()
         secretFile = new File("$tempDir/store.json")
-        def processEnvironmentClass = System.getenv().getClass()
-        def field = processEnvironmentClass.getDeclaredField('m')
-        field.accessible = true
-        def map = (Map<String, String>) field.get(System.getenv())
-        map.put('NXF_SECRETS_FILE', secretFile.toString())
+        SysEnv.set([NXF_SECRETS_FILE: secretFile.toString()])
     }
 
     def cleanupSpec() {
+        SysEnv.restore()
         tempDir?.deleteDir()
     }
 
