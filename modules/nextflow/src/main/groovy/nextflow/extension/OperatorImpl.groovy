@@ -1051,6 +1051,7 @@ class OperatorImpl {
      * @param mapper
      * @return
      */
+    @Deprecated
     DataflowWriteChannel phase( DataflowReadChannel source, Map opts, DataflowReadChannel other, Closure mapper = null ) {
 
         def target = new PhaseOp(source,other)
@@ -1061,6 +1062,7 @@ class OperatorImpl {
         return target
     }
 
+    @Deprecated
     DataflowWriteChannel phase( DataflowReadChannel source, DataflowReadChannel other, Closure mapper = null ) {
 
         def target = new PhaseOp(source,other)
@@ -1324,6 +1326,7 @@ class OperatorImpl {
         view(source, Collections.emptyMap(), closure)
     }
 
+    @Deprecated
     void choice(final DataflowReadChannel source, final List<DataflowWriteChannel> outputs, final Closure<Integer> code) {
         new ChoiceOp(source,outputs,code).apply()
     }
