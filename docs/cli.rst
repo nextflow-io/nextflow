@@ -1266,18 +1266,21 @@ Viewing the contents of a downloaded pipeline. ::
 
     == content of file: .nextflow/assets/nextflow-io/hello/main.nf
     #!/usr/bin/env nextflow
-
-    cheers = Channel.from 'Bonjour', 'Ciao', 'Hello', 'Hola'
+    nextflow.enable.dsl=2 
 
     process sayHello {
-      debug true
-      input:
-        val x from cheers
-
+      input: 
+        val x
+      output:
+        stdout
       script:
         """
         echo '$x world!'
         """
+    }
+
+    workflow {
+      Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
     }
 
 Listing the folder structure of the downloaded pipeline. ::
@@ -1300,18 +1303,21 @@ Viewing the contents of a downloaded pipeline without omitting the header. ::
     $ nextflow view -q nextflow-io/hello
 
     #!/usr/bin/env nextflow
-
-    cheers = Channel.from 'Bonjour', 'Ciao', 'Hello', 'Hola'
+    nextflow.enable.dsl=2 
 
     process sayHello {
-      debug true
-      input:
-        val x from cheers
-
+      input: 
+        val x
+      output:
+        stdout
       script:
         """
         echo '$x world!'
         """
+    }
+
+    workflow {
+      Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
     }
 
 

@@ -4,9 +4,9 @@
 Processes
 *********
 
-In Nextflow a `process` is the basic processing `primitive` to execute a user script.
+In Nextflow, a **process** is the basic processing primitive to execute a user script.
 
-The process definition starts with the keyword ``process``, followed by process name and finally the process `body`
+The process definition starts with the keyword ``process``, followed by process name and finally the process body
 delimited by curly brackets. The process body must contain a string which represents the command or, more generally,
 a script that is executed by it. A basic process looks like the following example::
 
@@ -16,26 +16,24 @@ a script that is executed by it. A basic process looks like the following exampl
       """
   }
 
-A process may contain five definition blocks, respectively: directives,
-inputs, outputs, when clause and finally the process script. The syntax is defined as follows:
-
-::
+A process may contain any of the following definition blocks: directives,
+inputs, outputs, when clause, and the process script. The syntax is defined as follows::
 
   process < name > {
 
-     [ directives ]
+    [ directives ]
 
-     input:
+    input:
       < process inputs >
 
-     output:
+    output:
       < process outputs >
 
-     when:
+    when:
       < condition >
 
-     [script|shell|exec]:
-     < user script to be executed >
+    [script|shell|exec]:
+      < user script to be executed >
 
   }
 
@@ -45,20 +43,17 @@ inputs, outputs, when clause and finally the process script. The syntax is defin
 Script
 ======
 
-The ``script`` block is a string statement that defines the command that is executed by the process to carry out its task.
+The ``script`` block defines, as a string expression, the script that is executed by the process.
 
-A process contains one and only one script block, and it must be the last statement when the process contains
-input and output declarations.
+A process may contain only one script block, and it must be the final statement in the process block
+(unless ``script:`` is explicitly declared).
 
-The entered string is executed as a `Bash <http://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ script in the
-`host` system. It can be any command, script or combination of them, that you would normally use in terminal shell
-or in a common Bash script.
+The script string is executed as a `Bash <http://en.wikipedia.org/wiki/Bash_(Unix_shell)>`_ script in the
+host environment. It can be any command or script that you would normally execute on the command line or
+in a Bash script. Naturally, the script may only use commands that are available in the host environment.
 
-The only limitation to the commands that can be used in the script statement is given by the availability of those
-programs in the target execution system.
-
-The script block can be a simple string or multi-line string. The latter simplifies the writing of non trivial scripts
-composed by multiple commands spanning over multiple lines. For example::
+The script block can be a simple string or a multi-line string. The latter approach makes it easier to write
+scripts with multiple commands spanning multiple lines. For example::
 
     process doMoreThings {
       """
@@ -68,20 +63,22 @@ composed by multiple commands spanning over multiple lines. For example::
       """
     }
 
-As explained in the script tutorial section, strings can be defined by using a single-quote
-or a double-quote, and multi-line strings are defined by three single-quote or three double-quote characters.
+As explained in the script tutorial section, strings can be defined using single-quotes
+or double-quotes, and multi-line strings are defined by three single-quote or three double-quote characters.
 
 There is a subtle but important difference between them. Like in Bash, strings delimited by a ``"`` character support
 variable substitutions, while strings delimited by ``'`` do not.
 
-In the above code fragment the ``$db`` variable is replaced by the actual value defined somewhere in the
+In the above code fragment, the ``$db`` variable is replaced by the actual value defined elsewhere in the
 pipeline script.
 
-.. warning:: Since Nextflow uses the same Bash syntax for variable substitutions in strings, you must manage them
+.. warning::
+  Since Nextflow uses the same Bash syntax for variable substitutions in strings, you must manage them
   carefully depending on whether you want to evaluate a *Nextflow* variable or a *Bash* variable.
 
-When you need to access a system environment variable in your script you have two options. The first choice is as
-easy as defining your script block by using a single-quote string. For example::
+When you need to access a system environment variable in your script, you have two options.
+
+If you don't need to access any Nextflow variables, you can define your script block with single-quotes::
 
     process printPath {
       '''
@@ -89,10 +86,7 @@ easy as defining your script block by using a single-quote string. For example::
       '''
     }
 
-The drawback of this solution is that you will not able to access variables defined in the pipeline script context,
-in your script block.
-
-To fix this, define your script by using a double-quote string and `escape` the system environment variables by
+Otherwise, you can define your script with double-quotes and escape the system environment variables by
 prefixing them with a back-slash ``\`` character, as shown in the following example::
 
     process doOtherThings {
@@ -103,27 +97,27 @@ prefixing them with a back-slash ``\`` character, as shown in the following exam
       """
     }
 
-In this example the ``$MAX`` variable has to be defined somewhere before, in the pipeline script.
-`Nextflow` replaces it with the actual value before executing the script. Instead, the ``$DB`` variable
-must exist in the script execution environment and the Bash interpreter will replace it with the actual value.
+In this example, ``$MAX`` is a Nextflow variable that must be defined elsewhere in the pipeline script.
+Nextflow replaces it with the actual value before executing the script. Meanwhile, ``$DB`` is a Bash variable
+that must exist in the execution environment, and Bash will replace it with the actual value during execution.
 
 .. tip::
-  Alternatively you can use the :ref:`process-shell` block definition which allows a script to contain both
+  Alternatively, you can use the :ref:`process-shell` block definition, which allows a script to contain both
   Bash and Nextflow variables without having to escape the first.
 
 Scripts `à la carte`
 --------------------
 
-The process script is interpreted by Nextflow as a Bash script by default, but you are not limited to it.
+The process script is interpreted by Nextflow as a Bash script by default, but you are not limited to Bash.
 
-You can use your favourite scripting language (e.g. Perl, Python, Ruby, R, etc), or even mix them in the same pipeline.
+You can use your favourite scripting language (Perl, Python, R, etc), or even mix them in the same pipeline.
 
-A pipeline may be composed by processes that execute very different tasks. Using `Nextflow` you can choose the scripting
-language that better fits the task carried out by a specified process. For example for some processes `R` could be
-more useful than `Perl`, in other you may need to use `Python` because it provides better access to a library or an API, etc.
+A pipeline may be composed of processes that execute very different tasks. With Nextflow, you can choose the scripting
+language that best fits the task performed by a given process. For example, for some processes R might be
+more useful than Perl, whereas for others you may need to use Python because it provides better access to a library or an API, etc.
 
-To use a scripting other than Bash, simply start your process script with the corresponding
-`shebang <http://en.wikipedia.org/wiki/Shebang_(Unix)>`_ declaration. For example::
+To use a language other than Bash, simply start your process script with the corresponding
+`shebang <http://en.wikipedia.org/wiki/Shebang_(Unix)>`_. For example::
 
     process perlStuff {
         """
@@ -153,44 +147,42 @@ To use a scripting other than Bash, simply start your process script with the co
 Conditional scripts
 -------------------
 
-Complex process scripts may need to evaluate conditions on the input parameters or use traditional flow control
-statements (i.e. ``if``, ``switch``, etc) in order to execute specific script commands, depending on the current
-inputs configuration.
+So far, our ``script`` block has always been a simple string expression, but in reality, the ``script`` block is
+just Groovy code that `returns` a string. This means that you can write arbitrary Groovy code to determine
+the script to execute, as long as the final statement is a string (remember that the ``return`` keyword is optional in Groovy).
 
-Process scripts can contain conditional statements by simply prefixing the script block with the keyword ``script:``.
-By doing that the interpreter will evaluate all the following statements as a code block that must return the
-script string to be executed. It's much easier to use than to explain, for example::
+For example, you can use flow control statements (``if``, ``switch``, etc) to execute a different script based on
+the process inputs. The only difference here is that you must explicitly declare the ``script:`` block, whereas before
+it was not required. Here is an example::
 
-    seq_to_align = ...
     mode = 'tcoffee'
 
     process align {
         input:
-        file seq_to_aln from sequences
+        path sequences
 
         script:
         if( mode == 'tcoffee' )
             """
-            t_coffee -in $seq_to_aln > out_file
+            t_coffee -in $sequences > out_file
             """
 
         else if( mode == 'mafft' )
             """
-            mafft --anysymbol --parttree --quiet $seq_to_aln > out_file
+            mafft --anysymbol --parttree --quiet $sequences > out_file
             """
 
         else if( mode == 'clustalo' )
             """
-            clustalo -i $seq_to_aln -o out_file
+            clustalo -i $sequences -o out_file
             """
 
         else
             error "Invalid alignment mode: ${mode}"
     }
 
-In the above example the process will execute the script fragment depending on the value of the ``mode`` parameter.
-By default it will execute the ``tcoffee`` command, changing the ``mode`` variable to ``mafft`` or ``clustalo`` value,
-the other branches will be executed.
+In the above example, the process will execute one of the script fragments depending on the value of the ``mode`` parameter.
+By default it will execute the ``tcoffee`` command, but changing the ``mode`` variable will cause a different branch to be executed.
 
 
 .. _process-template:
@@ -198,41 +190,45 @@ the other branches will be executed.
 Template
 --------
 
-Process script can be externalised by using *template* files which can be reused across different processes and tested
+Process scripts can be externalised to **template** files, which can be reused across different processes and tested
 independently from the overall pipeline execution.
 
 A template is simply a shell script file that Nextflow is able to execute by using the ``template`` function
 as shown below::
 
-    process template_example {
+    process templateExample {
         input:
-        val STR from 'this', 'that'
+        val STR
 
         script:
         template 'my_script.sh'
     }
 
-Nextflow looks for the ``my_script.sh`` template file in the directory ``templates`` that must exist in the same folder
-where the Nextflow script file is located (any other location can be provided by using an absolute template path).
+    workflow {
+        Channel.of('this', 'that') | templateExample
+    }
 
-.. note::
-  When using :ref:`DSL2 <dsl2-page>`, Nextflow also looks in the ``templates`` directory
-  located in the same folder as module. See :ref:`module templates <module-templates>`.
+By default, Nextflow looks for the ``my_script.sh`` template file in the ``templates`` directory located alongside the
+Nextflow script and/or the module script in which the process is defined. Any other location can be specified by using
+an absolute template path.
 
-The template script can contain any piece of code that can be executed by the underlying system. For example::
+The template script may contain any code that can be executed by the underlying environment. For example::
 
   #!/bin/bash
   echo "process started at `date`"
   echo $STR
-  :
   echo "process completed"
 
 .. tip::
-  The dollar character (``$``) is interpreted as a Nextflow variable placeholder when the script is run as a
-  Nextflow template, whereas it is evaluated as a Bash variable when run as a Bash script. This can be very useful to test
-  your script autonomously, i.e. independently from Nextflow execution. You only need to provide a Bash environment
-  variable for each the Nextflow variable existing in your script. For example, it would be possible to execute the above
+  The dollar character (``$``) is interpreted as a Nextflow variable when the script is run as a Nextflow template,
+  whereas it is evaluated as a Bash variable when run as a Bash script. This can be very useful for testing
+  your script independently from Nextflow execution. You only need to provide a Bash environment variable for each
+  of the Nextflow variables that are referenced in your script. For example, it would be possible to execute the above
   script with the following command in the terminal: ``STR='foo' bash templates/my_script.sh``
+
+.. tip::
+  As a best practice, the template script should not contain any ``\$`` escaped variables, because these variables
+  will not be evaluated properly when the script is executed directly.
 
 
 .. _process-shell:
@@ -240,25 +236,28 @@ The template script can contain any piece of code that can be executed by the un
 Shell
 -----
 
-The ``shell`` block is a string statement that defines the *shell* command executed by the process to carry out its task.
-It is an alternative to the :ref:`process-script` definition with an important difference, it uses
-the exclamation mark ``!`` character as the variable placeholder for Nextflow variables in place of the usual dollar character.
+The ``shell`` block is a string expression that defines the script that is executed by the process.
+It is an alternative to the :ref:`process-script` definition with one important difference: it uses
+the exclamation mark ``!`` character, instead of the usual dollar ``$`` character, to denote Nextflow variables.
 
-In this way it is possible to use both Nextflow and Bash variables in the same piece of code without having to escape
-the latter and making process scripts more readable and easy to maintain. For example::
+This way, it is possible to use both Nextflow and Bash variables in the same script without having to escape
+the latter, which makes process scripts easier to read and maintain. For example::
 
     process myTask {
         input:
-        val str from 'Hello', 'Hola', 'Bonjour'
+        val str
 
         shell:
         '''
-        echo User $USER says !{str}
+        echo "User $USER says !{str}"
         '''
     }
 
-In the above trivial example the ``$USER`` variable is managed by the Bash interpreter, while ``!{str}`` is handled
-as a process input variable managed by Nextflow.
+    workflow {
+        Channel.of('Hello', 'Hola', 'Bonjour') | myTask
+    }
+
+In the above example, ``$USER`` is treated as a Bash variable, while ``!{str}`` is treated as a Nextflow variable.
 
 .. note::
 
@@ -268,7 +267,7 @@ as a process input variable managed by Nextflow.
     - Variables prefixed with ``!`` must always be enclosed in curly brackets, i.e. ``!{str}`` is a valid 
       variable whereas ``!str`` is ignored.
 
-    - Shell scripts support the use of the file :ref:`process-template` mechanism. The same rules are applied to the variables
+    - Shell scripts support the use of the :ref:`process-template` mechanism. The same rules are applied to the variables
       defined in the script template.
 
 
@@ -277,13 +276,10 @@ as a process input variable managed by Nextflow.
 Native execution
 ----------------
 
-Nextflow processes can execute native code other than system scripts as shown in the previous paragraphs.
+Nextflow processes can also execute native Groovy code as the task itself, using the ``exec`` block. Whereas the
+``script`` block defines a script to be executed, the ``exec`` block defines Groovy code to be executed directly.
 
-This means that instead of specifying the process command to be executed as a string script, you can
-define it by providing one or more language statements, as you would do in the rest of the pipeline script.
-Simply starting the script definition block with the ``exec:`` keyword, for example::
-
-    x = Channel.from( 'a', 'b', 'c')
+For example::
 
     process simpleSum {
         input:
@@ -293,7 +289,11 @@ Simply starting the script definition block with the ``exec:`` keyword, for exam
         println "Hello Mr. $x"
     }
 
-Will display::
+    workflow {
+        Channel.of('a', 'b', 'c') | simpleSum
+    }
+
+will display::
 
     Hello Mr. b
     Hello Mr. a
@@ -308,8 +308,8 @@ Stub
 .. warning::
     This feature is experimental. It may change in future versions.
 
-As of version 20.11.0-edge it's possible to define a command *stub* that replaces the actual process command, when
-the `-stub-run` or `-stub` command line option. ::
+As of version 20.11.0-edge, you can define a command **stub**, which replaces the actual process command when
+the ``-stub-run`` or ``-stub`` command line option::
 
     process INDEX {
       input:
@@ -332,9 +332,9 @@ the `-stub-run` or `-stub` command line option. ::
         """
     }
 
-This feature is meant to allow the fast prototyping and test of the workflow logic without using the real
-commands. The developer can use it to provide a dummy command which is expected to mimic the execution
-of the real one in a quicker manner. This can also be used as an alternative for the *dry-run* feature.
+This feature makes it easier to quickly prototype the workflow logic without using the real
+commands. The developer can use it to provide a dummy script that mimics the execution
+of the real one in a quicker manner. In other words, it is a way to perform a dry-run.
 
 .. tip::
     The ``stub`` block can be defined before or after the ``script`` block.
@@ -347,184 +347,231 @@ of the real one in a quicker manner. This can also be used as an alternative for
 Inputs
 ======
 
-Nextflow processes are isolated from each other but can communicate between themselves sending values through channels.
-
-The ``input`` block defines from which channels the process expects to receive data. You can only define one
-input block at a time and it must contain one or more input declarations.
+The ``input`` block allows you to define the input channels of a process, similar to function arguments.
+A process may have at most one input block, and it must contain at least one input.
 
 The input block follows the syntax shown below::
 
     input:
-      <input qualifier> <input name> [from <source channel>] [attributes]
+      <input qualifier> <input name>
 
-An input definition starts with an input `qualifier` and the input `name`, followed by the keyword ``from`` and
-the actual channel over which inputs are received. Finally some input optional attributes can be specified.
+An input definition consists of a `qualifier` and a `name`. The input qualifier defines the type
+of data to be received. This information is used by Nextflow to apply the semantic rules associated with
+each qualifier, and handle it properly depending on the target execution platform (grid, cloud, etc).
 
-.. tip:: When the input name is the same as the channel name, the ``from`` part of the declaration can be omitted.
+When a process is invoked in a workflow block, it must be provided a channel for each channel in the
+process input block, similar to calling a function with specific arguments. The examples provided in
+the following sections demonstrate how a process is invoked with input channels.
 
-The input qualifier declares the `type` of data to be received. This information is used by Nextflow to apply the
-semantic rules associated to each qualifier and handle it properly depending on the target execution platform
-(grid, cloud, etc).
-
-The qualifiers available are the ones listed in the following table:
+The available input qualifiers are listed in the following table:
 
 =========== =============
 Qualifier   Semantic
 =========== =============
-val         Lets you access the received input value by its name in the process script.
-env         Lets you use the received value to set an environment variable named
-            as the specified input name.
-file        Lets you handle the received value as a file, staging it properly in the execution context.
-path        Lets you handle the received value as a path, staging the file properly in the execution context.
-stdin       Lets you forward the received value to the process ``stdin`` special file.
-tuple       Lets you handle a group of input values having one of the above qualifiers.
-each        Lets you execute the process for each entry in the input collection.
+``val``     Access the input value by name in the process script.
+``file``    (DEPRECATED) Handle the input value as a file, staging it properly in the execution context.
+``path``    Handle the input value as a path, staging the file properly in the execution context.
+``env``     Use the input value to set an environment variable in the process script.
+``stdin``   Forward the input value to the process ``stdin`` special file.
+``tuple``   Handle a group of input values having any of the above qualifiers.
+``each``    Execute the process for each element in the input collection.
 =========== =============
 
 
-Input of generic values
------------------------
+Input type ``val``
+------------------
 
-The ``val`` qualifier allows you to receive data of any type as input. It can be accessed in the process script
+The ``val`` qualifier accepts any data type. It can be accessed in the process script
 by using the specified input name, as shown in the following example::
-
-    num = Channel.from( 1, 2, 3 )
 
     process basicExample {
       input:
-      val x from num
+      val x
 
       "echo process job $x"
     }
 
-In the above example the process is executed three times, each time a value is received from the channel ``num``
-and used to process the script. Thus, it results in an output similar to the one shown below::
+    workflow {
+      def num = Channel.of(1,2,3)
+      basicExample(num)
+    }
+
+In the above example, the process is executed three times: once for each value emitted by the ``num`` channel.
+The resulting output is similar to the one shown below::
 
     process job 3
     process job 1
     process job 2
 
-.. note:: The `channel` guarantees that items are delivered in the same order as they were received - but -
-  since the process is executed in a parallel manner, there is no guarantee that they are processed in the
-  same order as they are received. In fact, in the above example, the value ``3`` is processed before the others.
+.. note::
+  While channels do emit items in the order that they are received, *processes* do not
+  necessarily *process* items in the order that they are received. In the above example,
+  the value ``3`` was processed before the others.
 
-When the ``val`` has the same name as the channel from where the data is received, the ``from`` part can be omitted.
-Thus the above example can be written as shown below::
-
-    num = Channel.from( 1, 2, 3 )
+.. note::
+  When the process declares exactly one input, the pipe ``|`` operator can be used to provide inputs to the process,
+  instead of passing it as a parameter. Both methods have identical semantics::
 
     process basicExample {
       input:
-      val num
+      val x
 
-      "echo process job $num"
+      "echo process job $x"
+    }
+
+    workflow {
+      Channel.of(1,2,3) | basicExample
     }
 
 
-Input of files
---------------
+Input type ``file``
+-------------------
 
-The ``file`` qualifier allows the handling of file values in the process execution context. This means that
-Nextflow will stage it in the process execution directory, and it can be access in the script by using the name
-specified in the input declaration. For example::
+.. note::
+  The ``file`` qualifier was the standard way to handle input files prior to Nextflow 19.10.0. In later versions
+  of Nextflow, the ``path`` qualifier should be preferred over ``file``.
 
-    proteins = Channel.fromPath( '/some/path/*.fa' )
+The ``file`` qualifier is identical to ``path``, with one important difference. When a ``file`` input
+receives a value that is not a file, it automatically converts the value to a string and saves it to a
+temporary file. This behavior is useful in some cases, but tends to be confusing in general. The ``path``
+qualifier instead interprets string values as the path location of the input file and automatically
+converts to a file object.
+
+
+.. _process-input-path:
+
+Input type ``path``
+-------------------
+
+The ``path`` qualifier allows you to provide input files to the process execution context. Nextflow will stage
+the files into the process execution directory, and they can be accessed in the script by using the specified
+input name. For example::
 
     process blastThemAll {
       input:
-      path query_file from proteins
+      path query_file
 
       "blastp -query ${query_file} -db nr"
     }
 
-In the above example all the files ending with the suffix ``.fa`` are sent over the channel ``proteins``.
-Then, these files are received by the process which will execute a `BLAST` query on each of them.
-
-When the file input name is the same as the channel name, the ``from`` part of the input declaration can be omitted.
-Thus, the above example could be written as shown below::
-
-    proteins = Channel.fromPath( '/some/path/*.fa' )
-
-    process blastThemAll {
-      input:
-      path proteins
-
-      "blastp -query $proteins -db nr"
+    workflow {
+      def proteins = Channel.fromPath( '/some/path/*.fa' )
+      blastThemAll(proteins)
     }
 
-It's worth noting that in the above examples, the name of the file in the file-system is not touched, you can
-access the file even without knowing its name because you can reference it in the process script by using the
-variable whose name is specified in the input file parameter declaration.
+In the above example, all the files ending with the suffix ``.fa`` are sent over the channel ``proteins``.
+These files are received by the process, which executes a BLAST query on each of them.
 
-There may be cases where your task needs to use a file whose name is fixed, it does not have to change along
-with the actual provided file. In this case you can specify its name by specifying the ``name`` attribute in the
-input file parameter declaration, as shown in the following example::
+It's worth noting that in the above example, the name of the file in the file-system is not used. You can
+access the file without even knowing its name, because you can reference it in the process script by the input name.
 
-    input:
-        path query_file name 'query.fa' from proteins
-
-Or alternatively using a shorter syntax::
+There may be cases where your task needs to use a file whose name is fixed, i.e. it does not have to change along
+with the actual provided file. In this case, you can specify a fixed name with the ``name`` attribute in the
+input file parameter definition, as shown in the following example::
 
     input:
-        path 'query.fa' from proteins
+    path query_file, name: 'query.fa'
 
-Using this, the previous example can be re-written as shown below::
+or, using a shorter syntax::
 
-    proteins = Channel.fromPath( '/some/path/*.fa' )
+    input:
+    path 'query.fa'
+
+The previous example can be re-written as shown below::
 
     process blastThemAll {
       input:
-      path 'query.fa' from proteins
+      path 'query.fa'
 
       "blastp -query query.fa -db nr"
     }
 
-What happens in this example is that each file, that the process receives, is staged with the name ``query.fa``
-in a different execution context (i.e. the folder where the job is executed) and an independent process
-execution is launched.
+    workflow {
+      def proteins = Channel.fromPath( '/some/path/*.fa' )
+      blastThemAll(proteins)
+    }
+
+In this example, each file received by the process is staged with the name ``query.fa``
+in a different execution context (i.e. the folder where a task is executed).
 
 .. tip::
   This feature allows you to execute the process command multiple times without worrying about the file names changing.
-  In other words, `Nextflow` helps you write pipeline tasks that are self-contained and decoupled from the execution
-  environment. This is also the reason why you should avoid whenever possible using absolute or relative paths
-  when referencing files in your pipeline processes.
+  In other words, Nextflow helps you write pipeline tasks that are self-contained and decoupled from the execution
+  environment. As a best practice, you should avoid referencing files in your process script other than those
+  defined in your input block.
 
-.. TODO describe that file can handle channels containing any data type not only file
+Channel factories like ``Channel.fromPath`` produce file objects, but a ``path`` input can also
+accept a string literal path. The string value should be an absolute path, i.e. it must be
+prefixed with a ``/`` character or a supported URI protocol (``file://``, ``http://``, ``s3://``, etc),
+and it cannot contain special characters (``\n``, etc).
+
+::
+
+    process foo {
+      input:
+      path x
+
+      """
+      your_command --in $x
+      """
+    }
+
+    workflow {
+      foo('/some/data/file.txt')
+    }
+
+The ``stageAs`` option allows you to control how the file should be named in the task work
+directory. You can provide a specific name or a pattern as described in the `Multiple input files`_
+section::
+
+    process foo {
+      input:
+      path x, stageAs: 'data.txt'
+
+      """
+      your_command --in data.txt
+      """
+    }
+
+    workflow {
+      foo('/some/data/file.txt')
+    }
 
 
 Multiple input files
 --------------------
 
-A process can declare as input file a channel that emits a collection of values, instead of a simple value.
+A ``path`` input can also accept a collection of files instead of a single value.
+In this case, the input variable will be a Groovy list, and you can use it as such.
 
-In this case, the script variable defined by the input file parameter will hold a list of files. You can
-use it as shown before, referring to all the files in the list, or by accessing a specific entry using the
-usual square brackets notation.
-
-When a target file name is defined in the input parameter and a collection of files is received by the process,
-the file name will be appended by a numerical suffix representing its ordinal position in the list. For example::
-
-    fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(size:3)
+When the input has a fixed file name and a collection of files is received by the process,
+the file name will be appended with a numerical suffix representing its ordinal position
+in the list. For example::
 
     process blastThemAll {
         input:
-        path 'seq' from fasta
+        path 'seq'
 
         "echo seq*"
     }
 
-Will output::
+    workflow {
+        def fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(size: 3)
+        blastThemAll(fasta)
+    }
+
+will output::
 
     seq1 seq2 seq3
     seq1 seq2 seq3
     ...
 
-The target input file name can contain the ``*`` and ``?`` wildcards, that can be used
+The target input file name may contain the ``*`` and ``?`` wildcards, which can be used
 to control the name of staged files. The following table shows how the wildcards are
 replaced depending on the cardinality of the received input collection.
 
 ============ ============== ==================================================
-Cardinality   Name pattern     Staged file names
+Cardinality   Name pattern   Staged file names
 ============ ============== ==================================================
  any         ``*``           named as the source file
  1           ``file*.ext``   ``file.ext``
@@ -538,140 +585,71 @@ Cardinality   Name pattern     Staged file names
  many        ``dir*/*``      (as above)
 ============ ============== ==================================================
 
-The following fragment shows how a wildcard can be used in the input file declaration::
-
-    fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(size:3)
+The following example shows how a wildcard can be used in the input file definition::
 
     process blastThemAll {
         input:
-        path 'seq?.fa' from fasta
+        path 'seq?.fa'
 
         "cat seq1.fa seq2.fa seq3.fa"
     }
 
-.. note:: Rewriting input file names according to a named pattern is an extra feature and not at all obligatory.
-  The normal file input constructs introduced in the `Input of files`_ section are valid for collections of
-  multiple files as well. To handle multiple input files preserving the original file names, use the ``*`` wildcard as
-  name pattern or a variable identifier.
+    workflow {
+        def fasta = Channel.fromPath( "/some/path/*.fa" ).buffer(size: 3)
+        blastThemAll(fasta)
+    }
+
+.. note::
+  Rewriting input file names according to a named pattern is an extra feature and not at all required.
+  The normal file input syntax introduced in the :ref:`process-input-path` section is valid for collections of
+  multiple files as well. To handle multiple input files while preserving the original file names, use a variable
+  identifier or the ``*`` wildcard.
 
 
 Dynamic input file names
 ------------------------
 
-When the input file name is specified by using the ``name`` file clause or the short `string` notation, you
-are allowed to use other input values as variables in the file name string. For example::
+When the input file name is specified by using the ``name`` option or a string literal, you
+can also use other input values as variables in the file name string. For example::
 
   process simpleCount {
     input:
-    val x from species
-    path "${x}.fa" from genomes
+    val x
+    path "${x}.fa"
 
     """
     cat ${x}.fa | grep '>'
     """
   }
 
-In the above example, the input file name is set by using the current value of the ``x`` input value.
+In the above example, the input file name is determined by the current value of the ``x`` input value.
 
-This allows the input files to be staged in the script working directory with a name that is coherent
+This approach allows input files to be staged in the task directory with a name that is coherent
 with the current execution context.
 
 .. tip::
-  In most cases, you won't need to use dynamic file names, because each process is executed in its
-  own temporary directory, and input files are automatically staged into this directory by Nextflow.
-  This guarantees that input files with the same name won't overwrite each other.
+  In most cases, you won't need to use dynamic file names, because each task is executed in its
+  own directory, and input files are automatically staged into this directory by Nextflow.
+  This behavior guarantees that input files with the same name won't overwrite each other.
 
 
-Input of type 'path'
---------------------
-
-The ``path`` input qualifier was introduced by Nextflow version 19.10.0 and it's a drop-in replacement
-for the ``file`` qualifier, therefore it's backward compatible with the syntax
-and the semantic for the input ``file`` described above.
-
-The important difference between ``file`` and ``path`` qualifier is that the first expects the
-values received as input to be *file* objects. When inputs is a different type, it automatically
-coverts to a string and saves it to a temporary files. This can be useful in some uses cases,
-but it turned out to be tricky in most common cases.
-
-The ``path`` qualifier instead interprets string values as the path location of the input file
-and automatically converts to a file object.
-
-::
-
-    process foo {
-      input:
-        path x from '/some/data/file.txt'
-
-      """
-      your_command --in $x
-      """
-    }
-
-.. note::
-    The input value should represent an absolute path location, i.e. the string value
-    **must** be prefixed with a ``/`` character or with a supported URI protocol (``file://``,
-    ``http://``, ``s3://``, etc) and it cannot contain special characters (``\n``, etc).
-
-The option ``stageAs`` allow you to control how the file should be named in the task work
-directory, providing a specific name or a name pattern as described in the `Multiple input files`_
-section::
-
-    process foo {
-      input:
-        path x, stageAs: 'data.txt' from '/some/data/file.txt'
-
-      """
-      your_command --in data.txt
-      """
-    }
-
-.. tip::
-    The ``path`` qualifier should be preferred over ``file`` to handle process input files
-    when using Nextflow 19.10.0 or later.
-
-
-Input of type 'stdin'
----------------------
-
-The ``stdin`` input qualifier allows you the forwarding of the value received from a channel to the
-`standard input <http://en.wikipedia.org/wiki/Standard_streams#Standard_input_.28stdin.29>`_
-of the command executed by the process. For example::
-
-    str = Channel.from('hello', 'hola', 'bonjour', 'ciao').map { it+'\n' }
-
-    process printAll {
-      input:
-      stdin str
-
-      """
-      cat -
-      """
-    }
-
-It will output::
-
-    hola
-    bonjour
-    ciao
-    hello
-
-
-Input of type 'env'
--------------------
+Input type ``env``
+------------------
 
 The ``env`` qualifier allows you to define an environment variable in the process execution context based
-on the value received from the channel. For example::
-
-    str = Channel.from('hello', 'hola', 'bonjour', 'ciao')
+on the input value. For example::
 
     process printEnv {
         input:
-        env HELLO from str
+        env HELLO
 
         '''
         echo $HELLO world!
         '''
+    }
+
+    workflow {
+        Channel.of('hello', 'hola', 'bonjour', 'ciao') | printEnv
     }
 
 ::
@@ -682,88 +660,128 @@ on the value received from the channel. For example::
     hola world!
 
 
+Input type ``stdin``
+--------------------
+
+The ``stdin`` qualifier allows you to forward the input value to the
+`standard input <http://en.wikipedia.org/wiki/Standard_streams#Standard_input_.28stdin.29>`_
+of the process script. For example::
+
+    process printAll {
+      input:
+      stdin str
+
+      """
+      cat -
+      """
+    }
+
+    workflow {
+      Channel.of('hello', 'hola', 'bonjour', 'ciao')
+        | map { it + '\n' }
+        | printAll
+    }
+
+will output::
+
+    hola
+    bonjour
+    ciao
+    hello
+
+
 .. _process-input-set:
 
-Input of type 'set'
--------------------
+Input type ``set``
+------------------
 
 .. warning:: The ``set`` input type has been deprecated. Use ``tuple`` instead.
 
 
 .. _process-input-tuple:
 
-Input of type 'tuple'
----------------------
+Input type ``tuple``
+--------------------
 
-The ``tuple`` qualifier allows you to group multiple parameters in a single parameter definition. It can be useful
-when a process receives, in input, tuples of values that need to be handled separately. Each element in the tuple
-is associated to a corresponding element with the ``tuple`` definition. For example::
-
-    values = Channel.of( [1, 'alpha'], [2, 'beta'], [3, 'delta'] )
+The ``tuple`` qualifier allows you to group multiple values into a single input definition. It can be useful
+when a channel emits tuples of values that need to be handled separately. Each element in the tuple
+is associated with a corresponding element in the ``tuple`` definition. For example::
 
     process tupleExample {
         input:
-        tuple val(x), path('latin.txt') from values
+        tuple val(x), path('latin.txt')
 
         """
-        echo Processing $x
+        echo "Processing $x"
         cat - latin.txt > copy
         """
     }
 
-In the above example the ``tuple`` parameter is used to define the value ``x`` and the file ``latin.txt``,
-which will receive a value from the same channel.
+    workflow {
+      Channel.of( [1, 'alpha'], [2, 'beta'], [3, 'delta'] ) | tupleExample
+    }
 
-In the ``tuple`` declaration items can be defined by using the following qualifiers: ``val``, ``env``, ``path`` and ``stdin``.
+In the above example, the ``tuple`` input consists of the value ``x`` and the file ``latin.txt``.
 
-File names can be defined in *dynamic* manner as explained in the `Dynamic input file names`_ section.
+A ``tuple`` definition may contain any of the following qualifiers, as previously described:
+``val``, ``env``, ``path`` and ``stdin``. Files specified with the ``path`` qualifier are treated
+exactly the same as standalone ``path`` inputs.
 
 
-Input repeaters
----------------
+Input repeaters (`each`)
+------------------------
 
 The ``each`` qualifier allows you to repeat the execution of a process for each item in a collection,
-every time a new data is received. For example::
-
-  sequences = Channel.fromPath('*.fa')
-  methods = ['regular', 'expresso', 'psicoffee']
+each time a new value is received. For example::
 
   process alignSequences {
     input:
-    path seq from sequences
-    each mode from methods
+    path seq
+    each mode
 
     """
     t_coffee -in $seq -mode $mode > result
     """
   }
 
-In the above example every time a file of sequences is received as input by the process,
-it executes *three* tasks running a T-coffee alignment with a different value for the ``mode`` parameter.
-This is useful when you need to `repeat` the same task for a given set of parameters.
+  workflow {
+    sequences = Channel.fromPath('*.fa')
+    methods = ['regular', 'expresso', 'psicoffee']
+
+    alignSequences(sequences, methods)
+  }
+
+In the above example, each time a file of sequences is emitted from the ``sequences`` channel,
+the process executes *three* tasks, each running a T-coffee alignment with a different value for
+the ``mode`` parameter. This behavior is useful when you need to repeat the same task over a given
+set of parameters.
 
 Input repeaters can be applied to files as well. For example::
 
-    sequences = Channel.fromPath('*.fa')
-    methods = ['regular', 'expresso']
-    libraries = [ file('PQ001.lib'), file('PQ002.lib'), file('PQ003.lib') ]
-
     process alignSequences {
       input:
-      path seq from sequences
-      each mode from methods
-      each path(lib) from libraries
+      path seq
+      each mode
+      each path(lib)
 
       """
       t_coffee -in $seq -mode $mode -lib $lib > result
       """
     }
 
-.. note:: When multiple repeaters are declared, the process is executed for each *combination* of them.
+    workflow {
+      sequences = Channel.fromPath('*.fa')
+      methods = ['regular', 'expresso']
+      libraries = [ file('PQ001.lib'), file('PQ002.lib'), file('PQ003.lib') ]
 
-In the latter example for any sequence input file emitted by the ``sequences`` channel are executed 6 alignments,
-3 using the ``regular`` method against each library files, and other 3 by using the ``expresso`` method always
-against the same library files.
+      alignSequences(sequences, methods, libraries)
+    }
+
+In the above example, each sequence input file emitted by the ``sequences`` channel triggers six alignment tasks,
+three with the ``regular`` method against each library file, and three with the ``expresso`` method.
+
+.. note::
+  When multiple repeaters are defined, the process is executed for each *combination* of them.
 
 .. note::
   Input repeaters currently do not support tuples. However, you can emulate an input repeater on a channel of
@@ -771,30 +789,28 @@ against the same library files.
   produce all of the desired input combinations.
 
 
-.. _process-understand-how-multiple-input-channels-work:
+.. _process-multiple-input-channels:
 
-Understand how multiple input channels work
--------------------------------------------
+Multiple input channels
+-----------------------
 
 A key feature of processes is the ability to handle inputs from multiple channels.
 
-When two or more channels are declared as process inputs, the process stops until
-there's a complete input configuration ie. it receives an input value from all the channels declared
-as input.
+When two or more channels are declared as process inputs, the process waits until
+there is a complete input configuration, i.e. until it receives a value from each
+input channel. When this condition is satisfied, the process consumes a value from
+each channel and launches a new task, repeating this logic until one or more channels
+are empty.
 
-When this condition is verified, it consumes the input values coming from the respective channels,
-and spawns a task execution, then repeat the same logic until one or more channels have no more content.
-
-This means channel values are consumed serially one after another and the first empty channel
-cause the process execution to stop even if there are other values in other channels.
+As a result, channel values are consumed sequentially and any empty channel will cause
+the process to wait, even if the other channels have values.
 
 For example::
 
   process foo {
-    debug true
     input:
-    val x from Channel.from(1,2)
-    val y from Channel.from('a','b','c')
+    val x
+    val y
 
     script:
     """
@@ -802,28 +818,31 @@ For example::
     """
   }
 
-The process ``foo`` is executed two times because the first input channel only provides two values and therefore
-the ``c`` element is discarded. It prints::
+  workflow {
+    x = Channel.of(1, 2)
+    y = Channel.of('a', 'b', 'c')
+    foo(x, y)
+  }
+
+The process ``foo`` is executed two times because the ``x`` channel emits only two values, therefore
+the ``c`` element is discarded. It outputs::
 
     1 and a
     2 and b
 
-A different semantic is applied when using a *value channel* (a.k.a. *singleton channel*).
-This kind of channel is created by the :ref:`Channel.value <channel-value>` factory method or implicitly
-when a process input specifies a simple value in the ``from`` clause.
-By definition, a value channel is bound to a single value and it can be read an unlimited
-number of times without consuming its content.
-
-These properties make that when mixing a value channel with one or more (queue) channels,
-it does not affect the process termination because its content is applied repeatedly.
+A different semantic is applied when using a :ref:`value channel <channel-type-value>`. This kind of
+channel is created by the :ref:`Channel.value <channel-value>` factory method or implicitly when a
+process is invoked with an argument that is not a channel. By definition, a value channel is bound to
+a single value and it can be read an unlimited number of times without consuming its content. Therefore,
+when mixing a value channel with one or more (queue) channels, it does not affect the process termination
+because the underlying value is applied repeatedly.
 
 To better understand this behavior, compare the previous example with the following one::
 
   process bar {
-    debug true
     input:
-    val x from Channel.value(1)
-    val y from Channel.from('a','b','c')
+    val x
+    val y
 
     script:
     """
@@ -831,9 +850,15 @@ To better understand this behavior, compare the previous example with the follow
     """
   }
 
-The above snippet executes the ``bar`` process three times because the first input is a *value channel*, therefore
-its content can be read as many times as needed. The process termination is determined by the content of the second
-channel. It prints::
+  workflow {
+    x = Channel.value(1)
+    y = Channel.of('a', 'b', 'c')
+    foo(x, y)
+  }
+
+The above example executes the ``bar`` process three times because ``x`` is a value channel, therefore
+its value can be read as many times as needed. The process termination is determined by the contents of ``y``.
+It outputs::
 
   1 and a
   1 and b
@@ -847,123 +872,161 @@ channel. It prints::
 
 See also: :ref:`channel-types`.
 
+
 Outputs
 =======
 
-The ``output`` declaration block allows you to define the channels used by the process to send out the results produced.
-You can only define one output block at a time and it must contain one or more output declarations.
+The ``output`` block allows you to define the output channels of a process, similar to function outputs.
+A process may have at most one output block, and it must contain at least one output.
 
 The output block follows the syntax shown below::
 
     output:
-      <output qualifier> <output name> [into <target channel>[,channel,..]] [attribute [,..]]
+      <output qualifier> <output name> [, <option>: <option value>]
 
-Output definitions start by an output `qualifier` and the output `name`, followed by the keyword ``into`` and
-one or more channels over which outputs are sent. Finally some optional attributes can be specified.
+An output definition consists of a `qualifier` and a `name`. Some optional attributes can also be specified.
 
-.. tip:: When the output name is the same as the channel name, the ``into`` part of the declaration can be omitted.
+When a process is invoked, each process output is returned as a channel. The examples provided in
+the following sections demonstrate how to access the output channels of a process.
 
-.. note:: If an output channel has not been previously declared in the pipeline script, it
-  will be implicitly created by the output declaration itself.
-
-The qualifiers that can be used in the output declaration block are the ones listed in the following table:
+The available output qualifiers are listed in the following table:
 
 =========== =============
 Qualifier   Semantic
 =========== =============
-val         Sends variables with the name specified over the output channel.
-file        Sends a file produced by the process with the name specified over the output channel.
-path        Sends a file produced by the process with the name specified over the output channel (replaces ``file``).
-env         Sends the variable defined in the process environment with the name specified over the output channel.
-stdout      Sends the executed process ``stdout`` over the output channel.
-tuple       Sends multiple values over the same output channel.
+``val``     Emit the variable with the specified name.
+``file``    (DEPRECATED) Emit a file produced by the process with the specified name.
+``path``    Emit a file produced by the process with the specified name.
+``env``     Emit the variable defined in the process environment with the specified name.
+``stdout``  Emit the ``stdout`` of the executed process.
+``tuple``   Emit multiple values.
 =========== =============
 
 
-Output values
--------------
+Output type ``val``
+-------------------
 
-The ``val`` qualifier allows you to output a `value` defined in the script context. In a common usage scenario,
-this is a value which has been defined in the ``input`` declaration block, as shown in the following example::
+The ``val`` qualifier allows you to output any Nextflow variable defined in the process. A common use case is to
+output a variable that was defined in the ``input`` block, as shown in the following example::
 
-   methods = ['prot','dna', 'rna']
+  process foo {
+    input:
+    each x
 
-   process foo {
-     input:
-     val x from methods
+    output:
+    val x
 
-     output:
-     val x into receiver
+    """
+    echo $x > file
+    """
+  }
 
-     """
-     echo $x > file
-     """
+  workflow {
+    methods = ['prot', 'dna', 'rna']
 
-   }
+    receiver = foo(methods)
+    receiver.view { "Received: $it" }
+  }
 
-   receiver.view { "Received: $it" }
-
-Valid output values are value literals, input value identifiers, variables accessible in the process scope and
-value expressions. For example::
+The output value can be a value literal, an input variable, any other Nextflow variable
+in the process scope, or a value expression. For example::
 
     process foo {
       input:
-      path fasta from 'dummy'
+      path infile
 
       output:
-      val x into var_channel
-      val 'BB11' into str_channel
-      val "${fasta.baseName}.out" into exp_channel
+      val x
+      val 'BB11'
+      val "${infile.baseName}.out"
 
       script:
-      x = fasta.name
+      x = infile.name
       """
       cat $x > file
       """
     }
 
+    workflow {
+      ch_dummy = Channel.fromPath('*').first()
+      (ch_var, ch_str, ch_exp) = foo(ch_dummy)
 
-Output files
-------------
+      ch_var.view { "ch_var: $it" }
+      ch_str.view { "ch_str: $it" }
+      ch_exp.view { "ch_exp: $it" }
+    }
 
-The ``file`` qualifier allows you to output one or more files, produced by the process, over the specified channel.
-For example::
+
+Output type ``file``
+--------------------
+
+.. note::
+    The ``file`` qualifier was the standard way to handle input files prior to Nextflow 19.10.0.
+    In later versions of Nextflow, the ``path`` qualifier should be preferred over ``file``.
+
+The ``file`` qualifier is similar to ``path``, but with some differences. The ``file`` qualifier
+interprets ``:`` as a path separator, therefore ``file 'foo:bar'`` captures two files named ``foo``
+and ``bar``, whereas ``path 'foo:bar'`` captures a single file named ``foo:bar``. Additionally, ``file``
+does not support all of the extra options provided by ``path``.
+
+
+Output type ``path``
+--------------------
+
+The ``path`` qualifier allows you to output one or more files produced by the process. For example::
 
     process randomNum {
       output:
-      path 'result.txt' into numbers
+      path 'result.txt'
 
       '''
       echo $RANDOM > result.txt
       '''
     }
 
-    numbers.subscribe { println "Received: " + it.text }
+    workflow {
+      numbers = randomNum()
+      numbers.view { "Received: ${it.text}" }
+    }
 
-In the above example the process, when executed, creates a file named ``result.txt`` containing a random number.
-Since a file parameter using the same name is declared between the outputs, when the task is completed that
-file is sent over the ``numbers`` channel. A downstream process declaring the same channel as ``input`` will
-be able to receive it.
+In the above example, the ``randomNum`` process creates a file named ``result.txt`` which contains a random number.
+Since a ``path`` output with the same name is declared, that file is emitted by the corresponding output channel.
+A downstream process with a compatible input channel will be able to receive it.
+
+A ``path`` output can be defined with any of the additional options defined in the following table.
+
+================== =====================
+Name                Description
+================== =====================
+``glob``            When ``true`` the specified name is interpreted as a glob pattern (default: ``true``)
+``hidden``          When ``true`` hidden files are included in the matching output files (default: ``false``)
+``followLinks``     When ``true`` target files are return in place of any matching symlink (default: ``true``)
+``type``            Type of paths returned, either ``file``, ``dir`` or ``any`` (default: ``any``, or ``file`` if the specified file name pattern contains a double star (``**``))
+``maxDepth``        Maximum number of directory levels to visit (default: no limit)
+``includeInputs``   When ``true`` any input files matching an output file glob pattern are included.
+================== =====================
 
 
 Multiple output files
 ---------------------
 
-When an output file name contains a ``*`` or ``?`` wildcard character it is interpreted as a `glob`_ path matcher.
-This allows you to *capture* multiple files into a list object and output them as a sole emission. For example::
+When an output file name contains a ``*`` or ``?`` wildcard character, it is interpreted as a `glob`_ path matcher.
+This allows you to capture multiple files into a list and emit the list as a single value. For example::
 
     process splitLetters {
         output:
-        path 'chunk_*' into letters
+        path 'chunk_*'
 
         '''
         printf 'Hola' | split -b 1 - chunk_
         '''
     }
 
-    letters
-        .flatMap()
-        .subscribe { println "File: ${it.name} => ${it.text}" }
+    workflow {
+        splitLetters
+            | flatten
+            | view { "File: ${it.name} => ${it.text}" }
+    }
 
 It prints::
 
@@ -972,9 +1035,9 @@ It prints::
     File: chunk_ac => l
     File: chunk_ad => a
 
-.. note::
-  In the above example, the operator :ref:`operator-flatmap` is used to transform the list of files emitted by
-  the ``letters`` channel into a channel that emits each file object separately.
+By default, all the files matching the specified glob pattern are emitted as a single list. However,
+as the above example demonstrates, the :ref:`operator-flatten` operator can be used to transform the
+list of files into a channel that emits each file individually.
 
 Some caveats on glob pattern behavior:
 
@@ -985,27 +1048,8 @@ Some caveats on glob pattern behavior:
   Although the input files matching a glob output declaration are not included in the
   resulting output channel, these files may still be transferred from the task scratch directory
   to the original task work directory. Therefore, to avoid unnecessary file copies, avoid using
-  loose wildcards when defining output files, e.g. ``file '*'``. Instead, use a prefix or a suffix
-  to restrict the set of matching files to only the expected ones, e.g. ``file 'prefix_*.sorted.bam'``. 
-
-By default all the files matching the specified glob pattern are emitted by the channel as a sole (list) item.
-It is also possible to emit each file as a sole item by adding the ``mode flatten`` attribute in the output file
-declaration.
-
-By using the ``mode`` attribute the previous example can be re-written as shown below::
-
-    process splitLetters {
-        output:
-        path 'chunk_*' into letters
-
-        '''
-        printf 'Hola' | split -b 1 - chunk_
-        '''
-    }
-
-    letters
-        .flatten()
-        .subscribe { println "File: ${it.name} => ${it.text}" }
+  loose wildcards when defining output files, e.g. ``path '*'``. Instead, use a prefix or a suffix
+  to restrict the set of matching files to only the expected ones, e.g. ``path 'prefix_*.sorted.bam'``. 
 
 Read more about glob syntax at the following link `What is a glob?`_
 
@@ -1013,39 +1057,38 @@ Read more about glob syntax at the following link `What is a glob?`_
 .. _What is a glob?: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
 
 
-.. _process-dynoutname:
-
 Dynamic output file names
 -------------------------
 
-When an output file name needs to be expressed dynamically, it is possible to define it using a dynamic evaluated
-string which references values defined in the input declaration block or in the script global context.
+When an output file name needs to be expressed dynamically, it is possible to define it using a dynamic
+string which references variables in the ``input`` block or in the script global context.
 For example::
 
   process align {
     input:
-    val x from species
-    path seq from sequences
+    val species
+    path seq
 
     output:
-    path "${x}.aln" into genomes
+    path "${species}.aln"
 
     """
-    t_coffee -in $seq > ${x}.aln
+    t_coffee -in $seq > ${species}.aln
     """
   }
 
-In the above example, each time the process is executed an alignment file is produced whose name depends
-on the actual value of the ``x`` input.
+In the above example, each process execution produces an alignment file whose name depends
+on the actual value of the ``species`` input.
 
 .. tip::
   The management of output files in Nextflow is often misunderstood.
+
   With other tools it is generally necessary to organize the output files into some kind of directory
   structure or to guarantee a unique file name scheme, so that result files don't overwrite each other
   and so they can be referenced unequivocally by downstream tasks.
 
   With Nextflow, in most cases, you don't need to manage the naming of output files, because each task is executed
-  in its own unique directory, so files produced by different tasks can not override each other.
+  in its own unique directory, so files produced by different tasks can't overwrite each other.
   Also, metadata can be associated with outputs by using the :ref:`tuple output <process-out-tuple>` qualifier, instead of
   including them in the output file name.
 
@@ -1053,72 +1096,16 @@ on the actual value of the ``x`` input.
   because it will result in simpler and more portable code.
 
 
-.. _process-out-path:
-
-Output path
------------
-
-The ``path`` output qualifier was introduced by Nextflow version 19.10.0 and it's a drop-in replacement
-for the ``file`` output qualifier, therefore it's backward compatible with the syntax
-and the semantic for the input ``file`` described above.
-
-The main advantage of ``path`` over the ``file`` qualifier is that it allows the specification
-of a number of outputs to fine-control the output files.
-
-============== =====================
-Name            Description
-============== =====================
-glob            When ``true`` the specified name is interpreted as a glob pattern (default: ``true``)
-hidden          When ``true`` hidden files are included in the matching output files (default: ``false``)
-followLinks     When ``true`` target files are return in place of any matching symlink (default: ``true``)
-type            Type of paths returned, either ``file``, ``dir`` or ``any`` (default: ``any``, or ``file`` if the specified file name pattern contains a `**` - double star - symbol)
-maxDepth        Maximum number of directory levels to visit (default: `no limit`)
-includeInputs   When ``true`` any input files matching an output file glob pattern are included.
-============== =====================
-
-.. warning::
-    The ``file`` qualifier interprets ``:`` as a path separator, therefore ``file 'foo:bar'``
-    captures two files named ``foo`` and ``bar``. The ``path`` qualifier, on the other hand, does not,
-    so the output definition ``path 'foo:bar'`` captures a single file named ``foo:bar``.
-
-.. tip::
-    The ``path`` qualifier should be preferred over ``file`` to handle process output files
-    when using Nextflow 19.10.0 or later.
-
-
-.. _process-stdout:
-
-Output 'stdout' special file
-----------------------------
-
-The ``stdout`` qualifier allows you to `capture` the ``stdout`` output of the executed process and send it over
-the channel specified in the output parameter declaration. For example::
-
-    process sayHello {
-        output:
-        stdout ch
-
-        """
-        echo Hello world!
-        """
-    }
-
-    ch.view { print "I say..  $it" }
-
-In the above example ``ch`` represents an arbitrary channel variable that holds the process outputs.
-
-
 .. _process-env:
 
-Output 'env'
-------------
+Output type ``env``
+-------------------
 
-The ``env`` qualifier allows you to capture a variable defined in the process execution environment
-and send it over the channel specified in the output parameter declaration::
+The ``env`` qualifier allows you to output a variable defined in the process execution environment::
 
     process myTask {
         output:
-        env FOO into target
+        env FOO
 
         script:
         '''
@@ -1126,36 +1113,55 @@ and send it over the channel specified in the output parameter declaration::
         '''
     }
 
-    target.view { "directory content: $it" }
+    workflow {
+        myTask | view { "directory contents: $it" }
+    }
+
+
+.. _process-stdout:
+
+Output type ``stdout``
+----------------------
+
+The ``stdout`` qualifier allows you to output the ``stdout`` of the executed process::
+
+    process sayHello {
+        output:
+        stdout
+
+        """
+        echo Hello world!
+        """
+    }
+
+    workflow {
+        sayHello | view { "I say... $it" }
+    }
 
 
 .. _process-set:
 
-Output 'set' of values
-----------------------
+Output type ``set``
+-------------------
 
 .. warning:: The ``set`` output type has been deprecated. Use ``tuple`` instead.
 
 
 .. _process-out-tuple:
 
-Output 'tuple' of values
-------------------------
+Output type ``tuple``
+---------------------
 
-The ``tuple`` qualifier allows you to send multiple values into a single channel. This feature is useful
-when you need to `group together` the results of multiple executions of the same process, as shown in the following
-example::
-
-    query_ch = Channel.fromPath '*.fa'
-    species_ch = Channel.from 'human', 'cow', 'horse'
+The ``tuple`` qualifier allows you to output multiple values in a single channel. It is useful
+when you need to associate outputs with metadata, for example::
 
     process blast {
       input:
-        val species from query_ch
-        path query from species_ch
+        val species
+        path query
 
       output:
-        tuple val(species), path('result') into blastOuts
+        tuple val(species), path('result')
 
       script:
         """
@@ -1163,48 +1169,62 @@ example::
         """
     }
 
-In the above example a ``blast`` task is executed for each pair of ``species`` and ``query`` that are received.
-When the task completes a new tuple containing the value for ``species`` and the file ``result`` is sent to the ``blastOuts`` channel.
+    workflow {
+      ch_species = Channel.from('human', 'cow', 'horse')
+      ch_query = Channel.fromPath('*.fa')
 
-A ``tuple`` declaration can contain any combination of the following qualifiers, previously described: ``val``, ``path``, ``env`` and ``stdout``.
+      blast(ch_species, ch_query)
+    }
 
-File names can be defined in a dynamic manner as explained in the :ref:`process-dynoutname` section.
+In the above example, a ``blast`` task is executed for each pair of ``species`` and ``query`` that are received.
+Each task produces a new tuple containing the value for ``species`` and the file ``result``.
+
+A ``tuple`` definition may contain any of the following qualifiers, as previously described:
+``val``, ``path``, ``env`` and ``stdout``. Files specified with the ``path`` qualifier are treated
+exactly the same as standalone ``path`` inputs.
 
 
-Optional Output
----------------
+Optional outputs
+----------------
 
-In most cases a process is expected to generate output that is added to the output channel. However, there are situations where it is valid for a process to `not` generate output. In these cases ``optional true`` may be added to the output declaration, which tells Nextflow not to fail the process if the declared output is not created.
-
-::
+In most cases, a process is expected to produce an output for each output definition. However,
+there are situations where it is valid for a process to not generate output. In these cases,
+``optional: true`` may be added to the output definition, which tells Nextflow not to fail the
+process if the declared output is not produced::
 
     output:
-        path("output.txt") optional true into outChannel
+        path("output.txt"), optional: true
 
-In this example, the process is normally expected to generate an ``output.txt`` file, but in the cases where the file is legitimately missing, the process does not fail. ``outChannel`` is only populated by those processes that do generate ``output.txt``. 
+In this example, the process is normally expected to produce an ``output.txt`` file, but in the
+cases where the file is legitimately missing, the process does not fail. The output channel will
+only contain values for those processes that produce ``output.txt``. 
 
 
 When
 ====
 
-The ``when`` declaration allows you to define a condition that must be verified in order to execute the process.
-This can be any expression that evaluates a boolean value.
+The ``when`` block allows you to define a condition that must be satisfied in order to execute the process.
+The condition can be any expression that returns a boolean value.
 
-It is useful to enable/disable the process execution depending on the state of various inputs and parameters. For example::
+It can be useful to enable/disable the process execution depending on the state of various inputs and parameters. For example::
 
     process find {
       input:
       path proteins
-      val type from dbtype
+      val dbtype
 
       when:
-      proteins.name =~ /^BB11.*/ && type == 'nr'
+      proteins.name =~ /^BB11.*/ && dbtype == 'nr'
 
       script:
       """
       blastp -query $proteins -db nr
       """
     }
+
+.. tip::
+  As a best practice, it is better to define such control flow logic in the workflow block, i.e. with an ``if`` statement
+  or with channel operators, to make the process more portable.
 
 
 .. _process-directives:
@@ -1220,41 +1240,6 @@ and have the following syntax::
     name value [, value2 [,..]]
 
 Some directives are generally available to all processes, while others depend on the `executor` currently defined.
-
-The directives are:
-
-* `accelerator`_
-* `afterScript`_
-* `beforeScript`_
-* `cache`_
-* `clusterOptions`_
-* `conda`_
-* `container`_
-* `containerOptions`_
-* `cpus`_
-* `debug`_
-* `disk`_
-* `echo`_
-* `errorStrategy`_
-* `executor`_
-* `ext`_
-* `label`_
-* `machineType`_
-* `maxErrors`_
-* `maxForks`_
-* `maxRetries`_
-* `memory`_
-* `module`_
-* `penv`_
-* `pod`_
-* `publishDir`_
-* `queue`_
-* `scratch`_
-* `stageInMode`_
-* `stageOutMode`_
-* `storeDir`_
-* `tag`_
-* `time`_
 
 
 .. _process-accelerator:
@@ -1648,8 +1633,8 @@ advanced configuration options. For example::
       container "biocontainers/star:${task.ext.version}"
 
       input:
-      path genome from genome_file
-      tuple val(sampleId), path(reads) from reads_ch
+      path genome
+      tuple val(sampleId), path(reads)
 
       """
       STAR --genomeDir $genome --readFilesIn $reads
@@ -1944,7 +1929,7 @@ The ``publishDir`` directive allows you to publish the process output files to a
         publishDir '/data/chunks'
 
         output:
-        path 'chunk_*' into letters
+        path 'chunk_*'
 
         '''
         printf 'Hola' | split -b 1 - chunk_
@@ -2005,7 +1990,7 @@ move            Moves the output files into the published directory. **Note**: t
         publishDir '/data/chunks', mode: 'copy', overwrite: false
 
         output:
-        path 'chunk_*' into letters
+        path 'chunk_*'
 
         '''
         printf 'Hola' | split -b 1 - chunk_
@@ -2126,16 +2111,14 @@ In more detail, it affects the process execution in two main ways:
 The following example shows how to use the ``storeDir`` directive to create a directory containing a BLAST database
 for each species specified by an input parameter::
 
-  genomes = Channel.fromPath(params.genomes)
-
   process formatBlastDatabases {
     storeDir '/db/genomes'
 
     input:
-    path species from genomes
+    path species
 
     output:
-    path "${dbName}.*" into blastDb
+    path "${dbName}.*"
 
     script:
     dbName = species.baseName
@@ -2201,11 +2184,15 @@ to identify them in the log file or in the trace execution report. For example::
       tag "$code"
 
       input:
-      val code from 'alpha', 'gamma', 'omega'
+      val code
 
       """
       echo $code
       """
+    }
+
+    workflow {
+      Channel.of('alpha', 'gamma', 'omega') | foo
     }
 
 The above snippet will print a log similar to the following one, where process names contain the tag value::
@@ -2270,7 +2257,7 @@ In order to be defined in a dynamic manner, the directive's value needs to be ex
       queue { entries > 100 ? 'long' : 'short' }
 
       input:
-      tuple val(entries), path('data.txt') from data
+      tuple val(entries), path('data.txt')
 
       script:
       """
@@ -2304,7 +2291,7 @@ All directives can be assigned a dynamic value except the following:
       queue { entries > 100 ? 'long' : 'short' }
 
       input:
-      tuple val(entries), path('data.txt') from data
+      tuple val(entries), path('data.txt')
 
       script:
       """

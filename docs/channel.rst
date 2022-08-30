@@ -19,7 +19,7 @@ A channel has two major properties:
 Channel types
 =============
 
-Nextflow distinguish two different kinds of channels: `queue channels` and `value channels`.
+In Nextflow there are two kinds of channels: `queue channels` and `value channels`.
 
 
 .. _channel-type-queue:
@@ -27,20 +27,12 @@ Nextflow distinguish two different kinds of channels: `queue channels` and `valu
 Queue channel
 -------------
 
-A `queue channel` is a non-blocking unidirectional FIFO queue which connects two processes or operators.
+A `queue channel` is a non-blocking unidirectional FIFO queue which connects two processes,
+channel factories, or operators.
 
-A queue channel is usually created using a factory method such as a `from`_, `fromPath`_, etc.
-or chaining it with a channel operator such as :ref:`operator-map`, :ref:`operator-flatmap`, etc.
-
-Queue channels are also created by process output declarations using the ``into`` clause.
-
-.. note::
-  The definition implies that a queue channel can only be used once as a process
-  output and once as a process input.
-
-If you need to connect a process output channel to more than one process or operator use the
-:ref:`operator-into` operator to create two (or more) copies of the same channel and use each
-of them to connect a separate process.
+A queue channel is usually created using a factory method (:ref:`_channel-of`, :ref:`_channel-path`, etc)
+or chaining it with a channel operator (:ref:`operator-map`, :ref:`operator-flatmap`, etc). Queue channels
+are also created by process output declarations.
 
 
 .. _channel-type-value:
@@ -48,39 +40,40 @@ of them to connect a separate process.
 Value channel
 -------------
 
-A `value channel` a.k.a. *singleton channel* by definition is bound to a single value and it can be read
-unlimited times without consuming its content.
-
-.. note:: For this reason a value channel can be used as input by more than one process.
+A `value channel` a.k.a. *singleton channel* is bound to a single value and can be read an
+unlimited number of times without consuming its content.
 
 A value channel is created using the `value`_ factory method or by operators returning
-a single value, such us :ref:`operator-first`, :ref:`operator-last`, :ref:`operator-collect`,
-:ref:`operator-count`, :ref:`operator-min`, :ref:`operator-max`, :ref:`operator-reduce`, :ref:`operator-sum`.
+a single value, such as :ref:`operator-first`, :ref:`operator-last`, :ref:`operator-collect`,
+:ref:`operator-count`, :ref:`operator-min`, :ref:`operator-max`, :ref:`operator-reduce`, :ref:`operator-sum`, etc.
 
-.. note::
-  A value channel is implicitly created by a process when an input specifies a simple value
-  in the ``from`` clause.
-  Moreover, a value channel is also implicitly created as output for a process whose
-  inputs are only value channels.
+A value channel is implicitly created by a process when it is invoked with a simple value.
+Furthermore, a value channel is also implicitly created as output for a process whose
+inputs are all value channels.
 
 For example::
 
     process foo {
       input:
-      val x from 1
+      val x
 
       output:
-      file 'x.txt' into result
+      path 'x.txt'
 
       """
       echo $x > x.txt
       """
     }
 
-The process in the above snippet declares a single input which implicitly is a value channel.
-Therefore also the ``result`` output is a value channel that can be read by more than one process.
+    workflow {
+      result = foo(1)
+      result.view { "Result: ${it}" }
+    }
 
-See also: :ref:`process-understand-how-multiple-input-channels-work`.
+In the above example, since the ``foo`` process is invoked with a simple value instead of a channel,
+the input is implicitly converted to a value channel, and the output is also provided as a value channel.
+
+See also: :ref:`process-multiple-input-channels`.
 
 
 .. _channel-factory:
@@ -88,24 +81,11 @@ See also: :ref:`process-understand-how-multiple-input-channels-work`.
 Channel factory
 ===============
 
-Channels may be created implicitly by the process output(s) declaration or explicitly using the following channel
-factory methods.
-
-The available factory methods are:
-
-* `create`_
-* `empty`_
-* `from`_
-* `fromPath`_
-* `fromFilePairs`_
-* `fromSRA`_
-* `of`_
-* `value`_
-* `watchPath`_
+Channels may be created explicitly using the following channel factory methods.
 
 .. note::
-  As of version 20.07.0 the prefix ``channel.`` has been introduced as an alias of ``Channel.``, therefore factory
-  methods can be specified either as ``channel.from()`` or ``Channel.from()``, and so on.
+  As of version 20.07.0, ``channel`` has been introduced as an alias of ``Channel``, therefore factory
+  methods can be specified either as ``channel.of()`` or ``Channel.of()``, and so on.
 
 
 .. _channel-create:
@@ -114,53 +94,21 @@ create
 ------
 
 .. warning::
-    This method is deprecated and is no longer available in DSL2 syntax.
+    The ``create`` method is no longer available in DSL2 syntax.
 
-Creates a new `channel` by using the ``create`` method, as shown below::
+Creates a new channel, as shown below::
 
     channelObj = Channel.create()
 
 
-.. _channel-of:
+.. _channel-empty:
 
-of
---
+empty
+-----
 
-The ``of`` method allows you to create a channel emitting any sequence of values that are specified as the method argument,
-for example::
+The ``empty`` factory method, by definition, creates a channel that doesn't emit any value.
 
-    ch = Channel.of( 1, 3, 5, 7 )
-    ch.view { "value: $it" }
-
-The first line in this example creates a variable ``ch`` which holds a channel object. This channel emits the values
-specified as a parameter in the ``of`` method. Thus the second line prints the following::
-
-    value: 1
-    value: 3
-    value: 5
-    value: 7
-
-Ranges of values are expanded accordingly::
-
-    Channel
-        .of(1..23, 'X', 'Y')
-        .view()
-
-Prints::
-
-    1
-    2
-    3
-    4
-    :
-    23
-    X
-    Y
-
-.. note::
-  This feature requires Nextflow version 19.10.0 of later.
-
-See also: `fromList`_ factory method.
+See also: :ref:`operator-ifempty` and :ref:`operator-close` operators.
 
 
 .. _channel-from:
@@ -169,8 +117,7 @@ from
 ----
 
 .. warning::
-    This method is deprecated and should only be used for backward compatibility in legacy code.
-    Use `of`_ or `fromList`_ instead.
+    This method is deprecated. Use `of`_ or `fromList`_ instead.
 
 The ``from`` method allows you to create a channel emitting any sequence of values that are specified as the method argument,
 for example::
@@ -196,7 +143,7 @@ The following example shows how to create a channel from a `range` of numbers or
   `Collection <http://docs.oracle.com/javase/7/docs/api/java/util/Collection.html>`_ interface, the resulting channel
   emits the collection entries as individual items.
 
-Thus the following two declarations produce an identical result even tough in the first case the items are specified
+Thus the following two declarations produce an identical result even though in the first case the items are specified
 as multiple arguments while in the second case as a single list object argument::
 
     Channel.from( 1, 3, 5, 7, 9 )
@@ -208,26 +155,13 @@ creates a channel emitting three entries each of which is a list containing two 
     Channel.from( [1, 2], [5,6], [7,9] )
 
 
-.. _channel-value:
-
-value
------
-
-The ``value`` factory method is used to create a *value* channel. An optional not ``null`` argument
-can be specified to bind the channel to a specific value. For example::
-
-    expl1 = Channel.value()
-    expl2 = Channel.value( 'Hello there' )
-    expl3 = Channel.value( [1,2,3,4,5] )
-
-The first line in the example creates an 'empty' variable. The second line creates a channel and binds a string to it.
-Finally the last one creates a channel and binds a list object to it that will be emitted as a sole emission.
-
-
 .. _channel-fromlist:
 
 fromList
 --------
+
+.. note::
+  This feature requires Nextflow version 19.10.0 or later.
 
 The ``fromList`` method allows you to create a channel emitting the values provided as a list of elements,
 for example::
@@ -244,9 +178,6 @@ Prints::
     value: d
 
 See also: `of`_ factory method.
-
-.. note::
-  This feature requires Nextflow version 19.10.0 or later.
 
 
 .. _channel-path:
@@ -272,7 +203,8 @@ For example::
 
 This example creates a channel and emits as many ``Path`` items as there are files with ``txt`` extension in the ``/data/big`` folder.
 
-.. tip:: Two asterisks, i.e. ``**``, works like ``*`` but crosses directory boundaries.
+.. tip::
+  Two asterisks, i.e. ``**``, works like ``*`` but crosses directory boundaries.
   This syntax is generally used for matching complete paths. Curly brackets specify a collection of sub-patterns.
 
 For example::
@@ -385,6 +317,8 @@ checkIfExists   When ``true`` throws an exception of the specified path do not e
 fromSRA
 -------
 
+.. note:: This feature requires Nextflow version 19.04.0 or later.
+
 The ``fromSRA`` method queries the `NCBI SRA <https://www.ncbi.nlm.nih.gov/sra>`_ database and returns a channel emitting
 the FASTQ files matching the specified criteria i.e project or accession number(s). For example::
 
@@ -439,10 +373,66 @@ should be provided either:
 * Using the ``apiKey`` optional parameter e.g. ``Channel.fromSRA(ids, apiKey:'0123456789abcdef')``.
 * Exporting the ``NCBI_API_KEY`` variable in your environment e.g. ``export NCBI_API_KEY=0123456789abcdef``.
 
-.. note:: This feature requires Nextflow version 19.04.0 or later.
+
+.. _channel-of:
+
+of
+--
+
+.. note::
+  This feature requires Nextflow version 19.10.0 of later.
+
+The ``of`` method allows you to create a channel that emits the arguments provided to it,
+for example::
+
+    ch = Channel.of( 1, 3, 5, 7 )
+    ch.view { "value: $it" }
+
+The first line in this example creates a variable ``ch`` which holds a channel object. This channel emits the arguments
+supplied to the ``of`` method. Thus the second line prints the following::
+
+    value: 1
+    value: 3
+    value: 5
+    value: 7
+
+Ranges of values are expanded accordingly::
+
+    Channel
+        .of(1..23, 'X', 'Y')
+        .view()
+
+Prints::
+
+    1
+    2
+    3
+    4
+    :
+    23
+    X
+    Y
+
+See also: `fromList`_ factory method.
 
 
-.. _channel-watch:
+.. _channel-value:
+
+value
+-----
+
+The ``value`` method is used to create a value channel. An optional (not ``null``) argument
+can be specified to bind the channel to a specific value. For example::
+
+    expl1 = Channel.value()
+    expl2 = Channel.value( 'Hello there' )
+    expl3 = Channel.value( [1,2,3,4,5] )
+
+The first line in the example creates an 'empty' variable. The second line creates a channel and binds a string to it.
+The third line creates a channel and binds a list object to it that will be emitted as a single value.
+
+
+.. _channel-watchpath:
 
 watchPath
 ---------
@@ -454,7 +444,7 @@ a `glob`_ path matching criteria.
 
 For example::
 
-     Channel
+    Channel
         .watchPath( '/path/*.fa' )
         .subscribe { println "Fasta file: $it" }
 
@@ -469,7 +459,7 @@ Name        Description
 ``delete``  A file is deleted
 =========== ================
 
-You can specified more than one of these events by using a comma separated string as shown below::
+You can specify more than one of these events by using a comma separated string as shown below::
 
     Channel
         .watchPath( '/path/*.fa', 'create,modify' )
@@ -483,27 +473,16 @@ You can specified more than one of these events by using a comma separated strin
 See also: `fromPath`_ factory method.
 
 
-.. _channel-empty:
-
-empty
------
-
-The ``empty`` factory method, by definition, creates a channel that doesn't emit any value.
-
-See also: :ref:`operator-ifempty` and :ref:`operator-close` operators.
-
-
-Binding values
-==============
-
-Since in `Nextflow` channels are implemented using `dataflow` variables or queues. Thus sending a message
-is equivalent to `bind` a value to object representing the communication channel.
-
+Channel methods
+===============
 
 .. _channel-bind1:
 
 bind
 ----
+
+.. warning::
+    The ``bind`` method is no longer available in DSL2 syntax.
 
 Channel objects provide a `bind( )` method which is the basic operation to send a message over the channel.
 For example::
@@ -517,15 +496,14 @@ For example::
 operator <<
 -----------
 
-The operator ``<<`` is just a syntax sugar for the ``bind`` method. Thus, the following example produce
+.. warning::
+    The ``<<`` operator is no longer available in DSL2 syntax.
+
+The operator ``<<`` is just a syntax sugar for the ``bind`` method. Thus, the following example produces
 an identical result as the previous one::
 
     myChannel = Channel.create()
     myChannel << 'Hello world'
-
-
-Observing events
-================
 
 
 .. _channel-subscribe:
@@ -538,7 +516,7 @@ The ``subscribe`` method allows you to execute a user defined function each time
 The emitted value is passed implicitly to the specified function. For example::
 
     // define a channel emitting three values
-    source = Channel.from ( 'alpha', 'beta', 'delta' )
+    source = Channel.of( 'alpha', 'beta', 'delta' )
 
     // subscribe a function to the channel printing the emitted values
     source.subscribe {  println "Got: $it"  }
@@ -550,13 +528,14 @@ The emitted value is passed implicitly to the specified function. For example::
     Got: delta
 
 .. note::
-  In Groovy, the language on which Nextflow is based, the user defined function is called a "closure".
+  In Groovy, the language on which Nextflow is based, the user defined function is called a **closure**.
+  Read the :ref:`script-closure` section to learn more about closures.
 
 If needed the closure parameter can be defined explicitly, using a name other than ``it`` and, optionally,
 specifying the expected value type, as shown in the following example::
 
     Channel
-        .from( 'alpha', 'beta', 'lambda' )
+        .of( 'alpha', 'beta', 'lambda' )
         .subscribe { String str ->
             println "Got: ${str}; len: ${str.size()}"
         }
@@ -567,27 +546,21 @@ specifying the expected value type, as shown in the following example::
     Got: beta; len: 4
     Got: lambda; len: 6
 
-Read :ref:`script-closure` paragraph to learn more about `closure` feature.
-
-
-onNext, onComplete, and onError
--------------------------------
-
 The ``subscribe`` method may accept one or more of the following event handlers:
 
-* ``onNext``: registers a function that is invoked whenever the channel emits a value.
-  This is the same as using the ``subscribe`` with a `plain` closure as describe in the examples above.
+* ``onNext``: function that is invoked whenever the channel emits a value.
+  Equivalent to using the ``subscribe`` with a plain closure as described in the examples above.
 
-* ``onComplete``: registers a function that is invoked after the `last` value is emitted by the channel.
+* ``onComplete``: function that is invoked after the last value is emitted by the channel.
 
-* ``onError``: registers a function that it is invoked when an exception is raised while handling the
+* ``onError``: function that it is invoked when an exception is raised while handling the
   ``onNext`` event. It will not make further calls to ``onNext`` or ``onComplete``.
   The ``onError`` method takes as its parameter the ``Throwable`` that caused the error.
 
 For example::
 
     Channel
-        .from( 1, 2, 3 )
+        .of( 1, 2, 3 )
         .subscribe onNext: { println it }, onComplete: { println 'Done' }
 
 ::
@@ -596,5 +569,6 @@ For example::
     2
     3
     Done
+
 
 .. _glob: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
