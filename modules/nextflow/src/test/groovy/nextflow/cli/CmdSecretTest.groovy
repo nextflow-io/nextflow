@@ -19,6 +19,7 @@ package nextflow.cli
 
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
+import nextflow.secret.SecretsLoader
 import org.junit.Rule
 import spock.lang.Shared
 import spock.lang.Specification
@@ -54,10 +55,21 @@ class CmdSecretTest extends Specification {
         field.accessible = true
         def map = (Map<String, String>) field.get(System.getenv())
         map.put('NXF_SECRETS_FILE', secretFile.toString())
+        map.put('NXF_ENABLE_SECRETS', 'true')
+
+        //required to run all test due collisions with others
+        def memoized = SecretsLoader.instance.memoizedMethodClosure$load
+        memoized.@cache.clear()
     }
 
     def cleanupSpec() {
         tempDir?.deleteDir()
+        def processEnvironmentClass = System.getenv().getClass()
+        def field = processEnvironmentClass.getDeclaredField('m')
+        field.accessible = true
+        def map = (Map<String, String>) field.get(System.getenv())
+        map.remove('NXF_SECRETS_FILE')
+        map.remove('NXF_ENABLE_SECRETS')
     }
 
     def 'should validate #COMMAND doesnt accept #ARGUMENTS' () {

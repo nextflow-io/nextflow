@@ -17,17 +17,22 @@
 
 package nextflow.secret
 
-import nextflow.exception.AbortOperationException
+import spock.lang.Ignore
 import spock.lang.Specification
-
-import java.nio.file.Files
-import java.nio.file.StandardOpenOption
 
 /**
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
  */
 class SecretsLoaderTest extends Specification {
+
+    def cleanupSpec() {
+        def processEnvironmentClass = System.getenv().getClass()
+        def field = processEnvironmentClass.getDeclaredField('m')
+        field.accessible = true
+        def map = (Map<String, String>) field.get(System.getenv())
+        map.remove('NXF_ENABLE_SECRETS')
+    }
 
     def "should check if NXF_ENABLE_SECRETS is #ENV"() {
         given:
