@@ -643,8 +643,7 @@ class Launcher {
      */
     static void main(String... args)  {
 
-        final launcher = new Launcher()
-        final status = launcher .command(args) .run()
+        final status = new Launcher() .command(args) .run()
         if( status )
             System.exit(status)
     }
