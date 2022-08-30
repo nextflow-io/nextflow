@@ -75,7 +75,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
     }
 
     static String uploadCmd(String source, Path targetDir) {
-        "nxf_az_upload '$source' '${AzHelper.toHttpUrl(targetDir)}'"
+        "nxf_az_upload ${Escape.path(source)} '${AzHelper.toHttpUrl(targetDir)}'"
     }
 
     @Override

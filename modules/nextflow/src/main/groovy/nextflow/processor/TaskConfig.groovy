@@ -186,6 +186,26 @@ class TaskConfig extends LazyMap implements Cloneable {
         return false
     }
 
+    String getBeforeScript() {
+        return get('beforeScript')
+    }
+
+    String getAfterScript() {
+        return get('afterScript')
+    }
+
+    def getCleanup() {
+        return get('cleanup')
+    }
+
+    String getStageInMode() {
+        return get('stageInMode')
+    }
+
+    String getStageOutMode() {
+        return get('stageOutMode')
+    }
+
     boolean getDebug() {
         // check both `debug` and `echo` for backward
         // compatibility until `echo` is not removed
@@ -294,7 +314,7 @@ class TaskConfig extends LazyMap implements Cloneable {
         def value = get('module')
 
         if( value instanceof List ) {
-            def result = []
+            List<String> result = []
             for( String name : value ) {
                 result.addAll( name.tokenize(':') )
             }
@@ -354,6 +374,9 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid PublishDir collection [${dirs.getClass().getName()}] $dirs")
     }
 
+    def getContainer() {
+        return get('container')
+    }
 
     /**
      * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values

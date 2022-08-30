@@ -100,7 +100,8 @@ class TraceRecord implements Serializable {
             env:        'str',
             error_action:'str',
             vol_ctxt: 'num',
-            inv_ctxt: 'num'
+            inv_ctxt: 'num',
+            hostname: 'str'
     ]
 
     static public Map<String,Closure<String>> FORMATTER = [
@@ -231,7 +232,7 @@ class TraceRecord implements Serializable {
 
         }
         catch( Exception e ) {
-            log.debug "Not a valid percentual value: '$value'"
+            log.debug "Not a valid percentage value: '$value'"
             return NA
         }
     }
@@ -393,8 +394,8 @@ class TraceRecord implements Serializable {
     }
 
     CharSequence renderJson(StringBuilder result = new StringBuilder()) {
-        def fields = []
-        def formats = []
+        List<String> fields = []
+        List<String> formats = []
         FIELDS.each { name, type -> fields << name; formats << type }
         renderJson(result, fields, formats)
     }

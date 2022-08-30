@@ -22,16 +22,19 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.config.ConfigParser
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.file.FileHelper
+import nextflow.util.StringUtils
 /**
  * Models a repository provider configuration attributes
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class ProviderConfig {
 
@@ -43,8 +46,11 @@ class ProviderConfig {
 
     static Path getScmConfigPath() {
         def cfg = env.get('NXF_SCM_FILE')
-        if( !cfg )
+        if( !cfg ) {
+            log.debug "Using SCM config path: ${DEFAULT_SCM_FILE}"
             return DEFAULT_SCM_FILE
+        }
+        log.debug "Detected SCM custom path: $cfg"
         // check and return it if valid
         return FileHelper.asPath(cfg)
     }
@@ -92,7 +98,7 @@ class ProviderConfig {
             attr.platform = 'file'
 
         if( !attr.platform ) {
-            throw new AbortOperationException("Missing `platform` attribute for `$name` scm provider configuration -- Check file: ${getScmConfigPath().toUriString()}")
+            throw new AbortOperationException("Missing `platform` attribute for `$name` SCM provider configuration -- Check file: ${getScmConfigPath().toUriString()}")
         }
 
         if( attr.auth ) {
@@ -131,6 +137,8 @@ class ProviderConfig {
      */
     String getDomain() {
         def result = server ?: path
+        if( !result )
+            return null
         def p = result.indexOf('://')
         if( p != -1 )
             result = result.substring(p+3)
@@ -202,6 +210,11 @@ class ProviderConfig {
         attr.endpoint ? attr.endpoint.toString().stripEnd('/') : server
     }
 
+    ProviderConfig setServer(String serverUrl) {
+        attr.server = serverUrl
+        return this
+    }
+
     ProviderConfig setUser(String user) {
         attr.user = user
         return this
@@ -225,6 +238,7 @@ class ProviderConfig {
 
     String getToken() { attr.token }
 
+
     String toString() {
         "ProviderConfig[name: $name, platform: $platform, server: $server]"
     }
@@ -243,13 +257,13 @@ class ProviderConfig {
     @PackageScope
     static List<ProviderConfig> createFromMap(Map<String,?> config) {
 
-        def providers = (Map<String,?>)config?.providers
+        final providers = (Map<String,?>)config?.providers
 
         List<ProviderConfig> result = []
         if( providers ) {
-            providers.keySet().each { String name ->
+            for( String name : providers.keySet() ) {
                 def attrs = (Map)providers.get(name)
-                result << new ProviderConfig(name, attrs)
+                result << RepositoryFactory.newProviderConfig(name, attrs)
             }
         }
 
@@ -267,7 +281,13 @@ class ProviderConfig {
     @PackageScope
     static Map getFromFile(Path file) {
         try {
-            parse(file.text)
+            // note: since this can be a remote file via e.g. read via HTTP
+            // it should not read more than once
+            final content = file.text
+            dumpScmContent(file, content)
+            final result = parse(content)
+            dumpConfig(result)
+            return result
         }
         catch (NoSuchFileException | FileNotFoundException e) {
             if( file == DEFAULT_SCM_FILE ) {
@@ -287,6 +307,23 @@ class ProviderConfig {
         catch( Exception e ) {
             final message = "Failed to parse config file '${file?.toUriString()}' -- Cause: ${e.message?:e.toString()}"
             throw new ConfigParseException(message,e)
+        }
+    }
+
+    static private void dumpScmContent(Path file, String content) {
+        try {
+            log.trace "Parsing SCM config path: ${file.toUriString()}\n${StringUtils.stripSecrets(content)}\n"
+        }catch(Exception e){
+            log.debug "Error dumping configuration ${file.toUriString()}", e
+        }
+    }
+
+    static private void dumpConfig(Map config) {
+        try {
+            log.debug "Detected SCM config: ${StringUtils.stripSecrets(config).toMapString()}"
+        }
+        catch (Throwable e) {
+            log.debug "Failed to dump SCM config: ${e.message ?: e}", e
         }
     }
 
@@ -310,6 +347,26 @@ class ProviderConfig {
 
         if( !result.find{ it.name == 'azurerepos' })
             result << new ProviderConfig('azurerepos')
+
     }
 
+    protected String resolveProjectName(String path) {
+        assert path
+        assert !path.startsWith('/')
+
+        String project = path
+        // fetch prefix from the server url
+        def prefix = new URL(server).path?.stripStart('/')
+        if( prefix && path.startsWith(prefix) ) {
+            project = path.substring(prefix.length())
+        }
+
+        if( server == 'https://dev.azure.com' ) {
+            final parts = project.tokenize('/')
+            if( parts[2]=='_git' )
+                project = "${parts[0]}/${parts[1]}"
+        }
+
+        return project.stripStart('/')
+    }
 }

@@ -174,7 +174,7 @@ class AzBatchTaskHandler extends TaskHandler {
             exitFile.text as Integer
         }
         catch( Exception e ) {
-            log.debug "[AZURE BATCH] Cannot read exitstatus for task: `$task.name` | ${e.message}"
+            log.debug "[AZURE BATCH] Cannot read exit status for task: `$task.name` | ${e.message}"
             return Integer.MAX_VALUE
         }
     }

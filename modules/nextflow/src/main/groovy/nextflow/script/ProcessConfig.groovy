@@ -408,7 +408,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
         // -- check for conflicting settings
         if( this.scratch && this.stageInMode == 'rellink' ) {
-            log.warn("Directives `scratch` and `stageInMode=rellink` conflict each other -- Enforcing default stageInMode for process `$simpleName`")
+            log.warn("Directives `scratch` and `stageInMode=rellink` conflict with each other -- Enforcing default stageInMode for process `$simpleName`")
             this.remove('stageInMode')
         }
     }

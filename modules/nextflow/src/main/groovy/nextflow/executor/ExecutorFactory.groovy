@@ -21,6 +21,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.executor.local.LocalExecutor
 import nextflow.k8s.K8sExecutor
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -51,13 +52,15 @@ class ExecutorFactory {
             'pbs': PbsExecutor,
             'pbspro': PbsProExecutor,
             'slurm': SlurmExecutor,
+            'bridge': BridgeExecutor,
             'crg': CrgExecutor,
             'bsc': LsfExecutor,
             'condor': CondorExecutor,
             'k8s': K8sExecutor,
             'nqsii': NqsiiExecutor,
             'moab': MoabExecutor,
-            'oar': OarExecutor
+            'oar': OarExecutor,
+            'hq': HyperQueueExecutor
     ]
 
     @PackageScope Map<String, Class<? extends Executor>> executorsMap

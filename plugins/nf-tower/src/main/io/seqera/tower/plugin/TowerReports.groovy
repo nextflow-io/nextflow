@@ -1,3 +1,13 @@
+/*
+ * Copyright (c) 2019-2022, Seqera Labs.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This Source Code Form is "Incompatible With Secondary Licenses", as
+ * defined by the Mozilla Public License, v. 2.0.
+ */
 package io.seqera.tower.plugin
 
 import groovy.transform.CompileStatic
@@ -153,7 +163,7 @@ class TowerReports {
      *
      * @param destination Path of the published file at destination filesystem.
      */
-    void filePublish(Path destination) {
+    boolean filePublish(Path destination) {
         if (processReports && destination) {
 
             if (!matchers) {
@@ -172,10 +182,11 @@ class TowerReports {
                     writer.send { PrintWriter it -> it.println("${reportEntry.key}\t${dst}\t${destination.size()}\t${display}\t${mimeType}") }
                     final numRep = totalReports.incrementAndGet()
                     log.debug("Adding report [${numRep}] ${reportEntry.key} -- ${dst}")
-                    break
+                    return true
                 }
             }
         }
+        return false
     }
 
     protected static String convertToGlobPattern(String reportKey) {

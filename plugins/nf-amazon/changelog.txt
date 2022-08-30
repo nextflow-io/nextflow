@@ -1,6 +1,32 @@
 nf-amazon changelog
 ===================
-1.7.1 - Apr 2022
+1.10.0 - 11 Aug
+- Improve S3 copy via xfer manager [02d2beae]
+- Add experimental fusion support [1854f1f2]
+- Increase S3 upload chunk size to 100 MB [9c94a080]
+- Add support for AWS Batch logs group (#3092) [4ef043ac]
+- Fix queueSize setting is not honoured by AWS Batch executor (#3093) [d07bb52b]
+- Add share identifier to Aws Batch (#3089) [c0253aba]
+
+1.9.0 - 1 Aug 2022
+- Fix Unable to disable scratch attribute with AWS Batch [1770f73a]
+- Fix NPE while setting S3 ObjectMetada #3031 [d6163431] <Jorge Aguilera>
+- Fix Unable to retrieve AWS batch instance type #1658 [3c4d4d3b] <Paolo Di Tommaso>
+- Fix AWS Batch job definition conflict (#3048) [e5084418] <Paolo Di Tommaso>
+- Improve S3 file upload/download via Transfer manager [7e8d2a5a] [b7bf9fe5] <Jorge Aguilera>
+
+1.8.1 - 13 Jul 2022
+- Fix Exception when settings AWS Batch containerOptions #3019 [89312ad8] <Paolo Di Tommaso>
+- Add docs aws.client.s3PathStyleAccess config (#3000) [20005500] <Abhinav Sharma>
+
+1.8.0 - 25 May 2022
+- Add support for custom KMS keys
+- Add support for virtual file system move operation [8c0ddfd5]
+
+1.7.2 - 15 Apr 2022
+- Fix Aws Batch retry policy on spot reclaim [d855f0d9]
+
+1.7.1 - 23 Apr 2022
 - Add config option `aws.client.anonymous` to allow the access of public buckets
 - Add config option `aws.client.debug`
 - Fix SS3 storage encryption flag for Batch submit job

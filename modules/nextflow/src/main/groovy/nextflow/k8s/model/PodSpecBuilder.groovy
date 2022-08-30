@@ -93,14 +93,15 @@ class PodSpecBuilder {
     List<Map> tolerations = []
 
     boolean privileged
-    
+
+    int activeDeadlineSeconds
+
     /**
      * @return A sequential volume unique identifier
      */
     static protected String nextVolName() {
         "vol-${VOLUMES.incrementAndGet()}".toString()
     }
-
 
     PodSpecBuilder withPodName(String name) {
         this.podName = name
@@ -247,6 +248,11 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withActiveDeadline(int seconds) {
+        this.activeDeadlineSeconds = seconds
+        return this
+    }
+
     PodSpecBuilder withPodOptions(PodOptions opts) {
         // -- pull policy
         if( opts.imagePullPolicy )
@@ -384,6 +390,10 @@ class PodSpecBuilder {
         if( annotations )
             metadata.annotations = sanitize(annotations, MetaType.ANNOTATION)
 
+        // time directive
+        if ( activeDeadlineSeconds > 0)
+            spec.activeDeadlineSeconds = activeDeadlineSeconds
+
         final pod = [
                 apiVersion: 'v1',
                 kind: 'Pod',
@@ -406,8 +416,8 @@ class PodSpecBuilder {
         }
 
         // add storage definitions ie. volumes and mounts
-        final mounts = []
-        final volumes = []
+        final List<Map> mounts = []
+        final List<Map> volumes = []
         final namesMap = [:]
 
         // creates a volume name for each unique claim name
@@ -457,6 +467,34 @@ class PodSpecBuilder {
         return pod
     }
 
+    Map buildAsJob() {
+        final pod = build()
+
+        // job metadata
+        final metadata = new LinkedHashMap<String,Object>()
+        metadata.name = this.podName    //  just use the podName for simplicity, it may be renamed to just `name` or `resourceName` in the future
+        metadata.namespace = this.namespace ?: 'default'
+
+        // job spec
+        final spec = new LinkedHashMap<String,Object>()
+        spec.backoffLimit = 0
+        spec.template = [spec: pod.spec]
+
+        if( labels )
+            metadata.labels = sanitize(labels, MetaType.LABEL)
+
+        if( annotations )
+            metadata.annotations = sanitize(annotations, MetaType.ANNOTATION)
+
+        final result = [
+                apiVersion: 'batch/v1',
+                kind: 'Job',
+                metadata: metadata,
+                spec: spec ]
+
+        return result
+
+    }
 
     @PackageScope
     @CompileDynamic

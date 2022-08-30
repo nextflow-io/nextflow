@@ -120,12 +120,17 @@ class PodmanBuilderTest extends Specification {
                 .build()
                 .runCommand == 'podman run -i -v /home/db:/home/db:ro -v "$PWD":"$PWD" -w "$PWD" fedora'
 
-
         new PodmanBuilder('fedora')
                 .params(mountFlags: 'Z')
                 .addMount(db_file)
                 .build()
                 .runCommand == 'podman run -i -v /home/db:/home/db:Z -v "$PWD":"$PWD":Z -w "$PWD" fedora'
+
+        new PodmanBuilder('fedora')
+                .params(privileged: true)
+                .build()
+                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --privileged fedora'
+
     }
 
     def 'test add mount'() {

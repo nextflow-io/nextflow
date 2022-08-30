@@ -192,6 +192,10 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-with-tower', '-x') == ['run', '-with-tower', '-', '-x']
         launcher.normalizeArgs('run','-with-tower', 'foo.com') == ['run', '-with-tower','foo.com']
 
+        launcher.normalizeArgs('run','-with-wave') == ['run', '-with-wave', '-']
+        launcher.normalizeArgs('run','-with-wave', '-x') == ['run', '-with-wave', '-', '-x']
+        launcher.normalizeArgs('run','-with-wave', 'foo.com') == ['run', '-with-wave','foo.com']
+
         launcher.normalizeArgs('run','-with-trace') == ['run', '-with-trace','-']
         launcher.normalizeArgs('run','-with-trace', '-x') == ['run', '-with-trace','-', '-x']
         launcher.normalizeArgs('run','-with-trace', 'file.x') == ['run', '-with-trace','file.x']
@@ -223,6 +227,10 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-with-charliecloud') == ['run', '-with-charliecloud','-']
         launcher.normalizeArgs('run','-with-charliecloud', '-x') == ['run', '-with-charliecloud','-', '-x']
         launcher.normalizeArgs('run','-with-charliecloud', 'busybox') == ['run', '-with-charliecloud','busybox']
+
+        launcher.normalizeArgs('run','-with-conda') == ['run', '-with-conda','-']
+        launcher.normalizeArgs('run','-with-conda', '-x') == ['run', '-with-conda','-', '-x']
+        launcher.normalizeArgs('run','-with-conda', 'busybox') == ['run', '-with-conda','busybox']
 
         launcher.normalizeArgs('run','-dump-channels') == ['run', '-dump-channels','*']
         launcher.normalizeArgs('run','-dump-channels', '-x') == ['run', '-dump-channels','*', '-x']

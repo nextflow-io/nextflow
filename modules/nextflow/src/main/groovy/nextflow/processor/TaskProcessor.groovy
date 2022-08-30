@@ -772,7 +772,7 @@ class TaskProcessor {
                 if( resumeDir != workDir )
                     exists = workDir.exists()
                 if( !exists && !workDir.mkdirs() )
-                    throw new IOException("Unable to create folder=$workDir -- check file system permission")
+                    throw new IOException("Unable to create directory=$workDir -- check file system permissions")
             }
             finally {
                 lock.release()
@@ -1259,8 +1259,12 @@ class TaskProcessor {
                 result += " -- Check script '${details[0]}' at line: ${details[1]}"
             return result
         }
-
-        return fail.message ?: fail.toString()
+        def result = fail.message ?: fail.toString()
+        def details = LoggerHelper.findErrorLine(fail)
+        if( details ){
+            result += " -- Check script '${details[0]}' at line: ${details[1]}"
+        }
+        return result
     }
 
     /**
@@ -1468,7 +1472,7 @@ class TaskProcessor {
         }
 
         if( stdout instanceof Path && !stdout.exists() ) {
-            throw new MissingFileException("Missing 'stdout' file: ${stdout} for process > ${task.name}")
+            throw new MissingFileException("Missing 'stdout' file: ${stdout.toUriString()} for process > ${task.name}")
         }
 
         task.setOutput(param, stdout)
@@ -1557,7 +1561,7 @@ class TaskProcessor {
             FileHelper.visitFiles(opts, workDir, namePattern) { Path it -> files.add(it) }
         }
         catch( NoSuchFileException e ) {
-            throw new MissingFileException("Cannot access folder: '$workDir'", e)
+            throw new MissingFileException("Cannot access directory: '$workDir'", e)
         }
 
         return files.sort()
@@ -1643,7 +1647,7 @@ class TaskProcessor {
 
 
         // pre-pend the 'bin' folder to the task environment
-        if( executor.binDir ) {
+        if( executor.binDir && executor.binDir.fileSystem==FileSystems.default ) {
             if( result.containsKey('PATH') ) {
                 // note: do not escape potential blanks in the bin path because the PATH
                 // variable is enclosed in `"` when in rendered in the launcher script -- see #630
@@ -1977,7 +1981,7 @@ class TaskProcessor {
         List keys = [ session.uniqueId, name, task.source ]
 
         if( task.isContainerEnabled() )
-            keys << task.container
+            keys << task.getContainerFingerprint()
 
         // add all the input name-value pairs to the key generator
         for( Map.Entry<InParam,Object> it : task.inputs ) {
@@ -2025,7 +2029,7 @@ class TaskProcessor {
             return CacheHelper.hasher(keys, mode).hash()
         }
         catch (Throwable e) {
-            final msg = "Oops.. something wrong happened while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
+            final msg = "Oops.. something went wrong while creating task '$name' unique id -- Offending keys: ${ keys.collect {"\n - type=${it.getClass().getName()} value=$it"} }"
             throw new UnexpectedException(msg,e)
         }
     }

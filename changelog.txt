@@ -1,5 +1,182 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.08.2-edge - 16 Aug 2022
+- Fix queueSize setting is not honoured by AWS Batch executor (again) #3117 [1733bb2e]
+- Add `files()` method to docs (#3123) [00bb8896] <Ben Sherman>
+- Refactor wave packing [bc876986]
+- Improve logging [aa380d5f]
+- Update dockerfile [e6329282]
+
+22.08.1-edge - 11 Aug 2022
+- Add support for disabling config include [e0859a12]
+- Add experimental fusion support [1854f1f2]
+- Add support for plugin provided function extension (#3079) [16230c2b] <Jorge Aguilera>
+- Add support for AWS Batch logs group (#3092) [4ef043ac] <Ben Sherman>
+- Add share identifier to Aws Batch (#3089) [c0253aba] <Ben Sherman>
+- Improve Tower cache manager [0091afc5]
+- Improve S3 copy via xfer manager [02d2beae]
+- Reports a warning when using NXF vars in the config [009ec256]
+- Make wake token cache duration config [5f955fc9]
+- Patch unable to start non-core plugin [a55f58ff]
+- Increase S3 upload chunk size to 100 MB [9c94a080]
+- Change Google Batch disk directive to override boot disk size (#3097) [7e1c0686] <Ben Sherman>
+- Fix queueSize setting is not honoured by AWS Batch executor (#3093) [d07bb52b] <Ben Sherman>
+- Fix Allow disabling scratch with Google Batch [e8e5c721]
+- Fix Emit relative path when relative parameter is set (#3072) [39797759] <Jorge Aguilera>
+- Bump nf-wave@0.3.0 [e46d341d]
+- Bump nf-tower@1.5.1 [cdc2be53]
+- Bump nf-google@1.4.1 [c39935a5]
+- Bump nf-amazon@1.10.0 [ccdf62d0]
+
+22.08.0-edge - 1 Aug 2022
+- Add warning to env config docs (#3083) [ca933c16] <Ben Sherman>
+- Add -with-conda CLI option (#3073) [98b2ac80]
+- Add simple wave plugin cli commands [8888b866]
+- Add default wave plugin [7793a0ec]
+- Add boot disk, cpu platform to google batch (#3058) [17a8483d] <Ben Sherman>
+- Add support for GPU accelerator to Google Batch (#3056) [f34ad7f6] <Ben Sherman>
+- Add support for archive dir to tower plugin [c234681a]
+- Add support tower cache backup/restore [bc2f9d13]
+- Add disk directive to google batch (#3057) [ec6e290c] <Ben Sherman>
+- Add retry when Azure submit fails with OperationTimedOut [6a3f9742]
+- Add warning when Google Batch quota is exceeded (#3066) [6b9c52ad] <Ben Sherman>
+- Allow fully disabling history file [0a45f858]
+- Allow the support function overloading and default parameters (#3011) [042d3857] <Jorge Aguilera>
+- Improve S3 file upload/download via Transfer manager [7e8d2a5a] <Jorge Aguilera>
+- Prevent overriding container entrypoint [b3a4bf85]
+- Update FileTransfer pool settings [503aafce]
+- Remove deprecated commands [93228b4b]
+- Prevent nextflow config to break tower launch [e059a724]
+- Refactor Google Batch executor to use Java API (#3044) [31a6e85c] <Ben Sherman>
+- Fix Unable to disable scratch attribute with AWS Batch [1770f73a]
+- Fix unit test setting explicit permissions for test files [1c821139] <Jorge Aguilera>
+- Fix Default plugins are overriden by config plugins [46cf3bfa] <Paolo Di Tommaso>
+- Fix S3 transfer download directory [b7bf9fe5]
+- Fix NPE while setting S3 ObjectMetada #3031 [d6163431] <Jorge Aguilera>
+- Fix Unable to retrieve AWS batch instance type #1658 [3c4d4d3b]
+- Fix AWS Batch job definition conflict (#3048) [e5084418]
+- Fix JAVA_TOOL_OPTIONS breaking launch #1716 [0e7b416d]
+- Fix add ps shared objects to Dockerfile (#3033) [1c23b40a] <Ben Sherman>
+- Parallelize build integration tests [807800a3]
+- Bump google-cloud-nio:0.124.8 [dfaa9d19]
+- Bump groovy 3.0.12 [5c900b91]
+- Bump Moment.js 2.29.4 [a9ced868]
+- Bump gson@2.9.0 [12f17176]
+- Bump nf-azure@0.13.4 
+- Bump nf-google@1.4.0
+- Bump nf-tower@1.5.0
+- Bump nf-wave@0.2.1
+- Bump nf-amazon@1.9.0
+
+22.04.5 - 15 Jul 2022
+- Allow fully disabling history file [1a36c9bc]
+
+22.07.1-edge - 13 Jul 2022
+- Add support for Google Batch API v1 [4c116d58] [e85d87ee]
+- Add time directive support for K8s executor (#2948) [2b6f70a8] <romanaduraciova>
+- Add docs aws.client.s3PathStyleAccess config (#3000) [20005500] <Abhinav Sharma>
+- Allow to override lsf.conf settings with nextflow config #2862 [dae191a1] <Paolo Di Tommaso>
+- Allow hybrid containers execution [0af1bcb3]
+- Improve error msg when script file cannot be read [52c2780e]
+- Improve error reporting for custom function [877c7931] <Jorge Aguilera>
+- Improve error message for missing plugin extension [4a43db84]
+- Improve test #3019 [7c37e0be] <Paolo Di Tommaso>
+- Rename kuberun -pod-image to -head-image [2576ba62] <Ben Sherman>
+- Externalise sqldb plugin source code [17e80b4f] <Paolo Di Tommaso>
+- Fix escape unstage outputs with double quotes #2912 #2904 #2790 [49ff02a6] <Ben Sherman>
+- Fix Exception when settings AWS Batch containerOptions #3019 [89312ad8] <Paolo Di Tommaso>
+- Fix Missing query param in http file (#2918) [43cc8511] <Paolo Di Tommaso>
+- Fix Publish copy mode for S3 based path [085f6b2b]
+- Fix Fail fast uploads to S3 (#2969) [7fd1a6e1] <Jorge Aguilera>
+- Fix null script name in launch info [7118849f]
+- Bump commons-code@1.15 [a06b4442]
+- Bump jgit@6.2.0 [3331826f]
+- Bump snakeyaml@1.30 [de62fd3f]
+- Bump gson@2.8.9 [3234ddd5]
+
+22.07.0-edge - [SKIPPED]
+
+22.04.4 - 19 Jun 2022
+- Fix Publish copy mode for s3 based path [bb510ce6]
+- Add strict mode config setting [b0567e62]
+- Update docker base image [b00c1418]
+
+22.06.1-edge - 17 Jun 2022
+- Fix CodeCommit creds handling + nf-codecommit@0.1.2 [70fc0745]
+- Fix typo in log message [a8f8529d]
+- Add more scientists to the list of random names [8d5b36a2] <Marcel Ribeiro Dantas>
+
+22.06.0-edge - 9 Jun 2022
+- Add AWS CodeCommit initial support [80fba6e9]
+- Add support for 307 and 308 HTTP redirection [92382012]
+- Add DirWatcher v2 [209c82cd]
+- Add Moriondo in the list of random names [e0abca58]
+- Add preview CLI option (#2914) [aa8f1aa4]
+- Fix Git config resultion error [64436697]
+- Fix StackOverflowError when dump all profiles (#2922) [28cd11a2] <Jorge Aguilera>
+- Fix gradle warning message in nf-sqldb (#2921) [b09ceabe] <Jorge Aguilera>
+- Fix log for LsfExecutror perTaskReserve attribute [7c3ec874] <Prete>
+- Fix external pod deletion for jobs (#2915) [4dd1af7a] <xhejtman>
+- Prevent function overloading in module definition [c0b522ab]
+- Improve error message of non sensical include (#2623) [285fe49c] <Jorge Aguilera>
+- Mount PWD path only when scratch is used [9b3c6e31] 
+- Stripe sensitive data into strings (#2908) [7fa4c86c] <Jorge Aguilera>
+- Dump scm content when trace is enabled [c3117ada]
+
+22.05.0-edge 25 May 2022
+- Add Hyperqueue executor (#2896) [ffa5712e] <Henrik Nortamo>
+- Add support for K8s Job resource [c70eb12d] <xhejtman>
+- Add support for time process directive in GLS executor (#2880) [1402e183] <Florian De Temmerman>
+- Add support for priviledge option for K8s containers [7ffe3a02]
+- Add DSL1 option to docs (#2836) [d30841a5] <Jose Espinosa-Carrasco>
+- Add support for container options to Azure Batch [3f4f00f9] 
+- Add support for move operation to AWS S3 [8c0ddfd5] 
+- Add K8s execution hostname in the trace file (#2828) [ebaef92a] <Fabian Lehmann>
+- Add support for AWS S3 encyption using a custom KMS key [c1e45aa9] <Paolo Di Tommaso>
+- Add support for Micromamba [383e023f]
+- Add jaxb-api dependecy to nf-amazon [c1a09f87]
+- Add strict mode config setting [ci fast] [696e70b5]
+- Add -head-prescript option to kuberun (#2830) [9e387055] 
+- Fix missing err message on submit failure [233e67f0] (#2899)
+- Fix resolve azure devops repositories when projectId is present [2500ff01] <Jorge Aguilera>
+- Fix AthenaJdbc into distribution zip [853a1f2a] [4b3579d5] [70ef7ee3] <Jorge Aguilera>
+- Fix Inconsistent bool parsing #2881 [40bf2b2a]
+- Fix  Unable to pull pipeline if config file is not in default branch (#2876) [4ee5b04f] <Jorge Aguilera>
+- Fix Prevent crash when scratch dir does not exist (#2888) [9ef44ae5] <Fabian Lehmann>
+- Fix DSL1 detection to invalid workflow keyword matching [fe0700b0] (#2879)  <Jose Espinosa-Carrasco>
+- Fix Aws Batch retry policy on spot reclaim [6e029b79]
+- Fix 'false' string in config interpreted as true (#2865) [079a18ce] <Fabian Lehmann>
+- Improve Git Provider config logging [d7dbca8ec]
+- Improve K8s task handler [1822b2ca]
+- Improve missing workflow err message [da101e8f] (#2871)
+- Include revision in the Azure Repos provider when specified (#2861) [3342c767] <Jorge Aguilera>
+- Remove unnecessary change dir echo [372d1f47]
+- Abort execution when accessing undefined params with strict mode [93836081]
+- Update docker base image [50cd7956]
+- Update default SKU for Azure Batch (#2868) [9ea09dba] <Abhinav Sharma>]
+- Update dependencies [405d9545]
+- Refactoring to prevent name conflict [aba2671b]
+- Few DSL syntax to explicit declaration of plugin extensions (#2820) [bfc4a067] <Jorge Aguilera>
+- Sanitize k8s label and annotation keys, don't sanitize annotation value (#2843) [5287a984] <Ben Sherman>
+- Docs improvement (#2835) [09e5bca3] <Ben Sherman>
+- Bump Jgit 6.1 [7186348c]
+- Bump Spock 2.1 [51100d16]
+- Bump capsule 1.1.1 [20ec1697]
+
+22.04.3 - 18 May 2022
+- Fix dsl1 detection (#2879) [1a7ea0d1] <Jose Espinosa-Carrasco
+
+22.04.2 - 16 May 2022
+- Fix stackoverflow error when probe dsl [a05fcbea]
+
+22.04.1 - 15 May 2022
+- Improve dsl detection [739b959f]
+- Improve missing workflow err message [f3fc081b] (#2871)
+- Fix Aws Batch retry policy on spot reclaim [d855f0d9]
+- Update default SKU for Azure Batch (#2868) [be60fc14]
+- Bump nf-amazon 1.7.2
+- Bump nf-azure 0.13.2
+
 22.04.0 - 23 Apr 2022
 - Improve error reporting (#2658) [e6ef017d] <Jorge Aguilera>
 - Document params-file and improve self-update (#2673) [1e008f47] <Abhinav Sharma>

@@ -36,3 +36,4 @@ gradle.properties
 .launch.classpath
 plugins-prod
 sandbox
+wave-demo

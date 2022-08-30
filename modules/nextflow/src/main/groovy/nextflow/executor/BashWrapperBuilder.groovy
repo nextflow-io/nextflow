@@ -24,13 +24,9 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.container.CharliecloudBuilder
 import nextflow.container.ContainerBuilder
 import nextflow.container.DockerBuilder
-import nextflow.container.PodmanBuilder
-import nextflow.container.ShifterBuilder
 import nextflow.container.SingularityBuilder
-import nextflow.container.UdockerBuilder
 import nextflow.exception.ProcessException
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
@@ -419,7 +415,12 @@ class BashWrapperBuilder {
          * create the container engine command when needed
          */
         if( containerBuilder ) {
-            def cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
+            String cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
+            if( env && !containerConfig.entrypointOverride() ) {
+                if( containerBuilder instanceof SingularityBuilder )
+                    cmd = 'cd $PWD; ' + cmd
+                cmd = "/bin/bash -c \"$cmd\""
+            }
             launcher = containerBuilder.getRunCommand(cmd)
         }
 
@@ -463,23 +464,7 @@ class BashWrapperBuilder {
 
     @PackageScope
     ContainerBuilder createContainerBuilder0(String engine) {
-        /*
-         * create a builder instance given the container engine
-         */
-        if( engine == 'docker' )
-            return new DockerBuilder(containerImage)
-        if( engine == 'podman' )
-            return new PodmanBuilder(containerImage)
-        if( engine == 'singularity' )
-            return new SingularityBuilder(containerImage)
-        if( engine == 'udocker' )
-            return new UdockerBuilder(containerImage)
-        if( engine == 'shifter' )
-            return new ShifterBuilder(containerImage)
-        if( engine == 'charliecloud' )
-            return new CharliecloudBuilder(containerImage)
-        //
-        throw new IllegalArgumentException("Unknown container engine: $engine")
+        ContainerBuilder.create(engine, containerImage)
     }
 
     protected boolean getAllowContainerMounts() {
@@ -566,7 +551,8 @@ class BashWrapperBuilder {
         if( containerConfig.writableInputMounts==false )
             builder.params(readOnlyInputs: true)
 
-        builder.params(entry: '/bin/bash')
+        if( this.containerConfig.entrypointOverride() )
+            builder.params(entry: '/bin/bash')
 
         // give a chance to override any option with process specific `containerOptions`
         if( containerOptions ) {
@@ -575,8 +561,8 @@ class BashWrapperBuilder {
 
         // The current work directory should be mounted only when
         // the task is executed in a temporary scratch directory (ie changeDir != null)
-        // Applying this strategy only to podman for now. See https://github.com/nextflow-io/nextflow/issues/1710
-        builder.addMountWorkDir( engine!='podman' || changeDir )
+        // See https://github.com/nextflow-io/nextflow/issues/1710
+        builder.addMountWorkDir( changeDir as boolean )
 
         builder.build()
         return builder

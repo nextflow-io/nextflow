@@ -1,10 +1,8 @@
-FROM amazoncorretto:17.0.1
+FROM amazoncorretto:17.0.4
 RUN yum install -y procps-ng
 
-FROM amazoncorretto:17.0.1
-COPY --from=0 /bin/ps /bin/ps
 ENV NXF_HOME=/.nextflow
-ARG TARGETPLATFORM
+ARG TARGETPLATFORM=linux/amd64
 
 # copy docker client
 COPY dist/${TARGETPLATFORM}/docker /usr/local/bin/docker
@@ -20,4 +18,3 @@ RUN mkdir /.nextflow \
 
 # define the entry point
 ENTRYPOINT ["/usr/local/bin/entry.sh"]
-
