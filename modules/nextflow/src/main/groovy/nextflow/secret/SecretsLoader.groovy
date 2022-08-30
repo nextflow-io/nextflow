@@ -32,7 +32,7 @@ import nextflow.plugin.Plugins
 class SecretsLoader {
 
     static boolean isEnabled() {
-        System.getenv('NXF_ENABLE_SECRETS') == null || System.getenv('NXF_ENABLE_SECRETS').toLowerCase() == 'true'
+        System.getenv('NXF_ENABLE_SECRETS') ? System.getenv('NXF_ENABLE_SECRETS') == 'true' : true
     }
 
     @Memoized
