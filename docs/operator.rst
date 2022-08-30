@@ -674,14 +674,11 @@ Then you will be able to specify the tag ``foo`` or ``bar`` as an argument of th
 either the content of the first or the second channel. Multiple tag names can be specified separating them with a ``,``
 character.
 
-If you want a customization output you can provide a Closure as an optional last argument where you return the string
-desided.
-
-For example, to pretty print a *Map* as a JSON output::
+You can customize the output by providing an optional closure that returns the desired string. For example, to pretty
+print a map as JSON::
 
     import static groovy.json.JsonOutput.toJson
     import static groovy.json.JsonOutput.prettyPrint
-
 
     workflow {
         Channel.of(
@@ -701,7 +698,6 @@ For example, to pretty print a *Map* as a JSON output::
 
 Will produce::
 
-    Launching `pretty.nf` [maniac_babbage] DSL2 - revision: 9c1c991204
     [DUMP: map] {
         "id": "test",
         "samples": [
@@ -721,8 +717,8 @@ Will produce::
     }
 
 .. warning::
-    In this case the Channel is working with a Map so we can convert the implicit `it` variable to Json. In case your
-Channel works with other types you need to adjust the Closure to obtain the result desired
+    In this case the channel is working with a map so we can convert the implicit `it` variable to JSON. In case your
+    channel works with other types, you need to adjust the closure to obtain the desired result.
 
 
 filter
