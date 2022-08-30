@@ -22,24 +22,24 @@ When the pipeline execution is launched Nextflow inject the secrets in pipeline 
 into temporary execution files. The secrets are accessible into the job command via environment variables.
 
 .. note::
-    This feature must be enabled by setting the following environment variable in the launch environment::
+    This feature is enabled by default. You can disabled it by setting the following environment variable in the launch environment::
 
-        export NXF_ENABLE_SECRETS=true
+        export NXF_ENABLE_SECRETS=false
 
 
 Command line
 ============
 
-When enabling this feature Nextflow provides a new command named ``secrets``. This command allow four simple
+Nextflow provides a command named ``secrets``. This command allows four simple
 operations:
 
 ===================== =====================
 Operation               Description
 ===================== =====================
 ``list``                List secrets available in the current store e.g. ``nextflow secrets list``.
-``get``                 Allows retrieving a secret value e.g. ``nextflow secrets get -n FOO``.
-``put``                 Allows creating creating a new secret or overriding an existing one e.g. ``nextflow secrets put -n FOO -v "Hello world"``
-``delete``              Allows deleting an existing secret e.g. ``nextflow secrets delete -n FOO``.
+``get``                 Allows retrieving a secret value e.g. ``nextflow secrets get FOO``.
+``put``                 Allows creating creating a new secret or overriding an existing one e.g. ``nextflow secrets put FOO "Hello world"``
+``delete``              Allows deleting an existing secret e.g. ``nextflow secrets delete FOO``.
 ===================== =====================
 
 Configuration file
@@ -52,7 +52,7 @@ Once create the secrets can be used in the pipeline configuration file as implic
       secretKey = secrets.MY_SECRET_KEY
     }
 
-The above above snippet access the secrets ``MY_ACCESS_KEY`` and ``MY_SECRET_KEY`` previously and assign them to
+The above snippet access the secrets ``MY_ACCESS_KEY`` and ``MY_SECRET_KEY`` previously and assign them to
 the corresponding AWS credentials settings.
 
 .. warning::
