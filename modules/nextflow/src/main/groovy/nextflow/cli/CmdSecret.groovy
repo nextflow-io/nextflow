@@ -35,8 +35,6 @@ import nextflow.secret.SecretsProvider
 @Parameters(commandDescription = "Manage pipeline secrets (preview)")
 class CmdSecret extends CmdBase implements UsageAware {
 
-    private PrintStream out = System.out
-
     interface SubCmd {
         String getName()
         void apply(List<String> result)
@@ -95,7 +93,7 @@ class CmdSecret extends CmdBase implements UsageAware {
             }
         }
 
-        out.println result.join('\n').toString()
+        println result.join('\n').toString()
     }
 
     /**
@@ -189,7 +187,7 @@ class CmdSecret extends CmdBase implements UsageAware {
             String secretName = result.first()
             if( !secretName )
                 throw new AbortOperationException("Missing secret name")
-            out.println provider.getSecret(secretName)?.value
+            println provider.getSecret(secretName)?.value
         }
 
         @Override
@@ -215,11 +213,11 @@ class CmdSecret extends CmdBase implements UsageAware {
             final names = new ArrayList(provider.listSecretsNames()).sort()
             if( names ) {
                 for( String it : names ) {
-                    out.println it
+                    println it
                 }
             }
             else {
-                out.println "no secrets available"
+                println "no secrets available"
             }
         }
 

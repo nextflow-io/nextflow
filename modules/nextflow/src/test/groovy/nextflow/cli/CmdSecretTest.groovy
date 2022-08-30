@@ -19,10 +19,10 @@ package nextflow.cli
 
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
-import nextflow.secret.LocalSecretsProvider
-import nextflow.secret.SecretsLoader
+import org.junit.Rule
 import spock.lang.Shared
 import spock.lang.Specification
+import test.OutputCapture
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -32,6 +32,9 @@ import java.nio.file.Path
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
  */
 class CmdSecretTest extends Specification {
+
+    @Rule
+    OutputCapture capture = new OutputCapture()
 
     @Shared
     Path tempDir
@@ -58,11 +61,8 @@ class CmdSecretTest extends Specification {
     }
 
     def 'should validate #COMMAND doesnt accept #ARGUMENTS' () {
-        given:
-        def buffer = new ByteArrayOutputStream()
-
         when:
-        new CmdSecret(args: [COMMAND] + ARGUMENTS, out: new PrintStream(buffer)).run()
+        new CmdSecret(args: [COMMAND] + ARGUMENTS).run()
 
         then:
         thrown(AbortOperationException)
@@ -83,30 +83,27 @@ class CmdSecretTest extends Specification {
 
         given:
         secretFile.delete()
-        def buffer = new ByteArrayOutputStream()
 
         when:
-        new CmdSecret(args: ['list'], out: new PrintStream(buffer)).run()
-        def screen = buffer.toString()
+        new CmdSecret(args: ['list']).run()
+        def screen = capture
+                .toString()
+                .readLines()
+                .join('\n')
 
         then:
-        screen == "no secrets available\n"
+        screen.indexOf("no secrets available") != -1
     }
 
     def 'should set a secret' () {
 
         given:
         secretFile.delete()
-        def buffer = new ByteArrayOutputStream()
 
         when:
-        new CmdSecret(args: ['put','foo','bar'], out: new PrintStream(buffer)).run()
-        def screen = buffer.toString()
+        new CmdSecret(args: ['put','foo','bar']).run()
 
         then:
-        screen == ""
-
-        and:
         secretFile.text.indexOf('"name": "foo"') != -1
         secretFile.text.indexOf('"value": "bar"') != -1
     }
@@ -123,16 +120,10 @@ class CmdSecretTest extends Specification {
         """
         secretFile.permissions = 'rw-------'
 
-        def buffer = new ByteArrayOutputStream()
-
         when:
-        new CmdSecret(args: ['delete', 'foo'], out: new PrintStream(buffer)).run()
-        def screen = buffer.toString()
+        new CmdSecret(args: ['delete', 'foo']).run()
 
         then:
-        screen == ""
-
-        and:
         secretFile.text.indexOf('"name": "foo"') == -1
     }
 
