@@ -1282,6 +1282,10 @@ afterScript
 The ``afterScript`` directive allows you to execute a custom (Bash) snippet immediately *after* the main process has run.
 This may be useful to clean up your staging area.
 
+.. warning:: In combination with the :ref:`container directive <process-container>`, the ``afterScript`` will be 
+   executed outside the specified container. The ``afterScript`` is always executed in the environment running 
+   ``nextflow``.
+
 
 .. _process-beforeScript:
 
@@ -1300,6 +1304,10 @@ For example::
       echo bar
       """
     }
+
+.. warning:: In combination with the :ref:`container directive <process-container>`, the ``beforeScript`` will be 
+   executed outside the specified container. The ``beforeScript`` is always executed in the environment running 
+   ``nextflow``.
 
 
 .. _process-cache:
