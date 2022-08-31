@@ -87,7 +87,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'stdin',
             'stdout',
             'stageInMode',
-            'stageOutMode'
+            'stageOutMode',
+            'resourceLabels'
     ]
 
     /**
@@ -672,16 +673,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return LABEL_REGEXP.matcher(left).matches() && LABEL_REGEXP.matcher(right).matches()
     }
 
-    protected boolean isResourceLabelsSyntax(String lbl){
-        def p = lbl.count('=')
-        if( p != 1)
-            return false
-        String[] fields = lbl.split('=')
-        def left = fields[0]
-        def right = fields[1]
-        return LABEL_REGEXP.matcher(left).matches()
-    }
-
     protected Map<String,String> parseAsMap(String lbl){
         def p = lbl.count('=')
         if( p != 1)
@@ -705,11 +696,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      */
     ProcessConfig label(String lbl) {
         if( !lbl ) return this
-
-        if( isResourceLabelsSyntax(lbl) ){
-            Map<String,Object> map = parseAsMap(lbl)
-            return label(map)
-        }
 
         // -- check that label has a valid syntax
         if( !isValidLabel(lbl) )
@@ -739,26 +725,27 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      * @return
      *      The {@link ProcessConfig} instance itself.
      */
-    ProcessConfig label(Map<String, Object> map) {
-        if( !map ) return this
+    ProcessConfig resourceLabels(Map<String, Object> map) {
+        if( !map )
+            return this
 
         // -- get the current sticker, it must be a Map
-        def allStickers = (Map)configProperties.get('resourceLabels')
-        if( !allStickers ) {
-            allStickers = [:]
+        def allLabels = (Map)configProperties.get('resourceLabels')
+        if( !allLabels ) {
+            allLabels = [:]
         }
         // -- merge duplicates
-        allStickers += map
-        configProperties.put('resourceLabels', allStickers)
+        allLabels += map
+        configProperties.put('resourceLabels', allLabels)
         return this
-    }
-
-    List<String> getLabels() {
-        (List<String>) configProperties.get('label') ?: Collections.<String>emptyList()
     }
 
     Map<String,Object> getResourceLabels() {
         (configProperties.get('resourceLabels') ?: Collections.emptyMap()) as Map<String, Object>
+    }
+
+    List<String> getLabels() {
+        (List<String>) configProperties.get('label') ?: Collections.<String>emptyList()
     }
 
     ProcessConfig secret(String name) {

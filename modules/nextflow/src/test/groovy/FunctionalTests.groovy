@@ -690,39 +690,6 @@ class FunctionalTests extends Specification {
         processor.config.label == [ 'bravo', 'gamma' ]
     }
 
-    def 'should set directive label when they are resourceLabels' () {
-
-        when:
-        def CONFIG = '''
-            process {
-                executor = 'nope'
-                label = 'alpha'
-            }
-            '''
-
-        def script = '''   
-                process foo {
-                    label 'bravo'
-                    label 'gamma'
-                    label 'department=floor 3' 
-                    label region:'eu-west-1' 
-                    script:
-                    'echo hello'
-                }
-                '''
-
-        def cfg = new ConfigParser().parse(CONFIG)
-        def runner = new TestScriptRunner(cfg)
-        runner.setScript(script).execute()
-        def processor = runner.scriptObj.taskProcessor
-        then:
-        processor instanceof TaskProcessor
-        processor.config.label.size() == 2
-        processor.config.label == [ 'bravo', 'gamma' ]
-        processor.config.resourceLabels.size() == 2
-        processor.config.resourceLabels == [ department: 'floor 3' , region: 'eu-west-1']
-    }
-
     def 'should create process with repeater'() {
 
         when:
