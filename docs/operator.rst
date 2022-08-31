@@ -674,31 +674,20 @@ Then you will be able to specify the tag ``foo`` or ``bar`` as an argument of th
 either the content of the first or the second channel. Multiple tag names can be specified separating them with a ``,``
 character.
 
-You can customize the output by providing an optional closure that returns the desired string. For example, to pretty
-print a map as JSON::
+The output can be formatted using the optional ``prettyPrint`` boolean parameter::
 
-    import static groovy.json.JsonOutput.toJson
-    import static groovy.json.JsonOutput.prettyPrint
+    Channel.of( [
+        id: 'test',
+        samples: [
+            [ id: 'S1', path: '/path/to/s1' ],
+            [ id: 'S2', path: '/path/to/s2' ],
+            [ id: 'S3', path: '/path/to/s3' ]
+        ]
+    ]).dump(tag:'foo', prettyPrint: true)
 
-    workflow {
-        Channel.of(
-            [
-                id: 'test',
-                samples: [
-                    [ id: 'S1', path: '/path/to/s1' ],
-                    [ id: 'S2', path: '/path/to/s2' ],
-                    [ id: 'S3', path: '/path/to/s3' ]
-                ]
-            ]
-        ).dump(tag: 'map', {
-            def json = toJson(it)
-            prettyPrint( json )
-        })
-    }
+::
 
-Will produce::
-
-    [DUMP: map] {
+    INFO  nextflow.extension.DumpOp – [DUMP: foo] {
         "id": "test",
         "samples": [
             {
@@ -715,10 +704,6 @@ Will produce::
             }
         ]
     }
-
-.. warning::
-    In this case the channel is working with a map so we can convert the implicit `it` variable to JSON. In case your
-    channel works with other types, you need to adjust the closure to obtain the desired result.
 
 
 filter

@@ -23,6 +23,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
+import nextflow.util.Converters
 import org.codehaus.groovy.runtime.InvokerHelper
 import static nextflow.util.CheckHelper.checkParams
 /**
@@ -36,7 +37,7 @@ import static nextflow.util.CheckHelper.checkParams
 @CompileStatic
 class DumpOp {
 
-    static final private Map PARAMS_DUMP = [tag: String]
+    static final private Map PARAMS_DUMP = [tag: String, prettyPrint: Boolean ]
 
     private Session session = (Global.session as Session)
 
@@ -48,10 +49,13 @@ class DumpOp {
 
     protected String tag
 
+    protected boolean prettyPrint
+
     DumpOp(Map opts, Closure<String> renderer) {
         checkParams('dump', opts, PARAMS_DUMP)
         this.source = source
         this.tag = opts.tag
+        this.prettyPrint = opts.prettyPrint ?: false
         this.renderer = renderer
         this.dumpNames = session.getDumpChannels()
     }
@@ -88,7 +92,7 @@ class DumpOp {
         events.onNext = {
             def marker = 'DUMP'
             if( tag ) marker += ": $tag"
-            log.info "[$marker] " + ( renderer ? renderer.call(it) : InvokerHelper.inspect(it) )
+            log.info "[$marker] " + ( renderer ? renderer.call(it) : prettyPrint ? Converters.prettyPrint(it) : InvokerHelper.inspect(it) )
             target.bind(it)
         }
 
