@@ -673,16 +673,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return LABEL_REGEXP.matcher(left).matches() && LABEL_REGEXP.matcher(right).matches()
     }
 
-    protected Map<String,String> parseAsMap(String lbl){
-        def p = lbl.count('=')
-        if( p != 1)
-            return Collections.emptyMap() as Map<String,String>
-        String[] fields = lbl.split('=')
-        def left = fields[0]
-        def right = fields[1]
-        Map.of(left, right)
-    }
-
     /**
      * Implements the process {@code label} directive.
      *
