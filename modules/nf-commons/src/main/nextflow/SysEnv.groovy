@@ -36,14 +36,19 @@ class SysEnv {
 
     private static Holder holder = new Holder(System.getenv())
 
+    private static final List<Map<String,String>> history = new ArrayList<Map<String,String>>()
+
     static Map<String,String> get()  { return holder }
 
-    static void set(Map<String,String> env) {
+    static String get(String name) { return holder.get(name) }
+
+    static void push(Map<String,String> env) {
+        history.push(holder.getTarget())
         holder.setTarget(env)
     }
 
-    static void restore() {
-        holder.setTarget(System.getenv())
+    static void pop() {
+        holder.setTarget(history.pop())
     }
 
 }
