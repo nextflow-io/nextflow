@@ -598,11 +598,15 @@ class TaskConfigTest extends Specification {
 
         when:
         def process = new ProcessConfig(script)
-        process.resourceLabels( region: 'eu-west-1', organization: 'A' )
+        process.resourceLabels( region: 'eu-west-1', organization: 'A', user: 'this', team: 'that' )
 
         then:
-        process.get('resourceLabels') == [region: 'eu-west-1', organization: 'A']
-        process.createTaskConfig().getResourceLabels() == [region: 'eu-west-1', organization: 'A']
+        process.get('resourceLabels') == [region: 'eu-west-1', organization: 'A', user: 'this', team: 'that']
 
+        when:
+        def config = process.createTaskConfig()
+        then:
+        config.getResourceLabels() == [region: 'eu-west-1', organization: 'A', user: 'this', team: 'that']
+        config.getResourceLabelsAsString() == 'region=eu-west-1,organization=A,user=this,team=that'
     }
 }
