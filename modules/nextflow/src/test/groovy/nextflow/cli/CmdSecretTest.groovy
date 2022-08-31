@@ -49,11 +49,11 @@ class CmdSecretTest extends Specification {
     def setupSpec(){
         tempDir = Files.createTempDirectory('test').toAbsolutePath()
         secretFile = new File("$tempDir/store.json")
-        SysEnv.set([NXF_SECRETS_FILE: secretFile.toString()])
+        SysEnv.push([NXF_SECRETS_FILE: secretFile.toString()])
     }
 
     def cleanupSpec() {
-        SysEnv.restore()
+        SysEnv.pop()
         tempDir?.deleteDir()
     }
 
