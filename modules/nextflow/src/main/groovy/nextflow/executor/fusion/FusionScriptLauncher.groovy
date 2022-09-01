@@ -102,6 +102,10 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         return buckets
     }
 
+    String fusionWork() {
+        return toContainerMount(remoteWorkDir).toString()
+    }
+
     @Override
     protected Path targetWrapperFile() {
         return remoteWorkDir.resolve(TaskRun.CMD_RUN)

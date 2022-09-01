@@ -51,6 +51,7 @@ class FusionHelper {
         //
         final buckets = launcher.fusionBuckets().join(',')
         containerBuilder.addEnv("NXF_FUSION_BUCKETS=$buckets")
+        containerBuilder.addEnv("NXF_FUSION_WORK=${launcher.fusionWork()}")
 
         // add env variables
         for( String env : containerConfig.getEnvWhitelist())
