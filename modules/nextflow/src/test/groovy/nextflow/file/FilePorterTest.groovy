@@ -239,6 +239,57 @@ class FilePorterTest extends Specification {
         STAGE?.deleteDir()
     }
 
+    def 'should create transfer paths' () {
+        given:
+        def sess = Mock(Session) {
+            getConfig() >> [:]
+        }
+        def folder = Files.createTempDirectory('test')
+        def local = folder.resolve('hola.text'); local.text = 'Hola'
+        and:
+        def foreign = TestHelper.createInMemTempDir()
+
+        and:
+        def porter = new FilePorter(sess)
+        
+        when:
+        def transfer1 = porter.createFileTransfer(local, foreign)
+        then:
+        transfer1.source == local
+        transfer1.target.startsWith(foreign)
+
+        // nothing change then the target path will be the same
+        when:
+        def transfer2 = porter.createFileTransfer(local, foreign)
+        then:
+        transfer2.source == local
+        transfer2.target == transfer1.target
+
+        when:
+        // copy the source to the expected target
+        FileHelper.copyPath(local, transfer1.target)
+        and:
+        // the transfer path should not be modified
+        def transfer3 = porter.createFileTransfer(local, foreign)
+        then:
+        transfer3.source == local
+        transfer3.target == transfer1.target
+
+        when:
+        // modify the file in the expected target path
+        transfer1.target.text = 'Ciao moundo'
+        and:
+        // the transfer path should not be modified
+        def transfer4 = porter.createFileTransfer(local, foreign)
+        then:
+        transfer4.source == local
+        transfer4.target != transfer1.target  // <-- it's changed
+        and:
+        transfer4.target.startsWith(foreign)  // <-- it's still in the foreign path
+
+        cleanup:
+        folder?.deleteDir()
+    }
     def 'should stage a file' () {
         given:
         def folder = Files.createTempDirectory('test')
@@ -260,17 +311,6 @@ class FilePorterTest extends Specification {
         then:
         // file was not touched, since it was in the cache
         ts == Files.getLastModifiedTime(local1)
-
-        when:
-        // breaking the local, should force a new copy
-        sleep 1100
-        local1.text = 'foo'
-        and:
-        porter.stageForeignFile(foreign1, local1)
-        then:
-        // file was not touched, since it was in the cache
-        ts != Files.getLastModifiedTime(local1)
-        local1.text == foreign1.text
 
         cleanup:
         folder?.deleteDir()
@@ -314,23 +354,18 @@ class FilePorterTest extends Specification {
         def l2 = local1.resolve('file.22'); l2.text = 'file.22'
         def l3 = local1.resolve('sub/file.333'); l3.text = 'file.333'
         and:
-        def porter = new FilePorter.FileTransfer(foreign1, local1)
 
         when:
-        def equals = porter.checkPathIntegrity(foreign1, local1)
+        def equals = FilePorter.checkPathIntegrity(foreign1, local1)
         then:
         equals
-        and:
-        local1.exists()
 
         when:
         l3.text = 'foo' // <-- change the file size
         and:
-        equals = porter.checkPathIntegrity(foreign1, local1)
+        equals = FilePorter.checkPathIntegrity(foreign1, local1)
         then:
         !equals
-        and:
-        !local1.exists()
 
         cleanup:
         local1?.deleteDir()
