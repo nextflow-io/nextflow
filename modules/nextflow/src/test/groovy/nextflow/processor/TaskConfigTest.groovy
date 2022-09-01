@@ -590,4 +590,23 @@ class TaskConfigTest extends Specification {
         process.createTaskConfig().getSecret() == ['alpha', 'omega']
 
     }
+
+    def 'should configure resourceLabels options'()  {
+
+        given:
+        def script = Mock(BaseScript)
+
+        when:
+        def process = new ProcessConfig(script)
+        process.resourceLabels( region: 'eu-west-1', organization: 'A', user: 'this', team: 'that' )
+
+        then:
+        process.get('resourceLabels') == [region: 'eu-west-1', organization: 'A', user: 'this', team: 'that']
+
+        when:
+        def config = process.createTaskConfig()
+        then:
+        config.getResourceLabels() == [region: 'eu-west-1', organization: 'A', user: 'this', team: 'that']
+        config.getResourceLabelsAsString() == 'region=eu-west-1,organization=A,user=this,team=that'
+    }
 }

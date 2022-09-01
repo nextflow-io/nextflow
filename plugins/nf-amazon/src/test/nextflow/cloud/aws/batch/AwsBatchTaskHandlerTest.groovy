@@ -863,6 +863,39 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     }
 
+    def 'should create an aws submit request with labels'() {
+
+        given:
+        def VAR_FOO = new KeyValuePair().withName('FOO').withValue('1')
+        def VAR_BAR = new KeyValuePair().withName('BAR').withValue('2')
+        def task = Mock(TaskRun)
+        task.getName() >> 'batch-task'
+        task.getConfig() >> new TaskConfig(memory: '8GB', cpus: 4, maxRetries: 2, errorStrategy: 'retry', resourceLabels:[a:'b'])
+
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        1 * handler.getSubmitCommand() >> ['sh','-c','hello']
+        1 * handler.maxSpotAttempts() >> 5
+        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+        1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
+
+        req.getJobName() == 'batchtask'
+        req.getJobQueue() == 'queue1'
+        req.getJobDefinition() == 'job-def:1'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
+        req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
+        req.getContainerOverrides().getCommand() == ['sh', '-c','hello']
+        req.getRetryStrategy() == new RetryStrategy()
+                .withAttempts(5)
+                .withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnStatusReason('Host EC2*'), new EvaluateOnExit().withOnReason('*').withAction('EXIT') )
+        req.getTags() == [a:'b']
+    }
     def 'get fusion submit command' () {
         given:
         def handler = Spy(AwsBatchTaskHandler) {

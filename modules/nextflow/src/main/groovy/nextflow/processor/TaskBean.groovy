@@ -101,6 +101,8 @@ class TaskBean implements Serializable, Cloneable {
 
     List<String> secretNames
 
+    Map<String,String> resourceLabels
+
     @PackageScope
     TaskBean() {
         shell = BashWrapperBuilder.BASH
@@ -151,6 +153,7 @@ class TaskBean implements Serializable, Cloneable {
         this.stageInMode = task.config.getStageInMode()
         this.stageOutMode = task.config.getStageOutMode()
 
+        this.resourceLabels = task.config.getResourceLabels()
     }
 
     @Override

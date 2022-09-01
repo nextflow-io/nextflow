@@ -337,6 +337,24 @@ class ProcessConfigTest extends Specification {
         config.getLabels() == ['foo','bar']
     }
 
+    def 'should apply resource labels config' () {
+        given:
+        def config = new ProcessConfig(Mock(BaseScript))
+        expect:
+        config.getResourceLabels() == [:]
+
+        when:
+        config.resourceLabels([foo: 'one', bar: 'two'])
+        then:
+        config.getResourceLabels() == [foo: 'one', bar: 'two']
+
+        when:
+        config.resourceLabels([foo: 'new one', baz: 'three'])
+        then:
+        config.getResourceLabels() == [foo: 'new one', bar: 'two', baz: 'three']
+
+    }
+
     def 'should check a valid label' () {
 
         expect:
@@ -642,6 +660,7 @@ class ProcessConfigTest extends Specification {
         then:
         process.accelerator == [request: 1, limit:5]
     }
+
 
     def 'should get default config path' () {
         given:
