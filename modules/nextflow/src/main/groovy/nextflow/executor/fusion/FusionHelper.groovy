@@ -48,10 +48,11 @@ class FusionHelper {
                 .addMountWorkDir(false)
                 .params(containerConfig)
                 .params(privileged: true)
-        //
-        final buckets = launcher.fusionBuckets().join(',')
-        containerBuilder.addEnv("NXF_FUSION_BUCKETS=$buckets")
-        containerBuilder.addEnv("NXF_FUSION_WORK=${launcher.fusionWork()}")
+
+        // add fusion env vars
+        for(Map.Entry<String,String> it : launcher.fusionEnv()) {
+            containerBuilder.addEnv("$it.key=$it.value")
+        }
 
         // add env variables
         for( String env : containerConfig.getEnvWhitelist())
