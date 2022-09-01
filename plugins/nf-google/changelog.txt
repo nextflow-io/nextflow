@@ -1,5 +1,11 @@
 nf-google changelog
 ===================
+1.4.2 - 1 Sep 2022
+- Add support for resource labels for google batch (#3168) (#3170) [2d24917b] (#2853) [5d0b7c35]
+- Add support for project resources [c2ad6566]
+- Bump google-cloud-batch 0.2.2 [2f5716da]
+- Get rid of remote bin dir [6cfb51e7]
+
 1.4.1 - 11 Aug 2022
 - Change google batch disk directive to override boot disk size (#3097) [7e1c0686]
 - Fix Allow disabling scratch with Google Batch [e8e5c721]>

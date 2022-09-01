@@ -1,5 +1,10 @@
 nf-azure changelog
 ===================
+0.13.5 - 1 Sep 2022
+- Get rid of remote bin dir [6cfb51e7]
+- Fix typos in log messages [76a87c72]
+- Improve Az Batch err handling and testing [85d31e8d]
+
 0.13.4 - 1 Aug 2022
 - Add retry when Azure submit fails with OperationTimedOut [6a3f9742]
 
