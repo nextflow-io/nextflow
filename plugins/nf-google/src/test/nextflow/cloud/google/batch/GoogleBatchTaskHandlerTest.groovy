@@ -48,6 +48,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
                 getCpus() >> 2
+                getResourceLabels() >> [:]
             }
         }
 
@@ -121,6 +122,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getMachineType() >> MACHINE_TYPE
                 getMemory() >> MEM
                 getTime() >> TIMEOUT
+                getResourceLabels() >> [:]
             }
         }
 
