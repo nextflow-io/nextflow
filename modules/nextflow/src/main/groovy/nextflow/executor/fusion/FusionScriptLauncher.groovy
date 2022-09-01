@@ -107,9 +107,10 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         if( env==null ) {
             final buckets = fusionBuckets().collect(it->"$scheme://$it").join(',')
             final work = toContainerMount(remoteWorkDir).toString()
-            env = Map.of(
-                    'NXF_FUSION_WORK', work,
-                    'NXF_FUSION_BUCKETS', buckets )
+            final result = new LinkedHashMap(10)
+            result.NXF_FUSION_WORK = work
+            result.NXF_FUSION_BUCKETS = buckets
+            env = result
         }
         return env
     }
