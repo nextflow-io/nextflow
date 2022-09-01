@@ -28,6 +28,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Const
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.CacheHelper
@@ -46,7 +47,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
 
     final private static String ONLY_OWNER_PERMS = 'rw-------'
 
-    private Map<String,String> env = System.getenv()
+    private Map<String,String> env = SysEnv.get()
 
     private Map<String,Secret> secretsMap
 

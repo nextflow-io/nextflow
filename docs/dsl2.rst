@@ -725,4 +725,4 @@ DSL2 migration notes
 * Operator ``print`` and ``println`` have been deprecated by DSL2 syntax. Use :ref:`operator-view` instead.
 * Operator :ref:`operator-separate` has been deprecated by DSL2 syntax.
 * Operator :ref:`operator-spread` has been deprecated with DSL2 syntax. Replace it with :ref:`operator-combine`.
-* Operator route has been deprecated by DSL2 syntax.
+* Operator ``route`` has been deprecated by DSL2 syntax.
