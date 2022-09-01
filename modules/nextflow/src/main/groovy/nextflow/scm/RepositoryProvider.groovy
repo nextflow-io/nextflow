@@ -17,6 +17,7 @@
 
 package nextflow.scm
 
+
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -182,7 +183,9 @@ abstract class RepositoryProvider {
 
         InputStream content = connection.getInputStream()
         try {
-            return content.text
+            final result = content.text
+            log.trace "Git provider HTTP request: '$api' -- Response:\n${result}"
+            return result
         }
         finally{
             content?.close()
