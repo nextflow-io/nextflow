@@ -52,6 +52,18 @@ class FusionScriptLauncherTest extends Specification {
 
     }
 
+    def 'should get fusion env' () {
+        given:
+        def fusion = new FusionScriptLauncher(
+                scheme: 'http',
+                buckets: ['foo'] as Set,
+                remoteWorkDir: XPath.get('http://foo/work'))
+
+        expect:
+        fusion.fusionEnv() == [NXF_FUSION_BUCKETS: 'http://foo',
+                               NXF_FUSION_WORK: '/fusion/http/foo/work']
+    }
+
     def 'should get header script' () {
         given:
         def fusion = new FusionScriptLauncher(scheme: 's3')

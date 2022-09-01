@@ -368,7 +368,9 @@ class AwsBatchTaskHandlerTest extends Specification {
             getAwsOptions() >> Mock(AwsOptions)
             getTask() >> Mock(TaskRun) {getWorkDir() >> S3PathFactory.parse('s3://my-bucket/work/dir') }
             fusionEnabled() >> true
-            fusionLauncher() >> Mock(FusionScriptLauncher) { fusionBuckets() >> ['FOO','BAR'] }
+            fusionLauncher() >> Mock(FusionScriptLauncher) {
+                fusionEnv() >> [NXF_FUSION_BUCKETS: 's3://FOO,s3://BAR']
+            }
         }
 
         expect:

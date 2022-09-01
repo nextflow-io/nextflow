@@ -743,8 +743,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             vars << new KeyValuePair().withName('AWS_METADATA_SERVICE_NUM_ATTEMPTS').withValue(this.getAwsOptions().maxTransferAttempts as String)
         }
         if( fusionEnabled() ) {
-            final buckets = fusionLauncher().fusionBuckets().collect(it->"s3://$it").join(',')
-            vars << new KeyValuePair().withName('NXF_FUSION_BUCKETS').withValue(buckets)
+            for(Map.Entry<String,String> it : fusionLauncher().fusionEnv()) {
+                vars << new KeyValuePair().withName(it.key).withValue(it.value)
+            }
         }
         return vars
     }
