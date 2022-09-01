@@ -23,7 +23,6 @@ import java.nio.file.Path
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
-import nextflow.secret.SecretsLoader
 import org.junit.Rule
 import spock.lang.Shared
 import spock.lang.Specification
@@ -60,12 +59,6 @@ class CmdSecretTest extends Specification {
     def cleanupSpec() {
         SysEnv.pop()
         tempDir?.deleteDir()
-        def processEnvironmentClass = System.getenv().getClass()
-        def field = processEnvironmentClass.getDeclaredField('m')
-        field.accessible = true
-        def map = (Map<String, String>) field.get(System.getenv())
-        map.remove('NXF_SECRETS_FILE')
-        map.remove('NXF_ENABLE_SECRETS')
     }
 
     def 'should validate #COMMAND doesnt accept #ARGUMENTS' () {

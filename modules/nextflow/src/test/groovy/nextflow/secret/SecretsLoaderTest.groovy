@@ -17,8 +17,9 @@
 
 package nextflow.secret
 
-import spock.lang.Ignore
+import nextflow.SysEnv
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -26,33 +27,30 @@ import spock.lang.Specification
  */
 class SecretsLoaderTest extends Specification {
 
-    def cleanupSpec() {
-        def processEnvironmentClass = System.getenv().getClass()
-        def field = processEnvironmentClass.getDeclaredField('m')
-        field.accessible = true
-        def map = (Map<String, String>) field.get(System.getenv())
-        map.remove('NXF_ENABLE_SECRETS')
+    def "should be enabled by default" () {
+        given:
+        SysEnv.push([:])
+        expect:
+        SecretsLoader.isEnabled()
+        cleanup:
+        SysEnv.pop()
     }
 
+    @Unroll
     def "should check if NXF_ENABLE_SECRETS is #ENV"() {
         given:
-        def processEnvironmentClass = System.getenv().getClass()
-        def field = processEnvironmentClass.getDeclaredField('m')
-        field.accessible = true
-        def map = (Map<String, String>) field.get(System.getenv())
-        if( ENV )
-            map.put('NXF_ENABLE_SECRETS', "$ENV".toString())
-        else
-            map.remove('NXF_ENABLE_SECRETS')
+        SysEnv.push(NXF_ENABLE_SECRETS: "$ENV")
 
         when:
         boolean enabled = SecretsLoader.isEnabled()
         then:
         enabled == RESULT
 
+        cleanup:
+        SysEnv.pop()
+
         where:
         ENV     | RESULT
-        null    | true
         'true'  | true
         '1'     | false
         'valid' | false
