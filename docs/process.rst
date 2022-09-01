@@ -1304,8 +1304,8 @@ For example::
       """
     }
 
-.. warning:: In combination with the :ref:`container directive <process-container>`, the ``beforeScript`` will be 
-   executed outside the specified container. The ``beforeScript`` is always executed in the host environment.
+.. warning:: When combined with the :ref:`container directive <process-container>`, the ``beforeScript`` will be 
+   executed outside the specified container. In other words, the ``beforeScript`` is always executed in the host environment.
 
 
 .. _process-cache:
