@@ -1,6 +1,6 @@
 NEXTFLOW CHANGE-LOG
 ===================
-22.09.0-edge - 1 Sep 2022 
+22.09.1-edge - 1 Sep 2022 
 - Add support for Charliecloud v0.28 (#3116) [84f43a33] <Patrick Hüther>
 - Add Support for EC-encrypted keys for K8s client [fd759d09]
 - Add support for Bridge batch scheduler (#3106) [343c17e6] <Eric Bonnet>
@@ -23,6 +23,8 @@ NEXTFLOW CHANGE-LOG
 - Improve Az Batch err handling and testing [85d31e8d] <Paolo Di Tommaso>
 - Bump google-cloud-batch 0.2.2 
 - Bump spock 2.2 
+
+22.09.0-edge - [SKIPPED]
 
 22.08.2-edge - 16 Aug 2022
 - Fix queueSize setting is not honoured by AWS Batch executor (again) #3117 [1733bb2e]
