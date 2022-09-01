@@ -369,7 +369,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     protected Map<String, String> getResourceLabels(TaskRun task){
-        task.config?.getResourceLabels() ?: Collections.emptyMap() as Map<String,String>
+        task.config.getResourceLabels() ?: Collections.<String,String>emptyMap()
     }
 
     /**

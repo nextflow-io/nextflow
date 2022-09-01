@@ -236,12 +236,14 @@ class K8sTaskHandler extends TaskHandler {
 
 
     protected Map<String,String> getLabels(TaskRun task) {
-        def result = new LinkedHashMap<String,String>(10)
-        def labels = k8sConfig.getLabels()
+        final result = new LinkedHashMap<String,String>(10)
+        final labels = k8sConfig.getLabels()
         if( labels ) {
             result.putAll(labels)
         }
-        result.putAll(task.config?.getResourceLabels() ?: Collections.emptyMap() as Map<String,String>)
+        final resLabels = task.config.getResourceLabels()
+        if( resLabels )
+            resLabels.putAll(resLabels)
         result.app = 'nextflow'
         result.runName = getRunName()
         result.taskName = task.getName()
