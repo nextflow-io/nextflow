@@ -368,6 +368,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         resolveJobDefinition(container)
     }
 
+    protected Map<String, String> getResourceLabels(TaskRun task){
+        task.config.getResourceLabels() ?: Collections.<String,String>emptyMap()
+    }
+
     /**
      * Maps a docker container image to a Batch job definition name
      *
@@ -652,6 +656,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         result.setJobName(normalizeJobName(task.name))
         result.setJobQueue(getJobQueue(task))
         result.setJobDefinition(getJobDefinition(task))
+        result.setTags(getResourceLabels(task))
         // set the share identifier
         if( this.getAwsOptions().shareIdentifier )
             result.setShareIdentifier(this.getAwsOptions().shareIdentifier)
