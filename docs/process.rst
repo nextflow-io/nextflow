@@ -1283,8 +1283,7 @@ The ``afterScript`` directive allows you to execute a custom (Bash) snippet imme
 This may be useful to clean up your staging area.
 
 .. warning:: In combination with the :ref:`container directive <process-container>`, the ``afterScript`` will be 
-   executed outside the specified container. The ``afterScript`` is always executed in the environment running 
-   ``nextflow``.
+   executed outside the specified container. The ``afterScript`` is always executed in the host environment.
 
 
 .. _process-beforeScript:
@@ -1306,8 +1305,7 @@ For example::
     }
 
 .. warning:: In combination with the :ref:`container directive <process-container>`, the ``beforeScript`` will be 
-   executed outside the specified container. The ``beforeScript`` is always executed in the environment running 
-   ``nextflow``.
+   executed outside the specified container. The ``beforeScript`` is always executed in the host environment.
 
 
 .. _process-cache:
