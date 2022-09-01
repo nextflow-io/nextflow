@@ -39,6 +39,7 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     private String scheme
     private Path remoteWorkDir
     private Set<String> buckets = new HashSet<>()
+    private Map<String,String> env
 
     /* ONLY FOR TESTING - DO NOT USE */
     protected FusionScriptLauncher() {
@@ -102,8 +103,15 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         return buckets
     }
 
-    String fusionWork() {
-        return toContainerMount(remoteWorkDir).toString()
+    Map<String,String> fusionEnv() {
+        if( env==null ) {
+            final buckets = fusionBuckets().collect(it->"$scheme://$it").join(',')
+            final work = toContainerMount(remoteWorkDir).toString()
+            env = Map.of(
+                    'NXF_FUSION_WORK', work,
+                    'NXF_FUSION_BUCKETS', buckets )
+        }
+        return env
     }
 
     @Override
