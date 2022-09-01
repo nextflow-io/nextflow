@@ -103,7 +103,7 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     }
 
     String fusionWork() {
-        return "/fusion/${scheme}${remoteWorkDir}"
+        return toContainerMount(remoteWorkDir).toString()
     }
 
     @Override
