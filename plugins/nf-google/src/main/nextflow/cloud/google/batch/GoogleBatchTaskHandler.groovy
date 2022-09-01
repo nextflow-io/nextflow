@@ -201,6 +201,8 @@ class GoogleBatchTaskHandler extends TaskHandler {
                     .addNetworkInterfaces(networkInterface)
             )
 
+        allocationPolicy.putAllLabels(task.config.getResourceLabels())
+
         // create the job
         return Job.newBuilder()
             .addTaskGroups(
