@@ -114,6 +114,7 @@ class BitbucketServerRepositoryProviderTest extends Specification {
     @Requires( { System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN') } )
     def 'should list tags' () {
         given:
+        def token = System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN')
         def config = new ProviderConfig('bbs', [server:'http://slurm.seqera.io:7990', platform:'bitbucketsever']).setAuth(token)
         and:
         def repo = new BitbucketServerRepositoryProvider('scm/hello/hello', config)
