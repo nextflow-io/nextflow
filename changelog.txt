@@ -9,14 +9,16 @@ NEXTFLOW CHANGE-LOG
 - Add retry strategy to httpfs client [55f9c87b]
 - Add support for project resources [c2ad6566]
 - Add mamba build options [987a13cb] <Paolo Di Tommaso>
-- Improve secrets cmd (#3158) [115b2f3d] <Jorge Aguilera>
 - Fix Do not override tower endpoint in the config [41fb1ad0]
 - Fix Hyperqueue job names must be less than 40 chars #3151 [8e43670b]
 - Fix typo in ConfigBuilder.groovy (#3143) [659e6108] <Mike Lee>
 - Fix Resume for dynamic resolved containers  [13483ff2]
+- Improve fusion env handling [10f35b60]
+- Improve foreign file(s) cache detection logic [3a9352c8]
 - Rename ModuleBundle to ResourcesBundle [0e51dc0f]
 - Use quiet output mode for hyperqueue executor (#3103) [70a91fdf] <Ben Sherman>
 - Wave improve conda settings [6f087fec]
+- Improve secrets cmd (#3158) [115b2f3d] <Jorge Aguilera>
 - Improve Wave resolution strategy [2eb700c6]
 - Improve Az Batch err handling and testing [85d31e8d] <Paolo Di Tommaso>
 - Bump google-cloud-batch 0.2.2 
