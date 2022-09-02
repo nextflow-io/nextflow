@@ -22,6 +22,8 @@ import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.exception.NodeTerminationException
+import nextflow.executor.fusion.FusionScriptLauncher
+import nextflow.file.http.XPath
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
@@ -32,6 +34,7 @@ import nextflow.k8s.model.PodMountSecret
 import nextflow.k8s.model.PodOptions
 import nextflow.k8s.model.PodSpecBuilder
 import nextflow.k8s.model.PodVolumeClaim
+import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -52,15 +55,20 @@ class K8sTaskHandlerTest extends Specification {
         given:
         def WORK_DIR = Paths.get('/some/work/dir')
         def config = Mock(TaskConfig)
-        def task = Mock(TaskRun)
+        def task = Mock(TaskRun) {
+            getWorkDir() >> WORK_DIR
+            getConfig() >> config
+            getContainerConfig() >> [:]
+            toTaskBean() >> new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        }
         def client = Mock(K8sClient)
-        def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(new K8sTaskHandler(builder:builder, client: client))
+        def handler = Spy(new K8sTaskHandler(client: client))
         Map result
 
         when:
         result = handler.newSubmitRequest(task)
         then:
+        _ * handler.fusionEnabled() >> false
         1 * handler.entrypointOverride() >> false
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
@@ -68,8 +76,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getAnnotations() >> [:]
         1 * handler.getContainerMounts() >> []
         1 * task.getContainer() >> 'debian:latest'
-        1 * task.getWorkDir() >> WORK_DIR
-        1 * task.getConfig() >> config
         1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
@@ -92,17 +98,16 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
+        _ * handler.fusionEnabled() >> false
         1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-foo'
         1 * handler.getLabels(task) >> [sessionId:'xxx']
         1 * handler.getAnnotations() >>  [evict: 'false']
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getContainerMounts() >> []
-        1 * builder.fixOwnership() >> true
         1 * handler.getOwner() >> '501:502'
         1 * task.getContainer() >> 'debian:latest'
-        1 * task.getWorkDir() >> WORK_DIR
-        1 * task.getConfig() >> config
+        1 * task.getContainerConfig() >> [fixOwnership: true]
         1 * config.getCpus() >> 1
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
@@ -122,10 +127,10 @@ class K8sTaskHandlerTest extends Specification {
                     ]
         ]
 
-
         when:
         result = handler.newSubmitRequest(task)
         then:
+        _ * handler.fusionEnabled() >> false
         1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-abc'
         1 * handler.getLabels(task) >> [:]
@@ -133,8 +138,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getContainerMounts() >> []
         1 * task.getContainer() >> 'user/alpine:1.0'
-        1 * task.getWorkDir() >> WORK_DIR
-        1 * task.getConfig() >> config
         1 * config.getCpus() >> 4
         1 * config.getMemory() >> MemoryUnit.of('16GB')
         1 * client.getConfig() >> new ClientConfig(namespace: 'namespace-x')
@@ -159,15 +162,20 @@ class K8sTaskHandlerTest extends Specification {
         given:
         def WORK_DIR = Paths.get('/some/work/dir')
         def config = Mock(TaskConfig)
-        def task = Mock(TaskRun)
+        def task = Mock(TaskRun) {
+            getWorkDir() >> WORK_DIR
+            getConfig() >> config
+            getContainerConfig() >> [:]
+            toTaskBean() >> new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        }
         def client = Mock(K8sClient)
-        def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(new K8sTaskHandler(builder: builder, client:client))
+        def handler = Spy(new K8sTaskHandler(client: client))
         Map result
 
         when:
         result = handler.newSubmitRequest(task)
         then:
+        _ * handler.fusionEnabled() >> false
         1 * handler.entrypointOverride() >> true
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
@@ -175,8 +183,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getAnnotations() >> [fooz: 'barz', ciao: 'mondo']
         1 * handler.getContainerMounts() >> []
         1 * task.getContainer() >> 'debian:latest'
-        1 * task.getWorkDir() >> WORK_DIR
-        1 * task.getConfig() >> config
         1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
@@ -201,17 +207,16 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
+        _ * handler.fusionEnabled() >> false
         1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-foo'
         1 * handler.getLabels(task) >> [sessionId:'xxx']
         1 * handler.getAnnotations() >>  [evict: 'false']
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getContainerMounts() >> []
-        1 * builder.fixOwnership() >> true
         1 * handler.getOwner() >> '501:502'
         1 * task.getContainer() >> 'debian:latest'
-        1 * task.getWorkDir() >> WORK_DIR
-        1 * task.getConfig() >> config
+        1 * task.getContainerConfig() >> [fixOwnership: true]
         1 * config.getCpus() >> 1
         1 * config.getMemory() >> null
         1 * client.getConfig() >> new ClientConfig()
@@ -231,10 +236,10 @@ class K8sTaskHandlerTest extends Specification {
                     ]
         ]
 
-
         when:
         result = handler.newSubmitRequest(task)
         then:
+        _ * handler.fusionEnabled() >> false
         1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-abc'
         1 * handler.getLabels(task) >> [:]
@@ -242,8 +247,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getContainerMounts() >> []
         1 * task.getContainer() >> 'user/alpine:1.0'
-        1 * task.getWorkDir() >> WORK_DIR
-        1 * task.getConfig() >> config
         1 * config.getCpus() >> 4
         1 * config.getMemory() >> MemoryUnit.of('16GB')
         1 * client.getConfig() >> new ClientConfig(namespace: 'namespace-x')
@@ -268,16 +271,23 @@ class K8sTaskHandlerTest extends Specification {
 
         given:
         def WORK_DIR = Paths.get('/some/work/dir')
-        def task = Mock(TaskRun)
-        def client = Mock(K8sClient)
-        def builder = Mock(K8sWrapperBuilder)
+        def task = Mock(TaskRun) {
+            getWorkDir() >> WORK_DIR
+            getConfig() >> new TaskConfig()
+            getContainerConfig() >> [:]
+            toTaskBean() >> new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        }
         def config = Mock(ClientConfig)
-        def handler = Spy(new K8sTaskHandler(builder: builder, client: client))
+        def client = Mock(K8sClient) {
+            getConfig() >> config
+        }
+        def handler = Spy(new K8sTaskHandler(client: client))
         Map result
 
         when:
         result = handler.newSubmitRequest(task)
         then:
+        _ * handler.fusionEnabled() >> false
         1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getPodOptions() >> new PodOptions()
@@ -285,9 +295,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getAnnotations() >> [:]
         1 * handler.getContainerMounts() >> []
         1 * task.getContainer() >> 'debian:latest'
-        1 * task.getWorkDir() >> WORK_DIR
-        1 * task.getConfig() >> new TaskConfig()
-        1 * client.getConfig() >> config
         1 * config.getNamespace() >> 'just-a-namespace'
         1 * config.getServiceAccount() >> 'pedantic-kallisto'
 
@@ -313,20 +320,25 @@ class K8sTaskHandlerTest extends Specification {
 
         given:
         def WORK_DIR = Paths.get('/some/work/dir')
-        def task = Mock(TaskRun)
-        def client = Mock(K8sClient)
-        def builder = Mock(K8sWrapperBuilder)
-        def config = Mock(TaskConfig)
-        def handler = Spy(new K8sTaskHandler(builder:builder, client:client))
-        def podOptions = Mock(PodOptions)
-        and:
-        podOptions.automountServiceAccountToken >> true
+        def task = Mock(TaskRun) {
+            getWorkDir() >> WORK_DIR
+            getConfig() >> Mock(TaskConfig)
+            getContainerConfig() >> [:]
+            toTaskBean() >> new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        }
+        def client = Mock(K8sClient) {
+            getConfig() >> new ClientConfig()
+        }
+        def handler = Spy(new K8sTaskHandler(client: client))
+        def podOptions = Mock(PodOptions) {
+            automountServiceAccountToken >> true
+        }
         Map result
 
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * client.getConfig() >> new ClientConfig()
+        _ * handler.fusionEnabled() >> false
         1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
@@ -334,8 +346,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getPodOptions() >> podOptions
         1 * handler.getContainerMounts() >> []
         1 * task.getContainer() >> 'debian:latest'
-        1 * task.getWorkDir() >> WORK_DIR
-        1 * task.getConfig() >> config
         2 * podOptions.getEnvVars() >> [ PodEnv.value('FOO','bar') ]
         2 * podOptions.getMountSecrets() >> [ new PodMountSecret('my-secret/key-z', '/data/secret.txt') ]
         2 * podOptions.getMountConfigMaps() >> [ new PodMountConfig('my-data/key-x', '/etc/file.txt') ]
@@ -372,20 +382,27 @@ class K8sTaskHandlerTest extends Specification {
         given:
         def WORK_DIR = Paths.get('/some/work/dir')
         def config = Mock(TaskConfig)
-        def task = Mock(TaskRun)
-        def client = Mock(K8sClient)
-        def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(new K8sTaskHandler(builder:builder, client:client))
-        and:
+        def task = Mock(TaskRun) {
+            getWorkDir() >> WORK_DIR
+            getConfig() >> config
+            getContainerConfig() >> [:]
+            toTaskBean() >> new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        }
+        def client = Mock(K8sClient) {
+            getConfig() >> new ClientConfig()
+        }
+        def handler = Spy(new K8sTaskHandler(client: client))
+        def podOptions = Mock(PodOptions) {
+            automountServiceAccountToken >> true
+        }
         Map result
 
-        def podOptions = Mock(PodOptions)
         def CLAIMS = [ new PodVolumeClaim('first','/work'), new PodVolumeClaim('second','/data') ]
-        podOptions.automountServiceAccountToken >> true
 
         when:
         result = handler.newSubmitRequest(task)
         then:
+        _ * handler.fusionEnabled() >> false
         1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getContainerMounts() >> []
@@ -393,11 +410,8 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getAnnotations() >> [:]
         1 * handler.getPodOptions() >> podOptions
         1 * task.getContainer() >> 'debian:latest'
-        1 * task.getWorkDir() >> WORK_DIR
-        1 * task.getConfig() >> config
         1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
-        1 * client.getConfig() >> new ClientConfig()
         2 * podOptions.getVolumeClaims() >> CLAIMS
 
         result == [
@@ -428,6 +442,7 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
+        _ * handler.fusionEnabled() >> false
         1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getContainerMounts() >> ['/tmp', '/data']
@@ -435,11 +450,8 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getAnnotations() >> [:]
         1 * handler.getPodOptions() >> new PodOptions()
         1 * task.getContainer() >> 'debian:latest'
-        1 * task.getWorkDir() >> WORK_DIR
-        1 * task.getConfig() >> config
         1 * config.getCpus() >> 0
         1 * config.getMemory() >> null
-        1 * client.getConfig() >> new ClientConfig()
 
         result == [
             apiVersion: 'v1',
@@ -473,7 +485,7 @@ class K8sTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(new K8sTaskHandler(client: client, task:task))
+        def handler = Spy(new K8sTaskHandler(client: client, task: task))
 
         def POD_NAME = 'new-pod-id'
         def REQUEST =  [foo: 'bar']
@@ -502,25 +514,28 @@ class K8sTaskHandlerTest extends Specification {
         thrown(K8sResponseException)
     }
 
-    def 'should submit a job' () {
+    def 'should create a job request' () {
         given:
         def WORK_DIR = Paths.get('/some/work/dir')
-        def task = Mock(TaskRun)
-        def client = Mock(K8sClient)
-        def builder = Mock(K8sWrapperBuilder)
-        def config = Mock(TaskConfig)
-        def executor = Mock(K8sExecutor)
-        def k8sConfig = Mock(K8sConfig)
-        def handler = Spy(new K8sTaskHandler(builder: builder, client: client, executor: executor))
-        def podOptions = Mock(PodOptions)
-        and:
-        podOptions.automountServiceAccountToken >> true
+        def task = Mock(TaskRun) {
+            getWorkDir() >> WORK_DIR
+            getConfig() >> Mock(TaskConfig)
+            getContainerConfig() >> [:]
+            toTaskBean() >> new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        }
+        def client = Mock(K8sClient) {
+            getConfig() >> new ClientConfig()
+        }
+        def handler = Spy(new K8sTaskHandler(client: client))
+        def podOptions = Mock(PodOptions) {
+            automountServiceAccountToken >> true
+        }
         Map result
 
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * client.getConfig() >> new ClientConfig()
+        _ * handler.fusionEnabled() >> false
         1 * handler.useJobResource() >> true
         1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
@@ -529,8 +544,6 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getContainerMounts() >> []
         1 * handler.getPodOptions() >> podOptions
         1 * task.getContainer() >> 'debian:latest'
-        1 * task.getWorkDir() >> WORK_DIR
-        1 * task.getConfig() >> config
 
         result == [
             apiVersion: 'batch/v1', 
@@ -959,5 +972,22 @@ class K8sTaskHandlerTest extends Specification {
         handler.completeTimeMillis == 20
     }
 
+    def 'get fusion submit command' () {
+        given:
+        def WORK_DIR = XPath.get('http://some/work/dir')
+        def task = Mock(TaskRun) {
+            getWorkDir() >> WORK_DIR
+            toTaskBean() >> new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        }
+        def handler = Spy(K8sTaskHandler)
+
+        when:
+        def builder = handler.createBashWrapper(task)
+        def result = handler.getSubmitCommand(task)
+        then:
+        _ * handler.fusionEnabled() >> true
+        and:
+        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; cp .command.log /fusion/http/some/work/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/http/some/work/dir/.command.run 2>&1 | tee .command.log'
+    }
 
 }

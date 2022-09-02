@@ -47,18 +47,16 @@ trait FusionAwareTask {
         return fusionEnabled
     }
 
-    FusionScriptLauncher fusionLauncher() {
+    FusionScriptLauncher fusionLauncher(TaskRun task) {
         if( fusionLauncher==null ) {
-            fusionLauncher = fusionEnabled()
-                    ? new FusionScriptLauncher(task.toTaskBean(), task.workDir.scheme)
-                    : null
+            fusionLauncher = new FusionScriptLauncher(task.toTaskBean(), task.workDir.scheme)
         }
         return fusionLauncher
     }
 
-    List<String> fusionSubmitCli() {
-        final logFile = fusionLauncher().toContainerMount(task.workDir.resolve(TaskRun.CMD_LOG))
-        final runFile = fusionLauncher().toContainerMount(task.workDir.resolve(TaskRun.CMD_RUN))
+    List<String> fusionSubmitCli(TaskRun task) {
+        final logFile = fusionLauncher(task).toContainerMount(task.workDir.resolve(TaskRun.CMD_LOG))
+        final runFile = fusionLauncher(task).toContainerMount(task.workDir.resolve(TaskRun.CMD_RUN))
         final cmd = "trap \"{ ret=\$?; cp ${TaskRun.CMD_LOG} ${logFile}||true; exit \$ret; }\" EXIT; bash ${runFile} 2>&1 | tee ${TaskRun.CMD_LOG}"
         return ['bash','-o','pipefail','-c', cmd.toString() ]
     }

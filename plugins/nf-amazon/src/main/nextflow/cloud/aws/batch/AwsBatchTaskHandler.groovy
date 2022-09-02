@@ -324,7 +324,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     protected BashWrapperBuilder createTaskWrapper() {
         return fusionEnabled()
-                ? fusionLauncher()
+                ? fusionLauncher(task)
                 : new AwsBatchScriptLauncher(task.toTaskBean(), getAwsOptions())
     }
 
@@ -633,7 +633,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     protected List<String> getSubmitCommand() {
         // final launcher command
         return fusionEnabled()
-                ? fusionSubmitCli()
+                ? fusionSubmitCli(task)
                 : classicSubmitCli()
     }
 
@@ -743,7 +743,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             vars << new KeyValuePair().withName('AWS_METADATA_SERVICE_NUM_ATTEMPTS').withValue(this.getAwsOptions().maxTransferAttempts as String)
         }
         if( fusionEnabled() ) {
-            for(Map.Entry<String,String> it : fusionLauncher().fusionEnv()) {
+            for(Map.Entry<String,String> it : fusionLauncher(task).fusionEnv()) {
                 vars << new KeyValuePair().withName(it.key).withValue(it.value)
             }
         }

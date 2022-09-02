@@ -252,9 +252,6 @@ class K8sConfig implements Map<String,Object> {
         if( !findVolumeClaimByPath(getLaunchDir()) )
             throw new AbortOperationException("Kubernetes `launchDir` must be a path mounted as a persistent volume -- launchDir=$launchDir; volumes=${getClaimPaths().join(', ')}")
 
-        if( !findVolumeClaimByPath(getWorkDir()) )
-            throw new AbortOperationException("Kubernetes `workDir` must be a path mounted as a persistent volume -- workDir=$workDir; volumes=${getClaimPaths().join(', ')}")
-
         if( !findVolumeClaimByPath(getProjectDir()) )
             throw new AbortOperationException("Kubernetes `projectDir` must be a path mounted as a persistent volume -- projectDir=$projectDir; volumes=${getClaimPaths().join(', ')}")
 
