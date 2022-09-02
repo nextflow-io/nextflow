@@ -1,0 +1,21 @@
+
+/* navbar -- Seqera logo */
+
+.nav-footer-logo {
+    width: 300px;
+    margin-top: 2rem;
+    border-top: 1px solid #666666;
+    text-align: center;
+    font-size: 80%;
+}
+
+.nav-footer-logo a {
+    display: block;
+    padding: 2rem 0 0.5rem;
+    color: #666666;
+}
+
+.nav-footer-logo a img {
+    margin-top: 0.5rem;
+    width: 60%;
+}
