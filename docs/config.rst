@@ -355,11 +355,11 @@ perTaskReserve        Specifies Platform LSF *per-task* memory reserve mode. See
 jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }``. Make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
 cpus                  The maximum number of CPUs made available by the underlying system. Used only by the ``local`` executor.
 memory                The maximum amount of memory made available by the underlying system. Used only by the ``local`` executor.
-retry.delay           (Version ``22.03.0-edge`` or later) Delay when retrying failed job submissions (default: ``500ms``). Used only by grid executors.
-retry.maxDelay        (Version ``22.03.0-edge`` or later) Max delay when retrying failed job submissions (default: ``30s``). Used only by grid executors.
-retry.jitter          (Version ``22.03.0-edge`` or later) Jitter value when retrying failed job submissions (default: ``0.25``). Used only by grid executors.
-retry.maxAttempts     (Version ``22.03.0-edge`` or later) Max attempts when retrying failed job submissions (default: ``3``). Used only by grid executors.
-retry.reason          (Version ``22.03.0-edge`` or later) Regex pattern that when verified cause a failed submit operation to be re-tried (default: ``Socket timed out``). Used only by grid executors.
+retry.delay           Delay when retrying failed job submissions (default: ``500ms``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
+retry.maxDelay        Max delay when retrying failed job submissions (default: ``30s``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
+retry.jitter          Jitter value when retrying failed job submissions (default: ``0.25``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
+retry.maxAttempts     Max attempts when retrying failed job submissions (default: ``3``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
+retry.reason          Regex pattern that when verified cause a failed submit operation to be re-tried (default: ``Socket timed out``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
 ===================== =====================
 
 The executor settings can be defined as shown below::
