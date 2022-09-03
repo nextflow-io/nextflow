@@ -742,6 +742,6 @@ class FunctionalTests extends Specification {
         runner.setScript(script).execute()
         then:
         def abort = thrown(AbortRunException)
-        runner.session.fault.report ==~ /(?s).*-- Check script '(.*?)' at line: 10.*/
+        runner.session.fault.report ==~ /(?s).*No signature of method: main.thisMethodExpectsOnlyOneString().*/
     }
 }

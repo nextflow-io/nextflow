@@ -38,6 +38,7 @@ import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import org.codehaus.groovy.control.customizers.ImportCustomizer
+import org.codehaus.groovy.control.messages.WarningMessage
 /**
  * Parse a nextflow script class applied the required AST transformations
  *
@@ -125,7 +126,8 @@ class ScriptParser {
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowXform))
         config.addCompilationCustomizers( new ASTTransformationCustomizer(OpXform))
-
+        config.debug = true
+        config.warningLevel = WarningMessage.POSSIBLE_ERRORS
         if( session && session.classesDir )
             config.setTargetDirectory(session.classesDir.toFile())
 
@@ -189,6 +191,30 @@ class ScriptParser {
         }
     }
 
+    ScriptParser parse(Path scriptFile, GroovyShell interpreter) {
+        try {
+            final parsed = interpreter.parse(scriptFile.toUri())
+            if( parsed !instanceof BaseScript ){
+                throw new CompilationFailedException(0, null)
+            }
+            script = (BaseScript)parsed
+            final meta = ScriptMeta.get(script)
+            meta.setScriptPath(scriptPath)
+            meta.setModule(module)
+            meta.validate()
+            return this
+        }
+        catch (CompilationFailedException e) {
+            String type = module ? "Module" : "Script"
+            String header = "$type compilation error\n- file : ${FilesEx.toUriString(scriptPath)}"
+            String msg = e.message ?: header
+            msg = msg != 'startup failed' ? msg : header
+            msg = msg.replaceAll(/startup failed:\n/,'')
+            msg = msg.replaceAll(~/$scriptFile.name(: \d+:\b*)?/, header+'\n- cause:')
+            throw new ScriptCompilationException(msg, e)
+        }
+    }
+
 
     ScriptParser parse(String scriptText) {
         def interpreter = getInterpreter()
@@ -197,13 +223,15 @@ class ScriptParser {
 
     ScriptParser parse(Path scriptPath) {
         this.scriptPath = scriptPath
-        parse(scriptPath.text)
+        def interpreter = getInterpreter()
+        parse(scriptPath, interpreter)
     }
 
     ScriptParser runScript(Path scriptPath) {
         this.scriptPath = scriptPath
         try {
-            runScript(scriptPath.text)
+            parse(scriptPath)
+            runScript()
         }
         catch (IOException e) {
             throw new ScriptCompilationException("Unable to read script: '$scriptPath' -- cause: $e.message", e)
