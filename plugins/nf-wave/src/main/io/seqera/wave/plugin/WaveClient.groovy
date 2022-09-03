@@ -146,12 +146,17 @@ class WaveClient {
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build()
 
-        final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
-        if( resp.statusCode()==200 ) {
-            log.debug "Wave response: ${resp.body()}"
-            return jsonToSubmitResponse(resp.body())
+        try {
+            final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
+            if( resp.statusCode()==200 ) {
+                log.debug "Wave response: ${resp.body()}"
+                return jsonToSubmitResponse(resp.body())
+            }
+            throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
         }
-        throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
+        catch (ConnectException e) {
+            throw new IllegalStateException("Unable to connect Wave service: $endpoint")
+        }
     }
 
     private SubmitContainerTokenResponse jsonToSubmitResponse(String body) {
