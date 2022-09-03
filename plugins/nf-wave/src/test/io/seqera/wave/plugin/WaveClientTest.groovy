@@ -178,6 +178,23 @@ class WaveClientTest extends Specification {
         !req.containerConfig.layers
     }
 
+    def 'should create request object with build and cache repos' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[build:[repo:'some/repo',cache:'some/cache']]]}
+        def DOCKERFILE =  'FROM foo:latest\nRUN something'
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromDockerfile(DOCKERFILE))
+        then:
+        req.buildRepository == 'some/repo'
+        req.cacheRepository == 'some/cache'
+        !req.containerImage
+        new String(req.containerFile.decodeBase64()) == DOCKERFILE
+        !req.condaFile
+        !req.containerConfig.layers
+    }
+
     def 'should create request object with conda file' () {
         given:
         def folder = Files.createTempDirectory('test')

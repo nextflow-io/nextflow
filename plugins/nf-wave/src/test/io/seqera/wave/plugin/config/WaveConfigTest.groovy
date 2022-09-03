@@ -82,7 +82,7 @@ class WaveConfigTest extends Specification {
 
     }
 
-    def 'should get mamba config' () {
+    def 'should get conda config' () {
         when:
         def opts = new WaveConfig([:])
         then:
@@ -95,6 +95,20 @@ class WaveConfigTest extends Specification {
         opts.condaOpts().baseImage == 'mambaorg/foo:1'
         opts.condaOpts().commands == ['USER hola']
         
+    }
+
+    def 'should get build and cache repos' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.buildRepository() == null
+        opts.cacheRepository() == null
+
+        when:
+        opts = new WaveConfig([build:[repo:'some/repo',cache:'some/cache']])
+        then:
+        opts.buildRepository() == 'some/repo'
+        opts.cacheRepository() == 'some/cache'
     }
 
     def 'should set strategy' () {
