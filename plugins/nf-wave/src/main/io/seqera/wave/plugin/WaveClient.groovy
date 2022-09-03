@@ -116,7 +116,9 @@ class WaveClient {
                 containerImage: assets.containerImage,
                 containerConfig: containerConfig,
                 containerFile: assets.dockerFileEncoded(),
-                condaFile: assets.condaFileEncoded()
+                condaFile: assets.condaFileEncoded(),
+                buildRepository: config().buildRepository(),
+                cacheRepository: config.cacheRepository()
         )
     }
 
