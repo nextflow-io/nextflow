@@ -56,4 +56,14 @@ class SubmitContainerTokenRequest {
      */
     ContainerConfig containerConfig
 
+    /**
+     * Conda recipe file used to build the container
+     */
+    String condaFile
+
+    String containerPlatform
+
+    String buildRepository
+
+    String cacheRepository
 }

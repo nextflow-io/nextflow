@@ -196,7 +196,7 @@ class TraceFileObserver implements TraceObserver {
      */
     @Override
     void onFlowCreate(Session session) {
-        log.debug "Flow starting -- trace file: $tracePath"
+        log.debug "Workflow started -- trace file: $tracePath"
 
         // make sure parent path exists
         def parent = tracePath.getParent()
@@ -222,7 +222,8 @@ class TraceFileObserver implements TraceObserver {
      */
     @Override
     void onFlowComplete() {
-        log.debug "Flow completing -- flushing trace file"
+        log.debug "Workflow completed -- saving trace file"
+
         // wait for termination and flush the agent content
         writer.await()
 
@@ -265,7 +266,7 @@ class TraceFileObserver implements TraceObserver {
     void onProcessComplete(TaskHandler handler, TraceRecord trace) {
         final taskId = handler.task.id
         if( !trace ) {
-            log.debug "Profile warn: Unable to find record for task_run with id: ${taskId}"
+            log.debug "[WARN] Unable to find record for task run with id: ${taskId}"
             return
         }
 

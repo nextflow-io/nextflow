@@ -23,6 +23,7 @@ import java.nio.file.Paths
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
 import org.pf4j.DefaultPluginManager
@@ -41,7 +42,7 @@ class PluginsFacade implements PluginStateListener {
 
     private static final String DEV_MODE = 'dev'
     private static final String PROD_MODE = 'prod'
-    private Map<String,String> env = new HashMap<>(System.getenv())
+    private Map<String,String> env = SysEnv.get()
 
     private String mode
     private Path root
@@ -161,11 +162,6 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
-    protected void init0(Path root) {
-        this.manager = createManager(root)
-        this.updater = createUpdater(root, manager)
-    }
-
     protected CustomPluginManager createManager(Path root) {
         final result = mode!=DEV_MODE ? new LocalPluginManager(root) : new DevPluginManager(root)
         result.addPluginStateListener(this)
@@ -197,7 +193,27 @@ class PluginsFacade implements PluginStateListener {
         // make sure plugins dir exists
         if( mode!=DEV_MODE && !FilesEx.mkdirs(root) )
             throw new IOException("Unable to create plugins dir: $root")
-        init0(root)
+
+        this.manager = createManager(root)
+        this.updater = createUpdater(root, manager)
+        manager.loadPlugins()
+        if( embedded ) {
+            manager.startPlugins()
+            this.embedded = embedded
+        }
+    }
+
+    void init(Path root, String mode, CustomPluginManager pluginManager) {
+        if( manager )
+            throw new IllegalArgumentException("Plugin system was already setup")
+        this.root = root
+        this.mode = mode
+        // setup plugin manager
+        this.manager = pluginManager
+        this.manager.addPluginStateListener(this)
+        // setup the updater
+        this.updater = createUpdater(root, manager)
+        // load plugins
         manager.loadPlugins()
         if( embedded ) {
             manager.startPlugins()
@@ -300,7 +316,7 @@ class PluginsFacade implements PluginStateListener {
             return
         }
 
-        start( defaultPlugins.getPlugin(pluginId) )
+        start(PluginSpec.parse(pluginId, defaultPlugins))
     }
 
     void start(PluginSpec plugin) {

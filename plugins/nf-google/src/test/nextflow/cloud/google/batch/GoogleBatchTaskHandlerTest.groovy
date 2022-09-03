@@ -48,6 +48,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
                 getCpus() >> 2
+                getResourceLabels() >> [:]
             }
         }
 
@@ -72,7 +73,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
         runnable.getContainer().getVolumesList() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
         and:
         instancePolicy.getAcceleratorsCount() == 0
-        instancePolicy.getDisksCount() == 0
         instancePolicy.getMachineType() == ''
         instancePolicy.getMinCpuPlatform() == ''
         instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
@@ -122,6 +122,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getMachineType() >> MACHINE_TYPE
                 getMemory() >> MEM
                 getTime() >> TIMEOUT
+                getResourceLabels() >> [:]
             }
         }
 
@@ -136,7 +137,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def instancePolicy = req.getAllocationPolicy().getInstances(0).getPolicy()
         def networkInterface = req.getAllocationPolicy().getNetwork().getNetworkInterfaces(0)
         and:
-        taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == BOOT_DISK.toMega()
+        taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == DISK.toMega()
         taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == CPUS * 1_000
         taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == MEM.toMega()
         taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == TIMEOUT.seconds
@@ -148,7 +149,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         instancePolicy.getAccelerators(0).getCount() == 1
         instancePolicy.getAccelerators(0).getType() == ACCELERATOR.type
-        instancePolicy.getDisks(0).getNewDisk().getSizeGb() == DISK.toGiga()
         instancePolicy.getMachineType() == MACHINE_TYPE
         instancePolicy.getMinCpuPlatform() == CPU_PLATFORM
         instancePolicy.getProvisioningModel().toString() == 'SPOT'
@@ -159,4 +159,34 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
     }
+
+    def 'should create submit request with resource labels spec' () {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        def exec = Mock(GoogleBatchExecutor) {
+            getConfig() >> Mock(BatchConfig)
+        }
+        and:
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> 2
+                getResourceLabels() >> [ foo: 'bar']
+            }
+        }
+
+        and:
+        def handler = new GoogleBatchTaskHandler(task, exec)
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        req.getAllocationPolicy().getLabelsMap() == [foo:'bar']
+    }
+
 }

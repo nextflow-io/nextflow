@@ -87,7 +87,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'stdin',
             'stdout',
             'stageInMode',
-            'stageOutMode'
+            'stageOutMode',
+            'resourceLabels'
     ]
 
     /**
@@ -408,7 +409,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
         // -- check for conflicting settings
         if( this.scratch && this.stageInMode == 'rellink' ) {
-            log.warn("Directives `scratch` and `stageInMode=rellink` conflict each other -- Enforcing default stageInMode for process `$simpleName`")
+            log.warn("Directives `scratch` and `stageInMode=rellink` conflict with each other -- Enforcing default stageInMode for process `$simpleName`")
             this.remove('stageInMode')
         }
     }
@@ -685,6 +686,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      */
     ProcessConfig label(String lbl) {
         if( !lbl ) return this
+
         // -- check that label has a valid syntax
         if( !isValidLabel(lbl) )
             throw new IllegalConfigException("Not a valid process label: $lbl -- Label must consist of alphanumeric characters or '_', must start with an alphabetic character and must end with an alphanumeric character")
@@ -700,6 +702,36 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         if( !allLabels.contains(lbl) )
             allLabels.add(lbl)
         return this
+    }
+
+    /**
+     * Implements the process {@code label} directive.
+     *
+     * Note this directive  can be specified (invoked) more than one time in
+     * the process context.
+     *
+     * @param map
+     *      The map to be attached to the process.
+     * @return
+     *      The {@link ProcessConfig} instance itself.
+     */
+    ProcessConfig resourceLabels(Map<String, Object> map) {
+        if( !map )
+            return this
+
+        // -- get the current sticker, it must be a Map
+        def allLabels = (Map)configProperties.get('resourceLabels')
+        if( !allLabels ) {
+            allLabels = [:]
+        }
+        // -- merge duplicates
+        allLabels += map
+        configProperties.put('resourceLabels', allLabels)
+        return this
+    }
+
+    Map<String,Object> getResourceLabels() {
+        (configProperties.get('resourceLabels') ?: Collections.emptyMap()) as Map<String, Object>
     }
 
     List<String> getLabels() {

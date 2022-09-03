@@ -37,11 +37,11 @@ import nextflow.util.ThreadPoolHelper
 @CompileStatic
 class FileTransferPool {
 
-    final static private DEFAULT_MIN_THREAD = 1
-    final static private DEFAULT_MAX_THREAD = Math.min(Runtime.runtime.availableProcessors()*2, 10)
-    final static private DEFAULT_QUEUE = 10_000
-    final static private DEFAULT_KEEP_ALIVE =  Duration.of('60sec')
-    final DEFAULT_MAX_AWAIT = Duration.of('12 hour')
+    final static private int DEFAULT_MIN_THREAD = 10
+    final static private int DEFAULT_MAX_THREAD = Math.max(DEFAULT_MIN_THREAD, Runtime.runtime.availableProcessors()*3)
+    final static private int DEFAULT_QUEUE = 10_000
+    final static private Duration DEFAULT_KEEP_ALIVE =  Duration.of('60sec')
+    final static private Duration DEFAULT_MAX_AWAIT = Duration.of('12 hour')
 
     private Integer minThreads
     final private Integer maxThreads
@@ -88,8 +88,8 @@ class FileTransferPool {
 
         executorService.shutdown()
         // wait for ongoing file transfer to complete
-        final waitMsg = "Waiting files transfer to complete (%d files)"
-        final exitMsg = "Exiting before FileTransfer thread pool complete -- Some files maybe lost"
+        final waitMsg = "Waiting for file transfers to complete (%d files)"
+        final exitMsg = "Exiting before FileTransfer thread pool complete -- Some files may be lost"
         ThreadPoolHelper.await(executorService, maxAwait, waitMsg, exitMsg)
     }
 

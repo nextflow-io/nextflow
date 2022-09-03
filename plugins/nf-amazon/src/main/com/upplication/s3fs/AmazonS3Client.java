@@ -72,7 +72,6 @@ import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.CopyObjectResult;
 import com.amazonaws.services.s3.model.CopyPartRequest;
 import com.amazonaws.services.s3.model.CopyPartResult;
 import com.amazonaws.services.s3.model.GetObjectTaggingRequest;
@@ -223,7 +222,7 @@ public class AmazonS3Client {
 	/**
 	 * @see com.amazonaws.services.s3.AmazonS3Client#copyObject(CopyObjectRequest)
 	 */
-	public CopyObjectResult copyObject(CopyObjectRequest req, List<Tag> tags) {
+	public void copyObject(CopyObjectRequest req, List<Tag> tags) {
 		if( tags !=null && tags.size()>0 ) {
 			req.setNewObjectTagging(new ObjectTagging(tags));
 		}
@@ -242,7 +241,8 @@ public class AmazonS3Client {
 		if( log.isTraceEnabled() ) {
 			log.trace("S3 CopyObject request {}", req);
 		}
-		return client.copyObject(req);
+
+		transferManager().copy(req);
 	}
 
 	/**

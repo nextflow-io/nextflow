@@ -92,13 +92,14 @@ class GoogleLifeSciencesExecutor extends Executor implements ExtensionPoint {
         }
 
         if( !config.project ) {
-            throw new AbortOperationException("Missing Google project Id -- Specify it adding the setting `google.project='your-project-id'` in the nextflow.config file")
+            throw new AbortOperationException("Missing Google project Id -- Specify it by setting `google.project='your-project-id'` in the nextflow.config file")
         }
 
     }
 
     protected void uploadBinDir() {
-        if( session.binDir && !config.disableBinDir ) {
+        final disableBinDir = session.disableRemoteBinDir || config.disableBinDir
+        if( session.binDir && !session.binDir.empty() && !disableBinDir ) {
             final cloudPath = getTempDir()
             log.info "Uploading local `bin` scripts folder to ${cloudPath.toUriString()}/bin"
             config.remoteBinDir = FilesEx.copyTo(session.binDir, cloudPath)

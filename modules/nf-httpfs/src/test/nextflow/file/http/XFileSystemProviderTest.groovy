@@ -17,22 +17,49 @@
 
 package nextflow.file.http
 
-import com.github.tomakehurst.wiremock.junit.WireMockRule
-import com.github.tomjankes.wiremock.WireMockGroovy
-import org.junit.Rule
-
 import java.nio.file.Files
 import java.nio.file.Path
 
+import com.github.tomakehurst.wiremock.junit.WireMockRule
+import com.github.tomjankes.wiremock.WireMockGroovy
+import nextflow.SysEnv
+import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.Unroll
-
-import java.nio.file.Paths
-
 /**
  * Created by emilio on 08/11/16.
  */
 class XFileSystemProviderTest extends Specification {
+
+    def 'should create with default config settings' () {
+        when:
+        def fs = new HttpFileSystemProvider()
+        then:
+        fs.retryCodes() == HttpFileSystemProvider.DEFAULT_RETRY_CODES.tokenize(',').collect( it -> it as int )
+        fs.backOffDelay() == HttpFileSystemProvider.DEFAULT_BACK_OFF_DELAY
+        fs.backOffBase() == HttpFileSystemProvider.DEFAULT_BACK_OFF_BASE
+        fs.maxAttempts() == HttpFileSystemProvider.DEFAULT_MAX_ATTEMPTS
+
+    }
+
+    def 'should create with custom config settings' () {
+        given:
+        SysEnv.push([NXF_HTTPFS_MAX_ATTEMPTS: '10',
+                     NXF_HTTPFS_BACKOFF_BASE: '300',
+                     NXF_HTTPFS_DELAY       : '400',
+                     NXF_HTTPFS_RETRY_CODES : '1,2,3'])
+
+        when:
+        def fs = new HttpFileSystemProvider()
+        then:
+        fs.retryCodes() == [1,2,3]
+        fs.backOffDelay() == 400
+        fs.backOffBase() == 300
+        fs.maxAttempts() == 10
+
+        cleanup:
+        SysEnv.pop()
+    }
 
     def "should return input stream"() {
         given:
@@ -62,7 +89,6 @@ class XFileSystemProviderTest extends Specification {
         and:
         stream.text == 'Hello world'
     }
-
 
     def "should read file attributes from map"() {
         given:
