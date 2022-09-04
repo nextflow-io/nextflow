@@ -1,5 +1,9 @@
 nf-tower changelog
 ===================
+1.5.2 - 1 Sep
+- Update copyright info [bc16aceb]
+- Fix typos in log messages [76a87c72]
+
 1.5.1 - 11 Aug 2022
 - Improve cache manager [0091afc5]
 
