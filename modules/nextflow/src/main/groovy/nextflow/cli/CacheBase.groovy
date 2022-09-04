@@ -56,7 +56,7 @@ trait CacheBase {
         }
 
         if( !history.exists() || history.empty() )
-            throw new AbortOperationException("It looks no pipeline was executed in this folder (or execution history is empty)")
+            throw new AbortOperationException("It looks like no pipeline was executed in this folder (or execution history is empty)")
 
         if( after && before )
             throw new AbortOperationException("Options `after` and `before` cannot be used in the same command")

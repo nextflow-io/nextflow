@@ -33,7 +33,7 @@ import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
-import nextflow.script.bundle.ModuleBundle
+import nextflow.script.bundle.ResourcesBundle
 import org.apache.commons.compress.archivers.ArchiveStreamFactory
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
@@ -94,9 +94,6 @@ class WaveClientTest extends Specification {
         def sess = Mock(Session) { getConfig() >> [wave:[:]]}
         def folder = Files.createTempDirectory('test')
         and:
-        def result = folder.resolve('result')
-        def result2 = folder.resolve('result2')
-        and:
         def bundlePath = folder.resolve('bundle'); bundlePath.mkdir()
         bundlePath.resolve('main.nf').text = "I'm the main file"
         bundlePath.resolve('this/that').mkdirs()
@@ -110,27 +107,10 @@ class WaveClientTest extends Specification {
             FilesEx.setPermissionsMode(it, mode)
         })
         and:
-        def bundle = ModuleBundle.scan(bundlePath)
+        def wave = new WaveClient(sess)
 
         when:
-        def wave = new WaveClient(sess)
-        def buffer = new ByteArrayOutputStream()
-        wave.makeTar(bundle, buffer)
-        and:
-        untar( new ByteArrayInputStream(buffer.toByteArray()), result )
-        then:
-        result.resolve('main.nf').text == bundlePath.resolve('main.nf').text
-        result.resolve('this/hola.txt').text == bundlePath.resolve('this/hola.txt').text
-        result.resolve('this/hello.txt').text == bundlePath.resolve('this/hello.txt').text
-        result.resolve('this/that/ciao.txt').text == bundlePath.resolve('this/that/ciao.txt').text
-        and:
-        result.resolve('main.nf').getPermissionsMode() == 0600
-        result.resolve('this/hola.txt').getPermissionsMode() == 0600
-        result.resolve('this/that').getPermissionsMode() == 0700
-        and:
-        Files.getLastModifiedTime(result.resolve('main.nf')) == LAST_MODIFIED
-        
-        when:
+        def bundle = ResourcesBundle.scan(bundlePath)
         def layer = wave.makeLayer(bundle)
         then:
         layer.tarDigest == 'sha256:81200f6ad32793567d8070375dc51312a1711fedf6a1c6f5e4a97fa3014f3491'
@@ -139,12 +119,30 @@ class WaveClientTest extends Specification {
         and:
         def gzip = layer.location.replace('data:','').decodeBase64()
         def tar = uncompress(gzip)
-        untar( new ByteArrayInputStream(tar), result2)
+        def result = folder.resolve('result')
+        untar( new ByteArrayInputStream(tar), result)
         and:
-        result2.resolve('main.nf').text == bundlePath.resolve('main.nf').text
-        result2.resolve('this/hola.txt').text == bundlePath.resolve('this/hola.txt').text
-        result2.resolve('this/hello.txt').text == bundlePath.resolve('this/hello.txt').text
-        result2.resolve('this/that/ciao.txt').text == bundlePath.resolve('this/that/ciao.txt').text
+        result.resolve('main.nf').text == bundlePath.resolve('main.nf').text
+        result.resolve('this/hola.txt').text == bundlePath.resolve('this/hola.txt').text
+        result.resolve('this/hello.txt').text == bundlePath.resolve('this/hello.txt').text
+        result.resolve('this/that/ciao.txt').text == bundlePath.resolve('this/that/ciao.txt').text
+
+        /*
+         * create a bundle using different base directory
+         */
+        when:
+        bundle = ResourcesBundle.scan(bundlePath, [baseDirectory: 'usr/local'])
+        layer = wave.makeLayer(bundle)
+        then:
+        def gzip2 = layer.location.replace('data:','').decodeBase64()
+        def tar2 = uncompress(gzip2)
+        def result2 = folder.resolve('result2')
+        untar( new ByteArrayInputStream(tar2), result2)
+        and:
+        result2.resolve('usr/local/main.nf').text == bundlePath.resolve('main.nf').text
+        result2.resolve('usr/local/this/hola.txt').text == bundlePath.resolve('this/hola.txt').text
+        result2.resolve('usr/local/this/hello.txt').text == bundlePath.resolve('this/hello.txt').text
+        result2.resolve('usr/local/this/that/ciao.txt').text == bundlePath.resolve('this/that/ciao.txt').text
 
         cleanup:
         folder?.deleteDir()
@@ -180,6 +178,23 @@ class WaveClientTest extends Specification {
         !req.containerConfig.layers
     }
 
+    def 'should create request object with build and cache repos' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[build:[repo:'some/repo',cache:'some/cache']]]}
+        def DOCKERFILE =  'FROM foo:latest\nRUN something'
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromDockerfile(DOCKERFILE))
+        then:
+        req.buildRepository == 'some/repo'
+        req.cacheRepository == 'some/cache'
+        !req.containerImage
+        new String(req.containerFile.decodeBase64()) == DOCKERFILE
+        !req.condaFile
+        !req.containerConfig.layers
+    }
+
     def 'should create request object with conda file' () {
         given:
         def folder = Files.createTempDirectory('test')
@@ -202,6 +217,50 @@ class WaveClientTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should  create request with module resources' () {
+        given:
+        def MODULE_RES = Mock(ResourcesBundle) {hasEntries() >> true }
+        def MODULE_LAYER = Mock(ContainerLayer)
+
+        and:
+        def session = Mock(Session) { getConfig() >> [:]}
+        WaveClient wave = Spy(WaveClient, constructorArgs: [session])
+
+        when:
+        def assets = new WaveAssets('my:image', MODULE_RES)
+        def req = wave.makeRequest(assets)
+        then:
+        1 * wave.makeLayer(MODULE_RES) >> MODULE_LAYER
+        and:
+        req.containerImage == 'my:image'
+        req.containerConfig.layers.size()==1
+        req.containerConfig.layers[0] == MODULE_LAYER
+    }
+
+    def 'should  create request with module and project resources' () {
+        given:
+        def MODULE_RES = Mock(ResourcesBundle) {hasEntries() >> true }
+        def MODULE_LAYER = Mock(ContainerLayer)
+        and:
+        def PROJECT_RES = Mock(ResourcesBundle) { hasEntries() >> true }
+        def PROJECT_LAYER = Mock(ContainerLayer)
+        and:
+        def session = Mock(Session) { getConfig() >> [:]}
+        WaveClient wave = Spy(WaveClient, constructorArgs: [session])
+
+        when:
+        def assets = new WaveAssets('my:image', MODULE_RES, null, null, null, PROJECT_RES)
+        def req = wave.makeRequest(assets)
+        then:
+        1 * wave.makeLayer(MODULE_RES) >> MODULE_LAYER
+        1 * wave.makeLayer(PROJECT_RES) >> PROJECT_LAYER
+        and:
+        req.containerImage == 'my:image'
+        req.containerConfig.layers.size()==2
+        req.containerConfig.layers[0] == PROJECT_LAYER
+        req.containerConfig.layers[1] == MODULE_LAYER
+    }
+
     def 'should create dockerfile content from conda recipe' () {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
@@ -220,7 +279,8 @@ class WaveClientTest extends Specification {
 
     def 'should create dockerfile content with custom config' () {
         given:
-        def session = Mock(Session) { getConfig() >> [wave:[build:[mamba:[from:'my-base:123', user:'my-user']]]]}
+        def CONDA_OPTS = [baseImage:'my-base:123', commands: ['USER my-user', 'RUN apt-get update -y && apt-get install -y procps']]
+        def session = Mock(Session) { getConfig() >> [wave:[build:[conda:CONDA_OPTS]]]}
         def RECIPE = 'bwa=0.7.15 salmon=1.1.1'
         when:
         def client = new WaveClient(session)
@@ -232,6 +292,7 @@ class WaveClientTest extends Specification {
                    bwa=0.7.15 salmon=1.1.1 \\
                    && micromamba clean -a -y
                 USER my-user
+                RUN apt-get update -y && apt-get install -y procps
                 '''.stripIndent()
     }
 
@@ -262,16 +323,17 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, IMAGE)
         then:
         assets.containerImage == IMAGE
-        !assets.bundle
+        !assets.moduleResources
         !assets.dockerFileContent
         !assets.containerConfig
         !assets.condaFile
+        !assets.projectResources
     }
 
     def 'should create asset with image and bundle' () {
         given:
         def IMAGE = 'foo:latest'
-        def BUNDLE = Mock(ModuleBundle)
+        def BUNDLE = Mock(ResourcesBundle)
         and:
         def session = Mock(Session) { getConfig() >> [:]}
         def task = Mock(TaskRun) { getConfig() >> [:]; getModuleBundle() >> BUNDLE }
@@ -282,22 +344,23 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, IMAGE)
         then:
         assets.containerImage == IMAGE
-        assets.bundle == BUNDLE
+        assets.moduleResources == BUNDLE
         !assets.dockerFileContent
         !assets.containerConfig
         !assets.condaFile
+        !assets.projectResources
     }
 
     def 'should create asset with image and bundle and container config' () {
         given:
         def IMAGE = 'foo:latest'
-        def BUNDLE = Mock(ModuleBundle)
+        def BUNDLE = Mock(ResourcesBundle)
         def CONTAINER_CONFIG = new ContainerConfig(entrypoint: ['entry.sh'], layers: [new ContainerLayer(location: 'http://somewhere')])
         and:
         def session = Mock(Session) { getConfig() >> [:]}
         def task = Mock(TaskRun) { getConfig() >> [:]; getModuleBundle() >> BUNDLE }
         and:
-        def client = Spy(new WaveClient(session))
+        WaveClient client = Spy(WaveClient, constructorArgs:[session])
 
         when:
         def assets = client.resolveAssets(task, IMAGE)
@@ -305,11 +368,12 @@ class WaveClientTest extends Specification {
         client.resolveContainerConfig() >> CONTAINER_CONFIG
         and:
         assets.containerImage == IMAGE
-        assets.bundle == BUNDLE
+        assets.moduleResources == BUNDLE
         assets.containerConfig == CONTAINER_CONFIG
         and:
         !assets.dockerFileContent
         !assets.condaFile
+        !assets.projectResources
     }
 
     def 'should create asset with dockerfile' () {
@@ -320,7 +384,7 @@ class WaveClientTest extends Specification {
         def DOCKERFILE = folder.resolve('Dockerfile')
         DOCKERFILE.text = 'FROM foo\nRUN this/that'
         and:
-        def BUNDLE = Mock(ModuleBundle) { getDockerfile() >> DOCKERFILE }
+        def BUNDLE = Mock(ResourcesBundle) { getDockerfile() >> DOCKERFILE }
         and:
         def task = Mock(TaskRun) {getModuleBundle() >> BUNDLE; getConfig() >> [:] }
         and:
@@ -330,10 +394,11 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == 'FROM foo\nRUN this/that'
-        assets.bundle == BUNDLE
+        assets.moduleResources == BUNDLE
         !assets.containerImage
         !assets.containerConfig
         !assets.condaFile
+        !assets.projectResources
 
         cleanup:
         folder?.deleteDir()
@@ -358,10 +423,11 @@ class WaveClientTest extends Specification {
                        && micromamba clean -a -y
                     '''.stripIndent()
         and:
-        !assets.bundle
+        !assets.moduleResources
         !assets.containerImage
         !assets.containerConfig
         !assets.condaFile
+        !assets.projectResources
     }
 
     def 'should create asset with conda file' () {
@@ -386,16 +452,131 @@ class WaveClientTest extends Specification {
         and:
         assets.condaFile == condaFile
         and:
-        !assets.bundle
+        !assets.moduleResources
         !assets.containerImage
         !assets.containerConfig
+        !assets.projectResources
 
         cleanup:
         folder?.deleteDir()
     }
 
+    def 'should create assets with project resources' () {
+        given:
+        def MODULE_RES = Mock(ResourcesBundle)
+        def PROJECT_RES = Mock(ResourcesBundle)
+        def CONTAINER_CONFIG = Mock(ContainerConfig)
+        def BIN_DIR = Path.of('/something/bin')
+        and:
+        def task = Mock(TaskRun) {getModuleBundle() >> MODULE_RES; getConfig() >> [:] }
+        and:
+        def session = Mock(Session) {
+            getConfig() >> [wave: [bundleProjectResources: true]]
+            getBinDir() >> BIN_DIR
+        }
+        and:
+        WaveClient wave = Spy(WaveClient, constructorArgs: [session])
 
-    // launch web server
+        when:
+        def assets = wave.resolveAssets(task, 'image:latest')
+        then:
+        1 * wave.projectResources(BIN_DIR) >> PROJECT_RES
+        and:
+        1 * wave.resolveContainerConfig() >> CONTAINER_CONFIG
+        and:
+        assets.moduleResources == MODULE_RES
+        assets.projectResources ==  PROJECT_RES
+        assets.containerImage == 'image:latest'
+    }
+
+    def 'should resolve conflicts' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def result = client.resolveConflicts([:], [])
+        then:
+        result == [:]
+
+        when:
+        result = client.resolveConflicts([dockerfile:'x',conda:'y',container:'z'], ['conda'])
+        then:
+        result == [conda:'y']
+
+        when:
+        result = client.resolveConflicts([dockerfile:'x',conda:'y',container:'z'], ['conda','dockerfile'])
+        then:
+        result == [conda:'y']
+
+        when:
+        result = client.resolveConflicts([dockerfile:'x',container:'z'], ['conda','dockerfile'])
+        then:
+        result == [dockerfile:'x']
+    }
+
+    def 'should check conflicts' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        client.checkConflicts([:], 'foo')
+        then:
+        noExceptionThrown()
+
+        when:
+        client.checkConflicts([conda:'this', container:'that'], 'foo')
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both 'container' and 'conda' directives that conflicts each other"
+
+        when:
+        client.checkConflicts([conda:'this', dockerfile:'that'], 'foo')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both a 'conda' directive and a module bundle dockerfile that conflicts each other"
+
+        when:
+        client.checkConflicts([container:'this', dockerfile:'that'], 'foo')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both a 'container' directive and a module bundle dockerfile that conflicts each other"
+
+    }
+
+    def 'should get project resource bundle' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def root = folder.resolve('bundle'); root.mkdir()
+        root.resolve('main.nf').text = "I'm the main file"
+        root.resolve('bin/nested').mkdirs()
+        root.resolve('this/that').mkdirs()
+        Files.write(root.resolve('bin/hola.sh'), "Hola".bytes)
+        Files.write(root.resolve('bin/hello.sh'), "Hello".bytes)
+        Files.write(root.resolve('bin/nested/script.sh'), "Script".bytes)
+        Files.write(root.resolve('this/that/ciao.txt'), "Ciao".bytes)
+        and:
+        def sess = Mock(Session) {getConfig() >> [wave:[:]] }
+        and:
+        def wave = new WaveClient(sess)
+
+        when:
+        def result = wave.projectResources(root.resolve('bin'))
+        then:
+        result.getEntries() ==  ['usr/local/bin/hola.sh','usr/local/bin/hello.sh','usr/local/bin/nested','usr/local/bin/nested/script.sh'] as Set
+
+        expect:
+        wave.projectResources(null) == null
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+    // --== launch web server ==--
     @Shared
     def CONFIG_RESP = [
             '/foo.json': new ContainerConfig(entrypoint: ['entry.sh']),
@@ -446,4 +627,5 @@ class WaveClientTest extends Specification {
           fusion: [enabled: true, containerConfigUrl: 'http://localhost:9901/bar.json']]\
                                                     | CONFIG_RESP.get('combined')
     }
+
 }

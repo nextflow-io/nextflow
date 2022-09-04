@@ -50,8 +50,8 @@ dependencies {
     testFixturesApi ("org.codehaus.groovy:groovy-test:3.0.12") { exclude group: 'org.codehaus.groovy' }
     testFixturesApi ("cglib:cglib-nodep:3.3.0")
     testFixturesApi ("org.objenesis:objenesis:3.2")
-    testFixturesApi ("org.spockframework:spock-core:2.1-groovy-3.0") { exclude group: 'org.codehaus.groovy'; exclude group: 'net.bytebuddy' }
-    testFixturesApi ('org.spockframework:spock-junit4:2.1-groovy-3.0') { exclude group: 'org.codehaus.groovy'; exclude group: 'net.bytebuddy' }
+    testFixturesApi ("org.spockframework:spock-core:2.2-groovy-3.0") { exclude group: 'org.codehaus.groovy'; exclude group: 'net.bytebuddy' }
+    testFixturesApi ('org.spockframework:spock-junit4:2.2-groovy-3.0') { exclude group: 'org.codehaus.groovy'; exclude group: 'net.bytebuddy' }
     testFixturesApi 'com.google.jimfs:jimfs:1.2'
 
 }

@@ -17,9 +17,9 @@
 
 package nextflow.container.resolver
 
+import groovy.transform.CompileStatic
 import nextflow.container.ContainerHandler
 import nextflow.processor.TaskRun
-
 /**
  * Given a container image name resolves it to target image name.
  *
@@ -29,20 +29,20 @@ import nextflow.processor.TaskRun
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class DefaultContainerResolver implements ContainerResolver {
+@CompileStatic
+final class DefaultContainerResolver implements ContainerResolver {
 
     @Override
-    String resolveImage(TaskRun task, String imageName) {
+    ContainerInfo resolveImage(TaskRun task, String imageName) {
         if( !imageName ) {
             // no image given, just return null
-            return null
+            return ContainerInfo.EMPTY
         }
 
         final cfg = task.getContainerConfig()
         final handler = new ContainerHandler(cfg, task.processor.executor)
-        final result = handler.normalizeImageName(imageName)
-
-        final proxy = System.getenv('NXF_PROXY_REG')
-        return proxy ? ContainerHandler.proxyReg(proxy, result) : result
+        final ret = handler.normalizeImageName(imageName)
+        return new ContainerInfo(imageName, ret, ret)
     }
+
 }

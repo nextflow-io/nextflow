@@ -157,6 +157,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = ['-with-tower'], description = 'Monitor workflow execution with Seqera Tower service')
     String withTower
 
+    @Parameter(names = ['-with-wave'], hidden = true)
+    String withWave
+
     @Parameter(names = ['-with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
     String withWebLog
 
@@ -399,7 +402,7 @@ class CmdRun extends CmdBase implements HubOptions {
             return dsl
         }
         // -- if still unknown try probing for DSL1
-        if( NextflowMeta.probeDls1(scriptText) ) {
+        if( NextflowMeta.probeDsl1(scriptText) ) {
             log.debug "Applied DSL=1 by probing script field"
             return DSL1
         }
@@ -475,7 +478,7 @@ class CmdRun extends CmdBase implements HubOptions {
                 throw new AbortOperationException("Cannot access `stdin` stream")
 
             if( revision )
-                throw new AbortOperationException("Revision option cannot be used running a local script")
+                throw new AbortOperationException("Revision option cannot be used when running a script from stdin")
 
             return new ScriptFile(file)
         }
@@ -490,7 +493,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         if( script.exists() ) {
             if( revision )
-                throw new AbortOperationException("Revision option cannot be used running a script")
+                throw new AbortOperationException("Revision option cannot be used when running a local script")
             return new ScriptFile(script)
         }
 

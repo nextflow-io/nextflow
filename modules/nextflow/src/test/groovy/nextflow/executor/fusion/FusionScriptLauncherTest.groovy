@@ -20,8 +20,8 @@ package nextflow.executor.fusion
 import java.nio.file.Path
 
 import nextflow.file.http.XPath
+import nextflow.processor.TaskBean
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -30,7 +30,7 @@ class FusionScriptLauncherTest extends Specification {
 
     def 'should get container mount' () {
         given:
-        def fusion = new FusionScriptLauncher(type: XPath)
+        def fusion = new FusionScriptLauncher(scheme: 'http')
 
         when:
         def result = fusion.toContainerMount(XPath.get('http://foo/a/b/c.txt'))
@@ -47,9 +47,29 @@ class FusionScriptLauncherTest extends Specification {
         then:
         result == Path.of('/fusion/http/bar/z.txt')
 
-
         expect:
         fusion.fusionBuckets() == [ 'foo', 'bar' ] as Set
 
+    }
+
+    def 'should get fusion env' () {
+        given:
+        def fusion = new FusionScriptLauncher(
+                scheme: 'http',
+                buckets: ['foo'] as Set,
+                remoteWorkDir: XPath.get('http://foo/work'))
+
+        expect:
+        fusion.fusionEnv() == [NXF_FUSION_BUCKETS: 'http://foo',
+                               NXF_FUSION_WORK: '/fusion/http/foo/work']
+    }
+
+    def 'should get header script' () {
+        given:
+        def fusion = new FusionScriptLauncher(scheme: 's3')
+        def task = Mock(TaskBean) { getWorkDir() >> Path.of('/some/work/dir')}
+
+        expect:
+        fusion.headerScript(task) == 'NXF_CHDIR=/some/work/dir\n'
     }
 }

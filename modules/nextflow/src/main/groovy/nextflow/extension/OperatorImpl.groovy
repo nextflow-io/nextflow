@@ -1051,6 +1051,7 @@ class OperatorImpl {
      * @param mapper
      * @return
      */
+    @Deprecated
     DataflowWriteChannel phase( DataflowReadChannel source, Map opts, DataflowReadChannel other, Closure mapper = null ) {
 
         def target = new PhaseOp(source,other)
@@ -1061,6 +1062,7 @@ class OperatorImpl {
         return target
     }
 
+    @Deprecated
     DataflowWriteChannel phase( DataflowReadChannel source, DataflowReadChannel other, Closure mapper = null ) {
 
         def target = new PhaseOp(source,other)
@@ -1324,6 +1326,7 @@ class OperatorImpl {
         view(source, Collections.emptyMap(), closure)
     }
 
+    @Deprecated
     void choice(final DataflowReadChannel source, final List<DataflowWriteChannel> outputs, final Closure<Integer> code) {
         new ChoiceOp(source,outputs,code).apply()
     }
@@ -1456,7 +1459,7 @@ class OperatorImpl {
     private void set0(source, Closure holder) {
         final name = CaptureProperties.capture(holder)
         if( !name )
-            throw new IllegalArgumentException("Missing name to which set the channel variable")
+            throw new IllegalArgumentException("Missing name with which to set the channel variable")
 
         if( name.size()>1 )
             throw new IllegalArgumentException("Operation `set` does not allow more than one target name")

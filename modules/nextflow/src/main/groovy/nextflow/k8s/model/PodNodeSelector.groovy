@@ -43,7 +43,7 @@ class PodNodeSelector {
             createWithMap(selector)
 
         else if( selector != null )
-            throw new IllegalArgumentException("Not a valid pod nodeSelector value: $selector [${selector.getClass().getName()}]")
+            throw new IllegalArgumentException("K8s invalid pod nodeSelector value: $selector [${selector.getClass().getName()}]")
     }
 
     private createWithMap(Map selection ) {

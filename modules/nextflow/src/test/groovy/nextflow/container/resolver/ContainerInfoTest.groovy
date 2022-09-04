@@ -15,22 +15,33 @@
  *
  */
 
-package io.seqera.wave.plugin.config
+package nextflow.container.resolver
+
+import spock.lang.Specification
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class MambaOpts {
+class ContainerInfoTest extends Specification {
 
-    final public String DEFAULT_FROM = 'mambaorg/micromamba:0.25.1'
-
-    final String from
-    final String user
-
-    MambaOpts(Map opts) {
-        this.from = opts.from ?: DEFAULT_FROM
-        this.user = opts.user
+    def 'should create container info' () {
+        when:
+        def info = new ContainerInfo('a','b','c')
+        then:
+        info.source == 'a'
+        info.target == 'b'
+        info.hashKey == 'c'
     }
 
+    def 'should check truth' () {
+        expect:
+        new ContainerInfo('a')
+        new ContainerInfo(null,'b')
+        new ContainerInfo(null,null,'c')
+        new ContainerInfo('a','b','c')
+        and:
+        !ContainerInfo.EMPTY
+        !new ContainerInfo()
+    }
 }

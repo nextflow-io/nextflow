@@ -33,11 +33,13 @@ import com.google.gson.reflect.TypeToken
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import io.seqera.wave.plugin.config.FusionConfig
 import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.packer.Packer
 import nextflow.Session
+import nextflow.container.resolver.ContainerInfo
 import nextflow.processor.TaskRun
-import nextflow.script.bundle.ModuleBundle
+import nextflow.script.bundle.ResourcesBundle
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -62,7 +64,10 @@ class WaveClient {
 
     private Cache<String, SubmitContainerTokenResponse> cache
 
+    private Session session
+
     WaveClient(Session session) {
+        this.session = session
         this.config = new WaveConfig(session.config.wave as Map ?: [:])
         this.fusion = new FusionConfig(session.config.fusion as Map ?: [:])
         this.endpoint = config.endpoint()
@@ -83,43 +88,37 @@ class WaveClient {
 
     WaveConfig config() { return config }
 
-    Boolean enabled() { config.enabled() }
+    Boolean enabled() { return config.enabled() }
 
-    protected <T extends OutputStream> T makeTar(ModuleBundle bundle, T target) {
-        packer.makeTar(bundle.root, bundle.getPathsList(), target)
-    }
-
-    protected ContainerLayer makeLayer(ModuleBundle bundle) {
-
-        final result = packer.layer(bundle.root, bundle.pathsList)
-
-        log.debug """\
-            Module bundle: ${bundle.root}
-            - digest     : ${bundle.fingerprint()}    
-            - location   : ${result.location}
-            - tar digest : ${result.tarDigest}
-            - gzip digest: ${result.gzipDigest}
-            - gzip size  : ${result.gzipSize}
-            """.stripIndent().rightTrim()
-
+    protected ContainerLayer makeLayer(ResourcesBundle bundle) {
+        final result = packer.layer(bundle.content())
         return result
     }
 
     SubmitContainerTokenRequest makeRequest(WaveAssets assets) {
         final containerConfig = assets.containerConfig ?: new ContainerConfig()
-        // pre-prepend the bundle layer
-        if( assets.bundle && assets.bundle.hasEntries() ) {
-            containerConfig.prependLayer(makeLayer(assets.bundle))
+        // prepend the bundle layer
+        if( assets.moduleResources!=null && assets.moduleResources.hasEntries() ) {
+            containerConfig.prependLayer(makeLayer(assets.moduleResources))
+        }
+        // prepend project resources bundle
+        if( assets.projectResources!=null && assets.projectResources.hasEntries() ) {
+            containerConfig.prependLayer(makeLayer(assets.projectResources))
         }
 
         if( !assets.containerImage && !assets.dockerFileContent )
             throw new IllegalArgumentException("Wave container request requires at least a image or container file to build")
 
+        if( assets.containerImage && assets.dockerFileContent )
+            throw new IllegalArgumentException("Wave container image and container file cannot be specified in the same request")
+
         return new SubmitContainerTokenRequest(
                 containerImage: assets.containerImage,
                 containerConfig: containerConfig,
                 containerFile: assets.dockerFileEncoded(),
-                condaFile: assets.condaFileEncoded()
+                condaFile: assets.condaFileEncoded(),
+                buildRepository: config().buildRepository(),
+                cacheRepository: config.cacheRepository()
         )
     }
 
@@ -147,12 +146,17 @@ class WaveClient {
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build()
 
-        final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
-        if( resp.statusCode()==200 ) {
-            log.debug "Wave response: ${resp.body()}"
-            return jsonToSubmitResponse(resp.body())
+        try {
+            final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
+            if( resp.statusCode()==200 ) {
+                log.debug "Wave response: ${resp.body()}"
+                return jsonToSubmitResponse(resp.body())
+            }
+            throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
         }
-        throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
+        catch (ConnectException e) {
+            throw new IllegalStateException("Unable to connect Wave service: $endpoint")
+        }
     }
 
     private SubmitContainerTokenResponse jsonToSubmitResponse(String body) {
@@ -181,7 +185,7 @@ class WaveClient {
     }
 
     @Memoized
-    ContainerConfig fetchContainerConfig(URL configUrl) {
+    synchronized protected ContainerConfig fetchContainerConfig(URL configUrl) {
         log.debug "Wave request container config: $configUrl"
         final req = HttpRequest.newBuilder()
                 .uri(configUrl.toURI())
@@ -200,50 +204,119 @@ class WaveClient {
         }
     }
 
+    protected void checkConflicts(Map<String,String> attrs, String name) {
+        if( attrs.dockerfile && attrs.conda ) {
+            throw new IllegalArgumentException("Process '${name}' declares both a 'conda' directive and a module bundle dockerfile that conflicts each other")
+        }
+        if( attrs.container && attrs.dockerfile ) {
+            throw new IllegalArgumentException("Process '${name}' declares both a 'container' directive and a module bundle dockerfile that conflicts each other")
+        }
+        if( attrs.container && attrs.conda ) {
+            throw new IllegalArgumentException("Process '${name}' declares both 'container' and 'conda' directives that conflicts each other")
+        }
+    }
+
+    Map<String,String> resolveConflicts(Map<String,String> attrs, List<String> strategy) {
+        final result = new HashMap<String,String>()
+        for( String it : strategy ) {
+            if( attrs.get(it) ) {
+                return [(it): attrs.get(it)]
+            }
+        }
+        return result
+    }
+
+    @Memoized
     WaveAssets resolveAssets(TaskRun task, String containerImage) {
+        // get the bundle
         final bundle = task.getModuleBundle()
-        // read the dockerfile defined in the module bundle
-        String dockerFileContent = null
+        // compose the request attributes
+        def attrs = new HashMap<String,String>()
+        attrs.container = containerImage
+        attrs.conda = task.config.conda as String
         if( bundle!=null && bundle.dockerfile ) {
-            dockerFileContent = bundle.dockerfile.text
+            attrs.dockerfile = bundle.dockerfile.text
         }
-        // compute docker file + conda content
-        final condaRecipe = task.config.conda as String
-        if( dockerFileContent && condaRecipe ) {
-            throw new IllegalArgumentException("Process '${task.lazyName()}' declares both a 'conda' directive and a module bundle dockerfile that conflicts each other")
-        }
+
+        // validate request attributes
+        if( config().strategy() )
+            attrs = resolveConflicts(attrs, config().strategy())
+        else
+            checkConflicts(attrs, task.lazyName())
+
+        //  resolve the wave assets
+        return resolveAssets0(attrs, bundle)
+    }
+
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle) {
+
+        String dockerScript = attrs.dockerfile
+        final containerImage = attrs.container
+
+        /*
+         * If 'conda' directive is specified use it to create a Dockefile
+         * to assemble the target container
+         */
         Path condaFile = null
-        if( condaRecipe ) {
+        if( attrs.conda ) {
+            if( dockerScript )
+                throw new IllegalArgumentException("Unexpected conda and dockerfile conflict")
+
             // map the recipe to a dockerfile
-            if( isCondaFile(condaRecipe) ) {
-                condaFile = Path.of(condaRecipe)
-                dockerFileContent = condaFileToDockerFile()
+            if( isCondaFile(attrs.conda) ) {
+                condaFile = Path.of(attrs.conda)
+                dockerScript = condaFileToDockerFile()
             }
             else {
-                dockerFileContent = condaRecipeToDockerFile(condaRecipe)
+                dockerScript = condaRecipeToDockerFile(attrs.conda)
             }
         }
 
-        if( dockerFileContent && containerImage ) {
-            throw new IllegalArgumentException("Process '${task.lazyName()}' declares both a 'container' directive and a module bundle dockerfile that conflicts each other")
-        }
-
-        if( !dockerFileContent && !containerImage ) {
-            // nothing to do
+        /*
+         * The process should declare at least a container image name via 'container' directive
+         * or a dockerfile file to build, otherwise there's no job to be done by wave
+         */
+        if( !dockerScript && !containerImage ) {
             return null
         }
 
+        /*
+         * project level resources i.e. `ROOT/bin/` directory files
+         * are only uploaded when using fusion
+         */
+        final projectRes = config.bundleProjectResources() && session.binDir
+                    ? projectResources(session.binDir)
+                    : null
+
         // read the container config and go ahead
-        final containerConfig = resolveContainerConfig()
-        return new WaveAssets(containerImage, bundle, containerConfig, dockerFileContent, condaFile)
+        final containerConfig = this.resolveContainerConfig()
+        return new WaveAssets(
+                    containerImage,
+                    bundle,
+                    containerConfig,
+                    dockerScript,
+                    condaFile,
+                    projectRes)
     }
 
-    String fetchContainerImage(WaveAssets assets) {
-        // go ahead
+    @Memoized
+    protected ResourcesBundle projectResources(Path path) {
+        log.debug "Wave assets bundle bin resources: $path"
+        // place project 'bin' resources under '/usr/local'
+        // see https://unix.stackexchange.com/questions/8656/usr-bin-vs-usr-local-bin-on-linux
+        return path && path.parent
+                ? ResourcesBundle.scan( path.parent, [filePattern: "$path.name/**", baseDirectory:'usr/local'] )
+                : null
+    }
+
+    ContainerInfo fetchContainerImage(WaveAssets assets) {
         try {
+            // compute a unique hash for this request assets
             final key = assets.hashKey()
-            final result = cache.get(key, { sendRequest(assets) } as Callable )
-            return result.targetImage
+            // get from cache or submit a new request
+            final response = cache.get(key, { sendRequest(assets) } as Callable )
+            // assemble the container info response
+            return new ContainerInfo(assets.containerImage, response.targetImage, key)
         }
         catch ( UncheckedExecutionException e ) {
             throw e.cause
@@ -252,31 +325,34 @@ class WaveClient {
 
     protected String condaFileToDockerFile() {
         def result = """\
-        FROM ${config.mambaOpts().from}
+        FROM ${config.condaOpts().baseImage}
         COPY --chown=\$MAMBA_USER:\$MAMBA_USER conda.yml /tmp/conda.yml
         RUN micromamba install -y -n base -f /tmp/conda.yml && \\
             micromamba clean -a -y
         """.stripIndent()
 
-        return addUser(result)
+        return addCommands(result)
     }
 
-    protected String addUser(String result) {
-        if( config.mambaOpts().user )
-            result += "USER ${config.mambaOpts().user}\n"
+    protected String addCommands(String result) {
+        if( !config.condaOpts().commands )
+            return result
+        for( String cmd : config.condaOpts().commands ) {
+            result += cmd + "\n"
+        }
         return result
     }
 
     protected String condaRecipeToDockerFile(String recipe) {
         def result = """\
-        FROM ${config.mambaOpts().from}
+        FROM ${config.condaOpts().baseImage}
         RUN \\
            micromamba install -y -n base -c defaults -c conda-forge \\
            $recipe \\
            && micromamba clean -a -y
         """.stripIndent()
 
-        return addUser(result)
+        return addCommands(result)
     }
 
     protected boolean isCondaFile(String value) {

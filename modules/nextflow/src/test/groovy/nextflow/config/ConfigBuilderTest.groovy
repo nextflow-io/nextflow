@@ -702,7 +702,7 @@ class ConfigBuilderTest extends Specification {
         new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         def e = thrown(AbortOperationException)
-        e.message == 'You have requested to run with Docker but no image were specified'
+        e.message == 'You have requested to run with Docker but no image was specified'
 
         when:
         file.text =
@@ -714,7 +714,7 @@ class ConfigBuilderTest extends Specification {
         new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         e = thrown(AbortOperationException)
-        e.message == 'You have requested to run with Docker but no image were specified'
+        e.message == 'You have requested to run with Docker but no image was specified'
 
     }
 
@@ -1089,6 +1089,69 @@ class ConfigBuilderTest extends Specification {
         config.tower.enabled
         config.tower.endpoint == 'http://bar.com'
 
+        when:
+        config = new ConfigObject()
+        config.tower.endpoint = 'http://foo.com'
+        builder.configRunOptions(config, env, new CmdRun(withTower: '-'))
+        then:
+        config.tower instanceof Map
+        config.tower.enabled
+        config.tower.endpoint == 'http://foo.com'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withTower: '-'))
+        then:
+        config.tower instanceof Map
+        config.tower.enabled
+        config.tower.endpoint == 'https://api.tower.nf'
+    }
+
+    def 'should set wave options' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.wave
+
+        when:
+        config = new ConfigObject()
+        config.wave.endpoint = 'http://foo.com'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.wave instanceof Map
+        !config.wave.enabled
+        config.wave.endpoint == 'http://foo.com'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withWave: 'http://bar.com'))
+        then:
+        config.wave instanceof Map
+        config.wave.enabled
+        config.wave.endpoint == 'http://bar.com'
+
+        when:
+        config = new ConfigObject()
+        config.wave.endpoint = 'http://foo.com'
+        builder.configRunOptions(config, env, new CmdRun(withWave: '-'))
+        then:
+        config.wave instanceof Map
+        config.wave.enabled
+        config.wave.endpoint == 'http://foo.com'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withWave: '-'))
+        then:
+        config.wave instanceof Map
+        config.wave.enabled
+        config.wave.endpoint == 'https://default.host'
     }
 
     def 'should enable conda env' () {

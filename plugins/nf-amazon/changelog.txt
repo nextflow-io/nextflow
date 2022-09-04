@@ -1,5 +1,11 @@
 nf-amazon changelog
 ===================
+1.10.1 - 1 Sep
+- Add support for label/tags (#2853) [5d0b7c35]
+- Add fusion support to local executor [17160bb0]
+- Improve fusion env handling [10f35b60]
+- Get rid of remote bin dir [6cfb51e7]
+
 1.10.0 - 11 Aug
 - Improve S3 copy via xfer manager [02d2beae]
 - Add experimental fusion support [1854f1f2]

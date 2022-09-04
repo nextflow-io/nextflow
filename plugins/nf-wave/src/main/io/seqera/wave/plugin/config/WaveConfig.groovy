@@ -32,23 +32,56 @@ class WaveConfig {
     final private String endpoint
     final private List<URL> containerConfigUrl
     final private Duration tokensCacheMaxDuration
-    final private MambaOpts mambaOpts
+    final private CondaOpts condaOpts
+    final private List<String> strategy
+    final private Boolean bundleProjectResources
+    final private String buildRepository
+    final private String cacheRepository
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
         this.containerConfigUrl = parseConfig(opts, env)
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '15m') as Duration
+        this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
+        this.buildRepository = opts.navigate('build.repo') as String
+        this.cacheRepository = opts.navigate('build.cache') as String
+        this.strategy = parseStrategy(opts.strategy)
+        this.bundleProjectResources = opts.bundleProjectResources
         if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
             throw new IllegalArgumentException("Endpoint URL should start with 'http:' or 'https:' protocol prefix - offending value: $endpoint")
-        this.mambaOpts = opts.navigate('build.mamba', Collections.emptyMap()) as MambaOpts
     }
 
     Boolean enabled() { this.enabled }
 
     String endpoint() { this.endpoint }
 
-    MambaOpts mambaOpts() { this.mambaOpts }
+    CondaOpts condaOpts() { this.condaOpts }
+
+    List<String> strategy() { this.strategy }
+
+    boolean bundleProjectResources() { bundleProjectResources }
+
+    String buildRepository() { buildRepository }
+
+    String cacheRepository() { cacheRepository }
+
+    protected List<String> parseStrategy(value) {
+        if( !value )
+            return Collections.<String>emptyList()
+        List<String> result
+        if( value instanceof CharSequence )
+            result = value.tokenize(',') .collect(it -> it.toString().trim())
+        else if( value instanceof List )
+            result = value.collect(it -> it.toString().trim())
+        else
+            throw new IllegalArgumentException("Invalid value for 'wave.strategy' configuration attribute - offending value: $value")
+        for( String it : result ) {
+            if( it !in ['conda','dockerfile','container'])
+                throw new IllegalArgumentException("Invalid value for 'wave.strategy' configuration attribute - offending value: $it")
+        }
+        return result
+    }
 
     protected List<URL> parseConfig(Map opts, Map<String,String> env) {
         List<String> result = new ArrayList<>(10)

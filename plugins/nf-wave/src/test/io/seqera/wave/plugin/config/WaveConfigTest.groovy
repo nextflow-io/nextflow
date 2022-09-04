@@ -17,7 +17,7 @@
 
 package io.seqera.wave.plugin.config
 
-import io.seqera.wave.plugin.config.WaveConfig
+
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -82,18 +82,61 @@ class WaveConfigTest extends Specification {
 
     }
 
-    def 'should get mamba config' () {
+    def 'should get conda config' () {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.mambaOpts().from == 'mambaorg/micromamba:0.25.1'
-        opts.mambaOpts().user == null
+        opts.condaOpts().baseImage == 'mambaorg/micromamba:0.25.1'
+        opts.condaOpts().commands == null
 
         when:
-        opts = new WaveConfig([build:[mamba:[from:'mambaorg/foo:1', user:'hola']]])
+        opts = new WaveConfig([build:[conda:[baseImage:'mambaorg/foo:1', commands:['USER hola']]]])
         then:
-        opts.mambaOpts().from == 'mambaorg/foo:1'
-        opts.mambaOpts().user == 'hola'
+        opts.condaOpts().baseImage == 'mambaorg/foo:1'
+        opts.condaOpts().commands == ['USER hola']
         
+    }
+
+    def 'should get build and cache repos' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.buildRepository() == null
+        opts.cacheRepository() == null
+
+        when:
+        opts = new WaveConfig([build:[repo:'some/repo',cache:'some/cache']])
+        then:
+        opts.buildRepository() == 'some/repo'
+        opts.cacheRepository() == 'some/cache'
+    }
+
+    def 'should set strategy' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.strategy() == []
+
+        when:
+        opts = new WaveConfig([strategy:STRATEGY])
+        then:
+        opts.strategy() == EXPECTED
+
+        where:
+        STRATEGY                | EXPECTED
+        null                    | []
+        'dockerfile'            | ['dockerfile']
+        'conda,container'       | ['conda','container']
+        'conda , container'     | ['conda','container']
+        ['conda','container']   | ['conda','container']
+        [' conda',' container'] | ['conda','container']
+    }
+
+    def 'should fail to set strategy' () {
+        when:
+        new WaveConfig([strategy:['foo']])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Invalid value for 'wave.strategy' configuration attribute - offending value: foo"
     }
 }

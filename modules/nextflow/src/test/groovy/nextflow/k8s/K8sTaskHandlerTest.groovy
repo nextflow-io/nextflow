@@ -773,7 +773,8 @@ class K8sTaskHandlerTest extends Specification {
         then:
         handler.getRunName() >> 'pedantic-joe'
         task.getName() >> 'hello-world-1'
-        task.getProcessor() >> proc 
+        task.getProcessor() >> proc
+        task.getConfig() >> Mock(TaskConfig)
         proc.getName() >> 'hello-proc'
         exec.getSession() >> sess
         sess.getUniqueId() >> uuid

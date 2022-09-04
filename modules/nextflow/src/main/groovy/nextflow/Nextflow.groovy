@@ -232,7 +232,7 @@ class Nextflow {
      */
     static void exit(int exitCode, String message = null) {
         if( session.aborted ) {
-            log.debug "Ignore exit because execution is already aborted -- message=$message"
+            log.debug "Ignoring exit because execution is already aborted -- message=$message"
             return
         }
         
@@ -282,7 +282,7 @@ class Nextflow {
 
         def file = FileHelper.getWorkFolder(session.workDir, hash)
         if( !file.exists() && !file.mkdirs() ) {
-            throw new IOException("Unable to create folder: $file -- Check file system permission" )
+            throw new IOException("Unable to create directory: $file -- Check file system permissions" )
         }
 
         return file
@@ -332,7 +332,7 @@ class Nextflow {
             path = path.resolve(name)
 
         if( !path.exists() && create && !path.mkdirs() )
-            throw new IOException("Unable to create folder: $path -- Check file system permission" )
+            throw new IOException("Unable to create directory: $path -- Check file system permissions" )
 
         return path
     }
