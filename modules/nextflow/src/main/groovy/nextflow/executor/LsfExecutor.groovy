@@ -155,7 +155,7 @@ class LsfExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> queueStatusCommand( queue ) {
-        // note: use the `-w` option to avoid that the printed jobid maybe truncated when exceed 7 digits
+        // note: use the `-w` option to avoid that the printed jobid may be truncated when exceed 7 digits
         // see https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_jobid_disp_length.5.html
         final result = ['bjobs', '-w']
 
@@ -284,16 +284,17 @@ class LsfExecutor extends AbstractGridExecutor {
             perJobMemLimit = str == 'Y'
             log.debug "[LSF] Detected lsf.conf LSB_JOB_MEMLIMIT=$str ($perJobMemLimit)"
         }
-        else {
-            perJobMemLimit = session.getExecConfigProp(name, 'perJobMemLimit', false)
-        }
+
+        perJobMemLimit = session.getExecConfigProp(name, 'perJobMemLimit', perJobMemLimit)
 
         // per task reserve https://github.com/nextflow-io/nextflow/issues/1071#issuecomment-481412239
         if( conf.get('RESOURCE_RESERVE_PER_TASK') ) {
             final str = conf.get('RESOURCE_RESERVE_PER_TASK').toUpperCase()
             perTaskReserve = str == 'Y'
-            log.debug "[LSF] Detected lsf.conf RESOURCE_RESERVE_PER_TASK=$str ($perJobMemLimit)"
+            log.debug "[LSF] Detected lsf.conf RESOURCE_RESERVE_PER_TASK=$str ($perTaskReserve)"
         }
+
+        perTaskReserve = session.getExecConfigProp(name, 'perTaskReserve', perTaskReserve)
     }
 
 }

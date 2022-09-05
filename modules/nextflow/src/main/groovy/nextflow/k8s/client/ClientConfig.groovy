@@ -16,6 +16,9 @@
  */
 
 package nextflow.k8s.client
+
+import nextflow.util.Duration
+
 import javax.net.ssl.KeyManager
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -54,6 +57,18 @@ class ClientConfig {
     KeyManager[] keyManagers
 
     /**
+     * Timeout when reading from Input stream when a connection is established to a resource.
+     * If the timeout expires before there is data available for read, a {@link java.net.SocketTimeoutException} is raised
+     */
+    Duration httpReadTimeout
+
+    /**
+     * Timeout when opening a communications link to the resource referenced by K8sClient request connection
+     * If the timeout expires before there is data available for read, a {@link java.net.SocketTimeoutException} is raised
+     */
+    Duration httpConnectTimeout
+
+    /**
      * When true signal that the configuration was retrieved from within a K8s cluster
      */
     boolean isFromCluster
@@ -65,7 +80,7 @@ class ClientConfig {
     }
 
     String toString() {
-        "${this.class.getSimpleName()}[ server=$server, namespace=$namespace, token=${cut(token)}, sslCert=${cut(sslCert)}, clientCert=${cut(clientCert)}, clientKey=${cut(clientKey)}, verifySsl=$verifySsl, fromFile=$isFromCluster ]"
+        "${this.class.getSimpleName()}[ server=$server, namespace=$namespace, token=${cut(token)}, sslCert=${cut(sslCert)}, clientCert=${cut(clientCert)}, clientKey=${cut(clientKey)}, verifySsl=$verifySsl, fromFile=$isFromCluster, httpReadTimeout=$httpReadTimeout, httpConnectTimeout=$httpConnectTimeout ]"
     }
 
     private String cut(String str) {

@@ -21,11 +21,10 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.regex.Pattern
 
-import com.google.common.io.BaseEncoding
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.executor.Executor
 import nextflow.util.Escape
 /**
  * Helper class to normalise a container image name depending
@@ -44,8 +43,11 @@ class ContainerHandler {
 
     private Path baseDir
 
-    ContainerHandler(Map containerConfig) {
+    private Executor executor
+
+    ContainerHandler(Map containerConfig, Executor executor=null) {
         this(containerConfig, CWD)
+        this.executor = executor
     }
 
     ContainerHandler(Map containerConfig, Path dir) {
@@ -58,6 +60,11 @@ class ContainerHandler {
     Path getBaseDir() { baseDir }
 
     String normalizeImageName(String imageName) {
+        // when the executor is container native, it's assumed
+        // the use of docker plain image name format
+        if( executor?.isContainerNative() ) {
+            return normalizeDockerImageName(imageName)
+        }
         final engine = config.getEngine()
         if( engine == 'shifter' ) {
             return normalizeShifterImageName(imageName)
@@ -213,44 +220,6 @@ class ContainerHandler {
         // in all other case it's supposed to be the name of an image in the docker hub
         // prefix it with the `docker://` pseudo protocol used by singularity to download it
         return "docker://${img}"
-    }
-
-    @Memoized(maxCacheSize = 1_000)
-    static String proxyReg(String proxy, String image) {
-        final p = image.lastIndexOf('/')
-        if( p==-1 ) {
-            final result = "$proxy/tw/${encodeBase32('library')}/$image"
-            log.debug "Using proxy reg image => $result"
-            return result
-        }
-        String base = image.substring(0,p)
-        String name = image.substring(p)
-        if( base.contains('.') && !base.contains('/') )
-            base += '/library'
-        final result = "$proxy/tw/${encodeBase32(base)}${name}"
-        log.debug "Using proxy reg image => $result"
-        return result
-    }
-
-    final private static char PADDING = '_' as char
-    final private static BaseEncoding BASE32 = BaseEncoding.base32() .withPadChar(PADDING)
-
-    static String encodeBase32(String str, boolean padding=false) {
-        final result = BASE32.encode(str.bytes).toLowerCase()
-        if( padding )
-            return result
-        final p = result.indexOf(PADDING as byte)
-        return p == -1 ? result : result.substring(0,p)
-    }
-
-    static String decodeBase32(String encoded) {
-        final result = BASE32.decode(encoded.toUpperCase())
-        return new String(result)
-    }
-
-    static String resolve(String str) {
-        def parts = str.tokenize('/')
-        return decodeBase32(parts[2]) + '/' + parts[3]
     }
 
 }

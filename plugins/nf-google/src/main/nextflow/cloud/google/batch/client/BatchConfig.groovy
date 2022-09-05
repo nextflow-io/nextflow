@@ -22,8 +22,10 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.cloud.google.GoogleOpts
+import nextflow.util.MemoryUnit
 /**
  * Model Google Batch config settings
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -32,7 +34,8 @@ class BatchConfig {
 
     private GoogleOpts googleOpts
     private GoogleCredentials credentials
-    private boolean disableBinDir
+    private MemoryUnit bootDiskSize
+    private String cpuPlatform
     private boolean spot
     private boolean preemptible
     private boolean usePrivateAddress
@@ -42,7 +45,8 @@ class BatchConfig {
 
     GoogleOpts getGoogleOpts() { return googleOpts }
     GoogleCredentials getCredentials() { return credentials }
-    boolean getDisableBinDir() { disableBinDir }
+    MemoryUnit getBootDiskSize() { bootDiskSize }
+    String getCpuPlatform() { cpuPlatform }
     boolean getPreemptible() { preemptible }
     boolean getSpot() { spot }
     boolean getUsePrivateAddress() { usePrivateAddress }
@@ -53,8 +57,9 @@ class BatchConfig {
     static BatchConfig create(Session session) {
         final result = new BatchConfig()
         result.googleOpts = GoogleOpts.create(session)
-        result.credentials = makeCreds(result.googleOpts.credsFile)
-        result.disableBinDir = session.config.navigate('google.batch.disableRemoteBinDir',false)
+        result.credentials = result.googleOpts.credentials
+        result.bootDiskSize = session.config.navigate('google.batch.bootDiskSize') as MemoryUnit
+        result.cpuPlatform = session.config.navigate('google.batch.cpuPlatform')
         result.spot = session.config.navigate('google.batch.spot',false)
         result.preemptible = session.config.navigate('google.batch.preemptible',false)
         result.usePrivateAddress = session.config.navigate('google.batch.usePrivateAddress',false)
@@ -64,22 +69,9 @@ class BatchConfig {
         return result
     }
 
-    static protected GoogleCredentials makeCreds(File credsFile) {
-        GoogleCredentials result
-        if( credsFile ) {
-            log.debug "Google auth via application credentials file: $credsFile"
-            result = GoogleCredentials .fromStream(new FileInputStream(credsFile))
-        }
-        else {
-            log.debug "Google auth via application DEFAULT"
-            result = GoogleCredentials.getApplicationDefault()
-        }
-        return result.createScoped("https://www.googleapis.com/auth/cloud-platform")
-    }
-
     @Override
     String toString(){
-        return "BatchConfig[googleOpts=$googleOpts; disableBinDir=$disableBinDir]"
+        return "BatchConfig[googleOpts=$googleOpts"
     }
 
 }

@@ -13,12 +13,12 @@ import nextflow.script.ScriptMeta
 class MissingProcessException extends ProcessException {
 
     MissingProcessException(ScriptMeta meta, MissingMethodException e) {
-        super(message(meta, e.method), e)
+        super(message(meta, e.method, e.arguments), e)
     }
 
     @PackageScope
-    static String message(ScriptMeta meta, String name) {
-        def result = "Missing process or function with name '$name'"
+    static String message(ScriptMeta meta, String name, Object[]args) {
+        def result = "Missing process or function $name(${args.length ? args : ''})"
         def matches = meta.getAllNames().closest(name)
         if( matches.size()==1 )
             result += " -- Did you mean '${matches[0]}' instead?"

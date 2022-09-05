@@ -166,8 +166,8 @@ class K8sTaskHandler extends TaskHandler {
         }
     }
 
-    protected boolean preserveContainerEntrypoint() {
-        return executor.getK8sConfig().preserveContainerEntrypoint()
+    protected boolean entrypointOverride() {
+        return executor.getK8sConfig().entrypointOverride()
     }
 
     protected Map newSubmitRequest0(TaskRun task, String imageName) {
@@ -186,9 +186,9 @@ class K8sTaskHandler extends TaskHandler {
             .withAnnotations(getAnnotations())
             .withPodOptions(getPodOptions())
 
-        // when `preserveEntrypoint` is true the launcher is run via `args` instead of `command`
+        // when `entrypointOverride` is false the launcher is run via `args` instead of `command`
         // to not override the container entrypoint
-        if( preserveContainerEntrypoint() ) {
+        if( !entrypointOverride() ) {
             builder.withArgs(launcher)
         }
         else {
@@ -216,9 +216,14 @@ class K8sTaskHandler extends TaskHandler {
             builder.withHostMount(mount,mount)
         }
 
+        if ( taskCfg.time ) {
+            final duration = taskCfg.getTime()
+            builder.withActiveDeadline(duration.toSeconds() as int)
+        }
+
         return useJobResource()
-                ? builder.buildAsJob()
-                : builder.build()
+            ? builder.buildAsJob()
+            : builder.build()
     }
 
     protected PodOptions getPodOptions() {
@@ -231,11 +236,14 @@ class K8sTaskHandler extends TaskHandler {
 
 
     protected Map<String,String> getLabels(TaskRun task) {
-        def result = new LinkedHashMap<String,String>(10)
-        def labels = k8sConfig.getLabels()
+        final result = new LinkedHashMap<String,String>(10)
+        final labels = k8sConfig.getLabels()
         if( labels ) {
             result.putAll(labels)
         }
+        final resLabels = task.config.getResourceLabels()
+        if( resLabels )
+            resLabels.putAll(resLabels)
         result.app = 'nextflow'
         result.runName = getRunName()
         result.taskName = task.getName()
@@ -463,7 +471,7 @@ class K8sTaskHandler extends TaskHandler {
             if ( k8sConfig.fetchNodeName() && !runsOnNode )
                 runsOnNode = client.getNodeOfPod( podName )
         } catch ( Exception e ){
-            log.warn ("Unable to fetch pod: $podName its node -- see the log file for details", e)
+            log.warn ("Unable to get the node name of pod $podName -- see the log file for details", e)
         }
     }
 

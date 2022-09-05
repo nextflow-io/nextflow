@@ -781,7 +781,9 @@ the :ref:`k8s-page` section.
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -params-file              |             | Load script parameters from a JSON/YAML file.                                  |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
-| -pod-image                |             | Specify the container image for the Nextflow pod.                              |
+| -head-image               |             | Specify the container image for the Nextflow driver pod.                       |
++---------------------------+-------------+--------------------------------------------------------------------------------+
+| -preview                  |             | Run the workflow script skipping the execution of all processes                |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -process.                 | {}          | Set process options. Syntax ``-process.key=value``                             |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
@@ -828,6 +830,8 @@ the :ref:`k8s-page` section.
 | -with-trace               | trace.txt   | Create processes execution tracing file.                                       |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-weblog              |             | Send workflow status messages via HTTP to target URL.                          |
++---------------------------+-------------+--------------------------------------------------------------------------------+
+| -without-conda            | false       | Disable process execution with Conda.                                          |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -without-docker           | false       | Disable process execution with Docker.                                         |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
@@ -1262,18 +1266,21 @@ Viewing the contents of a downloaded pipeline. ::
 
     == content of file: .nextflow/assets/nextflow-io/hello/main.nf
     #!/usr/bin/env nextflow
-
-    cheers = Channel.from 'Bonjour', 'Ciao', 'Hello', 'Hola'
+    nextflow.enable.dsl=2 
 
     process sayHello {
-      debug true
-      input:
-        val x from cheers
-
+      input: 
+        val x
+      output:
+        stdout
       script:
         """
         echo '$x world!'
         """
+    }
+
+    workflow {
+      Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
     }
 
 Listing the folder structure of the downloaded pipeline. ::
@@ -1296,18 +1303,21 @@ Viewing the contents of a downloaded pipeline without omitting the header. ::
     $ nextflow view -q nextflow-io/hello
 
     #!/usr/bin/env nextflow
-
-    cheers = Channel.from 'Bonjour', 'Ciao', 'Hello', 'Hola'
+    nextflow.enable.dsl=2 
 
     process sayHello {
-      debug true
-      input:
-        val x from cheers
-
+      input: 
+        val x
+      output:
+        stdout
       script:
         """
         echo '$x world!'
         """
+    }
+
+    workflow {
+      Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
     }
 
 

@@ -373,6 +373,21 @@ class SessionTest extends Specification {
         'charliecloud' | [enabled: true, x:'delta', y: 'gamma']
     }
 
+    @Unroll
+    def 'should get config config' () {
+        given:
+        def session =  Spy(new Session([conda: CONFIG]))
+        expect:
+        session.condaConfig.isEnabled() == EXPECTED
+        
+        where:
+        EXPECTED    | CONFIG            | ENV
+        false       | [:]               | [:]
+        false       | [enabled: false]  | [:]
+        true        | [enabled: true]   | [:]
+
+    }
+
     def 'should get manifest object' () {
 
         given:

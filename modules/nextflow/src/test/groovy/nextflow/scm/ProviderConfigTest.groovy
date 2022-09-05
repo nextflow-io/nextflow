@@ -18,6 +18,7 @@
 package nextflow.scm
 
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -222,5 +223,24 @@ class ProviderConfigTest extends Specification {
         !result.find { it.name == 'xxxx' }
     }
 
+    @Unroll
+    def 'should resolve project name' () {
+        given:
+        def config = new ProviderConfig('github', [server: SERVER])
+
+        expect:
+        config.resolveProjectName(PATH) == EXPECTED
+
+        where:
+        PATH          | SERVER                  | EXPECTED
+        'a/b/c'       | null                    | 'a/b/c'
+        'a/b/c'       | 'http://dot.com'        | 'a/b/c'
+        'a/b/c'       | 'http://dot.com/'       | 'a/b/c'
+        'a/b/c'       | 'http://dot.com/a'      | 'b/c'
+        'a/b/c'       | 'http://dot.com/a/'     | 'b/c'
+        and:
+        'paolo0758/nf-azure-repo'                    | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
+        'paolo0758/nf-azure-repo/_git/nf-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
+    }
 
 }

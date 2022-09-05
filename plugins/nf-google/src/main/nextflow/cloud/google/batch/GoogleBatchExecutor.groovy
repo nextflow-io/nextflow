@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.google.batch.client.BatchClient
+import nextflow.cloud.google.batch.logging.BatchLogging
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
 import nextflow.extension.FilesEx
@@ -45,10 +46,12 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     private BatchClient client
     private BatchConfig config
     private Path remoteBinDir
+    private BatchLogging logging
 
     BatchClient getClient() { return client }
     BatchConfig getConfig() { return config }
     Path getRemoteBinDir() { return remoteBinDir }
+    BatchLogging getLogging() { logging }
 
     @Override
     final boolean isContainerNative() {
@@ -68,7 +71,7 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     }
 
     protected void uploadBinDir() {
-        if( session.binDir && !config.disableBinDir ) {
+        if( session.binDir && !session.binDir.empty() && !session.disableRemoteBinDir ) {
             final cloudPath = getTempDir()
             log.info "Uploading local `bin` scripts folder to ${cloudPath.toUriString()}/bin"
             this.remoteBinDir = FilesEx.copyTo(session.binDir, cloudPath)
@@ -77,11 +80,12 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
 
     protected void createConfig() {
         this.config = BatchConfig.create(session)
-        log.debug "Google Batch config=$config"
+        log.debug "[GOOGLE BATCH] Executor config=$config"
     }
 
     protected void createClient() {
         this.client = new BatchClient(config)
+        this.logging = new BatchLogging(config)
     }
 
     @Override

@@ -16,9 +16,11 @@
 
 package nextflow.script
 
+import nextflow.exception.MissingProcessException
+
 import java.nio.file.Files
 
-import nextflow.exception.DuplicateModuleIncludeException
+import nextflow.NextflowMeta
 import nextflow.exception.ScriptCompilationException
 import spock.lang.Timeout
 import test.Dsl2Spec
@@ -145,6 +147,114 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         then:
         result.val == 'dlrow olleh'
+    }
+
+    def 'should allows duplicate functions' () {
+        given:
+        NextflowMeta.instance.strictMode(true)
+        and:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        def foo(str='foo') {
+          return str.reverse()
+        }
+        '''
+
+        SCRIPT.text = """  
+        include { foo } from "$MODULE" 
+        workflow {
+           emit:
+           channel.of('hello world').map { 
+            [ witharg : foo(it), withdefault : foo() ] 
+           }
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner() .setScript(SCRIPT).execute()
+        def map = result.val
+        then:
+        map
+        map.witharg == 'hello world'.reverse()
+        map.withdefault == 'foo'.reverse()
+        
+        cleanup:
+        NextflowMeta.instance.strictMode(false)
+    }
+
+    def 'should allows multiple signatures of function' () {
+        given:
+        NextflowMeta.instance.strictMode(true)
+        and:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        def foo( list=[1,2,3] ) {
+          return list
+        }
+        def foo(c1, c2){
+            return c1+"-"+c2
+        }   
+        '''
+
+        SCRIPT.text = """  
+        include { foo } from "$MODULE" 
+        workflow {
+           emit:
+           channel.from( foo() ).flatMap { foo(it, it*2) } 
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner() .setScript(SCRIPT).execute()
+
+        then:
+        result.val == '1-2'
+        result.val == '2-4'
+        result.val == '3-6'
+
+        cleanup:
+        NextflowMeta.instance.strictMode(false)
+    }
+
+    def 'should fails if no signatures of function founded' () {
+        given:
+        NextflowMeta.instance.strictMode(true)
+        and:
+        def folder = Files.createTempDirectory('test')
+        def MODULE = folder.resolve('module.nf')
+        def SCRIPT = folder.resolve('main.nf')
+
+        MODULE.text = '''
+        def foo( list=[1,2,3] ) {
+          return list
+        }
+        def foo(c1, c2){
+            return c1+"-"+c2
+        }   
+        '''
+
+        SCRIPT.text = """  
+        include { foo } from "$MODULE" 
+        workflow {
+           emit:
+           channel.from( foo(1, 2, 3) ) 
+        }
+        """
+
+        when:
+        def result = new MockScriptRunner() .setScript(SCRIPT).execute()
+
+        then:
+        thrown(MissingProcessException)
+
+        cleanup:
+        NextflowMeta.instance.strictMode(false)
     }
 
     def 'should invoke a workflow from include' () {
@@ -663,7 +773,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         noExceptionThrown()
     }
 
-    def 'should error on duplicate import' () {
+    def 'should allows duplicate import' () {
         given:
         def folder = TestHelper.createInMemTempDir();
         def MOD1 = folder.resolve('mod1.nf')
@@ -686,8 +796,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         def runner = new MockScriptRunner()
         runner.setScript(SCRIPT).execute()
         then:
-        def err = thrown(DuplicateModuleIncludeException)
-        err.message == "A process with name 'foo' is already defined in the current context"
+        noExceptionThrown()
     }
 
     def 'should include only named component' () {
