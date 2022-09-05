@@ -20,7 +20,7 @@ package io.seqera.wave.plugin
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.exception.AbortRunException
+import nextflow.exception.AbortOperationException
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
 /**
@@ -38,7 +38,7 @@ class WaveFactory implements TraceObserverFactory {
         final wave = (Map)config.wave
         final fusion = (Map)config.fusion
         if( fusion?.enabled ) {
-            if( !wave?.enabled ) throw new AbortRunException("Fusion feature requires enabling Wave service")
+            if( !wave?.enabled ) throw new AbortOperationException("Fusion feature requires enabling Wave service")
             log.debug "Detected Fusion enabled -- Enabling bundle project resources -- Disabling upload of remote bin directory"
             wave.bundleProjectResources = true
             session.disableRemoteBinDir = true
