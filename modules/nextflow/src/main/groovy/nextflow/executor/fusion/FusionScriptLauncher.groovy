@@ -62,18 +62,6 @@ class FusionScriptLauncher extends BashWrapperBuilder {
             bean.inputFiles.put( entry.key, toContainerMount(entry.value) )
         }
 
-        // include task script as an input to force its staging in the container work directory
-        bean.inputFiles[TaskRun.CMD_SCRIPT] = bean.workDir.resolve(TaskRun.CMD_SCRIPT)
-        // add the wrapper file when stats are enabled
-        // NOTE: this must match the logic that uses the run script in BashWrapperBuilder
-        if( isTraceRequired() ) {
-            bean.inputFiles[TaskRun.CMD_RUN] = bean.workDir.resolve(TaskRun.CMD_RUN)
-        }
-        // include task stdin file
-        if( bean.input != null ) {
-            bean.inputFiles[TaskRun.CMD_INFILE] = bean.workDir.resolve(TaskRun.CMD_INFILE)
-        }
-
         // make it change to the task work dir
         bean.headerScript = headerScript(bean)
         // enable use of local scratch dir
@@ -129,4 +117,5 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     protected Path targetInputFile() {
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
     }
+
 }
