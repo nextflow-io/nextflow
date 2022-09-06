@@ -16,6 +16,9 @@
 
 package nextflow.cloud.azure.batch
 
+import com.azure.identity.ClientSecretCredentialBuilder
+import com.microsoft.azure.batch.auth.BatchCredentials
+
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
@@ -24,7 +27,6 @@ import java.util.function.Predicate
 
 import com.microsoft.azure.batch.BatchClient
 import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials
-import com.microsoft.azure.batch.auth.BatchApplicationTokenCredentials
 import com.microsoft.azure.batch.protocol.models.AutoUserScope
 import com.microsoft.azure.batch.protocol.models.AutoUserSpecification
 import com.microsoft.azure.batch.protocol.models.AzureFileShareConfiguration
@@ -256,36 +258,53 @@ class AzBatchService implements Closeable {
         result.setScale(0, RoundingMode.UP).intValue()
     }
 
+
+    protected createBatchCredentialsWithKey() {
+        if (config.batch().endpoint || config.batch().accountKey || config.batch().accountName) {
+            // Create batch client
+            if (!config.batch().endpoint)
+                throw new IllegalArgumentException("Missing Azure Batch endpoint -- Specify it in the nextflow.config file using the setting 'azure.batch.endpoint'")
+            if (!config.batch().accountName)
+                throw new IllegalArgumentException("Missing Azure Batch account name -- Specify it in the nextflow.config file using the setting 'azure.batch.accountName'")
+            if (!config.batch().accountKey)
+                throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKet'")
+
+            return new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey)
+
+        }
+    }
+
+    protected createBatchCredentialsWithServicePrincipal() {
+        if (config.identity().servicePrincipalId || config.identity().servicePrincipalSecret) {
+            if (!config.identity().servicePrincipalId)
+                throw new IllegalArgumentException("Missing Azure Batch servicePrincipalId -- Specify it in the nextflow.config file")
+            if (!config.identity().servicePrincipalSecret)
+                throw new IllegalArgumentException("Missing Azure Batch servicePrincipalSecret -- Specify it in the nextflow.config file")
+
+            return new ClientSecretCredentialBuilder()
+                    .clientId(config.identity().servicePrincipalId)
+                    .clientSecret(config.identity().servicePrincipalSecret)
+                    .tenantId(config.identity().tenantId)
+                    .build()
+
+        }
+    }
+
+
     protected BatchClient createBatchClient() {
         log.debug "[AZURE BATCH] Executor options=${config.batch()}"
 
-        def cred
+        def cred = config.identity().isConfigured()
+                ? createBatchCredentialsWithServicePrincipal()
+                : createBatchCredentialsWithKey()
 
-        if (config.batch().endpoint || config.batch().accountKey || config.batch().accountName ) {
-             // Create batch client
-            if( !config.batch().endpoint )
-                throw new IllegalArgumentException("Missing Azure Batch endpoint -- Specify it in the nextflow.config file using the setting 'azure.batch.endpoint'")
-            if( !config.batch().accountName )
-                throw new IllegalArgumentException("Missing Azure Batch account name -- Specify it in the nextflow.config file using the setting 'azure.batch.accountName'")
-            if( !config.batch().accountKey )
-                throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKet'")
+        // Create batch client
+        def client = BatchClient.open(cred as BatchCredentials)
 
-            cred = new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey)
-        } else {
-
-            final batchEndpoint = config.batch().batchEndpoint ?: "https://batch.core.windows.net/";
-            final authenticationEndpoint =  config.batch().authenticationEndpoint ?: "https://login.microsoftonline.com/";
-            final batchServiceEndpoint = config.batch().batchEndpoint
-            final tenantId = config.batch().tenantId
-            final clientId = config.batch().clientId
-            final clientSecret = config.batch().clientSecret
-            cred = new BatchApplicationTokenCredentials(batchServiceEndpoint, clientId, clientSecret, tenantId, batchEndpoint, authenticationEndpoint)
-        }
-
-
-        def client = BatchClient.open(cred)
         final sess = Global.session as Session
-        sess.onShutdown { client.protocolLayer().restClient().close() }
+        sess.onShutdown {
+            client.protocolLayer().restClient().close()
+        }
         return client
     }
 
