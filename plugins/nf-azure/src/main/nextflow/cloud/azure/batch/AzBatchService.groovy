@@ -260,6 +260,8 @@ class AzBatchService implements Closeable {
 
 
     protected createBatchCredentialsWithKey() {
+        log.debug "[AZURE BATCH] Creating Azure Batch client using shared key creddentials"
+
         if (config.batch().endpoint || config.batch().accountKey || config.batch().accountName) {
             // Create batch client
             if (!config.batch().endpoint)
@@ -275,21 +277,16 @@ class AzBatchService implements Closeable {
     }
 
     protected createBatchCredentialsWithServicePrincipal() {
-        if (config.identity().servicePrincipalId || config.identity().servicePrincipalSecret) {
-            if (!config.identity().servicePrincipalId)
-                throw new IllegalArgumentException("Missing Azure Batch servicePrincipalId -- Specify it in the nextflow.config file")
-            if (!config.identity().servicePrincipalSecret)
-                throw new IllegalArgumentException("Missing Azure Batch servicePrincipalSecret -- Specify it in the nextflow.config file")
+        log.debug "[AZURE BATCH] Creating Azure Batch client using service principal credentials"
 
-            return new ClientSecretCredentialBuilder()
-                    .clientId(config.identity().servicePrincipalId)
-                    .clientSecret(config.identity().servicePrincipalSecret)
-                    .tenantId(config.identity().tenantId)
-                    .build()
+        def servicePrincipalBasedCred = new ClientSecretCredentialBuilder()
+                .clientId(config.identity().servicePrincipalId)
+                .clientSecret(config.identity().servicePrincipalSecret)
+                .tenantId(config.identity().tenantId)
+                .build()
 
-        }
+        return servicePrincipalBasedCred
     }
-
 
     protected BatchClient createBatchClient() {
         log.debug "[AZURE BATCH] Executor options=${config.batch()}"
