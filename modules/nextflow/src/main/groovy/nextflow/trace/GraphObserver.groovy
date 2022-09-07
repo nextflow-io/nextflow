@@ -41,8 +41,6 @@ import nextflow.processor.TaskProcessor
 @Slf4j
 class GraphObserver implements TraceObserver {
 
-    static public final String DEF_FILE_NAME = 'dag.dot'
-
     private Path file
 
     private DAG dag
@@ -73,11 +71,14 @@ class GraphObserver implements TraceObserver {
     void onFlowComplete() {
         // -- normalise the DAG
         dag.normalize()
-        // -- render it to a file
+        // -- overwrite existing file if specified
         if( overwrite )
             Files.deleteIfExists(file)
-        else
-            file.rollFile()
+        // -- otherwise log warning if file already exists
+        else if( Files.exists(file) ) {
+            log.warn 'DAG file already exists, enable `dag.overwrite` to overwrite it on subsequent runs'
+            return
+        }
         createRender().renderDocument(dag,file)
     }
 

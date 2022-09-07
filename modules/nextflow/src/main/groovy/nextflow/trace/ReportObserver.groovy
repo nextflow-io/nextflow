@@ -40,8 +40,6 @@ import nextflow.script.WorkflowMetadata
 @CompileStatic
 class ReportObserver implements TraceObserver {
 
-    static final public String DEF_FILE_NAME = 'report.html'
-
     static final public int DEF_MAX_TASKS = 10_000
 
     /**
@@ -280,11 +278,15 @@ class ReportObserver implements TraceObserver {
         if( parent )
             Files.createDirectories(parent)
 
+        // overwrite existing file if specified
         if( overwrite )
             Files.deleteIfExists(reportFile)
-        else
-            // roll the any trace files that may exist
-            reportFile.rollFile()
+
+        // otherwise log warning if file already exists
+        else if( Files.exists(reportFile) ) {
+            log.warn 'Report file already exists, enable `report.overwrite` to overwrite it on subsequent runs'
+            return
+        }
 
         def writer = Files.newBufferedWriter(reportFile, Charset.defaultCharset())
         writer.withWriter { w -> w << html_output }

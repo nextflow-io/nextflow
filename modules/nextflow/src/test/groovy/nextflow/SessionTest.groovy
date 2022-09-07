@@ -280,7 +280,7 @@ class SessionTest extends Specification {
 
         when:
         session = [:] as Session
-        session.config = [trace: [enabled: true, fields: 'task_id,name,exit,vmem']]
+        session.config = [trace: [enabled: true, fields: 'task_id,name,exit,vmem', file: 'trace.txt']]
         result = session.createObservers()
         observer = result[1] as TraceFileObserver
         then:

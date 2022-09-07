@@ -39,8 +39,6 @@ import nextflow.processor.TaskProcessor
 @CompileStatic
 class TraceFileObserver implements TraceObserver {
 
-    public static final String DEF_FILE_NAME = 'trace.txt'
-
     /**
      * The list of fields included in the trace report
      */
@@ -203,11 +201,15 @@ class TraceFileObserver implements TraceObserver {
         if( parent )
             Files.createDirectories(parent)
 
+        // overwrite existing file if specified
         if( overwrite )
             Files.deleteIfExists(tracePath)
-        else
-            // roll the any trace files that may exist
-            tracePath.rollFile()
+
+        // otherwise log warning if file already exists
+        else if( Files.exists(tracePath) ) {
+            log.warn 'Trace file already exists, enable `trace.overwrite` to overwrite it on subsequent runs'
+            return
+        }
 
         // create a new trace file
         traceFile = new PrintWriter(Files.newBufferedWriter(tracePath, Charset.defaultCharset()))

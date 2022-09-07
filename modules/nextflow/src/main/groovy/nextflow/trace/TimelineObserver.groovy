@@ -41,8 +41,6 @@ import org.apache.commons.lang.StringEscapeUtils
 @CompileStatic
 class TimelineObserver implements TraceObserver {
 
-    public static final String DEF_FILE_NAME = 'timeline.html'
-
     /**
      * Holds the the start time for tasks started/submitted but not yet completed
      */
@@ -175,11 +173,15 @@ class TimelineObserver implements TraceObserver {
         if( parent )
             Files.createDirectories(parent)
 
+        // overwrite existing file if specified
         if( overwrite )
             Files.deleteIfExists(reportFile)
-        else
-            // roll any trace files that may exist
-            reportFile.rollFile()
+
+        // otherwise log warning if file already exists
+        else if( Files.exists(reportFile) ) {
+            log.warn 'Timeline file already exists, enable `timeline.overwrite` to overwrite it on subsequent runs'
+            return
+        }
 
         def writer = Files.newBufferedWriter(reportFile, Charset.defaultCharset())
         writer.withWriter { w -> w << html_output }

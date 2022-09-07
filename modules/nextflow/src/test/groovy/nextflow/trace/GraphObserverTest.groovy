@@ -16,7 +16,6 @@
  */
 
 package nextflow.trace
-import java.nio.file.Files
 import java.nio.file.Paths
 
 import groovyx.gpars.dataflow.DataflowQueue
@@ -77,7 +76,7 @@ class GraphObserverTest extends Specification {
 
     def 'should write a dot file' () {
         given:
-        def file = Files.createTempFile('nxf_','.dot')
+        def file = TestHelper.createInMemTempFile('dag.dot')
         def gr = new GraphObserver(file)
         gr.dag = test_dag
 
@@ -104,7 +103,7 @@ class GraphObserverTest extends Specification {
 
     def 'should write an html file' () {
         given:
-        def file = Files.createTempFile('nxf-','.html')
+        def file = TestHelper.createInMemTempFile('dag.html')
         def gr = new GraphObserver(file)
         gr.dag = test_dag
 
@@ -132,7 +131,7 @@ class GraphObserverTest extends Specification {
     @Requires( { TestHelper.graphvizInstalled() } )
     def 'should write an svg file' () {
         given:
-        def file = Files.createTempFile('nxf-','.svg')
+        def file = TestHelper.createInMemTempFile('dag.svg')
         def gr = new GraphObserver(file)
         gr.dag = test_dag
 
@@ -150,7 +149,7 @@ class GraphObserverTest extends Specification {
     @Requires( { TestHelper.graphvizInstalled() } )
     def 'should write a png file' () {
         given:
-        def file = Files.createTempFile('nxf-','.png')
+        def file = TestHelper.createInMemTempFile('dag.png')
         def gr = new GraphObserver(file)
         gr.dag = test_dag
 
@@ -167,7 +166,7 @@ class GraphObserverTest extends Specification {
     @Requires( { TestHelper.graphvizInstalled() } )
     def 'should write a pdf file' () {
         given:
-        def file = Files.createTempFile('nxf-','.pdf')
+        def file = TestHelper.createInMemTempFile('dag.pdf')
         def gr = new GraphObserver(file)
         gr.dag = test_dag
 
@@ -183,8 +182,7 @@ class GraphObserverTest extends Specification {
 
     def 'should output a dot file when no extension is specified' () {
         given:
-        def folder = Files.createTempDirectory('test')
-        def file = folder.resolve('nope')
+        def file = TestHelper.createInMemTempFile('dag')
         def gr = new GraphObserver(file)
         gr.dag = test_dag
 
@@ -202,9 +200,6 @@ class GraphObserverTest extends Specification {
         result.contains('label="Process 2"')
         // contains at least one edge
         result.contains('->')
-
-        cleanup:
-        folder.deleteDir()
     }
 
     def 'should return a renderer instance' () {

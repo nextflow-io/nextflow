@@ -531,6 +531,9 @@ class ConfigBuilder {
     @PackageScope
     void configRunOptions(ConfigObject config, Map env, CmdRun cmdRun) {
 
+        // -- get current timestamp
+        String timestamp = getTimestamp()
+
         // -- set config options
         if( cmdRun.cacheable != null )
             config.cacheable = cmdRun.cacheable
@@ -610,7 +613,7 @@ class ConfigBuilder {
             if( cmdRun.withTrace != '-' )
                 config.trace.file = cmdRun.withTrace
             else if( !config.trace.file )
-                config.trace.file = TraceFileObserver.DEF_FILE_NAME
+                config.trace.file = "trace_${timestamp}.txt"
         }
 
         // -- sets report report options
@@ -621,7 +624,7 @@ class ConfigBuilder {
             if( cmdRun.withReport != '-' )
                 config.report.file = cmdRun.withReport
             else if( !config.report.file )
-                config.report.file = ReportObserver.DEF_FILE_NAME
+                config.report.file = "report_${timestamp}.html"
         }
 
         // -- sets timeline report options
@@ -632,7 +635,7 @@ class ConfigBuilder {
             if( cmdRun.withTimeline != '-' )
                 config.timeline.file = cmdRun.withTimeline
             else if( !config.timeline.file )
-                config.timeline.file = TimelineObserver.DEF_FILE_NAME
+                config.timeline.file = "timeline_${timestamp}.html"
         }
 
         // -- sets DAG report options
@@ -643,7 +646,7 @@ class ConfigBuilder {
             if( cmdRun.withDag != '-' )
                 config.dag.file = cmdRun.withDag
             else if( !config.dag.file )
-                config.dag.file = GraphObserver.DEF_FILE_NAME
+                config.dag.file = 'dag.dot'
         }
 
         if( cmdRun.withNotification ) {
@@ -726,6 +729,10 @@ class ConfigBuilder {
         if( cmdRun.withCharliecloud ) {
             configContainer(config, 'charliecloud', cmdRun.withCharliecloud)
         }
+    }
+
+    protected String getTimestamp() {
+        new Date().format('yyyy-MM-dd_HH-mm-ss')
     }
 
     private void configContainer(ConfigObject config, String engine, def cli) {

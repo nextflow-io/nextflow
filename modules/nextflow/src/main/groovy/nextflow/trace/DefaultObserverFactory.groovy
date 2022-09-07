@@ -58,11 +58,9 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = config.navigate('report.file')
+        Path reportPath = (config.navigate('report.file') as Path).complete()
         def maxTasks = config.navigate('report.maxTasks', ReportObserver.DEF_MAX_TASKS) as int
-        if( !fileName ) fileName = ReportObserver.DEF_FILE_NAME
-        def report = (fileName as Path).complete()
-        def observer = new ReportObserver(report)
+        def observer = new ReportObserver(reportPath)
         observer.maxTasks = maxTasks
         config.navigate('report.overwrite') { observer.overwrite = it }
         result << observer
@@ -76,10 +74,8 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = config.navigate('timeline.file')
-        if( !fileName ) fileName = TimelineObserver.DEF_FILE_NAME
-        def traceFile = (fileName as Path).complete()
-        def observer = new TimelineObserver(traceFile)
+        Path timelinePath = (config.navigate('timeline.file') as Path).complete()
+        def observer = new TimelineObserver(timelinePath)
         config.navigate('timeline.overwrite')  { observer.overwrite = it }
         result << observer
     }
@@ -89,10 +85,8 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = config.navigate('dag.file')
-        if( !fileName ) fileName = GraphObserver.DEF_FILE_NAME
-        def traceFile = (fileName as Path).complete()
-        def observer = new GraphObserver(traceFile)
+        Path dagPath = (config.navigate('dag.file') as Path).complete()
+        def observer = new GraphObserver(dagPath)
         config.navigate('dag.overwrite')  { observer.overwrite = it }
         result << observer
     }
@@ -105,10 +99,8 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = config.navigate('trace.file')
-        if( !fileName ) fileName = TraceFileObserver.DEF_FILE_NAME
-        def traceFile = (fileName as Path).complete()
-        def observer = new TraceFileObserver(traceFile)
+        Path tracePath = (config.navigate('trace.file') as Path).complete()
+        def observer = new TraceFileObserver(tracePath)
         config.navigate('trace.raw') { it -> observer.useRawNumbers(it == true) }
         config.navigate('trace.sep') { observer.separator = it }
         config.navigate('trace.fields') { observer.setFieldsAndFormats(it) }

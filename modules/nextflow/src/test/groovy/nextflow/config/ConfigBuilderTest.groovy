@@ -191,7 +191,7 @@ class ConfigBuilderTest extends Specification {
         file?.delete()
     }
 
-    def 'CLI params should override the ones defined in the config file (2)' () {
+    def 'CLI params should override the ones defined in the config file 2' () {
         setup:
         def file = Files.createTempFile('test',null)
         file.text = '''
@@ -782,7 +782,9 @@ class ConfigBuilderTest extends Specification {
 
         given:
         def env = [:]
-        def builder = [:] as ConfigBuilder
+        def builder = Spy(ConfigBuilder) {
+            getTimestamp() >> '0000-00-00_00-00-00'
+        }
 
         when:
         def config = new ConfigObject()
@@ -825,14 +827,16 @@ class ConfigBuilderTest extends Specification {
         then: // command line should override the config file
         config.trace instanceof Map
         config.trace.enabled
-        config.trace.file == 'trace.txt'
+        config.trace.file == 'trace_0000-00-00_00-00-00.txt'
     }
 
     def 'should set session report options' () {
 
         given:
         def env = [:]
-        def builder = [:] as ConfigBuilder
+        def builder = Spy(ConfigBuilder) {
+            getTimestamp() >> '0000-00-00_00-00-00'
+        }
 
         when:
         def config = new ConfigObject()
@@ -881,7 +885,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.report instanceof Map
         config.report.enabled
-        config.report.file == 'report.html'
+        config.report.file == 'report_0000-00-00_00-00-00.html'
     }
 
 
@@ -1005,7 +1009,9 @@ class ConfigBuilderTest extends Specification {
 
         given:
         def env = [:]
-        def builder = [:] as ConfigBuilder
+        def builder = Spy(ConfigBuilder) {
+            getTimestamp() >> '0000-00-00_00-00-00'
+        }
 
         when:
         def config = new ConfigObject()
@@ -1057,7 +1063,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.timeline instanceof Map
         config.timeline.enabled
-        config.timeline.file == 'timeline.html'
+        config.timeline.file == 'timeline_0000-00-00_00-00-00.html'
     }
 
     def 'should set tower options' () {
