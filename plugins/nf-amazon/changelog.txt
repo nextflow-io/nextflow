@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+1.10.2 - 7 Sep
+- Fix thread pool race condition on shutdown [8d2b0587]
+- Fix Intermediate multipart upload requires a minimum size (#3193) [0b66aed6]
+
 1.10.1 - 1 Sep
 - Add support for label/tags (#2853) [5d0b7c35]
 - Add fusion support to local executor [17160bb0]

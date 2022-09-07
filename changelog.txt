@@ -1,5 +1,20 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.09.2-edge - 7 Sep 2022
+- Fix thread pool race condition on shutdown [8d2b0587]
+- Fix Intermediate multipart upload requires a minimum size (#3193) [0b66aed6] <Jorge Aguilera>
+- Fix fusion enable detection [3ef91512]
+- Add before-afterScript warning to docs (#3167) [09464590] <Kibubu>
+- Add httpReadTimeout and httpConnectTimeout config to K8s client [064f9bc4]
+- Add support for Wave build & cache repos [98a275ba]
+- Finalise secrets feature (#3161) [49021b82]
+- Update executor retry config docs (#3001) [aed6c234]
+- Change Azure test pool name [0c724504]
+- Improve Wave error reporting [b11d0f11]
+- Remove unneeded launcher file remapping [a255118d] <Paolo Di Tommaso>
+- Update Azure vm types [80f5fbe4]
+- Update docs logos (#3174) [529bad81] <Phil Ewels>
+
 22.09.1-edge - 1 Sep 2022 
 - Add support for Charliecloud v0.28 (#3116) [84f43a33] <Patrick Hüther>
 - Add Support for EC-encrypted keys for K8s client [fd759d09]
