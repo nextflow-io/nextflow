@@ -483,8 +483,8 @@ public class AmazonS3Client {
 					.withMinimumUploadPartSize(uploadChunkSize)
 					.withExecutorFactory(() -> transferPool)
 					.build();
-			//
-			registerShutdownCallback();
+			// add thread pool shutdown callback
+			Global.onCleanup((it) -> { Session sess=(Session) it; showdownTransferPool(sess != null && sess.isAborted()); });
 		}
 		return transferManager;
 	}
@@ -642,23 +642,6 @@ public class AmazonS3Client {
 			final String waitMsg = "[AWS S3] Waiting files transfer to complete (%d files)";
 			final String exitMsg = "[AWS S3] Exiting before FileTransfer thread pool complete -- Some files maybe lost";
 			ThreadPoolHelper.await(transferPool, Duration.of("1h"), waitMsg, exitMsg);
-		}
-	}
-
-	protected void registerShutdownCallback() {
-		// add a shutdown hook
-		final Session sess = (Session) Global.getSession();
-		if( sess != null ) {
-			sess.onShutdown( () -> showdownTransferPool(sess.isAborted()) );
-		}
-		else {
-			log.debug("Session not available -- registering shutdown hook");
-			Runtime.getRuntime().addShutdownHook(new Thread() {
-				@Override
-				public void run() {
-					showdownTransferPool(false);
-				}
-			});
 		}
 	}
 }

@@ -81,7 +81,7 @@ class CollectFileOp {
         defineHashingParams()
 
         // make sure to delete the collector on termination
-        Global.onShutdown(() -> collector.safeClose() )
+        Global.onCleanup( collector.safeClose() )
     }
 
     protected FileCollector getCollector() {

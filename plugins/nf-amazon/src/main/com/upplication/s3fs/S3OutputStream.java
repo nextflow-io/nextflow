@@ -337,7 +337,7 @@ public final class S3OutputStream extends OutputStream {
         partETags = new LinkedBlockingQueue<>();
         phaser = new Phaser();
         phaser.register();
-        log.trace("Starting S3 upload: {}; chunk-size: {}; max-threads: {}", uploadId, request.getChunkSize(), request.getMaxThreads());
+        log.trace("[S3 phaser] Register - Starting S3 upload: {}; chunk-size: {}; max-threads: {}", uploadId, request.getChunkSize(), request.getMaxThreads());
     }
 
 
@@ -352,6 +352,7 @@ public final class S3OutputStream extends OutputStream {
     private Runnable task(final ByteBuffer buffer, final byte[] checksum, final int partIndex) {
 
         phaser.register();
+        log.trace("[S3 phaser] Task register");
         return new Runnable() {
             @Override
             public void run() {
@@ -364,6 +365,7 @@ public final class S3OutputStream extends OutputStream {
                     log.error("Upload: {} > Error for part: {}\nCaused by: {}", uploadId, partIndex, writer.toString());
                 }
                 finally {
+                    log.trace("[S3 phaser] Task arriveAndDeregisterphaser");
                     phaser.arriveAndDeregister();
                 }
             }
@@ -395,6 +397,7 @@ public final class S3OutputStream extends OutputStream {
                 uploadBuffer(buf, true);
 
             // -- shutdown upload executor and await termination
+            log.trace("[S3 phaser] Close arriveAndAwaitAdvance");
             phaser.arriveAndAwaitAdvance();
 
             // -- complete upload process
@@ -532,6 +535,7 @@ public final class S3OutputStream extends OutputStream {
             log.warn("Failed to abort multipart upload {}: {}", uploadId, e.getMessage());
         }
         aborted = true;
+        log.trace("[S3 phaser] MultipartUpload arriveAndDeregister");
         phaser.arriveAndDeregister();
     }
 
@@ -645,13 +649,7 @@ public final class S3OutputStream extends OutputStream {
             executorSingleton = pool;
             log.trace("Created singleton upload executor -- max-treads: {}", maxThreads);
             // register shutdown hook
-            Session sess = (Session) Global.getSession();
-            if( sess != null ) {
-                sess.onShutdown(() -> shutdownExecutor(sess.isAborted()) );
-            }
-            else {
-                log.warn("Session not available -- S3 uploader may not shutdown properly");
-            }
+            Global.onCleanup((it) -> { Session sess=(Session) it; shutdownExecutor(sess!=null && sess.isAborted()); });
         }
         return executorSingleton;
     }

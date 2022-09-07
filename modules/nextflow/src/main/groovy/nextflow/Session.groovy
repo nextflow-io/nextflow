@@ -49,7 +49,6 @@ import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
-import nextflow.file.FileTransferPool
 import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
@@ -637,10 +636,6 @@ class Session implements ISession {
     void destroy() {
         try {
             log.trace "Session > destroying"
-            // note: the file transfer pool must be terminated before
-            // invoking the shutdown callback to prevent depending pool (e.g. s3 transfer pool)
-            // are terminated while some file still needs to be download/uploaded
-            FileTransferPool.shutdown(aborted)
             // invoke shutdown callbacks
             shutdown0()
             log.trace "Session > after cleanup"
@@ -701,9 +696,6 @@ class Session implements ISession {
 
         // -- invoke observers completion handlers
         notifyFlowComplete()
-
-        // -- global
-        Global.cleanUp()
     }
 
     /**

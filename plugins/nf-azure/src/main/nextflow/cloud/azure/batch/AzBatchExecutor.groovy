@@ -21,6 +21,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.exception.AbortOperationException
@@ -97,7 +98,7 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
         if( !config.storage().sasToken )
             config.storage().sasToken = AzHelper.generateAccountSas(workDir, config.storage().tokenDuration)
 
-        session.onShutdown { batchService.close() }
+        Global.onCleanup { batchService.close() }
     }
 
     /**
