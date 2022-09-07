@@ -17,22 +17,17 @@
 
 package nextflow.cli
 
-import nextflow.secret.SecretsLoader
-
 import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
+import nextflow.secret.SecretsLoader
 import org.junit.Rule
 import spock.lang.Shared
 import spock.lang.Specification
 import test.OutputCapture
-
-import java.nio.file.Files
-import java.nio.file.Path
-
 /**
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
@@ -78,8 +73,8 @@ class CmdSecretTest extends Specification {
         'list' | ['foo']
         'get' | ['']
         'get' | ['a','b']
-        'put' | ['']
-        'put' | ['a']
+        'set' | ['']
+        'set' | ['a']
         'delete' | ['']
         'delete' | ['a','b']
     }
@@ -107,7 +102,7 @@ class CmdSecretTest extends Specification {
         secretFile.delete()
 
         when:
-        new CmdSecret(args: ['put','foo','bar']).run()
+        new CmdSecret(args: ['set','foo','bar']).run()
 
         then:
         secretFile.text.indexOf('"name": "foo"') != -1

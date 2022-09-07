@@ -8,9 +8,6 @@ Secrets
 As of version ``21.09.0-edge``, Nextflow adds the built-in support for pipeline secrets to allow users to handle
 and manage sensitive information for pipeline execution in a safe manner.
 
-.. warning::
-    This feature is experimental, and may change in a future release.
-
 How it works
 ============
 
@@ -20,11 +17,6 @@ owner.
 
 When the pipeline execution is launched Nextflow inject the secrets in pipeline jobs without leaking them
 into temporary execution files. The secrets are accessible into the job command via environment variables.
-
-.. note::
-    This feature is enabled by default. You can disabled it by setting the following environment variable in the launch environment::
-
-        export NXF_ENABLE_SECRETS=false
 
 
 Command line
@@ -38,7 +30,7 @@ Operation               Description
 ===================== =====================
 ``list``                List secrets available in the current store e.g. ``nextflow secrets list``.
 ``get``                 Allows retrieving a secret value e.g. ``nextflow secrets get FOO``.
-``put``                 Allows creating creating a new secret or overriding an existing one e.g. ``nextflow secrets put FOO "Hello world"``
+``set``                 Allows creating creating a new secret or overriding an existing one e.g. ``nextflow secrets set FOO "Hello world"``
 ``delete``              Allows deleting an existing secret e.g. ``nextflow secrets delete FOO``.
 ===================== =====================
 
@@ -82,5 +74,7 @@ process execution environment holding the values defines in the secret store.
     in the example above, otherwise a variable with the same will be evaluated in the Nextflow script
     context instead of the command script.
 
-.. warning::
+.. note::
     This feature is only available when using the local or grid executors (Slurm, Grid Engine, etc).
+    The AWS Batch executor allows the use of secrets when deploying the pipeline execution via
+    `Nextflow Tower <https://seqera.io/blog/pipeline-secrets-secure-handling-of-sensitive-information-in-tower/>`_.
