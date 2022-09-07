@@ -78,6 +78,7 @@ public final class S3OutputStream extends OutputStream {
 
     private static final Logger log = LoggerFactory.getLogger(S3OutputStream.class);
 
+    private static final int MIN_MULTIPART_UPLOAD = 1048576;
 
     /**
      * Amazon S3 API implementation to use.
@@ -265,10 +266,11 @@ public final class S3OutputStream extends OutputStream {
     @Override
     public void flush() throws IOException {
         // send out the current current
-        uploadBuffer(buf);
-        // clear the current buffer
-        buf = null;
-        md5 = null;
+        if( uploadBuffer(buf, false) ) {
+            // clear the current buffer
+            buf = null;
+            md5 = null;
+        }
     }
 
     private ByteBuffer allocate() {
@@ -296,10 +298,17 @@ public final class S3OutputStream extends OutputStream {
      * Upload the given buffer to S3 storage in a asynchronous manner.
      * NOTE: when the executor service is busy (i.e. there are any more free threads)
      * this method will block
+     *
+     * return: true if the buffer can be reused, false if still needs to be used
      */
-    private void uploadBuffer(ByteBuffer buf) throws IOException {
+    private boolean uploadBuffer(ByteBuffer buf, boolean last) throws IOException {
         // when the buffer is empty nothing to do
-        if( buf == null || buf.position()==0 ) { return; }
+        if( buf == null || buf.position()==0 ) { return false; }
+
+        // Intermediate uploads needs to have at least MIN bytes
+        if( buf.position() < MIN_MULTIPART_UPLOAD && !last){
+            return false;
+        }
 
         if (partsCount == 0) {
             init();
@@ -307,6 +316,8 @@ public final class S3OutputStream extends OutputStream {
 
         // set the buffer in read mode and submit for upload
         executor.submit( task(buf, md5.digest(), ++partsCount) );
+
+        return true;
     }
 
     /**
@@ -380,7 +391,7 @@ public final class S3OutputStream extends OutputStream {
         else {
             // -- upload remaining chunk
             if( buf != null )
-                uploadBuffer(buf);
+                uploadBuffer(buf, true);
 
             // -- shutdown upload executor and await termination
             phaser.arriveAndAwaitAdvance();
