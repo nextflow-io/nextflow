@@ -1282,6 +1282,9 @@ afterScript
 The ``afterScript`` directive allows you to execute a custom (Bash) snippet immediately *after* the main process has run.
 This may be useful to clean up your staging area.
 
+.. note:: When combined with the :ref:`container directive <process-container>`, the ``afterScript`` will be 
+   executed outside the specified container. In other words, the ``afterScript`` is always executed in the host environment.
+
 
 .. _process-beforeScript:
 
@@ -1300,6 +1303,9 @@ For example::
       echo bar
       """
     }
+
+.. note:: When combined with the :ref:`container directive <process-container>`, the ``beforeScript`` will be 
+   executed outside the specified container. In other words, the ``beforeScript`` is always executed in the host environment.
 
 
 .. _process-cache:
@@ -1674,6 +1680,19 @@ in the configuration file to select and configure subset of processes having sim
 
 See the :ref:`config-process-selectors` documentation for details.
 
+The ``label`` directive can be also expressed as a `Map<key-value>` or a `key=value` sentence:
+
+  process bigTask {
+    label "region=eu-west-1"
+    label organization: 'MyOrganization'
+    label department: 'a department', group: 'a group'
+
+    '''
+    <task script>
+    '''
+  }
+
+These labels will be used to tag the process when pipeline is running in AWS, Google or K8s
 
 .. _process-machineType:
 

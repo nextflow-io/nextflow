@@ -382,4 +382,8 @@ azure.batch.pools.<name>.runAs                  Specify the username under which
 azure.registry.server                           Specify the container registry from which to pull the Docker images (default: ``docker.io``, requires ``nf-azure@0.9.8``).
 azure.registry.userName                         Specify the username to connect to a private container registry (requires ``nf-azure@0.9.8``).
 azure.registry.password                         Specify the password to connect to a private container registry (requires ``nf-azure@0.9.8``).
+azure.retryPolicy.delay                         Delay when retrying failed API requests (default: ``500ms``).
+azure.retryPolicy.maxDelay                      Max delay when retrying failed API requests (default: ``60s``).
+azure.retryPolicy.jitter                        Jitter value when retrying failed API requests (default: ``0.25``).
+azure.retryPolicy.maxAttempts                   Max attempts when retrying failed API requests (default: ``10``).
 ============================================== =================

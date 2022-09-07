@@ -39,6 +39,7 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     private String scheme
     private Path remoteWorkDir
     private Set<String> buckets = new HashSet<>()
+    private Map<String,String> env
 
     /* ONLY FOR TESTING - DO NOT USE */
     protected FusionScriptLauncher() {
@@ -59,18 +60,6 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         // remap input files to container mounted paths
         for( Map.Entry<String,Path> entry : new HashMap<>(bean.inputFiles).entrySet() ) {
             bean.inputFiles.put( entry.key, toContainerMount(entry.value) )
-        }
-
-        // include task script as an input to force its staging in the container work directory
-        bean.inputFiles[TaskRun.CMD_SCRIPT] = bean.workDir.resolve(TaskRun.CMD_SCRIPT)
-        // add the wrapper file when stats are enabled
-        // NOTE: this must match the logic that uses the run script in BashWrapperBuilder
-        if( isTraceRequired() ) {
-            bean.inputFiles[TaskRun.CMD_RUN] = bean.workDir.resolve(TaskRun.CMD_RUN)
-        }
-        // include task stdin file
-        if( bean.input != null ) {
-            bean.inputFiles[TaskRun.CMD_INFILE] = bean.workDir.resolve(TaskRun.CMD_INFILE)
         }
 
         // make it change to the task work dir
@@ -102,6 +91,18 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         return buckets
     }
 
+    Map<String,String> fusionEnv() {
+        if( env==null ) {
+            final buckets = fusionBuckets().collect(it->"$scheme://$it").join(',')
+            final work = toContainerMount(remoteWorkDir).toString()
+            final result = new LinkedHashMap(10)
+            result.NXF_FUSION_WORK = work
+            result.NXF_FUSION_BUCKETS = buckets
+            env = result
+        }
+        return env
+    }
+
     @Override
     protected Path targetWrapperFile() {
         return remoteWorkDir.resolve(TaskRun.CMD_RUN)
@@ -116,4 +117,5 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     protected Path targetInputFile() {
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
     }
+
 }

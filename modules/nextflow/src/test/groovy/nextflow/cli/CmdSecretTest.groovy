@@ -17,6 +17,8 @@
 
 package nextflow.cli
 
+import nextflow.secret.SecretsLoader
+
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -27,6 +29,10 @@ import org.junit.Rule
 import spock.lang.Shared
 import spock.lang.Specification
 import test.OutputCapture
+
+import java.nio.file.Files
+import java.nio.file.Path
+
 /**
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
@@ -50,6 +56,9 @@ class CmdSecretTest extends Specification {
         tempDir = Files.createTempDirectory('test').toAbsolutePath()
         secretFile = new File("$tempDir/store.json")
         SysEnv.push([NXF_SECRETS_FILE: secretFile.toString()])
+        //required to run all test due collisions with others
+        def memoized = SecretsLoader.instance.memoizedMethodClosure$load
+        memoized.@cache.clear()
     }
 
     def cleanupSpec() {
