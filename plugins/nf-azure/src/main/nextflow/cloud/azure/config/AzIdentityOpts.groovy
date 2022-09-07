@@ -31,6 +31,11 @@ class AzIdentityOpts {
     String servicePrincipalSecret
     String tenantId
 
+
+    AzIdentityOpts() {
+        this(Collections.emptyMap())
+    }
+
     AzIdentityOpts(Map config, Map<String, String> env = null) {
         assert config != null
         this.sysEnv = env == null ? new HashMap<String, String>(System.getenv()) : env

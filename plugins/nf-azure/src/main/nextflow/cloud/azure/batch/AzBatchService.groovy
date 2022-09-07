@@ -16,7 +16,7 @@
 
 package nextflow.cloud.azure.batch
 
-import com.azure.identity.ClientSecretCredentialBuilder
+import com.microsoft.azure.batch.auth.BatchApplicationTokenCredentials
 import com.microsoft.azure.batch.auth.BatchCredentials
 
 import java.math.RoundingMode
@@ -279,11 +279,17 @@ class AzBatchService implements Closeable {
     protected createBatchCredentialsWithServicePrincipal() {
         log.debug "[AZURE BATCH] Creating Azure Batch client using service principal credentials"
 
-        def servicePrincipalBasedCred = new ClientSecretCredentialBuilder()
-                .clientId(config.identity().servicePrincipalId)
-                .clientSecret(config.identity().servicePrincipalSecret)
-                .tenantId(config.identity().tenantId)
-                .build()
+        final batchEndpoint = "https://batch.core.windows.net/";
+        final authenticationEndpoint = "https://login.microsoftonline.com/";
+
+        def servicePrincipalBasedCred = new BatchApplicationTokenCredentials(
+                config.batch().endpoint,
+                config.identity().servicePrincipalId,
+                config.identity().servicePrincipalSecret,
+                config.identity().tenantId,
+                batchEndpoint,
+                authenticationEndpoint
+        )
 
         return servicePrincipalBasedCred
     }

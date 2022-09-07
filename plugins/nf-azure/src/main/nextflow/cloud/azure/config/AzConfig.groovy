@@ -60,6 +60,7 @@ class AzConfig {
     AzRetryConfig retryConfig() { retryConfig }
 
     AzIdentityOpts identity() { identityOpts }
+   
     static AzConfig getConfig(Session session) {
         if( !session )
             throw new IllegalStateException("Missing Nextflow session")
