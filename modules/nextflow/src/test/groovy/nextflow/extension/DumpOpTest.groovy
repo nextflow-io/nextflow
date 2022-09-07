@@ -120,7 +120,7 @@ class DumpOpTest extends Specification {
         new Session(dumpChannels: ['*'])
 
         when:
-        def result = Channel.of(items).dump(tag: 'foo', prettyPrint: true)
+        def result = Channel.of(items).dump(tag: 'foo', pretty: true)
 
         then:
         result.val
@@ -150,7 +150,7 @@ class DumpOpTest extends Specification {
                         [id: 'S2', path: '/path/to/s2'],
                         [id: 'S3', path: '/path/to/s3']
                 ]
-        ]).dump(tag: 'foo', prettyPrint: true)
+        ]).dump(tag: 'foo', pretty: true)
 
         then:
         result.val
