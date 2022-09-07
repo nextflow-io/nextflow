@@ -674,7 +674,7 @@ Then you will be able to specify the tag ``foo`` or ``bar`` as an argument of th
 either the content of the first or the second channel. Multiple tag names can be specified separating them with a ``,``
 character.
 
-The output can be formatted using the optional ``prettyPrint`` boolean parameter::
+The output can be formatted using the optional ``pretty`` boolean parameter::
 
     Channel.of( [
         id: 'test',
@@ -683,7 +683,7 @@ The output can be formatted using the optional ``prettyPrint`` boolean parameter
             [ id: 'S2', path: '/path/to/s2' ],
             [ id: 'S3', path: '/path/to/s3' ]
         ]
-    ]).dump(tag:'foo', prettyPrint: true)
+    ]).dump(tag:'foo', pretty: true)
 
 ::
 
