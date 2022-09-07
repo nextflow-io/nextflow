@@ -38,9 +38,17 @@ class SysEnv {
 
     private static final List<Map<String,String>> history = new ArrayList<Map<String,String>>()
 
-    static Map<String,String> get()  { return holder }
+    static Map<String,String> get()  {
+        return holder
+    }
 
-    static String get(String name) { return holder.get(name) }
+    static String get(String name) {
+        return holder.get(name)
+    }
+
+    static String get(String name, String defValue) {
+        return holder.containsKey(name) ? holder.get(name) : defValue
+    }
 
     static void push(Map<String,String> env) {
         history.push(holder.getTarget())

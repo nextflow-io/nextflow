@@ -19,6 +19,7 @@ package nextflow.secret
 
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 
@@ -32,7 +33,7 @@ import nextflow.plugin.Plugins
 class SecretsLoader {
 
     static boolean isEnabled() {
-        System.getenv('NXF_ENABLE_SECRETS')=='true'
+        SysEnv.get('NXF_ENABLE_SECRETS', 'true') == 'true'
     }
 
     @Memoized
