@@ -158,7 +158,7 @@ public final class S3OutputStream extends OutputStream {
 
     private List<Tag> tags;
 
-    private AtomicInteger bufferCounter = new AtomicInteger();
+    private final AtomicInteger bufferCounter = new AtomicInteger();
 
     /**
      * Creates a new {@code S3OutputStream} that writes data directly into the S3 object with the given {@code objectId}.
@@ -276,7 +276,8 @@ public final class S3OutputStream extends OutputStream {
     private ByteBuffer allocate() {
 
         if( partsCount==0 ) {
-            return ByteBuffer.allocate(10 * 1024);
+            log.debug("Allocating new buffer of {} bytes, total buffers {}", request.getChunkSize(), bufferCounter.incrementAndGet());
+            return ByteBuffer.allocate(request.getChunkSize());
         }
 
         // try to reuse a buffer from the poll
