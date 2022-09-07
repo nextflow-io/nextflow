@@ -288,7 +288,7 @@ public final class S3OutputStream extends OutputStream {
         else {
             // allocate a new buffer
             log.debug("Allocating new buffer of {} bytes, total buffers {}", request.getChunkSize(), bufferCounter.incrementAndGet());
-            result = ByteBuffer.allocateDirect(request.getChunkSize());
+            result = ByteBuffer.allocate(request.getChunkSize());
         }
 
         return result;
