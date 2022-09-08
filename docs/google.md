@@ -76,7 +76,7 @@ when done, make sure to use the latest `edge` release running the snippet in the
 ### Configuration
 
 Make sure to have defined in your environment the `GOOGLE_APPLICATION_CREDENTIALS` variable.
-See the section [Credentials] for details.
+See the section [Credentials](#credentials) for details.
 
 :::{note}
 Make sure your Google account is allowed to access the Google Cloud Batch service by checking
@@ -260,7 +260,7 @@ this feature for pipelines spawning many short lived tasks.
 ### Configuration
 
 Make sure to have defined in your environment the `GOOGLE_APPLICATION_CREDENTIALS` variable.
-See the section [Credentials] for details.
+See the section [Credentials](#credentials) for details.
 
 :::{tip}
 Make sure to have enabled Cloud Life Sciences API to use this feature. To learn how to enable it

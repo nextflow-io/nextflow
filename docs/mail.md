@@ -182,7 +182,7 @@ Alternatively, you can provide the SMTP server configuration settings to use the
 built-in mail support, which doesn't require any external system tool.
 :::
 
-See the [Mail configuration] section to learn about the available mail delivery options and configuration settings.
+See the [Mail configuration](#mail-configuration) section to learn about the available mail delivery options and configuration settings.
 
 Read {ref}`Notification scope <config-notification>` section to learn more about the workflow notification
 configuration details.

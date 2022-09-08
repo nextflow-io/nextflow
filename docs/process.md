@@ -547,7 +547,7 @@ workflow {
 ```
 
 The `stageAs` option allows you to control how the file should be named in the task work
-directory. You can provide a specific name or a pattern as described in the [Multiple input files]
+directory. You can provide a specific name or a pattern as described in the [Multiple input files](#multiple-input-files)
 section:
 
 ```
@@ -1050,7 +1050,7 @@ A `path` output can be defined with any of the additional options defined in the
 
 ### Multiple output files
 
-When an output file name contains a `*` or `?` wildcard character, it is interpreted as a [glob] path matcher.
+When an output file name contains a `*` or `?` wildcard character, it is interpreted as a [glob][glob] path matcher.
 This allows you to capture multiple files into a list and emit the list as a single value. For example:
 
 ```
@@ -1096,7 +1096,7 @@ loose wildcards when defining output files, e.g. `path '*'`. Instead, use a pref
 to restrict the set of matching files to only the expected ones, e.g. `path 'prefix_*.sorted.bam'`.
 :::
 
-Read more about glob syntax at the following link [What is a glob?]
+Read more about glob syntax at the following link [What is a glob?][what is a glob?]
 
 ### Dynamic output file names
 
@@ -1506,7 +1506,7 @@ process big_job {
 This directive is required for tasks that execute multi-process or multi-threaded commands/tools and it is meant
 to reserve enough CPUs when a pipeline task is executed through a cluster resource manager.
 
-See also: [penv], [memory], [time], [queue], [maxForks]
+See also: [penv](#penv), [memory](#memory), [time](#time), [queue](#queue), [maxForks](#maxforks)
 
 (process-debug)=
 
@@ -1565,7 +1565,7 @@ This directive is only used by certain executors. Refer to the
 {ref}`executor-page` page to see which executors support this directive.
 :::
 
-See also: [cpus], [memory] [time], [queue] and [Dynamic computing resources].
+See also: [cpus](#cpus), [memory](#memory) [time](#time), [queue](#queue) and [Dynamic computing resources](#dynamic-computing-resources).
 
 (process-echo)=
 
@@ -1620,15 +1620,15 @@ process retryIfFail {
 }
 ```
 
-The number of times a failing process is re-executed is defined by the [maxRetries] and [maxErrors] directives.
+The number of times a failing process is re-executed is defined by the [maxRetries](#maxretries) and [maxErrors](#maxerrors) directives.
 
 :::{tip}
 More complex strategies depending on the task exit status
 or other parametric values can be defined using a dynamic `errorStrategy`.
-See the [Dynamic directives] section for details.
+See the [Dynamic directives](#dynamic-directives) section for details.
 :::
 
-See also: [maxErrors], [maxRetries] and [Dynamic computing resources].
+See also: [maxErrors](#maxerrors), [maxRetries](#maxretries) and [Dynamic computing resources](#dynamic-computing-resources).
 
 (process-executor)=
 
@@ -1773,7 +1773,7 @@ process foo {
 This feature requires Nextflow 19.07.0 or later.
 :::
 
-See also: [cpus] and [memory].
+See also: [cpus](#cpus) and [memory](#memory).
 
 (process-maxerrors)=
 
@@ -1798,7 +1798,7 @@ This setting considers the **total** errors accumulated for a given process, acr
 to control the number of times a process **instance** (aka task) can fail, use `maxRetries`.
 :::
 
-See also: [errorStrategy] and [maxRetries].
+See also: [errorStrategy](#errorstrategy) and [maxRetries](#maxretries).
 
 (process-maxforks)=
 
@@ -1845,7 +1845,7 @@ launch different execution instances), while the `maxRetries` defines the maximu
 execution can be retried in case of an error.
 :::
 
-See also: [errorStrategy] and [maxErrors].
+See also: [errorStrategy](#errorstrategy) and [maxErrors](#maxerrors).
 
 (process-memory)=
 
@@ -1876,7 +1876,7 @@ The following memory unit suffix can be used when specifying the memory value:
 
 % This setting is equivalent to set the ``qsub -l virtual_free=<mem>`` command line option.
 
-See also: [cpus], [time], [queue] and [Dynamic computing resources].
+See also: [cpus](#cpus), [time](#time), [queue](#queue) and [Dynamic computing resources](#dynamic-computing-resources).
 
 (process-module)=
 
@@ -1938,7 +1938,7 @@ process big_job {
 This configuration depends on the parallel environment provided by your grid engine installation. Refer to your
 cluster documentation or contact your admin to learn more about this.
 
-See also: [cpus], [memory], [time]
+See also: [cpus](#cpus), [memory](#memory), [time](#time)
 
 (process-pod)=
 
@@ -2046,7 +2046,7 @@ Table of optional parameters that can be used with the `publishDir` directive:
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | mode        | The file publishing method. See the following table for possible values.                                                                                                                                                                                                                                                                                                                                                                                |
 | overwrite   | When `true` any existing file in the specified folder will be overridden (default: `true` during normal pipeline execution and `false` when pipeline execution is `resumed`).                                                                                                                                                                                                                                                                           |
-| pattern     | Specifies a [glob] file pattern that selects which files to publish from the overall set of output files.                                                                                                                                                                                                                                                                                                                                               |
+| pattern     | Specifies a [glob][glob] file pattern that selects which files to publish from the overall set of output files.                                                                                                                                                                                                                                                                                                                                               |
 | path        | Specifies the directory where files need to be published. **Note**: the syntax `publishDir '/some/dir'` is a shortcut for `publishDir path: '/some/dir'`.                                                                                                                                                                                                                                                                                               |
 | saveAs      | A closure which, given the name of the file being published, returns the actual file name or a full path where the file is required to be stored. This can be used to rename or change the destination directory of the published files dynamically by using a custom strategy. Return the value `null` from the closure to *not* publish a file. This is useful when the process has multiple output files, but you want to publish only some of them. |
 | enabled     | Enable or disable the publish rule depending on the boolean value specified (default: `true`).                                                                                                                                                                                                                                                                                                                                                          |
@@ -2221,7 +2221,7 @@ process formatBlastDatabases {
 :::{warning}
 The `storeDir` directive is meant for long-term process caching and should not be used to
 publish output files or organize outputs into a semantic directory structure. In those cases, use
-the [publishDir] directive instead.
+the [publishDir](#publishdir) directive instead.
 :::
 
 :::{note}
@@ -2256,7 +2256,7 @@ directory. The following values are allowed:
 | move  | Output files are moved from the scratch directory to the work directory.                               |
 | rsync | Output files are copied from the scratch directory to the work directory by using the `rsync` utility. |
 
-See also: [scratch].
+See also: [scratch](#scratch).
 
 (process-tag)=
 
@@ -2325,7 +2325,7 @@ This directive is only used by certain executors. Refer to the
 {ref}`executor-page` page to see which executors support this directive.
 :::
 
-See also: [cpus], [memory], [queue] and [Dynamic computing resources].
+See also: [cpus](#cpus), [memory](#memory), [queue](#queue) and [Dynamic computing resources](#dynamic-computing-resources).
 
 ### Dynamic directives
 
@@ -2350,14 +2350,14 @@ process foo {
 }
 ```
 
-In the above example, the [queue] directive is evaluated dynamically, depending on the input value `entries`. When it is
+In the above example, the [queue](#queue) directive is evaluated dynamically, depending on the input value `entries`. When it is
 larger than 100, jobs will be submitted to the `long` queue, otherwise the `short` queue will be used.
 
 All directives can be assigned a dynamic value except the following:
 
-- [executor]
-- [label]
-- [maxForks]
+- [executor](#executor)
+- [label](#label)
+- [maxForks](#maxforks)
 
 :::{tip}
 Assigning a string value with one or more variables is always resolved in a dynamic manner, and therefore
@@ -2396,7 +2396,7 @@ It's a very common scenario that different instances of the same process may hav
 In such situations requesting, for example, an amount of memory too low will cause some tasks to fail.
 Instead, using a higher limit that fits all the tasks in your execution could significantly decrease the execution priority of your jobs.
 
-The [Dynamic directives] evaluation feature can be used to modify the amount of computing resources requested in case
+The [Dynamic directives](#dynamic-directives) evaluation feature can be used to modify the amount of computing resources requested in case
 of a process failure and try to re-execute it using a higher limit. For example:
 
 ```
@@ -2412,14 +2412,14 @@ process foo {
 }
 ```
 
-In the above example the [memory] and execution [time] limits are defined dynamically. The first time the process
+In the above example the [memory](#memory) and execution [time](#time) limits are defined dynamically. The first time the process
 is executed the `task.attempt` is set to `1`, thus it will request a two GB of memory and one hour of maximum execution
 time.
 
 If the task execution fail reporting an exit status in the range between 137 and 140, the task is re-submitted (otherwise terminates immediately).
 This time the value of `task.attempt` is `2`, thus increasing the amount of the memory to four GB and the time to 2 hours, and so on.
 
-The directive [maxRetries] set the maximum number of time the same task can be re-executed.
+The directive [maxRetries](#maxretries) set the maximum number of time the same task can be re-executed.
 
 ### Dynamic Retry with backoff
 

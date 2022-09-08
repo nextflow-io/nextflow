@@ -489,7 +489,7 @@ myFile = file('some/path/to/my_file.file')
 The `file` method can reference either `files` or `directories`, depending on what the string path refers to in the
 file system.
 
-When using the wildcard characters `*`, `?`, `[]` and `{}`, the argument is interpreted as a [glob] path matcher
+When using the wildcard characters `*`, `?`, `[]` and `{}`, the argument is interpreted as a [glob][glob] path matcher
 and the `file` method returns a list object holding the paths of files whose names match the specified pattern, or an
 empty list if no match is found:
 

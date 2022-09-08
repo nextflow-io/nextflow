@@ -56,7 +56,7 @@ it using the `organisation` name defined by the environment variable `NXF_ORG` (
 :::{tip}
 To access a private repository, specify the access credentials by using the `-user` command
 line option, then the program will ask you to enter the password interactively.
-Private repository access credentials can also be defined in the [SCM configuration file].
+Private repository access credentials can also be defined in the [SCM configuration file](#scm-configuration-file)(#s.
 :::
 
 ## Handling revisions
@@ -215,7 +215,7 @@ version `20.10.0` or later).
 
 ### BitBucket credentials
 
-Create a `bitbucket` entry in the [SCM configuration file] specifying your user name and app password, as shown below:
+Create a `bitbucket` entry in the [SCM configuration file](#scm-configuration-file) specifying your user name and app password, as shown below:
 
 ```
 providers {
@@ -244,7 +244,7 @@ BitBucket Server uses a different API from the [BitBucket](https://bitbucket.org
 use the right configuration whether you are using the cloud service or a self-hosted installation.
 :::
 
-To access your local BitBucket Server create an entry in the [SCM configuration file] specifying as shown below:
+To access your local BitBucket Server create an entry in the [SCM configuration file](#scm-configuration-file) specifying as shown below:
 
 ```
 providers {
@@ -262,7 +262,7 @@ providers {
 
 ### GitHub credentials
 
-Create a `github` entry in the [SCM configuration file] specifying your user name and access token as shown below:
+Create a `github` entry in the [SCM configuration file](#scm-configuration-file) specifying your user name and access token as shown below:
 
 ```
 providers {
@@ -282,7 +282,7 @@ Learn more about PAT and how to create it at [this link](https://docs.github.com
 
 ### GitLab credentials
 
-Create a `gitlab` entry in the [SCM configuration file] specifying the user name, password and your API access token
+Create a `gitlab` entry in the [SCM configuration file](#scm-configuration-file) specifying the user name, password and your API access token
 that can be found in your GitLab [account page](https://gitlab.com/profile/account) (sign in required). For example:
 
 ```
@@ -393,7 +393,7 @@ The support for protocols other than HTTPS is not available at this time.
 Nextflow is able to access repositories hosted on private BitBucket, GitHub, GitLab and Gitea server installations.
 
 In order to use a private SCM installation you will need to set the server name and access credentials
-in your [SCM configuration file] .
+in your [SCM configuration file](#scm-configuration-file) .
 
 If, for example, the host name of your private GitLab server is `gitlab.acme.org`, you will need to have in the
 `$HOME/.nextflow/scm` file a configuration like the following:
@@ -485,7 +485,7 @@ or
 nextflow run http://github.com/foo/bar
 ```
 
-See the [Running a pipeline] section for more details on how to run Nextflow projects.
+See the [Running a pipeline](#running-a-pipeline) section for more details on how to run Nextflow projects.
 
 ## Manage dependencies
 

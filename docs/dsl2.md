@@ -269,7 +269,7 @@ workflow my_pipeline {
 
 Then, the result of the `my_pipeline` execution can be accessed using the `out` property, i.e.
 `my_pipeline.out`. When multiple output channels are declared, use the array bracket notation
-to access each output channel as described for the [Process output] definition.
+to access each output channel as described for the [Process output](#process-output) definition.
 
 ### Workflow named output
 
@@ -305,7 +305,7 @@ A different workflow entrypoint can be specified using the `-entry` command line
 
 ### Workflow composition
 
-Workflows defined in your script or imported with [Module inclusion] can be invoked and composed
+Workflows defined in your script or imported with [Module inclusion](#module-inclusion) can be invoked and composed
 as any other process in your application.
 
 ```

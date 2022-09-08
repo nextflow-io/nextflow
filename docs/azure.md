@@ -50,7 +50,7 @@ file path `az://my-data/foo.txt`.
 
 ## Azure File Shares
 
-As of version <mailto:nf-azure@0.11.0>, Nextflow has built-in support also for [Azure Files](https://azure.microsoft.com/en-us/services/storage/files/).
+As of version `nf-azure@0.11.0`, Nextflow has built-in support also for [Azure Files](https://azure.microsoft.com/en-us/services/storage/files/).
 Files available in the serverless Azure File shares can be mounted concurrently on the nodes of a pool executing the pipeline.
 These files become immediately available in the file system and can be referred as local files within the processes. This
 is especially useful when a task needs to access large amount of data (such as genome indexes) during its execution. An
@@ -238,7 +238,7 @@ azure {
 ```
 
 The above example defines the configuration for two node pools. The first will provision 10 compute nodes of type `Standard_D2_v2`,
-the second 5 nodes of type `Standard_E2_v3`. See the [Advanced settings] below for the complete list of available
+the second 5 nodes of type `Standard_E2_v3`. See the [Advanced settings](#advanced-settings) below for the complete list of available
 configuration options.
 
 ### Requirements on pre-existing named pools
@@ -328,7 +328,7 @@ Below the configurations for image reference/SKU combinations to select two popu
 
 In the above snippet replace `<name>` with the name of your Azure node pool.
 
-See the [Advanced settings] below and [Azure Batch nodes](https://docs.microsoft.com/en-us/azure/batch/batch-linux-nodes) documentation for more details.
+See the [Advanced settings](#advanced-settings) below and [Azure Batch nodes](https://docs.microsoft.com/en-us/azure/batch/batch-linux-nodes) documentation for more details.
 
 ### Private container registry
 

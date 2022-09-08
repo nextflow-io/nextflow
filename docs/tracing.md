@@ -146,7 +146,7 @@ and many other metrics. You can see an example below:
 Nextflow collects these metrics through a background process for each job in the target environment.
 Make sure the following tools are available in the environment where tasks are executed: `awk`, `date`, `grep`, `egrep`, `ps`, `sed`, `tail`, `tee`.
 Moreover, some of these metrics are not reported when running on Mac OS X. See the note
-about that in the [Trace report] below.
+about that in the [Trace report](#trace-report) below.
 :::
 
 :::{warning}
@@ -403,7 +403,7 @@ The JSON object contains the following attributes:
 | metadata  | The workflow metadata including the {ref}`config manifest<config-manifest>`. For a list of all fields, have a look at the bottom message examples. This attribute is only provided for the following events: `started`, `completed`. |
 
 :::{note}
-The content of the `trace` attribute depends on the [Trace report](trace-report) settings defined in the
+The content of the `trace` attribute depends on the [Trace report](#trace-report) settings defined in the
 `nextflow.config` file. See the {ref}`Trace configuration<config-trace>` section to learn more.
 :::
 

@@ -23,7 +23,7 @@ In Nextflow there are two kinds of channels: `queue channels` and `value channel
 A `queue channel` is a non-blocking unidirectional FIFO queue which connects two processes,
 channel factories, or operators.
 
-A queue channel is usually created using a factory method ({ref}`_channel-of`, {ref}`_channel-path`, etc)
+A queue channel is usually created using a factory method ([of](#of), [fromPath](#frompath), etc)
 or chaining it with a channel operator ({ref}`operator-map`, {ref}`operator-flatmap`, etc). Queue channels
 are also created by process output declarations.
 
@@ -34,7 +34,7 @@ are also created by process output declarations.
 A `value channel` a.k.a. *singleton channel* is bound to a single value and can be read an
 unlimited number of times without consuming its content.
 
-A value channel is created using the [value] factory method or by operators returning
+A value channel is created using the [value](#value) factory method or by operators returning
 a single value, such as {ref}`operator-first`, {ref}`operator-last`, {ref}`operator-collect`,
 {ref}`operator-count`, {ref}`operator-min`, {ref}`operator-max`, {ref}`operator-reduce`, {ref}`operator-sum`, etc.
 
@@ -106,7 +106,7 @@ See also: {ref}`operator-ifempty` and {ref}`operator-close` operators.
 ### from
 
 :::{warning}
-This method is deprecated. Use [of] or [fromList] instead.
+This method is deprecated. Use [of](#of) or [fromList](#fromlist) instead.
 :::
 
 The `from` method allows you to create a channel emitting any sequence of values that are specified as the method argument,
@@ -181,7 +181,7 @@ value: c
 value: d
 ```
 
-See also: [of] factory method.
+See also: [of](#of) factory method.
 
 (channel-path)=
 
@@ -201,7 +201,7 @@ object for the specified file.
 `fromPath` does not check whether the file exists.
 :::
 
-Whenever the `fromPath` argument contains a `*` or `?` wildcard character it is interpreted as a [glob] path matcher.
+Whenever the `fromPath` argument contains a `*` or `?` wildcard character it is interpreted as a [glob][glob] path matcher.
 For example:
 
 ```
@@ -242,7 +242,7 @@ expl3 = Channel.fromPath( '/path/*', hidden: true )
 The first example returns all hidden files in the specified path. The second one returns all hidden files
 ending with the `.fa` suffix. Finally the last example returns all files (hidden and non-hidden) in that path.
 
-By default a [glob] pattern only looks for `regular file` paths that match the specified criteria, i.e.
+By default a [glob][glob] pattern only looks for `regular file` paths that match the specified criteria, i.e.
 it won't return directory paths.
 
 You may use the parameter `type` specifying the value `file`, `dir` or `any` in order to define what kind of paths
@@ -278,7 +278,7 @@ Channel.fromPath( ['/some/path/*.fq', '/other/path/*.fastq'] )
 
 ### fromFilePairs
 
-The `fromFilePairs` method creates a channel emitting the file pairs matching a [glob] pattern provided by the user.
+The `fromFilePairs` method creates a channel emitting the file pairs matching a [glob][glob] pattern provided by the user.
 The matching files are emitted as tuples in which the first element is the grouping key of the matching
 pair and the second element is the list of files (sorted in lexicographical order). For example:
 
@@ -448,7 +448,7 @@ X
 Y
 ```
 
-See also: [fromList] factory method.
+See also: [fromList](#fromlist) factory method.
 
 (channel-value)=
 
@@ -473,7 +473,7 @@ The third line creates a channel and binds a list object to it that will be emit
 The `watchPath` method watches a folder for one or more files matching a specified pattern. As soon as
 there is a file that meets the specified condition, it is emitted over the channel that is returned by the `watchPath`
 method. The condition on files to watch can be specified by using `*` or `?` wildcard characters i.e. by specifying
-a [glob] path matching criteria.
+a [glob][glob] path matching criteria.
 
 For example:
 
@@ -506,7 +506,7 @@ which means that it will cause your pipeline to run forever. Consider using the 
 to close the channel when a certain condition is met (e.g. receiving a file named `DONE`).
 :::
 
-See also: [fromPath] factory method.
+See also: [fromPath](#frompath) factory method.
 
 ## Channel methods
 

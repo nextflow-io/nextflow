@@ -9,13 +9,13 @@ chain operators to fit your needs.
 This page is a comprehensive reference for all Nextflow operators. However, if you are new
 to Nextflow, here are some suggested operators to learn for common use cases:
 
-- Filtering: [filter], [randomSample], [take], [unique]
-- Reduction: [collect], [groupTuple], [reduce]
-- Parsing text data: [splitCsv], [splitText]
-- Combining channels: [combine], [concat], [join], [mix]
-- Forking channels: [branch], [multiMap]
-- Maths: [count], [max], [min], [sum]
-- Other: [ifEmpty], [map], [set], [view]
+- Filtering: [filter](#filter), [randomSample](#randomsample), [take](#take), [unique](#unique)
+- Reduction: [collect](#collect), [groupTuple](#grouptuple), [reduce](#reduce)
+- Parsing text data: [splitCsv](#splitcsv), [splitText](#splittext)
+- Combining channels: [combine](#combine), [concat](#concat), [join](#join), [mix](#mix)
+- Forking channels: [branch](#branch), [multiMap](#multimap)
+- Maths: [count](#count), [max](#max), [min](#min), [sum](#sum)
+- Other: [ifEmpty](#ifempty), [map](#map), [set](#set), [view](#view)
 
 (operator-branch)=
 
@@ -200,14 +200,14 @@ the source channel into subsets:
   If you want to emit the remaining items in a tuple containing less than `n` elements, simply
   add the parameter `remainder` specifying `true`, as shown in the previous example.
 
-See also: [collate] operator.
+See also: [collate](#collate) operator.
 
 (operator-choice)=
 
 ## choice
 
 :::{warning}
-This operator is deprecated. Use [branch] instead.
+This operator is deprecated. Use [branch](#branch) instead.
 :::
 
 The `choice` operator allows you to forward the items emitted by a source channel to two
@@ -229,7 +229,7 @@ source.choice( queue1, queue2 ) { a -> a =~ /^Hello.*/ ? 0 : 1 }
 queue1.view()
 ```
 
-See also [branch] operator.
+See also [branch](#branch) operator.
 
 (operator-close)=
 
@@ -291,7 +291,7 @@ Channel
 
 As before, if you don't want to emit the last items which do not complete a tuple, specify `false` as the third parameter.
 
-See also: [buffer] operator.
+See also: [buffer](#buffer) operator.
 
 (operator-collect)=
 
@@ -330,7 +330,7 @@ Available parameters:
 | flat  | When `true` nested list structures are normalised and their items are added to the resulting list object (default: `true`).                                                                                                                                                                                |
 | sort  | When `true` the items in the resulting list are sorted by their natural ordering. It is possible to provide a custom ordering criteria by using either a {ref}`closure <script-closure>` or a [Comparator](https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html) object (default: `false`). |
 
-See also: [toList] and [toSortedList] operator.
+See also: [toList](#tolist) and [toSortedList](#tosortedlist) operator.
 
 ## collectFile
 
@@ -501,7 +501,7 @@ left
 [B, 2, y]
 ```
 
-See also [join], [cross], [spread] and [phase].
+See also [join](#join), [cross](#cross), [spread](#spread) and [phase](#phase).
 
 (operator-concat)=
 
@@ -647,7 +647,7 @@ There are two important caveats when using the `cross` operator:
 >    items have an unique key identifier.
 
 Optionally, a mapping function can be specified in order to provide a custom rule to associate an item to a key,
-in a similar manner as shown for the [phase] operator.
+in a similar manner as shown for the [phase](#phase) operator.
 
 ## distinct
 
@@ -882,12 +882,12 @@ Channel
 6
 ```
 
-See also: [flatMap] operator.
+See also: [flatMap](#flatmap) operator.
 
 ## groupBy
 
 :::{warning}
-This operator is deprecated. Use the [groupTuple] operator instead.
+This operator is deprecated. Use the [groupTuple](#grouptuple) operator instead.
 :::
 
 The `groupBy` operator collects the values emitted by the source channel grouping them together using a `mapping`
@@ -1069,7 +1069,7 @@ The above example takes advantage of the {ref}`multiple assignment <script-multi
 in order to assign two variables at once using the list of channels returned by the `into` operator.
 :::
 
-See also [tap] and [separate] operators.
+See also [tap](#tap) and [separate](#separate) operators.
 
 (operator-join)=
 
@@ -1249,7 +1249,7 @@ nature. Therefore, if you try to merge output channels from different processes,
 may be different on each run, which will cause resumed runs to not work properly.
 
 You should always use a matching key (e.g. sample ID) to merge multiple channels, so that they are
-combined in a deterministic way. For this purpose, you can use the [join] operator.
+combined in a deterministic way. For this purpose, you can use the [join](#join) operator.
 :::
 
 (operator-min)=
@@ -1417,7 +1417,7 @@ due to the parallel and asynchronous nature of Nextflow pipelines.
 ## phase
 
 :::{warning}
-This operator is deprecated. Use the [join] operator instead.
+This operator is deprecated. Use the [join](#join) operator instead.
 :::
 
 The `phase` operator creates a channel that synchronizes the values emitted by two other channels,
@@ -1479,14 +1479,14 @@ It prints:
 [null, 4]
 ```
 
-See also [join] operator.
+See also [join](#join) operator.
 
 (operator-print)=
 
 ## print
 
 :::{warning}
-The `print` operator is no longer available in DSL2 syntax. Use [view] instead.
+The `print` operator is no longer available in DSL2 syntax. Use [view](#view) instead.
 :::
 
 The `print` operator prints the items emitted by a channel to the standard output.
@@ -1505,14 +1505,14 @@ It prints:
 FOO BAR BAZ QUX
 ```
 
-See also: [println] and [view].
+See also: [println](#println) and [view](#view).
 
 (operator-println)=
 
 ## println
 
 :::{warning}
-The `println` operator is no longer available in DSL2 syntax. Use [view] instead.
+The `println` operator is no longer available in DSL2 syntax. Use [view](#view) instead.
 :::
 
 The `println` operator prints the items emitted by a channel to the console standard output appending
@@ -1550,7 +1550,7 @@ It prints:
 ~ qux
 ```
 
-See also: [print] and [view].
+See also: [print](#print) and [view](#view).
 
 ## randomSample
 
@@ -1628,7 +1628,7 @@ myChannel.reduce( seedValue ) {  a, b -> ... }
 ## separate
 
 :::{warning}
-This operator is deprecated. Use [multiMap] instead.
+This operator is deprecated. Use [multiMap](#multimap) instead.
 :::
 
 The `separate` operator lets you copy the items emitted by the source channel into multiple
@@ -1723,7 +1723,7 @@ The above example takes advantage of the {ref}`multiple assignment <script-multi
 in order to assign two variables at once using the list of channels returned by the `separate` operator.
 :::
 
-See also: [multiMap], [into], [choice] and [map] operators.
+See also: [multiMap](#multimap), [into](#into), [choice](#choice) and [map](#map) operators.
 
 (operator-set)=
 
@@ -2025,7 +2025,7 @@ You can also use `countLines` to count the number of lines in the text file(s).
 ## spread
 
 :::{warning}
-This operator is deprecated. Use [combine] instead.
+This operator is deprecated. Use [combine](#combine) instead.
 :::
 
 The `spread` operator combines the items emitted by the source channel with all the values in an array
@@ -2102,11 +2102,11 @@ Done
 Specifying a size of `-1` causes the operator to take all values.
 :::
 
-See also [until].
+See also [until](#until).
 
 ## tap
 
-The `tap` operator combines the functions of [into] and [separate] operators in such a way that
+The `tap` operator combines the functions of [into](#into) and [separate](#separate) operators in such a way that
 it connects two channels, copying the values from the source into the `tapped` channel. At the same
 time it splits the source channel into a newly created channel that is returned by the operator itself.
 
@@ -2161,7 +2161,7 @@ log1.view { "Log 1: $it" }
 log2.view { "Log 2: $it" }
 ```
 
-See also [into] and [separate] operators.
+See also [into](#into) and [separate](#separate) operators.
 
 ## toInteger
 
@@ -2197,7 +2197,7 @@ Channel
 Done
 ```
 
-See also: [collect] operator.
+See also: [collect](#collect) operator.
 
 ## toSortedList
 
@@ -2229,7 +2229,7 @@ Channel
 [[lisa, 10], [maggie, 7], [homer, 5], [marge, 3], [bart, 2]]
 ```
 
-See also: [collect] operator.
+See also: [collect](#collect) operator.
 
 ## transpose
 
@@ -2314,7 +2314,7 @@ Channel
 1
 ```
 
-See also [take].
+See also [take](#take).
 
 (operator-view)=
 
@@ -2350,7 +2350,7 @@ Square of: 3 is 9
 ```
 
 :::{note}
-Both the `view` and [print] (or [println]) operators consume the items emitted by the source channel to which they
+Both the `view` and [print](#print) (or [println](#println)) operators consume the items emitted by the source channel to which they
 are applied. The main difference between them is that `view` returns a newly created channel that is
 identical to the source channel, while `print` does not. This allows the `view` operator to be chained like other operators.
 :::
