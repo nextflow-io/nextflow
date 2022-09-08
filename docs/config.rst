@@ -173,6 +173,7 @@ maxParallelTransfers        Max parallel upload/download transfer operations *pe
 maxTransferAttempts         Max number of downloads attempts from S3 (default: `1`).
 maxSpotAttempts             Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: ``5``, requires ``22.04.0`` or later)
 shareIdentifier             The share identifier for all tasks when using `fair-share scheduling for AWS Batch <https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/>`_ (requires ``22.09.0-edge`` or later)
+retryMode                   The retry mode configuration setting, to accommodate rate-limiting on `AWS services <https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html>`_ (default: ``standard``)
 =========================== ================
 
 
