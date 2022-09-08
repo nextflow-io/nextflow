@@ -56,7 +56,7 @@ in the cloud, offloading the process executions through the Google Cloud service
 ### Requirements
 
 The support for Google Batch requires Nextflow version `22.07.1-edge` or later. If you have already Nextflow
-installed make sure to update to the latest `edge` release using these commands:
+installed make sure to update to the latest edge release using these commands:
 
 ```
 export NXF_EDGE=1
@@ -69,7 +69,7 @@ If you don't have Nextflow, install it with command below:
 curl get.nextflow.io | bash
 ```
 
-when done, make sure to use the latest `edge` release running the snippet in the previous paragraph.
+when done, make sure to use the latest edge release running the snippet in the previous paragraph.
 
 (google-batch-config)=
 

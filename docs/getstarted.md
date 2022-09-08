@@ -72,10 +72,10 @@ NXF_VER=20.04.0 nextflow run hello
 
 A *stable* version of Nextflow is released on a six-months basic schedule, in the 1st and 3rd quarter of every year.
 
-Along with the stable release, an `edge` version is released on a monthly basis. This version is useful to test and
+Along with the stable release, an *edge* version is released on a monthly basis. This version is useful to test and
 use most recent updates and experimental features.
 
-To use the latest `edge` release run the following snippet in your shell terminal:
+To use the latest edge release run the following snippet in your shell terminal:
 
 ```
 export NXF_EDGE=1
@@ -160,7 +160,7 @@ using this string to find the specific task directory.
 
 ### Modify and resume
 
-`Nextflow` keeps track of all the processes executed in your pipeline. If you modify some parts of your script,
+Nextflow keeps track of all the processes executed in your pipeline. If you modify some parts of your script,
 only the processes that are actually changed will be re-executed. The execution of the processes that are not changed
 will be skipped and the cached result used instead.
 

@@ -2,10 +2,10 @@
 
 # Executors
 
-In the Nextflow framework architecture, the `executor` is the component that determines the system where a pipeline
+In the Nextflow framework architecture, the *executor* is the component that determines the system where a pipeline
 process is run and supervises its execution.
 
-The `executor` provides an abstraction between the pipeline processes and the underlying execution system. This
+The executor provides an abstraction between the pipeline processes and the underlying execution system. This
 allows you to write the pipeline functional logic independently from the actual processing platform.
 
 In other words you can write your pipeline script once and have it running on your computer, a cluster resource manager
@@ -236,7 +236,7 @@ See the {ref}`Kubernetes <k8s-page>` page to learn how to set up a Kubernetes cl
 ## Local
 
 The `local` executor is used by default. It runs the pipeline processes in the computer where Nextflow
-is launched. The processes are parallelised by spawning multiple `threads` and by taking advantage of multi-cores
+is launched. The processes are parallelised by spawning multiple threads and by taking advantage of multi-cores
 architecture provided by the CPU.
 
 In a common usage scenario, the `local` executor can be useful to develop and test your pipeline script in your computer,
@@ -440,7 +440,7 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-time`
 
 :::{note}
-SLURM `partitions` can be considered jobs queues. Nextflow allows you to set partitions by using the above `queue`
+SLURM partitions can be considered jobs queues. Nextflow allows you to set partitions by using the above `queue`
 directive.
 :::
 

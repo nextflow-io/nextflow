@@ -44,7 +44,7 @@ remote object storage as a work directory e.g. AWS Batch.
 
 ### Enabling Conda environment
 
-As of version `22.08.0-edge` the use Conda recipes specified using the {ref}`process-conda`
+As of version `22.08.0-edge`, the use of Conda recipes specified using the {ref}`process-conda`
 directive needs to be enabled explicitly by setting the option shown below in the pipeline
 configuration file (i.e. `nextflow.config`):
 

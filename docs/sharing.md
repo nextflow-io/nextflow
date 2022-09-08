@@ -17,7 +17,7 @@ executions.
 
 ## Running a pipeline
 
-To launch the execution of a pipeline project, hosted in a remote code repository, you simply need to specify its `qualified` name
+To launch the execution of a pipeline project, hosted in a remote code repository, you simply need to specify its qualified name
 or the repository URL after the `run` command. The qualified name is formed by two parts: the `owner` name and the
 `repository` name separated by a `/` character.
 

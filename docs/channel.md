@@ -6,7 +6,7 @@ Nextflow is based on the Dataflow programming model in which processes communica
 
 A channel has two major properties:
 
-1. Sending a message is an `asynchronous` operation which completes immediately,
+1. Sending a message is an *asynchronous* operation which completes immediately,
    without having to wait for the receiving process.
 2. Receiving data is a blocking operation which stops the receiving process until the message has arrived.
 
@@ -14,13 +14,13 @@ A channel has two major properties:
 
 ## Channel types
 
-In Nextflow there are two kinds of channels: `queue channels` and `value channels`.
+In Nextflow there are two kinds of channels: *queue channels* and *value channels*.
 
 (channel-type-queue)=
 
 ### Queue channel
 
-A `queue channel` is a non-blocking unidirectional FIFO queue which connects two processes,
+A *queue channel* is a non-blocking unidirectional FIFO queue which connects two processes,
 channel factories, or operators.
 
 A queue channel is usually created using a factory method ([of](#of), [fromPath](#frompath), etc)
@@ -31,7 +31,7 @@ are also created by process output declarations.
 
 ### Value channel
 
-A `value channel` a.k.a. *singleton channel* is bound to a single value and can be read an
+A *value channel* a.k.a. *singleton channel* is bound to a single value and can be read an
 unlimited number of times without consuming its content.
 
 A value channel is created using the [value](#value) factory method or by operators returning
@@ -127,7 +127,7 @@ value: 5
 value: 7
 ```
 
-The following example shows how to create a channel from a `range` of numbers or strings:
+The following example shows how to create a channel from a *range* of numbers or strings:
 
 ```
 zeroToNine = Channel.from( 0..9 )
@@ -148,7 +148,7 @@ Channel.from( 1, 3, 5, 7, 9 )
 Channel.from( [1, 3, 5, 7, 9] )
 ```
 
-But when more than one argument is provided, they are always managed as `single` emissions. Thus, the following example
+But when more than one argument is provided, they are always managed as *single* emissions. Thus, the following example
 creates a channel emitting three entries each of which is a list containing two elements:
 
 ```
@@ -223,8 +223,8 @@ moreFiles = Channel.fromPath( 'data/**/*.fa' )
 pairFiles = Channel.fromPath( 'data/file_{1,2}.fq' )
 ```
 
-The first line returns a channel emitting the files ending with the suffix `.fa` in the `data` folder `and` recursively
-in all its sub-folders. While the second one only emits the files which have the same suffix in `any` sub-folder in the `data` path.
+The first line returns a channel emitting the files ending with the suffix `.fa` in the `data` folder *and* recursively
+in all its sub-folders. While the second one only emits the files which have the same suffix in *any* sub-folder in the `data` path.
 Finally the last example emits two files: `data/file_1.fq` and `data/file_2.fq`.
 
 :::{note}
@@ -242,7 +242,7 @@ expl3 = Channel.fromPath( '/path/*', hidden: true )
 The first example returns all hidden files in the specified path. The second one returns all hidden files
 ending with the `.fa` suffix. Finally the last example returns all files (hidden and non-hidden) in that path.
 
-By default a [glob][glob] pattern only looks for `regular file` paths that match the specified criteria, i.e.
+By default a [glob][glob] pattern only looks for regular file paths that match the specified criteria, i.e.
 it won't return directory paths.
 
 You may use the parameter `type` specifying the value `file`, `dir` or `any` in order to define what kind of paths
@@ -253,7 +253,7 @@ myFileChannel = Channel.fromPath( '/path/*b', type: 'dir' )
 myFileChannel = Channel.fromPath( '/path/a*', type: 'any' )
 ```
 
-The first example will return all `directory` paths ending with the `b` suffix, while the second will return any file
+The first example will return all *directory* paths ending with the `b` suffix, while the second will return any file
 and directory starting with a `a` prefix.
 
 | Name          | Description                                                                                                                                |

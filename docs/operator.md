@@ -26,7 +26,7 @@ Requires Nextflow version `19.08.0-edge` or later.
 :::
 
 The `branch` operator allows you to forward the items emitted by a source channel to one
-or more output channels, `choosing` one out of them at a time.
+or more output channels, choosing one out of them at a time.
 
 The selection criteria is defined by specifying a {ref}`closure <script-closure>` that provides
 one or more boolean expression, each of which is identified by a unique label. On the first expression
@@ -117,10 +117,10 @@ There are a number of ways you can regulate how `buffer` gathers the items from
 the source channel into subsets:
 
 - `buffer( closingCondition )`: starts to collect the items emitted by the channel into
-  a subset until the `closing condition` is verified. After that the subset is emitted
+  a subset until the `closingCondition` is verified. After that the subset is emitted
   to the resulting channel and new items are gathered into a new subset. The process is repeated
   until the last value in the source channel is sent. The `closingCondition` can be specified
-  either as a {ref}`regular expression <script-regexp>`, a Java class, a literal value, or a `boolean predicate`
+  either as a {ref}`regular expression <script-regexp>`, a Java class, a literal value, or a boolean predicate
   that has to be satisfied. For example:
 
   ```
@@ -135,11 +135,11 @@ the source channel into subsets:
   ```
 
 - `buffer( openingCondition, closingCondition )`: starts to gather the items emitted by the channel
-  as soon as one of the them verify the `opening condition` and it continues until there is one item
-  which verify the `closing condition`. After that the subset is emitted and it continues applying the
+  as soon as one of the them verify the `openingCondition` and it continues until there is one item
+  which verify the `closingCondition`. After that the subset is emitted and it continues applying the
   described logic until the last channel item is emitted.
   Both conditions can be defined either as a {ref}`regular expression <script-regexp>`, a literal value,
-  a Java class, or a `boolean predicate` that need to be satisfied. For example:
+  a Java class, or a boolean predicate that need to be satisfied. For example:
 
   ```
   Channel
@@ -211,7 +211,7 @@ This operator is deprecated. Use [branch](#branch) instead.
 :::
 
 The `choice` operator allows you to forward the items emitted by a source channel to two
-(or more) output channels, `choosing` one out of them at a time.
+(or more) output channels, choosing one out of them at a time.
 
 The destination channel is selected by using a {ref}`closure <script-closure>` that must return the `index` number of the channel
 where the item has to be sent. The first channel is identified by the index `0`, the second as `1` and so on.
@@ -507,7 +507,7 @@ See also [join](#join), [cross](#cross), [spread](#spread) and [phase](#phase).
 
 ## concat
 
-The `concat` operator allows you to `concatenate` the items emitted by two or more channels to a new channel, in such
+The `concat` operator allows you to *concatenate* the items emitted by two or more channels to a new channel, in such
 a way that the items emitted by the resulting channel are in same order as they were when specified as operator arguments.
 
 In other words it guarantees that given any `n` channels, the concatenation channel emits the items proceeding from the channel `i+1 th`
@@ -553,7 +553,7 @@ Channel
 
 An optional parameter can be provided in order to select which items are to be counted.
 The selection criteria can be specified either as a {ref}`regular expression <script-regexp>`,
-a literal value, a Java class, or a `boolean predicate` that needs to be satisfied. For example:
+a literal value, a Java class, or a boolean predicate that needs to be satisfied. For example:
 
 ```
 Channel
@@ -651,7 +651,7 @@ in a similar manner as shown for the [phase](#phase) operator.
 
 ## distinct
 
-The `distinct` operator allows you to remove `consecutive` duplicated items from a channel, so that each emitted item
+The `distinct` operator allows you to remove *consecutive* duplicated items from a channel, so that each emitted item
 is different from the preceding one. For example:
 
 ```
@@ -721,7 +721,7 @@ character.
 
 The `filter` operator allows you to get only the items emitted by a channel that satisfy a condition and discarding
 all the others. The filtering condition can be specified by using either a {ref}`regular expression <script-regexp>`,
-a literal value, a type `qualifier` (i.e. a Java class) or any boolean `predicate`.
+a literal value, a type qualifier (i.e. a Java class) or any boolean predicate.
 
 The following example shows how to filter a channel by using a regular expression that returns only strings that
 begin with `a`:
@@ -753,9 +753,9 @@ Channel
 4.5
 ```
 
-Finally, a filtering condition can be defined by using any a boolean `predicate`. A predicate is expressed by
+Finally, a filtering condition can be defined by using any a boolean predicate. A predicate is expressed by
 a {ref}`closure <script-closure>` returning a boolean value. For example the following fragment shows how filter
-a channel emitting numbers so that the `odd` values are returned:
+a channel emitting numbers so that the odd values are returned:
 
 ```
 Channel
@@ -782,7 +782,7 @@ In reality it is just syntactic sugar for `filter({ it % 2 == 1 })`
 
 The `first` operator creates a channel that returns the first item emitted by the source channel, or eventually
 the first item that matches an optional condition. The condition can be specified by using a {ref}`regular expression<script-regexp>`,
-a Java `class` type or any boolean `predicate`. For example:
+a Java `class` type or any boolean predicate. For example:
 
 ```
 // no condition is specified, emits the very first item: 1
@@ -815,7 +815,7 @@ Channel
 ## flatMap
 
 The `flatMap` operator applies a function of your choosing to every item emitted by a channel, and
-returns the items so obtained as a new channel. Whereas the `mapping` function returns a list of items,
+returns the items so obtained as a new channel. Whereas the mapping function returns a list of items,
 this list is flattened so that each single item is emitted on its own.
 
 For example:
@@ -841,7 +841,7 @@ results.subscribe onNext: { println it }, onComplete: { println 'Done' }
 Done
 ```
 
-Associative arrays are handled in the same way, so that each array entry is emitted as a single `key-value` item. For example:
+Associative arrays are handled in the same way, so that each array entry is emitted as a single key-value pair. For example:
 
 ```
 Channel
@@ -890,7 +890,7 @@ See also: [flatMap](#flatmap) operator.
 This operator is deprecated. Use the [groupTuple](#grouptuple) operator instead.
 :::
 
-The `groupBy` operator collects the values emitted by the source channel grouping them together using a `mapping`
+The `groupBy` operator collects the values emitted by the source channel grouping them together using a mapping
 function that associates each item with a key. When finished, it emits an associative
 array that maps each key to the set of items identified by that key.
 
@@ -907,7 +907,7 @@ Channel
 [ b:['bonjour'], c:['ciao'], h:['hello','hola','hi'] ]
 ```
 
-The `mapping` function is an optional parameter. When omitted, the values are grouped
+The mapping function is an optional parameter. When omitted, the values are grouped
 according to these rules:
 
 - Any value of type `Map` is associated with the value of its first entry, or `null` when the map itself is empty.
@@ -1145,7 +1145,7 @@ Channel
 ## map
 
 The `map` operator applies a function of your choosing to every item emitted by a channel, and
-returns the items so obtained as a new channel. The function applied is called the `mapping` function
+returns the items so obtained as a new channel. The function applied is called the mapping function
 and is expressed with a {ref}`closure <script-closure>` as shown in the example below:
 
 ```
@@ -1612,7 +1612,7 @@ result = 15
 ```
 
 :::{tip}
-A common use case for this operator is to use the first paramter as an `accumulator`
+A common use case for this operator is to use the first paramter as an accumulator and
 the second parameter as the `i-th` item to be processed.
 :::
 
@@ -1632,9 +1632,9 @@ This operator is deprecated. Use [multiMap](#multimap) instead.
 :::
 
 The `separate` operator lets you copy the items emitted by the source channel into multiple
-channels, which each of these can receive a `separate` version of the same item.
+channels, which each of these can receive a separate version of the same item.
 
-The operator applies a `mapping function` of your choosing to every item emitted by the source channel.
+The operator applies a mapping function of your choosing to every item emitted by the source channel.
 This function must return a list of as many values as there are output channels. Each entry in the result
 list will be assigned to the output channel with the corresponding position index. For example:
 
@@ -1659,7 +1659,7 @@ Channel 2: 64
 Channel 1: 9
 ```
 
-When the `mapping function` is omitted, the source channel must emit tuples of values. In this case the operator `separate`
+When the mapping function is omitted, the source channel must emit tuples of values. In this case the operator `separate`
 splits the tuple in such a way that the value `i-th` in a tuple is assigned to the target channel with the corresponding position index.
 For example:
 
@@ -1989,7 +1989,7 @@ Channel
     }
 ```
 
-An optional {ref}`closure <script-closure>` can be specified in order to `transform` the text chunks produced by the operator.
+An optional {ref}`closure <script-closure>` can be specified in order to transform the text chunks produced by the operator.
 The following example shows how to split text files into chunks of 10 lines and transform them to capital letters:
 
 ```
@@ -2107,7 +2107,7 @@ See also [until](#until).
 ## tap
 
 The `tap` operator combines the functions of [into](#into) and [separate](#separate) operators in such a way that
-it connects two channels, copying the values from the source into the `tapped` channel. At the same
+it connects two channels, copying the values from the source into the tapped channel. At the same
 time it splits the source channel into a newly created channel that is returned by the operator itself.
 
 The `tap` can be useful in certain scenarios where you may be required to concatenate multiple operations,

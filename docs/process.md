@@ -45,8 +45,7 @@ process < name > {
 
 The `script` block defines, as a string expression, the script that is executed by the process.
 
-A process may contain only one script block, and it must be the final statement in the process block
-(unless `script:` is explicitly declared).
+A process may contain only one script, and if the `script` guard is not explicitly declared, the script must be the final statement in the process block.
 
 The script string is executed as a [Bash](<http://en.wikipedia.org/wiki/Bash_(Unix_shell)>) script in the
 host environment. It can be any command or script that you would normally execute on the command line or
@@ -113,7 +112,7 @@ Alternatively, you can use the {ref}`process-shell` block definition, which allo
 Bash and Nextflow variables without having to escape the first.
 :::
 
-### Scripts `à la carte`
+### Scripts *à la carte*
 
 The process script is interpreted by Nextflow as a Bash script by default, but you are not limited to Bash.
 
@@ -156,11 +155,11 @@ more portable.
 ### Conditional scripts
 
 So far, our `script` block has always been a simple string expression, but in reality, the `script` block is
-just Groovy code that `returns` a string. This means that you can write arbitrary Groovy code to determine
+just Groovy code that returns a string. This means that you can write arbitrary Groovy code to determine
 the script to execute, as long as the final statement is a string (remember that the `return` keyword is optional in Groovy).
 
 For example, you can use flow control statements (`if`, `switch`, etc) to execute a different script based on
-the process inputs. The only difference here is that you must explicitly declare the `script:` block, whereas before
+the process inputs. The only difference here is that you must explicitly declare the `script` guard, whereas before
 it was not required. Here is an example:
 
 ```
@@ -371,7 +370,7 @@ input:
   <input qualifier> <input name>
 ```
 
-An input definition consists of a `qualifier` and a `name`. The input qualifier defines the type
+An input definition consists of a *qualifier* and a *name*. The input qualifier defines the type
 of data to be received. This information is used by Nextflow to apply the semantic rules associated with
 each qualifier, and handle it properly depending on the target execution platform (grid, cloud, etc).
 
@@ -929,7 +928,7 @@ output:
   <output qualifier> <output name> [, <option>: <option value>]
 ```
 
-An output definition consists of a `qualifier` and a `name`. Some optional attributes can also be specified.
+An output definition consists of a *qualifier* and a *name*. Some optional attributes can also be specified.
 
 When a process is invoked, each process output is returned as a channel. The examples provided in
 the following sections demonstrate how to access the output channels of a process.
@@ -1364,7 +1363,7 @@ the pipeline is launched with the {ref}`resume <getstarted-resume>` option, any 
 along with the same inputs, will cause the process execution to be skipped, producing the stored data as
 the actual results.
 
-The caching feature generates a unique `key` by indexing the process script and inputs. This key is used
+The caching feature generates a unique key by indexing the process script and inputs. This key is used
 to identify univocally the outputs produced by the process execution.
 
 The cache is enabled by default, you can disable it for a specific process by setting the `cache`
@@ -1392,7 +1391,7 @@ The `cache` directive possible values are shown in the following table:
 
 ### clusterOptions
 
-The `clusterOptions` directive allows the usage of any `native` configuration option accepted by your cluster submit command.
+The `clusterOptions` directive allows the usage of any native configuration option accepted by your cluster submit command.
 You can use it to request non-standard resources or use settings that are specific to your cluster and not supported
 out of the box by Nextflow.
 
@@ -1779,7 +1778,7 @@ See also: [cpus](#cpus) and [memory](#memory).
 
 ### maxErrors
 
-The `maxErrors` directive allows you to specify the maximum number of times a process can fail when using the `retry` `error strategy`.
+The `maxErrors` directive allows you to specify the maximum number of times a process can fail when using the `retry` error strategy.
 By default this directive is disabled, you can set it as shown in the example below:
 
 ```
@@ -1824,7 +1823,7 @@ process doNotParallelizeIt {
 ### maxRetries
 
 The `maxRetries` directive allows you to define the maximum number of times a process instance can be
-re-submitted in case of failure. This value is applied only when using the `retry` `error strategy`. By default
+re-submitted in case of failure. This value is applied only when using the `retry` error strategy. By default
 only one retry is allowed, you can increase this value as shown below:
 
 ```
@@ -1920,7 +1919,7 @@ can be specified in a single `module` directive by separating all the module nam
 
 ### penv
 
-The `penv` directive  allows you to define the `parallel environment` to be used when submitting a parallel task to the
+The `penv` directive  allows you to define the parallel environment to be used when submitting a parallel task to the
 {ref}`SGE <sge-executor>` resource manager. For example:
 
 ```
@@ -2029,7 +2028,7 @@ The above example splits the string `Hola` into file chunks of a single byte. Wh
 are published into the `/data/chunks` folder.
 
 :::{note}
-Only files that match the declaration in the `output:` block are published, not all the outputs of the process.
+Only files that match the declaration in the `output` block are published, not all the outputs of the process.
 :::
 
 :::{tip}
@@ -2057,12 +2056,12 @@ Table of publish modes:
 
 | Mode         | Description                                                                                                                                                                                              |
 | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| symlink      | Creates an absolute `symbolic link` in the published directory for each process output file (default).                                                                                                   |
-| rellink      | Creates a relative `symbolic link` in the published directory for each process output file.                                                                                                              |
-| link         | Creates a `hard link` in the published directory for each process output file.                                                                                                                           |
+| symlink      | Creates an absolute symbolic link in the published directory for each process output file (default).                                                                                                   |
+| rellink      | Creates a relative symbolic link in the published directory for each process output file.                                                                                                              |
+| link         | Creates a hard link in the published directory for each process output file.                                                                                                                           |
 | copy         | Copies the output files into the published directory.                                                                                                                                                    |
 | copyNoFollow | Copies the output files into the published directory without following symlinks ie. copies the links themselves.                                                                                         |
-| move         | Moves the output files into the published directory. **Note**: this is only supposed to be used for a `terminating` process i.e. a process whose output is not consumed by any other downstream process. |
+| move         | Moves the output files into the published directory. **Note**: this is only supposed to be used for a *terminating* process i.e. a process whose output is not consumed by any other downstream process. |
 
 :::{note}
 The `mode` value must be specified as a string literal, i.e. in quotes. Multiple parameters
@@ -2130,7 +2129,7 @@ This directive is only used by certain executors. Refer to the
 
 The `scratch` directive allows you to execute the process in a temporary folder that is local to the execution node.
 
-This is useful when your pipeline is launched by using a `grid` executor, because it allows you to decrease the NFS
+This is useful when your pipeline is launched by using a grid executor, because it allows you to decrease the NFS
 overhead by running the pipeline processes in a temporary directory in the local disk of the actual execution node.
 Only the files declared as output in the process definition will be copied in the pipeline working area.
 
@@ -2187,7 +2186,7 @@ Summary of allowed values:
 
 ### storeDir
 
-The `storeDir` directive allows you to define a directory that is used as a `permanent` cache for your process results.
+The `storeDir` directive allows you to define a directory that is used as a *permanent* cache for your process results.
 
 In more detail, it affects the process execution in two main ways:
 

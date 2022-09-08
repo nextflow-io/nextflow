@@ -1,14 +1,14 @@
 # Basic concepts
 
-`Nextflow` is a reactive workflow framework and a programming [DSL](http://en.wikipedia.org/wiki/Domain-specific_language)
+Nextflow is a reactive workflow framework and a programming [DSL](http://en.wikipedia.org/wiki/Domain-specific_language)
 that eases the writing of data-intensive computational pipelines.
 
 It is designed around the idea that the Linux platform is the lingua franca of data science. Linux provides many
 simple but powerful command-line and scripting tools that, when chained together, facilitate complex
 data manipulations.
 
-`Nextflow` extends this approach, adding the ability to define complex program interactions and a high-level
-parallel computational environment based on the `dataflow` programming model.
+Nextflow extends this approach, adding the ability to define complex program interactions and a high-level
+parallel computational environment based on the *dataflow* programming model.
 
 ## Processes and channels
 
@@ -16,9 +16,9 @@ In practice a Nextflow pipeline script is made by joining together different pro
 Each process can be written in any scripting language that can be executed by the Linux platform (Bash, Perl, Ruby, Python, etc.).
 
 Processes are executed independently and are isolated from each other, i.e. they do not share a common (writable) state.
-The only way they can communicate is via asynchronous FIFO queues, called `channels` in Nextflow.
+The only way they can communicate is via asynchronous FIFO queues, called *channels* in Nextflow.
 
-Any process can define one or more channels as `input` and `output`. The interaction between these processes,
+Any process can define one or more channels as *input* and *output*. The interaction between these processes,
 and ultimately the pipeline execution flow itself, is implicitly defined by these input and output declarations.
 
 A Nextflow script looks like this:
@@ -69,19 +69,19 @@ process to the inputs of the following one.
 When the workflow is started, it will create two processes and one channel (`query_ch`)
 and it will link all of them. Both processes will be started at the same time and they will listen to their
 respective input channels. Whenever `blastSearch` emits a value, `extractTopHits`
-will receive it (i.e. `extractTopHits` consumes the channel in a `reactive` way).
+will receive it (i.e. `extractTopHits` consumes the channel in a *reactive* way).
 
 Read the {ref}`Channel <channel-page>` and {ref}`Process <process-page>` sections to learn more about these features.
 
 ## Execution abstraction
 
-While a process defines `what` command or script has to be executed, the `executor` determines `how`
+While a process defines *what* command or script has to be executed, the *executor* determines *how*
 that script is actually run on the target system.
 
 If not otherwise specified, processes are executed on the local computer. The local executor is very useful for pipeline
 development and testing purposes, but for real world computational pipelines an HPC or cloud platform is often required.
 
-In other words, `Nextflow` provides an abstraction between the pipeline's functional logic and the underlying execution system.
+In other words, Nextflow provides an abstraction between the pipeline's functional logic and the underlying execution system.
 Thus it is possible to write a pipeline once and to seamlessly run it on your computer, a grid platform, or the cloud,
 without modifying it, by simply defining the target execution platform in the configuration file.
 
@@ -105,7 +105,7 @@ Read the {ref}`executor-page` to learn more about the Nextflow executors.
 
 ## Scripting language
 
-`Nextflow` is designed to have a minimal learning curve, without having to pick up
+Nextflow is designed to have a minimal learning curve, without having to pick up
 a new programming language. In most cases, users can utilise their current skills to develop
 Nextflow workflows. However, it also provides a powerful scripting DSL.
 

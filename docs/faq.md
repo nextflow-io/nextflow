@@ -6,7 +6,7 @@
 
 Q: *I have a collection of input files (e.g. carrots.fa, onions.fa, broccoli.fa). How can I specify that a process is performed on each input file in a parallel manner?*
 
-A: The idea here is to create a `channel` that will trigger a process
+A: The idea here is to create a *channel* that will trigger a process
 execution for each of your files. First define a parameter that specifies where
 the input files are:
 

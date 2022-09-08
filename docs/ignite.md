@@ -137,7 +137,7 @@ nextflow run <your pipeline> -process.executor ignite -cluster.join path:/net/sh
 Nextflow is able to deploy and self-configure an Ignite cluster on demand, taking advantage of the Open [MPI](https://en.wikipedia.org/wiki/Message_Passing_Interface)
 standard that is commonly available in grid and supercomputer facilities.
 
-In this scenario a Nextflow workflow needs to be executed as an MPI job. Under the hood Nextflow will launch a `driver`
+In this scenario a Nextflow workflow needs to be executed as an MPI job. Under the hood Nextflow will launch a *driver*
 process in the first of the nodes, allocated by your job request, and an Ignite daemon in the remaining nodes.
 
 In practice you will need a launcher script to submit an MPI job request to your batch scheduler/resource manager.

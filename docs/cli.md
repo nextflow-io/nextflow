@@ -2,7 +2,7 @@
 
 # Command line interface (CLI)
 
-`Nextflow` provides a robust command line interface for the management and
+Nextflow provides a robust command line interface for the management and
 execution pipelines. The top-level interface consists of two aspects,
 *options* and *commands*.
 
@@ -100,7 +100,7 @@ For specifying other JVM level options, please refer to the {ref}`config-env-var
 
 **Examples**
 
-Add `JVM properties` to the invoked pipeline.
+Add JVM properties to the invoked pipeline.
 
 ```
 $ nextflow -Dfile.encoding=UTF-8 run nextflow-io/hello
@@ -668,8 +668,8 @@ $ nextflow info [options] [project]
 **Description**
 
 The `info` command prints out the nextflow runtime information about the hardware as
-well as the software versions of the `Nextflow version and build`, `Operating System`
-and `Groovy and Java runtime`. It can also be used to display information about a
+well as the software versions of the Nextflow version and build, operating system,
+and Groovy and Java runtime. It can also be used to display information about a
 specific project.
 
 **Options**

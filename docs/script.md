@@ -31,7 +31,7 @@ To print something is as easy as using one of the `print` or `println` methods.
 println "Hello, World!"
 ```
 
-The only difference between the two is that the `println` method implicitly appends a `new line` character
+The only difference between the two is that the `println` method implicitly appends a newline character
 to the printed string.
 
 ### Variables
@@ -83,7 +83,7 @@ Learn more about lists:
 
 ### Maps
 
-Maps are used to store `associative arrays` or `dictionaries`. They are unordered collections of heterogeneous, named data:
+Maps are used to store *associative arrays* (also known as *dictionaries*). They are unordered collections of heterogeneous, named data:
 
 ```
 scores = [ "Brett":100, "Pete":"Did not finish", "Andrew":86.87934 ]
@@ -200,8 +200,7 @@ Like before, multi-line strings inside double quotes support variable interpolat
 single-quoted multi-line strings do not.
 :::
 
-As in Bash/shell scripts, terminating a line in a multi-line string with a `\` character prevents a
-a `new line` character from separating that line from the one that follows:
+As in Bash/shell scripts, terminating a line in a multi-line string with a `\` character prevents a newline character from separating that line from the one that follows:
 
 ```
 myLongCmdline = """
@@ -285,7 +284,7 @@ See {ref}`Process directives <process-directives>` for details.
 Briefly, a closure is a block of code that can be passed as an argument to a function.
 Thus, you can define a chunk of code and then pass it around as if it were a string or an integer.
 
-More formally, you can create functions that are defined as `first class objects`.
+More formally, you can create functions that are defined as *first-class objects*.
 
 ```
 square = { it * it }
@@ -341,9 +340,9 @@ Sudha = Kumari
 ```
 
 A closure has two other important features. First, it can access variables in the scope where it is defined,
-so that it can `interact` with them.
+so that it can interact with them.
 
-Second, a closure can be defined in an `anonymous` manner, meaning that it is not given a name,
+Second, a closure can be defined in an anonymous manner, meaning that it is not given a name,
 and is defined in the place where it needs to be used.
 
 As an example showing both these features, see the following code fragment:
@@ -486,7 +485,7 @@ given a file path string:
 myFile = file('some/path/to/my_file.file')
 ```
 
-The `file` method can reference either `files` or `directories`, depending on what the string path refers to in the
+The `file` method can reference both files and directories, depending on what the string path refers to in the
 file system.
 
 When using the wildcard characters `*`, `?`, `[]` and `{}`, the argument is interpreted as a [glob][glob] path matcher
@@ -558,7 +557,7 @@ In order to append a string value to a file without erasing existing content, yo
 myFile.append('Add this line\n')
 ```
 
-Or use the `left shift` operator, a more idiomatic way to append text content to a file:
+Or use the left shift operator, a more idiomatic way to append text content to a file:
 
 ```
 myFile << 'Add a line more\n'
