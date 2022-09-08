@@ -2,5 +2,5 @@ set +e
 $NXF_RUN | tee stdout
 set -e
 
-< stdout grep "Check script '.*error-message.nf' at line: 20"
+< stdout grep "No signature of method: error-message.printx()"
 
