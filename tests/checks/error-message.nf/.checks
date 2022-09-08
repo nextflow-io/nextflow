@@ -2,5 +2,5 @@ set +e
 $NXF_RUN | tee stdout
 set -e
 
-< stdout grep "No signature of method: error-message.printx()"
+< stdout grep "Unknown method invocation `printx` -- Did you mean?"
 
