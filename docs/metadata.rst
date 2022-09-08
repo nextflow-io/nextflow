@@ -58,9 +58,9 @@ manifest                    Entries of the workflow manifest.
 :sup:`*` errorReport        Detailed error of the task that caused the workflow execution to fail.
 =========================== ===========================
 
-| Properties marked with a `✝` are accessible only in the workflow completion handler.
-| Properties marked with a `*` are accessible only in the workflow completion and error handlers. See the `Completion handler`_ section for details.
-|
+* Properties marked with a `✝` are accessible only in the workflow completion handler.
+* Properties marked with a `*` are accessible only in the workflow completion and error handlers. See the `Completion handler`_ section for details.
+
 
 
 .. _metadata-nextflow:
