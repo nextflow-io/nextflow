@@ -69,10 +69,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptCompilationException)
-        err.message == """\
-                Module compilation error
-                - file : $MODULE
-                """.stripIndent().rightTrim()
+        err.message.indexOf("$MODULE") != -1
     }
 
     def 'should invoke foreign functions' () {
