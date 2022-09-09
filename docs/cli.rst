@@ -1096,6 +1096,8 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -cache                    |             | Enable/disable processes caching.                                              |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
+| -disable-jobs-cancellation|             | Prevent the cancellation of child jobs on execution termination                |
++---------------------------+-------------+--------------------------------------------------------------------------------+
 | -dsl1                     | false       | Execute the workflow using DSL1 syntax.                                        |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -dsl2                     | true        | Execute the workflow using DSL2 syntax.                                        |
@@ -1139,9 +1141,13 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 | -r, -revision             |             | Revision of the project to run                                                 |
 |                           |             | (either a git ``branch``, ``tag`` or commit ``SHA`` number).                   |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
+| -stub-run, -stub          | false       | Execute the workflow replacing process scripts with command stubs              |
++---------------------------+-------------+--------------------------------------------------------------------------------+
 | -test                     |             | Test a script function with the name specified.                                |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -user                     |             | Private repository user name.                                                  |
++---------------------------+-------------+--------------------------------------------------------------------------------+
+| -with-charliecloud        |             | Enable process execution in a Charliecloud container runtime                   |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-conda               |             | Use the specified Conda environment package or                                 |
 |                           |             | file (must end with ``.yml|.yaml``)                                            |
