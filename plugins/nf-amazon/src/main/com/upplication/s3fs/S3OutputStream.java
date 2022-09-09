@@ -78,6 +78,7 @@ public final class S3OutputStream extends OutputStream {
 
     private static final Logger log = LoggerFactory.getLogger(S3OutputStream.class);
 
+    private static final int MIN_MULTIPART_UPLOAD = 1048576;
 
     /**
      * Amazon S3 API implementation to use.
@@ -157,7 +158,7 @@ public final class S3OutputStream extends OutputStream {
 
     private List<Tag> tags;
 
-    private AtomicInteger bufferCounter = new AtomicInteger();
+    private final AtomicInteger bufferCounter = new AtomicInteger();
 
     /**
      * Creates a new {@code S3OutputStream} that writes data directly into the S3 object with the given {@code objectId}.
@@ -265,16 +266,18 @@ public final class S3OutputStream extends OutputStream {
     @Override
     public void flush() throws IOException {
         // send out the current current
-        uploadBuffer(buf);
-        // clear the current buffer
-        buf = null;
-        md5 = null;
+        if( uploadBuffer(buf, false) ) {
+            // clear the current buffer
+            buf = null;
+            md5 = null;
+        }
     }
 
     private ByteBuffer allocate() {
 
         if( partsCount==0 ) {
-            return ByteBuffer.allocate(10 * 1024);
+            log.debug("Allocating new buffer of {} bytes, total buffers {}", request.getChunkSize(), bufferCounter.incrementAndGet());
+            return ByteBuffer.allocate(request.getChunkSize());
         }
 
         // try to reuse a buffer from the poll
@@ -285,7 +288,7 @@ public final class S3OutputStream extends OutputStream {
         else {
             // allocate a new buffer
             log.debug("Allocating new buffer of {} bytes, total buffers {}", request.getChunkSize(), bufferCounter.incrementAndGet());
-            result = ByteBuffer.allocateDirect(request.getChunkSize());
+            result = ByteBuffer.allocate(request.getChunkSize());
         }
 
         return result;
@@ -296,10 +299,17 @@ public final class S3OutputStream extends OutputStream {
      * Upload the given buffer to S3 storage in a asynchronous manner.
      * NOTE: when the executor service is busy (i.e. there are any more free threads)
      * this method will block
+     *
+     * return: true if the buffer can be reused, false if still needs to be used
      */
-    private void uploadBuffer(ByteBuffer buf) throws IOException {
+    private boolean uploadBuffer(ByteBuffer buf, boolean last) throws IOException {
         // when the buffer is empty nothing to do
-        if( buf == null || buf.position()==0 ) { return; }
+        if( buf == null || buf.position()==0 ) { return false; }
+
+        // Intermediate uploads needs to have at least MIN bytes
+        if( buf.position() < MIN_MULTIPART_UPLOAD && !last){
+            return false;
+        }
 
         if (partsCount == 0) {
             init();
@@ -307,6 +317,8 @@ public final class S3OutputStream extends OutputStream {
 
         // set the buffer in read mode and submit for upload
         executor.submit( task(buf, md5.digest(), ++partsCount) );
+
+        return true;
     }
 
     /**
@@ -325,7 +337,7 @@ public final class S3OutputStream extends OutputStream {
         partETags = new LinkedBlockingQueue<>();
         phaser = new Phaser();
         phaser.register();
-        log.trace("Starting S3 upload: {}; chunk-size: {}; max-threads: {}", uploadId, request.getChunkSize(), request.getMaxThreads());
+        log.trace("[S3 phaser] Register - Starting S3 upload: {}; chunk-size: {}; max-threads: {}", uploadId, request.getChunkSize(), request.getMaxThreads());
     }
 
 
@@ -340,6 +352,7 @@ public final class S3OutputStream extends OutputStream {
     private Runnable task(final ByteBuffer buffer, final byte[] checksum, final int partIndex) {
 
         phaser.register();
+        log.trace("[S3 phaser] Task register");
         return new Runnable() {
             @Override
             public void run() {
@@ -352,6 +365,7 @@ public final class S3OutputStream extends OutputStream {
                     log.error("Upload: {} > Error for part: {}\nCaused by: {}", uploadId, partIndex, writer.toString());
                 }
                 finally {
+                    log.trace("[S3 phaser] Task arriveAndDeregisterphaser");
                     phaser.arriveAndDeregister();
                 }
             }
@@ -380,9 +394,10 @@ public final class S3OutputStream extends OutputStream {
         else {
             // -- upload remaining chunk
             if( buf != null )
-                uploadBuffer(buf);
+                uploadBuffer(buf, true);
 
             // -- shutdown upload executor and await termination
+            log.trace("[S3 phaser] Close arriveAndAwaitAdvance");
             phaser.arriveAndAwaitAdvance();
 
             // -- complete upload process
@@ -520,6 +535,7 @@ public final class S3OutputStream extends OutputStream {
             log.warn("Failed to abort multipart upload {}: {}", uploadId, e.getMessage());
         }
         aborted = true;
+        log.trace("[S3 phaser] MultipartUpload arriveAndDeregister");
         phaser.arriveAndDeregister();
     }
 
@@ -633,13 +649,7 @@ public final class S3OutputStream extends OutputStream {
             executorSingleton = pool;
             log.trace("Created singleton upload executor -- max-treads: {}", maxThreads);
             // register shutdown hook
-            Session sess = (Session) Global.getSession();
-            if( sess != null ) {
-                sess.onShutdown(() -> shutdownExecutor(sess.isAborted()) );
-            }
-            else {
-                log.warn("Session not available -- S3 uploader may not shutdown properly");
-            }
+            Global.onCleanup((it) -> { Session sess=(Session) it; shutdownExecutor(sess!=null && sess.isAborted()); });
         }
         return executorSingleton;
     }
