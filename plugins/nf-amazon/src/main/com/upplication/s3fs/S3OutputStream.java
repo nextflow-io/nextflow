@@ -152,7 +152,7 @@ public final class S3OutputStream extends OutputStream {
      */
     private int partsCount;
 
-    private int chunkSize;
+    private int bufferSize;
 
     private CannedAccessControlList cannedAcl;
 
@@ -169,13 +169,13 @@ public final class S3OutputStream extends OutputStream {
         this.s3 = requireNonNull(s3);
         this.objectId = requireNonNull(objectId);
         this.request = request;
-        this.chunkSize = request.getChunkSize();
+        this.bufferSize = request.getBufferSize();
     }
 
     private ByteBuffer expandBuffer(ByteBuffer byteBuffer) {
         
         final float expandFactor = 2.5f;
-        final int newCapacity = Math.min( (int)(byteBuffer.capacity() * expandFactor), chunkSize );
+        final int newCapacity = Math.min( (int)(byteBuffer.capacity() * expandFactor), bufferSize );
 
         // cast to prevent Java 8 / Java 11 cross compile-runtime error
         // https://www.morling.dev/blog/bytebuffer-and-the-dreaded-nosuchmethoderror/
@@ -242,7 +242,7 @@ public final class S3OutputStream extends OutputStream {
             md5 = createMd5();
         }
         else if( !buf.hasRemaining() ) {
-            if( buf.position() < chunkSize ) {
+            if( buf.position() < bufferSize ) {
                 buf = expandBuffer(buf);
             }
             else {
@@ -276,8 +276,10 @@ public final class S3OutputStream extends OutputStream {
     private ByteBuffer allocate() {
 
         if( partsCount==0 ) {
-            log.debug("Allocating new buffer of {} bytes, total buffers {}", request.getChunkSize(), bufferCounter.incrementAndGet());
-            return ByteBuffer.allocate(request.getChunkSize());
+            // this class is expected to be used to upload small files
+            // start with a small buffer and growth if more space if necessary
+            final int initialSize = 100 * 1024;
+            return ByteBuffer.allocate(initialSize);
         }
 
         // try to reuse a buffer from the poll
@@ -287,8 +289,8 @@ public final class S3OutputStream extends OutputStream {
         }
         else {
             // allocate a new buffer
-            log.debug("Allocating new buffer of {} bytes, total buffers {}", request.getChunkSize(), bufferCounter.incrementAndGet());
-            result = ByteBuffer.allocate(request.getChunkSize());
+            log.debug("Allocating new buffer of {} bytes, total buffers {}", bufferSize, bufferCounter.incrementAndGet());
+            result = ByteBuffer.allocate(bufferSize);
         }
 
         return result;
@@ -337,7 +339,7 @@ public final class S3OutputStream extends OutputStream {
         partETags = new LinkedBlockingQueue<>();
         phaser = new Phaser();
         phaser.register();
-        log.trace("[S3 phaser] Register - Starting S3 upload: {}; chunk-size: {}; max-threads: {}", uploadId, request.getChunkSize(), request.getMaxThreads());
+        log.trace("[S3 phaser] Register - Starting S3 upload: {}; chunk-size: {}; max-threads: {}", uploadId, bufferSize, request.getMaxThreads());
     }
 
 
