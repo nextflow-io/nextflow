@@ -73,6 +73,7 @@ import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
 import nextflow.util.VersionNumber
+import org.apache.commons.lang.exception.ExceptionUtils
 import sun.misc.Signal
 import sun.misc.SignalHandler
 /**
@@ -907,8 +908,10 @@ class Session implements ISession {
      * @param Closure
      */
     void onShutdown( Runnable hook ) {
-        if( !hook )
+        if( !hook ) {
+            log.warn "Shutdown hook cannot be null\n${ExceptionUtils.getStackTrace(new Exception())}"
             return
+        }
         if( shutdownInitiated )
             throw new IllegalStateException("Session shutdown already initiated — Hook cannot be added: $hook")
         shutdownCallbacks.add(hook)
