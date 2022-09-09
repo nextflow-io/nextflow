@@ -32,6 +32,8 @@ public class S3MultipartOptions {
 
     public static final int DEFAULT_CHUNK_SIZE = 100 << 20;  // 100 MB
 
+    public static final int DEFAULT_BUFFER_SIZE = 10485760;
+
     /**
      * Upload chunk max size
      */
@@ -41,6 +43,11 @@ public class S3MultipartOptions {
      * Maximum number of threads allowed
      */
     private int maxThreads;
+
+    /**
+     * Buffer size used by the stream uploader
+     */
+    private int bufferSize;
 
     /**
      * Maximum number of attempts to upload a chunk in a multiparts upload process
@@ -61,6 +68,7 @@ public class S3MultipartOptions {
         chunkSize = DEFAULT_CHUNK_SIZE;
         maxAttempts = 5;
         maxThreads = Runtime.getRuntime().availableProcessors() *3;
+        bufferSize = DEFAULT_BUFFER_SIZE;
     }
 
     public S3MultipartOptions() {
@@ -72,6 +80,7 @@ public class S3MultipartOptions {
         setChunkSize(props.getProperty("upload_chunk_size"));
         setMaxAttempts(props.getProperty("upload_max_attempts"));
         setRetrySleep(props.getProperty("upload_retry_sleep"));
+        setBufferSize(props.getProperty("upload_buffer_size"));
     }
 
     public int getChunkSize() {
@@ -100,6 +109,7 @@ public class S3MultipartOptions {
         return retrySleep;
     }
 
+    public int getBufferSize() { return bufferSize; }
 
     public S3MultipartOptions setChunkSize(int chunkSize) {
         this.chunkSize = chunkSize;
@@ -115,6 +125,24 @@ public class S3MultipartOptions {
         }
         catch( NumberFormatException e ) {
             log.warn("Not a valid AWS S3 multipart upload chunk size: `{}` -- Using default", chunkSize);
+        }
+        return this;
+    }
+
+    public S3MultipartOptions setBufferSize(int bufferSize) {
+        this.bufferSize = bufferSize;
+        return this;
+    }
+
+    public S3MultipartOptions setBufferSize(String bufferSize) {
+        if( bufferSize==null )
+            return this;
+
+        try {
+            setBufferSize(Integer.parseInt(bufferSize));
+        }
+        catch( NumberFormatException e ) {
+            log.warn("Not a valid AWS S3 multipart upload buffer size: `{}` -- Using default", bufferSize);
         }
         return this;
     }
