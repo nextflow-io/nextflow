@@ -76,7 +76,6 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         this.scheme = scheme
         this.remoteWorkDir = remoteWorkDir
         this.buckets = buckets
-
     }
 
     static protected String headerScript(TaskBean bean) {
