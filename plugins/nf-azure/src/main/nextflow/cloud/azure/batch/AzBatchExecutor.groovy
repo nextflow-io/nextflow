@@ -98,7 +98,7 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
         if( !config.storage().sasToken )
             config.storage().sasToken = AzHelper.generateAccountSas(workDir, config.storage().tokenDuration)
 
-        Global.onCleanup { batchService.close() }
+        Global.onCleanup((it)->batchService.close())
     }
 
     /**

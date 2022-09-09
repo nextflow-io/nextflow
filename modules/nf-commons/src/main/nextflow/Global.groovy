@@ -27,6 +27,8 @@ import nextflow.util.Duration
 import nextflow.util.IniFile
 import nextflow.util.MemoryUnit
 import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang.exception.ExceptionUtils
+
 /**
  * Hold global variables
  *
@@ -244,6 +246,10 @@ class Global {
      * @param callback A closure to be executed on application shutdown
      */
     static void onCleanup(Consumer<ISession> callback) {
+        if( callback==null ) {
+            log.warn "Cleanup consumer cannot be null\n${ExceptionUtils.getStackTrace(new Exception())}"
+            return 
+        }
         hooks.add(callback)
     }
 

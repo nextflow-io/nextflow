@@ -266,7 +266,7 @@ class AzBatchService implements Closeable {
 
         final cred = new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey)
         final client = BatchClient.open(cred)
-        Global.onCleanup { client.protocolLayer().restClient().close() }
+        Global.onCleanup((it)->client.protocolLayer().restClient().close())
         return client
     }
 
