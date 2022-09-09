@@ -471,12 +471,14 @@ class AzBatchService implements Closeable {
         def name = opts ? opts.vmType : getPool(poolId)?.vmSize()
         if( !name )
             throw new IllegalArgumentException("Cannot find Azure Batch config for pool: $poolId")
+        if( !opts )
+            opts = new AzPoolOpts(vmType: name)
 
         def type = getVmType(config.batch().location, name)
         if( !type )
             throw new IllegalArgumentException("Cannot find Azure Batch VM type '$poolId' - Check pool definition $poolId in the Nextflow config file")
 
-        new AzVmPoolSpec(poolId: poolId, vmType: type, opts: opts)
+        return new AzVmPoolSpec(poolId: poolId, vmType: type, opts: opts)
     }
 
     protected AzVmPoolSpec specFromAutoPool(TaskRun task) {
