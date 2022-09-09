@@ -46,34 +46,43 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         this.buckets = new HashSet<>()
     }
 
-    FusionScriptLauncher(TaskBean bean, String scheme) {
-        super(bean)
-        // keep track the google storage work dir
-        this.scheme = scheme
-        this.remoteWorkDir = bean.workDir
+    static FusionScriptLauncher create(TaskBean bean, String scheme) {
+
+        final buckets = new HashSet(10)
+        final remoteWorkDir = bean.workDir
 
         // map bean work and target dirs to container mount
         // this needed to create the command launcher using container local file paths
-        bean.workDir = toContainerMount(bean.workDir)
-        bean.targetDir = toContainerMount(bean.targetDir)
+        bean.workDir = toContainerMount(bean.workDir, scheme, buckets)
+        bean.targetDir = toContainerMount(bean.targetDir, scheme, buckets)
 
         // remap input files to container mounted paths
         for( Map.Entry<String,Path> entry : new HashMap<>(bean.inputFiles).entrySet() ) {
-            bean.inputFiles.put( entry.key, toContainerMount(entry.value) )
+            bean.inputFiles.put( entry.key, toContainerMount(entry.value, scheme, buckets) )
         }
 
         // make it change to the task work dir
         bean.headerScript = headerScript(bean)
         // enable use of local scratch dir
-        if( scratch==null )
-            scratch = true
+        if( bean.scratch==null )
+            bean.scratch = true
+
+        return new FusionScriptLauncher(bean, scheme, remoteWorkDir, buckets)
     }
 
-    protected String headerScript(TaskBean bean) {
+    FusionScriptLauncher(TaskBean bean, String scheme, Path remoteWorkDir, Set<String> buckets) {
+        super(bean)
+        // keep track the google storage work dir
+        this.scheme = scheme
+        this.remoteWorkDir = remoteWorkDir
+        this.buckets = buckets
+    }
+
+    static protected String headerScript(TaskBean bean) {
         return "NXF_CHDIR=${Escape.path(bean.workDir)}\n"
     }
 
-    Path toContainerMount(Path path) {
+    static protected Path toContainerMount(Path path, String scheme, Set<String> buckets) {
         if( path == null )
             return null
 
@@ -85,6 +94,10 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         final result = "/fusion/$p.scheme/${p.bucket}${p.path}"
         buckets.add(p.bucket)
         return Path.of(result)
+    }
+
+    Path toContainerMount(Path path) {
+        toContainerMount(path,scheme,buckets)
     }
 
     Set<String> fusionBuckets() {

@@ -50,7 +50,7 @@ trait FusionAwareTask {
     FusionScriptLauncher fusionLauncher() {
         if( fusionLauncher==null ) {
             fusionLauncher = fusionEnabled()
-                    ? new FusionScriptLauncher(task.toTaskBean(), task.workDir.scheme)
+                    ? FusionScriptLauncher.create(task.toTaskBean(), task.workDir.scheme)
                     : null
         }
         return fusionLauncher
