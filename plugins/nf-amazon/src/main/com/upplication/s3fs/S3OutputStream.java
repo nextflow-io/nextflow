@@ -78,7 +78,11 @@ public final class S3OutputStream extends OutputStream {
 
     private static final Logger log = LoggerFactory.getLogger(S3OutputStream.class);
 
-    private static final int MIN_MULTIPART_UPLOAD = 1048576;
+    /**
+     * Minimum multipart chunk size 5MB
+     * https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html
+     */
+    private static final int MIN_MULTIPART_UPLOAD = 5 * 1024 * 1024;
 
     /**
      * Amazon S3 API implementation to use.
@@ -265,7 +269,7 @@ public final class S3OutputStream extends OutputStream {
      */
     @Override
     public void flush() throws IOException {
-        // send out the current current
+        // send out the current buffer
         if( uploadBuffer(buf, false) ) {
             // clear the current buffer
             buf = null;
