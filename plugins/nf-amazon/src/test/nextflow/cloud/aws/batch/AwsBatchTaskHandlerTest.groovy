@@ -368,7 +368,7 @@ class AwsBatchTaskHandlerTest extends Specification {
             getAwsOptions() >> Mock(AwsOptions)
             getTask() >> Mock(TaskRun) {getWorkDir() >> S3PathFactory.parse('s3://my-bucket/work/dir') }
             fusionEnabled() >> true
-            fusionLauncher(_) >> Mock(FusionScriptLauncher) {
+            fusionLauncher() >> Mock(FusionScriptLauncher) {
                 fusionEnv() >> [NXF_FUSION_BUCKETS: 's3://FOO,s3://BAR']
             }
         }
@@ -898,12 +898,11 @@ class AwsBatchTaskHandlerTest extends Specification {
                 .withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnStatusReason('Host EC2*'), new EvaluateOnExit().withOnReason('*').withAction('EXIT') )
         req.getTags() == [a:'b']
     }
-
     def 'get fusion submit command' () {
         given:
         def handler = Spy(AwsBatchTaskHandler) {
             fusionEnabled() >> true
-            fusionLauncher(_) >> new FusionScriptLauncher(scheme: 's3')
+            fusionLauncher() >> new FusionScriptLauncher(scheme: 's3')
             getTask() >> Mock(TaskRun) {
                 getWorkDir() >> S3PathFactory.parse('s3://my-bucket/work/dir')
             }

@@ -55,6 +55,8 @@ import org.pf4j.ExtensionPoint
 @CompileStatic
 class AwsBatchExecutor extends Executor implements ExtensionPoint {
 
+    private Map<String,String> sysEnv = System.getenv()
+
     /**
      * Proxy to throttle AWS batch client requests
      */
@@ -247,7 +249,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
 
     @Override
     boolean isFusionEnabled() {
-        return FusionHelper.isFusionEnabled(session)
+        return FusionHelper.isFusionEnabled(session, sysEnv)
     }
 
     protected void logRateLimitChange(RateUnit rate) {

@@ -39,6 +39,8 @@ import nextflow.script.ScriptType
 @SupportedScriptTypes( [ScriptType.SCRIPTLET, ScriptType.GROOVY] )
 class LocalExecutor extends Executor {
 
+    private Map<String,String> sysEnv = System.getenv()
+
     @Override
     protected TaskMonitor createTaskMonitor() {
         return LocalPollingMonitor.create(session, name)
@@ -71,7 +73,7 @@ class LocalExecutor extends Executor {
 
     @Override
     boolean isFusionEnabled() {
-        return FusionHelper.isFusionEnabled(session)
+        return FusionHelper.isFusionEnabled(session, sysEnv)
     }
 }
 

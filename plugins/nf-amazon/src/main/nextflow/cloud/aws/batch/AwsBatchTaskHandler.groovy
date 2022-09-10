@@ -324,7 +324,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     protected BashWrapperBuilder createTaskWrapper() {
         return fusionEnabled()
-                ? fusionLauncher(task)
+                ? fusionLauncher()
                 : new AwsBatchScriptLauncher(task.toTaskBean(), getAwsOptions())
     }
 
@@ -633,7 +633,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     protected List<String> getSubmitCommand() {
         // final launcher command
         return fusionEnabled()
-                ? fusionSubmitCli(task)
+                ? fusionSubmitCli()
                 : classicSubmitCli()
     }
 

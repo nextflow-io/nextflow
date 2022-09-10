@@ -139,7 +139,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     protected BashWrapperBuilder createBashWrapper(TaskRun task) {
         return fusionEnabled()
-                ? fusionLauncher(task)
+                ? fusionLauncher()
                 : new K8sWrapperBuilder(task)
     }
 
@@ -149,7 +149,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     protected List<String> getSubmitCommand(TaskRun task) {
         return fusionEnabled()
-                ? fusionSubmitCli(task)
+                ? fusionSubmitCli()
                 : classicSubmitCli(task)
     }
 
@@ -158,6 +158,10 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected String getOwner() { OWNER }
+
+    protected Boolean fixOwnership() {
+        task.containerConfig.fixOwnership
+    }
 
     /**
      * Creates a Pod specification that executed that specified task
@@ -209,7 +213,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
         // note: task environment is managed by the task bash wrapper
         // do not add here -- see also #680
-        if( task.containerConfig.fixOwnership )
+        if( fixOwnership() )
             builder.withEnv(PodEnv.value('NXF_OWNER', getOwner()))
 
         // add computing resources
@@ -236,8 +240,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         if ( fusionEnabled() ) {
             builder.withPrivileged(true)
 
-            final buckets = fusionLauncher(task).fusionBuckets().join(',')
-            builder.withEnv(PodEnv.value('NXF_FUSION_BUCKETS', buckets))
+            final env = fusionLauncher().fusionEnv()
+            for( Map.Entry<String,String> it : env )
+                builder.withEnv(PodEnv.value(it.key, it.value))
         }
 
         return useJobResource()

@@ -121,8 +121,8 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
 
     protected void buildTaskWrapper() {
         final wrapper = fusionEnabled()
-                ? fusionLauncher(task)
-                : new BashWrapperBuilder(task)
+                ? fusionLauncher()
+                : new BashWrapperBuilder(task.toTaskBean())
         // create the bash command wrapper and store in the task work dir
         wrapper.build()
     }
@@ -144,8 +144,8 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected ProcessBuilder fusionProcessBuilder() {
-        final submit = fusionSubmitCli(task)
-        final launcher = fusionLauncher(task)
+        final submit = fusionSubmitCli()
+        final launcher = fusionLauncher()
         final config = session.containerConfig
         final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), submit)
         log.debug "Launch cmd line: ${cmd.join(' ')}"
