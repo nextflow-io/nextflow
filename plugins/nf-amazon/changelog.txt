@@ -1,6 +1,10 @@
 nf-amazon changelog
 ===================
-1.10.2 - 7 Sep
+1.10.3 - 10 Sep 2022
+- S3 min upload size 5MB [9926d15d]
+- Use smaller buffer size for s3 stream uploader [8c643074]
+
+1.10.2 - 7 Sep 2022
 - Fix thread pool race condition on shutdown [8d2b0587]
 - Fix Intermediate multipart upload requires a minimum size (#3193) [0b66aed6]
 
