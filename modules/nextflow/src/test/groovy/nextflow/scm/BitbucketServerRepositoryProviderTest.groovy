@@ -17,6 +17,7 @@
 
 package nextflow.scm
 
+import spock.lang.Ignore
 import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -97,6 +98,7 @@ class BitbucketServerRepositoryProviderTest extends Specification {
 
     }
 
+    @Ignore
     @Requires( { System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN') } )
     def 'should list branches' () {
         given:
@@ -111,6 +113,7 @@ class BitbucketServerRepositoryProviderTest extends Specification {
         result.contains( new RepositoryProvider.BranchInfo('master', 'c62df3d9c2464adcaa0fb6c978c8e32e2672b191') )
     }
 
+    @Ignore
     @Requires( { System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN') } )
     def 'should list tags' () {
         given:
