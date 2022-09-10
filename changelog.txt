@@ -1,5 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.09.3-edge - 10 Sep 2022
+- Add fusion support to K8s executor (#3142) [6bb27b32]
+- Fix shutdown/cleanup hooks invocation [f4185070]
+- Fix Use smaller buffer size for S3 stream uploader [8c643074] [9926d15d]
+- Fix Azure NPE on missing pool opts [d5c0aabd]
+- Fix handling of targetDir when using Fusion fs [2091b272]
+- Document aws.batch.retryMode config  (#3195) [56f75e0c] <Abhinav Sharma>
+
 22.09.2-edge - 7 Sep 2022
 - Fix thread pool race condition on shutdown [8d2b0587]
 - Fix Intermediate multipart upload requires a minimum size (#3193) [0b66aed6] <Jorge Aguilera>
