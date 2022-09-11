@@ -92,7 +92,7 @@ class ResourcesBundle {
             final name = baseDirectory
                     ? Path.of(baseDirectory).resolve(relPath).toString()
                     : relPath.toString()
-            content.put(name, it)
+            content.put(name, it.normalize())
         }
         return this
     }
@@ -187,4 +187,16 @@ class ResourcesBundle {
         return CacheHelper.hasher(allMeta).hash().toString()
     }
 
+    final private static List<String> BIN_PATHS = ['bin','usr/bin','usr/local/bin']
+
+    List<Path> getBinDirs() {
+        final result = new ArrayList(10)
+        for( Map.Entry<String,Path> it : content ) {
+            if( it.key in BIN_PATHS && Files.isDirectory(it.value) && !result.contains(it.value) )
+                result.add(it.value)
+        }
+        // sort to make order predictable
+        Collections.sort(result)
+        return result
+    }
 }

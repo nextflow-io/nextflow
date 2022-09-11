@@ -189,4 +189,29 @@ class ResourcesBundleTest extends Specification {
         ] as Set
     }
 
+    def 'should get bin paths' () {
+        given:
+        def root = folder.resolve('mod1'); root.mkdir()
+        def main = root.resolve('main.nf'); main.text = "I'm the main file"
+        and:
+        root.resolve('bin').mkdirs()
+        root.resolve('bin/hola.sh').text = 'hola'
+        root.resolve('some/path').mkdirs()
+        root.resolve('other/path').mkdirs()
+        root.resolve('usr/bin').mkdirs()
+        root.resolve('usr/local/bin').mkdirs()
+        root.resolve('usr/local/foo').mkdirs()
+
+        when:
+        def module = ResourcesBundle.scan(root)
+        then:
+        module.content().size()>0
+        and:
+        module.getBinDirs() == [root.resolve('bin'),
+                                root.resolve('usr/bin'),
+                                root.resolve('usr/local/bin')]
+
+
+    }
+
 }

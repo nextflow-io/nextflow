@@ -93,7 +93,7 @@ class TaskBean implements Serializable, Cloneable {
 
     String stageOutMode
 
-    Path binDir
+    List<Path> binDirs
 
     def cleanup
 
@@ -149,7 +149,7 @@ class TaskBean implements Serializable, Cloneable {
 
         this.inputFiles = task.getInputFilesMap()
         this.outputFiles = task.getOutputFilesNames()
-        this.binDir = task.getProcessor().getExecutor().getBinDir()
+        this.binDirs = task.getProcessor().getBinDirs()
         this.stageInMode = task.config.getStageInMode()
         this.stageOutMode = task.config.getStageOutMode()
 

@@ -492,7 +492,7 @@ class BashWrapperBuilder {
             builder.addMountForInputs(inputFiles)
 
         if( allowContainerMounts )
-            builder.addMount(binDir)
+            builder.addMounts(binDirs)
 
         if(this.containerMount)
             builder.addMount(containerMount)

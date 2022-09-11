@@ -35,7 +35,6 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
-import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
@@ -604,9 +603,7 @@ class TaskRun implements Cloneable {
     }
 
     ResourcesBundle getModuleBundle() {
-        final script = this.getProcessor().getOwnerScript()
-        final meta = ScriptMeta.get(script)
-        return meta != null ? meta.getModuleBundle() : null
+        return this.getProcessor().getModuleBundle()
     }
 
     /**

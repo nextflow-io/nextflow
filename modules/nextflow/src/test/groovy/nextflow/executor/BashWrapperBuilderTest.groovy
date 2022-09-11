@@ -192,16 +192,12 @@ class BashWrapperBuilderTest extends Specification {
     def 'should create container env' () {
         given:
         def bash = Spy(BashWrapperBuilder)
-
-        when:
-        def builder = bash.createContainerBuilder(null)
-        then:
+        and:
         bash.getEnvironment() >> [:]
-        bash.getBinDir() >> Paths.get('/my/bin')
+        bash.getBinDirs() >> [Paths.get('/my/bin') ]
         bash.getWorkDir() >> Paths.get('/my/work/dir')
         bash.getStatsEnabled() >> false
         bash.getStageInMode() >> 'symlink'
-
         bash.getInputFiles() >> [:]
         bash.getContainerConfig() >> [engine: 'singularity', envWhitelist: 'FOO,BAR']
         bash.getContainerImage() >> 'foo/bar'
@@ -210,13 +206,17 @@ class BashWrapperBuilderTest extends Specification {
         bash.getContainerCpus() >> null
         bash.getContainerCpuset() >> null
         bash.getContainerOptions() >> null
-
         bash.isSecretNative() >> false
         bash.getSecretNames() >> []
 
+        when:
+        def builder = bash.createContainerBuilder(null)
+        then:
         builder instanceof SingularityBuilder
         builder.env == ['FOO','BAR']
         builder.workDir == Paths.get('/my/work/dir')
+        builder.mounts == [ Paths.get('/my/bin') ]
+        
     }
 
     def 'should add resolved inputs'() {
