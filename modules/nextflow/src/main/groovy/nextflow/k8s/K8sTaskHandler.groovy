@@ -124,11 +124,13 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
         // get input files paths
         final paths = DockerBuilder.inputFilesToPaths(builder.getInputFiles())
-        final binDir = builder.binDir
+        final binDirs = builder.binDirs
         final workDir = builder.workDir
         // add standard paths
-        if( binDir ) paths << binDir
-        if( workDir ) paths << workDir
+        if( binDirs )
+            paths.addAll(binDirs)
+        if( workDir )
+            paths << workDir
 
         def trie = new PathTrie()
         paths.each { trie.add(it) }
