@@ -184,6 +184,12 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         return (V)this
     }
 
+    V addMounts( List<Path> paths ) {
+        if( paths ) for( Path it : paths )
+            mounts.add(it)
+        return (V)this
+    }
+
     V addMountForInputs( Map<String,Path> inputFiles ) {
         mounts.addAll( inputFilesToPaths(inputFiles) )
         return (V)this
