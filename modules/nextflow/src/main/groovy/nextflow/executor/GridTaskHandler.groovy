@@ -136,7 +136,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         final fusionCli = fusionSubmitCli()
         final containerCli = FusionHelper.runWithContainer(launcher, config, task.getContainer(), fusionCli)
 
-        return headers + containerCli.join(' ')
+        return '#!/bin/bash' + headers + containerCli.join(' ')
     }
 
     @Memoized
