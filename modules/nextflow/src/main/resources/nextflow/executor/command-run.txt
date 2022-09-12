@@ -74,21 +74,21 @@ nxf_mktemp() {
 nxf_fs_copy() {
   local source=$1
   local target=$2
-  local basedir=$(dirname $1)
-  mkdir -p $target/$basedir
-  cp -fRL $source $target/$basedir
+  local basedir=$(dirname "$source")
+  mkdir -p "$target/$basedir"
+  cp -fRL "$source" "$target/$basedir"
 }
 
 nxf_fs_move() {
   local source=$1
   local target=$2
-  local basedir=$(dirname $1)
-  mkdir -p $target/$basedir
-  mv -f $source $target/$basedir
+  local basedir=$(dirname "$source")
+  mkdir -p "$target/$basedir"
+  mv -f "$source" "$target/$basedir"
 }
 
 nxf_fs_rsync() {
-  rsync -rRl $1 $2
+  rsync -rRl "$1" "$2"
 }
 
 on_exit() {
