@@ -35,6 +35,8 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
+import nextflow.executor.fusion.FusionAwareTask
+import nextflow.executor.fusion.FusionHelper
 import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -46,7 +48,7 @@ import nextflow.util.Throttle
  * Handles a job execution in the underlying grid platform
  */
 @Slf4j
-class GridTaskHandler extends TaskHandler {
+class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
     /** The target executor platform */
     final AbstractGridExecutor executor
@@ -99,19 +101,42 @@ class GridTaskHandler extends TaskHandler {
 
     protected ProcessBuilder createProcessBuilder() {
 
-        // -- log the qsub command
+        // -- create the submit command
         def cli = executor.getSubmitCommandLine(task, wrapperFile)
+
+        // -- run script is piped from stdin when fusion is enabled
+        if( fusionEnabled() ) {
+            cli.removeAll { it == wrapperFile.name }
+        }
+
         log.trace "start process ${task.name} > cli: ${cli}"
 
         /*
          * launch 'sub' script wrapper
          */
-        ProcessBuilder builder = new ProcessBuilder()
+        def builder = new ProcessBuilder()
                 .command( cli as String[] )
                 .redirectErrorStream(true)
-                .directory(task.workDir.toFile())
+
+        // -- working directory is not used when fusion is enabled
+        if( !fusionEnabled() ) {
+            builder.directory(task.workDir.toFile())
+        }
 
         return builder
+    }
+
+    protected String fusionStdinScript() {
+        // get job headers
+        final headers = executor.getHeaders(task)
+
+        // get container launch cli
+        final launcher = fusionLauncher()
+        final config = executor.session.containerConfig
+        final fusionCli = fusionSubmitCli()
+        final containerCli = FusionHelper.runWithContainer(launcher, config, task.getContainer(), fusionCli)
+
+        return headers + containerCli.join(' ')
     }
 
     @Memoized
@@ -205,16 +230,24 @@ class GridTaskHandler extends TaskHandler {
      */
     @Override
     void submit() {
-        ProcessBuilder builder = null
+        ProcessBuilder processBuilder = null
         try {
             // -- create the wrapper script
-            executor.createBashWrapperBuilder(task).build()
+            final wrapperBuilder = fusionEnabled()
+                    ? fusionLauncher()
+                    : executor.createBashWrapperBuilder(task)
+            wrapperBuilder.build()
             // -- start the execution and notify the event to the monitor
-            builder = createProcessBuilder()
+            processBuilder = createProcessBuilder()
             // -- forward the job launcher script to the command stdin if required
-            final stdinScript = executor.pipeLauncherScript() ? wrapperFile.text : null
+            final stdinScript = fusionEnabled()
+                    ? fusionStdinScript()
+                    : executor.pipeLauncherScript() ? wrapperFile.text : null
+
+            log.trace "start process ${task.name} > stdin script:\n${stdinScript}"
+
             // -- execute with a re-triable strategy
-            final result = safeExecute( () -> processStart(builder, stdinScript) )
+            final result = safeExecute( () -> processStart(processBuilder, stdinScript) )
             // -- save the JobId in the
             this.jobId = executor.parseJobId(result)
             this.status = SUBMITTED
@@ -227,7 +260,7 @@ class GridTaskHandler extends TaskHandler {
                 task.exitStatus = e.getExitStatus()
                 task.stdout = e.getReason()
             }
-            task.script = builder ? CmdLineHelper.toLine(builder.command()) : null
+            task.script = processBuilder ? CmdLineHelper.toLine(processBuilder.command()) : null
             status = COMPLETED
             throw new ProcessFailedException("Error submitting process '${task.name}' for execution", e )
         }

@@ -21,6 +21,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.executor.fusion.FusionHelper
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor
@@ -387,6 +388,11 @@ abstract class AbstractGridExecutor extends Executor {
     protected String quote(Path path) {
         def str = Escape.path(path)
         path.toString() != str ? "\"$str\"" : str
+    }
+
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
     }
 }
 
