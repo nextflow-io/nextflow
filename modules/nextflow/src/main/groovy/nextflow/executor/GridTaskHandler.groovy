@@ -106,7 +106,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
         // -- run script is piped from stdin when fusion is enabled
         if( fusionEnabled() ) {
-            cli.removeAll { it == wrapperFile.name }
+            cli.removeAll { it.contains(wrapperFile.name) }
         }
 
         log.trace "start process ${task.name} > cli: ${cli}"
