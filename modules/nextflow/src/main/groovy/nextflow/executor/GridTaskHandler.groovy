@@ -137,7 +137,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         // define job headers
         final headers = executor
             .getHeaders(task)
-            .replaceAll(task.workDir.resolve(TaskRun.CMD_LOG), logPath.toString())
+            .replaceAll(task.workDir.resolve(TaskRun.CMD_LOG).toString(), logPath.toString())
             .replaceAll(task.workDir.toString(), '.')
 
         // define container launch cli
@@ -146,7 +146,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         final fusionCli = fusionSubmitCli()
         final containerCli = FusionHelper
             .runWithContainer(launcher, config, task.getContainer(), fusionCli)
-            .replaceAll(' ' + TaskRun.CMD_LOG, logPath.toString())
+            .replaceAll(' ' + TaskRun.CMD_LOG, ' ' + logPath.toString())
 
         return shebang + headers + containerCli
     }
