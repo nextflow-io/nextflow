@@ -111,7 +111,9 @@ class AzHelper {
 
         final client = az0(path).getFileSystem().getBlobServiceClient()
         final startTime = OffsetDateTime.now()
-        // The maximum lifetime for user delegation key (and therefore delegation SAS) is 7 days - https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-user-delegation-sas-create-cli
+       
+        // The maximum lifetime for user delegation key (and therefore delegation SAS) is 7 days
+        // Reference https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-user-delegation-sas-create-cli
         final expiryTime = OffsetDateTime.now().plusDays(7)
 
         final delegationKey = client.getUserDelegationKey(startTime, expiryTime)

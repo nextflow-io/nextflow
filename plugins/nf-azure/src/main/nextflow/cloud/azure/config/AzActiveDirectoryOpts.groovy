@@ -46,6 +46,14 @@ class AzActiveDirectoryOpts {
     }
 
 
+    Map<String, Object> getEnv() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(AzFileSystemProvider.AZURE_CLIENT_ID, servicePrincipalId)
+        props.put(AzFileSystemProvider.AZURE_CLIENT_SECRET, servicePrincipalSecret)
+        props.put(AzFileSystemProvider.AZURE_TENANT_ID, tenantId)
+        return props
+    }
+
     boolean isConfigured() {
         if (servicePrincipalId && servicePrincipalSecret && tenantId)
             return true

@@ -46,7 +46,7 @@ class AzConfig {
         this.registryOpts = new AzRegistryOpts((Map) azure.registry ?: Collections.emptyMap())
         this.azcopyOpts = new AzCopyOpts((Map) azure.azcopy ?: Collections.emptyMap())
         this.retryConfig = new AzRetryConfig((Map) azure.retryPolicy ?: Collections.emptyMap())
-        this.activeDirectoryOpts = new AzActiveDirectoryOpts((Map) azure.activeDirectoryOpts ?: Collections.emptyMap())
+        this.activeDirectoryOpts = new AzActiveDirectoryOpts((Map) azure.activeDirectory ?: Collections.emptyMap())
     }
 
     AzCopyOpts azcopy() { azcopyOpts }

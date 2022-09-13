@@ -29,34 +29,31 @@ import nextflow.util.Duration
 @CompileStatic
 class AzStorageOpts {
 
-    private Map<String,String> sysEnv
+    private Map<String, String> sysEnv
     String accountKey
     String accountName
     String sasToken
     Duration tokenDuration
-    Map<String,AzFileShareOpts> fileShares
+    Map<String, AzFileShareOpts> fileShares
 
 
-    AzStorageOpts(Map config, Map<String,String> env=null) {
-        assert config!=null
-        this.sysEnv = env==null ? new HashMap<String,String>(System.getenv()) : env
+    AzStorageOpts(Map config, Map<String, String> env = null) {
+        assert config != null
+        this.sysEnv = env == null ? new HashMap<String, String>(System.getenv()) : env
         this.accountKey = config.accountKey ?: sysEnv.get('AZURE_STORAGE_ACCOUNT_KEY')
         this.accountName = config.accountName ?: sysEnv.get('AZURE_STORAGE_ACCOUNT_NAME')
         this.sasToken = config.sasToken
         this.tokenDuration = (config.tokenDuration as Duration) ?: Duration.of('12h')
-        this.fileShares = parseFileShares(config.fileShares instanceof Map ? config.fileShares as Map<String,Map>
-                : Collections.<String,Map>emptyMap())
+        this.fileShares = parseFileShares(config.fileShares instanceof Map ? config.fileShares as Map<String, Map>
+                : Collections.<String, Map> emptyMap())
 
     }
 
-    Map<String,Object> getEnv() {
+    Map<String, Object> getEnv() {
         Map<String, Object> props = new HashMap<>();
         props.put(AzFileSystemProvider.AZURE_STORAGE_ACCOUNT_KEY, accountKey)
         props.put(AzFileSystemProvider.AZURE_STORAGE_ACCOUNT_NAME, accountName)
         props.put(AzFileSystemProvider.AZURE_STORAGE_SAS_TOKEN, sasToken)
-        props.put(AzFileSystemProvider.AZURE_CLIENT_ID, AzConfig.getConfig().activeDirectory().servicePrincipalId)
-        props.put(AzFileSystemProvider.AZURE_CLIENT_SECRET, AzConfig.getConfig().activeDirectory().servicePrincipalSecret)
-        props.put(AzFileSystemProvider.AZURE_TENANT_ID, AzConfig.getConfig().activeDirectory().tenantId)
         return props
     }
 

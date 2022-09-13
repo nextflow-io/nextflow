@@ -233,9 +233,6 @@ class AzFileSystemProvider extends FileSystemProvider {
 
         if (servicePrincipalSecret && servicePrincipalId && tenantId) {
 
-            if (!servicePrincipalSecret && !servicePrincipalId && !tenantId)
-                throw new IllegalArgumentException("Missing AZURE_CLIENT_ID, AZURE_CLIENT_SECRET and AZURE_TENANT_ID")
-
             client = createBlobServiceWithServicePrincipal(accountName, servicePrincipalId, servicePrincipalSecret, tenantId)
 
         } else {
