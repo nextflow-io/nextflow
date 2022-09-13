@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 package nextflow.cloud.azure.batch
+
 import com.azure.storage.blob.BlobServiceClient
+import com.azure.storage.blob.models.UserDelegationKey
 import com.azure.storage.common.sas.AccountSasPermission
 import com.azure.storage.common.sas.AccountSasResourceType
 import com.azure.storage.common.sas.AccountSasService
@@ -37,32 +39,6 @@ import nextflow.util.Duration
  */
 @CompileStatic
 class AzHelper {
-
-    static private AzPath az0(Path path){
-        if( path !instanceof AzPath )
-            throw new IllegalArgumentException("Not a valid Azure path: $path [${path?.getClass()?.getName()}]")
-        return (AzPath)path
-    }
-
-    static String toHttpUrl(Path path, String sas=null) {
-        def url = az0(path).blobClient().getBlobUrl()
-        url = URLDecoder.decode(url, 'UTF-8').stripEnd('/')
-        return !sas ? url : "${url}?${sas}"
-    }
-
-    static String toContainerUrl(Path path, String sas) {
-        def url = az0(path).containerClient().getBlobContainerUrl()
-        url = URLDecoder.decode(url, 'UTF-8').stripEnd('/')
-        return !sas ? url : "${url}?${sas}"
-    }
-
-    static String generateContainerSas(Path path, Duration duration) {
-        generateSas(az0(path).containerClient(), duration)
-    }
-
-    static String generateAccountSas(Path path, Duration duration) {
-        generateAccountSas(az0(path).getFileSystem().getBlobServiceClient(), duration)
-    }
 
     static BlobContainerSasPermission CONTAINER_PERMS = new BlobContainerSasPermission()
             .setAddPermission(true)
@@ -103,16 +79,58 @@ class AzHelper {
             .setObject(true)
             .setService(true)
 
-    static String generateSas(BlobContainerClient client, Duration duration) {
-        final now = OffsetDateTime .now()
+    static private AzPath az0(Path path) {
+        if (path !instanceof AzPath)
+            throw new IllegalArgumentException("Not a valid Azure path: $path [${path?.getClass()?.getName()}]")
+        return (AzPath) path
+    }
+
+    static String toHttpUrl(Path path, String sas = null) {
+        def url = az0(path).blobClient().getBlobUrl()
+        url = URLDecoder.decode(url, 'UTF-8').stripEnd('/')
+        return !sas ? url : "${url}?${sas}"
+    }
+
+    static String toContainerUrl(Path path, String sas) {
+        def url = az0(path).containerClient().getBlobContainerUrl()
+        url = URLDecoder.decode(url, 'UTF-8').stripEnd('/')
+        return !sas ? url : "${url}?${sas}"
+    }
+
+    static String generateContainerSas(Path path, Duration duration) {
+        final key = generateUserDelegationKey(az0(path), duration)
+
+        return generateContainerUserDelegationSas(az0(path).containerClient(), duration, key)
+    }
+
+    static String generateAccountSas(Path path, Duration duration) {
+        generateAccountSas(az0(path).getFileSystem().getBlobServiceClient(), duration)
+    }
+
+    static UserDelegationKey generateUserDelegationKey(Path path, Duration duration) {
+
+        final client = az0(path).getFileSystem().getBlobServiceClient()
+        final startTime = OffsetDateTime.now()
+        // The maximum lifetime for user delegation key (and therefore delegation SAS) is 7 days - https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-user-delegation-sas-create-cli
+        final expiryTime = OffsetDateTime.now().plusDays(7)
+
+        final delegationKey = client.getUserDelegationKey(startTime, expiryTime)
+
+        return delegationKey
+    }
+
+    static String generateContainerUserDelegationSas(BlobContainerClient client, Duration duration, UserDelegationKey key) {
+        final now = OffsetDateTime.now()
 
         final signature = new BlobServiceSasSignatureValues()
                 .setPermissions(BLOB_PERMS)
                 .setPermissions(CONTAINER_PERMS)
                 .setStartTime(now)
-                .setExpiryTime( now.plusSeconds(duration.toSeconds()) )
+                .setExpiryTime(now.plusDays(7)) // The maximum duration is 7 days
 
-        return client .generateSas(signature)
+        final generatedSas = client.generateUserDelegationSas(signature, key)
+
+        return generatedSas
     }
 
     static String generateAccountSas(BlobServiceClient client, Duration duration) {
@@ -125,4 +143,5 @@ class AzHelper {
 
         return client.generateAccountSas(signature)
     }
+
 }

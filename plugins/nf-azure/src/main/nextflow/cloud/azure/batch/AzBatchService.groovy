@@ -277,16 +277,16 @@ class AzBatchService implements Closeable {
     }
 
     protected createBatchCredentialsWithServicePrincipal() {
-        log.debug "[AZURE BATCH] Creating Azure Batch client using service principal credentials"
+        log.debug "[AZURE BATCH] Creating Azure Batch client using Service Principal credentials"
 
         final batchEndpoint = "https://batch.core.windows.net/";
         final authenticationEndpoint = "https://login.microsoftonline.com/";
 
         def servicePrincipalBasedCred = new BatchApplicationTokenCredentials(
                 config.batch().endpoint,
-                config.identity().servicePrincipalId,
-                config.identity().servicePrincipalSecret,
-                config.identity().tenantId,
+                config.activeDirectory().servicePrincipalId,
+                config.activeDirectory().servicePrincipalSecret,
+                config.activeDirectory().tenantId,
                 batchEndpoint,
                 authenticationEndpoint
         )
@@ -297,7 +297,7 @@ class AzBatchService implements Closeable {
     protected BatchClient createBatchClient() {
         log.debug "[AZURE BATCH] Executor options=${config.batch()}"
 
-        def cred = config.identity().isConfigured()
+        def cred = config.activeDirectory().isConfigured()
                 ? createBatchCredentialsWithServicePrincipal()
                 : createBatchCredentialsWithKey()
 

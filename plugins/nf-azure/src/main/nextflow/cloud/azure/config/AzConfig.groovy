@@ -38,7 +38,7 @@ class AzConfig {
 
     private AzRetryConfig retryConfig
 
-    private AzIdentityOpts identityOpts
+    private AzActiveDirectoryOpts activeDirectoryOpts
 
     AzConfig(Map azure) {
         this.batchOpts = new AzBatchOpts((Map) azure.batch ?: Collections.emptyMap())
@@ -46,7 +46,7 @@ class AzConfig {
         this.registryOpts = new AzRegistryOpts((Map) azure.registry ?: Collections.emptyMap())
         this.azcopyOpts = new AzCopyOpts((Map) azure.azcopy ?: Collections.emptyMap())
         this.retryConfig = new AzRetryConfig((Map) azure.retryPolicy ?: Collections.emptyMap())
-        this.identityOpts = new AzIdentityOpts((Map) azure.identity ?: Collections.emptyMap())
+        this.activeDirectoryOpts = new AzActiveDirectoryOpts((Map) azure.activeDirectoryOpts ?: Collections.emptyMap())
     }
 
     AzCopyOpts azcopy() { azcopyOpts }
@@ -59,13 +59,13 @@ class AzConfig {
 
     AzRetryConfig retryConfig() { retryConfig }
 
-    AzIdentityOpts identity() { identityOpts }
-   
+    AzActiveDirectoryOpts activeDirectory() { activeDirectoryOpts }
+
     static AzConfig getConfig(Session session) {
-        if( !session )
+        if (!session)
             throw new IllegalStateException("Missing Nextflow session")
 
-        new AzConfig( (Map)session.config.azure ?: Collections.emptyMap()  )
+        new AzConfig((Map) session.config.azure ?: Collections.emptyMap())
     }
 
     static AzConfig getConfig() {

@@ -15,6 +15,8 @@
  */
 package nextflow.cloud.azure.nio
 
+import com.azure.identity.ClientSecretCredentialBuilder
+
 import static java.nio.file.StandardCopyOption.*
 import static java.nio.file.StandardOpenOption.*
 
@@ -58,10 +60,14 @@ class AzFileSystemProvider extends FileSystemProvider {
     public static final String AZURE_STORAGE_ACCOUNT_KEY = 'AZURE_STORAGE_ACCOUNT_KEY'
     public static final String AZURE_STORAGE_SAS_TOKEN = 'AZURE_STORAGE_SAS_TOKEN'
 
+    public static final String AZURE_CLIENT_ID = 'AZURE_CLIENT_ID'
+    public static final String AZURE_CLIENT_SECRET = 'AZURE_CLIENT_SECRET'
+    public static final String AZURE_TENANT_ID = 'AZURE_TENANT_ID'
+
     public static final String SCHEME = 'az'
 
-    private Map<String,String> env = new HashMap<>(System.getenv())
-    private Map<String,AzFileSystem> fileSystems = [:]
+    private Map<String, String> env = new HashMap<>(System.getenv())
+    private Map<String, AzFileSystem> fileSystems = [:]
     private String sasToken = null
     private String accountKey = null
 
@@ -120,7 +126,7 @@ class AzFileSystemProvider extends FileSystemProvider {
 
     @Memoized
     protected BlobServiceClient createBlobServiceWithToken(String accountName, String sasToken) {
-        log.debug "Creating Azure blob storage client -- accountName: $accountName; sasToken: ${sasToken?.substring(0,10)}.."
+        log.debug "Creating Azure blob storage client -- accountName: $accountName; sasToken: ${sasToken?.substring(0, 10)}.."
 
         final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
 
@@ -130,9 +136,28 @@ class AzFileSystemProvider extends FileSystemProvider {
                 .buildClient()
     }
 
+    @Memoized
+    protected BlobServiceClient createBlobServiceWithServicePrincipal(String accountName, String clientId, String clientSecret, String tenantId) {
+        log.debug "Creating Azure Blob storage client using Service Principal credentials"
+
+        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
+
+        def servicePrincipalBasedCred = new ClientSecretCredentialBuilder()
+                .clientId(clientId)
+                .clientSecret(clientSecret)
+                .tenantId(tenantId)
+                .build()
+
+        return new BlobServiceClientBuilder()
+                .credential(servicePrincipalBasedCred)
+                .endpoint(endpoint)
+                .buildClient()
+
+    }
+
     /**
      * Constructs a new {@code FileSystem} object identified by a URI. This
-     * method is invoked by the {@link java.nio.file.FileSystems#newFileSystem(URI,Map)}
+     * method is invoked by the {@link java.nio.file.FileSystems#newFileSystem(URI, Map)}
      * method to open a new file system identified by a URI.
      *
      * <p> The {@code uri} parameter is an absolute, hierarchical URI, with a
@@ -189,22 +214,40 @@ class AzFileSystemProvider extends FileSystemProvider {
      */
     synchronized AzFileSystem newFileSystem0(String bucket, Map<String, ?> config) throws IOException {
 
-        if( fileSystems.containsKey(bucket) )
+        if (fileSystems.containsKey(bucket))
             throw new FileSystemAlreadyExistsException("File system already exists for Azure blob container: `$bucket`")
 
         final accountName = config.get(AZURE_STORAGE_ACCOUNT_NAME) as String
         final accountKey = config.get(AZURE_STORAGE_ACCOUNT_KEY) as String
         final sasToken = config.get(AZURE_STORAGE_SAS_TOKEN) as String
 
-        if( !accountName )
+        final servicePrincipalId = System.getenv(AZURE_CLIENT_ID) as String
+        final servicePrincipalSecret = System.getenv(AZURE_CLIENT_SECRET) as String
+        final tenantId = System.getenv(AZURE_TENANT_ID) as String
+
+
+        if (!accountName)
             throw new IllegalArgumentException("Missing AZURE_STORAGE_ACCOUNT_NAME")
 
-        if( !accountKey && !sasToken )
-            throw new IllegalArgumentException("Missing AZURE_STORAGE_ACCOUNT_KEY or AZURE_STORAGE_SAS_TOKEN")
+        def client
 
-        final client = sasToken
-                ? createBlobServiceWithToken(accountName, sasToken)
-                : createBlobServiceWithKey(accountName, accountKey)
+        if (servicePrincipalSecret && servicePrincipalId && tenantId) {
+
+            if (!servicePrincipalSecret && !servicePrincipalId && !tenantId)
+                throw new IllegalArgumentException("Missing AZURE_CLIENT_ID or AZURE_CLIENT_SECRET && AZURE_TENANT_ID")
+
+            client = createBlobServiceWithServicePrincipal(accountName, servicePrincipalId, servicePrincipalSecret, tenantId)
+
+        } else {
+
+            if (!accountKey && !sasToken)
+                throw new IllegalArgumentException("Missing AZURE_STORAGE_ACCOUNT_KEY or AZURE_STORAGE_SAS_TOKEN")
+
+            client = sasToken
+                    ? createBlobServiceWithToken(accountName, sasToken)
+                    : createBlobServiceWithKey(accountName, accountKey)
+        }
+
         final result = createFileSystem(client, bucket, config)
         fileSystems[bucket] = result
 

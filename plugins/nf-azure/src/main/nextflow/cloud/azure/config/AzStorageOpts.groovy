@@ -54,6 +54,9 @@ class AzStorageOpts {
         props.put(AzFileSystemProvider.AZURE_STORAGE_ACCOUNT_KEY, accountKey)
         props.put(AzFileSystemProvider.AZURE_STORAGE_ACCOUNT_NAME, accountName)
         props.put(AzFileSystemProvider.AZURE_STORAGE_SAS_TOKEN, sasToken)
+        props.put(AzFileSystemProvider.AZURE_CLIENT_ID, AzConfig.getConfig().activeDirectory().servicePrincipalId)
+        props.put(AzFileSystemProvider.AZURE_CLIENT_SECRET, AzConfig.getConfig().activeDirectory().servicePrincipalSecret)
+        props.put(AzFileSystemProvider.AZURE_TENANT_ID, AzConfig.getConfig().activeDirectory().tenantId)
         return props
     }
 

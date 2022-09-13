@@ -64,7 +64,7 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
 
     protected void validateWorkDir() {
         /*
-         * make sure the work dir is a S3 bucket
+         * make sure the work dir is an Azure bucket
          */
         if( !(workDir instanceof AzPath) ) {
             session.abort()
@@ -93,8 +93,14 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
     protected void initBatchService() {
         config = AzConfig.getConfig(session)
         batchService = new AzBatchService(this)
-        // generate an account SAS token if missing
-        if( !config.storage().sasToken )
+
+        // Generate an account SAS token using activeDirectory configs if missing
+        if (config.activeDirectory().isConfigured()) {
+            config.storage().sasToken = AzHelper.generateContainerSas(workDir, config.storage().tokenDuration)
+        }
+
+        // Generate an account SAS token using account keys
+        if (!config.storage().sasToken && !config.activeDirectory().isConfigured())
             config.storage().sasToken = AzHelper.generateAccountSas(workDir, config.storage().tokenDuration)
 
         session.onShutdown { batchService.close() }

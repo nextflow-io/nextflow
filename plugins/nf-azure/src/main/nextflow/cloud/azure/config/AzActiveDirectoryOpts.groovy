@@ -1,7 +1,7 @@
 /*
  * Copyright 2021, Microsoft Corp
  * Copyright 2022, Seqera Labs
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,6 +17,7 @@
 package nextflow.cloud.azure.config
 
 import groovy.transform.CompileStatic
+import nextflow.cloud.azure.nio.AzFileSystemProvider
 
 /**
  * Model Azure identity options from nextflow config file
@@ -24,24 +25,24 @@ import groovy.transform.CompileStatic
  * @author Abhinav Sharma <abhi18av@outlook.com>
  */
 @CompileStatic
-class AzIdentityOpts {
+class AzActiveDirectoryOpts {
 
     private Map<String, String> sysEnv
+
     String servicePrincipalId
     String servicePrincipalSecret
     String tenantId
 
-
-    AzIdentityOpts() {
+    AzActiveDirectoryOpts() {
         this(Collections.emptyMap())
     }
 
-    AzIdentityOpts(Map config, Map<String, String> env = null) {
+    AzActiveDirectoryOpts(Map config, Map<String, String> env = null) {
         assert config != null
         this.sysEnv = env == null ? new HashMap<String, String>(System.getenv()) : env
-        this.servicePrincipalId = config.servicePrincipalId ?: sysEnv.get('AZURE_SP_CLIENT_ID')
-        this.servicePrincipalSecret = config.servicePrincipalSecret ?: sysEnv.get('AZURE_SP_CLIENT_SECRET')
-        this.tenantId = config.tenantId ?: sysEnv.get('AZURE_SP_TENANT_ID')
+        this.servicePrincipalId = config.servicePrincipalId ?: sysEnv.get('AZURE_CLIENT_ID')
+        this.servicePrincipalSecret = config.servicePrincipalSecret ?: sysEnv.get('AZURE_CLIENT_SECRET')
+        this.tenantId = config.tenantId ?: sysEnv.get('AZURE_TENANT_ID')
     }
 
 
