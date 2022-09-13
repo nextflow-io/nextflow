@@ -33,10 +33,6 @@ class AzActiveDirectoryOpts {
     String servicePrincipalSecret
     String tenantId
 
-    AzActiveDirectoryOpts() {
-        this(Collections.emptyMap())
-    }
-
     AzActiveDirectoryOpts(Map config, Map<String, String> env = null) {
         assert config != null
         this.sysEnv = env == null ? new HashMap<String, String>(System.getenv()) : env
