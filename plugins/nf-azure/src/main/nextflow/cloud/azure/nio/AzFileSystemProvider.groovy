@@ -221,9 +221,9 @@ class AzFileSystemProvider extends FileSystemProvider {
         final accountKey = config.get(AZURE_STORAGE_ACCOUNT_KEY) as String
         final sasToken = config.get(AZURE_STORAGE_SAS_TOKEN) as String
 
-        final servicePrincipalId = System.getenv(AZURE_CLIENT_ID) as String
-        final servicePrincipalSecret = System.getenv(AZURE_CLIENT_SECRET) as String
-        final tenantId = System.getenv(AZURE_TENANT_ID) as String
+        final servicePrincipalId = config.get(AZURE_CLIENT_ID) as String
+        final servicePrincipalSecret = config.get(AZURE_CLIENT_SECRET) as String
+        final tenantId = config.get(AZURE_TENANT_ID) as String
 
 
         if (!accountName)
@@ -234,7 +234,7 @@ class AzFileSystemProvider extends FileSystemProvider {
         if (servicePrincipalSecret && servicePrincipalId && tenantId) {
 
             if (!servicePrincipalSecret && !servicePrincipalId && !tenantId)
-                throw new IllegalArgumentException("Missing AZURE_CLIENT_ID or AZURE_CLIENT_SECRET && AZURE_TENANT_ID")
+                throw new IllegalArgumentException("Missing AZURE_CLIENT_ID, AZURE_CLIENT_SECRET and AZURE_TENANT_ID")
 
             client = createBlobServiceWithServicePrincipal(accountName, servicePrincipalId, servicePrincipalSecret, tenantId)
 
