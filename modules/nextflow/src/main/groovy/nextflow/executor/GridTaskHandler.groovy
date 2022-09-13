@@ -131,7 +131,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         def headers = executor.getHeaders(task)
 
         // convert paths in headers to fusion mounts
-        headers = headers.replaceAll(task.workDir, fusionLauncher().toContainerMount(task.workDir))
+        headers = headers.replaceAll(task.workDir.toString(), fusionLauncher().toContainerMount(task.workDir).toString())
 
         // get container launch cli
         final launcher = fusionLauncher()
