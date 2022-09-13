@@ -91,6 +91,7 @@ class HyperQueueExecutorTest extends Specification {
         when:
         def result = exec.getSubmitCommandLine(task, path)
         then:
+        exec.isFusionEnabled() >> false
         result == ['hq', '--output-mode=quiet', 'submit', '--directives=file', 'script.run']
     }
 

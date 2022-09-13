@@ -82,7 +82,8 @@ class HyperQueueExecutor extends AbstractGridExecutor {
 
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
-        return TupleHelper.listOf('hq', '--output-mode=quiet', 'submit', '--directives=file', scriptFile.getName())
+        final directivesOpt = isFusionEnabled() ? 'stdin' : 'file'
+        return TupleHelper.listOf('hq', '--output-mode=quiet', 'submit', "--directives=${directivesOpt}".toString(), scriptFile.getName())
     }
 
     @Override
