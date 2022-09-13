@@ -19,6 +19,7 @@ package nextflow.executor
 
 import static nextflow.processor.TaskStatus.*
 
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 import java.time.temporal.ChronoUnit
@@ -136,8 +137,8 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         // define job headers
         final headers = executor
             .getHeaders(task)
+            .replaceAll(task.workDir.resolve(TaskRun.CMD_LOG), logPath.toString())
             .replaceAll(task.workDir.toString(), '.')
-            .replaceAll(TaskRun.CMD_LOG, logPath.toString())
 
         // define container launch cli
         final launcher = fusionLauncher()
@@ -145,7 +146,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         final fusionCli = fusionSubmitCli()
         final containerCli = FusionHelper
             .runWithContainer(launcher, config, task.getContainer(), fusionCli)
-            .replaceAll(TaskRun.CMD_LOG, logPath.toString())
+            .replaceAll(' ' + TaskRun.CMD_LOG, logPath.toString())
 
         return shebang + headers + containerCli
     }
