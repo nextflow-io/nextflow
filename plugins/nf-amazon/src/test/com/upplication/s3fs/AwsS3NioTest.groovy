@@ -1156,4 +1156,44 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         local?.deleteDir()
         deleteBucket(bucketName)
     }
+
+    void "should upload a stream with multiple flush"(){
+        given:
+        def bucketName = createBucket()
+        and:
+        def path = (S3Path) Paths.get(new URI("s3:///$bucketName/alpha.txt"))
+
+        when:
+        PrintWriter writer = new PrintWriter(Files.newBufferedWriter(path, Charset.defaultCharset()))
+        writer.println '*'*20
+        writer.flush()
+        writer.println '*'*20
+        writer.flush()
+        writer.close()
+
+        then:
+        Files.readString(Paths.get(new URI("s3:///$bucketName/alpha.txt"))).length() == 42 // 2*20 + 2 return lines
+
+        cleanup:
+        deleteBucket(bucketName)
+    }
+
+    void "should upload a stream without flush"(){
+        given:
+        def bucketName = createBucket()
+        and:
+        def path = (S3Path) Paths.get(new URI("s3:///$bucketName/alpha.txt"))
+
+        when:
+        PrintWriter writer = new PrintWriter(Files.newBufferedWriter(path, Charset.defaultCharset()))
+        writer.println '*'*20
+        writer.println '*'*20
+        writer.close()
+
+        then:
+        Files.readString(Paths.get(new URI("s3:///$bucketName/alpha.txt"))).length() == 42 // 2*20 + 2 return lines
+
+        cleanup:
+        deleteBucket(bucketName)
+    }
 }
