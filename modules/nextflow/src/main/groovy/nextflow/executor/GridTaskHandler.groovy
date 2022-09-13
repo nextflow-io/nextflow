@@ -127,19 +127,25 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected String fusionStdinScript() {
+        // create temp log file
+        final logPath = Files.createTempFile('nf-task','.log')
+
         // define shebang
         final shebang = '#!/bin/bash\n'
 
         // define job headers
-        final launcher = fusionLauncher()
         final headers = executor
             .getHeaders(task)
-            .replaceAll(task.workDir.toString(), launcher.toContainerMount(task.workDir).toString())
+            .replaceAll(task.workDir.toString(), '.')
+            .replaceAll(TaskRun.CMD_LOG, logPath.toString())
 
         // define container launch cli
+        final launcher = fusionLauncher()
         final config = executor.session.containerConfig
         final fusionCli = fusionSubmitCli()
-        final containerCli = FusionHelper.runWithContainer(launcher, config, task.getContainer(), fusionCli)
+        final containerCli = FusionHelper
+            .runWithContainer(launcher, config, task.getContainer(), fusionCli)
+            .replaceAll(TaskRun.CMD_LOG, logPath.toString())
 
         return shebang + headers + containerCli
     }
