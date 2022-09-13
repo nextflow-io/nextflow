@@ -391,6 +391,11 @@ abstract class AbstractGridExecutor extends Executor {
     }
 
     @Override
+    boolean isContainerNative() {
+        return isFusionEnabled()
+    }
+
+    @Override
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
     }
