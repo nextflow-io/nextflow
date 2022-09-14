@@ -17,10 +17,12 @@
 
 package nextflow.executor
 
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessNonZeroExitStatusException
+import nextflow.file.http.XPath
 import nextflow.processor.TaskRun
 import spock.lang.Specification
 /**
@@ -54,6 +56,7 @@ class GridTaskHandlerTest extends Specification {
         handler.submit()
 
         then:
+        handler.fusionEnabled() >> false
         handler.safeExecute( _ )  >> { throw new ProcessNonZeroExitStatusException("Submit failed", "The limit is invalid", 10, ['qsub', 'foo']) }
         and:
         exec.createBashWrapperBuilder(task) >> Mock(BashWrapperBuilder)
@@ -66,5 +69,45 @@ class GridTaskHandlerTest extends Specification {
         task.stdout ==  "The limit is invalid"
         task.exitStatus == 10
 
+    }
+
+    def 'should create local process builder' () {
+        given:
+        def task = Mock(TaskRun) {
+            getWorkDir() >> Path.of('/some/work/dir')
+        }
+        def executor = Mock(AbstractGridExecutor)
+        def handler = Spy(new GridTaskHandler(task, executor))
+
+        when:
+        def builder = handler.createProcessBuilder()
+        then:
+        executor.getSubmitCommandLine(task, _) >> ['qsub', '.command.run']
+        handler.fusionEnabled() >> false
+        and:
+        builder.command() == ['qsub', '.command.run']
+        builder.directory() == new File('/some/work/dir')
+        builder.redirectErrorStream()
+    }
+
+    def 'should create fusion process builder' () {
+        given:
+        def WORK_DIR = XPath.get('http://some/work/dir')
+        and:
+        def task = Mock(TaskRun) {
+            getWorkDir() >> WORK_DIR
+        }
+        def executor = Mock(AbstractGridExecutor)
+        def handler = Spy(new GridTaskHandler(task, executor))
+
+        when:
+        def builder = handler.createProcessBuilder()
+        then:
+        executor.getSubmitCommandLine(task, _) >> ['qsub', '.command.run']
+        handler.fusionEnabled() >> true
+        and:
+        builder.command() == ['qsub']
+        builder.directory() == null
+        builder.redirectErrorStream()
     }
 }

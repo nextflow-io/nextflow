@@ -127,9 +127,13 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         return builder
     }
 
+    protected Path createTempFile(String prefix, String suffix) {
+        Files.createTempFile(prefix, suffix)
+    }
+
     protected String fusionStdinScript() {
         // create temp log file
-        final logPath = Files.createTempFile('nf-task','.log')
+        final logPath = createTempFile('nf-task', '.log')
 
         // define shebang
         final shebang = '#!/bin/bash\n'

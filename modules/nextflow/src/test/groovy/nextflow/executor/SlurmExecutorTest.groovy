@@ -16,8 +16,16 @@
  */
 
 package nextflow.executor
+
+import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
+import nextflow.Session
+import nextflow.container.ContainerConfig
+import nextflow.executor.fusion.FusionScriptLauncher
+import nextflow.file.http.XPath
+import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -252,5 +260,41 @@ class SlurmExecutorTest extends Specification {
         exec.queueStatusCommand(null) == ['squeue','--noheader','-o','%i %t','-t','all','-u', usr]
         exec.queueStatusCommand('xxx') == ['squeue','--noheader','-o','%i %t','-t','all','-p','xxx','-u', usr]
 
+    }
+
+    def 'get fusion stdin script' () {
+        given:
+        def WORK_DIR = XPath.get('http://some/work/dir')
+        def LOG_PATH = Path.of('nf-task.log')
+        and:
+        def session = Mock(Session) {
+            getContainerConfig() >> new ContainerConfig([engine: 'docker', enabled: true])
+        }
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def task = Mock(TaskRun) {
+            getConfig() >> new TaskConfig()
+            getContainer() >> 'ubuntu:latest'
+            getName() >> 'the task name'
+            getWorkDir() >> WORK_DIR
+            toTaskBean() >> bean
+        }
+        def executor = [session: session] as SlurmExecutor
+        def handler = Spy(new GridTaskHandler(task, executor))
+
+        when:
+        def result = handler.fusionStdinScript()
+        then:
+        handler.createTempFile(_, _) >> LOG_PATH
+        handler.fusionEnabled() >> true
+        and:
+        result == '''
+                #!/bin/bash
+                #SBATCH -D .
+                #SBATCH -J nf-the_task_name
+                #SBATCH -o nf-task.log
+                #SBATCH --no-requeue
+                #SBATCH --signal B:USR2@30
+                docker run -i -e "NXF_FUSION_WORK=/fusion/http/some/work/dir" -e "NXF_FUSION_BUCKETS=http://some" --privileged ubuntu:latest bash -o pipefail -c 'trap "{ ret=$?; cp nf-task.log /fusion/http/some/work/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/http/some/work/dir/.command.run 2>&1 | tee nf-task.log'
+                '''.stripIndent().trim()
     }
 }
