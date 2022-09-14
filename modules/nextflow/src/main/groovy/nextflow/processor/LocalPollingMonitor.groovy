@@ -169,11 +169,11 @@ class LocalPollingMonitor extends TaskPollingMonitor {
 
         final taskCpus = cpus(handler)
         if( taskCpus>maxCpus )
-            throw new ProcessUnrecoverableException("Process requirement exceed available CPUs -- req: $taskCpus; avail: $maxCpus")
+            throw new ProcessUnrecoverableException("Process requirement exceeds available CPUs -- req: $taskCpus; avail: $maxCpus")
 
         final taskMemory = mem(handler)
         if( taskMemory>maxMemory)
-            throw new ProcessUnrecoverableException("Process requirement exceed available memory -- req: ${new MemoryUnit(taskMemory)}; avail: ${new MemoryUnit(maxMemory)}")
+            throw new ProcessUnrecoverableException("Process requirement exceeds available memory -- req: ${new MemoryUnit(taskMemory)}; avail: ${new MemoryUnit(maxMemory)}")
 
         final result = super.canSubmit(handler) && taskCpus <= availCpus && taskMemory <= availMemory
         if( !result && log.isTraceEnabled( ) ) {

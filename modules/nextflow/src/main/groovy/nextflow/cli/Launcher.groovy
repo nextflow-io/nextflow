@@ -180,7 +180,7 @@ class Launcher {
             colsString.toShort()
         }
         catch( Exception e ) {
-            log.debug "Oops .. not a valid \$COLUMNS value: $colsString"
+            log.debug "Oops.. not a valid \$COLUMNS value: $colsString"
             return 0
         }
     }
@@ -265,6 +265,10 @@ class Launcher {
             }
 
             else if( current == '-with-tower' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
+            else if( current == '-with-wave' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '-'
             }
 
@@ -639,8 +643,7 @@ class Launcher {
      */
     static void main(String... args)  {
 
-        final launcher = new Launcher()
-        final status = launcher .command(args) .run()
+        final status = new Launcher() .command(args) .run()
         if( status )
             System.exit(status)
     }

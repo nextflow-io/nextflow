@@ -27,6 +27,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.conda.CondaCache
 import nextflow.container.ContainerConfig
+import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
@@ -34,10 +35,9 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
-import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
-import nextflow.script.bundle.ModuleBundle
+import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
@@ -342,6 +342,10 @@ class TaskRun implements Cloneable {
         return copy
     }
 
+    String lazyName() {
+        return name ?: processor.getName()
+    }
+
     String getName() {
         if( name )
             return name
@@ -569,28 +573,37 @@ class TaskRun implements Cloneable {
         cache.getCachePathFor(config.conda as String)
     }
 
+    @Memoized
+    protected ContainerInfo getContainerInfo0() {
+        // fetch the container image from the config
+        def configImage = config.getContainer()
+        // the boolean `false` literal can be provided
+        // to signal the absence of the container
+        if( configImage == false )
+            return null
+        if( !configImage )
+            configImage = null
+
+        final res = ContainerResolverProvider.load()
+        final info = res.resolveImage(this, configImage as String)
+        return info
+    }
+
     /**
      * The name of a docker container where the task is supposed to run when provided
      */
     String getContainer() {
-        // fetch the container image from the config
-        def imageImage = config.getContainer()
-        // the boolean `false` literal can be provided
-        // to signal the absence of the container
-        if( imageImage == false )
-            return null
-        if( !imageImage )
-            imageImage = null
-
-        final res = ContainerResolverProvider.load()
-        final target = res.resolveImage(this, imageImage as String)
-        return target
+        final info = getContainerInfo0()
+        return info?.target
     }
 
-    ModuleBundle getModuleBundle() {
-        final script = this.getProcessor().getOwnerScript()
-        final meta = ScriptMeta.get(script)
-        return meta != null ? meta.getModuleBundle() : null
+    String getContainerFingerprint() {
+        final info = getContainerInfo0()
+        return info?.hashKey
+    }
+
+    ResourcesBundle getModuleBundle() {
+        return this.getProcessor().getModuleBundle()
     }
 
     /**

@@ -17,6 +17,7 @@
 
 package nextflow.scm
 
+
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -182,7 +183,9 @@ abstract class RepositoryProvider {
 
         InputStream content = connection.getInputStream()
         try {
-            return content.text
+            final result = content.text
+            log.trace "Git provider HTTP request: '$api' -- Response:\n${result}"
+            return result
         }
         finally{
             content?.close()
@@ -291,7 +294,7 @@ abstract class RepositoryProvider {
         }
         catch( IOException e1 ) {
             validateRepo()
-            throw new AbortOperationException("Not a valid Nextflow project -- The repository `${getRepositoryUrl()}` must contain a the script `${Const.DEFAULT_MAIN_FILE_NAME}` or the file `${Const.MANIFEST_FILE_NAME}`", e1)
+            throw new AbortOperationException("Not a valid Nextflow project -- The repository `${getRepositoryUrl()}` must contain a `${Const.DEFAULT_MAIN_FILE_NAME}` script or the file `${Const.MANIFEST_FILE_NAME}`", e1)
         }
     }
 

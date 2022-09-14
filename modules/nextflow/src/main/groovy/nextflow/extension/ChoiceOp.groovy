@@ -28,7 +28,7 @@ import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
 /**
- * Implements the logic for {@link OperatorEx#choice} operator(s)
+ * Implements the logic for {@link OperatorImpl#choice} operator(s)
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

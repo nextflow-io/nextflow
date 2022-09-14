@@ -74,13 +74,13 @@ class FileHelperTest extends Specification {
         FileHelper.asPath('\n/some/file.txt')
         then:
         e = thrown(IllegalArgumentException)
-        e.message == "Path string cannot start with blank or a special characters -- Offending path: '\\n/some/file.txt'"
+        e.message == "Path string cannot start with a blank or special characters -- Offending path: '\\n/some/file.txt'"
 
         when:
         FileHelper.asPath('/some/file.txt\n')
         then:
         e = thrown(IllegalArgumentException)
-        e.message == "Path string cannot ends with blank or a special characters -- Offending path: '/some/file.txt\\n'"
+        e.message == "Path string cannot ends with a blank or special characters -- Offending path: '/some/file.txt\\n'"
     }
 
     def 'should strip query params from http files' () {

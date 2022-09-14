@@ -21,6 +21,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.exception.AbortOperationException
@@ -68,7 +69,7 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
          */
         if( !(workDir instanceof AzPath) ) {
             session.abort()
-            throw new AbortOperationException("When using `$name` executor an Azure bucket must be provided as working directory either using -bucket-dir or -work-dir command line option")
+            throw new AbortOperationException("When using `$name` executor an Azure bucket must be provided as working directory using either the `-bucket-dir` or `-work-dir` command line option")
         }
     }
 
@@ -83,8 +84,7 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
         /*
          * upload local binaries
          */
-        def disableBinDir = session.getExecConfigProp(name, 'disableRemoteBinDir', false)
-        if( session.binDir && !session.binDir.empty() && !disableBinDir ) {
+        if( session.binDir && !session.binDir.empty() && !session.disableRemoteBinDir ) {
             final remote = getTempDir()
             log.info "Uploading local `bin` scripts folder to ${remote.toUriString()}/bin"
             remoteBinDir = FilesEx.copyTo(session.binDir, remote)
@@ -98,7 +98,7 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
         if( !config.storage().sasToken )
             config.storage().sasToken = AzHelper.generateAccountSas(workDir, config.storage().tokenDuration)
 
-        session.onShutdown { batchService.close() }
+        Global.onCleanup((it)->batchService.close())
     }
 
     /**

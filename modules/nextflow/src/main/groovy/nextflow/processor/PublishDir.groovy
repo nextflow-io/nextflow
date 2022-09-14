@@ -399,7 +399,7 @@ class PublishDir {
         final t1 = real0(target)
         final s1 = real0(sourceDir)
         if( t1.startsWith(s1) ) {
-            def msg = "Refuse to publish file since destination path conflicts with the task work directory!"
+            def msg = "Refusing to publish file since destination path conflicts with the task work directory!"
             if( taskName )
                 msg += "\n- offending task  : $taskName"
             msg += "\n- offending file  : $target"

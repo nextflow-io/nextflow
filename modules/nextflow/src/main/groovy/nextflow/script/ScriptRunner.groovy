@@ -24,9 +24,11 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
+import nextflow.file.FileTransferPool
 import nextflow.util.HistoryFile
 /**
  * Run a nextflow script file
@@ -231,13 +233,19 @@ class ScriptRunner {
     protected await() {
         if( preview )
             return
-        log.debug "> Await termination "
+        log.debug "> Awaiting termination "
         session.await()
     }
 
     protected shutdown() {
         session.destroy()
         session.cleanup()
+        // -- global cleanup
+        // note: the file transfer pool must be terminated before
+        // invoking the shutdown callback to prevent depending pool (e.g. s3 transfer pool)
+        // are terminated while some file still needs to be download/uploaded
+        FileTransferPool.shutdown(session.aborted)
+        Global.cleanUp()
         log.debug "> Execution complete -- Goodbye"
     }
 
@@ -281,7 +289,7 @@ class ScriptRunner {
             }
 
             if( pos >= size() ) {
-                throw new AbortOperationException("Arguments index out of range: $pos -- You may have not entered all arguments required by the pipeline")
+                throw new AbortOperationException("Arguments index out of range: $pos -- You may not have entered all arguments required by the pipeline")
             }
 
             super.get(pos)
