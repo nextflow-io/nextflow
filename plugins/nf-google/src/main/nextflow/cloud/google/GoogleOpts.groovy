@@ -35,7 +35,7 @@ import nextflow.exception.AbortOperationException
 @CompileStatic
 class GoogleOpts {
 
-    static final String DEFAULT_LOCATION = 'us-central1'
+    static final public String DEFAULT_LOCATION = 'us-central1'
 
     static Map<String,String> env = System.getenv()
 
