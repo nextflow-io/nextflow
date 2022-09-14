@@ -28,7 +28,29 @@ class TowerConfig {
     final Long workspaceId
 
     TowerConfig(Map opts, Map<String,String> env) {
-        this.accessToken = opts.accessToken as String ?: env.get('TOWER_ACCESS_TOKEN')
-        this.workspaceId = opts.workspaceId as Long ?: env.get('TOWER_WORKSPACE_ID') as Long
+        this.accessToken = accessToken0(opts, env)
+        this.workspaceId = workspaceId0(opts, env) as Long
+    }
+
+    private String accessToken0(Map opts, Map<String,String> env) {
+        // when 'TOWER_WORKFLOW_ID' is provided in the env, it's a tower made launch
+        // therefore the access token should only be taken from the env
+        // otherwise check into the config file and fallback in the env
+        // see also
+        // https://github.com/nextflow-io/nextflow/blob/master/plugins/nf-tower/src/main/io/seqera/tower/plugin/TowerClient.groovy#L369-L377
+        def token = env.get('TOWER_WORKFLOW_ID')
+                ? env.get('TOWER_ACCESS_TOKEN')
+                : opts.accessToken as String ?: env.get('TOWER_ACCESS_TOKEN')
+        return token
+    }
+
+    private String workspaceId0(Map opts, Map<String,String> env) {
+        // when 'TOWER_WORKFLOW_ID' is provided in the env, it's a tower made launch
+        // therefore the workspace should only be taken from the env
+        // otherwise check into the config file and fallback in the env
+        def workspaceId = env.get('TOWER_WORKFLOW_ID')
+                ? env.get('TOWER_WORKSPACE_ID')
+                : opts.workspaceId as Long ?: env.get('TOWER_WORKSPACE_ID') as Long
+        return workspaceId
     }
 }
