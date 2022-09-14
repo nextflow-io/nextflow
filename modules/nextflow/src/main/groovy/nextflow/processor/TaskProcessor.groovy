@@ -78,8 +78,10 @@ import nextflow.file.FilePorter
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
+import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
+import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.BasicMode
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
@@ -1626,6 +1628,29 @@ class TaskProcessor {
         return result
     }
 
+    @Memoized
+    ResourcesBundle getModuleBundle() {
+        final script = this.getOwnerScript()
+        final meta = ScriptMeta.get(script)
+        return meta != null ? meta.getModuleBundle() : null
+    }
+
+    @Memoized
+    protected List<Path> getBinDirs() {
+        final result = new ArrayList(10)
+        // module bundle bin dir have priority, add before
+        if( moduleBundle!=null )
+            result.addAll(moduleBundle.getBinDirs())
+        // then add project bin dir
+        if( executor.binDir )
+            result.add(executor.binDir)
+        return result
+    }
+
+    @Memoized
+    boolean isLocalWorkDir() {
+        return executor.workDir.fileSystem == FileSystems.default
+    }
 
     /**
      * @return The map holding the shell environment variables for the task to be executed
@@ -1645,16 +1670,21 @@ class TaskProcessor {
             log.debug "Invalid 'session.config.env' object: ${session.config.env?.class?.name}"
         }
 
-
-        // pre-pend the 'bin' folder to the task environment
-        if( executor.binDir && executor.binDir.fileSystem==FileSystems.default ) {
-            if( result.containsKey('PATH') ) {
-                // note: do not escape potential blanks in the bin path because the PATH
-                // variable is enclosed in `"` when in rendered in the launcher script -- see #630
-                result['PATH'] =  "${executor.binDir}:${result['PATH']}".toString()
-            }
-            else {
-                result['PATH'] = "${executor.binDir}:\$PATH".toString()
+        // append the 'bin' folder to the task environment
+        List<Path> paths
+        if( isLocalWorkDir() && (paths=getBinDirs()) ) {
+            for( Path it : paths ) {
+                if( result.containsKey('PATH') ) {
+                    // note: do not escape potential blanks in the bin path because the PATH
+                    // variable is enclosed in `"` when in rendered in the launcher script -- see #630
+                    result['PATH'] =  "${result['PATH']}:${it}".toString()
+                }
+                else {
+                    // note: append custom bin path *after* the system PATH
+                    // to prevent unnecessary network round-trip for each command
+                    // when the added path is a shared file system directory
+                    result['PATH'] = "\$PATH:${it}".toString()
+                }
             }
         }
 

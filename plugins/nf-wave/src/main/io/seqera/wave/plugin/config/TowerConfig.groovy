@@ -1,6 +1,5 @@
 /*
  * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,32 +12,23 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.k8s
-
-
-import groovy.transform.CompileStatic
-import nextflow.executor.BashWrapperBuilder
-import nextflow.processor.TaskRun
-import nextflow.util.Escape
-
+package io.seqera.wave.plugin.config
 /**
- * Implements a BASH wrapper for tasks executed by kubernetes cluster
+ * Model Tower config accessed by Wave
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
-class K8sWrapperBuilder extends BashWrapperBuilder {
+class TowerConfig {
 
-    K8sWrapperBuilder(TaskRun task) {
-        super(task)
-        this.headerScript = "NXF_CHDIR=${Escape.path(task.workDir)}"
+    final String accessToken
+
+    final Long workspaceId
+
+    TowerConfig(Map opts, Map<String,String> env) {
+        this.accessToken = opts.accessToken as String ?: env.get('TOWER_ACCESS_TOKEN')
+        this.workspaceId = opts.workspaceId as Long ?: env.get('TOWER_WORKSPACE_ID') as Long
     }
-
-    /**
-     * only for testing purpose -- do not use
-     */
-    protected K8sWrapperBuilder() {}
-
 }

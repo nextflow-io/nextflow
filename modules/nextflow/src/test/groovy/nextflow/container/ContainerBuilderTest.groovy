@@ -17,6 +17,8 @@
 
 package nextflow.container
 
+import java.nio.file.Path
+
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -94,6 +96,31 @@ class ContainerBuilderTest extends Specification {
         then:
         def e = thrown(IllegalArgumentException)
         e.message == 'Unknown container engine: foo'
+
+    }
+
+    def 'should add mount'() {
+        given:
+        def builder = Spy(ContainerBuilder)
+
+        when:
+        builder.addMount(null)
+        builder.addMount(Path.of('/this'))
+        builder.addMount(Path.of('/that'))
+        then:
+        builder.@mounts == [Path.of('/this'), Path.of('/that')]
+    }
+
+    def 'should add mounts'() {
+        given:
+        def builder = Spy(ContainerBuilder)
+
+        when:
+        builder.addMounts(null)
+        builder.addMounts([Path.of('/this'), Path.of('/that')])
+        builder.addMounts([Path.of('/another'), Path.of('/one')])
+        then:
+        builder.@mounts == [Path.of('/this'), Path.of('/that'), Path.of('/another'), Path.of('/one')]
 
     }
 }

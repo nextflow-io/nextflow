@@ -672,6 +672,8 @@ well as the software versions of the Nextflow version and build, operating syste
 and Groovy and Java runtime. It can also be used to display information about a
 specific project.
 
+If no run name or session id is provided, it will clean the latest run.
+
 **Options**
 
 | Name, shorthand (if any) | Default | Description                                     |
@@ -738,20 +740,26 @@ the {ref}`k8s-page` section.
 | -ansi-log                |               | Enable/disable ANSI console logging.                                                                     |
 | -bucket-dir              |               | Remote bucket where intermediate result files are stored.                                                |
 | -cache                   |               | Enable/disable processes caching.                                                                        |
+| -disable-jobs-cancellation |             | Prevent the cancellation of child jobs on execution termination                                          |
+| -dsl1                    | false         | Execute the workflow using DSL1 syntax.                                                                  |
 | -dsl2                    | false         | Execute the workflow using DSL2 syntax.                                                                  |
 | -dump-channels           |               | Dump channels for debugging purpose.                                                                     |
 | -dump-hashes             | false         | Dump task hash keys for debugging purpose.                                                               |
 | -e.                      | {}            | Add the specified variable to execution environment. Syntax: `-e.key=value`                              |
 | -entry                   |               | Entry workflow name to be executed.                                                                      |
+| -head-cpus               | 0             | Specify number of CPUs requested for the Nextflow pod                                                    |
+| -head-image              |               | Specify the container image for the Nextflow driver pod.                                                 |
+| -head-memory             |               | Specify amount of memory requested for the Nextflow pod                                                  |
 | -h, -help                | false         | Print the command usage.                                                                                 |
 | -hub                     | github        | Service hub where the project is hosted. Options: `gitlab` or `bitbucket`                                |
 | -latest                  | false         | Pull latest changes before run.                                                                          |
 | -lib                     |               | Library extension path.                                                                                  |
+| -main-script             |               | The script file to be executed when launching a project directory or repository                          |
 | -name                    |               | Assign a mnemonic name to the a pipeline run.                                                            |
 | -n, -namespace           |               | Specify the K8s namespace to use.                                                                        |
 | -offline                 | false         | Do not check for remote project updates.                                                                 |
 | -params-file             |               | Load script parameters from a JSON/YAML file.                                                            |
-| -head-image              |               | Specify the container image for the Nextflow driver pod.                                                 |
+| -plugins                 |               | Specify the plugins to be applied for this run e.g. nf-amazon,nf-tower                                   |
 | -preview                 |               | Run the workflow script skipping the execution of all processes                                          |
 | -process.                | {}            | Set process options. Syntax `-process.key=value`                                                         |
 | -profile                 |               | Choose a configuration profile.                                                                          |
@@ -764,6 +772,7 @@ the {ref}`k8s-page` section.
 | -test                    |               | Test a script function with the name specified.                                                          |
 | -user                    |               | Private repository user name.                                                                            |
 | -v, -volume-mount        |               | Volume claim mounts eg. `my-pvc:/mnt/path`                                                               |
+| -with-charliecloud       |               | Enable process execution in a Charliecloud container runtime                                             |
 | -with-conda              |               | Use the specified Conda environment package or file (must end with `.yml\|.yaml`)                        |
 | -with-dag                | dag.dot       | Create pipeline DAG file.                                                                                |
 | -with-docker             |               | Enable process execution in a Docker container.                                                          |
@@ -1014,6 +1023,7 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 | -ansi-log                |               | Enable/disable ANSI console logging.                                                                                      |
 | -bucket-dir              |               | Remote bucket where intermediate result files are stored.                                                                 |
 | -cache                   |               | Enable/disable processes caching.                                                                                         |
+| -disable-jobs-cancellation |             | Prevent the cancellation of child jobs on execution termination                                                           |
 | -dsl1                    | false         | Execute the workflow using DSL1 syntax.                                                                                   |
 | -dsl2                    | true          | Execute the workflow using DSL2 syntax.                                                                                   |
 | -dump-channels           |               | Dump channels for debugging purpose.                                                                                      |
@@ -1034,8 +1044,10 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 | -qs, -queue-size         |               | Max number of processes that can be executed in parallel by each executor.                                                |
 | -resume                  |               | Execute the script using the cached results, useful to continue executions that was stopped by an error.                  |
 | -r, -revision            |               | Revision of the project to run (either a git `branch`, `tag` or commit `SHA` number).                                     |
+| -stub-run, -stub         | false         | Execute the workflow replacing process scripts with command stubs                                                         |
 | -test                    |               | Test a script function with the name specified.                                                                           |
 | -user                    |               | Private repository user name.                                                                                             |
+| -with-charliecloud       |               | Enable process execution in a Charliecloud container runtime                                                              |
 | -with-conda              |               | Use the specified Conda environment package or file (must end with `.yml\|.yaml`)                                         |
 | -with-dag                | dag.dot       | Create pipeline DAG file.                                                                                                 |
 | -with-docker             |               | Enable process execution in a Docker container.                                                                           |

@@ -34,9 +34,11 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import io.seqera.wave.plugin.config.FusionConfig
+import io.seqera.wave.plugin.config.TowerConfig
 import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.packer.Packer
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.container.resolver.ContainerInfo
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
@@ -58,6 +60,8 @@ class WaveClient {
 
     final private FusionConfig fusion
 
+    final private TowerConfig tower
+
     final private Packer packer
 
     final private String endpoint
@@ -68,8 +72,9 @@ class WaveClient {
 
     WaveClient(Session session) {
         this.session = session
-        this.config = new WaveConfig(session.config.wave as Map ?: [:])
-        this.fusion = new FusionConfig(session.config.fusion as Map ?: [:])
+        this.config = new WaveConfig(session.config.wave as Map ?: Collections.emptyMap(), SysEnv.get())
+        this.fusion = new FusionConfig(session.config.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
+        this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
         this.endpoint = config.endpoint()
         log.debug "Wave server endpoint: ${endpoint}"
         this.packer = new Packer()
@@ -124,12 +129,18 @@ class WaveClient {
 
     SubmitContainerTokenResponse sendRequest(WaveAssets assets) {
         final req = makeRequest(assets)
+        req.towerAccessToken = tower.accessToken
+        req.towerWorkspaceId = tower.workspaceId
         return sendRequest(req)
     }
 
     SubmitContainerTokenResponse sendRequest(String image) {
         final ContainerConfig containerConfig = resolveContainerConfig()
-        final request = new SubmitContainerTokenRequest(containerImage: image, containerConfig: containerConfig)
+        final request = new SubmitContainerTokenRequest(
+                containerImage: image,
+                containerConfig: containerConfig,
+                towerAccessToken: tower.accessToken,
+                towerWorkspaceId: tower.workspaceId )
         return sendRequest(request)
     }
 
