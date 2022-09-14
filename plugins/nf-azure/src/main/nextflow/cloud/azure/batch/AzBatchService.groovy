@@ -69,6 +69,7 @@ import nextflow.cloud.azure.config.CopyToolInstallMode
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.executor.fusion.FusionHelper
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.CacheHelper
@@ -354,10 +355,23 @@ class AzBatchService implements Closeable {
         // custom container settings
         if( task.config.getContainerOptions() )
             opts += "${task.config.getContainerOptions()} "
+        // fusion environment settings
+        final executor = task.getProcessor().getExecutor()
+        final launcher = FusionHelper.getFusionLauncher(task)
+        if( executor.isFusionEnabled() ) {
+            opts += "--privileged "
+            for( Map.Entry<String,String> it : launcher.fusionEnv() ) {
+                opts += "-e $it.key=$it.value "
+            }
+        }
         // config overall container settings
         final containerOpts = new TaskContainerSettings()
                 .withImageName(container)
                 .withContainerRunOptions(opts)
+        // submit command line
+        final cmd = executor.isFusionEnabled()
+                ? "sh -c '${FusionHelper.getFusionSubmitCli(task, launcher)}'"
+                : "sh -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'"
 
         final slots = computeSlots(task, pool)
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
@@ -366,7 +380,7 @@ class AzBatchService implements Closeable {
                 .withId(taskId)
                 .withUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs))
                 .withContainerSettings(containerOpts)
-                .withCommandLine("sh -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'")
+                .withCommandLine(cmd)
                 .withResourceFiles(resourceFileUrls(task,sas))
                 .withOutputFiles(outputFileUrls(task, sas))
                 .withRequiredSlots(slots)

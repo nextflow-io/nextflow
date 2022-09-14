@@ -42,25 +42,21 @@ trait FusionAwareTask {
 
     boolean fusionEnabled() {
         if( fusionEnabled==null ) {
-            fusionEnabled = getExecutor0().isFusionEnabled()
+            fusionEnabled = FusionHelper.isFusionEnabled(getExecutor0().getSession())
         }
         return fusionEnabled
     }
 
     FusionScriptLauncher fusionLauncher() {
         if( fusionLauncher==null ) {
-            fusionLauncher = fusionEnabled()
-                    ? FusionScriptLauncher.create(task.toTaskBean(), task.workDir.scheme)
-                    : null
+            fusionLauncher = FusionHelper.getFusionLauncher(task)
         }
         return fusionLauncher
     }
 
     List<String> fusionSubmitCli() {
-        final logFile = fusionLauncher().toContainerMount(task.workDir.resolve(TaskRun.CMD_LOG))
-        final runFile = fusionLauncher().toContainerMount(task.workDir.resolve(TaskRun.CMD_RUN))
-        final cmd = "trap \"{ ret=\$?; cp ${TaskRun.CMD_LOG} ${logFile}||true; exit \$ret; }\" EXIT; bash ${runFile} 2>&1 | tee ${TaskRun.CMD_LOG}"
-        return ['bash','-o','pipefail','-c', cmd.toString() ]
+        final cmd = FusionHelper.getFusionSubmitCli(task, fusionLauncher())
+        return ['bash','-o','pipefail','-c', cmd]
     }
 
 }

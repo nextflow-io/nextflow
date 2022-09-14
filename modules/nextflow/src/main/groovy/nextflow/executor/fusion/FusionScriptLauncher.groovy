@@ -91,9 +91,9 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         if( p.scheme != scheme )
             throw new IllegalArgumentException("Unexpected path for Fusion script launcher: ${path.toUriString()}")
 
-        final result = "/fusion/$p.scheme/${p.bucket}${p.path}"
         buckets.add(p.bucket)
-        return Path.of(result)
+
+        return Path.of("/fusion/${p.scheme}/${p.bucket}${p.path}")
     }
 
     Path toContainerMount(Path path) {

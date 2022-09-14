@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.fusion.FusionHelper
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -41,8 +42,6 @@ import nextflow.trace.TraceRecord
 class AzBatchTaskHandler extends TaskHandler {
 
     AzBatchExecutor executor
-
-    private TaskBean taskBean
 
     private Path exitFile
 
@@ -61,7 +60,6 @@ class AzBatchTaskHandler extends TaskHandler {
     AzBatchTaskHandler(TaskRun task, AzBatchExecutor executor) {
         super(task)
         this.executor = executor
-        this.taskBean = new TaskBean(task)
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
@@ -82,7 +80,9 @@ class AzBatchTaskHandler extends TaskHandler {
     }
 
     protected BashWrapperBuilder createBashWrapper() {
-        new AzBatchScriptLauncher(taskBean, executor)
+        executor.isFusionEnabled()
+                ? FusionHelper.getFusionLauncher(task)
+                : new AzBatchScriptLauncher(task.toTaskBean(), executor)
     }
 
     @Override
