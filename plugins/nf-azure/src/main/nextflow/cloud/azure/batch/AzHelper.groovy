@@ -40,8 +40,6 @@ import nextflow.util.Duration
 @CompileStatic
 class AzHelper {
 
-    static private final long SEVEN_DAYS_IN_MILLIS = Duration.of("168h").toMillis()
-
     static BlobContainerSasPermission CONTAINER_PERMS = new BlobContainerSasPermission()
             .setAddPermission(true)
             .setCreatePermission(true)
@@ -112,13 +110,15 @@ class AzHelper {
     static UserDelegationKey generateUserDelegationKey(Path path, Duration duration) {
 
         final client = az0(path).getFileSystem().getBlobServiceClient()
+
         final startTime = OffsetDateTime.now()
+        final indicatedExpiryTime = startTime.plusHours(duration.toHours())
 
         // The maximum lifetime for user delegation key (and therefore delegation SAS) is 7 days
         // Reference https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-user-delegation-sas-create-cli
-        final expiryTime = { duration.toMillis() < SEVEN_DAYS_IN_MILLIS }
-                ? startTime.plusDays(duration.toDays())
-                : startTime.plusDays(7)
+        final maxExpiryTime = startTime.plusDays(7)
+
+        final expiryTime = (indicatedExpiryTime.toEpochSecond() <= maxExpiryTime.toEpochSecond()) ? indicatedExpiryTime : maxExpiryTime
 
         final delegationKey = client.getUserDelegationKey(startTime, expiryTime)
 
@@ -126,18 +126,20 @@ class AzHelper {
     }
 
     static String generateContainerUserDelegationSas(BlobContainerClient client, Duration duration, UserDelegationKey key) {
-        final now = OffsetDateTime.now()
+       
+        final startTime = OffsetDateTime.now()
+        final indicatedExpiryTime = startTime.plusHours(duration.toHours())
 
         // The maximum lifetime for user delegation key (and therefore delegation SAS) is 7 days
         // Reference https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-user-delegation-sas-create-cli
-        final expiryTime = { duration.toMillis() < SEVEN_DAYS_IN_MILLIS }
-                ? now.plusDays(duration.toDays())
-                : now.plusDays(7)
+        final maxExpiryTime = startTime.plusDays(7)
+
+        final expiryTime = (indicatedExpiryTime.toEpochSecond() <= maxExpiryTime.toEpochSecond()) ? indicatedExpiryTime : maxExpiryTime
 
         final signature = new BlobServiceSasSignatureValues()
                 .setPermissions(BLOB_PERMS)
                 .setPermissions(CONTAINER_PERMS)
-                .setStartTime(now)
+                .setStartTime(startTime)
                 .setExpiryTime(expiryTime)
 
         final generatedSas = client.generateUserDelegationSas(signature, key)
