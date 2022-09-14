@@ -28,6 +28,7 @@ class TowerConfigTest extends Specification {
     def 'should get tower config' () {
         given:
         TowerConfig config
+        Map env
 
         when:
         config = new TowerConfig([:], [:])
@@ -36,15 +37,26 @@ class TowerConfigTest extends Specification {
         !config.getWorkspaceId()
 
         when:
-        config = new TowerConfig([:], [TOWER_ACCESS_TOKEN:'foo', TOWER_WORKSPACE_ID: '123'])
+        env = [TOWER_ACCESS_TOKEN:'foo', TOWER_WORKSPACE_ID: '123']
+        config = new TowerConfig([:], env)
         then:
         config.accessToken == 'foo'
         config.workspaceId == 123
 
         when:
-        config = new TowerConfig(accessToken: 'bar', workspaceId: '789', [TOWER_ACCESS_TOKEN:'foo', TOWER_WORKSPACE_ID: '123'])
+        env =  [TOWER_ACCESS_TOKEN:'foo', TOWER_WORKSPACE_ID: '123']
+        config = new TowerConfig(accessToken: 'bar', workspaceId: '789', env)
         then:
         config.accessToken == 'bar'
         config.workspaceId == 789
+
+        // when TOWER_WORKFLOW_ID is defined env has priority
+
+        when:
+        env = [TOWER_ACCESS_TOKEN:'foo', TOWER_WORKSPACE_ID: '123', TOWER_WORKFLOW_ID: 'xyz']
+        config = new TowerConfig(accessToken: 'bar', workspaceId: '789', env)
+        then:
+        config.accessToken == 'foo'
+        config.workspaceId == 123
     }
 }
