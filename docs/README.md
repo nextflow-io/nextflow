@@ -8,7 +8,7 @@ Nextflow documentation is written using [Sphinx](http://www.sphinx-doc.org/), [M
 The build dependencies can be installed with `pip`:
 
 ```bash
-pip install sphinx=3.5.4 myst-parser sphinx_rtd_theme
+pip install sphinx==3.5.4 myst-parser==0.17.0 sphinx_rtd_theme==1.0.0
 ```
 
 
@@ -16,7 +16,7 @@ pip install sphinx=3.5.4 myst-parser sphinx_rtd_theme
 
 To edit and contribute to the documentation, you only need a text editor to change the appropriate `.md` files in this directory.
 
-Once you have made your changes, run the following command build the HTML files:
+Once you have made your changes, run the following command to build the HTML files:
 ```bash
 make clean html
 ```
