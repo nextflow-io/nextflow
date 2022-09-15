@@ -417,7 +417,7 @@ Hybrid workloads
 ----------------
 
 Nextflow allows the use of multiple executors in the same workflow application. This feature enables the deployment
-of hybrid workloads in which some jobs are execute in the local computer or local computing cluster and
+of hybrid workloads in which some jobs are executed in the local computer or local computing cluster and
 some jobs are offloaded to AWS Batch service.
 
 To enable this feature use one or more :ref:`config-process-selectors` in your Nextflow configuration file to apply
