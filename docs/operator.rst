@@ -31,7 +31,7 @@ The ``branch`` operator allows you to forward the items emitted by a source chan
 or more output channels, `choosing` one out of them at a time.
 
 The selection criteria is defined by specifying a :ref:`closure <script-closure>` that provides
-one or more boolean expression, each of which is identified by a unique label. On the first expression 
+one or more boolean expression, each of which is identified by a unique label. On the first expression
 that evaluates to a *true* value, the current item is bound to a named channel as the label identifier.
 For example::
 
@@ -107,52 +107,52 @@ The ``buffer`` operator gathers the items emitted by the source channel into sub
 There are a number of ways you can regulate how ``buffer`` gathers the items from
 the source channel into subsets:
 
-* ``buffer( closingCondition )``: starts to collect the items emitted by the channel into 
-  a subset until the `closing condition` is verified. After that the subset is emitted 
-  to the resulting channel and new items are gathered into a new subset. The process is repeated 
-  until the last value in the source channel is sent. The ``closingCondition`` can be specified 
+* ``buffer( closingCondition )``: starts to collect the items emitted by the channel into
+  a subset until the `closing condition` is verified. After that the subset is emitted
+  to the resulting channel and new items are gathered into a new subset. The process is repeated
+  until the last value in the source channel is sent. The ``closingCondition`` can be specified
   either as a :ref:`regular expression <script-regexp>`, a Java class, a literal value, or a `boolean predicate`
   that has to be satisfied. For example::
 
     Channel
-        .of( 1, 2, 3, 1, 2, 3 ) 
-        .buffer { it == 2 } 
+        .of( 1, 2, 3, 1, 2, 3 )
+        .buffer { it == 2 }
         .view()
 
     // emitted values
     [1,2]
     [3,1,2]
 
-* ``buffer( openingCondition, closingCondition )``: starts to gather the items emitted by the channel 
+* ``buffer( openingCondition, closingCondition )``: starts to gather the items emitted by the channel
   as soon as one of the them verify the `opening condition` and it continues until there is one item
-  which verify the `closing condition`. After that the subset is emitted and it continues applying the 
+  which verify the `closing condition`. After that the subset is emitted and it continues applying the
   described logic until the last channel item is emitted.
   Both conditions can be defined either as a :ref:`regular expression <script-regexp>`, a literal value,
-  a Java class, or a `boolean predicate` that need to be satisfied. For example:: 
+  a Java class, or a `boolean predicate` that need to be satisfied. For example::
 
     Channel
-        .of( 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2 ) 
-        .buffer( 2, 4 ) 
+        .of( 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2 )
+        .buffer( 2, 4 )
         .view()
 
     // emits bundles starting with '2' and ending with'4'
     [2,3,4]
     [2,3,4]
 
-* ``buffer( size: n )``: transform the source channel in such a way that it emits tuples 
+* ``buffer( size: n )``: transform the source channel in such a way that it emits tuples
   made up of ``n`` elements. An incomplete tuple is discarded. For example::
 
     Channel
-        .of( 1, 2, 3, 1, 2, 3, 1 ) 
+        .of( 1, 2, 3, 1, 2, 3, 1 )
         .buffer( size: 2 )
         .view()
 
-    // emitted values 
+    // emitted values
     [1, 2]
     [3, 1]
     [2, 3]
 
-  If you want to emit the last items in a tuple containing less than ``n`` elements, simply 
+  If you want to emit the last items in a tuple containing less than ``n`` elements, simply
   add the parameter ``remainder`` specifying ``true``, for example::
 
     Channel
@@ -166,15 +166,15 @@ the source channel into subsets:
     [2, 3]
     [1]
 
-* ``buffer( size: n, skip: m )``: as in the previous example, it emits tuples containing ``n`` elements, 
+* ``buffer( size: n, skip: m )``: as in the previous example, it emits tuples containing ``n`` elements,
   but skips ``m`` values before starting to collect the values for the next tuple (including the first emission). For example::
 
     Channel
-        .of( 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2 ) 
+        .of( 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2 )
         .buffer( size:3, skip:2 )
         .view()
 
-    // emitted values 
+    // emitted values
     [3, 4, 5]
     [3, 4, 5]
 
@@ -192,17 +192,17 @@ choice
 .. warning::
     This operator is deprecated. Use `branch`_ instead.
 
-The ``choice`` operator allows you to forward the items emitted by a source channel to two 
-(or more) output channels, `choosing` one out of them at a time. 
+The ``choice`` operator allows you to forward the items emitted by a source channel to two
+(or more) output channels, `choosing` one out of them at a time.
 
 The destination channel is selected by using a :ref:`closure <script-closure>` that must return the `index` number of the channel
-where the item has to be sent. The first channel is identified by the index ``0``, the second as ``1`` and so on. 
+where the item has to be sent. The first channel is identified by the index ``0``, the second as ``1`` and so on.
 
-The following example sends all string items beginning with ``Hello`` into ``queue1``, 
-the others into ``queue2``  
+The following example sends all string items beginning with ``Hello`` into ``queue1``,
+the others into ``queue2``
 
 ::
-  
+
     source = Channel.from 'Hello world', 'Hola', 'Hello John'
     queue1 = Channel.create()
     queue2 = Channel.create()
@@ -420,7 +420,7 @@ The following example shows how use a `closure` to collect and sort all sequence
         }
         .view { it.text }
 
-.. warning:: The ``collectFile`` operator needs to store files in a temporary folder that is automatically deleted on 
+.. warning:: The ``collectFile`` operator needs to store files in a temporary folder that is automatically deleted on
     workflow completion. For performance reasons this folder is located in the machine's local storage,
     and it will require as much free space as the data that is being collected. Optionally, a different temporary data
     folder can be specified by using the ``tempDir`` parameter.
@@ -508,7 +508,7 @@ count
 -----
 
 The ``count`` operator creates a channel that emits a single item: a number that represents the total number of
-items emitted by the source channel. For example:: 
+items emitted by the source channel. For example::
 
     Channel
         .of(9,1,7,5)
@@ -516,8 +516,8 @@ items emitted by the source channel. For example::
         .view()
     // -> 4
 
-An optional parameter can be provided in order to select which items are to be counted. 
-The selection criteria can be specified either as a :ref:`regular expression <script-regexp>`, 
+An optional parameter can be provided in order to select which items are to be counted.
+The selection criteria can be specified either as a :ref:`regular expression <script-regexp>`,
 a literal value, a Java class, or a `boolean predicate` that needs to be satisfied. For example::
 
     Channel
@@ -531,7 +531,7 @@ a literal value, a Java class, or a `boolean predicate` that needs to be satisfi
         .count ( ~/c/ )
         .view()
     // -> 2
-    
+
     Channel
         .of('a','c','c','q','b')
         .count { it <= 'c' }
@@ -544,8 +544,8 @@ a literal value, a Java class, or a `boolean predicate` that needs to be satisfi
 countBy
 -------
 
-The ``countBy`` operator creates a channel which emits an associative array (i.e. ``Map`` object) 
-that counts the occurrences of the emitted items in the source channel having the same key. 
+The ``countBy`` operator creates a channel which emits an associative array (i.e. ``Map`` object)
+that counts the occurrences of the emitted items in the source channel having the same key.
 For example::
 
     Channel
@@ -557,7 +557,7 @@ For example::
 
     [x:3, y:2, z:1]
 
-An optional grouping criteria can be specified by using a :ref:`closure <script-closure>` 
+An optional grouping criteria can be specified by using a :ref:`closure <script-closure>`
 that associates each item with the grouping key. For example::
 
     Channel
@@ -576,18 +576,18 @@ cross
 -----
 
 The ``cross`` operator allows you to combine the items of two channels in such a way that
-the items of the source channel are emitted along with the items emitted by the target channel 
-for which they have a matching key.  
+the items of the source channel are emitted along with the items emitted by the target channel
+for which they have a matching key.
 
 The key is defined, by default, as the first entry in an array, a list or map object,
-or the value itself for any other data type. For example:: 
+or the value itself for any other data type. For example::
 
     source = Channel.of( [1, 'alpha'], [2, 'beta'] )
     target = Channel.of( [1, 'x'], [1, 'y'], [1, 'z'], [2,'p'], [2,'q'], [2,'t'] )
 
     source.cross(target).view()
 
-It will output:: 
+It will output::
 
     [ [1, alpha], [1, x] ]
     [ [1, alpha], [1, y] ]
@@ -597,13 +597,13 @@ It will output::
     [ [2, beta],  [2, t] ]
 
 The above example shows how the items emitted by the source channels are associated to the ones
-emitted by the target channel (on the right) having the same key. 
+emitted by the target channel (on the right) having the same key.
 
 There are two important caveats when using the ``cross`` operator:
 
-    #. The operator is not `commutative`, i.e. the result of ``a.cross(b)`` is different from ``b.cross(a)`` 
-    #. The source channel should emits items for which there's no key repetition i.e. the emitted 
-       items have an unique key identifier. 
+    #. The operator is not `commutative`, i.e. the result of ``a.cross(b)`` is different from ``b.cross(a)``
+    #. The source channel should emits items for which there's no key repetition i.e. the emitted
+       items have an unique key identifier.
 
 Optionally, a mapping function can be specified in order to provide a custom rule to associate an item to a key,
 in a similar manner as shown for the `phase`_ operator.
@@ -769,7 +769,7 @@ flatMap
 
 The ``flatMap`` operator applies a function of your choosing to every item emitted by a channel, and
 returns the items so obtained as a new channel. Whereas the `mapping` function returns a list of items,
-this list is flattened so that each single item is emitted on its own.  
+this list is flattened so that each single item is emitted on its own.
 
 For example::
 
@@ -842,7 +842,7 @@ groupBy
 
 The ``groupBy`` operator collects the values emitted by the source channel grouping them together using a `mapping`
 function that associates each item with a key. When finished, it emits an associative
-array that maps each key to the set of items identified by that key.  
+array that maps each key to the set of items identified by that key.
 
 For example::
 
@@ -851,7 +851,7 @@ For example::
         .groupBy { String str -> str[0] }
         .view()
 
-:: 
+::
 
     [ b:['bonjour'], c:['ciao'], h:['hello','hola','hi'] ]
 
@@ -1082,8 +1082,8 @@ The ``last`` operator creates a channel that only returns the last item emitted 
 map
 ---
 
-The ``map`` operator applies a function of your choosing to every item emitted by a channel, and 
-returns the items so obtained as a new channel. The function applied is called the `mapping` function 
+The ``map`` operator applies a function of your choosing to every item emitted by a channel, and
+returns the items so obtained as a new channel. The function applied is called the `mapping` function
 and is expressed with a :ref:`closure <script-closure>` as shown in the example below::
 
     Channel
@@ -1118,13 +1118,13 @@ For example::
 
   Max value is 8
 
-An optional :ref:`closure <script-closure>` parameter can be specified in order to provide 
-a function that returns the value to be compared. The example below shows how to find the string 
-item that has the maximum length:: 
+An optional :ref:`closure <script-closure>` parameter can be specified in order to provide
+a function that returns the value to be compared. The example below shows how to find the string
+item that has the maximum length::
 
     Channel
         .of("hello","hi","hey")
-        .max { it.size() } 
+        .max { it.size() }
         .view()
 
 ::
@@ -1132,11 +1132,11 @@ item that has the maximum length::
      "hello"
 
 Alternatively it is possible to specify a comparator function i.e. a :ref:`closure <script-closure>`
-taking two parameters that represent two emitted items to be compared. For example:: 
+taking two parameters that represent two emitted items to be compared. For example::
 
     Channel
         .of("hello","hi","hey")
-        .max { a,b -> a.size() <=> b.size() } 
+        .max { a,b -> a.size() <=> b.size() }
         .view()
 
 
@@ -1199,9 +1199,9 @@ For example::
 
   Min value is 2
 
-An optional :ref:`closure <script-closure>` parameter can be specified in order to provide 
-a function that returns the value to be compared. The example below shows how to find the string 
-item that has the minimum length:: 
+An optional :ref:`closure <script-closure>` parameter can be specified in order to provide
+a function that returns the value to be compared. The example below shows how to find the string
+item that has the minimum length::
 
     Channel
         .of("hello","hi","hey")
@@ -1213,11 +1213,11 @@ item that has the minimum length::
     "hi"
 
 Alternatively it is possible to specify a comparator function i.e. a :ref:`closure <script-closure>`
-taking two parameters that represent two emitted items to be compared. For example:: 
+taking two parameters that represent two emitted items to be compared. For example::
 
     Channel
         .of("hello","hi","hey")
-        .min { a,b -> a.size() <=> b.size() } 
+        .min { a,b -> a.size() <=> b.size() }
         .view()
 
 
@@ -1466,7 +1466,7 @@ By setting it, the ``randomSample`` operator will always return the same pseudo-
         .randomSample( 10, 234 )
         .view()
 
-The above example will print 10 random numbers in the range between 1 and 100. At each run of the script, the same 
+The above example will print 10 random numbers in the range between 1 and 100. At each run of the script, the same
 sequence will be returned.
 
 
@@ -1477,11 +1477,11 @@ reduce
 
 The ``reduce`` operator applies a function of your choosing to every item emitted by a channel.
 Each time this function is invoked it takes two parameters: firstly the `i-th` emitted item
-and secondly the result of the previous invocation of the function itself. The result is 
-passed on to the next function call, along with the `i+1 th` item, until all the items are 
+and secondly the result of the previous invocation of the function itself. The result is
+passed on to the next function call, along with the `i+1 th` item, until all the items are
 processed.
 
-Finally, the ``reduce`` operator emits the result of the last invocation of your function 
+Finally, the ``reduce`` operator emits the result of the last invocation of your function
 as the sole output.
 
 For example::
@@ -1517,18 +1517,18 @@ separate
 .. warning::
     This operator is deprecated. Use `multiMap`_ instead.
 
-The ``separate`` operator lets you copy the items emitted by the source channel into multiple 
-channels, which each of these can receive a `separate` version of the same item. 
+The ``separate`` operator lets you copy the items emitted by the source channel into multiple
+channels, which each of these can receive a `separate` version of the same item.
 
 The operator applies a `mapping function` of your choosing to every item emitted by the source channel.
-This function must return a list of as many values as there are output channels. Each entry in the result 
-list will be assigned to the output channel with the corresponding position index. For example:: 
+This function must return a list of as many values as there are output channels. Each entry in the result
+list will be assigned to the output channel with the corresponding position index. For example::
 
     queue1 = Channel.create()
     queue2 = Channel.create()
 
     Channel
-        .from ( 2,4,8 ) 
+        .from ( 2,4,8 )
         .separate( queue1, queue2 ) { a -> [a+1, a*a] }
 
     queue1.view { "Channel 1: $it" }
@@ -1924,12 +1924,12 @@ For example::
 
     The sum is 21
 
-An optional :ref:`closure <script-closure>` parameter can be specified in order to provide 
-a function that, given an item, returns the value to be summed. For example:: 
+An optional :ref:`closure <script-closure>` parameter can be specified in order to provide
+a function that, given an item, returns the value to be summed. For example::
 
     Channel
         .of( 4, 1, 7, 5 )
-        .sum { it * it } 
+        .sum { it * it }
         .view { "Square: $it" }
 
 ::
@@ -2162,7 +2162,7 @@ the condition specified is verified. For example::
   2
   1
 
-See also `take`_. 
+See also `take`_.
 
 
 .. _operator-view:

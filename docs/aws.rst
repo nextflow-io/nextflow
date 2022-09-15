@@ -411,7 +411,7 @@ The pipeline execution must specifies a AWS Storage bucket where jobs intermedia
 
 .. warning::
   The bucket path should include at least a top level directory name e.g. use ``s3://my-bucket/work``
-  not just ``s3://my-bucket``. 
+  not just ``s3://my-bucket``.
 
 Hybrid workloads
 ----------------
