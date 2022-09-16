@@ -646,7 +646,7 @@ class ConfigBuilder {
             if( cmdRun.withDag != '-' )
                 config.dag.file = cmdRun.withDag
             else if( !config.dag.file )
-                config.dag.file = 'dag.dot'
+                config.dag.file = "dag_${timestamp}.dot"
         }
 
         if( cmdRun.withNotification ) {

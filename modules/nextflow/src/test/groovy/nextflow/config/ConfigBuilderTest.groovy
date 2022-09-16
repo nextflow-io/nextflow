@@ -893,7 +893,9 @@ class ConfigBuilderTest extends Specification {
 
         given:
         def env = [:]
-        def builder = [:] as ConfigBuilder
+        def builder = Spy(ConfigBuilder) {
+            getTimestamp() >> '0000-00-00_00-00-00'
+        }
 
         when:
         def config = new ConfigObject()
@@ -942,7 +944,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.dag instanceof Map
         config.dag.enabled
-        config.dag.file == 'dag.dot'
+        config.dag.file == 'dag_0000-00-00_00-00-00.dot'
     }
 
     def 'should set session weblog options' () {
