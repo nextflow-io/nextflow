@@ -760,12 +760,12 @@ class PodSpecBuilderTest extends Specification {
 
 
     @Unroll
-    def 'should sanitize k8s label: #label' () {
+    def 'should sanitize k8s label value: #label' () {
         given:
         def builder = new PodSpecBuilder()
 
         expect:
-        builder.sanitize0(label, PodSpecBuilder.MetaType.LABEL) == str
+        builder.sanitize0(label, PodSpecBuilder.MetaType.LABEL, PodSpecBuilder.SegmentType.VALUE) == str
 
         where:
         label           | str
@@ -786,6 +786,27 @@ class PodSpecBuilderTest extends Specification {
     }
 
     @Unroll
+    def 'should sanitize k8s label key: #label_key' () {
+        given:
+        def builder = new PodSpecBuilder()
+
+        expect:
+        builder.sanitizeKey(label_key, PodSpecBuilder.MetaType.LABEL) == str
+
+        where:
+        label_key               | str
+        'foo'                   | 'foo'
+        'key 1'                 | 'key_1'
+        'foo.bar/key 2'         | 'foo.bar/key_2'
+        'foo.bar/key 2/key 3'   | 'foo.bar/key_2_key_3'
+        'foo.bar/'              | 'foo.bar'
+        '/foo.bar'              | 'foo.bar'
+        'x2345678901234567890123456789012345678901234567890123456789012345' | 'x23456789012345678901234567890123456789012345678901234567890123'
+        'x23456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345/key 2' | 'x234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123/key_2'
+        'foo.bar/x2345678901234567890123456789012345678901234567890123456789012345' | 'foo.bar/x23456789012345678901234567890123456789012345678901234567890123'
+    }
+
+    @Unroll
     def 'should sanitize k8s label map' () {
         given:
         def builder = new PodSpecBuilder()
@@ -797,6 +818,7 @@ class PodSpecBuilderTest extends Specification {
         KEY_VALUE               | EXPECTED
         [foo:'bar']             | [foo:'bar']
         ['key 1':'value 2']     | [key_1:'value_2']
+        ['foo.bar/key 2':'value 3'] | ['foo.bar/key_2':'value_3']
     }
 
     @Unroll
@@ -808,11 +830,32 @@ class PodSpecBuilderTest extends Specification {
         builder.sanitize(KEY_VALUE, PodSpecBuilder.MetaType.ANNOTATION) == EXPECTED
 
         where:
-        KEY_VALUE               | EXPECTED
-        [foo:'bar']             | [foo:'bar']
-        ['key 1':'value 2']     | [key_1:'value 2']
+        KEY_VALUE                           | EXPECTED
+        [foo:'bar']                         | [foo:'bar']
+        ['key 1':'value 2']                 | [key_1:'value 2']
+        ['foo.bar/key 2':'value 3']         | ['foo.bar/key_2':'value 3']
+        ['foo.bar/key 3/no key': 'value 4']  | ['foo.bar/key_3_no_key':'value 4']
+        ['x2345678901234567890123456789012345678901234567890123456789012345':'value 5'] | ['x23456789012345678901234567890123456789012345678901234567890123':'value 5']
+        ['x23456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345/key 4':'value 6'] | ['x234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123/key_4':'value 6']
+        ['foo.bar/x2345678901234567890123456789012345678901234567890123456789012345':'value 7'] | ['foo.bar/x23456789012345678901234567890123456789012345678901234567890123':'value 7']
     }
 
+    @Unroll
+    def 'should not sanitize k8s annotation value' () {
+        given:
+        def builder = new PodSpecBuilder()
+
+        expect:
+        builder.sanitize(ANNOTATION, PodSpecBuilder.MetaType.ANNOTATION) == EXPECTED
+
+        where:
+        ANNOTATION              | EXPECTED
+        ['foo':'value 1']               | ['foo':'value 1']
+        ['foo':'foo.bar / *']           | ['foo':'foo.bar / *']
+        ['foo':'value 2 \n value 3']    | ['foo':'value 2 \n value 3']
+        ['foo':'value 3']               | ['foo':'value 3']
+        ['foo':'x2345678901234567890123456789012345678901234567890123456789012345'] | ['foo':'x2345678901234567890123456789012345678901234567890123456789012345']
+    }
 
     def 'should create job spec' () {
 
