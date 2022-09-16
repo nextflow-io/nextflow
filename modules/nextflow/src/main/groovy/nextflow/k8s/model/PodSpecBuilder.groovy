@@ -579,7 +579,7 @@ class PodSpecBuilder {
     protected Map sanitize(Map map, MetaType kind) {
         final result = new HashMap(map.size())
         for( Map.Entry entry : map ) {
-            final key = sanitizeKey((String)entry.key, kind)
+            final key = sanitizeKey(String.valueOf(entry.key), kind)
             final value = (kind == MetaType.LABEL)
                 ? sanitize0(entry.value, kind, SegmentType.VALUE)
                 : entry.value
