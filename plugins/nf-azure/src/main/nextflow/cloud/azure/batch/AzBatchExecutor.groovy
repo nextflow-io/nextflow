@@ -98,8 +98,8 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
         // Generate an account SAS token using either activeDirectory configs or storage account keys
         if (!config.storage().sasToken) {
             config.storage().sasToken = config.activeDirectory().isConfigured()
-                    ? AzHelper.generateContainerSas(workDir, config.storage().tokenDuration)
-                    : AzHelper.generateAccountSas(workDir, config.storage().tokenDuration)
+                    ? AzHelper.generateContainerSasWithActiveDirectory(workDir, config.storage().tokenDuration)
+                    : AzHelper.generateAccountSasWithAccountKey(workDir, config.storage().tokenDuration)
         }
 
         Global.onCleanup((it) -> batchService.close())

@@ -97,13 +97,13 @@ class AzHelper {
         return !sas ? url : "${url}?${sas}"
     }
 
-    static String generateContainerSas(Path path, Duration duration) {
+    static String generateContainerSasWithActiveDirectory(Path path, Duration duration) {
         final key = generateUserDelegationKey(az0(path), duration)
 
         return generateContainerUserDelegationSas(az0(path).containerClient(), duration, key)
     }
 
-    static String generateAccountSas(Path path, Duration duration) {
+    static String generateAccountSasWithAccountKey(Path path, Duration duration) {
         generateAccountSas(az0(path).getFileSystem().getBlobServiceClient(), duration)
     }
 
