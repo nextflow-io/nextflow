@@ -28,7 +28,6 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
-import nextflow.file.FileTransferPool
 import nextflow.util.HistoryFile
 /**
  * Run a nextflow script file
@@ -240,11 +239,6 @@ class ScriptRunner {
     protected shutdown() {
         session.destroy()
         session.cleanup()
-        // -- global cleanup
-        // note: the file transfer pool must be terminated before
-        // invoking the shutdown callback to prevent depending pool (e.g. s3 transfer pool)
-        // are terminated while some file still needs to be download/uploaded
-        FileTransferPool.shutdown(session.aborted)
         Global.cleanUp()
         log.debug "> Execution complete -- Goodbye"
     }

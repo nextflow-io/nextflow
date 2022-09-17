@@ -85,9 +85,9 @@ class TowerReports {
                             final total = this.totalReports.get()
                             FileHelper.copyPath(launchReportsPath, workReportsPath, StandardCopyOption.REPLACE_EXISTING)
                             lastTotalReports.set(total)
-                            log.debug("Reports file sync to workdir with ${total} reports")
+                            log.trace("Reports file sync to workdir with ${total} reports")
                         } catch (IOException e) {
-                            log.error("Error copying reports file ${launchReportsPath} to the workdir -- ${e.message}")
+                            log.error("Error copying reports file ${launchReportsPath.toUriString()} to the workdir ${workReportsPath.toUriString()} -- ${e.message}")
                         }
                     }
                 }
@@ -118,8 +118,19 @@ class TowerReports {
                 timer.cancel()
             }
             writer.await()
-            reportsFile.flush()
+            // close and upload it
             reportsFile.close()
+            saveReportsFileUpload()
+        }
+    }
+
+    protected void saveReportsFileUpload() {
+        try {
+            FileHelper.copyPath(launchReportsPath, workReportsPath, StandardCopyOption.REPLACE_EXISTING)
+            log.debug "Saved reports file ${workReportsPath.toUriString()}"
+        }
+        catch (Exception e) {
+            log.error("Error copying reports file ${launchReportsPath.toUriString()} to the workdir ${workReportsPath.toUriString()} -- ${e.message}")
         }
     }
 
@@ -181,7 +192,7 @@ class TowerReports {
                     final mimeType = reportEntry.value.get("mimeType", "")
                     writer.send { PrintWriter it -> it.println("${reportEntry.key}\t${dst}\t${destination.size()}\t${display}\t${mimeType}") }
                     final numRep = totalReports.incrementAndGet()
-                    log.debug("Adding report [${numRep}] ${reportEntry.key} -- ${dst}")
+                    log.trace("Adding report [${numRep}] ${reportEntry.key} -- ${dst}")
                     return true
                 }
             }
