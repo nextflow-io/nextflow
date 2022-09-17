@@ -1632,7 +1632,7 @@ class TaskProcessor {
     ResourcesBundle getModuleBundle() {
         final script = this.getOwnerScript()
         final meta = ScriptMeta.get(script)
-        return meta != null ? meta.getModuleBundle() : null
+        return meta?.isModule() ? meta.getModuleBundle() : null
     }
 
     @Memoized
