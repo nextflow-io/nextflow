@@ -107,4 +107,7 @@ class BatchClient {
         return status ? status.getState().toString() : null
     }
 
+    void shutdown() {
+        batchServiceClient.close()
+    }
 }

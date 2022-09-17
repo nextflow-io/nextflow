@@ -106,4 +106,9 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     TaskHandler createTaskHandler(TaskRun task) {
         return new GoogleBatchTaskHandler(task, this)
     }
+
+    @Override
+    void shutdown() {
+        client.shutdown()
+    }
 }
