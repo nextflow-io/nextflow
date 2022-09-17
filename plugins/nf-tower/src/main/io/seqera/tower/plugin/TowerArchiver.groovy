@@ -34,8 +34,8 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.file.FileHelper
-import nextflow.file.FileTransferPool
 import nextflow.util.Duration
+import nextflow.util.ThreadPoolManager
 /**
  * This class stores all nextflow task '.command.*' files and pipeline reports
  *  into a storage path specified via the NXF_ARCHIVE_DIR env variable
@@ -59,12 +59,13 @@ class TowerArchiver {
     private Duration maxAwait
     private String retryReason
     private ExecutorService executor
+    private ThreadPoolManager poolManager = new ThreadPoolManager('TowerArchiver')
 
     Path getBaseDir() { baseDir }
 
     Path getTargetDir() { targetDir }
 
-    protected TowerArchiver(Path baseDir, Path targetDir, Session session, Map<String,String> env=null, ExecutorService executor=null) {
+    protected TowerArchiver(Path baseDir, Path targetDir, Session session, Map<String,String> env=null) {
         log.debug "Creating tower archiver for base-dir: '$baseDir'; target-dir: '$targetDir'"
         this.baseDir = baseDir
         this.targetDir = targetDir
@@ -75,16 +76,16 @@ class TowerArchiver {
         this.jitter = session.config.navigate('tower.archiver.jitter', '0.25') as Double
         this.maxAwait = session.config.navigate('tower.archiver.shutdown.maxAwait', '1h') as Duration
         this.retryReason = session.config.navigate('tower.archiver.shutdown.retryReason', RETRY_REASON) as String
-        this.executor = executor!=null ? executor : FileTransferPool.getExecutorService()
+        this.executor = poolManager.withConfig(session.config).create()
         if( env!=null )
             this.env = env
     }
 
-    static TowerArchiver create(Session session, Map<String,String> env, ExecutorService executor=null) {
+    static TowerArchiver create(Session session, Map<String,String> env) {
         final paths = parse(env.get('NXF_ARCHIVE_DIR'))
         if( !paths )
             return null
-        final result = new TowerArchiver(Path.of(paths[0]), FileHelper.asPath(paths[1]), session, env, executor)
+        final result = new TowerArchiver(Path.of(paths[0]), FileHelper.asPath(paths[1]), session, env)
         return result
     }
 
@@ -233,4 +234,7 @@ class TowerArchiver {
         return Failsafe.with(policy).get(action)
     }
 
+    void shutdown(Session session) {
+        poolManager.shutdown(session)
+    }
 }

@@ -39,6 +39,8 @@ import nextflow.exception.ProcessStageException
 import nextflow.extension.FilesEx
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
+import nextflow.util.ThreadPoolManager
+
 /**
  * Move foreign (ie. remote) files to the staging work area
  *
@@ -57,7 +59,7 @@ class FilePorter {
 
     final Map<Path,FileTransfer> stagingTransfers = new HashMap<>()
 
-    @Lazy private ExecutorService threadPool = FileTransferPool.getExecutorService()
+    private ExecutorService threadPool
 
     private Duration pollTimeout
 
@@ -69,6 +71,9 @@ class FilePorter {
         this.session = session
         maxRetries = session.config.navigate('filePorter.maxRetries') as Integer ?: MAX_RETRIES
         pollTimeout = session.config.navigate('filePorter.pollTimeout') as Duration ?: POLL_TIMEOUT
+        threadPool = new ThreadPoolManager('FileTransfer')
+                .withConfig(session.config)
+                .createAndRegisterShutdownCallback(session)
     }
 
     Batch newBatch(Path stageDir) { new Batch(stageDir) }

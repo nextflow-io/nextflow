@@ -49,6 +49,7 @@ import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
+import nextflow.util.ThreadPoolManager
 import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
@@ -637,6 +638,8 @@ class Session implements ISession {
     void destroy() {
         try {
             log.trace "Session > destroying"
+            // shutdown publish dir executor
+            publishPoolManager.shutdown(aborted)
             // invoke shutdown callbacks
             shutdown0()
             log.trace "Session > after cleanup"
@@ -1351,6 +1354,15 @@ class Session implements ISession {
 
     void printConsole(Path file) {
         ansiLogObserver ? ansiLogObserver.appendInfo(file.text) : Files.copy(file, System.out)
+    }
+
+    private ThreadPoolManager publishPoolManager = new ThreadPoolManager('PublishDir')
+
+    @Memoized
+    synchronized ExecutorService publishDirExecutorService() {
+        return publishPoolManager
+                .withConfig(config)
+                .create()
     }
 
 }

@@ -22,7 +22,6 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.Session
-import nextflow.file.FileTransferPool
 import spock.lang.Specification
 import test.TestHelper
 /**
@@ -179,8 +178,8 @@ class PublishDirTest extends Specification {
         ] as Set
         def publisher = new PublishDir(path: publishDir, mode: 'copy')
         publisher.apply( outputs, task )
-
-        FileTransferPool.shutdown(false)
+        and:
+        session.@publishPoolManager.shutdown(false)
 
         then:
         publishDir.resolve('file1.txt').text == 'aaa'
