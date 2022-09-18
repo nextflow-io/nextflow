@@ -146,7 +146,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected List<String> classicSubmitCli(TaskRun task) {
-        new ArrayList(BashWrapperBuilder.BASH) << "${Escape.path(task.workDir)}/${TaskRun.CMD_RUN}".toString()
+        final result = new ArrayList(BashWrapperBuilder.BASH)
+        result.add("${Escape.path(task.workDir)}/${TaskRun.CMD_RUN}")
+        return result
     }
 
     protected List<String> getSubmitCommand(TaskRun task) {
