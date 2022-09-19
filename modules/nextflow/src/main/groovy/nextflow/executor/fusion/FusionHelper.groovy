@@ -50,6 +50,7 @@ class FusionHelper {
         final engine = containerConfig.getEngine()
         final containerBuilder = ContainerBuilder.create(engine, containerName)
                 .addMountWorkDir(false)
+                .addRunOptions('--rm')
                 .params(containerConfig)
                 .params(privileged: true)
 

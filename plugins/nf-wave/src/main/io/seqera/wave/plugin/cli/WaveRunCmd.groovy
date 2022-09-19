@@ -65,9 +65,10 @@ class WaveRunCmd {
     void runContainer(String image, List<String> args=Collections.emptyList()) {
         final containerConfig = session.getContainerConfig()
         final containerBuilder = new DockerBuilder(image)
+                .addMountWorkDir(false)
+                .addRunOptions('--rm')
                 .params(containerConfig)
                 .params(containerParams)
-                .addMountWorkDir(false)
 
         // add env variables
         environment.addAll( containerConfig.getEnvWhitelist() )
