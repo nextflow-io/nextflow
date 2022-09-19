@@ -912,7 +912,7 @@ class BashWrapperBuilderTest extends Specification {
         def binding = builder.makeBinding()
         then:
         builder.fixOwnership() >> true
-        binding.fix_ownership == '[ ${NXF_OWNER:=\'\'} ] && chown -fR --from root $NXF_OWNER /work/dir/{*,.*} || true'
+        binding.fix_ownership == '[ ${NXF_OWNER:=\'\'} ] && chown -fR $NXF_OWNER /work/dir/{*,.*} || true'
 
 
         when:
