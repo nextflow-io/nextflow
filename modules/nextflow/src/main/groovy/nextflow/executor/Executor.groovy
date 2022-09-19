@@ -54,7 +54,9 @@ abstract class Executor {
 
     TaskMonitor getMonitor() { monitor }
 
-    protected String getDisplayName() { name }
+    protected String getDisplayName() {
+        return fusionEnabled ? "$name (fusion enabled)" : name
+    }
 
     /**
      * Allows to post-initialize the executor
