@@ -1,5 +1,21 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.09.4-edge - 19 Sep 2022
+- Add Fusion display name [f789d457]
+- Add container cleanup [cd2ae7dc]
+- Add Wave interactive debug session [ce7fa651]
+- Add support for wave build and cache repositories[692043ff]
+- Add shutdown to Google Batch client  [8f413cf7]
+- Add native_id to Google Batch handler [352b4239]
+- Add java sts library to enable use of IRSA in k8s (#3207) [62df42c3] <Vishwas>
+- Add support for module custon bin dirs [77f55262]
+- Add support for tower token to wave client [928d5b04]
+- Update CLI docs (#3200) [8acebee6] <Marcel Ribeiro Dantas>
+- Fix issue with empty report file [9cc4f079]
+- Do not return resource bundle for root module [775c7ed9]
+- Improve tower config [ee03c243]
+- Bump groovy 3.0.13 [4a17e198]
+
 22.09.3-edge - 10 Sep 2022
 - Add fusion support to K8s executor (#3142) [6bb27b32]
 - Fix shutdown/cleanup hooks invocation [f4185070]
