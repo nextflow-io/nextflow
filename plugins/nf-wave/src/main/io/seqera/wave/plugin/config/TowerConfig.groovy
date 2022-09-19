@@ -40,7 +40,7 @@ class TowerConfig {
         // https://github.com/nextflow-io/nextflow/blob/master/plugins/nf-tower/src/main/io/seqera/tower/plugin/TowerClient.groovy#L369-L377
         def token = env.get('TOWER_WORKFLOW_ID')
                 ? env.get('TOWER_ACCESS_TOKEN')
-                : opts.accessToken as String ?: env.get('TOWER_ACCESS_TOKEN')
+                : opts.containsKey('accessToken') ? opts.accessToken as String : env.get('TOWER_ACCESS_TOKEN')
         return token
     }
 
