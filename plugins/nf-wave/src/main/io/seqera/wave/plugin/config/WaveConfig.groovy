@@ -44,8 +44,8 @@ class WaveConfig {
         this.containerConfigUrl = parseConfig(opts, env)
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '15m') as Duration
         this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
-        this.buildRepository = opts.navigate('build.repo') as String
-        this.cacheRepository = opts.navigate('build.cache') as String
+        this.buildRepository = opts.navigate('build.repository') as String
+        this.cacheRepository = opts.navigate('build.cacheRepository') as String
         this.strategy = parseStrategy(opts.strategy)
         this.bundleProjectResources = opts.bundleProjectResources
         if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
