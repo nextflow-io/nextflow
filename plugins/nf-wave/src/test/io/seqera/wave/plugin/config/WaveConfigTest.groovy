@@ -105,7 +105,7 @@ class WaveConfigTest extends Specification {
         opts.cacheRepository() == null
 
         when:
-        opts = new WaveConfig([build:[repo:'some/repo',cache:'some/cache']])
+        opts = new WaveConfig([build:[repository:'some/repo', cacheRepository:'some/cache']])
         then:
         opts.buildRepository() == 'some/repo'
         opts.cacheRepository() == 'some/cache'
