@@ -22,6 +22,7 @@ import java.nio.file.Path
 import java.nio.file.attribute.FileTime
 
 import groovy.json.JsonSlurper
+import io.seqera.wave.plugin.cli.WaveCmdEntry
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import org.junit.Rule
@@ -34,7 +35,7 @@ import test.OutputCapture
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class WaveCmdTest extends Specification implements TarHelper {
+class WaveCmdEntryTest extends Specification implements TarHelper {
 
     @Shared
     @TempDir
@@ -61,7 +62,7 @@ class WaveCmdTest extends Specification implements TarHelper {
             FilesEx.setPermissionsMode(it, mode)
         })
         and:
-        def cmd = new WaveCmd()
+        def cmd = new WaveCmdEntry()
 
         when:
         def result = cmd.packContainer( [rootPath.toString()] )
@@ -89,7 +90,7 @@ class WaveCmdTest extends Specification implements TarHelper {
     @Unroll
     def 'should find base name' () {
         expect:
-        WaveCmd.baseName(PATH) == EXPECTED
+        WaveCmdEntry.baseName(PATH) == EXPECTED
 
         where:
         PATH                        | EXPECTED

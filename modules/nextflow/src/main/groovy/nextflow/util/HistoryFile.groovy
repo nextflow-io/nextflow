@@ -221,7 +221,7 @@ class HistoryFile extends File {
     List<Record> findByIdOrName( String str ) {
         if( str == 'last' ) {
             def entry = getLast()
-            return entry ? [entry] : Collections.emptyList()
+            return entry ? [entry] : Collections.<Record>emptyList()
         }
 
         if( isUuidString(str) )
@@ -229,7 +229,7 @@ class HistoryFile extends File {
 
         else {
             def entry = getByName(str)
-            return entry ? [entry] : Collections.emptyList()
+            return entry ? [entry] : Collections.<Record>emptyList()
         }
 
     }

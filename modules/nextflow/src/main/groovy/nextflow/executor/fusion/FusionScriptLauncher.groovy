@@ -17,13 +17,13 @@
 
 package nextflow.executor.fusion
 
+import static nextflow.executor.fusion.FusionHelper.*
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.executor.BashWrapperBuilder
-import nextflow.extension.FilesEx
-import nextflow.io.BucketParser
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
 import nextflow.util.Escape
@@ -80,20 +80,6 @@ class FusionScriptLauncher extends BashWrapperBuilder {
 
     static protected String headerScript(TaskBean bean) {
         return "NXF_CHDIR=${Escape.path(bean.workDir)}\n"
-    }
-
-    static protected Path toContainerMount(Path path, String scheme, Set<String> buckets) {
-        if( path == null )
-            return null
-
-        final p = BucketParser.from( FilesEx.toUriString(path) )
-
-        if( p.scheme != scheme )
-            throw new IllegalArgumentException("Unexpected path for Fusion script launcher: ${path.toUriString()}")
-
-        final result = "/fusion/$p.scheme/${p.bucket}${p.path}"
-        buckets.add(p.bucket)
-        return Path.of(result)
     }
 
     Path toContainerMount(Path path) {

@@ -15,7 +15,7 @@
  *
  */
 
-package io.seqera.wave.plugin.packer
+package io.seqera.wave.plugin.cli
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -24,10 +24,9 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.wave.plugin.ContainerConfig
-import io.seqera.wave.plugin.WaveClient
+import io.seqera.wave.plugin.packer.Packer
 import io.seqera.wave.plugin.util.BasicCliOpts
 import nextflow.cli.PluginAbstractExec
-import nextflow.container.DockerBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.io.BucketParser
 /**
@@ -37,22 +36,25 @@ import nextflow.io.BucketParser
  */
 @Slf4j
 @CompileStatic
-class WaveCmd implements PluginAbstractExec {
+class WaveCmdEntry implements PluginAbstractExec {
 
-    List<String> getCommands() {  ['get-container','run-container', 'pack'] }
+    List<String> getCommands() {  ['get-container','run-container', 'debug-task', 'pack'] }
 
     @Override
     int exec(String cmd, List<String> args) {
 
         switch (cmd) {
             case 'get-container':
-                getContainer(args)
+                new WaveRunCmd(session).getContainer(args)
                 break
             case 'run-container':
-                runContainer(args)
+                new WaveRunCmd(session).runContainer(args)
                 break
             case 'pack':
                 println packContainer(args)
+                break
+            case 'debug-task':
+                new WaveDebugCmd(session).taskDebug(args)
                 break
             default:
                 throw new AbortOperationException("Unknown wave command: $cmd")
@@ -104,48 +106,6 @@ class WaveCmd implements PluginAbstractExec {
                 .replaceAll(/\.gzip$/,'')
                 .replaceAll(/\.tar$/,'')
                 .replaceAll(/\.json$/,'')
-    }
-
-    protected void getContainer(List<String> args) {
-        if( !args )
-            throw new AbortOperationException("Missing container image - usage: nextflow plugin exec nf-wave get-container <image>")
-        final image = args.pop()
-        final target = resolveTargetImage(image)
-        log.info """\
-                Source container: $image
-                Waved  container: $target""".stripIndent()
-    }
-
-    protected void runContainer(List<String> args) {
-        if( !args )
-            throw new AbortOperationException("Missing container image - usage: nextflow plugin exec nf-wave container-run <image>")
-        final image = args.pop()
-        final target = resolveTargetImage(image)
-        log.info "Resolved image: '$image' => '$target'"
-        final containerConfig = getSession().getContainerConfig()
-        final containerBuilder = new DockerBuilder(target)
-                .params(containerConfig)
-        // add env variables
-        for( String env : containerConfig.getEnvWhitelist())
-            containerBuilder.addEnv(env)
-        // assemble the final command
-        final containerCmd = containerBuilder
-                .build()
-                .getRunCommand(args.join(' '))
-
-        log.info "Running: $containerCmd"
-        final process = new ProcessBuilder()
-                .command(['sh','-c',containerCmd])
-                .directory(Path.of(".").toFile())
-                .inheritIO()
-                .start()
-
-        process.waitFor()
-    }
-
-    protected String resolveTargetImage(String image) {
-        final resp = new WaveClient(session).sendRequest(image)
-        return resp?.targetImage
     }
 
 }
