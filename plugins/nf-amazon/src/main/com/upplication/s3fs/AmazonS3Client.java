@@ -242,7 +242,7 @@ public class AmazonS3Client {
 			log.trace("S3 CopyObject request {}", req);
 		}
 
-		transferManager().copy(req);
+		client.copyObject(req);
 	}
 
 	/**
