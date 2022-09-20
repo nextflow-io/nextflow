@@ -1,5 +1,11 @@
 nf-amazon changelog
 ===================
+1.10.5 - 20 Sep 2022
+- Fix AWS S3 copy object [b3b90d23]
+
+1.10.4 - 13 Sep 2020
+- Add STS library to enable use of IRSA in EKS cluster [62df42c3]
+
 1.10.3 - 10 Sep 2022
 - S3 min upload size 5MB [9926d15d]
 - Use smaller buffer size for s3 stream uploader [8c643074]
