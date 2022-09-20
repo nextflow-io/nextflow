@@ -231,10 +231,10 @@ class K8sConfig implements Map<String,Object> {
 
         // create or discover client credentials
         if( result.clientCert && result.clientKey ) {
-            result.keyManagers = ConfigDiscovery.createKeyManagers(result.clientCert, result.clientKey)
+            result.keyManagers = ConfigDiscovery.getInstance().createKeyManagers(result.clientCert, result.clientKey)
         }
         else if( !result.token ) {
-            result.token = ConfigDiscovery.discoverAuthToken(result.namespace, result.serviceAccount)
+            result.token = ConfigDiscovery.getInstance().discoverAuthToken(result.namespace, result.serviceAccount)
         }
 
         return result
@@ -245,7 +245,7 @@ class K8sConfig implements Map<String,Object> {
     }
 
     @PackageScope ClientConfig clientDiscovery( String ctx ) {
-        ConfigDiscovery.discover(ctx)
+        ConfigDiscovery.getInstance().discover(ctx)
     }
 
     void checkStorageAndPaths(K8sClient client) {

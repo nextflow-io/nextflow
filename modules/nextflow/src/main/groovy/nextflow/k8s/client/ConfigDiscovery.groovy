@@ -34,10 +34,14 @@ import org.yaml.snakeyaml.Yaml
 @Slf4j
 class ConfigDiscovery {
 
+    static final ConfigDiscovery instance = new ConfigDiscovery()
+
+    static ConfigDiscovery getInstance() { instance }
+
     /**
      * Discover Kubernetes service from current environment settings
      */
-    static ClientConfig discover(String context=null) {
+    ClientConfig discover(String context=null) {
 
         // Note: System.getProperty('user.home') may not report the correct home path when
         // running in a container. Use env HOME instead.
@@ -63,7 +67,7 @@ class ConfigDiscovery {
         throw new IllegalStateException("Unable to lookup Kubernetes cluster configuration")
     }
 
-    static protected ClientConfig fromCluster(Map<String,String> env) {
+    protected ClientConfig fromCluster(Map<String,String> env) {
 
         // See https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#accessing-the-api-from-a-pod
 
@@ -71,14 +75,18 @@ class ConfigDiscovery {
         final port = env.get('KUBERNETES_SERVICE_PORT')
         final server = host + ( port ? ":$port" : '' )
 
-        final cert = Paths.get('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt').bytes
-        final token = Paths.get('/var/run/secrets/kubernetes.io/serviceaccount/token').text
-        final namespace = Paths.get('/var/run/secrets/kubernetes.io/serviceaccount/namespace').text
+        final cert = path('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt').bytes
+        final token = path('/var/run/secrets/kubernetes.io/serviceaccount/token').text
+        final namespace = path('/var/run/secrets/kubernetes.io/serviceaccount/namespace').text
 
         new ClientConfig( server: server, token: token, namespace: namespace, sslCert: cert, isFromCluster: true )
     }
 
-    static protected ClientConfig fromConfig(Path path, String contextName=null) {
+    protected Path path(String path) {
+        Paths.get(path)
+    }
+
+    protected ClientConfig fromConfig(Path path, String contextName=null) {
         def yaml = (Map)new Yaml().load(Files.newInputStream(path))
 
         contextName = contextName ?: yaml."current-context" as String
@@ -103,13 +111,13 @@ class ConfigDiscovery {
         return config
     }
 
-    static protected KeyStore createKeyStore0(byte[] clientCert, byte[] clientKey, char[] passphrase, String alg) {
+    protected KeyStore createKeyStore0(byte[] clientCert, byte[] clientKey, char[] passphrase, String alg) {
         def cert = new ByteArrayInputStream(clientCert)
         def key = new ByteArrayInputStream(clientKey)
         return SSLUtils.createKeyStore(cert, key, alg, passphrase, null, null)
     }
 
-    static protected KeyStore createKeyStore(byte[] clientCert, byte[] clientKey, char[] passphrase) {
+    protected KeyStore createKeyStore(byte[] clientCert, byte[] clientKey, char[] passphrase) {
         try {
             // try first RSA algorithm
             return createKeyStore0(clientCert, clientKey, passphrase, "RSA")
@@ -126,7 +134,7 @@ class ConfigDiscovery {
         }
     }
 
-    static KeyManager[] createKeyManagers(byte[] clientCert, byte[] clientKey) {
+    KeyManager[] createKeyManagers(byte[] clientCert, byte[] clientKey) {
         final passphrase = "".toCharArray()
         final keyStore = createKeyStore(clientCert, clientKey, passphrase)
         final kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
@@ -134,7 +142,7 @@ class ConfigDiscovery {
         return kmf.getKeyManagers();
     }
 
-    static String discoverAuthToken(String namespace, String serviceAccount) {
+    String discoverAuthToken(String namespace, String serviceAccount) {
         def cmd = "kubectl -n ${namespace} get secret `kubectl -n ${namespace} get serviceaccount ${serviceAccount} -o jsonpath='{.secrets[0].name}'` -o jsonpath='{.data.token}'"
         def proc = new ProcessBuilder('bash','-o','pipefail','-c', cmd).redirectErrorStream(true).start()
         def status = proc.waitFor()

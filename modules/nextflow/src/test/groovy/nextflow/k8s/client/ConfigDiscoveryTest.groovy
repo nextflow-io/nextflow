@@ -18,7 +18,6 @@
 package nextflow.k8s.client
 import javax.net.ssl.KeyManager
 import java.nio.file.Files
-import java.nio.file.Paths
 
 import spock.lang.Specification
 import test.TestHelper
@@ -61,8 +60,10 @@ class ConfigDiscoveryTest extends Specification {
             """
             .stripIndent()
 
+        def discovery = Spy(ConfigDiscovery)
+
         when:
-        def config = ConfigDiscovery.fromConfig(CONFIG)
+        def config = discovery.fromConfig(CONFIG)
         then:
         config.server == 'https://localhost:6443'
         config.token == null
@@ -108,8 +109,10 @@ class ConfigDiscoveryTest extends Specification {
             """
                 .stripIndent()
 
+        def discovery = Spy(ConfigDiscovery)
+
         when:
-        def config = ConfigDiscovery.fromConfig(CONFIG)
+        def config = discovery.fromConfig(CONFIG)
         then:
         config.server == 'https://localhost:6443'
         config.token == null
@@ -152,8 +155,10 @@ class ConfigDiscoveryTest extends Specification {
             """
                 .stripIndent()
 
+        def discovery = Spy(ConfigDiscovery)
+
         when:
-        def config = ConfigDiscovery.fromConfig(CONFIG)
+        def config = discovery.fromConfig(CONFIG)
         then:
         config.server == 'https://localhost:6443'
         config.token == '90s090s98s7f8s'
@@ -215,7 +220,7 @@ class ConfigDiscoveryTest extends Specification {
         '''.stripIndent()
 
         when:
-        def cfg1 = ConfigDiscovery.fromConfig(CONFIG, 'dev-frontend')
+        def cfg1 = ConfigDiscovery.getInstance().fromConfig(CONFIG, 'dev-frontend')
         then:
         cfg1.server == 'https://1.2.3.4'
         cfg1.sslCert == 'fake-ca-content'.bytes
@@ -224,7 +229,7 @@ class ConfigDiscoveryTest extends Specification {
         cfg1.clientCert == 'fake-cert-content'.bytes
 
         when:
-        def cfg2 = ConfigDiscovery.fromConfig(CONFIG, 'dev-storage')
+        def cfg2 = ConfigDiscovery.getInstance().fromConfig(CONFIG, 'dev-storage')
         then:
         cfg2.server == 'https://1.2.3.4'
         cfg2.sslCert == 'fake-ca-content'.bytes
@@ -233,7 +238,7 @@ class ConfigDiscoveryTest extends Specification {
         cfg2.clientCert == 'fake-cert-content'.bytes
 
         when:
-        def cfg3 = ConfigDiscovery.fromConfig(CONFIG, 'exp-scratch')
+        def cfg3 = ConfigDiscovery.getInstance().fromConfig(CONFIG, 'exp-scratch')
         then:
         cfg3.server == 'https://5.6.7.8'
         cfg3.sslCert == null
@@ -241,7 +246,7 @@ class ConfigDiscoveryTest extends Specification {
         cfg3.namespace == 'default'
 
         when:
-        ConfigDiscovery.fromConfig(CONFIG, 'foo')
+        ConfigDiscovery.getInstance().fromConfig(CONFIG, 'foo')
         then:
         thrown(IllegalArgumentException)
 
@@ -256,18 +261,15 @@ class ConfigDiscoveryTest extends Specification {
         def TOKEN_FILE = TestHelper.createInMemTempFile('token'); TOKEN_FILE.text = 'my-token'
         def NAMESPACE_FILE = TestHelper.createInMemTempFile('namespace'); NAMESPACE_FILE.text = 'foo-namespace'
 
-        Paths.metaClass.static.get = { String path ->
-            [
-                '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt': CERT_FILE,
-                '/var/run/secrets/kubernetes.io/serviceaccount/token': TOKEN_FILE,
-                '/var/run/secrets/kubernetes.io/serviceaccount/namespace': NAMESPACE_FILE
-            ][path]
-        }
-        ConfigDiscovery.metaClass.static.createKeyManagers = { null }
+        def discovery = Spy(ConfigDiscovery)
 
         when:
-        def config = ConfigDiscovery.fromCluster([ KUBERNETES_SERVICE_HOST: 'foo.com', KUBERNETES_SERVICE_PORT: '4343' ])
+        def config = discovery.fromCluster([ KUBERNETES_SERVICE_HOST: 'foo.com', KUBERNETES_SERVICE_PORT: '4343' ])
         then:
+        1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt') >> CERT_FILE
+        1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/token') >> TOKEN_FILE
+        1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/namespace') >> NAMESPACE_FILE
+        0 * discovery.createKeyManagers(_, _) >> null
         config.server == 'foo.com:4343'
         config.namespace == 'foo-namespace'
         config.token == 'my-token'
@@ -275,8 +277,11 @@ class ConfigDiscoveryTest extends Specification {
         config.isFromCluster
 
         when:
-        config = ConfigDiscovery.fromCluster([ KUBERNETES_SERVICE_HOST: 'https://host.com' ])
+        config = discovery.fromCluster([ KUBERNETES_SERVICE_HOST: 'https://host.com' ])
         then:
+        1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt') >> CERT_FILE
+        1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/token') >> TOKEN_FILE
+        1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/namespace') >> NAMESPACE_FILE
         config.server == 'https://host.com'
     }
 
@@ -285,7 +290,7 @@ class ConfigDiscoveryTest extends Specification {
         final CERT = 'LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNTRENDQVRDZ0F3SUJBZ0lJRlFsM1l2Y2k1TWN3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB4T0RBeE1UTXlNREEyTlRaYUZ3MHhPVEF4TVRNeU1EQTJOVFphTURNeApGREFTQmdOVkJBb1RDMFJ2WTJ0bGNpQkpibU11TVJzd0dRWURWUVFERXhKa2IyTnJaWEl0Wm05eUxXUmxjMnQwCmIzQXdnWjh3RFFZSktvWklodmNOQVFFQkJRQURnWTBBTUlHSkFvR0JBUEtYT0ZsV2t2THIzb29ETGNFOElyME0KTzNBMHZqQlVvUzZ0bUdBbFRYYTd0QWQwM3BTMXNJNit0WVRwVlU2YXR6ZU9vU0VrOWhmaWxBdVNYdG1hSHZCUAp1czFEcG1LZEZRMWI3OFRkSnQ4OGV3c3BRajFxYUwvQldHeitMUzUrRHUrNUJuUGtmZlhDS1UxQTdUc2tZamJyClhxeDhlN2FWZURWTmFjZXc0Z0RqQWdNQkFBR2pBakFBTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFBMXVtVlAKR29EZTVCRXJrb21qWXdITXhiTTd4UStibTYrUDE1T0pINUo0UGNQeU11d25ocC9ORVp1NnpsTTZSUUo3SUNKQgpHWTRBMnFKVmJsWUkwQkJzRkF1TXMreTAyazdVVVVoK0NRYVd0SXhBcFNmbkQ4dUVXQ0g5VE1ZNGdLbTZjTDhVCk1OVVl1RnpUQ2hmTS96RjdUMXVaZWxJYXNrYXFaWSt3a3hxa3YyRUQxQ2F5MDUxSXRWRXZVbDIvSVZyVHdrT20KZ25nL3Q4L2RkeDhpOUkzTFJrMTlTaERKdXlQZ1NrTTZRSWlSd09mRHk4V0ZFaURpd0hBS0ErSEZhTGhOOFJTMwpieDUvdEhEN01id0FpdnorNTU4YUFEQjNEd1ZpekthM2d5Wm4yUzRjUGFqZnNwODFqRkNIQS9QekdQdTU2MzJwCkxRN0gyRW1aYmJuUHFYTFgKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo='.decodeBase64()
         final KEY = 'LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlDWGdJQkFBS0JnUUR5bHpoWlZwTHk2OTZLQXkzQlBDSzlERHR3Tkw0d1ZLRXVyWmhnSlUxMnU3UUhkTjZVCnRiQ092cldFNlZWT21yYzNqcUVoSlBZWDRwUUxrbDdabWg3d1Q3ck5RNlppblJVTlcrL0UzU2JmUEhzTEtVSTkKYW1pL3dWaHMvaTB1Zmc3dnVRWno1SDMxd2lsTlFPMDdKR0kyNjE2c2ZIdTJsWGcxVFduSHNPSUE0d0lEQVFBQgpBb0dBYWRUOCtVU2lvU1d6bFVRanZ1eHNQMHRKMXY2N2hqdzFnVGFzaGkxZjZRK2tUNmgxdml5eGxPU3dMZ2JaCmQ0eFpwL3dxWVZwTm5rZnp6RVNUNnB5cEo5WTEwdHY1cFpSWG9HbG1NT2tIZSswUW45N0c5ZDRzL2JCV3lmYXYKRzhRTC9tZFN6Vy85YUdrSkpiNWU0VDlsSURvRDNFVDgwYUFWbzl2V0NPVUxsdWtDUVFEK0hINU5ucVBuSTdnTApWOUJKZzlRRVBwUTVYa2traW8rejZ2YkRHQU5rR1VPV1dmRURKUHE2Q2JBb1dqeWh1Qy9KS1dYRWs4Rkt0M1Y2CkhVNllYeVpGQWtFQTlHVE9XOFM4KzVNNHE5R3lNeURxN1ZkVHA3M2daeSsvNjVQam5hNlpDUnhTZklxL2xKUVoKY2F6MkhGYVRzRFdLbkdhWGNxTmdBVXNEODNyWTlzM3hCd0pCQUt5Vjc1YUtPMm0rRWI3cWVsV2p5bmpEZytwZQp4akNpUnkxOFZQSjJPYjlmaFU3MWNVS2dlQVdvbE5NalRuREw1dkNxUkNzNTZ4cnk5VC9sN2I2QlNUMENRUURnCjRoV2xDZTdnQzhOZEQzTkxhdUhpRGJZenB4dmp0Mk9Ca2E4ai9ISmptTVVxUnI0dEtPNFUxUlFPVlhoRzc2MmgKWnlHNjRpeklZOCs1N3ZQUWZ3Wm5Ba0VBdW9RWW1lUi90UWhIakhRNFlhZGRHbkNBQ2hZZ29ObEFzSGhGTElxVQo1ZTZaMXN2Q3VKU285TDVVRCtrclFUYWlGU01pRHZwZlJyVE1ZKzZ5Q0tTajd3PT0KLS0tLS1FTkQgUlNBIFBSSVZBVEUgS0VZLS0tLS0K'.decodeBase64()
         when:
-        def managers = ConfigDiscovery.createKeyManagers(CERT, KEY)
+        def managers = ConfigDiscovery.getInstance().createKeyManagers(CERT, KEY)
         then:
         managers.size()==1
     }
@@ -295,7 +300,7 @@ class ConfigDiscoveryTest extends Specification {
         final CERT = 'LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNTRENDQVRDZ0F3SUJBZ0lJRlFsM1l2Y2k1TWN3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB4T0RBeE1UTXlNREEyTlRaYUZ3MHhPVEF4TVRNeU1EQTJOVFphTURNeApGREFTQmdOVkJBb1RDMFJ2WTJ0bGNpQkpibU11TVJzd0dRWURWUVFERXhKa2IyTnJaWEl0Wm05eUxXUmxjMnQwCmIzQXdnWjh3RFFZSktvWklodmNOQVFFQkJRQURnWTBBTUlHSkFvR0JBUEtYT0ZsV2t2THIzb29ETGNFOElyME0KTzNBMHZqQlVvUzZ0bUdBbFRYYTd0QWQwM3BTMXNJNit0WVRwVlU2YXR6ZU9vU0VrOWhmaWxBdVNYdG1hSHZCUAp1czFEcG1LZEZRMWI3OFRkSnQ4OGV3c3BRajFxYUwvQldHeitMUzUrRHUrNUJuUGtmZlhDS1UxQTdUc2tZamJyClhxeDhlN2FWZURWTmFjZXc0Z0RqQWdNQkFBR2pBakFBTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFBMXVtVlAKR29EZTVCRXJrb21qWXdITXhiTTd4UStibTYrUDE1T0pINUo0UGNQeU11d25ocC9ORVp1NnpsTTZSUUo3SUNKQgpHWTRBMnFKVmJsWUkwQkJzRkF1TXMreTAyazdVVVVoK0NRYVd0SXhBcFNmbkQ4dUVXQ0g5VE1ZNGdLbTZjTDhVCk1OVVl1RnpUQ2hmTS96RjdUMXVaZWxJYXNrYXFaWSt3a3hxa3YyRUQxQ2F5MDUxSXRWRXZVbDIvSVZyVHdrT20KZ25nL3Q4L2RkeDhpOUkzTFJrMTlTaERKdXlQZ1NrTTZRSWlSd09mRHk4V0ZFaURpd0hBS0ErSEZhTGhOOFJTMwpieDUvdEhEN01id0FpdnorNTU4YUFEQjNEd1ZpekthM2d5Wm4yUzRjUGFqZnNwODFqRkNIQS9QekdQdTU2MzJwCkxRN0gyRW1aYmJuUHFYTFgKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo='.decodeBase64()
         final KEY = 'LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JR0hBZ0VBTUJNR0J5cUdTTTQ5QWdFR0NDcUdTTTQ5QXdFSEJHMHdhd0lCQVFRZ21aZFZ3NmJRU0w1T1l5RjQKbzJ4V0hUQ05BSW1hRTkycGd2dGMzK2Z2UDVxaFJBTkNBQVJSd0RpUVptTUNqcWxvbFBzRTdiZjgwWjhrZkRXTworS2U4NUdVSll2MlBubWVxbDhkYjdwcmFlMHFPQUJaaXR2Mmh2SmJFeFdsUFR0MS9CYTNMK1B5NAotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tCg=='.decodeBase64()
         when:
-        def managers = ConfigDiscovery.createKeyManagers(CERT, KEY)
+        def managers = ConfigDiscovery.getInstance().createKeyManagers(CERT, KEY)
         then:
         managers.size()==1
     }
