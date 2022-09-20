@@ -18,6 +18,7 @@
 package nextflow.k8s.client
 import javax.net.ssl.KeyManager
 import java.nio.file.Files
+import java.nio.file.Paths
 
 import spock.lang.Specification
 import test.TestHelper
@@ -255,7 +256,7 @@ class ConfigDiscoveryTest extends Specification {
         def TOKEN_FILE = TestHelper.createInMemTempFile('token'); TOKEN_FILE.text = 'my-token'
         def NAMESPACE_FILE = TestHelper.createInMemTempFile('namespace'); NAMESPACE_FILE.text = 'foo-namespace'
 
-        ConfigDiscovery.metaClass.static.path = { String path ->
+        Paths.metaClass.static.get = { String path ->
             [
                 '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt': CERT_FILE,
                 '/var/run/secrets/kubernetes.io/serviceaccount/token': TOKEN_FILE,

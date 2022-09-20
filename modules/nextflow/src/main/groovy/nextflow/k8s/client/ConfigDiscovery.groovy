@@ -71,15 +71,11 @@ class ConfigDiscovery {
         final port = env.get('KUBERNETES_SERVICE_PORT')
         final server = host + ( port ? ":$port" : '' )
 
-        final cert = path('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt').bytes
-        final token = path('/var/run/secrets/kubernetes.io/serviceaccount/token').text
-        final namespace = path('/var/run/secrets/kubernetes.io/serviceaccount/namespace').text
+        final cert = Paths.get('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt').bytes
+        final token = Paths.get('/var/run/secrets/kubernetes.io/serviceaccount/token').text
+        final namespace = Paths.get('/var/run/secrets/kubernetes.io/serviceaccount/namespace').text
 
         new ClientConfig( server: server, token: token, namespace: namespace, sslCert: cert, isFromCluster: true )
-    }
-
-    static protected Path path(String path) {
-       Paths.get(path)
     }
 
     static protected ClientConfig fromConfig(Path path, String contextName=null) {
