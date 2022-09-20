@@ -17,6 +17,8 @@
 
 package nextflow.k8s
 
+import javax.net.ssl.KeyManager
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -229,23 +231,43 @@ class K8sConfig implements Map<String,Object> {
         if( target.httpReadTimeout )
             result.httpReadTimeout = target.httpReadTimeout as Duration
 
-        // create or discover client credentials
-        if( result.clientCert && result.clientKey ) {
-            result.keyManagers = ConfigDiscovery.getInstance().createKeyManagers(result.clientCert, result.clientKey)
+        if( !result.namespace )
+            result.namespace = 'default'
+
+        // use service account token if service account is specified
+        if( result.serviceAccount ) {
+            result.token = clientAuthToken(result.namespace, result.serviceAccount)
         }
+
+        // otherwise use keys for current user if specified
+        else if( result.clientCert && result.clientKey ) {
+            result.keyManagers = clientKeyManagers(result.clientCert, result.clientKey)
+        }
+
+        // otherwise use token for current user if specified
+        // otherwise use token for default service account
         else if( !result.token ) {
-            result.token = ConfigDiscovery.getInstance().discoverAuthToken(result.namespace, result.serviceAccount)
+            result.serviceAccount = 'default'
+            result.token = clientAuthToken(result.namespace, result.serviceAccount)
         }
 
         return result
     }
 
-    @PackageScope ClientConfig clientFromMap( Map map ) {
+    protected ClientConfig clientFromMap(Map map) {
         ClientConfig.fromMap(map)
     }
 
-    @PackageScope ClientConfig clientDiscovery( String ctx ) {
-        ConfigDiscovery.getInstance().discover(ctx)
+    protected ClientConfig clientDiscovery(String context) {
+        ConfigDiscovery.getInstance().discover(context)
+    }
+
+    protected KeyManager[] clientKeyManagers(byte[] clientCert, byte[] clientKey) {
+        ConfigDiscovery.getInstance().createKeyManagers(clientCert, clientKey)
+    }
+
+    protected String clientAuthToken(String namespace, String serviceAccount) {
+        ConfigDiscovery.getInstance().discoverAuthToken(namespace, serviceAccount)
     }
 
     void checkStorageAndPaths(K8sClient client) {

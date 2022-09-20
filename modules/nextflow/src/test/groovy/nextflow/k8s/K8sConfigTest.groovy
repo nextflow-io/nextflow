@@ -19,6 +19,7 @@ package nextflow.k8s
 
 import nextflow.Const
 import nextflow.k8s.client.ClientConfig
+import nextflow.k8s.client.ConfigDiscovery
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
@@ -133,21 +134,19 @@ class K8sConfigTest extends Specification {
 
         given:
         def CONFIG = [
-            namespace: 'this',
-            serviceAccount: 'that',
-            client: [server: 'http://foo', token: 'secret-token']
+            client: [server: 'http://foo']
         ]
+        def config = Spy(K8sConfig, constructorArgs: [ CONFIG ])
 
         when:
-        def config = new K8sConfig(CONFIG)
         def client = config.getClient()
         then:
+        1 * config.clientAuthToken('default', 'default') >> 'secret-token'
         client.server == 'http://foo'
-        client.namespace == 'this'
-        client.serviceAccount == 'that'
-        client.token == 'secret-token'
-        client.httpConnectTimeout == null // testing default null
-        client.httpReadTimeout == null // testing default null
+        client.namespace == 'default'
+        client.serviceAccount == 'default'
+        client.httpConnectTimeout == null
+        client.httpReadTimeout == null
 
     }
 
@@ -155,33 +154,49 @@ class K8sConfigTest extends Specification {
 
         given:
         def CONFIG = [
-                namespace: 'this',
-                serviceAccount: 'that',
-                client: [server: 'http://foo', token: 'secret-token'],
-                httpReadTimeout: '20s',
-                httpConnectTimeout: '25s' ]
+            client: [server: 'http://foo'],
+            httpConnectTimeout: '25s',
+            httpReadTimeout: '20s'
+        ]
+        def config = Spy(K8sConfig, constructorArgs: [ CONFIG ])
 
         when:
-        def config = new K8sConfig(CONFIG)
         def client = config.getClient()
         then:
+        1 * config.clientAuthToken('default', 'default') >> 'secret-token'
+        client.server == 'http://foo'
+        client.namespace == 'default'
+        client.serviceAccount == 'default'
+        client.httpConnectTimeout == Duration.of('25s')
+        client.httpReadTimeout == Duration.of('20s')
+
+    }
+
+    def 'should create client config with service account' () {
+
+        given:
+        def CONFIG = [
+            namespace: 'this',
+            serviceAccount: 'that',
+            client: [server: 'http://foo']
+        ]
+        def config = Spy(K8sConfig, constructorArgs: [ CONFIG ])
+
+        when:
+        def client = config.getClient()
+        then:
+        1 * config.clientAuthToken('this', 'that') >> 'secret-token'
         client.server == 'http://foo'
         client.namespace == 'this'
         client.serviceAccount == 'that'
-        client.token == 'secret-token'
-        client.httpConnectTimeout == Duration.of('25s')
-        client.httpReadTimeout == Duration.of('20s')
 
     }
 
     def 'should create client config with discovery' () {
 
         given:
-        def CONFIG = [
-            context: 'pizza',
-            serviceAccount: 'that'
-        ]
-        K8sConfig config = Spy(K8sConfig, constructorArgs: [ CONFIG ])
+        def CONFIG = [context: 'pizza']
+        def config = Spy(K8sConfig, constructorArgs: [ CONFIG ])
 
         when:
         def client = config.getClient()
@@ -189,7 +204,6 @@ class K8sConfigTest extends Specification {
         1 * config.clientDiscovery('pizza') >> new ClientConfig(namespace: 'foo', server: 'bar', token: 'secret-token')
         client.server == 'bar'
         client.namespace == 'foo'
-        client.serviceAccount == 'that'
         client.token == 'secret-token'
 
     }
