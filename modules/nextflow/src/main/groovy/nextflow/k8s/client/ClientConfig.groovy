@@ -93,10 +93,6 @@ class ClientConfig {
         cut(bytes.encodeBase64().toString())
     }
 
-    static ClientConfig discover(String context=null) {
-        new ConfigDiscovery(context: context).discover()
-    }
-
     static ClientConfig fromMap(Map map) {
         def result = new ClientConfig()
         if( map.server )

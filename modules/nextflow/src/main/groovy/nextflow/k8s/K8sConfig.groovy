@@ -24,6 +24,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.k8s.client.ClientConfig
+import nextflow.k8s.client.ConfigDiscovery
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.model.PodOptions
@@ -207,11 +208,13 @@ class K8sConfig implements Map<String,Object> {
     @Memoized
     ClientConfig getClient() {
 
+        // create or discover client config
         final result = ( target.client instanceof Map
                 ? clientFromMap(target.client as Map)
                 : clientDiscovery(target.context as String)
         )
 
+        // apply settings from nextflow k8s config
         if( target.namespace ) {
             result.namespace = target.namespace as String
         }
@@ -226,6 +229,14 @@ class K8sConfig implements Map<String,Object> {
         if( target.httpReadTimeout )
             result.httpReadTimeout = target.httpReadTimeout as Duration
 
+        // create or discover client credentials
+        if( result.clientCert && result.clientKey ) {
+            result.keyManagers = ConfigDiscovery.createKeyManagers(result.clientCert, result.clientKey)
+        }
+        else if( !result.token ) {
+            result.token = ConfigDiscovery.discoverAuthToken(result.namespace, result.serviceAccount)
+        }
+
         return result
     }
 
@@ -234,7 +245,7 @@ class K8sConfig implements Map<String,Object> {
     }
 
     @PackageScope ClientConfig clientDiscovery( String ctx ) {
-        ClientConfig.discover(ctx)
+        ConfigDiscovery.discover(ctx)
     }
 
     void checkStorageAndPaths(K8sClient client) {

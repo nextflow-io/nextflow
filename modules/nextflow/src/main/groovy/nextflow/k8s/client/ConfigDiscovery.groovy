@@ -34,27 +34,20 @@ import org.yaml.snakeyaml.Yaml
 @Slf4j
 class ConfigDiscovery {
 
-    private Map<String,String> env = System.getenv()
-
-    private ClientConfig config
-
-    private String context
-
     /**
      * Discover Kubernetes service from current environment settings
      */
-    ClientConfig discover() {
-
-        config = new ClientConfig()
+    static ClientConfig discover(String context=null) {
 
         // Note: System.getProperty('user.home') may not report the correct home path when
         // running in a container. Use env HOME instead.
+        def env = System.getenv()
         def home = System.getenv('HOME')
         def kubeConfig = env.get('KUBECONFIG') ? env.get('KUBECONFIG') : "$home/.kube/config"
         def configFile = Paths.get(kubeConfig)
 
         if( configFile.exists() ) {
-            return fromConfig(configFile)
+            return fromConfig(configFile, context)
         }
         else {
             log.debug "K8s config file does not exist: $configFile"
@@ -70,7 +63,7 @@ class ConfigDiscovery {
         throw new IllegalStateException("Unable to lookup Kubernetes cluster configuration")
     }
 
-    protected ClientConfig fromCluster(Map<String,String> env) {
+    static protected ClientConfig fromCluster(Map<String,String> env) {
 
         // See https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#accessing-the-api-from-a-pod
 
@@ -85,18 +78,19 @@ class ConfigDiscovery {
         new ClientConfig( server: server, token: token, namespace: namespace, sslCert: cert, isFromCluster: true )
     }
 
-    protected Path path(String path) {
+    static protected Path path(String path) {
        Paths.get(path)
     }
 
-    protected ClientConfig fromConfig(Path path) {
+    static protected ClientConfig fromConfig(Path path, String contextName=null) {
         def yaml = (Map)new Yaml().load(Files.newInputStream(path))
 
-        final contextName = context ?: yaml."current-context" as String
-        final allContext = yaml.contexts as List
+        contextName = contextName ?: yaml."current-context" as String
+
+        final allContexts = yaml.contexts as List
         final allClusters = yaml.clusters as List
         final allUsers = yaml.users as List
-        final context = allContext.find { Map it -> it.name == contextName } ?.context
+        final context = allContexts.find { Map it -> it.name == contextName } ?.context
         if( !context )
             throw new IllegalArgumentException("Unknown Kubernetes context: $contextName -- check config file: $path")
         final userName = context?.user
@@ -110,23 +104,16 @@ class ConfigDiscovery {
             config.namespace = context?.namespace
         }
 
-        if( config.clientCert && config.clientKey ) {
-            config.keyManagers = createKeyManagers(config.clientCert, config.clientKey)
-        }
-        else if( !config.token ) {
-            config.token = discoverAuthToken()
-        }
-
         return config
     }
 
-    protected KeyStore createKeyStore0(byte[] clientCert, byte[] clientKey, char[] passphrase, String alg) {
+    static protected KeyStore createKeyStore0(byte[] clientCert, byte[] clientKey, char[] passphrase, String alg) {
         def cert = new ByteArrayInputStream(clientCert)
         def key = new ByteArrayInputStream(clientKey)
         return SSLUtils.createKeyStore(cert, key, alg, passphrase, null, null)
     }
 
-    protected KeyStore createKeyStore(byte[] clientCert, byte[] clientKey, char[] passphrase) {
+    static protected KeyStore createKeyStore(byte[] clientCert, byte[] clientKey, char[] passphrase) {
         try {
             // try first RSA algorithm
             return createKeyStore0(clientCert, clientKey, passphrase, "RSA")
@@ -143,7 +130,7 @@ class ConfigDiscovery {
         }
     }
 
-    protected KeyManager[] createKeyManagers(byte[] clientCert, byte[] clientKey) {
+    static KeyManager[] createKeyManagers(byte[] clientCert, byte[] clientKey) {
         final passphrase = "".toCharArray()
         final keyStore = createKeyStore(clientCert, clientKey, passphrase)
         final kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
@@ -151,12 +138,12 @@ class ConfigDiscovery {
         return kmf.getKeyManagers();
     }
 
-    protected String discoverAuthToken() {
-        def cmd = /echo $(kubectl describe secret $(kubectl get secrets | grep default | cut -f1 -d ' ') | grep -E '^token' | cut -f2 -d':' | tr -d '\t')/
+    static String discoverAuthToken(String namespace, String serviceAccount) {
+        def cmd = "kubectl -n ${namespace} get secret `kubectl -n ${namespace} get serviceaccount ${serviceAccount} -o jsonpath='{.secrets[0].name}'` -o jsonpath='{.data.token}'"
         def proc = new ProcessBuilder('bash','-o','pipefail','-c', cmd).redirectErrorStream(true).start()
         def status = proc.waitFor()
         if( status==0 ) {
-            return proc.text.trim()
+            return proc.text.trim().decodeBase64()
         }
         else {
             final msg = proc.text

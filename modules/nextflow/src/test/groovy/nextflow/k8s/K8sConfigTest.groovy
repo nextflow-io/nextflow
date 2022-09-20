@@ -132,7 +132,11 @@ class K8sConfigTest extends Specification {
     def 'should create client config' () {
 
         given:
-        def CONFIG = [namespace: 'this', serviceAccount: 'that', client: [server: 'http://foo']]
+        def CONFIG = [
+            namespace: 'this',
+            serviceAccount: 'that',
+            client: [server: 'http://foo', token: 'secret-token']
+        ]
 
         when:
         def config = new K8sConfig(CONFIG)
@@ -141,6 +145,7 @@ class K8sConfigTest extends Specification {
         client.server == 'http://foo'
         client.namespace == 'this'
         client.serviceAccount == 'that'
+        client.token == 'secret-token'
         client.httpConnectTimeout == null // testing default null
         client.httpReadTimeout == null // testing default null
 
@@ -152,7 +157,7 @@ class K8sConfigTest extends Specification {
         def CONFIG = [
                 namespace: 'this',
                 serviceAccount: 'that',
-                client: [server: 'http://foo'],
+                client: [server: 'http://foo', token: 'secret-token'],
                 httpReadTimeout: '20s',
                 httpConnectTimeout: '25s' ]
 
@@ -163,6 +168,7 @@ class K8sConfigTest extends Specification {
         client.server == 'http://foo'
         client.namespace == 'this'
         client.serviceAccount == 'that'
+        client.token == 'secret-token'
         client.httpConnectTimeout == Duration.of('25s')
         client.httpReadTimeout == Duration.of('20s')
 
@@ -171,16 +177,20 @@ class K8sConfigTest extends Specification {
     def 'should create client config with discovery' () {
 
         given:
-        def CONTEXT = 'pizza'
-        def CONFIG = [context: CONTEXT]
+        def CONFIG = [
+            context: 'pizza',
+            serviceAccount: 'that'
+        ]
         K8sConfig config = Spy(K8sConfig, constructorArgs: [ CONFIG ])
 
         when:
         def client = config.getClient()
         then:
-        1 * config.clientDiscovery(CONTEXT) >> new ClientConfig(namespace: 'foo', server: 'bar')
+        1 * config.clientDiscovery('pizza') >> new ClientConfig(namespace: 'foo', server: 'bar', token: 'secret-token')
         client.server == 'bar'
         client.namespace == 'foo'
+        client.serviceAccount == 'that'
+        client.token == 'secret-token'
 
     }
 
