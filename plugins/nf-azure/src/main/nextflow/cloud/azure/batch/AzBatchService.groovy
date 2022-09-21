@@ -62,7 +62,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Global
-import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzFileShareOpts
 import nextflow.cloud.azure.config.AzPoolOpts
@@ -267,8 +266,7 @@ class AzBatchService implements Closeable {
 
         final cred = new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey)
         final client = BatchClient.open(cred)
-        final sess = Global.session as Session
-        sess.onShutdown { client.protocolLayer().restClient().close() }
+        Global.onCleanup((it)->client.protocolLayer().restClient().close())
         return client
     }
 
@@ -473,12 +471,14 @@ class AzBatchService implements Closeable {
         def name = opts ? opts.vmType : getPool(poolId)?.vmSize()
         if( !name )
             throw new IllegalArgumentException("Cannot find Azure Batch config for pool: $poolId")
+        if( !opts )
+            opts = new AzPoolOpts(vmType: name)
 
         def type = getVmType(config.batch().location, name)
         if( !type )
             throw new IllegalArgumentException("Cannot find Azure Batch VM type '$poolId' - Check pool definition $poolId in the Nextflow config file")
 
-        new AzVmPoolSpec(poolId: poolId, vmType: type, opts: opts)
+        return new AzVmPoolSpec(poolId: poolId, vmType: type, opts: opts)
     }
 
     protected AzVmPoolSpec specFromAutoPool(TaskRun task) {

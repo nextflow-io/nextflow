@@ -23,6 +23,7 @@ import java.nio.file.Paths
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
 import org.pf4j.DefaultPluginManager
@@ -41,7 +42,7 @@ class PluginsFacade implements PluginStateListener {
 
     private static final String DEV_MODE = 'dev'
     private static final String PROD_MODE = 'prod'
-    private Map<String,String> env = new HashMap<>(System.getenv())
+    private Map<String,String> env = SysEnv.get()
 
     private String mode
     private Path root
@@ -366,7 +367,7 @@ class PluginsFacade implements PluginStateListener {
         if( (Bolts.navigate(config,'tower.enabled') || env.TOWER_ACCESS_TOKEN ) && !specs.find {it.id == 'nf-tower' } ) {
             specs << defaultPlugins.getPlugin('nf-tower')
         }
-        if( Bolts.navigate(config,'wave.enabled') && !specs.find {it.id == 'nf-wave' } ) {
+        if( (Bolts.navigate(config,'wave.enabled') || Bolts.navigate(config,'fusion.enabled')) && !specs.find {it.id == 'nf-wave' } ) {
             specs << defaultPlugins.getPlugin('nf-wave')
         }
 

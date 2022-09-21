@@ -268,6 +268,10 @@ class Launcher {
                 normalized << '-'
             }
 
+            else if( current == '-with-wave' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
             else if( current == '-ansi-log' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << 'true'
             }
@@ -639,8 +643,7 @@ class Launcher {
      */
     static void main(String... args)  {
 
-        final launcher = new Launcher()
-        final status = launcher .command(args) .run()
+        final status = new Launcher() .command(args) .run()
         if( status )
             System.exit(status)
     }

@@ -1,5 +1,25 @@
 nf-amazon changelog
 ===================
+1.10.5 - 20 Sep 2022
+- Fix AWS S3 copy object [b3b90d23]
+
+1.10.4 - 13 Sep 2020
+- Add STS library to enable use of IRSA in EKS cluster [62df42c3]
+
+1.10.3 - 10 Sep 2022
+- S3 min upload size 5MB [9926d15d]
+- Use smaller buffer size for s3 stream uploader [8c643074]
+
+1.10.2 - 7 Sep 2022
+- Fix thread pool race condition on shutdown [8d2b0587]
+- Fix Intermediate multipart upload requires a minimum size (#3193) [0b66aed6]
+
+1.10.1 - 1 Sep
+- Add support for label/tags (#2853) [5d0b7c35]
+- Add fusion support to local executor [17160bb0]
+- Improve fusion env handling [10f35b60]
+- Get rid of remote bin dir [6cfb51e7]
+
 1.10.0 - 11 Aug
 - Improve S3 copy via xfer manager [02d2beae]
 - Add experimental fusion support [1854f1f2]

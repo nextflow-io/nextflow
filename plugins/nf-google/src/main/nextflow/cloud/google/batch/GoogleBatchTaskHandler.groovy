@@ -34,6 +34,7 @@ import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.trace.TraceRecord
 /**
  * Implements a task handler for Google Batch executor
  * 
@@ -201,6 +202,8 @@ class GoogleBatchTaskHandler extends TaskHandler {
                     .addNetworkInterfaces(networkInterface)
             )
 
+        allocationPolicy.putAllLabels(task.config.getResourceLabels())
+
         // create the job
         return Job.newBuilder()
             .addTaskGroups(
@@ -297,6 +300,15 @@ class GoogleBatchTaskHandler extends TaskHandler {
         else {
             log.debug "[GOOGLE BATCH] Oops.. invalid delete action"
         }
+    }
+
+    @Override
+    TraceRecord getTraceRecord() {
+        def result = super.getTraceRecord()
+        if( jobId && uid ) {
+            result.put('native_id', "$jobId/$uid")
+        }
+        return result
     }
 
 }

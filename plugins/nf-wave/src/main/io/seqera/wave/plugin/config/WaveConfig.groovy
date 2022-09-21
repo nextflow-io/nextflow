@@ -18,13 +18,14 @@
 package io.seqera.wave.plugin.config
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.util.Duration
-
 /**
  * Model Wave client configuration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class WaveConfig {
     final private static String DEF_ENDPOINT = 'http://localhost:9090'
@@ -34,7 +35,9 @@ class WaveConfig {
     final private Duration tokensCacheMaxDuration
     final private CondaOpts condaOpts
     final private List<String> strategy
-    final private bundleProjectResources
+    final private Boolean bundleProjectResources
+    final private String buildRepository
+    final private String cacheRepository
 
     WaveConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
@@ -42,6 +45,8 @@ class WaveConfig {
         this.containerConfigUrl = parseConfig(opts, env)
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '15m') as Duration
         this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
+        this.buildRepository = opts.navigate('build.repository') as String
+        this.cacheRepository = opts.navigate('build.cacheRepository') as String
         this.strategy = parseStrategy(opts.strategy)
         this.bundleProjectResources = opts.bundleProjectResources
         if( !endpoint.startsWith('http://') && !endpoint.startsWith('https://') )
@@ -58,9 +63,16 @@ class WaveConfig {
 
     boolean bundleProjectResources() { bundleProjectResources }
 
+    String buildRepository() { buildRepository }
+
+    String cacheRepository() { cacheRepository }
+
     protected List<String> parseStrategy(value) {
-        if( !value )
-            return Collections.<String>emptyList()
+        if( !value ) {
+            final defaultStrategy = List.of('container','dockerfile','conda')
+            log.debug "Wave strategy not specified - using default: $defaultStrategy"
+            return defaultStrategy
+        }
         List<String> result
         if( value instanceof CharSequence )
             result = value.tokenize(',') .collect(it -> it.toString().trim())

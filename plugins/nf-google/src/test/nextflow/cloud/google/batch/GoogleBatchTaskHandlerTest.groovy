@@ -19,10 +19,14 @@ package nextflow.cloud.google.batch
 
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.executor.Executor
 import nextflow.executor.res.AcceleratorResource
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.script.BaseScript
+import nextflow.script.ProcessConfig
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -48,6 +52,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
                 getCpus() >> 2
+                getResourceLabels() >> [:]
             }
         }
 
@@ -121,6 +126,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getMachineType() >> MACHINE_TYPE
                 getMemory() >> MEM
                 getTime() >> TIMEOUT
+                getResourceLabels() >> [:]
             }
         }
 
@@ -156,5 +162,61 @@ class GoogleBatchTaskHandlerTest extends Specification {
         networkInterface.getNoExternalIpAddress() == true
         and:
         req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
+    }
+
+    def 'should create submit request with resource labels spec' () {
+        given:
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        def exec = Mock(GoogleBatchExecutor) {
+            getConfig() >> Mock(BatchConfig)
+        }
+        and:
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> 2
+                getResourceLabels() >> [ foo: 'bar']
+            }
+        }
+
+        and:
+        def handler = new GoogleBatchTaskHandler(task, exec)
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        req.getAllocationPolicy().getLabelsMap() == [foo:'bar']
+    }
+
+    def 'should create the trace record' () {
+        given:
+        def exec = Mock(Executor) { getName() >> 'google-batch' }
+        def processor = Mock(TaskProcessor) {
+            getExecutor() >> exec
+            getName() >> 'foo'
+            getConfig() >> new ProcessConfig(Mock(BaseScript))
+        }
+        and:
+        def task = Mock(TaskRun)
+        task.getProcessor() >> processor
+        task.getConfig() >> GroovyMock(TaskConfig)
+        and:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.task = task
+        handler.@jobId = 'xyz-123'
+        handler.@uid = '789'
+
+        when:
+        def trace = handler.getTraceRecord()
+        then:
+        handler.isCompleted() >> false
+        and:
+        trace.native_id == 'xyz-123/789'
+        trace.executorName == 'google-batch'
     }
 }

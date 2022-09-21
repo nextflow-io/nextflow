@@ -173,6 +173,7 @@ maxParallelTransfers        Max parallel upload/download transfer operations *pe
 maxTransferAttempts         Max number of downloads attempts from S3 (default: `1`).
 maxSpotAttempts             Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: ``5``, requires ``22.04.0`` or later)
 shareIdentifier             The share identifier for all tasks when using `fair-share scheduling for AWS Batch <https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/>`_ (requires ``22.09.0-edge`` or later)
+retryMode                   The retry mode configuration setting, to accommodate rate-limiting on `AWS services <https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html>`_ (default: ``standard``)
 =========================== ================
 
 
@@ -342,24 +343,24 @@ The ``executor`` configuration scope allows you to set the optional executor set
 ===================== =====================
 Name                  Description
 ===================== =====================
-name                  The name of the executor to be used e.g. ``local``, ``sge``, etc.
+name                  The name of the executor to be used (default: ``local``).
 queueSize             The number of tasks the executor will handle in a parallel manner (default: ``100``).
-pollInterval          Determines how often a poll occurs to check for a process termination.
-dumpInterval          Determines how often the executor status is written in the application log file (default: ``5min``).
-queueStatInterval     Determines how often the queue status is fetched from the cluster system. This setting is used only by grid executors (default: ``1min``).
-exitReadTimeout       Determines how long the executor waits before to an error status when a process is terminated but the ``.exitcode`` file does not exist or is empty. This setting is used only by grid executors (default: ``270 sec``).
-killBatchSize         Determines the number of jobs that can be `killed` in a single command execution (default: ``100``).
-submitRateLimit       Determines the max rate of job submission per time unit, for example ``'10sec'`` eg. max 10 jobs per second or ``'50/2min'`` i.e. 50 job submissions every 2 minutes (default: `unlimited`).
+submitRateLimit       Determines the max rate of job submission per time unit, for example ``'10sec'`` (10 jobs per second) or ``'50/2min'`` (50 jobs every 2 minutes) (default: unlimited).
+pollInterval          Determines how often to check for process termination. Default varies for each executor.
+dumpInterval          Determines how often to log the executor status (default: ``5min``).
+queueStatInterval     Determines how often to fetch the queue status from the scheduler (default: ``1min``). Used only by grid executors.
+exitReadTimeout       Determines how long to wait before returning an error status when a process is terminated but the ``.exitcode`` file does not exist or is empty (default: ``270 sec``). Used only by grid executors.
+killBatchSize         Determines the number of jobs that can be killed in a single command execution (default: ``100``).
 perJobMemLimit        Specifies Platform LSF *per-job* memory limit mode. See :ref:`lsf-executor`.
 perTaskReserve        Specifies Platform LSF *per-task* memory reserve mode. See :ref:`lsf-executor`.
-jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }`` Note: when using this option you need to make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
-cpus                  The maximum number of CPUs made available by the underlying system (only used by the ``local`` executor).
-memory                The maximum amount of memory made available by the underlying system (only used by the ``local`` executor).
-retry.delay           Delay when re-retying failed submit operations (default: ``500ms``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later).
-retry.maxDelay        Max delay when re-retying failed submit operations (default: ``30s``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later).
-retry.jitter          Jitter value when re-retying failed submit operations (default: ``0.25``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later)
-retry.maxAttempts     Max attempts when re-retying failed submit operations (default: ``3``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later)
-retry.reason          Regex pattern that when verified cause a failed submit operation to be re-tried (default: ``Socket timed out``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later)
+jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }``. Make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
+cpus                  The maximum number of CPUs made available by the underlying system. Used only by the ``local`` executor.
+memory                The maximum amount of memory made available by the underlying system. Used only by the ``local`` executor.
+retry.delay           Delay when retrying failed job submissions (default: ``500ms``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
+retry.maxDelay        Max delay when retrying failed job submissions (default: ``30s``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
+retry.jitter          Jitter value when retrying failed job submissions (default: ``0.25``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
+retry.maxAttempts     Max attempts when retrying failed job submissions (default: ``3``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
+retry.reason          Regex pattern that when verified cause a failed submit operation to be re-tried (default: ``Socket timed out``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
 ===================== =====================
 
 The executor settings can be defined as shown below::
@@ -424,6 +425,8 @@ computeResourceType Define whether use Kubernetes ``Pod`` or ``Job`` resource ty
 fetchNodeName       If you trace the hostname, activate this option (default: ``false``, requires version ``22.05.0-edge`` or later).
 volumeClaims        (deprecated)
 maxRequestRetries   Defines the Kubernetes API max request retries (default is set to 5)
+httpReadTimeout     Defines the Kubernetes client request HTTP connection read timeout e.g. ``'60s'`` (requires version ``22.10.0`` or later).
+httpConnectTimeout  Defines the Kubernetes client request HTTP connection timeout e.g. ``'60s'`` (requires version ``22.10.0`` or later).
 =================== ================
 
 See the :ref:`k8s-page` documentation for more details.
@@ -973,6 +976,7 @@ NXF_DEBUG                       Defines scripts debugging level: ``1`` dump task
 NXF_DEFAULT_DSL                 Defines the DSL version version that should be used in not specified otherwise in the script of config file (default: ``2``, requires version ``22.03.0-edge`` or later)
 NXF_DISABLE_JOBS_CANCELLATION   Disables the cancellation of child jobs on workflow execution termination (requires version ``21.12.0-edge`` or later).
 NXF_ENABLE_STRICT               Enable Nextflow *strict* execution mode (default: ``false``, requires version ``22.05.0-edge`` or later)
+NXF_ENABLE_SECRETS              Enable Nextflow secrets features (default: ``true``, requires version ``21.09.0-edge`` or later)
 NXF_EXECUTOR                    Defines the default process executor e.g. `sge`
 NXF_GRAB                        Provides extra runtime dependencies downloaded from a Maven repository service [DEPRECATED]
 NXF_HOME                        Nextflow home directory (default: ``$HOME/.nextflow``).

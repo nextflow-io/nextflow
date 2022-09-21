@@ -82,7 +82,7 @@ class WaveConfigTest extends Specification {
 
     }
 
-    def 'should get mamba config' () {
+    def 'should get conda config' () {
         when:
         def opts = new WaveConfig([:])
         then:
@@ -97,11 +97,26 @@ class WaveConfigTest extends Specification {
         
     }
 
+    def 'should get build and cache repos' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.buildRepository() == null
+        opts.cacheRepository() == null
+
+        when:
+        opts = new WaveConfig([build:[repository:'some/repo', cacheRepository:'some/cache']])
+        then:
+        opts.buildRepository() == 'some/repo'
+        opts.cacheRepository() == 'some/cache'
+    }
+
+    @Unroll
     def 'should set strategy' () {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.strategy() == []
+        opts.strategy() == ['container','dockerfile','conda']
 
         when:
         opts = new WaveConfig([strategy:STRATEGY])
@@ -110,7 +125,7 @@ class WaveConfigTest extends Specification {
 
         where:
         STRATEGY                | EXPECTED
-        null                    | []
+        null                    | ['container','dockerfile','conda']
         'dockerfile'            | ['dockerfile']
         'conda,container'       | ['conda','container']
         'conda , container'     | ['conda','container']

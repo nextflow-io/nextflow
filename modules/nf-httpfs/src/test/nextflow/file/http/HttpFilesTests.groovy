@@ -17,7 +17,6 @@
 
 package nextflow.file.http
 
-
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.file.Files
@@ -31,6 +30,7 @@ import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
 import groovy.transform.CompileStatic
+import nextflow.SysEnv
 import org.junit.Rule
 import spock.lang.IgnoreIf
 import spock.lang.Specification
@@ -79,6 +79,27 @@ class HttpFilesTests extends Specification {
         !Files.exists(path2)
     }
 
+    def 'should re-try read file' () {
+        given:
+        def RESP = 'Hello world'
+        and:
+        // launch web server
+        def attempt = 0
+        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        server.createContext("/", new BasicHandler(RESP, { ++attempt < 3 ? 404 : 200 } ));
+
+        server.start()
+
+        when:
+        def path = Paths.get(new URI('http://admin:Secret1@localhost:9900/foo/bar'))
+        then:
+        path.text == 'Hello world'
+        and:
+        attempt == 3
+
+        cleanup:
+        server?.stop(0)
+    }
 
     def 'read a http file ' () {
         given:
@@ -97,6 +118,8 @@ class HttpFilesTests extends Specification {
     }
 
     def 'should check file properties' () {
+        given:
+        SysEnv.push([NXF_HTTPFS_MAX_ATTEMPTS: '1'])
 
         when:
         def path1 = Paths.get(new URI('http://www.nextflow.io/index.html'))
@@ -117,6 +140,8 @@ class HttpFilesTests extends Specification {
         !Files.isSameFile(path1, path2)
         !Files.exists(path2)
 
+        cleanup:
+        SysEnv.pop()
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
@@ -257,11 +282,17 @@ class HttpFilesTests extends Specification {
 
         String body
 
-        int respCode
+        Closure<Integer> respCode
 
         Map<String,String> allHeaders
 
         BasicHandler(String s, int code, Map<String,String> headers=null) {
+            this.body=s
+            this.respCode = { return code }
+            this.allHeaders = headers ?: Collections.<String,String>emptyMap()
+        }
+
+        BasicHandler(String s, Closure<Integer> code, Map<String,String> headers=null) {
             this.body=s
             this.respCode = code
             this.allHeaders = headers ?: Collections.<String,String>emptyMap()
@@ -277,7 +308,7 @@ class HttpFilesTests extends Specification {
             }
             
             header.set("Content-Type", "text/plain")
-            request.sendResponseHeaders(respCode, body.size())
+            request.sendResponseHeaders(respCode.call(), body.size())
 
             OutputStream os = request.getResponseBody();
             os.write(body.bytes);
