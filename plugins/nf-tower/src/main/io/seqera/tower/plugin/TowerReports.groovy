@@ -10,14 +10,6 @@
  */
 package io.seqera.tower.plugin
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import groovy.yaml.YamlRuntimeException
-import groovy.yaml.YamlSlurper
-import groovyx.gpars.agent.Agent
-import nextflow.Session
-import nextflow.file.FileHelper
-
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
@@ -27,6 +19,13 @@ import java.nio.file.StandardCopyOption
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicInteger
 
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import groovy.yaml.YamlRuntimeException
+import groovy.yaml.YamlSlurper
+import groovyx.gpars.agent.Agent
+import nextflow.Session
+import nextflow.file.FileHelper
 /**
  * If reports are defined at `nf-<workflow_id>-tower.yml`, collects all published files
  * that are reports and writes `nf-<workflow_id>-reports.tsv` file with all the paths.
@@ -73,7 +72,7 @@ class TowerReports {
             this.writer = new Agent<PrintWriter>(reportsFile)
 
             // send header
-            this.writer.send { PrintWriter it -> it.println("key\tpath\tsize\tdisplay\tmime_type")}
+            this.writer.send { PrintWriter it -> it.println("key\tpath\tsize\tdisplay\tmime_type") }
 
             // Schedule a reports copy if launchDir and workDir are different
             if (this.workReportsPath && this.launchReportsPath != this.workReportsPath) {
@@ -83,9 +82,9 @@ class TowerReports {
                     if (lastTotalReports.get() < this.totalReports.get()) {
                         try {
                             final total = this.totalReports.get()
+                            log.trace("Reports file sync to workdir with ${total} reports")
                             FileHelper.copyPath(launchReportsPath, workReportsPath, StandardCopyOption.REPLACE_EXISTING)
                             lastTotalReports.set(total)
-                            log.trace("Reports file sync to workdir with ${total} reports")
                         } catch (IOException e) {
                             log.error("Error copying reports file ${launchReportsPath.toUriString()} to the workdir ${workReportsPath.toUriString()} -- ${e.message}")
                         }
@@ -119,6 +118,7 @@ class TowerReports {
             }
             writer.await()
             // close and upload it
+            reportsFile.flush()
             reportsFile.close()
             saveReportsFileUpload()
         }
@@ -185,19 +185,29 @@ class TowerReports {
 
             for (int p=0; p < matchers.size(); p++) {
                 if (matchers.get(p).matches(destination)) {
-                    final dst = destination.toUriString()
                     final reportEntry = this.reportsEntries.get(p)
-                    // Report properties
-                    final display = reportEntry.value.get("display", "")
-                    final mimeType = reportEntry.value.get("mimeType", "")
-                    writer.send { PrintWriter it -> it.println("${reportEntry.key}\t${dst}\t${destination.size()}\t${display}\t${mimeType}") }
-                    final numRep = totalReports.incrementAndGet()
-                    log.trace("Adding report [${numRep}] ${reportEntry.key} -- ${dst}")
+                    writer.send { PrintWriter it -> writeRecord(it, reportEntry, destination) }
                     return true
                 }
             }
         }
         return false
+    }
+
+    protected writeRecord(PrintWriter it, Map.Entry<String,Map<String,String>> reportEntry, Path destination) {
+        try {
+            final target = destination.toUriString()
+            final numRep = totalReports.incrementAndGet()
+            log.trace("Adding report [${numRep}] ${reportEntry.key} -- ${target}")
+            // Report properties
+            final display = reportEntry.value.get("display", "")
+            final mimeType = reportEntry.value.get("mimeType", "")
+            it.println("${reportEntry.key}\t${target}\t${destination.size()}\t${display}\t${mimeType}");
+            it.flush()
+        }
+        catch (Throwable e) {
+            log.error ("Unexpected error writing Tower report entry '${destination.toUriString()}'", e)
+        }
     }
 
     protected static String convertToGlobPattern(String reportKey) {
