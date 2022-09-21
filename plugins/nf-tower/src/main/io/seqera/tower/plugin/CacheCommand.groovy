@@ -52,9 +52,12 @@ class CacheCommand implements PluginAbstractExec {
     protected void archiveLogs(Session sess) {
         // archive logs
         final archiver = TowerArchiver.create(sess, System.getenv())
-        if( archiver ) {
+        if( archiver ) try {
             log.debug "Running Nextflow logs archiver"
             archiver.archiveLogs()
+        }
+        finally {
+            archiver.shutdown(sess)
         }
     }
 

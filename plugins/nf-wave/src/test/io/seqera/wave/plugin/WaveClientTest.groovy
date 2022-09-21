@@ -180,7 +180,7 @@ class WaveClientTest extends Specification {
 
     def 'should create request object with build and cache repos' () {
         given:
-        def session = Mock(Session) { getConfig() >> [wave:[build:[repo:'some/repo',cache:'some/cache']]]}
+        def session = Mock(Session) { getConfig() >> [wave:[build:[repository:'some/repo',cacheRepository:'some/cache']]]}
         def DOCKERFILE =  'FROM foo:latest\nRUN something'
         def wave = new WaveClient(session)
 
