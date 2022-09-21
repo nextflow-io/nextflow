@@ -1332,7 +1332,6 @@ class OperatorImpl {
     }
 
     // NO DAG
-    @DeprecatedDsl2
     DataflowWriteChannel merge(final DataflowReadChannel source, final DataflowReadChannel other, final Closure closure=null) {
         final result = CH.createBy(source)
         final inputs = [source, other]
