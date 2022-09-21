@@ -111,11 +111,12 @@ class WaveConfigTest extends Specification {
         opts.cacheRepository() == 'some/cache'
     }
 
+    @Unroll
     def 'should set strategy' () {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.strategy() == []
+        opts.strategy() == ['container','dockerfile','conda']
 
         when:
         opts = new WaveConfig([strategy:STRATEGY])
@@ -124,7 +125,7 @@ class WaveConfigTest extends Specification {
 
         where:
         STRATEGY                | EXPECTED
-        null                    | []
+        null                    | ['container','dockerfile','conda']
         'dockerfile'            | ['dockerfile']
         'conda,container'       | ['conda','container']
         'conda , container'     | ['conda','container']
