@@ -424,6 +424,7 @@ storageSubPath      The path in the persistent volume to be mounted (default: ro
 computeResourceType Define whether use Kubernetes ``Pod`` or ``Job`` resource type to carry out Nextflow tasks (default: ``Pod``).
 fetchNodeName       If you trace the hostname, activate this option (default: ``false``, requires version ``22.05.0-edge`` or later).
 volumeClaims        (deprecated)
+maxErrorRetry       Defines the Kubernetes API max request retries (default is set to 4)
 httpReadTimeout     Defines the Kubernetes client request HTTP connection read timeout e.g. ``'60s'`` (requires version ``22.10.0`` or later).
 httpConnectTimeout  Defines the Kubernetes client request HTTP connection timeout e.g. ``'60s'`` (requires version ``22.10.0`` or later).
 =================== ================

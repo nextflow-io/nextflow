@@ -143,7 +143,19 @@ class K8sConfigTest extends Specification {
         client.serviceAccount == 'that'
         client.httpConnectTimeout == null // testing default null
         client.httpReadTimeout == null // testing default null
+        client.maxErrorRetry == 4
 
+    }
+
+    def 'should set maxErrorRetry' () {
+        given:
+        def CONFIG = [maxErrorRetry: 10]
+
+        when:
+        def config = new K8sConfig(CONFIG)
+        def client = config.getClient()
+        then:
+        client.maxErrorRetry == 10
     }
 
     def 'should create client config with http request timeouts' () {
