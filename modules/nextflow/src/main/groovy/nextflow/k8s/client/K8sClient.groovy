@@ -618,18 +618,16 @@ class K8sClient {
      */
     protected K8sResponseApi makeRequest(String method, String path, String body=null) throws K8sResponseException {
 
-        final int maxAttempts = 5
+        final int maxRetries = config.maxErrorRetry
         int attempt = 0
 
-        while ( attempt < maxAttempts ) {
-            attempt++
-
+        while ( true ) {
             try {
                 return makeRequestCall( method, path, body )
             } catch ( K8sResponseException | SocketException | SocketTimeoutException e ) {
                 if ( e instanceof K8sResponseException && e.response.code != 500 )
                     throw e
-                if ( attempt >= maxAttempts )
+                if ( ++attempt > maxRetries )
                     throw e
                 log.debug "[K8s] API request threw socket exception: $e.message for $method $path - Retrying request (attempt=$attempt)"
                 final long delay = (Math.pow(3, attempt - 1) as long) * 250

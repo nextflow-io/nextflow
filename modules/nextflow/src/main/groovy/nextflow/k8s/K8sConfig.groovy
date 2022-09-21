@@ -226,6 +226,9 @@ class K8sConfig implements Map<String,Object> {
         if( target.httpReadTimeout )
             result.httpReadTimeout = target.httpReadTimeout as Duration
 
+        if( target.maxErrorRetry )
+            result.maxErrorRetry = target.maxErrorRetry as Integer
+
         return result
     }
 
