@@ -1,8 +1,8 @@
-nf-amazon@1.10.4
-nf-wave@0.4.2
+nf-amazon@1.10.5
+nf-wave@0.4.3
 nf-console@1.0.4
 nf-google@1.4.3
 nf-azure@0.14.2
-nf-tower@1.5.3
+nf-tower@1.5.4
 nf-ga4gh@1.0.4
 nf-codecommit@0.1.2
