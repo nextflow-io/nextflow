@@ -618,21 +618,21 @@ class K8sClient {
      */
     protected K8sResponseApi makeRequest(String method, String path, String body=null) throws K8sResponseException {
 
-        final int maxTrials = 5
-        int trial = 0
+        final int maxAttempts = 5
+        int attempt = 0
 
-        while ( trial < maxTrials ) {
-            trial++
+        while ( attempt < maxAttempts ) {
+            attempt++
 
             try {
                 return makeRequestCall( method, path, body )
-            } catch ( K8sResponseException | SocketException e ) {
+            } catch ( K8sResponseException | SocketException | SocketTimeoutException e ) {
                 if ( e instanceof K8sResponseException && e.response.code != 500 )
                     throw e
-                log.error "[K8s] API request threw socket exception: $e.message for $method $path ${body ? '\n'+prettyPrint(body).indent() : ''}"
-                if ( trial < maxTrials ) log.info( "[K8s] Try API request again, remaining trials: ${ maxTrials - trial }" )
-                else throw e
-                final long delay = (Math.pow(3, trial - 1) as long) * 250
+                if ( attempt >= maxAttempts )
+                    throw e
+                log.debug "[K8s] API request threw socket exception: $e.message for $method $path - Retrying request (attempt=$attempt)"
+                final long delay = (Math.pow(3, attempt - 1) as long) * 250
                 sleep( delay )
             }
         }
