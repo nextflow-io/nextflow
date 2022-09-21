@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.09.5-edge - 21 Sep 2022
+- Use default wave strategy [abbfa7f4]
+- Handle errors reported by tower report writer [0e814647]
+- Fix AWS S3 copy object [b3b90d23]
+
 22.09.4-edge - 19 Sep 2022
 - Add Fusion display name [f789d457]
 - Add container cleanup [cd2ae7dc]
