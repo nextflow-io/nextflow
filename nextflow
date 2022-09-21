@@ -64,7 +64,7 @@ function get() {
     if command -v curl &>/dev/null; then
         GET="curl -fsSL '$1' -o '$2'"
     elif command -v wget &>/dev/null; then
-        GET="wget -q '$1' -O '$2'"
+        GET="wget '$1' -O '$2'"
     else
         echo_red "ERROR: Cannot find 'curl' nor 'wget' utility --  please install one of them"
         exit 1
