@@ -18,13 +18,14 @@
 package io.seqera.wave.plugin.config
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.util.Duration
-
 /**
  * Model Wave client configuration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class WaveConfig {
     final private static String DEF_ENDPOINT = 'http://localhost:9090'
@@ -67,8 +68,11 @@ class WaveConfig {
     String cacheRepository() { cacheRepository }
 
     protected List<String> parseStrategy(value) {
-        if( !value )
-            return Collections.<String>emptyList()
+        if( !value ) {
+            final defaultStrategy = List.of('container','dockerfile','conda')
+            log.debug "Wave strategy not specified - using default: $defaultStrategy"
+            return defaultStrategy
+        }
         List<String> result
         if( value instanceof CharSequence )
             result = value.tokenize(',') .collect(it -> it.toString().trim())
