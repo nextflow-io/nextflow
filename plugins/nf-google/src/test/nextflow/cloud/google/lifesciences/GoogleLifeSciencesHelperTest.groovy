@@ -194,7 +194,8 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
                     network: 'net/123',
                     subnetwork: 'sub/192',
                     serviceAccountEmail: 'myaccount@developer.gserviceaccount.com',
-                    usePrivateAddress: true ))
+                    usePrivateAddress: true,
+                    resourceLabels: [foo:'bar'] ))
         then:
         with(resources3) {
             getVirtualMachine().getMachineType() == type
@@ -208,6 +209,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
             getVirtualMachine().getAccelerators()[0].getType()=='nvidia-tesla-k80'
             getVirtualMachine().getBootDiskSizeGb() == 75
             getVirtualMachine().getCpuPlatform() == 'Intel Skylake'
+            getVirtualMachine().getLabels() == [foo: 'bar']
             getVirtualMachine().getNetwork().getUsePrivateAddress()
             getVirtualMachine().getNetwork().getNetwork() == 'net/123'
             getVirtualMachine().getNetwork().getSubnetwork() == 'sub/192'
