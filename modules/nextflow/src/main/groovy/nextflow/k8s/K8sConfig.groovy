@@ -211,10 +211,9 @@ class K8sConfig implements Map<String,Object> {
     ClientConfig getClient() {
 
         // create or discover client config
-        final result = ( target.client instanceof Map
+        final result = target.client instanceof Map
                 ? clientFromMap(target.client as Map)
-                : clientDiscovery(target.context as String)
-        )
+                : clientFromDiscovery(target.context as String)
 
         // apply settings from nextflow k8s config
         if( target.namespace ) {
@@ -258,7 +257,7 @@ class K8sConfig implements Map<String,Object> {
         ClientConfig.fromMap(map)
     }
 
-    protected ClientConfig clientDiscovery(String context) {
+    protected ClientConfig clientFromDiscovery(String context) {
         ConfigDiscovery.getInstance().discover(context)
     }
 

@@ -46,10 +46,10 @@ class ConfigDiscovery {
         // Note: System.getProperty('user.home') may not report the correct home path when
         // running in a container. Use env HOME instead.
         def env = System.getenv()
-        def home = System.getenv('HOME')
-        def kubeConfig = env.get('KUBECONFIG') ? env.get('KUBECONFIG') : "$home/.kube/config"
+        def kubeConfig = env.get('KUBECONFIG') ?: "${env.get('HOME')}/.kube/config"
         def configFile = Paths.get(kubeConfig)
 
+        // discover client config from KUBECONFIG (i.e. running in local machine)
         if( configFile.exists() ) {
             return fromConfig(configFile, context)
         }
@@ -57,6 +57,7 @@ class ConfigDiscovery {
             log.debug "K8s config file does not exist: $configFile"
         }
 
+        // discover client config from K8s env vars (i.e. running in a pod)
         if( env.get('KUBERNETES_SERVICE_HOST') ) {
             return fromCluster(env)
         }
@@ -69,7 +70,7 @@ class ConfigDiscovery {
 
     protected ClientConfig fromCluster(Map<String,String> env) {
 
-        // See https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#accessing-the-api-from-a-pod
+        // See https://kubernetes.io/docs/tasks/run-application/access-api-from-pod/
 
         final host = env.get('KUBERNETES_SERVICE_HOST')
         final port = env.get('KUBERNETES_SERVICE_PORT')
@@ -82,6 +83,9 @@ class ConfigDiscovery {
         new ClientConfig( server: server, token: token, namespace: namespace, sslCert: cert, isFromCluster: true )
     }
 
+    /**
+     * Helper method for testing purposes.
+     */
     protected Path path(String path) {
         Paths.get(path)
     }
@@ -156,6 +160,5 @@ class ConfigDiscovery {
             return null
         }
     }
-
 
 }

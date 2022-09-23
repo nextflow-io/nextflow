@@ -201,7 +201,7 @@ class K8sConfigTest extends Specification {
         when:
         def client = config.getClient()
         then:
-        1 * config.clientDiscovery('pizza') >> new ClientConfig(namespace: 'foo', server: 'bar', token: 'secret-token')
+        1 * config.clientFromDiscovery('pizza') >> new ClientConfig(namespace: 'foo', server: 'bar', token: 'secret-token')
         client.server == 'bar'
         client.namespace == 'foo'
         client.token == 'secret-token'
