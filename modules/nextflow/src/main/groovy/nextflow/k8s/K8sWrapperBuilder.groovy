@@ -41,9 +41,4 @@ class K8sWrapperBuilder extends BashWrapperBuilder {
      */
     protected K8sWrapperBuilder() {}
 
-    @Override
-    boolean fixOwnership() {
-        containerConfig.fixOwnership
-    }
-
 }

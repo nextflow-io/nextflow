@@ -25,7 +25,7 @@ import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
 import nextflow.util.CheckHelper
 /**
- * Implements {@link OperatorEx#groupTuple} operator logic
+ * Implements {@link OperatorImpl#groupTuple} operator logic
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

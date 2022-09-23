@@ -1,16 +1,21 @@
 
-/* navbar -- logo */
+/* navbar -- Seqera logo */
 
-.wy-side-nav-search a:before {
+.nav-footer-logo {
+    width: 300px;
+    margin-top: 2rem;
+    border-top: 1px solid #666666;
+    text-align: center;
+    font-size: 80%;
+}
+
+.nav-footer-logo a {
     display: block;
-    content: url(https://github.com/nextflow-io/trademark/raw/master/nextflow2014_black_white.png);
-    visibility: visible;
-    transform: scale(.43);
-    transform-origin: left;
-    margin: -30px 0 -50px 0;
+    padding: 2rem 0 0.5rem;
+    color: #666666;
 }
 
-.wy-side-nav-search a {
-    visibility: hidden;
+.nav-footer-logo a img {
+    margin-top: 0.5rem;
+    width: 60%;
 }
-

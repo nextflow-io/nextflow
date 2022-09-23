@@ -371,6 +371,10 @@ against the *including* script location.
 .. note::
     Relative paths must begin with the ``./`` prefix. Also, the ``include`` statement must be defined **outside** of the workflow definition.
 
+.. warning::
+    From version 22.05.0 `include` directive can be used to import operators and functions from plugin if the path
+    match the pattern `plugin/<plugin-id>` so avoid to use `plugin` as folder for your module
+
 
 Multiple inclusions
 -------------------
@@ -721,4 +725,4 @@ DSL2 migration notes
 * Operator ``print`` and ``println`` have been deprecated by DSL2 syntax. Use :ref:`operator-view` instead.
 * Operator :ref:`operator-separate` has been deprecated by DSL2 syntax.
 * Operator :ref:`operator-spread` has been deprecated with DSL2 syntax. Replace it with :ref:`operator-combine`.
-* Operator route has been deprecated by DSL2 syntax.
+* Operator ``route`` has been deprecated by DSL2 syntax.

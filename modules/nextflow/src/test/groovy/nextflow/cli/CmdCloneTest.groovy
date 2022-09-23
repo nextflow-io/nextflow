@@ -18,6 +18,7 @@
 package nextflow.cli
 import java.nio.file.Files
 
+import nextflow.plugin.Plugins
 import spock.lang.Requires
 import spock.lang.Specification
 /**
@@ -43,7 +44,7 @@ class CmdCloneTest extends Specification {
 
         cleanup:
         dir?.deleteDir()
-
+        Plugins.stop()
     }
 
 }

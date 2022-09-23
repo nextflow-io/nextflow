@@ -1,5 +1,44 @@
 nf-amazon changelog
 ===================
+1.10.5 - 20 Sep 2022
+- Fix AWS S3 copy object [b3b90d23]
+
+1.10.4 - 13 Sep 2020
+- Add STS library to enable use of IRSA in EKS cluster [62df42c3]
+
+1.10.3 - 10 Sep 2022
+- S3 min upload size 5MB [9926d15d]
+- Use smaller buffer size for s3 stream uploader [8c643074]
+
+1.10.2 - 7 Sep 2022
+- Fix thread pool race condition on shutdown [8d2b0587]
+- Fix Intermediate multipart upload requires a minimum size (#3193) [0b66aed6]
+
+1.10.1 - 1 Sep
+- Add support for label/tags (#2853) [5d0b7c35]
+- Add fusion support to local executor [17160bb0]
+- Improve fusion env handling [10f35b60]
+- Get rid of remote bin dir [6cfb51e7]
+
+1.10.0 - 11 Aug
+- Improve S3 copy via xfer manager [02d2beae]
+- Add experimental fusion support [1854f1f2]
+- Increase S3 upload chunk size to 100 MB [9c94a080]
+- Add support for AWS Batch logs group (#3092) [4ef043ac]
+- Fix queueSize setting is not honoured by AWS Batch executor (#3093) [d07bb52b]
+- Add share identifier to Aws Batch (#3089) [c0253aba]
+
+1.9.0 - 1 Aug 2022
+- Fix Unable to disable scratch attribute with AWS Batch [1770f73a]
+- Fix NPE while setting S3 ObjectMetada #3031 [d6163431] <Jorge Aguilera>
+- Fix Unable to retrieve AWS batch instance type #1658 [3c4d4d3b] <Paolo Di Tommaso>
+- Fix AWS Batch job definition conflict (#3048) [e5084418] <Paolo Di Tommaso>
+- Improve S3 file upload/download via Transfer manager [7e8d2a5a] [b7bf9fe5] <Jorge Aguilera>
+
+1.8.1 - 13 Jul 2022
+- Fix Exception when settings AWS Batch containerOptions #3019 [89312ad8] <Paolo Di Tommaso>
+- Add docs aws.client.s3PathStyleAccess config (#3000) [20005500] <Abhinav Sharma>
+
 1.8.0 - 25 May 2022
 - Add support for custom KMS keys
 - Add support for virtual file system move operation [8c0ddfd5]

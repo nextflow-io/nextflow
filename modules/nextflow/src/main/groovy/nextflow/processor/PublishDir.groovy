@@ -17,9 +17,6 @@
 
 package nextflow.processor
 
-import nextflow.NF
-import nextflow.exception.ProcessException
-
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileSystem
 import java.nio.file.FileSystems
@@ -37,6 +34,7 @@ import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Global
+import nextflow.NF
 import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
@@ -111,7 +109,7 @@ class PublishDir {
     private String taskName
 
     @Lazy
-    private ExecutorService threadPool = (Global.session as Session).getFileTransferThreadPool()
+    private ExecutorService threadPool = { def sess = Global.session as Session; sess.publishDirExecutorService() }()
 
     void setPath( Closure obj ) {
         setPath( obj.call() as Path )
@@ -400,7 +398,7 @@ class PublishDir {
         final t1 = real0(target)
         final s1 = real0(sourceDir)
         if( t1.startsWith(s1) ) {
-            def msg = "Refuse to publish file since destination path conflicts with the task work directory!"
+            def msg = "Refusing to publish file since destination path conflicts with the task work directory!"
             if( taskName )
                 msg += "\n- offending task  : $taskName"
             msg += "\n- offending file  : $target"
@@ -473,8 +471,9 @@ class PublishDir {
     @CompileStatic
     @PackageScope
     void validatePublishMode() {
-
-        if( (sourceFileSystem && sourceFileSystem != path.fileSystem) || path.fileSystem != FileSystems.default ) {
+        if( log.isTraceEnabled() )
+            log.trace "Publish path: ${path.toUriString()}; notMatchSourceFs=${sourceFileSystem && sourceFileSystem != path.fileSystem}; notMatchDefaultFs=${path.fileSystem != FileSystems.default}; isFusionFs=${path.toString().startsWith('/fusion/s3/')}"
+        if( (sourceFileSystem && sourceFileSystem != path.fileSystem) || path.fileSystem != FileSystems.default || path.toString().startsWith('/fusion/s3/') ) {
             if( !mode ) {
                 mode = Mode.COPY
             }

@@ -25,8 +25,6 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileDynamic
@@ -38,6 +36,7 @@ import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
+import nextflow.conda.CondaConfig
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.dag.DAG
@@ -50,6 +49,7 @@ import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
+import nextflow.util.ThreadPoolManager
 import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
@@ -73,8 +73,8 @@ import nextflow.util.ConfigHelper
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
-import nextflow.util.ThreadPoolBuilder
 import nextflow.util.VersionNumber
+import org.apache.commons.lang.exception.ExceptionUtils
 import sun.misc.Signal
 import sun.misc.SignalHandler
 /**
@@ -172,6 +172,11 @@ class Session implements ISession {
      */
     String commitId
 
+    /*
+     * Disable the upload of project 'bin' directory when using cloud executor
+     */
+    boolean disableRemoteBinDir
+
     /**
      * Local path where script generated classes are saved
      */
@@ -206,7 +211,9 @@ class Session implements ISession {
 
     private volatile Throwable error
 
-    private Queue<Closure<Void>> shutdownCallbacks = new ConcurrentLinkedQueue<>()
+    private volatile boolean shutdownInitiated
+
+    private Queue<Runnable> shutdownCallbacks = new ConcurrentLinkedQueue<>()
 
     private int poolSize
 
@@ -314,7 +321,7 @@ class Session implements ISession {
         else {
            uniqueId = systemEnv.get('NXF_UUID') ? UUID.fromString(systemEnv.get('NXF_UUID')) : UUID.randomUUID()
         }
-        log.debug "Session uuid: $uniqueId"
+        log.debug "Session UUID: $uniqueId"
 
         // -- set the run name
         this.runName = config.runName ?: NameGenerator.next()
@@ -369,6 +376,7 @@ class Session implements ISession {
         }
 
         // set the byte-code target directory
+        this.disableRemoteBinDir = getExecConfigProp(null, 'disableRemoteBinDir', false)
         this.classesDir = FileHelper.createLocalDir()
         this.executorFactory = new ExecutorFactory(Plugins.manager)
         this.observers = createObservers()
@@ -447,23 +455,33 @@ class Session implements ISession {
         igniters.add(action)
     }
 
-    void fireDataflowNetwork() {
+    void fireDataflowNetwork(boolean preview=false) {
         checkConfig()
         notifyFlowBegin()
 
-        if( !NextflowMeta.instance.isDsl2() )
+        if( !NextflowMeta.instance.isDsl2() ) {
             return
+        }
 
         // bridge any dataflow queue into a broadcast channel
         CH.broadcast()
 
-        log.debug "Ignite dataflow network (${igniters.size()})"
+        if( preview ) {
+            terminated = true
+        }
+        else {
+            callIgniters()
+        }
+    }
+
+    private void callIgniters() {
+        log.debug "Igniting dataflow network (${igniters.size()})"
         for( Closure action : igniters ) {
             try {
                 action.call()
             }
             catch( Exception e ) {
-                log.error(e.message ?: "Failed to trigger dataflow network", e)
+                log.error(e.message ?: "Failed to ignite dataflow network", e)
                 abort(e)
                 break
             }
@@ -481,13 +499,13 @@ class Session implements ISession {
             msg ? "The following nodes are still active:\n" + msg : null
         }
         catch( Exception e ) {
-            log.debug "Unexpected error dumping DGA status", e
+            log.debug "Unexpected error while dumping DAG status", e
             return null
         }
     }
 
     Session start() {
-        log.debug "Session start invoked"
+        log.debug "Session start"
 
         // register shut-down cleanup hooks
         registerSignalHandlers()
@@ -607,27 +625,29 @@ class Session implements ISession {
     void await() {
         log.debug "Session await"
         processesBarrier.awaitCompletion()
-        log.debug "Session await > all process finished"
+        log.debug "Session await > all processes finished"
         terminated = true
         monitorsBarrier.awaitCompletion()
         log.debug "Session await > all barriers passed"
+        if( !aborted ) {
+            joinAllOperators()
+            log.trace "Session > all operators finished"
+        }
     }
 
     void destroy() {
         try {
             log.trace "Session > destroying"
-            if( !aborted ) {
-                joinAllOperators()
-                log.trace "Session > after processors join"
-            }
-
+            // shutdown publish dir executor
+            publishPoolManager.shutdown(aborted)
             // invoke shutdown callbacks
             shutdown0()
             log.trace "Session > after cleanup"
             // shutdown executors
-            executorFactory.shutdown()
+            executorFactory?.shutdown()
+            executorFactory = null
             // shutdown executor service
-            execService.shutdown()
+            execService?.shutdown()
             execService = null
             log.trace "Session > executor shutdown"
 
@@ -638,11 +658,11 @@ class Session implements ISession {
             Plugins.stop()
 
             // -- cleanup script classes dir
-            classesDir.deleteDir()
+            classesDir?.deleteDir()
         }
         finally {
             // -- update the history file
-            if( HistoryFile.DEFAULT.exists() ) {
+            if( !HistoryFile.disabled() && HistoryFile.DEFAULT.exists() ) {
                 HistoryFile.DEFAULT.update(runName,isSuccess())
             }
             log.trace "Session destroyed"
@@ -665,14 +685,13 @@ class Session implements ISession {
         }
     }
 
-
     final protected void shutdown0() {
         log.trace "Shutdown: $shutdownCallbacks"
+        shutdownInitiated = true
         while( shutdownCallbacks.size() ) {
-            def hook = shutdownCallbacks.poll()
+            final hook = shutdownCallbacks.poll()
             try {
-                if( hook )
-                    hook.call()
+                hook.run()
             }
             catch( Exception e ) {
                 log.debug "Failed to execute shutdown hook: $hook", e
@@ -681,9 +700,6 @@ class Session implements ISession {
 
         // -- invoke observers completion handlers
         notifyFlowComplete()
-
-        // -- global
-        Global.cleanUp()
     }
 
     /**
@@ -848,7 +864,7 @@ class Session implements ISession {
     }
 
     protected List<String> validateConfig0(Collection<String> processNames) {
-        def result = []
+        List<String> result = []
 
         if( !(config.process instanceof Map) )
             return result
@@ -894,11 +910,14 @@ class Session implements ISession {
      * Register a shutdown hook to close services when the session terminates
      * @param Closure
      */
-    void onShutdown( Closure shutdown ) {
-        if( !shutdown )
+    void onShutdown( Runnable hook ) {
+        if( !hook ) {
+            log.warn "Shutdown hook cannot be null\n${ExceptionUtils.getStackTrace(new Exception())}"
             return
-
-        shutdownCallbacks << shutdown
+        }
+        if( shutdownInitiated )
+            throw new IllegalStateException("Session shutdown already initiated — Hook cannot be added: $hook")
+        shutdownCallbacks.add(hook)
     }
 
     void notifyProcessCreate(TaskProcessor process) {
@@ -926,10 +945,11 @@ class Session implements ISession {
     }
 
     void notifyTaskPending( TaskHandler handler ) {
+        final trace = handler.getTraceRecord()
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessPending(handler, handler.getTraceRecord())
+                observer.onProcessPending(handler, trace)
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -946,10 +966,11 @@ class Session implements ISession {
         // -- save a record in the cache index
         cache.putIndexAsync(handler)
 
+        final trace = handler.getTraceRecord()
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessSubmit(handler, handler.getTraceRecord())
+                observer.onProcessSubmit(handler, trace)
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -961,10 +982,11 @@ class Session implements ISession {
      * Notifies task start event
      */
     void notifyTaskStart( TaskHandler handler ) {
+        final trace = handler.getTraceRecord()
         for( int i=0; i<observers.size(); i++ ) {
             final observer = observers.get(i)
             try {
-                observer.onProcessStart(handler, handler.getTraceRecord())
+                observer.onProcessStart(handler, trace)
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
@@ -979,7 +1001,7 @@ class Session implements ISession {
      */
     void notifyTaskComplete( TaskHandler handler ) {
         // save the completed task in the cache DB
-        final trace = handler.getTraceRecord()
+        final trace = handler.safeTraceRecord()
         cache.putTaskAsync(handler, trace)
 
         // notify the event to the observers
@@ -1062,10 +1084,11 @@ class Session implements ISession {
      */
     void notifyError( TaskHandler handler ) {
 
+        final trace = handler?.safeTraceRecord()
         for ( int i=0; i<observers?.size(); i++){
             try{
                 final observer = observers.get(i)
-                observer.onFlowError(handler, handler?.getTraceRecord())
+                observer.onFlowError(handler, trace)
             } catch ( Throwable e ) {
                 log.debug(e.getMessage(), e)
             }
@@ -1075,7 +1098,7 @@ class Session implements ISession {
             return
 
         try {
-            errorAction.call( handler?.getTraceRecord() )
+            errorAction.call(trace)
         }
         catch( Throwable e ) {
             log.debug(e.getMessage(), e)
@@ -1119,6 +1142,12 @@ class Session implements ISession {
         finally {
             db.close()
         }
+    }
+
+    @Memoized
+    CondaConfig getCondaConfig() {
+        final cfg = config.conda as Map ?: Collections.emptyMap()
+        return new CondaConfig(cfg, getSystemEnv())
     }
 
     /**
@@ -1198,7 +1227,6 @@ class Session implements ISession {
     protected Map<String,String> getSystemEnv() {
         new HashMap<String, String>(System.getenv())
     }
-
 
     @CompileDynamic
     def fetchContainers() {
@@ -1328,73 +1356,13 @@ class Session implements ISession {
         ansiLogObserver ? ansiLogObserver.appendInfo(file.text) : Files.copy(file, System.out)
     }
 
-    @Memoized // <-- this guarantees that the same executor is used across different publish dir in the same session
-    @CompileStatic
-    synchronized ExecutorService getFileTransferThreadPool() {
-        final DEFAULT_MIN_THREAD = Math.min(Runtime.runtime.availableProcessors(), 4)
-        final DEFAULT_MAX_THREAD = DEFAULT_MIN_THREAD
-        final DEFAULT_QUEUE = 10_000
-        final DEFAULT_KEEP_ALIVE =  Duration.of('60sec')
-        final DEFAULT_MAX_AWAIT = Duration.of('12 hour')
+    private ThreadPoolManager publishPoolManager = new ThreadPoolManager('PublishDir')
 
-        def minThreads = config.navigate("threadPool.FileTransfer.minThreads", DEFAULT_MIN_THREAD) as Integer
-        def maxThreads = config.navigate("threadPool.FileTransfer.maxThreads", DEFAULT_MAX_THREAD) as Integer
-        def maxQueueSize = config.navigate("threadPool.FileTransfer.maxQueueSize", DEFAULT_QUEUE) as Integer
-        def keepAlive = config.navigate("threadPool.FileTransfer.keepAlive", DEFAULT_KEEP_ALIVE) as Duration
-        def maxAwait = config.navigate("threadPool.FileTransfer.maxAwait", DEFAULT_MAX_AWAIT) as Duration
-        def allowThreadTimeout = config.navigate("threadPool.FileTransfer.allowThreadTimeout", false) as Boolean
-
-        if( minThreads>maxThreads ) {
-            log.debug("FileTransfer minThreads ($minThreads) cannot be greater than maxThreads ($maxThreads) - Setting minThreads to $maxThreads")
-            minThreads = maxThreads
-        }
-
-        final pool = new ThreadPoolBuilder()
-                .withName('FileTransfer')
-                .withMinSize(minThreads)
-                .withMaxSize(maxThreads)
-                .withQueueSize(maxQueueSize)
-                .withKeepAliveTime(keepAlive)
-                .withAllowCoreThreadTimeout(allowThreadTimeout)
-                .build()
-
-        this.onShutdown {
-            final max = maxAwait.millis
-            final t0 = System.currentTimeMillis()
-            // start shutdown process
-            if( aborted ) {
-                pool.shutdownNow()
-                return
-            }
-            pool.shutdown()
-            // wait for ongoing file transfer to complete
-            int count=0
-            while( true ) {
-                final terminated = pool.awaitTermination(5, TimeUnit.SECONDS)
-                if( terminated )
-                    break
-                
-                final delta = System.currentTimeMillis()-t0
-                if( delta > max ) {
-                    log.warn "Exiting before FileTransfer thread pool complete -- Some files maybe lost"
-                    break
-                }
-
-                final p1 = ((ThreadPoolExecutor)pool)
-                final pending = p1.getTaskCount() - p1.getCompletedTaskCount()
-                // log to console every 10 minutes (120 * 5 sec)
-                if( count % 120 == 0 ) {
-                    log.info1 "Waiting files transfer to complete (${pending} files)"
-                }
-                // log to the debug file every minute (12 * 5 sec)
-                else if( count % 12 == 0 ) {
-                    log.debug "Waiting files transfer to complete (${pending} files)"
-                }
-                // increment the count
-                count++
-            }
-        }
-
-        return pool
+    @Memoized
+    synchronized ExecutorService publishDirExecutorService() {
+        return publishPoolManager
+                .withConfig(config)
+                .create()
     }
+
 }

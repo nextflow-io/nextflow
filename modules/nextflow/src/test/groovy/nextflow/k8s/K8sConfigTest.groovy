@@ -22,6 +22,7 @@ import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
+import nextflow.util.Duration
 import spock.lang.Specification
 /**
  *
@@ -140,6 +141,42 @@ class K8sConfigTest extends Specification {
         client.server == 'http://foo'
         client.namespace == 'this'
         client.serviceAccount == 'that'
+        client.httpConnectTimeout == null // testing default null
+        client.httpReadTimeout == null // testing default null
+        client.maxErrorRetry == 4
+
+    }
+
+    def 'should set maxErrorRetry' () {
+        given:
+        def CONFIG = [maxErrorRetry: 10, namespace: 'this', serviceAccount: 'that', client: [server: 'http://foo']]
+
+        when:
+        def config = new K8sConfig(CONFIG)
+        def client = config.getClient()
+        then:
+        client.maxErrorRetry == 10
+    }
+
+    def 'should create client config with http request timeouts' () {
+
+        given:
+        def CONFIG = [
+                namespace: 'this',
+                serviceAccount: 'that',
+                client: [server: 'http://foo'],
+                httpReadTimeout: '20s',
+                httpConnectTimeout: '25s' ]
+
+        when:
+        def config = new K8sConfig(CONFIG)
+        def client = config.getClient()
+        then:
+        client.server == 'http://foo'
+        client.namespace == 'this'
+        client.serviceAccount == 'that'
+        client.httpConnectTimeout == Duration.of('25s')
+        client.httpReadTimeout == Duration.of('20s')
 
     }
 
@@ -400,12 +437,12 @@ class K8sConfigTest extends Specification {
         when:
         def cfg = new K8sConfig([:])
         then:
-        !cfg.preserveContainerEntrypoint()
+        !cfg.entrypointOverride()
 
         when:
-        cfg = new K8sConfig( preserveContainerEntrypoint: true )
+        cfg = new K8sConfig( entrypointOverride: true )
         then:
-        cfg.preserveContainerEntrypoint()
+        cfg.entrypointOverride()
 
     }
 

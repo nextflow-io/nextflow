@@ -37,6 +37,7 @@ import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodMountConfig
 import nextflow.k8s.model.PodSpecBuilder
 import nextflow.k8s.model.ResourceType
+import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.scm.ProviderConfig
 import nextflow.util.ConfigHelper
@@ -58,7 +59,7 @@ class K8sDriverLauncher {
     /**
      * Container image to be used for the Nextflow driver pod
      */
-    private String podImage
+    private String headImage
 
     /** 
      * Request CPUs to be used for the Nextflow driver pod
@@ -187,7 +188,7 @@ class K8sDriverLauncher {
                 }
             }
             catch( Exception e ) {
-                log.warn "Caught exception waiting for ${resourceType.lower()} to stop running"
+                log.warn "Caught exception while waiting for ${resourceType.lower()} to stop running"
             }
         }
     }
@@ -264,6 +265,7 @@ class K8sDriverLauncher {
 
         if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.runRemoteConfig ) {
             // -- check and parse project remote config
+            Plugins.init()
             final pipelineConfig = new AssetManager(pipelineName, cmd) .getConfigFile()
             builder.setUserConfigFiles(pipelineConfig)
         }
@@ -382,7 +384,7 @@ class K8sDriverLauncher {
     private void checkUnsupportedOption(String name) {
         def field = getField(cmd,name)
         if( !field ) {
-            log.warn "Unknown cli option to check: $name"
+            log.warn "Unknown command-line option to check: $name"
             return
         }
         field.setAccessible(true)
@@ -518,7 +520,7 @@ class K8sDriverLauncher {
         // create the launcher pod
         PodSpecBuilder builder = new PodSpecBuilder()
             .withPodName(runName)
-            .withImageName(podImage ?: k8sConfig.getNextflowImageName())
+            .withImageName(headImage ?: k8sConfig.getNextflowImageName())
             .withCommand(['/bin/bash', '-c', cmd])
             .withLabels([ app: 'nextflow', runName: runName ])
             .withNamespace(k8sClient.config.namespace)

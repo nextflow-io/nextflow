@@ -15,7 +15,10 @@ import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 
 import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.s3.model.Tag
 import groovy.util.logging.Slf4j
+import nextflow.file.CopyMoveHelper
+import nextflow.file.FileHelper
 import spock.lang.Ignore
 import spock.lang.IgnoreIf
 import spock.lang.Requires
@@ -34,27 +37,16 @@ import spock.lang.Timeout
 class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     @Shared
-    AmazonS3 s3Client
+    static AmazonS3 s3Client0
 
-    def setupSpec() {
+    AmazonS3 getS3Client() { s3Client0 }
+
+    static {
         def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY')
         def secretKey = System.getenv('AWS_S3FS_SECRET_KEY')
-//        def region = System.getenv('AWS_REGION') ?: 'eu-west-1'
-//        log.debug "Creating AWS S3 client: region=$region; accessKey=${accessKey?.substring(0,5)}.. - secretKey=${secretKey?.substring(0,5)}.. -  "
-//        final creds = new AWSCredentials() {
-//            String getAWSAccessKeyId() { accessKey }
-//            String getAWSSecretKey() { secretKey }
-//        }
-//
-//        storageClient = AmazonS3ClientBuilder
-//                .standard()
-//                .withRegion(region)
-//                .withCredentials(new AWSStaticCredentialsProvider(creds))
-//                .build()
         def fs = (S3FileSystem)FileSystems.newFileSystem(URI.create("s3:///"), [access_key: accessKey, secret_key: secretKey])
-        s3Client = fs.client.getClient()
+        s3Client0 = fs.client.getClient()
     }
-
 
     def 'should create a blob' () {
         given:
@@ -601,6 +593,28 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         deleteBucket(bucketName)
     }
 
+    def 'should copy a bucket' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def target = folder.resolve('file.txt')
+        and:
+        def bucketName = createBucket()
+        and:
+        final TEXT = randomText(50 * 1024)
+        final path = Paths.get(new URI("s3:///$bucketName/file.txt"))
+        createObject(path, TEXT)
+
+        when:
+        target = FileHelper.copyPath(path, target)
+
+        then:
+        target.text == TEXT
+
+        cleanup:
+        folder?.deleteDir()
+        deleteBucket(bucketName)
+    }
+
     def 'should create a newOutputStream' () {
         given:
         def bucketName = createBucket()
@@ -989,4 +1003,197 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         deleteBucket(bucketName)
     }
 
+    def 'should download file from encrypted bucket' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def target = folder.resolve('test-data.txt')
+        and:
+        def source = s3path("s3://nf-kms-xyz/test-data.txt")
+
+        when:
+        FileHelper.copyPath(source, target)
+        then:
+        target.exists()
+        
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should upload file to encrypted bucket' () {
+        given:
+        def KEY = 'arn:aws:kms:eu-west-1:195996028523:key/e97ecf28-951e-4700-bf22-1bd416ec519f'
+        and:
+        def folder = Files.createTempDirectory('test')
+        def source = folder.resolve('hello.txt'); source.text = 'Hello world'
+        and:
+        def target = (S3Path) Paths.get(new URI("s3:///nf-kms-xyz/test-${UUID.randomUUID()}.txt"))
+        and: // assign some tags
+        target.setTags([ONE: 'HELLO'])
+
+        when:
+        FileHelper.copyPath(source, target)
+        then:
+        target.exists()
+        
+        expect:
+        target.getFileSystem().getClient().getObjectKmsKeyId(target.bucket, target.key) == KEY
+        and:
+        target.getFileSystem().getClient().getObjectTags(target.bucket, target.key).find { it.key=='ONE' }.value == 'HELLO'
+
+        cleanup:
+        Files.deleteIfExists(target)
+        folder?.deleteDir()
+    }
+
+    def 'should upload directory to encrypted bucket' () {
+        given:
+        def KEY = 'arn:aws:kms:eu-west-1:195996028523:key/e97ecf28-951e-4700-bf22-1bd416ec519f'
+        and:
+        def folder = Files.createTempDirectory('test')
+        def source = folder.resolve('data'); source.mkdir()
+        source.resolve('file-1.txt').text = 'file 1'
+        source.resolve('file-2.txt').text = 'file 2'
+        source.resolve('alpha').mkdir()
+        source.resolve('alpha/file-3.txt').text = 'file 3'
+        source.resolve('alpha/beta').mkdir()
+        source.resolve('alpha/beta/file-4.txt').text = 'file 4'
+        source.resolve('alpha/beta/file-5.txt').text = 'file 5'
+
+        and:
+        def target = (S3Path) Paths.get(new URI("s3:///nf-kms-xyz/test-${UUID.randomUUID()}"))
+        and: // assign some tags
+        target.setTags([ONE: 'HELLO'])
+
+        when:
+        FileHelper.copyPath(source, target)
+        then:
+        target.exists()
+        target.resolve('file-1.txt').text == 'file 1'
+        target.resolve('file-2.txt').text == 'file 2'
+        target.resolve('alpha/file-3.txt').text == 'file 3'
+        target.resolve('alpha/beta/file-4.txt').text == 'file 4'
+        target.resolve('alpha/beta/file-5.txt').text == 'file 5'
+
+        expect:
+        def client = target.getFileSystem().getClient()
+        and:
+        client.getObjectKmsKeyId(target.bucket,  "$target.key/file-1.txt") == KEY
+        client.getObjectKmsKeyId(target.bucket,  "$target.key/alpha/beta/file-5.txt") == KEY
+        and:
+        client.getObjectTags(target.bucket,  "$target.key/file-1.txt") == [ new Tag('ONE','HELLO') ]
+        client.getObjectTags(target.bucket,  "$target.key/alpha/beta/file-5.txt") == [ new Tag('ONE','HELLO') ]
+
+        cleanup:
+        target?.deleteDir()
+        folder?.deleteDir()
+    }
+
+    def 'should download s3 dir to local dir' () {
+        given:
+        def bucketName = createBucket()
+        createObject("$bucketName/cache/foo/file-1",'File one')
+        createObject("$bucketName/cache/foo/bar/file-2",'File two')
+        createObject("$bucketName/cache/foo/baz/file-3",'File three')
+        and:
+        def local = Files.createTempDirectory('test')
+        def cache1 = local.resolve('cache1')
+        def cache2 = local.resolve('cache2')
+        and:
+        def remote = s3path("s3://$bucketName/cache/foo")
+
+        when:
+        CopyMoveHelper.copyToForeignTarget(remote, cache1)
+        then:
+        cache1.resolve('file-1').exists()
+        cache1.resolve('bar/file-2').exists()
+        cache1.resolve('baz/file-3').exists()
+
+        when:
+        // the use of 'FileHelper.copyPath' will invoke the s3 provider download directory method
+        // make sure the resulting local directory structure matches the one created by 'CopyMoveHelper.copyToForeignTarget'
+        FileHelper.copyPath(remote, cache2)
+        then:
+        cache2.resolve('file-1').exists()
+        cache2.resolve('bar/file-2').exists()
+        cache2.resolve('baz/file-3').exists()
+
+        cleanup:
+        local?.deleteDir()
+        deleteBucket(bucketName)
+    }
+
+
+    def 'should upload local dir to s3 directory' () {
+        given:
+        def bucketName = createBucket()
+        def local = Files.createTempDirectory('test')
+        local.resolve('cache/foo').mkdirs()
+        local.resolve('cache/foo/bar').mkdirs()
+        local.resolve('cache/foo/baz').mkdirs()
+        and:
+        local.resolve('cache/foo/file-1').text = 'File one'
+        local.resolve('cache/foo/bar/file-2').text = 'File two'
+        local.resolve('cache/foo/baz/file-3').text = 'File three'
+        local.resolve('cache/foo/baz/file-4').text = 'File four'
+
+        when:
+        CopyMoveHelper.copyToForeignTarget(local.resolve('cache/foo'), s3path("s3://$bucketName/cache1"))
+        then:
+        Files.exists(s3path("s3://$bucketName/cache1/file-1"))
+        Files.exists(s3path("s3://$bucketName/cache1/bar/file-2"))
+        Files.exists(s3path("s3://$bucketName/cache1/baz/file-3"))
+        Files.exists(s3path("s3://$bucketName/cache1/baz/file-4"))
+
+        when:
+        FileHelper.copyPath(local.resolve('cache/foo'), s3path("s3://$bucketName/cache2"))
+        then:
+        Files.exists(s3path("s3://$bucketName/cache2/file-1"))
+        Files.exists(s3path("s3://$bucketName/cache2/bar/file-2"))
+        Files.exists(s3path("s3://$bucketName/cache2/baz/file-3"))
+        Files.exists(s3path("s3://$bucketName/cache2/baz/file-4"))
+
+        cleanup:
+        local?.deleteDir()
+        deleteBucket(bucketName)
+    }
+
+    void "should upload a stream with multiple flush"(){
+        given:
+        def bucketName = createBucket()
+        and:
+        def path = (S3Path) Paths.get(new URI("s3:///$bucketName/alpha.txt"))
+
+        when:
+        PrintWriter writer = new PrintWriter(Files.newBufferedWriter(path, Charset.defaultCharset()))
+        writer.println '*'*20
+        writer.flush()
+        writer.println '*'*20
+        writer.flush()
+        writer.close()
+
+        then:
+        Files.readString(Paths.get(new URI("s3:///$bucketName/alpha.txt"))).length() == 42 // 2*20 + 2 return lines
+
+        cleanup:
+        deleteBucket(bucketName)
+    }
+
+    void "should upload a stream without flush"(){
+        given:
+        def bucketName = createBucket()
+        and:
+        def path = (S3Path) Paths.get(new URI("s3:///$bucketName/alpha.txt"))
+
+        when:
+        PrintWriter writer = new PrintWriter(Files.newBufferedWriter(path, Charset.defaultCharset()))
+        writer.println '*'*20
+        writer.println '*'*20
+        writer.close()
+
+        then:
+        Files.readString(Paths.get(new URI("s3:///$bucketName/alpha.txt"))).length() == 42 // 2*20 + 2 return lines
+
+        cleanup:
+        deleteBucket(bucketName)
+    }
 }

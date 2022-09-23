@@ -147,8 +147,13 @@ A minimal configuration looks like the following snippet::
       }
     }
 
-In the above example, replace the location and the account placeholders with the value corresponding to your configuration and
-save it to a file named ``nextflow.config``.
+In the above example, replace the location placeholder with the name of your Azure region and the account placeholders with the values
+corresponding to your configuration . Then save it to a file named ``nextflow.config``.
+
+.. tip:: The list of Azure regions can be found by executing the following Azure CLI command::
+
+    az account list-locations -o table
+
 
 Given the previous configuration, launch the execution of the pipeline using the following command::
 
@@ -305,17 +310,19 @@ Below the configurations for image reference/SKU combinations to select two popu
 
 * Ubuntu 20.04::
 
-	sku = "batch.node.ubuntu 20.04"
-	offer = "ubuntu-server-container"
-	publisher = "microsoft-azure-batch"
+	azure.batch.pools.<name>.sku = "batch.node.ubuntu 20.04"
+	azure.batch.pools.<name>.offer = "ubuntu-server-container"
+	azure.batch.pools.<name>.publisher = "microsoft-azure-batch"
 
 * CentOS 8 (default)::
 
-	sku = "batch.node.centos 8"
-	offer = "centos-container"
-	publisher = "microsoft-azure-batch"
+	azure.batch.pools.<name>.sku = "batch.node.centos 8"
+	azure.batch.pools.<name>.offer = "centos-container"
+	azure.batch.pools.<name>.publisher = "microsoft-azure-batch"
 
-See the `Advanced settings`_ below and `Azure Batch nodes <https://docs.microsoft.com/en-us/azure/batch/batch-linux-nodes>` documentation for more details.
+In the above snippet replace ``<name>`` with the name of your Azure node pool.
+
+See the `Advanced settings`_ below and `Azure Batch nodes <https://docs.microsoft.com/en-us/azure/batch/batch-linux-nodes>`_ documentation for more details.
 
 Private container registry
 --------------------------
@@ -353,7 +360,7 @@ azure.storage.tokenDuration                     The duration of the shared acces
 azure.batch.accountName                         The batch service account name.
 azure.batch.accountKey                          The batch service account key.
 azure.batch.endpoint                            The batch service endpoint e.g. ``https://nfbatch1.westeurope.batch.azure.com``.
-azure.batch.location                            The batch service location e.g. ``westeurope``. This is not needed when the endpoint is specified.
+azure.batch.location                            The name of the batch service region, e.g. ``westeurope`` or ``eastus2``. This is not needed when the endpoint is specified.
 azure.batch.autoPoolMode                        Enable the automatic creation of batch pools depending on the pipeline resources demand (default: ``true``).
 azure.batch.allowPoolCreation                   Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: ``false``).
 azure.batch.deleteJobsOnCompletion              Enable the automatic deletion of jobs created by the pipeline execution (default: ``true``).
@@ -375,4 +382,8 @@ azure.batch.pools.<name>.runAs                  Specify the username under which
 azure.registry.server                           Specify the container registry from which to pull the Docker images (default: ``docker.io``, requires ``nf-azure@0.9.8``).
 azure.registry.userName                         Specify the username to connect to a private container registry (requires ``nf-azure@0.9.8``).
 azure.registry.password                         Specify the password to connect to a private container registry (requires ``nf-azure@0.9.8``).
+azure.retryPolicy.delay                         Delay when retrying failed API requests (default: ``500ms``).
+azure.retryPolicy.maxDelay                      Max delay when retrying failed API requests (default: ``60s``).
+azure.retryPolicy.jitter                        Jitter value when retrying failed API requests (default: ``0.25``).
+azure.retryPolicy.maxAttempts                   Max attempts when retrying failed API requests (default: ``10``).
 ============================================== =================

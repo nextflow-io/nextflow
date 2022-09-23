@@ -188,7 +188,7 @@ class PathVisitor {
     @PackageScope
     static ExecutorService createExecutor(Session session) {
         final result = Executors.newCachedThreadPool(new CustomThreadFactory('PathVisitor'))
-        session?.onShutdown { result.shutdown() }
+        Global.onCleanup((it) -> result.shutdown())
         return result
     }
 

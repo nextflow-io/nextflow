@@ -29,6 +29,26 @@ import nextflow.util.PathTrie
  */
 abstract class ContainerBuilder<V extends ContainerBuilder> {
 
+    /**
+     * Create a builder instance given the container engine
+     */
+    static ContainerBuilder create(String engine, String containerImage) {
+        if( engine == 'docker' )
+            return new DockerBuilder(containerImage)
+        if( engine == 'podman' )
+            return new PodmanBuilder(containerImage)
+        if( engine == 'singularity' )
+            return new SingularityBuilder(containerImage)
+        if( engine == 'udocker' )
+            return new UdockerBuilder(containerImage)
+        if( engine == 'shifter' )
+            return new ShifterBuilder(containerImage)
+        if( engine == 'charliecloud' )
+            return new CharliecloudBuilder(containerImage)
+        //
+        throw new IllegalArgumentException("Unknown container engine: $engine")
+    }
+
     final protected List env = []
 
     final protected List<Path> mounts = []
@@ -51,11 +71,16 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     protected boolean readOnlyInputs
 
+    @Deprecated
     protected String entryPoint
 
     protected String runCommand
 
     protected boolean mountWorkDir = true
+
+    protected boolean privileged
+
+    String getImage() { image }
 
     V addRunOptions(String str) {
         runOptions.add(str)
@@ -156,6 +181,12 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
     V addMount( Path path ) {
         if( path )
             mounts.add(path)
+        return (V)this
+    }
+
+    V addMounts( List<Path> paths ) {
+        if( paths ) for( Path it : paths )
+            mounts.add(it)
         return (V)this
     }
 

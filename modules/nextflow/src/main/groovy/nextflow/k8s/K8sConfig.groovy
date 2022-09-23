@@ -30,6 +30,7 @@ import nextflow.k8s.model.PodOptions
 import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
 import nextflow.k8s.model.ResourceType
+import nextflow.util.Duration
 
 /**
  * Model Kubernetes specific settings defined in the nextflow
@@ -125,8 +126,11 @@ class K8sConfig implements Map<String,Object> {
      *      container entrypoint (it does however require to have a bash shell as the image entrypoint)
      *
      */
-    boolean preserveContainerEntrypoint() {
-        return target.preserveContainerEntrypoint
+    boolean entrypointOverride() {
+        def result = target.entrypointOverride
+        if( result == null )
+            result = System.getenv('NXF_CONTAINER_ENTRYPOINT_OVERRIDE')
+        return result
     }
 
     /**
@@ -200,7 +204,6 @@ class K8sConfig implements Map<String,Object> {
         return result ? result.claimName : null
     }
 
-
     @Memoized
     ClientConfig getClient() {
 
@@ -216,6 +219,15 @@ class K8sConfig implements Map<String,Object> {
         if( target.serviceAccount ) {
             result.serviceAccount = target.serviceAccount as String
         }
+
+        if( target.httpConnectTimeout )
+            result.httpConnectTimeout = target.httpConnectTimeout as Duration
+
+        if( target.httpReadTimeout )
+            result.httpReadTimeout = target.httpReadTimeout as Duration
+
+        if( target.maxErrorRetry )
+            result.maxErrorRetry = target.maxErrorRetry as Integer
 
         return result
     }
