@@ -197,6 +197,7 @@ class GoogleLifeSciencesHelper {
                 .setDisks([disk])
                 .setServiceAccount(serviceAccount)
                 .setPreemptible(req.preemptible)
+                .setLabels(req.resourcesLabels)
 
         def network = new Network()
 
