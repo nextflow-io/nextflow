@@ -233,20 +233,16 @@ class K8sConfig implements Map<String,Object> {
         if( !result.namespace )
             result.namespace = 'default'
 
-        // use service account token if service account is specified
-        if( result.serviceAccount ) {
-            result.token = clientAuthToken(result.namespace, result.serviceAccount)
-        }
+        if( !result.serviceAccount )
+            result.serviceAccount = 'default'
 
-        // otherwise use keys for current user if specified
-        else if( result.clientCert && result.clientKey ) {
+        // use keys for current user if specified
+        if( result.clientCert && result.clientKey ) {
             result.keyManagers = clientKeyManagers(result.clientCert, result.clientKey)
         }
 
-        // otherwise use token for current user if specified
-        // otherwise use token for default service account
+        // otherwise use token for current user or service account if specified
         else if( !result.token ) {
-            result.serviceAccount = 'default'
             result.token = clientAuthToken(result.namespace, result.serviceAccount)
         }
 

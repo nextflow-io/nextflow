@@ -172,7 +172,23 @@ class K8sConfigTest extends Specification {
 
     }
 
-    def 'should create client config with service account' () {
+    def 'should create client config from discovery' () {
+
+        given:
+        def CONFIG = [context: 'pizza']
+        def config = Spy(K8sConfig, constructorArgs: [ CONFIG ])
+
+        when:
+        def client = config.getClient()
+        then:
+        1 * config.clientFromDiscovery('pizza') >> new ClientConfig(namespace: 'foo', server: 'bar', token: 'secret-token')
+        client.server == 'bar'
+        client.namespace == 'foo'
+        client.token == 'secret-token'
+
+    }
+
+    def 'should create client config from discovery with service account' () {
 
         given:
         def CONFIG = [
@@ -189,22 +205,6 @@ class K8sConfigTest extends Specification {
         client.server == 'http://foo'
         client.namespace == 'this'
         client.serviceAccount == 'that'
-
-    }
-
-    def 'should create client config with discovery' () {
-
-        given:
-        def CONFIG = [context: 'pizza']
-        def config = Spy(K8sConfig, constructorArgs: [ CONFIG ])
-
-        when:
-        def client = config.getClient()
-        then:
-        1 * config.clientFromDiscovery('pizza') >> new ClientConfig(namespace: 'foo', server: 'bar', token: 'secret-token')
-        client.server == 'bar'
-        client.namespace == 'foo'
-        client.token == 'secret-token'
 
     }
 
