@@ -151,7 +151,7 @@ class ConfigDiscovery {
         def proc = new ProcessBuilder('bash','-o','pipefail','-c', cmd).redirectErrorStream(true).start()
         def status = proc.waitFor()
         if( status==0 ) {
-            return proc.text.trim().decodeBase64()
+            return new String(proc.text.trim().decodeBase64())
         }
         else {
             final msg = proc.text
