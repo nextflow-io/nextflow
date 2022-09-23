@@ -16,6 +16,9 @@
  */
 package nextflow.processor
 
+import nextflow.exception.K8sOutOfCPUException
+import nextflow.exception.K8sOutOfMemoryException
+
 import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
@@ -972,8 +975,15 @@ class TaskProcessor {
             if( error instanceof Error ) throw error
 
             // -- retry without increasing the error counts
-            if( task && (error.cause instanceof NodeTerminationException || error.cause instanceof CloudSpotTerminationException) ) {
-                if( error.cause instanceof NodeTerminationException )
+            if( task && (error.cause instanceof NodeTerminationException
+                    || error.cause instanceof CloudSpotTerminationException
+                    || error instanceof K8sOutOfCPUException
+                    || error instanceof K8sOutOfMemoryException
+            ) ) {
+                if( error.cause instanceof NodeTerminationException
+                        || error instanceof K8sOutOfCPUException
+                        || error instanceof K8sOutOfMemoryException
+                )
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
                 else
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
