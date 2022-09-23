@@ -147,16 +147,18 @@ class K8sConfigTest extends Specification {
         client.serviceAccount == 'default'
         client.httpConnectTimeout == null
         client.httpReadTimeout == null
+        client.maxErrorRetry == 4
 
     }
 
-    def 'should create client config with http request timeouts' () {
+    def 'should create client config with options' () {
 
         given:
         def CONFIG = [
             client: [server: 'http://foo'],
             httpConnectTimeout: '25s',
-            httpReadTimeout: '20s'
+            httpReadTimeout: '20s',
+            maxErrorRetry: 10
         ]
         def config = Spy(K8sConfig, constructorArgs: [ CONFIG ])
 
@@ -169,7 +171,7 @@ class K8sConfigTest extends Specification {
         client.serviceAccount == 'default'
         client.httpConnectTimeout == Duration.of('25s')
         client.httpReadTimeout == Duration.of('20s')
-
+        client.maxErrorRetry == 10
     }
 
     def 'should create client config from discovery' () {

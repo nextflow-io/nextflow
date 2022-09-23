@@ -170,7 +170,7 @@ Environment Modules
 Community
 =========
 
-You can post questions, or report problems by using the Nextflow [discussion forum](https://groups.google.com/forum/#!forum/nextflow)
+You can post questions, or report problems by using the Nextflow [discussions](https://github.com/nextflow-io/nextflow/discussions)
 or the Nextflow [Slack community chat](https://www.nextflow.io/slack-invite.html).
 
 *Nextflow* also hosts a yearly workshop showcasing researcher's workflows and advancements in the langauge. Talks from the past workshops are available on the [Nextflow YouTube Channel](https://www.youtube.com/channel/UCB-5LCKLdTKVn2F4V4KlPbQ)

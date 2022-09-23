@@ -216,13 +216,15 @@ class K8sConfig implements Map<String,Object> {
                 : clientFromDiscovery(target.context as String)
 
         // apply settings from nextflow k8s config
-        if( target.namespace ) {
+        if( target.namespace )
             result.namespace = target.namespace as String
-        }
+        else if( !result.namespace )
+            result.namespace = 'default'
 
-        if( target.serviceAccount ) {
+        if( target.serviceAccount )
             result.serviceAccount = target.serviceAccount as String
-        }
+        else if( !result.serviceAccount )
+            result.serviceAccount = 'default'
 
         if( target.httpConnectTimeout )
             result.httpConnectTimeout = target.httpConnectTimeout as Duration
@@ -230,11 +232,8 @@ class K8sConfig implements Map<String,Object> {
         if( target.httpReadTimeout )
             result.httpReadTimeout = target.httpReadTimeout as Duration
 
-        if( !result.namespace )
-            result.namespace = 'default'
-
-        if( !result.serviceAccount )
-            result.serviceAccount = 'default'
+        if( target.maxErrorRetry )
+            result.maxErrorRetry = target.maxErrorRetry as Integer
 
         // use keys for current user if specified
         if( result.clientCert && result.clientKey ) {
