@@ -159,11 +159,13 @@ class WaveClient {
 
         try {
             final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
-            if( resp.statusCode()==200 ) {
-                log.debug "Wave response: ${resp.body()}"
+            log.debug "Wave response: statusCode=${resp.statusCode()}; body=${resp.body()}"
+            if( resp.statusCode()==200 )
                 return jsonToSubmitResponse(resp.body())
-            }
-            throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
+            if( resp.statusCode()==401 )
+                throw new BadResponseException("Unauthorised [401] - Verify you have provided a valid access token")
+            else
+                throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
         }
         catch (ConnectException e) {
             throw new IllegalStateException("Unable to connect Wave service: $endpoint")
