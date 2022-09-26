@@ -1,5 +1,9 @@
 nf-google changelog
 ===================
+1.4.3 - 26 Sep 2022
+- Update Google Batch mount point with the requirements [5aec28ac]
+- Apply GCP resourceLabels to the VirtualMachine (#3234) [2275c03c] <Doug Daniels>
+
 1.4.2 - 1 Sep 2022
 - Add support for resource labels for google batch (#3168) (#3170) [2d24917b] (#2853) [5d0b7c35]
 - Add support for project resources [c2ad6566]
