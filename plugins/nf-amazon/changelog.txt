@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+1.10.6 - 26 Sep 2022
+- Add tags propagation to AWS Batch [d64eeffc]
+
 1.10.5 - 20 Sep 2022
 - Fix AWS S3 copy object [b3b90d23]
 
