@@ -111,7 +111,7 @@ class WaveConfig {
     }
 
     List<URL> containerConfigUrl() {
-        return containerConfigUrl
+        return containerConfigUrl ?: Collections.<URL>emptyList()
     }
 
     Duration tokensCacheMaxDuration() { 

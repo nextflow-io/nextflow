@@ -20,6 +20,7 @@ package io.seqera.wave.plugin
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
+import nextflow.util.CacheHelper
 
 /**
  * Model a container layer meta-info
@@ -30,15 +31,45 @@ import groovy.transform.ToString
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
 class ContainerLayer {
+    /**
+     * the layer location, it can be either `http:` or `https:` prefixed URI
+     * or a `data:` pseudo-protocol followed by a base64 encoded tar gzipped layer payload
+     */
     String location
+
+    /**
+     * The layer gzip sha256 checksum
+     */
     String gzipDigest
+
+    /**
+     * The layer gzip size in bytes
+     */
     Integer gzipSize
+
+    /**
+     * The layer tar sha256 checksum
+     */
     String tarDigest
+
+    /**
+     * When {@code this layer is not added in the final config fingerprint}
+     */
+    Boolean skipHashing
 
     void validate() {
         if( !location ) throw new IllegalArgumentException("Missing layer location")
         if( !gzipDigest ) throw new IllegalArgumentException("Missing layer gzip digest")
         if( !gzipSize ) throw new IllegalArgumentException("Missing layer gzip size")
         if( !tarDigest ) throw new IllegalArgumentException("Missing layer tar digest")
+    }
+
+    String fingerprint() {
+        final allMeta = new ArrayList()
+        allMeta.add( location ?: 'no-location' )
+        allMeta.add( gzipDigest ?: 'no-gzipDigest' )
+        allMeta.add( gzipSize ?: 0 )
+        allMeta.add( tarDigest ?: 'no-tarDigest')
+        return CacheHelper.hasher(allMeta).hash().toString()
     }
 }

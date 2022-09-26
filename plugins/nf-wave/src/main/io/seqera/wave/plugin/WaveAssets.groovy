@@ -64,7 +64,7 @@ class WaveAssets {
         final allMeta = new ArrayList(10)
         allMeta.add( this.containerImage )
         allMeta.add( this.moduleResources?.fingerprint() )
-        allMeta.add( this.containerConfig?.hashCode() )
+        allMeta.add( this.containerConfig?.fingerprint() )
         allMeta.add( this.dockerFileContent )
         allMeta.add( this.condaFile )
         allMeta.add( this.projectResources?.fingerprint() )
