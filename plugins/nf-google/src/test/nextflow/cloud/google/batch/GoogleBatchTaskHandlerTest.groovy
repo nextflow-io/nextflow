@@ -71,10 +71,10 @@ class GoogleBatchTaskHandlerTest extends Specification {
         taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == 0
         taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == 0
         and:
-        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/foo/scratch/.command.run 2>&1 | tee .command.log'
+        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/disks/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/disks/foo/scratch/.command.run 2>&1 | tee .command.log'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
         runnable.getContainer().getOptions() == ''
-        runnable.getContainer().getVolumesList() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
+        runnable.getContainer().getVolumesList() == ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
         and:
         instancePolicy.getAcceleratorsCount() == 0
         instancePolicy.getMachineType() == ''
@@ -146,10 +146,10 @@ class GoogleBatchTaskHandlerTest extends Specification {
         taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == MEM.toMega()
         taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == TIMEOUT.seconds
         and:
-        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/foo/scratch/.command.run 2>&1 | tee .command.log'
+        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/disks/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/disks/foo/scratch/.command.run 2>&1 | tee .command.log'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
         runnable.getContainer().getOptions() == CONTAINER_OPTS
-        runnable.getContainer().getVolumesList() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
+        runnable.getContainer().getVolumesList() == ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
         and:
         instancePolicy.getAccelerators(0).getCount() == 1
         instancePolicy.getAccelerators(0).getType() == ACCELERATOR.type
