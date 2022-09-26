@@ -50,8 +50,14 @@ class TowerConfigTest extends Specification {
         config.accessToken == 'bar'
         config.workspaceId == 789
 
-        // when TOWER_WORKFLOW_ID is defined env has priority
+        when:
+        env =  [TOWER_ACCESS_TOKEN:'foo', TOWER_WORKSPACE_ID: '123']
+        config = new TowerConfig(accessToken: null, workspaceId: '789', env)
+        then:
+        config.accessToken == null
+        config.workspaceId == 789
 
+        // when TOWER_WORKFLOW_ID is defined env has priority
         when:
         env = [TOWER_ACCESS_TOKEN:'foo', TOWER_WORKSPACE_ID: '123', TOWER_WORKFLOW_ID: 'xyz']
         config = new TowerConfig(accessToken: 'bar', workspaceId: '789', env)
