@@ -1,5 +1,16 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.09.6-edge - 26 Sep 2022
+- Add SocketTimeoutException to k8s client request retry [527e0d5d]
+- Add MaxErrorRetry to K8s config [58be2128]
+- Add tags propagation to AWS Batch [d64eeffc]
+- Fix task resume when updating fusion layer [f38fd2db]
+- Fix Channel merge still deprecated for DSL2 (#3220) [d27384d2] <Kibubu>
+- Apply GCP resourceLabels to the VirtualMachine (#3234) [2275c03c] <Doug Daniels>
+- Update Google Batch mount point with the requirements [5aec28ac]
+- Improve wave error reporting [73842215]
+- Bump fusion 0.4.x [26f1f896]
+
 22.09.5-edge - 21 Sep 2022
 - Use default wave strategy [abbfa7f4]
 - Handle errors reported by tower report writer [0e814647]
