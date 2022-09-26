@@ -40,7 +40,7 @@ import nextflow.util.PathTrie
 @CompileStatic
 class GoogleBatchScriptLauncher extends BashWrapperBuilder {
 
-    private static final String MOUNT_ROOT = '/mnt'
+    private static final String MOUNT_ROOT = '/mnt/disks'
 
     private CloudStoragePath remoteWorkDir
     private Path remoteBinDir
