@@ -32,7 +32,7 @@ class WaveConfigTest extends Specification {
         def opts = new WaveConfig([:])
         then:
         !opts.enabled()
-        opts.endpoint() == 'http://localhost:9090'
+        opts.endpoint() == 'https://wave.seqera.io'
     }
 
     def 'should create from env' () {
