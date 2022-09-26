@@ -19,8 +19,8 @@ class AzBashLibTest extends Specification {
            # Env variables used for azcopy opts
            export _AZCOPY_BLOCK_SIZE_MB=4
            export _AZCOPY_BLOCK_BLOB_TIER=None
-           export _AZCOPY_PUT_MD5=
-           export _AZCOPY_CHECK_MD5=FailIfDifferent
+           export _AZCOPY_PUT_MD5="--put-md5"
+           export _AZCOPY_CHECK_MD5="FailIfDifferent"
            export _AZCOPY_OVERWRITE=false
 
             nxf_az_upload() {
@@ -122,8 +122,8 @@ class AzBashLibTest extends Specification {
             # Env variables used for azcopy opts
             export _AZCOPY_BLOCK_SIZE_MB=4
             export _AZCOPY_BLOCK_BLOB_TIER=None
-            export _AZCOPY_PUT_MD5=
-            export _AZCOPY_CHECK_MD5=FailIfDifferent
+            export _AZCOPY_PUT_MD5="--put-md5"
+            export _AZCOPY_CHECK_MD5="FailIfDifferent"
             export _AZCOPY_OVERWRITE=false
 
             nxf_az_upload() {
@@ -169,8 +169,6 @@ class AzBashLibTest extends Specification {
         def output = AzBashLib.script(new AzCopyOpts([
                 blobTier : "Hot",
                 blockSize: "10",
-                putMD5   : true,
-                checkMD5 : "FailIfDifferent",
                 overwrite: false]), 10, 20, Duration.of('30s'))
 
         then:

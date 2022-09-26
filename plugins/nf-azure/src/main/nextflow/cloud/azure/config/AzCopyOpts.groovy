@@ -43,22 +43,9 @@ class AzCopyOpts {
     static public final String DEFAULT_OVERWRITE = "false" // true | false | prompt | ifSourceNewer
     String overwrite
 
-    //The Azure Blob Storage service automatically computes MD5 sum for files less than 64 MB in size.
-    //Content-MD5 property of the destination blob or file. (azcopy default: false)
-    static public final Boolean DEFAULT_PUT_MD5 = false
-    Boolean putMD5
-
-    //Specifies how strictly MD5 hashes should be validated when downloading. (azcopy default: "FailIfDifferent")
-    // NoCheck| LogOnly| FailIfDifferent| FailIfDifferentOrMissing
-    static public final String DEFAULT_CHECK_MD5 = "FailIfDifferent"
-    String checkMD5
-
-
     AzCopyOpts() {
         this.blockSize = DEFAULT_BLOCK_SIZE
         this.blobTier = DEFAULT_BLOB_TIER
-        this.putMD5 = DEFAULT_PUT_MD5
-        this.checkMD5 = DEFAULT_CHECK_MD5
         this.overwrite = DEFAULT_OVERWRITE
     }
 
@@ -68,8 +55,6 @@ class AzCopyOpts {
 
         this.blockSize = config.blockSize ?: DEFAULT_BLOCK_SIZE
         this.blobTier = config.blobTier ?: DEFAULT_BLOB_TIER
-        this.putMD5 = config.putMD5 ?: DEFAULT_PUT_MD5
-        this.checkMD5 = config.checkMD5 ?: DEFAULT_CHECK_MD5
         this.overwrite = config.overwrite ?: DEFAULT_OVERWRITE
 
     }

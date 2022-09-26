@@ -31,8 +31,6 @@ class AzBashLib extends BashFunLib<AzBashLib> {
 
     private String blockSize = AzCopyOpts.DEFAULT_BLOCK_SIZE
     private String blobTier = AzCopyOpts.DEFAULT_BLOB_TIER
-    private String putMD5 = ''
-    private String checkMD5 = AzCopyOpts.DEFAULT_CHECK_MD5
     private String overwrite = AzCopyOpts.DEFAULT_OVERWRITE
 
     AzBashLib withBlockSize(String value) {
@@ -44,17 +42,6 @@ class AzBashLib extends BashFunLib<AzBashLib> {
     AzBashLib withBlobTier(String value) {
         if (value)
             this.blobTier = value
-        return this
-    }
-
-    AzBashLib withPutMD5(Boolean value) {
-        this.putMD5 = value ? '--put-md5' : ''
-        return this
-    }
-
-    AzBashLib withCheckMD5(String value) {
-        if (value)
-            this.checkMD5 = value
         return this
     }
 
@@ -70,8 +57,8 @@ class AzBashLib extends BashFunLib<AzBashLib> {
         # Env variables used for azcopy opts
         export _AZCOPY_BLOCK_SIZE_MB=${blockSize}
         export _AZCOPY_BLOCK_BLOB_TIER=${blobTier}
-        export _AZCOPY_PUT_MD5=${putMD5}
-        export _AZCOPY_CHECK_MD5=${checkMD5}
+        export _AZCOPY_PUT_MD5="--put-md5"
+        export _AZCOPY_CHECK_MD5="FailIfDifferent"
         export _AZCOPY_OVERWRITE=${overwrite}
         """.stripIndent()
     }
@@ -128,8 +115,6 @@ class AzBashLib extends BashFunLib<AzBashLib> {
                 .withDelayBetweenAttempts(delayBetweenAttempts)
                 .withBlobTier(opts.blobTier)
                 .withBlockSize(opts.blockSize)
-                .withPutMD5(opts.putMD5)
-                .withCheckMD5(opts.checkMD5)
                 .withOverwrite(opts.overwrite)
                 .render()
     }
