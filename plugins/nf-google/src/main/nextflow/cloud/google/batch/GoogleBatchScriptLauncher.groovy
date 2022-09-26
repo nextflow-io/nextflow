@@ -89,7 +89,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder {
         def result = "NXF_CHDIR=${Escape.path(bean.workDir)}\n"
         if( remoteBinDir ) {
             result += "cp -r $remoteBinDir \$HOME/.nextflow-bin\n"
-            result += 'chmod +x $HOME/.nextflow-bin/*\n'
+            result += 'chmod +x -R $HOME/.nextflow-bin/\n'
             result += 'export PATH=$HOME/.nextflow-bin:$PATH\n'
         }
         return result
