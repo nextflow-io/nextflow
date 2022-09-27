@@ -326,7 +326,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         opts.getAwsCli() >> 'aws'
         script == '''
             aws s3 cp --recursive --only-show-errors s3://foo/bar $PWD/nextflow-bin
-            chmod +x $PWD/nextflow-bin/*
+            chmod +x $PWD/nextflow-bin/* || true
             export PATH=$PWD/nextflow-bin:$PATH
             export BAR="world"
             export FOO="hola"
@@ -339,7 +339,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         opts.getRemoteBinDir() >> '/foo/bar'
         script == '''
             /conda/bin/aws s3 cp --recursive --only-show-errors s3://foo/bar $PWD/nextflow-bin
-            chmod +x $PWD/nextflow-bin/*
+            chmod +x $PWD/nextflow-bin/* || true
             export PATH=$PWD/nextflow-bin:$PATH
             export BAR="world"
             export FOO="hola"
@@ -353,7 +353,7 @@ class AwsBatchFileCopyStrategyTest extends Specification {
         opts.getRegion() >> 'eu-west-1'
         script == '''
             /conda/bin/aws s3 cp --recursive --only-show-errors s3://foo/bar $PWD/nextflow-bin
-            chmod +x $PWD/nextflow-bin/*
+            chmod +x $PWD/nextflow-bin/* || true
             export PATH=$PWD/nextflow-bin:$PATH
             export BAR="world"
             export FOO="hola"

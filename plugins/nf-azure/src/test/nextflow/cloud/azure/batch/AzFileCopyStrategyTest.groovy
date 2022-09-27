@@ -216,7 +216,7 @@ class AzFileCopyStrategyTest extends Specification {
         binding.stage_inputs == '''\
                 # stage input files
                 nxf_az_download 'http://account.blob.core.windows.net/my-data/work/remote/bin' $PWD/.nextflow-bin
-                chmod +x $PWD/.nextflow-bin/*
+                chmod +x $PWD/.nextflow-bin/* || true
                 downloads=(true)
                 
                 nxf_parallel "${downloads[@]}"

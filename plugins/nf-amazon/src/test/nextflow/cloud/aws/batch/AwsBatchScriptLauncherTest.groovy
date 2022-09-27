@@ -159,7 +159,7 @@ class AwsBatchScriptLauncherTest extends Specification {
         then:
         binding.task_env == '''\
                     aws s3 cp --recursive --only-show-errors s3://bucket/bin $PWD/nextflow-bin
-                    chmod +x $PWD/nextflow-bin/*
+                    chmod +x $PWD/nextflow-bin/* || true
                     export PATH=$PWD/nextflow-bin:$PATH
                     export FOO="xxx"
                     '''.stripIndent()
