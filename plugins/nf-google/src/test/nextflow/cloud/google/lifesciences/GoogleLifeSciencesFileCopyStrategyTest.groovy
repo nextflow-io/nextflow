@@ -219,7 +219,7 @@ class GoogleLifeSciencesFileCopyStrategyTest extends GoogleSpecification {
         def envScript = strategy.getEnvScript([FOO:1, BAR: 2, PATH: 3], false)
         then:
         envScript == '''\
-                chmod +x /work/xx/yy/nextflow-bin/*
+                chmod +x /work/xx/yy/nextflow-bin/* || true
                 export PATH=/work/xx/yy/nextflow-bin:$PATH
                 export BAR="2"
                 export FOO="1"
