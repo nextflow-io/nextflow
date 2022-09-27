@@ -27,7 +27,7 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class FusionConfig {
 
-    final static public String DEFAULT_FUSION_URL = 'https://fusionfs-release.s3.eu-west-1.amazonaws.com/fusionfs-latest.json'
+    final static public String DEFAULT_FUSION_URL = 'https://s3.eu-west-1.amazonaws.com/fusionfs.io/releases/v0.4.json'
 
     final private enabled
     final private String containerConfigUrl
