@@ -61,7 +61,7 @@ import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
-import nextflow.exception.TemporaryProblem
+import nextflow.exception.RetriableException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessUnrecoverableException
@@ -972,7 +972,7 @@ class TaskProcessor {
             // -- do not recoverable error, just re-throw it
             if( error instanceof Error ) throw error
 
-            boolean temporaryProblem = (error instanceof TemporaryProblem || error?.cause instanceof TemporaryProblem)
+            boolean temporaryProblem = (error instanceof RetriableException || error?.cause instanceof RetriableException)
             // -- retry without increasing the error counts
             if( task && ( temporaryProblem || error.cause instanceof CloudSpotTerminationException ) ) {
                 if( temporaryProblem )
