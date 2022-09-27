@@ -16,7 +16,6 @@
  */
 package nextflow.processor
 
-
 import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
@@ -972,14 +971,13 @@ class TaskProcessor {
             // -- do not recoverable error, just re-throw it
             if( error instanceof Error ) throw error
 
-            boolean temporaryProblem = (error instanceof RetriableException || error?.cause instanceof RetriableException)
+            boolean transientError = (error instanceof RetriableException || error?.cause instanceof RetriableException)
             // -- retry without increasing the error counts
-            if( task && ( temporaryProblem ) ) {
-                if( temporaryProblem && error?.cause?.message == null  ) {
+            if( task && transientError ) {
+                if( transientError && error?.cause?.message == null )
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
-                }else {
+                else
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
-                }
                 task.failCount+=1
                 final taskCopy = task.makeCopy()
                 session.getExecService().submit {
