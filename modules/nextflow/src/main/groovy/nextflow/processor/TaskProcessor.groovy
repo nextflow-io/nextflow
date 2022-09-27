@@ -55,12 +55,11 @@ import nextflow.Session
 import nextflow.ast.NextflowDSLImpl
 import nextflow.ast.TaskCmdXform
 import nextflow.ast.TaskTemplateVarsXform
-import nextflow.cloud.CloudSpotTerminationException
 import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
-import nextflow.exception.RetriableException
+import nextflow.exception.TransientException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessUnrecoverableException
@@ -971,7 +970,7 @@ class TaskProcessor {
             // -- do not recoverable error, just re-throw it
             if( error instanceof Error ) throw error
 
-            boolean transientError = (error instanceof RetriableException || error?.cause instanceof RetriableException)
+            boolean transientError = (error instanceof TransientException || error?.cause instanceof TransientException)
             // -- retry without increasing the error counts
             if( task && transientError ) {
                 if( transientError && error?.cause?.message == null )
