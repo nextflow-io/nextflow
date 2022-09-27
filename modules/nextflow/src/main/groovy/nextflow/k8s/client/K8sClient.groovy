@@ -503,16 +503,12 @@ class K8sClient {
             def msg = "K8s pod '$podName' execution failed"
             if( status.reason ) msg += " - reason: ${status.reason}"
             if( status.message ) msg += " - message: ${status.message}"
-            if ( 'OutOfcpu' == status.reason && (status.message as String).startsWith("Pod Node didn't have enough resource: cpu,")) {
-                throw new K8sOutOfCpuException(msg)
+            switch ( status.reason ) {
+                case 'OutOfcpu':    throw new K8sOutOfCpuException(msg)
+                case 'OutOfmemory': throw new K8sOutOfMemoryException(msg)
+                case 'Shutdown':    throw new NodeTerminationException(msg)
+                default:            throw new ProcessFailedException(msg)
             }
-            if ( 'OutOfmemory' == status.reason && (status.message as String).startsWith("Pod Node didn't have enough resource: memory,") ) {
-                throw new K8sOutOfMemoryException(msg)
-            }
-            final err = status.reason == 'Shutdown'
-                    ? new NodeTerminationException(msg)
-                    : new ProcessFailedException(msg)
-            throw err
         }
 
         throw new K8sResponseException("K8s undetermined status conditions for pod $podName", resp)
