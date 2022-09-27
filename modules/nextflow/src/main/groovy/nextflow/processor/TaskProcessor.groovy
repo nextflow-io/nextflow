@@ -16,8 +16,6 @@
  */
 package nextflow.processor
 
-import nextflow.exception.K8sOutOfCpuException
-import nextflow.exception.K8sOutOfMemoryException
 
 import static nextflow.processor.ErrorStrategy.*
 
@@ -63,7 +61,7 @@ import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
-import nextflow.exception.NodeTerminationException
+import nextflow.exception.TemporaryProblem
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessUnrecoverableException
@@ -974,16 +972,10 @@ class TaskProcessor {
             // -- do not recoverable error, just re-throw it
             if( error instanceof Error ) throw error
 
+            boolean temporaryProblem = (error instanceof TemporaryProblem || error?.cause instanceof TemporaryProblem)
             // -- retry without increasing the error counts
-            if( task && (error.cause instanceof NodeTerminationException
-                    || error.cause instanceof CloudSpotTerminationException
-                    || error instanceof K8sOutOfCpuException
-                    || error instanceof K8sOutOfMemoryException
-            ) ) {
-                if( error.cause instanceof NodeTerminationException
-                        || error instanceof K8sOutOfCpuException
-                        || error instanceof K8sOutOfMemoryException
-                )
+            if( task && ( temporaryProblem || error.cause instanceof CloudSpotTerminationException ) ) {
+                if( temporaryProblem )
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
                 else
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
