@@ -23,6 +23,7 @@
 
     <logger name="org.apache.http" level="INFO" />
     <logger name="com.amazonaws" level="INFO" />
+    <logger name="com.upplication" level="DEBUG" />
 
     <root level="DEBUG">
         <appender-ref ref="STDOUT"/>

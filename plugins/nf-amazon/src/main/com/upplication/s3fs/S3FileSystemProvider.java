@@ -611,11 +611,21 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 		AmazonS3Client client = s3Source.getFileSystem() .getClient();
 
+		final ObjectMetadata sourceObjMetadata = s3Source.getFileSystem().getClient().getObjectMetadata(s3Source.getBucket(), s3Source.getKey());
+		final S3MultipartOptions opts = props != null ? new S3MultipartOptions(props) : new S3MultipartOptions();
+		final long maxSize = opts.getMaxCopySize();
+		final long length = sourceObjMetadata.getContentLength();
 		final List<Tag> tags = ((S3Path) target).getTagsList();
 
-		CopyObjectRequest copyObjRequest = new CopyObjectRequest(s3Source.getBucket(), s3Source.getKey(),s3Target.getBucket(), s3Target.getKey());
-		log.trace("Copy file via copy object - source: source={}, target={}, tags={}", s3Source, s3Target,tags);
-		client.copyObject(copyObjRequest, tags);
+		if( length <= maxSize ) {
+			CopyObjectRequest copyObjRequest = new CopyObjectRequest(s3Source.getBucket(), s3Source.getKey(),s3Target.getBucket(), s3Target.getKey());
+			log.trace("Copy file via copy object - source: source={}, target={}, tags={}", s3Source, s3Target,tags);
+			client.copyObject(copyObjRequest, tags);
+		}
+		else {
+			log.trace("Copy file via multipart upload - source: source={}, target={}, tags={}", s3Source, s3Target, tags);
+			client.multipartCopyObject(s3Source, s3Target, length, opts, tags);
+		}
 	}
 
 

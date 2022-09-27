@@ -31,7 +31,7 @@ import spock.lang.Timeout
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@Timeout(30)
+@Timeout(60)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
 @Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
 class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
@@ -1196,4 +1196,54 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         cleanup:
         deleteBucket(bucketName)
     }
+
+    def 'should upload, copy and download a file' () {
+        given:
+        def TEXT = randomText(FILE_SIZE)
+        def folder = Files.createTempDirectory('test')
+        def file = Files.write(folder.resolve('foo.data'), TEXT.bytes)
+        and:
+        def bucket1 = createBucket()
+        def bucket2 = createBucket()
+
+        // upload a file to a remote bucket
+        when:
+        def target1 = s3path("s3://$bucket1/foo.data")
+        FileHelper.copyPath(file, target1)
+        // the file exist
+        then:
+        Files.exists(target1)
+        Files.size(target1) == Files.size(file)
+
+        // copy a file across buckets
+        when:
+        def target2 = s3path("s3://$bucket2/foo.data")
+        FileHelper.copyPath(target1, target2)
+        // the file exist
+        then:
+        Files.exists(target2)
+        Files.size(target2) == Files.size(target1)
+
+        // download a file locally
+        when:
+        def result = folder.resolve('result.data')
+        FileHelper.copyPath(target2, result)
+        then:
+        Files.exists(result)
+        and:
+        Files.size(target2) == Files.size(result)
+
+        cleanup:
+        deleteBucket(bucket1)
+        deleteBucket(bucket2)
+        folder?.deleteDir()
+
+        // check the limits in the file `amazon.properties`
+        // in the test resources
+        where:
+        _ | FILE_SIZE
+        _ | 50 * 1024
+        _ | 11 * 1024 * 1024
+    }
+
 }
