@@ -17,7 +17,7 @@
 
 package nextflow.k8s.client
 
-import nextflow.exception.K8sOutOfCPUException
+import nextflow.exception.K8sOutOfCpuException
 import nextflow.exception.K8sOutOfMemoryException
 
 import javax.net.ssl.HttpsURLConnection
@@ -714,7 +714,7 @@ class K8sClientTest extends Specification {
         client.podState(POD_NAME)
         then:
         1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
-        def e = thrown(K8sOutOfCPUException)
+        def e = thrown(K8sOutOfCpuException)
         e.message == "K8s pod 'nf-3b344812fe0aeb9554424bcf6caa7ffb' execution failed - reason: OutOfcpu - message: Pod Node didn't have enough resource: cpu, requested: 4000, used: 2100, capacity: 6000"
     }
 

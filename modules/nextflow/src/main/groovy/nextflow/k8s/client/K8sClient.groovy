@@ -17,7 +17,7 @@
 
 package nextflow.k8s.client
 
-import nextflow.exception.K8sOutOfCPUException
+import nextflow.exception.K8sOutOfCpuException
 import nextflow.exception.K8sOutOfMemoryException
 
 import javax.net.ssl.HostnameVerifier
@@ -504,7 +504,7 @@ class K8sClient {
             if( status.reason ) msg += " - reason: ${status.reason}"
             if( status.message ) msg += " - message: ${status.message}"
             if ( 'OutOfcpu' == status.reason && (status.message as String).startsWith("Pod Node didn't have enough resource: cpu,")) {
-                throw new K8sOutOfCPUException(msg)
+                throw new K8sOutOfCpuException(msg)
             }
             if ( 'OutOfmemory' == status.reason && (status.message as String).startsWith("Pod Node didn't have enough resource: memory,") ) {
                 throw new K8sOutOfMemoryException(msg)
