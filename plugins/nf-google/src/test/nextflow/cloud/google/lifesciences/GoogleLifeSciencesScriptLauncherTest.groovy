@@ -56,7 +56,7 @@ class GoogleLifeSciencesScriptLauncherTest extends GoogleSpecification {
         binding.stage_cmd == null
         binding.unstage_cmd == null
         binding.task_env == '''\
-                chmod +x /work/xx/yy/nextflow-bin/*
+                chmod +x /work/xx/yy/nextflow-bin/* || true
                 export PATH=/work/xx/yy/nextflow-bin:$PATH
                 export FOO="xxx"
                 '''.stripIndent()
