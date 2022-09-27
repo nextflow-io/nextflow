@@ -437,7 +437,7 @@ class LoggerHelper {
     static protected void appendFormattedMessage( StringBuilder buffer, ILoggingEvent event, Throwable fail, Session session) {
         final className = session?.script?.getClass()?.getName()
         final message = event.getFormattedMessage()
-        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || ScriptRuntimeException
+        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || fail instanceof ScriptRuntimeException
         final normalize = { String str -> str ?. replace("${className}.", '')}
         List error = fail ? findErrorLine(fail) : null
 
@@ -644,8 +644,12 @@ class LoggerHelper {
             try {
                 final message = fmtEvent(event, session, false)
                 final renderer = session?.ansiLogObserver
-                if( !renderer || !renderer.started || renderer.stopped )
-                    System.out.println(message)
+                if( !renderer || !renderer.started || renderer.stopped ) {
+                    if( event.level==Level.ERROR || event.level==Level.WARN )
+                        System.err.println(message)
+                    else
+                        System.out.println(message)
+                }
 
                 else if( event.marker == STICKY )
                     renderer.appendSticky(message)
