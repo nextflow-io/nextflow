@@ -17,6 +17,8 @@
 
 package nextflow.cloud
 import groovy.transform.CompileStatic
+import nextflow.exception.RetriableException
+
 /**
  * Exception thrown when a spot instance is retired by the
  * provider
@@ -25,7 +27,7 @@ import groovy.transform.CompileStatic
  */
 @Deprecated
 @CompileStatic
-class CloudSpotTerminationException extends RuntimeException {
+class CloudSpotTerminationException extends RuntimeException implements RetriableException {
 
     String termination
 

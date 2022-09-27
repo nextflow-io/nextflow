@@ -974,11 +974,12 @@ class TaskProcessor {
 
             boolean temporaryProblem = (error instanceof RetriableException || error?.cause instanceof RetriableException)
             // -- retry without increasing the error counts
-            if( task && ( temporaryProblem || error.cause instanceof CloudSpotTerminationException ) ) {
-                if( temporaryProblem )
+            if( task && ( temporaryProblem ) ) {
+                if( temporaryProblem && error?.cause?.message == null  ) {
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
-                else
+                }else {
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
+                }
                 task.failCount+=1
                 final taskCopy = task.makeCopy()
                 session.getExecService().submit {
