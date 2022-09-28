@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.09.7-edge - 28 Sep 2022
+- Fix Issue copying file bigger than 5gb to S3 [18fd9a44]
+- Fix chmod command to accommodate hidden files in bindir (or empty bindir) (#3247) [a0fcc7b0] <Abhinav Sharma>
+- Bump nf-amazon@1.10.7 [f7f96e6f] 
+
 22.09.6-edge - 26 Sep 2022
 - Add SocketTimeoutException to k8s client request retry [527e0d5d]
 - Add MaxErrorRetry to K8s config [58be2128]
