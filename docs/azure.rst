@@ -352,11 +352,11 @@ As of version ``22.09.7-edge``, `Service Principal <https://learn.microsoft.com/
 
 The Service Principal should have the at least the following role assignments :
 
-1. "Contributor"
+1. Contributor
 
-2. "Storage Blob Data Reader"
+2. Storage Blob Data Reader
 
-3. "Storage Blob Data Contributor"
+3. Storage Blob Data Contributor
 
 .. note::
   To assign the necessary roles to the Service Principal refer to the `official Azure documentation <https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments-portal?tabs=current>`_.
