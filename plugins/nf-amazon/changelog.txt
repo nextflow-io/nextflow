@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+1.10.7 - 28 Sep 2022
+- Fix Issue copying file bigger than 5gb to S3 [18fd9a44]
+
 1.10.6 - 26 Sep 2022
 - Add tags propagation to AWS Batch [d64eeffc]
 
