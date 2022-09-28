@@ -1,4 +1,4 @@
-nf-amazon@1.10.6
+nf-amazon@1.10.7
 nf-wave@0.4.4
 nf-console@1.0.4
 nf-google@1.4.4
