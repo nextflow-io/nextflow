@@ -897,6 +897,7 @@ class AwsBatchTaskHandlerTest extends Specification {
                 .withAttempts(5)
                 .withEvaluateOnExit( new EvaluateOnExit().withAction('RETRY').withOnStatusReason('Host EC2*'), new EvaluateOnExit().withOnReason('*').withAction('EXIT') )
         req.getTags() == [a:'b']
+        req.getPropagateTags() == true
     }
     def 'get fusion submit command' () {
         given:

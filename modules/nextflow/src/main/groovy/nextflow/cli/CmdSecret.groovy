@@ -57,6 +57,7 @@ class CmdSecret extends CmdBase implements UsageAware {
     CmdSecret() {
         commands.add( new GetCmd() )
         commands.add( new PutCmd() )
+        commands.add( new SetCmd() )
         commands.add( new ListCmd() )
         commands.add( new DeleteCmd() )
     }
@@ -148,10 +149,20 @@ class CmdSecret extends CmdBase implements UsageAware {
     /**
      * Implements the secret `put` sub-command
      */
-    class PutCmd implements SubCmd {
+    @Deprecated
+    class PutCmd extends SetCmd {
+        String getName() { 'put' }
+
+        void apply(List<String> result) {
+            log.warn "Put command is deprecated - use 'set' instead'"
+            super.apply(result)
+        }
+    }
+
+    class SetCmd implements SubCmd {
 
         @Override
-        String getName() { 'put' }
+        String getName() { 'set' }
 
         @Override
         void apply(List<String> result) {
@@ -167,7 +178,7 @@ class CmdSecret extends CmdBase implements UsageAware {
 
         @Override
         void usage(List<String> result) {
-            result << 'Put a key-pair in the secret store'
+            result << 'Set a key-pair in the secret store'
             result << "Usage: nextflow secret $name <NAME> <VALUE>".toString()
             result << ''
             result << ''

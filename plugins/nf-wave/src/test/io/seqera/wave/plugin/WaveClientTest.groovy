@@ -180,7 +180,7 @@ class WaveClientTest extends Specification {
 
     def 'should create request object with build and cache repos' () {
         given:
-        def session = Mock(Session) { getConfig() >> [wave:[build:[repo:'some/repo',cache:'some/cache']]]}
+        def session = Mock(Session) { getConfig() >> [wave:[build:[repository:'some/repo',cacheRepository:'some/cache']]]}
         def DOCKERFILE =  'FROM foo:latest\nRUN something'
         def wave = new WaveClient(session)
 
@@ -573,6 +573,25 @@ class WaveClientTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+
+    }
+
+    def 'should send request with tower access token' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [wave:[:], tower:[accessToken:'foo', workspaceId:123]] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        def assets = Mock(WaveAssets)
+        def request = new SubmitContainerTokenRequest()
+        when:
+        wave.sendRequest(assets)
+        then:
+        1 * wave.makeRequest(assets) >> request
+        1 * wave.sendRequest(request) >> { List it ->
+            assert (it[0] == request)
+            assert (it[0] as SubmitContainerTokenRequest).towerAccessToken == 'foo'
+            assert (it[0] as SubmitContainerTokenRequest).towerWorkspaceId == 123
+        }
 
     }
 

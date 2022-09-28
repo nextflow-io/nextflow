@@ -23,6 +23,7 @@ import java.nio.file.Path
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
+import nextflow.secret.SecretsLoader
 import org.junit.Rule
 import spock.lang.Shared
 import spock.lang.Specification
@@ -50,6 +51,9 @@ class CmdSecretTest extends Specification {
         tempDir = Files.createTempDirectory('test').toAbsolutePath()
         secretFile = new File("$tempDir/store.json")
         SysEnv.push([NXF_SECRETS_FILE: secretFile.toString()])
+        //required to run all test due collisions with others
+        def memoized = SecretsLoader.instance.memoizedMethodClosure$load
+        memoized.@cache.clear()
     }
 
     def cleanupSpec() {
@@ -69,8 +73,8 @@ class CmdSecretTest extends Specification {
         'list' | ['foo']
         'get' | ['']
         'get' | ['a','b']
-        'put' | ['']
-        'put' | ['a']
+        'set' | ['']
+        'set' | ['a']
         'delete' | ['']
         'delete' | ['a','b']
     }
@@ -98,7 +102,7 @@ class CmdSecretTest extends Specification {
         secretFile.delete()
 
         when:
-        new CmdSecret(args: ['put','foo','bar']).run()
+        new CmdSecret(args: ['set','foo','bar']).run()
 
         then:
         secretFile.text.indexOf('"name": "foo"') != -1

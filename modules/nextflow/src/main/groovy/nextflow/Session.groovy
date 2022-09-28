@@ -49,7 +49,7 @@ import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
-import nextflow.file.FileTransferPool
+import nextflow.util.ThreadPoolManager
 import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
@@ -74,6 +74,7 @@ import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.NameGenerator
 import nextflow.util.VersionNumber
+import org.apache.commons.lang.exception.ExceptionUtils
 import sun.misc.Signal
 import sun.misc.SignalHandler
 /**
@@ -637,10 +638,8 @@ class Session implements ISession {
     void destroy() {
         try {
             log.trace "Session > destroying"
-            // note: the file transfer pool must be terminated before
-            // invoking the shutdown callback to prevent depending pool (e.g. s3 transfer pool)
-            // are terminated while some file still needs to be download/uploaded
-            FileTransferPool.shutdown(aborted)
+            // shutdown publish dir executor
+            publishPoolManager.shutdown(aborted)
             // invoke shutdown callbacks
             shutdown0()
             log.trace "Session > after cleanup"
@@ -701,9 +700,6 @@ class Session implements ISession {
 
         // -- invoke observers completion handlers
         notifyFlowComplete()
-
-        // -- global
-        Global.cleanUp()
     }
 
     /**
@@ -915,8 +911,10 @@ class Session implements ISession {
      * @param Closure
      */
     void onShutdown( Runnable hook ) {
-        if( !hook )
+        if( !hook ) {
+            log.warn "Shutdown hook cannot be null\n${ExceptionUtils.getStackTrace(new Exception())}"
             return
+        }
         if( shutdownInitiated )
             throw new IllegalStateException("Session shutdown already initiated — Hook cannot be added: $hook")
         shutdownCallbacks.add(hook)
@@ -1356,6 +1354,15 @@ class Session implements ISession {
 
     void printConsole(Path file) {
         ansiLogObserver ? ansiLogObserver.appendInfo(file.text) : Files.copy(file, System.out)
+    }
+
+    private ThreadPoolManager publishPoolManager = new ThreadPoolManager('PublishDir')
+
+    @Memoized
+    synchronized ExecutorService publishDirExecutorService() {
+        return publishPoolManager
+                .withConfig(config)
+                .create()
     }
 
 }
