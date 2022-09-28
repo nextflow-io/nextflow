@@ -364,7 +364,7 @@ The Service Principal should have the at least the following role assignments :
 The credentials for Service Principal can be specified as follows::
 
     azure {
-         activeDirectory {
+        activeDirectory {
             servicePrincipalId = '<YOUR SERVICE PRINCIPAL CLIENT ID>'
             servicePrincipalSecret = '<YOUR SERVICE PRINCIPAL CLIENT SECRET>'
             tenantId = '<YOUR TENANT ID>'
