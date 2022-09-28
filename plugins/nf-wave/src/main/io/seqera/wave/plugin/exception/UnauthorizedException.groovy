@@ -15,15 +15,15 @@
  *
  */
 
-package io.seqera.wave.plugin
+package io.seqera.wave.plugin.exception
 
 import groovy.transform.InheritConstructors
 
 /**
- * Model an invalid HTTP response
+ * Unauthorized access exception
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @InheritConstructors
-class BadResponseException extends RuntimeException{
+class UnauthorizedException extends RuntimeException {
 }

@@ -25,11 +25,24 @@ class TowerConfig {
 
     final String accessToken
 
+    final String refreshToken
+
     final Long workspaceId
+
+    final String endpoint
 
     TowerConfig(Map opts, Map<String,String> env) {
         this.accessToken = accessToken0(opts, env)
+        this.refreshToken = refreshToken0(opts, env)
         this.workspaceId = workspaceId0(opts, env) as Long
+        this.endpoint = endpoint0(opts, env)
+    }
+
+    private String endpoint0(Map opts, Map<String,String> env) {
+        def result = opts.endpoint as String
+        if( !result || result=='-' )
+            result = env.get('TOWER_API_ENDPOINT') ?: 'https://api.tower.nf'
+        return result.stripEnd('/')
     }
 
     private String accessToken0(Map opts, Map<String,String> env) {
@@ -41,6 +54,18 @@ class TowerConfig {
         def token = env.get('TOWER_WORKFLOW_ID')
                 ? env.get('TOWER_ACCESS_TOKEN')
                 : opts.containsKey('accessToken') ? opts.accessToken as String : env.get('TOWER_ACCESS_TOKEN')
+        return token
+    }
+
+    private String refreshToken0(Map opts, Map<String,String> env) {
+        // when 'TOWER_WORKFLOW_ID' is provided in the env, it's a tower made launch
+        // therefore the access token should only be taken from the env
+        // otherwise check into the config file and fallback in the env
+        // see also
+        // https://github.com/nextflow-io/nextflow/blob/master/plugins/nf-tower/src/main/io/seqera/tower/plugin/TowerClient.groovy#L369-L377
+        def token = env.get('TOWER_WORKFLOW_ID')
+                ? env.get('TOWER_REFRESH_TOKEN')
+                : opts.containsKey('refreshToken') ? opts.refreshToken as String : env.get('TOWER_REFRESH_TOKEN')
         return token
     }
 

@@ -65,4 +65,85 @@ class TowerConfigTest extends Specification {
         config.accessToken == 'foo'
         config.workspaceId == 123
     }
+
+    def 'should get refresh token' () {
+        given:
+        TowerConfig config
+        Map env
+
+        when:
+        config = new TowerConfig([:], [:])
+        then:
+        !config.refreshToken
+
+        when:
+        env = [TOWER_REFRESH_TOKEN:'foo', TOWER_WORKSPACE_ID: '123']
+        config = new TowerConfig([:], env)
+        then:
+        config.refreshToken == 'foo'
+        config.workspaceId == 123
+
+        when:
+        env =  [TOWER_REFRESH_TOKEN:'foo', TOWER_WORKSPACE_ID: '123']
+        config = new TowerConfig(refreshToken: 'bar', workspaceId: '789', env)
+        then:
+        config.refreshToken == 'bar'
+        config.workspaceId == 789
+
+        when:
+        env =  [TOWER_REFRESH_TOKEN:'foo', TOWER_WORKSPACE_ID: '123']
+        config = new TowerConfig(refreshToken: null, workspaceId: '789', env)
+        then:
+        config.refreshToken == null
+        config.workspaceId == 789
+
+        // when TOWER_WORKFLOW_ID is defined env has priority
+        when:
+        env = [TOWER_REFRESH_TOKEN:'foo', TOWER_WORKSPACE_ID: '123', TOWER_WORKFLOW_ID: 'xyz']
+        config = new TowerConfig(refreshToken: 'bar', workspaceId: '789', env)
+        then:
+        config.refreshToken == 'foo'
+        config.workspaceId == 123
+    }
+
+    def 'should config endpoint' () {
+        given:
+        TowerConfig config
+        Map env
+
+        when:
+        config = new TowerConfig([:], [:])
+        then:
+        config.endpoint == 'https://api.tower.nf'
+
+        when:
+        config = new TowerConfig([endpoint:'-'], [:])
+        then:
+        config.endpoint == 'https://api.tower.nf'
+
+        when:
+        config = new TowerConfig([endpoint:'http://foo.com'], [:])
+        then:
+        config.endpoint == 'http://foo.com'
+
+        when:
+        config = new TowerConfig([endpoint:'http://foo.com//'], [:])
+        then:
+        config.endpoint == 'http://foo.com'
+
+        when:
+        config = new TowerConfig([endpoint:'http://foo.com'], [TOWER_API_ENDPOINT:'http://bar.com'])
+        then:
+        config.endpoint == 'http://foo.com'
+
+        when:
+        config = new TowerConfig([endpoint:'-'], [TOWER_API_ENDPOINT:'http://bar.com/'])
+        then:
+        config.endpoint == 'http://bar.com'
+
+        when:
+        config = new TowerConfig([:], [TOWER_API_ENDPOINT:'http://bar.com/'])
+        then:
+        config.endpoint == 'http://bar.com'
+    }
 }
