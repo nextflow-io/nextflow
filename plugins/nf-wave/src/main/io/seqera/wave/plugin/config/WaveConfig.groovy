@@ -28,7 +28,7 @@ import nextflow.util.Duration
 @Slf4j
 @CompileStatic
 class WaveConfig {
-    final private static String DEF_ENDPOINT = 'http://localhost:9090'
+    final private static String DEF_ENDPOINT = 'https://wave.seqera.io'
     final private Boolean enabled
     final private String endpoint
     final private List<URL> containerConfigUrl
@@ -111,7 +111,7 @@ class WaveConfig {
     }
 
     List<URL> containerConfigUrl() {
-        return containerConfigUrl
+        return containerConfigUrl ?: Collections.<URL>emptyList()
     }
 
     Duration tokensCacheMaxDuration() { 
