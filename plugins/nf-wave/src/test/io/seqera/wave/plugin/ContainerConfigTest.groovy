@@ -111,4 +111,54 @@ class ContainerConfigTest extends Specification {
         and:
         [new ContainerLayer(location: 'http://x')]  | [new ContainerLayer(location: 'http://y'),new ContainerLayer(location: 'http://y')]   | [new ContainerLayer(location: 'http://x'), new ContainerLayer(location: 'http://y'),new ContainerLayer(location: 'http://y')]
     }
+
+    def 'should compute config fingerprint' () {
+        given:
+        def config1 = new ContainerConfig(entrypoint: ['entry.sh'], cmd: ['the.cmd'], env: ['x=2'], workingDir: '/foo')
+        def config2 = new ContainerConfig(entrypoint: ['entry.sh'], cmd: ['the.cmd'], env: ['x=2'], workingDir: '/foo')
+        def config3 = new ContainerConfig(entrypoint: ['entry.sh'], cmd: ['the.cmd'], env: ['x=2'], workingDir: '/bar')
+        and:
+        def layer1 = new ContainerLayer('http://this/that', 'abd', 100, 'efg')
+        def layer2 = new ContainerLayer('http://this/that', 'abd', 100, 'efg')
+        def layer3 = new ContainerLayer('http://xxx/yyy', 'abd', 200, 'efg')
+        and:
+        def fusion1 = new ContainerLayer('abc', 'xyz', 300, 'efg', true)
+        def fusion2 = new ContainerLayer('efg', 'pqr', 400, 'efg', true)
+
+        expect:
+        config1.fingerprint() == config2.fingerprint()
+        config1.fingerprint() != config3.fingerprint()
+
+        when:
+        config1.appendLayer(layer1)
+        config2.appendLayer(layer2)
+        then:
+        // layers have the same fingerprint
+        layer1.fingerprint() == layer2.fingerprint()
+        // configs have the same fingerprint
+        config1.fingerprint() == config2.fingerprint()
+
+        when:
+        config1.layers.clear()
+        config2.layers.clear()
+        and:
+        config1.appendLayer(layer1)
+        config2.appendLayer(layer3)
+        then:
+        // different layer fingerprint cause the config to have different fingerprints
+        layer1.fingerprint() != layer3.fingerprint()
+        config1.fingerprint() != config2.fingerprint()
+
+        when:
+        config1.layers.clear()
+        config2.layers.clear()
+        and:
+        config1.appendLayer(fusion1)
+        config2.appendLayer(fusion2)
+        then:
+        // the layer have different fingerprint BUT the `skipHashing`
+        // makes the config to ignore it
+        fusion1.fingerprint() != fusion2.fingerprint()
+        config1.fingerprint() == config2.fingerprint()
+    }
 }
