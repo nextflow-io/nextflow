@@ -1,0 +1,31 @@
+classDiagram
+    %%
+    %% com.upplication.s3fs
+    %%
+    S3FileSystemProvider --> S3FileSystem : newFileSystem
+
+    class S3FileSystem {
+        client : AmazonS3Client
+        endpoint : String
+    }
+    S3FileSystem --* AmazonS3Client
+
+    class AmazonS3Client {
+        client : AmazonS3
+        cannedAcl : CannedAccessControlList
+        kmsKeyId : String
+        storageEncryption : SSEAlgorithm
+        transferManager : TransferManager
+        transferPool : ExecutorService
+        uploadChunkSize : Long
+        uploadMaxThreads : Integer
+    }
+
+    Path <|-- S3Path
+
+    class S3Path {
+        bucket : String
+        parts : List~String~
+        fileSystem : S3FileSystem
+    }
+    S3Path --* S3FileSystem
