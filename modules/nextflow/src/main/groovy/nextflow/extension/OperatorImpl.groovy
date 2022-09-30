@@ -1493,4 +1493,20 @@ class OperatorImpl {
         log.warn "Operator `fork` has been renamed to `multiMap`"
         multiMap(source, action)
     }
+
+    /**
+     * Implement a `withOp` operator e.g.
+     * <pre>
+     *     someChannel | withOp { someProcess(it, someChannel) }
+           someChannel | withOp { someProcess(someChannel, it) }
+           someChannel | withOp { someChannel.someOperator(it) }
+     * </pre>
+     *
+     * @param source The channel instance to be bound in the context
+     * @param closure A closure defining the operation/process to call
+     */
+
+    Object withOp(final DataflowReadChannel source, Closure closure) {
+        source.with(closure)
+    }
 }
