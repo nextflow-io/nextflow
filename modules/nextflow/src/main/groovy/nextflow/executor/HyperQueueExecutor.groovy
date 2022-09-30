@@ -129,9 +129,4 @@ class HyperQueueExecutor extends AbstractGridExecutor {
         return result
     }
 
-    @Override
-    protected String sanitizeJobName(String name) {
-        name.size() > 40 ? name.substring(0,40) : name
-    }
-
 }
