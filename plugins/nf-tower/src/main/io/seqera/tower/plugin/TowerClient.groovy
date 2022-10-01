@@ -393,6 +393,8 @@ class TowerClient implements TraceObserver {
         final req = makeCompleteReq(session)
         final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
         logHttpResponse(urlTraceComplete, resp)
+        // shutdown file archiver
+        archiver?.shutdown(session)
     }
 
     @Override

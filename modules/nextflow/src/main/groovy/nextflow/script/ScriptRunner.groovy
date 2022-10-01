@@ -24,6 +24,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
@@ -238,6 +239,7 @@ class ScriptRunner {
     protected shutdown() {
         session.destroy()
         session.cleanup()
+        Global.cleanUp()
         log.debug "> Execution complete -- Goodbye"
     }
 

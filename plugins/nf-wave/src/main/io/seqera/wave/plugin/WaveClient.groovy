@@ -34,9 +34,13 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import io.seqera.wave.plugin.config.FusionConfig
+import io.seqera.wave.plugin.config.TowerConfig
 import io.seqera.wave.plugin.config.WaveConfig
+import io.seqera.wave.plugin.exception.BadResponseException
+import io.seqera.wave.plugin.exception.UnauthorizedException
 import io.seqera.wave.plugin.packer.Packer
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.container.resolver.ContainerInfo
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
@@ -58,6 +62,8 @@ class WaveClient {
 
     final private FusionConfig fusion
 
+    final private TowerConfig tower
+
     final private Packer packer
 
     final private String endpoint
@@ -66,10 +72,17 @@ class WaveClient {
 
     private Session session
 
+    private volatile String accessToken
+
+    private volatile String refreshToken
+
+    private CookieManager cookieManager
+
     WaveClient(Session session) {
         this.session = session
-        this.config = new WaveConfig(session.config.wave as Map ?: [:])
-        this.fusion = new FusionConfig(session.config.fusion as Map ?: [:])
+        this.config = new WaveConfig(session.config.wave as Map ?: Collections.emptyMap(), SysEnv.get())
+        this.fusion = new FusionConfig(session.config.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
+        this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
         this.endpoint = config.endpoint()
         log.debug "Wave server endpoint: ${endpoint}"
         this.packer = new Packer()
@@ -78,10 +91,13 @@ class WaveClient {
             .newBuilder()
             .expireAfterWrite(config.tokensCacheMaxDuration().toSeconds(), TimeUnit.SECONDS)
             .build()
+        // the cookie manager
+        cookieManager = new CookieManager()
         // create http client
         this.httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NORMAL)
+                .cookieHandler(cookieManager)
                 .connectTimeout(Duration.ofSeconds(10))
                 .build()
     }
@@ -124,22 +140,39 @@ class WaveClient {
 
     SubmitContainerTokenResponse sendRequest(WaveAssets assets) {
         final req = makeRequest(assets)
+        req.towerAccessToken = tower.accessToken
+        req.towerWorkspaceId = tower.workspaceId
         return sendRequest(req)
     }
 
     SubmitContainerTokenResponse sendRequest(String image) {
         final ContainerConfig containerConfig = resolveContainerConfig()
-        final request = new SubmitContainerTokenRequest(containerImage: image, containerConfig: containerConfig)
+        final request = new SubmitContainerTokenRequest(
+                containerImage: image,
+                containerConfig: containerConfig,
+                towerAccessToken: tower.accessToken,
+                towerWorkspaceId: tower.workspaceId )
         return sendRequest(request)
     }
 
     SubmitContainerTokenResponse sendRequest(SubmitContainerTokenRequest request) {
+        return sendRequest0(request, 1)
+    }
+
+    SubmitContainerTokenResponse sendRequest0(SubmitContainerTokenRequest request, int attempt) {
         assert endpoint, 'Missing wave endpoint'
         assert !endpoint.endsWith('/'), "Endpoint url must not end with a slash - offending value: $endpoint"
 
+        // update the request token
+        accessToken ?= tower.accessToken
+        refreshToken ?= tower.refreshToken
+
+        // set the request access token
+        request.towerAccessToken = accessToken
+
         final body = JsonOutput.toJson(request)
         final uri = URI.create("${endpoint}/container-token")
-        log.debug "Wave request: $uri - request: $request"
+        log.debug "Wave request: $uri; attempt=$attempt - request: $request"
         final req = HttpRequest.newBuilder()
                 .uri(uri)
                 .headers('Content-Type','application/json')
@@ -148,11 +181,22 @@ class WaveClient {
 
         try {
             final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
-            if( resp.statusCode()==200 ) {
-                log.debug "Wave response: ${resp.body()}"
+            log.debug "Wave response: statusCode=${resp.statusCode()}; body=${resp.body()}"
+            if( resp.statusCode()==200 )
                 return jsonToSubmitResponse(resp.body())
+            if( resp.statusCode()==401 ) {
+                final shouldRetry = request.towerAccessToken
+                        && refreshToken
+                        && attempt==1
+                        && refreshJwtToken0(refreshToken)
+                if( shouldRetry ) {
+                    return sendRequest0(request, attempt+1)
+                }
+                else
+                    throw new UnauthorizedException("Unauthorised [401] - Verify you have provided a valid access token")
             }
-            throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
+            else
+                throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
         }
         catch (ConnectException e) {
             throw new IllegalStateException("Unable to connect Wave service: $endpoint")
@@ -360,4 +404,51 @@ class WaveClient {
             return false
         return value.endsWith('.yaml') || value.endsWith('.yml') || value.endsWith('.txt')
     }
+
+    protected boolean refreshJwtToken0(String refresh) {
+        log.debug "Token refresh request >> $refresh"
+
+        final req = HttpRequest.newBuilder()
+                .uri(new URI("${tower.endpoint}/oauth/access_token"))
+                .headers('Content-Type',"application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString("grant_type=refresh_token&refresh_token=${URLEncoder.encode(refresh, 'UTF-8')}"))
+                .build()
+
+        final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
+        log.debug "Refresh cookie response: [${resp.statusCode()}] ${resp.body()}"
+        if( resp.statusCode() != 200 )
+            return false
+
+        final authCookie = getCookie('JWT')
+        final refreshCookie = getCookie('JWT_REFRESH_TOKEN')
+
+        // set the new bearer token in the current client session
+        if( authCookie?.value ) {
+            log.trace "Updating http client bearer token=$authCookie.value"
+            accessToken = authCookie.value
+        }
+        else {
+            log.warn "Missing JWT cookie from refresh token response ~ $authCookie"
+        }
+
+        // set the new refresh token
+        if( refreshCookie?.value ) {
+            log.trace "Updating http client refresh token=$refreshCookie.value"
+            refreshToken = refreshCookie.value
+        }
+        else {
+            log.warn "Missing JWT_REFRESH_TOKEN cookie from refresh token response ~ $refreshCookie"
+        }
+
+        return true
+    }
+
+    private HttpCookie getCookie(final String cookieName) {
+        for( HttpCookie it : cookieManager.cookieStore.cookies ) {
+            if( it.name == cookieName )
+                return it
+        }
+        return null
+    }
+
 }

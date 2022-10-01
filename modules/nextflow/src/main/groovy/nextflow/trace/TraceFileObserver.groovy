@@ -194,7 +194,7 @@ class TraceFileObserver implements TraceObserver {
      */
     @Override
     void onFlowCreate(Session session) {
-        log.debug "Workflow started -- trace file: $tracePath"
+        log.debug "Workflow started -- trace file: ${tracePath.toUriString()}"
 
         // make sure parent path exists
         def parent = tracePath.getParent()

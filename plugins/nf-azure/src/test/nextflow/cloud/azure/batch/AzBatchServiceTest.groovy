@@ -407,6 +407,8 @@ class AzBatchServiceTest extends Specification {
         result.vmType.name == 'Standard_D2_v2'
         result.vmType.numberOfCores == 2
         and:
+        result.opts
+        and:
         0 * svc.getPool(_) >> null
     }
 
@@ -424,6 +426,8 @@ class AzBatchServiceTest extends Specification {
         and:        
         result.vmType.name == 'Standard_D2_v2'
         result.vmType.numberOfCores == 2
+        and:
+        result.opts.vmType == 'Standard_D2_v2'
     }
 
     def 'should create retry policy' () {
