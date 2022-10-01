@@ -17,8 +17,10 @@ import java.nio.file.attribute.BasicFileAttributes
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.Tag
 import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
 import nextflow.file.CopyMoveHelper
 import nextflow.file.FileHelper
+import nextflow.trace.TraceHelper
 import spock.lang.Ignore
 import spock.lang.IgnoreIf
 import spock.lang.Requires
@@ -1246,4 +1248,38 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         _ | 11 * 1024 * 1024
     }
 
+    def 'should overwrite a file' () {
+        given:
+        def bucket1 = createBucket()
+        def path = s3path("s3://$bucket1/foo/bar.txt")
+        and:
+        path.text = 'foo'
+
+        when:
+        def file = TraceHelper.newFileWriter(path, true, 'Test')
+        file.write('Hola')
+        file.close()
+        then:
+        path.text == 'Hola'
+
+        cleanup:
+        deleteBucket(bucket1)
+    }
+
+    def 'should not overwrite a file' () {
+        given:
+        def bucket1 = createBucket()
+        def path = s3path("s3://$bucket1/foo/bar.txt")
+        and:
+        path.text = 'foo'
+
+        when:
+        TraceHelper.newFileWriter(path, false, 'Test')
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == "Test file already exists: ${path.toUriString()}"
+
+        cleanup:
+        deleteBucket(bucket1)
+    }
 }

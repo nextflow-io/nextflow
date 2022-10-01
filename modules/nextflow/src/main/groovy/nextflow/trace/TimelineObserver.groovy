@@ -17,13 +17,11 @@
 
 package nextflow.trace
 
-import groovy.text.GStringTemplateEngine
-
-import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
+import groovy.text.GStringTemplateEngine
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -41,7 +39,7 @@ import org.apache.commons.lang.StringEscapeUtils
 @CompileStatic
 class TimelineObserver implements TraceObserver {
 
-    public static final String DEF_FILE_NAME = 'timeline.html'
+    public static final String DEF_FILE_NAME = "timeline-${TraceHelper.launchTimestampFmt()}.html"
 
     /**
      * Holds the the start time for tasks started/submitted but not yet completed
@@ -175,13 +173,7 @@ class TimelineObserver implements TraceObserver {
         if( parent )
             Files.createDirectories(parent)
 
-        if( overwrite )
-            Files.deleteIfExists(reportFile)
-        else
-            // roll any trace files that may exist
-            reportFile.rollFile()
-
-        def writer = Files.newBufferedWriter(reportFile, Charset.defaultCharset())
+        def writer = TraceHelper.newFileWriter(reportFile, overwrite, 'Timeline')
         writer.withWriter { w -> w << html_output }
         writer.close()
     }

@@ -17,6 +17,8 @@ import java.nio.file.attribute.BasicFileAttributes
 import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.BlobServiceClientBuilder
 import com.azure.storage.common.StorageSharedKeyCredential
+import nextflow.exception.AbortOperationException
+import nextflow.trace.TraceHelper
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Shared
@@ -880,6 +882,40 @@ class AzNioTest extends Specification implements AzBaseSpec {
         cleanup:
         deleteBucket(bucketName)
     }
-    
+
+    def 'should overwrite a file' () {
+        given:
+        def bucket1 = createBucket()
+        def path = Path.of(new URI("az://$bucket1/foo/bar.txt"))
+        and:
+        path.text = 'foo'
+
+        when:
+        def file = TraceHelper.newFileWriter(path, true, 'Test')
+        file.write('Hola')
+        file.close()
+        then:
+        path.text == 'Hola'
+
+        cleanup:
+        deleteBucket(bucket1)
+    }
+
+    def 'should not overwrite a file' () {
+        given:
+        def bucket1 = createBucket()
+        def path = Path.of(new URI("az://$bucket1/foo/bar.txt"))
+        and:
+        path.text = 'foo'
+
+        when:
+        TraceHelper.newFileWriter(path, false, 'Test')
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == "Test file already exists: ${path.toUriString()}"
+
+        cleanup:
+        deleteBucket(bucket1)
+    }
 
 }

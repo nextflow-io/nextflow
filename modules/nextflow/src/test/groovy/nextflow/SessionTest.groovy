@@ -26,6 +26,7 @@ import nextflow.container.ContainerConfig
 import nextflow.exception.AbortOperationException
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
+import nextflow.trace.TraceHelper
 import nextflow.trace.WorkflowStatsObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.util.Duration
@@ -238,7 +239,8 @@ class SessionTest extends Specification {
     }
 
     def 'test create observers'() {
-
+        given:
+        TraceHelper.testTimestampFmt = '20221001'
         def session
         def result
         def observer
@@ -285,10 +287,9 @@ class SessionTest extends Specification {
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == Paths.get('trace.txt').complete()
+        observer.tracePath == Paths.get('trace-20221001.txt').complete()
         observer.separator == '\t'
         observer.fields == ['task_id','name','exit','vmem']
-
 
     }
 
