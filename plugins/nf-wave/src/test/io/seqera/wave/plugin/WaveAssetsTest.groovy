@@ -32,7 +32,7 @@ class WaveAssetsTest extends Specification {
         def BUNDLE = Mock(ResourcesBundle) { fingerprint() >> '12345' }
         
         expect:
-        new WaveAssets(IMAGE).hashKey() == CacheHelper.hasher([IMAGE]).hash().toString()
+        new WaveAssets(IMAGE).fingerprint() == CacheHelper.hasher([IMAGE]).hash().toString()
 //        new WaveAssets(IMAGE,BUNDLE).hashKey() == CacheHelper.hasher([IMAGE, BUNDLE]).hash().toString()
 
     }

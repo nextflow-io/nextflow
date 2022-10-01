@@ -22,6 +22,7 @@ import static java.nio.file.StandardOpenOption.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
+import java.time.OffsetDateTime
 
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
@@ -161,6 +162,9 @@ class WaveClientTest extends Specification {
         !req.containerFile
         !req.condaFile
         !req.containerConfig.layers
+        and:
+        req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
+        req.timestamp instanceof OffsetDateTime
     }
 
     def 'should create request object with dockerfile' () {
