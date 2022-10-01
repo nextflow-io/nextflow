@@ -22,6 +22,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.Path
 import java.time.Duration
+import java.time.OffsetDateTime
 import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
 
@@ -134,7 +135,9 @@ class WaveClient {
                 containerFile: assets.dockerFileEncoded(),
                 condaFile: assets.condaFileEncoded(),
                 buildRepository: config().buildRepository(),
-                cacheRepository: config.cacheRepository()
+                cacheRepository: config.cacheRepository(),
+                timestamp: OffsetDateTime.now(),
+                fingerprint: assets.fingerprint()
         )
     }
 
@@ -356,7 +359,7 @@ class WaveClient {
     ContainerInfo fetchContainerImage(WaveAssets assets) {
         try {
             // compute a unique hash for this request assets
-            final key = assets.hashKey()
+            final key = assets.fingerprint()
             // get from cache or submit a new request
             final response = cache.get(key, { sendRequest(assets) } as Callable )
             // assemble the container info response
