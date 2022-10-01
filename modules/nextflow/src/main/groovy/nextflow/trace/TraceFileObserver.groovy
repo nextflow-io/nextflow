@@ -17,7 +17,7 @@
 
 package nextflow.trace
 
-import java.nio.charset.Charset
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
@@ -39,7 +39,7 @@ import nextflow.processor.TaskProcessor
 @CompileStatic
 class TraceFileObserver implements TraceObserver {
 
-    public static final String DEF_FILE_NAME = 'trace.txt'
+    public static final String DEF_FILE_NAME = "trace-${TraceHelper.launchTimestampFmt()}.txt"
 
     /**
      * The list of fields included in the trace report
@@ -203,14 +203,8 @@ class TraceFileObserver implements TraceObserver {
         if( parent )
             Files.createDirectories(parent)
 
-        if( overwrite )
-            Files.deleteIfExists(tracePath)
-        else
-            // roll the any trace files that may exist
-            tracePath.rollFile()
-
         // create a new trace file
-        traceFile = new PrintWriter(Files.newBufferedWriter(tracePath, Charset.defaultCharset()))
+        traceFile = new PrintWriter(TraceHelper.newFileWriter(tracePath,overwrite, 'Trace'))
 
         // launch the agent
         writer = new Agent<PrintWriter>(traceFile)
