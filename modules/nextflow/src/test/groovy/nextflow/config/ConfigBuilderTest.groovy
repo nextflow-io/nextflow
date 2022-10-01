@@ -1155,7 +1155,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.wave instanceof Map
         config.wave.enabled
-        config.wave.endpoint == 'https://default.host'
+        config.wave.endpoint == 'https://wave.seqera.io'
     }
 
     def 'should enable conda env' () {
