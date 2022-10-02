@@ -372,7 +372,7 @@ class WaveClient {
 
     protected String condaFileToDockerFile() {
         def result = """\
-        FROM ${config.condaOpts().baseImage}
+        FROM ${config.condaOpts().mambaImage}
         COPY --chown=\$MAMBA_USER:\$MAMBA_USER conda.yml /tmp/conda.yml
         RUN micromamba install -y -n base -f /tmp/conda.yml && \\
             micromamba clean -a -y
@@ -392,7 +392,7 @@ class WaveClient {
 
     protected String condaRecipeToDockerFile(String recipe) {
         def result = """\
-        FROM ${config.condaOpts().baseImage}
+        FROM ${config.condaOpts().mambaImage}
         RUN \\
            micromamba install -y -n base -c defaults -c conda-forge \\
            $recipe \\
