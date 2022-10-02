@@ -255,7 +255,7 @@ Name            Description
 ``index``       The task index (corresponds to ``task_id`` in the execution trace)
 ``name``        The current task name
 ``process``     The current process name
-``workDir``     The task unique directory. NOTE: This is only available for processes that run native code via the ``exec:`` statement. 
+``workDir``     The task unique directory. NOTE: This is only available for processes that run native code via the ``exec:`` statement.
 =============== ========================
 
 The ``task`` object also contains the values of all process directives for the given task,

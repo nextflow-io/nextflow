@@ -84,7 +84,7 @@ For debugging purpose it's possible to execute a Nextflow pod and launch an inte
    nextflow kuberun login -v vol-claim:/mount/path
 
 This command creates a pod, sets up the volume claim(s), configures the Nextflow environment and finally launches a Bash
-login session.  
+login session.
 
 .. warning:: The pod is automatically destroyed once the shell session terminates. Do not use to start long running
   workflow executions in background.

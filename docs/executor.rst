@@ -66,10 +66,10 @@ See the :ref:`Azure Batch <azure-batch>` page for further configuration details.
 Bridge
 ======
 
-`Bridge <https://github.com/cea-hpc/bridge>`_ is an abstraction layer to ease batch system and resource manager usage in 
+`Bridge <https://github.com/cea-hpc/bridge>`_ is an abstraction layer to ease batch system and resource manager usage in
 heterogeneous HPC environments.
 
-It is open source software and can be installed on top of existing classical job schedulers such as Slurm or LSF, or other 
+It is open source software and can be installed on top of existing classical job schedulers such as Slurm or LSF, or other
 schedulers. Bridge allows to submit jobs, get information on running jobs, stop jobs, get information on the cluster system, etc.
 
 For more details on how to install the Bridge system, see the `documentation <https://github.com/cea-hpc/bridge>`_.

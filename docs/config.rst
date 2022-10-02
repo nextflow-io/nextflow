@@ -819,8 +819,8 @@ brackets, as shown below::
 .. tip::
   Your ``accessToken`` can be obtained from your Tower instance in the `Tokens page <https://tower.nf/tokens>`.
 
-.. tip:: 
-  The Tower workspace ID can also be specified using the environment variable ``TOWER_WORKSPACE_ID`` (config file has priority over the environment variable). 
+.. tip::
+  The Tower workspace ID can also be specified using the environment variable ``TOWER_WORKSPACE_ID`` (config file has priority over the environment variable).
 
 
 .. _config-trace:
@@ -887,8 +887,8 @@ Name                Description
 cleanup             If ``true``, on a successful completion of a run all files in *work* directory are automatically deleted.
 ================== ================
 
-.. warning:: 
-    The use of the ``cleanup`` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. 
+.. warning::
+    The use of the ``cleanup`` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run.
     Also, be aware that deleting all scratch files can take a lot of time, especially when using a shared file system or remote cloud storage.
 
 

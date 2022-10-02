@@ -2,7 +2,7 @@
 TARGET=../../nextflow-website/assets
 if egrep "^release = '.*edge|.*SNAPSHOT'$" -c conf.py >/dev/null; then
 MODE=edge
-else 
+else
 MODE=latest
 fi
 LATEST=$TARGET/docs/$MODE/

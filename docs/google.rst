@@ -15,7 +15,7 @@ environment in which a tool runs.
 The most common case will be to pick up your end-user Google credentials from your
 workstation. You can create these by running the command::
 
-    gcloud auth application-default login 
+    gcloud auth application-default login
 
 and running through the authentication flow. This will write a credential file to your gcloud
 configuration directory that will be used for any tool you run on your workstation that
@@ -61,7 +61,7 @@ Requirements
 The support for Google Batch requires Nextflow version ``22.07.1-edge`` or later. If you have already Nextflow
 installed make sure to update to the latest `edge` release using these commands::
 
-    export NXF_EDGE=1 
+    export NXF_EDGE=1
     nextflow -self-update
 
 If you don't have Nextflow, install it with command below::

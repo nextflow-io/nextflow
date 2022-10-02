@@ -41,7 +41,7 @@ configFiles                 Configuration files used for the workflow execution.
 container                   Docker image used to run workflow tasks. When more than one image is used
                             it returns a map object containing `[process name, image name]` pair entries.
 containerEngine             Returns the name of the container engine (e.g. docker or singularity) or null
-                            if no container engine is enabled. 
+                            if no container engine is enabled.
 commandLine                 Command line as entered by the user to launch the workflow execution.
 profile                     Used configuration profile.
 runName                     Mnemonic name assigned to this execution instance.

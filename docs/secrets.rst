@@ -48,7 +48,7 @@ The above snippet access the secrets ``MY_ACCESS_KEY`` and ``MY_SECRET_KEY`` pre
 the corresponding AWS credentials settings.
 
 .. warning::
-    Secrets **cannot** be assigned to pipeline parameters. 
+    Secrets **cannot** be assigned to pipeline parameters.
 
 
 Process secrets

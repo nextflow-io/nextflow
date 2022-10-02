@@ -64,7 +64,7 @@ Process
 Process definition
 ------------------
 
-The new DSL separates the definition of a process from its invocation. The process definition follows the usual 
+The new DSL separates the definition of a process from its invocation. The process definition follows the usual
 syntax as described in the :ref:`process documentation <process-page>`. The only difference is that the
 ``from`` and ``into`` channel declarations have to be omitted.
 
@@ -149,7 +149,7 @@ can be used to reference the channel within the caller scope. For example::
       your_command --here
       '''
     }
-    
+
     workflow {
         foo()
         foo.out.samples_bam.view()
@@ -284,7 +284,7 @@ the entry point of execution for the workflow application.
 .. note::
   Implicit workflow definition is ignored when a script is included as a module. This
   allows the writing of a workflow script that can be used either as a library module or as
-  an application script. 
+  an application script.
 
 .. tip::
   A different workflow entrypoint can be specified using the ``-entry`` command line option.
@@ -466,7 +466,7 @@ The above snippet prints::
     Ciao world!
 
 Finally, the include option ``params`` allows the specification of one or more parameters without
-inheriting any value from the external environment. 
+inheriting any value from the external environment.
 
 
 .. _module-templates:
@@ -684,7 +684,7 @@ DSL2 migration notes
           foo()
           bar()
         }
-        
+
 * The use of unqualified value and file elements into input tuples is not allowed anymore. Replace them with a corresponding
   ``val`` or ``path`` qualifier::
 
