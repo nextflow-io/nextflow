@@ -173,7 +173,7 @@ public class AmazonS3Client {
 		return client.putObject(req);
 	}
 
-	private PutObjectRequest preparePutObjectRequest(PutObjectRequest req, ObjectMetadata metadata, List<Tag> tags) {
+	private PutObjectRequest preparePutObjectRequest(PutObjectRequest req, ObjectMetadata metadata, List<Tag> tags, String contentType) {
 		req.withMetadata(metadata);
 		if( cannedAcl != null ) {
 			req.withCannedAcl(cannedAcl);
@@ -187,13 +187,16 @@ public class AmazonS3Client {
 		if( storageEncryption!=null ) {
 			metadata.setSSEAlgorithm(storageEncryption.toString());
 		}
+		if( contentType!=null ) {
+			metadata.setContentType(contentType);
+		}
 		return req;
 	}
 
 	/**
 	 * @see com.amazonaws.services.s3.AmazonS3Client#putObject(String, String, java.io.InputStream, ObjectMetadata)
 	 */
-	public PutObjectResult putObject(String bucket, String keyName, InputStream inputStream, ObjectMetadata metadata, List<Tag> tags) {
+	public PutObjectResult putObject(String bucket, String keyName, InputStream inputStream, ObjectMetadata metadata, List<Tag> tags, String contentType) {
 		PutObjectRequest req = new PutObjectRequest(bucket, keyName, inputStream, metadata);
 		if( cannedAcl != null ) {
 			req.withCannedAcl(cannedAcl);
@@ -206,6 +209,9 @@ public class AmazonS3Client {
 		}
 		if( storageEncryption!=null ) {
 			metadata.setSSEAlgorithm(storageEncryption.toString());
+		}
+		if( contentType!=null ) {
+			metadata.setContentType(contentType);
 		}
 		if( log.isTraceEnabled() ) {
 			log.trace("S3 PutObject request {}", req);
@@ -222,21 +228,25 @@ public class AmazonS3Client {
 	/**
 	 * @see com.amazonaws.services.s3.AmazonS3Client#copyObject(CopyObjectRequest)
 	 */
-	public void copyObject(CopyObjectRequest req, List<Tag> tags) {
+	public void copyObject(CopyObjectRequest req, List<Tag> tags, String contentType) {
 		if( tags !=null && tags.size()>0 ) {
 			req.setNewObjectTagging(new ObjectTagging(tags));
 		}
 		if( cannedAcl != null ) {
 			req.withCannedAccessControlList(cannedAcl);
 		}
+		// getNewObjectMetada returns null if no object metadata has been specified.
+		ObjectMetadata meta = req.getNewObjectMetadata() != null ? req.getNewObjectMetadata() : new ObjectMetadata();
 		if( storageEncryption != null ) {
-			// getNewObjectMetada returns null if no object metadata has been specified.
-			ObjectMetadata meta = req.getNewObjectMetadata() != null ? req.getNewObjectMetadata() : new ObjectMetadata();
 			meta.setSSEAlgorithm(storageEncryption.toString());
 			req.setNewObjectMetadata(meta);
 		}
 		if( kmsKeyId !=null ) {
 			req.withSSEAwsKeyManagementParams(new SSEAwsKeyManagementParams(kmsKeyId));
+		}
+		if( contentType!=null ) {
+			meta.setContentType(contentType);
+			req.setNewObjectMetadata(meta);
 		}
 		if( log.isTraceEnabled() ) {
 			log.trace("S3 CopyObject request {}", req);
@@ -351,12 +361,13 @@ public class AmazonS3Client {
         return client.listNextBatchOfObjects(objectListing);
     }
 
-	public void multipartCopyObject(S3Path s3Source, S3Path s3Target, Long objectSize, S3MultipartOptions opts, List<Tag> tags ) {
+	public void multipartCopyObject(S3Path s3Source, S3Path s3Target, Long objectSize, S3MultipartOptions opts, List<Tag> tags, String contentType ) {
 
 		final String sourceBucketName = s3Source.getBucket();
 		final String sourceObjectKey = s3Source.getKey();
 		final String targetBucketName = s3Target.getBucket();
 		final String targetObjectKey = s3Target.getKey();
+	  	final ObjectMetadata meta = new ObjectMetadata();
 
 		// Step 2: Initialize
 		InitiateMultipartUploadRequest initiateRequest = new InitiateMultipartUploadRequest(targetBucketName, targetObjectKey);
@@ -364,7 +375,6 @@ public class AmazonS3Client {
 			initiateRequest.withCannedACL(cannedAcl);
 		}
 		if( storageEncryption!=null ) {
-			ObjectMetadata meta = new ObjectMetadata();
 			meta.setSSEAlgorithm(storageEncryption.toString());
 			initiateRequest.withObjectMetadata(meta);
 		}
@@ -375,7 +385,11 @@ public class AmazonS3Client {
 		if( tags != null && tags.size()>0 ) {
 			initiateRequest.setTagging( new ObjectTagging(tags));
 		}
-		
+
+		if( contentType!=null ) {
+			meta.setContentType(contentType);
+			initiateRequest.withObjectMetadata(meta);
+		}
 		InitiateMultipartUploadResult initResult = client.initiateMultipartUpload(initiateRequest);
 
 
@@ -561,7 +575,7 @@ public class AmazonS3Client {
 	public void uploadFile(File source, S3Path target) {
 		PutObjectRequest req = new PutObjectRequest(target.getBucket(), target.getKey(), source);
 		ObjectMetadata metadata = new ObjectMetadata();
-		preparePutObjectRequest(req,metadata, target.getTagsList());
+		preparePutObjectRequest(req, metadata, target.getTagsList(), target.getContentType());
 		// initiate transfer
 		Upload upload = transferManager() .upload(req);
 		// await for completion

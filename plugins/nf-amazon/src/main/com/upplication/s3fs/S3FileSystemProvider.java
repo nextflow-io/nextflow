@@ -413,6 +413,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 				.setStorageClass(props.getProperty("upload_storage_class"))
 				.setStorageEncryption(props.getProperty("storage_encryption"))
 				.setKmsKeyId(props.getProperty("storage_kms_key_id"))
+				.setContentType(fileToUpload.getContentType())
 				.setTags(fileToUpload.getTagsList());
 		return stream;
 	}
@@ -445,6 +446,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
         // and we can use the File SeekableByteChannel implementation
 		final SeekableByteChannel seekable = Files .newByteChannel(tempFile, options);
 		final List<Tag> tags = ((S3Path) path).getTagsList();
+		final String contentType = ((S3Path) path).getContentType();
 
 		return new SeekableByteChannel() {
 			@Override
@@ -474,10 +476,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
                         */
                         s3Path.getFileSystem()
                                 .getClient()
-                                .putObject(s3Path.getBucket(), s3Path.getKey(),
-                                        stream,
-                                        metadata,
-										tags);
+                                .putObject(s3Path.getBucket(), s3Path.getKey(), stream, metadata, tags, contentType);
                     }
                 }
                 else {
@@ -548,8 +547,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 		s3Path.getFileSystem()
 				.getClient()
-				.putObject(s3Path.getBucket(), keyName,
-						new ByteArrayInputStream(new byte[0]), metadata, tags);
+				.putObject(s3Path.getBucket(), keyName, new ByteArrayInputStream(new byte[0]), metadata, tags, null);
 	}
 
 	@Override
@@ -616,15 +614,16 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		final long maxSize = opts.getMaxCopySize();
 		final long length = sourceObjMetadata.getContentLength();
 		final List<Tag> tags = ((S3Path) target).getTagsList();
+		final String contentType = ((S3Path) target).getContentType();
 
 		if( length <= maxSize ) {
 			CopyObjectRequest copyObjRequest = new CopyObjectRequest(s3Source.getBucket(), s3Source.getKey(),s3Target.getBucket(), s3Target.getKey());
-			log.trace("Copy file via copy object - source: source={}, target={}, tags={}", s3Source, s3Target,tags);
-			client.copyObject(copyObjRequest, tags);
+			log.trace("Copy file via copy object - source: source={}, target={}, tags={}", s3Source, s3Target, tags);
+			client.copyObject(copyObjRequest, tags, contentType);
 		}
 		else {
 			log.trace("Copy file via multipart upload - source: source={}, target={}, tags={}", s3Source, s3Target, tags);
-			client.multipartCopyObject(s3Source, s3Target, length, opts, tags);
+			client.multipartCopyObject(s3Source, s3Target, length, opts, tags, contentType);
 		}
 	}
 
