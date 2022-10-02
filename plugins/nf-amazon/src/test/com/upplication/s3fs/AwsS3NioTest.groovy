@@ -27,6 +27,7 @@ import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Timeout
+import spock.lang.Unroll
 
 /**
  *
@@ -1199,6 +1200,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         deleteBucket(bucketName)
     }
 
+    @Unroll
     def 'should upload, copy and download a file' () {
         given:
         def TEXT = randomText(FILE_SIZE)
@@ -1248,6 +1250,59 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         _ | 11 * 1024 * 1024
     }
 
+    @Unroll
+    def 'should set file media type' () {
+        given:
+        def TEXT = randomText(FILE_SIZE)
+        def folder = Files.createTempDirectory('test')
+        def file = Files.write(folder.resolve('foo.data'), TEXT.bytes)
+        and:
+        def bucket1 = createBucket()
+        def bucket2 = createBucket()
+
+        // upload a file to a remote bucket
+        when:
+        def target1 = s3path("s3://$bucket1/foo.data")
+        and:
+        target1.setContentType('text/foo')
+        def client = target1.getFileSystem().getClient()
+        and:
+        FileHelper.copyPath(file, target1)
+        // the file exist
+        then:
+        Files.exists(target1)
+        and:
+        client
+                .getObjectMetadata(target1.getBucket(), target1.getKey())
+                .getContentType() == 'text/foo'
+
+        // copy a file across buckets
+        when:
+        def target2 = s3path("s3://$bucket2/foo.data")
+        and:
+        target2.setContentType('text/bar')
+        and:
+        FileHelper.copyPath(target1, target2)
+        // the file exist
+        then:
+        Files.exists(target2)
+        client
+                .getObjectMetadata(target2.getBucket(), target2.getKey())
+                .getContentType() == 'text/bar'
+
+        cleanup:
+        deleteBucket(bucket1)
+        deleteBucket(bucket2)
+        folder?.deleteDir()
+
+        // check the limits in the file `amazon.properties`
+        // in the test resources
+        where:
+        _ | FILE_SIZE
+        _ | 50 * 1024
+        _ | 11 * 1024 * 1024
+    }
+
     def 'should overwrite a file' () {
         given:
         def bucket1 = createBucket()
@@ -1282,4 +1337,5 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         cleanup:
         deleteBucket(bucket1)
     }
+    
 }

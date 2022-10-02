@@ -92,6 +92,8 @@ public class S3Path implements Path, TagAwareFile {
 
 	private Map<String,String> tags;
 
+	private String contentType;
+
 	/**
 	 * path must be a string of the form "/{bucket}", "/{bucket}/{key}" or just
 	 * "{key}".
@@ -548,6 +550,11 @@ public class S3Path implements Path, TagAwareFile {
 		this.tags = tags;
 	}
 
+	@Override
+	public void setContentType(String type) {
+		this.contentType = type;
+	}
+
 	public List<Tag> getTagsList() {
 		// nothing found, just return
 		if( tags==null )
@@ -558,6 +565,10 @@ public class S3Path implements Path, TagAwareFile {
 			result.add( new Tag(entry.getKey(), entry.getValue()) );
 		}
 		return result;
+	}
+
+	public String getContentType() {
+		return contentType;
 	}
 
 	// ~ helpers methods
