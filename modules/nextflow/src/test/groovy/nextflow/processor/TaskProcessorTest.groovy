@@ -131,19 +131,28 @@ class TaskProcessorTest extends Specification {
 
     }
 
+    @Unroll
     def 'should add module bin paths to task env' () {
         given:
         def session = Mock(Session) { getConfig() >> [:] }
-        def executor = Mock(Executor)
+        def executor = Mock(Executor) { getBinDir() >> Path.of('/project/bin')}
+        and:
         TaskProcessor processor = Spy(TaskProcessor, constructorArgs: [[session:session, executor:executor]])
         and:
         when:
         def result = processor.getProcessEnvironment()
         then:
+        session.enableModuleBinaries() >> MODULE_BIN
         processor.getModuleBundle() >> Mock(ResourcesBundle)  { getBinDirs() >> [Path.of('/foo'), Path.of('/bar')] }
-        processor.isLocalWorkDir() >> true
+        processor.isLocalWorkDir() >> LOCAL
         and:
-        result == [PATH:'$PATH:/foo:/bar']
+        result == EXPECTED
+
+        where:
+        LOCAL   | MODULE_BIN    | EXPECTED
+        false   | false         | [:]
+        true    | false         | [PATH:'$PATH:/project/bin']
+        true    | true          | [PATH:'$PATH:/foo:/bar:/project/bin']
     }
 
     def 'should fetch interpreter from shebang line'() {

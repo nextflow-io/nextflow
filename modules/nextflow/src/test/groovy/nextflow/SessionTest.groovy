@@ -570,4 +570,17 @@ class SessionTest extends Specification {
         0 * session.showVersionError(_)
 
     }
+
+    def 'should get module binaries status'() {
+        given:
+        def session = new Session(CONFIG)
+
+        expect:
+        session.enableModuleBinaries() == EXPECTED
+        
+        where:
+        CONFIG                                      | EXPECTED
+        [:]                                         | false
+        [nextflow:[enable:[moduleBinaries: true]]]  | true
+    }
 }
