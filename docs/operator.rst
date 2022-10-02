@@ -674,6 +674,11 @@ Then you will be able to specify the tag ``foo`` or ``bar`` as an argument of th
 either the content of the first or the second channel. Multiple tag names can be specified separating them with a ``,``
 character.
 
+The output can be formatted using the optional ``pretty`` boolean option. For example::
+
+    Channel
+        .fromSRA('SRP043510')
+        .dump(tag:'foo', pretty: true)
 
 filter
 ------
