@@ -133,15 +133,15 @@ Read the :ref:`script-page` section to learn about the Nextflow scripting langua
 Configuration options
 ---------------------
 
-Pipeline configuration properties are defined in a file named ``nextflow.config`` in the pipeline execution directory. 
+Pipeline configuration properties are defined in a file named ``nextflow.config`` in the pipeline execution directory.
 
-This file can be used to define which executor to use, the process's environment variables, pipeline parameters etc. 
+This file can be used to define which executor to use, the process's environment variables, pipeline parameters etc.
 
 A basic configuration file might look like this::
 
-	process { 
+	process {
 	  executor='sge'
-	  queue = 'cn-el6' 
+	  queue = 'cn-el6'
 	}
 
 
