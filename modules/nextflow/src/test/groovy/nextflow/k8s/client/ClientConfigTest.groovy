@@ -56,12 +56,25 @@ class ClientConfigTest extends Specification {
                 clientKey: 'world'.bytes.encodeBase64().toString() ]
 
         when:
-        def result = ClientConfig.fromMap(MAP)
+        def result = ClientConfig.fromNextflowConfig(MAP, null, null)
 
         then:
         result.server == 'foo.com'
         result.token == 'blah-blah'
         result.namespace == 'my-namespace'
+        result.serviceAccount == 'default'
+        result.verifySsl
+        result.clientCert == 'hello'.bytes
+        result.clientKey == 'world'.bytes
+        result.sslCert == 'fizzbuzz'.bytes
+
+        when:
+        result = ClientConfig.fromNextflowConfig(MAP, 'ns1', 'sa2')
+        then:
+        result.server == 'foo.com'
+        result.token == 'blah-blah'
+        result.namespace == 'ns1'
+        result.serviceAccount == 'sa2'
         result.verifySsl
         result.clientCert == 'hello'.bytes
         result.clientKey == 'world'.bytes
@@ -89,12 +102,13 @@ class ClientConfigTest extends Specification {
                 clientKeyFile: file3 ]
 
         when:
-        def result = ClientConfig.fromMap(MAP)
+        def result = ClientConfig.fromNextflowConfig(MAP, null, null)
 
         then:
         result.server == 'foo.com'
         result.token == 'blah-blah'
         result.namespace == 'my-namespace'
+        result.serviceAccount == 'default'
         !result.verifySsl
         result.sslCert == file1.text.bytes
         result.clientCert == file2.text.bytes
