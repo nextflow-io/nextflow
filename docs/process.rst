@@ -264,7 +264,7 @@ In the above example, ``$USER`` is treated as a Bash variable, while ``!{str}`` 
     - Shell script definitions require the use of single-quote ``'`` delimited strings. When using double-quote ``"``
       delimited strings, dollar variables are interpreted as Nextflow variables as usual. See :ref:`string-interpolation`.
 
-    - Variables prefixed with ``!`` must always be enclosed in curly brackets, i.e. ``!{str}`` is a valid 
+    - Variables prefixed with ``!`` must always be enclosed in curly brackets, i.e. ``!{str}`` is a valid
       variable whereas ``!str`` is ignored.
 
     - Shell scripts support the use of the :ref:`process-template` mechanism. The same rules are applied to the variables
@@ -1049,7 +1049,7 @@ Some caveats on glob pattern behavior:
   resulting output channel, these files may still be transferred from the task scratch directory
   to the original task work directory. Therefore, to avoid unnecessary file copies, avoid using
   loose wildcards when defining output files, e.g. ``path '*'``. Instead, use a prefix or a suffix
-  to restrict the set of matching files to only the expected ones, e.g. ``path 'prefix_*.sorted.bam'``. 
+  to restrict the set of matching files to only the expected ones, e.g. ``path 'prefix_*.sorted.bam'``.
 
 Read more about glob syntax at the following link `What is a glob?`_
 
@@ -1092,7 +1092,7 @@ on the actual value of the ``species`` input.
   Also, metadata can be associated with outputs by using the :ref:`tuple output <process-out-tuple>` qualifier, instead of
   including them in the output file name.
 
-  To sum up, the use of output files with static names over dynamic ones is preferable whenever possible, 
+  To sum up, the use of output files with static names over dynamic ones is preferable whenever possible,
   because it will result in simpler and more portable code.
 
 
@@ -1197,7 +1197,7 @@ process if the declared output is not produced::
 
 In this example, the process is normally expected to produce an ``output.txt`` file, but in the
 cases where the file is legitimately missing, the process does not fail. The output channel will
-only contain values for those processes that produce ``output.txt``. 
+only contain values for those processes that produce ``output.txt``.
 
 
 When
@@ -1282,7 +1282,7 @@ afterScript
 The ``afterScript`` directive allows you to execute a custom (Bash) snippet immediately *after* the main process has run.
 This may be useful to clean up your staging area.
 
-.. note:: When combined with the :ref:`container directive <process-container>`, the ``afterScript`` will be 
+.. note:: When combined with the :ref:`container directive <process-container>`, the ``afterScript`` will be
    executed outside the specified container. In other words, the ``afterScript`` is always executed in the host environment.
 
 
@@ -1304,7 +1304,7 @@ For example::
       """
     }
 
-.. note:: When combined with the :ref:`container directive <process-container>`, the ``beforeScript`` will be 
+.. note:: When combined with the :ref:`container directive <process-container>`, the ``beforeScript`` will be
    executed outside the specified container. In other words, the ``beforeScript`` is always executed in the host environment.
 
 
@@ -1323,7 +1323,7 @@ to identify univocally the outputs produced by the process execution.
 
 
 The cache is enabled by default, you can disable it for a specific process by setting the ``cache``
-directive to ``false``. For example:: 
+directive to ``false``. For example::
 
   process noCacheThis {
     cache false
@@ -1713,7 +1713,7 @@ This directive is optional and if specified overrides the cpus and memory direct
     }
 
 .. note:: This feature requires Nextflow 19.07.0 or later.
-    
+
 See also: `cpus`_ and `memory`_.
 
 
@@ -1733,7 +1733,7 @@ By default this directive is disabled, you can set it as shown in the example be
       echo 'do this as that .. '
       """
     }
-    
+
 .. note:: This setting considers the **total** errors accumulated for a given process, across all instances. If you want
   to control the number of times a process **instance** (aka task) can fail, use ``maxRetries``.
 
@@ -1997,7 +1997,7 @@ symlink         Creates an absolute `symbolic link` in the published directory f
 rellink         Creates a relative `symbolic link` in the published directory for each process output file.
 link            Creates a `hard link` in the published directory for each process output file.
 copy            Copies the output files into the published directory.
-copyNoFollow    Copies the output files into the published directory without following symlinks ie. copies the links themselves. 
+copyNoFollow    Copies the output files into the published directory without following symlinks ie. copies the links themselves.
 move            Moves the output files into the published directory. **Note**: this is only supposed to be used for a `terminating` process i.e. a process whose output is not consumed by any other downstream process.
 =============== =================
 
@@ -2322,8 +2322,8 @@ All directives can be assigned a dynamic value except the following:
 Dynamic computing resources
 ---------------------------
 
-It's a very common scenario that different instances of the same process may have very different needs in terms of computing resources. 
-In such situations requesting, for example, an amount of memory too low will cause some tasks to fail. 
+It's a very common scenario that different instances of the same process may have very different needs in terms of computing resources.
+In such situations requesting, for example, an amount of memory too low will cause some tasks to fail.
 Instead, using a higher limit that fits all the tasks in your execution could significantly decrease the execution priority of your jobs.
 
 The `Dynamic directives`_ evaluation feature can be used to modify the amount of computing resources requested in case

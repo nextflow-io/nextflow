@@ -153,7 +153,7 @@ the workflow execution.
 
 Specifying the Conda environments in a separate configuration :ref:`profile <config-profiles>` is therefore
 recommended to allow the execution via a command line option and to enhance the workflow portability. For example::
-  
+
   profiles {
     conda {
       process.conda = 'samtools'
