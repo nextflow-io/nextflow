@@ -57,7 +57,7 @@ class DumpHelper {
                 } else if (it.value == null) {
                     it.value = replaceNullWith
                 } else if (it.value instanceof Path) {
-                    return FilesEx.toUriString((Path)it.value)
+                    it.value = FilesEx.toUriString((Path)it.value)
                 } else {
                     it.value = it.value.toString()
                 }
