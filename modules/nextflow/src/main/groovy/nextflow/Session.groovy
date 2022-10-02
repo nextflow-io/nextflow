@@ -822,6 +822,10 @@ class Session implements ISession {
         }
     }
 
+    boolean enableModuleBinaries() {
+        config.navigate('nextflow.enable.moduleBinaries', false) as boolean
+    }
+
     @PackageScope VersionNumber getCurrentVersion() {
         new VersionNumber(APP_VER)
     }

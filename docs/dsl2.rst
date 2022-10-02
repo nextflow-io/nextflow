@@ -368,12 +368,12 @@ execution context. This way, `foo`` can be invoked in the ``workflow`` scope.
 Nextflow implicitly looks for the script file ``./some/module.nf`` resolving the path
 against the *including* script location.
 
+.. tip::
+  As of version ``22.10.0``, Nextflow looks for the module script also at the following path ``./some/module/main.nf`` i.e.
+  the module can be defined as a directory whose name matches the module name and contains a script named ``main.nf``.
+
 .. note::
     Relative paths must begin with the ``./`` prefix. Also, the ``include`` statement must be defined **outside** of the workflow definition.
-
-.. warning::
-    From version 22.05.0 `include` directive can be used to import operators and functions from plugin if the path
-    match the pattern `plugin/<plugin-id>` so avoid to use `plugin` as folder for your module
 
 
 Multiple inclusions
@@ -530,6 +530,30 @@ has several module components, and all them use templates, the project could gro
                 |-P6-template.sh
                 |-P7-template.sh
 
+Module binaries
+-----------------
+
+As of version ``22.10.0``, modules can define binary scripts that are locally scoped to the processes defined by the tasks.
+
+To enable this feature add the following setting in pipeline configuration file::
+
+    nextflow.enable.moduleBinaries = true
+
+The binary scripts must be placed in the module directory names ``<module-dir>/resources/usr/bin``::
+
+    <module-dir>
+        |-main.nf
+        \-resources
+            \-usr
+                \-bin
+                    |-your-module-script1.sh
+                    \-another-module-script2.py
+
+Those scripts will be accessible as any other command in the tasks environment, provided they have been granted
+the Linux execute permissions.
+
+.. note::
+    This feature requires the use of a local or shared file system as the pipeline work directory.
 
 Channel forking
 ===============
