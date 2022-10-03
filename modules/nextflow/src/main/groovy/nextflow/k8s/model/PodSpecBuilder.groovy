@@ -591,10 +591,13 @@ class PodSpecBuilder {
 
     protected String sanitizeKey(String value, MetaType kind) {
         String[] split_value = Arrays.stream(
-                value.split('/', 2)).filter(str -> !str.isEmpty()
+                value.split('/')).filter(str -> !str.isEmpty()
         ).toArray(String[]::new)
-        
-        if (split_value.length > 1) {
+
+        if (split_value.length > 2) {
+            throw new IllegalArgumentException("Invalid key in $kind -- Keys can only contain one '/'")
+        }
+        else if (split_value.length > 1) {
             return sanitize0(split_value[0], kind, SegmentType.PREFIX) + "/" \
                    + sanitize0(split_value[1], kind, SegmentType.NAME)
         }

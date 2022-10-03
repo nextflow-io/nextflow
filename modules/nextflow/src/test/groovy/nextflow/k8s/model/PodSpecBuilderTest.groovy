@@ -798,12 +798,29 @@ class PodSpecBuilderTest extends Specification {
         'foo'                   | 'foo'
         'key 1'                 | 'key_1'
         'foo.bar/key 2'         | 'foo.bar/key_2'
-        'foo.bar/key 2/key 3'   | 'foo.bar/key_2_key_3'
         'foo.bar/'              | 'foo.bar'
         '/foo.bar'              | 'foo.bar'
         'x2345678901234567890123456789012345678901234567890123456789012345' | 'x23456789012345678901234567890123456789012345678901234567890123'
         'x23456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345/key 2' | 'x234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123/key_2'
         'foo.bar/x2345678901234567890123456789012345678901234567890123456789012345' | 'foo.bar/x23456789012345678901234567890123456789012345678901234567890123'
+    }
+
+    @Unroll
+    def 'should report error if sanitizing k8s label with more than one slash character: #label_key' () {
+        given:
+        def builder = new PodSpecBuilder()
+
+        when:
+        builder.sanitizeKey(label_key, PodSpecBuilder.MetaType.LABEL)
+
+        then:
+        def error = thrown(expectedException)
+        error.message == expectedMessage
+
+        where:
+        label_key               | expectedException         | expectedMessage
+        'foo.bar/key 2/key 3'   | IllegalArgumentException  | "Invalid key in $PodSpecBuilder.MetaType.LABEL -- Keys can only contain one '/'"
+        'foo.bar/foo/bar/bar'   | IllegalArgumentException  | "Invalid key in $PodSpecBuilder.MetaType.LABEL -- Keys can only contain one '/'"
     }
 
     @Unroll
@@ -834,10 +851,27 @@ class PodSpecBuilderTest extends Specification {
         [foo:'bar']                         | [foo:'bar']
         ['key 1':'value 2']                 | [key_1:'value 2']
         ['foo.bar/key 2':'value 3']         | ['foo.bar/key_2':'value 3']
-        ['foo.bar/key 3/no key': 'value 4'] | ['foo.bar/key_3_no_key':'value 4']
         ['x2345678901234567890123456789012345678901234567890123456789012345':'value 5'] | ['x23456789012345678901234567890123456789012345678901234567890123':'value 5']
         ['x23456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345/key 4':'value 6'] | ['x234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123/key_4':'value 6']
         ['foo.bar/x2345678901234567890123456789012345678901234567890123456789012345':'value 7'] | ['foo.bar/x23456789012345678901234567890123456789012345678901234567890123':'value 7']
+    }
+
+    @Unroll
+    def 'should report error if sanitizing k8s annotation key with more than one slash character: #annotation_key' () {
+        given:
+        def builder = new PodSpecBuilder()
+
+        when:
+        builder.sanitizeKey(annotation_key, PodSpecBuilder.MetaType.ANNOTATION)
+
+        then:
+        def error = thrown(expectedException)
+        error.message == expectedMessage
+
+        where:
+        annotation_key          | expectedException         | expectedMessage
+        'foo.bar/key 2/key 3'   | IllegalArgumentException  | "Invalid key in $PodSpecBuilder.MetaType.ANNOTATION -- Keys can only contain one '/'"
+        'foo.bar/foo/bar/bar'   | IllegalArgumentException  | "Invalid key in $PodSpecBuilder.MetaType.ANNOTATION -- Keys can only contain one '/'"
     }
 
     @Unroll
