@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+1.11.0 - 3 Oct 2022
+- Add support for custom S3 content type [02afa332] <Paolo Di Tommaso>
+- Get rid of  file name rolling for report files [a762ed59] <Paolo Di Tommaso>
+
 1.10.7 - 28 Sep 2022
 - Fix Issue copying file bigger than 5gb to S3 [18fd9a44]
 
