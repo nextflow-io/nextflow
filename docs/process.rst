@@ -1677,22 +1677,10 @@ process using the ``label`` directive more than one time.
 
 Labels are useful to organise workflow processes in separate groups which can be referenced
 in the configuration file to select and configure subset of processes having similar computing requirements.
-
 See the :ref:`config-process-selectors` documentation for details.
 
-The ``label`` directive can be also expressed as a `Map<key-value>` or a `key=value` sentence:
+See also: `resourceLabels`_
 
-  process bigTask {
-    label "region=eu-west-1"
-    label organization: 'MyOrganization'
-    label department: 'a department', group: 'a group'
-
-    '''
-    <task script>
-    '''
-  }
-
-These labels will be used to tag the process when pipeline is running in AWS, Google or K8s
 
 .. _process-machineType:
 
@@ -2053,6 +2041,28 @@ Multiple queues can be specified by separating their names with a comma for exam
 
 .. note:: This directive is only used by certain executors. Refer to the
   :ref:`executor-page` page to see which executors support this directive.
+
+
+.. _process-resourcelabel:
+
+resourceLabels
+--------------
+
+The ``resourceLabels`` directive is an alternative to `label`_ that allows you to express labels as a map
+or as key-value pairs::
+
+  process bigTask {
+    resourceLabels 'region=eu-west-1'
+    resourceLabels organization: 'MyOrganization'
+    resourceLabels department: 'a department', group: 'a group'
+
+    '''
+    <task script>
+    '''
+  }
+
+These labels will be used to tag the task and any associated compute resources when the pipeline is executed
+on AWS, Google or K8s.
 
 
 .. _process-scratch:
