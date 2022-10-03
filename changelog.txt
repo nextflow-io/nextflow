@@ -1,5 +1,28 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.10.0-RC1 - 3 Oct 2022
+- Add module binaries enabling flag + docs [c50e178f] <Paolo Di Tommaso>
+- Add timestamp and fingerprint to wave request [a5a7e138] <Paolo Di Tommaso>
+- Add missing inputs to the incremental task "test" (#1442) [ci fast] [f85d59a6] <Thodoris Sotiropoulos>
+- Add support for refresh token to Wave [ed9f25f1] <Paolo Di Tommaso>
+- Add pretty option to dump operator [ci fast] [4218b299] <Paolo Di Tommaso>
+- Add support for custom S3 content type [02afa332] <Paolo Di Tommaso>
+- Get rid of  file name rolling for report files [a762ed59] <Paolo Di Tommaso>
+- Ignore JGit warning when missing git tool [a94fa9c1] <Paolo Di Tommaso>
+- Remove jobname limit to HyperQueue executor (#3251) [99604ccb] <Henrik Nortamo>
+- Rename baseImage to mambaImage [ci fast] [50086028] <Paolo Di Tommaso>
+- Fix failing test [ci fast] [e6790003] <Paolo Di Tommaso>
+- Fix K8s cluster token when using serviceAccount [c3364d0f] <Paolo Di Tommaso>
+- Fix hanging test [44c04874] <Paolo Di Tommaso>
+- Improve docs (#3212) [ci skip] [5d80388c] <Marcel Ribeiro Dantas>
+- Bump fusion snapshot [ci skip] [8e03f655] <Paolo Di Tommaso>
+- Bump wave endpoint [a044cc6a] <Paolo Di Tommaso>
+- Bump nf-wave@0.4.5 [7424dc4b] <Paolo Di Tommaso>
+- Bump fusion config v0.5.1 [4dbdf112] <Paolo Di Tommaso>
+- Bump nf-wave@0.5.0
+- Bump nf-tower@1.5.5
+- Bump nf-amazon@1.11.0
+
 22.09.7-edge - 28 Sep 2022
 - Fix Issue copying file bigger than 5gb to S3 [18fd9a44]
 - Fix chmod command to accommodate hidden files in bindir (or empty bindir) (#3247) [a0fcc7b0] <Abhinav Sharma>
