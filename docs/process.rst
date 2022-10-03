@@ -2043,7 +2043,7 @@ Multiple queues can be specified by separating their names with a comma for exam
   :ref:`executor-page` page to see which executors support this directive.
 
 
-.. _process-resourcelabel:
+.. _process-resourcelabels:
 
 resourceLabels
 --------------
