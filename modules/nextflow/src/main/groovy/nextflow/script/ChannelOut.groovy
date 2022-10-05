@@ -90,7 +90,10 @@ class ChannelOut implements List<DataflowWriteChannel> {
      */
     static List spread(Object[] args) {
         final result = new ArrayList(args.size()*2)
+        println "spread.result: $result"
+        println "spread.args: $args"
         for( int i=0; i<args.size(); i++ ) {
+            println "spread.i: $i"
             if( args[i] instanceof ChannelOut ) {
                 final list = (List)args[i]
                 for( def el : list ) {
@@ -101,6 +104,7 @@ class ChannelOut implements List<DataflowWriteChannel> {
                 result.add(args[i])
             }
         }
+        println "spread.result: $result"
         return result
     }
 

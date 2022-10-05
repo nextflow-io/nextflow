@@ -40,6 +40,7 @@ import nextflow.Session
 import nextflow.script.ChannelOut
 import nextflow.script.TokenBranchDef
 import nextflow.script.TokenMultiMapDef
+import nextflow.script.ChainableDef
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.splitter.TextSplitter
@@ -1495,18 +1496,22 @@ class OperatorImpl {
     }
 
     /**
-     * Implement a `withOp` operator e.g.
-     * <pre>
-     *     someChannel | withOp { someProcess(it, someChannel) }
-           someChannel | withOp { someProcess(someChannel, it) }
-           someChannel | withOp { someChannel.someOperator(it) }
-     * </pre>
-     *
-     * @param source The channel instance to be bound in the context
-     * @param closure A closure defining the operation/process to call
+     * Implement `exec` operator e.g.
      */
 
-    Object withOp(final DataflowReadChannel source, Closure closure) {
-        source.with(closure)
+    Object exec(DataflowReadChannel source, ChainableDef chainableDef, Object... args) {
+        new ExecOp(source, chainableDef, args).apply()
+    }
+
+    Object exec(DataflowReadChannel source, ChainableDef chainableDef, Closure closure) {
+        new ExecOp(source, chainableDef, closure).apply()
+    }
+
+    Object exec(DataflowReadChannel source, OpCall opCall, Object... args) {
+        new ExecOp(source, opCall, args).apply()
+    }
+
+    Object exec(DataflowReadChannel source, OpCall opCall, Closure closure) {
+        new ExecOp(source, opCall, closure).apply()
     }
 }
