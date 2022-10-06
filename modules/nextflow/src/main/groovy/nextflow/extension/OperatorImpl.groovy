@@ -40,7 +40,7 @@ import nextflow.Session
 import nextflow.script.ChannelOut
 import nextflow.script.TokenBranchDef
 import nextflow.script.TokenMultiMapDef
-import nextflow.script.ChainableDef
+import nextflow.script.ProcessDef
 import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.splitter.TextSplitter
@@ -1496,22 +1496,23 @@ class OperatorImpl {
     }
 
     /**
-     * Implement `exec` operator e.g.
+     * Implement `exec` operator 
      */
-
-    Object exec(DataflowReadChannel source, ChainableDef chainableDef, Object... args) {
-        new ExecOp(source, chainableDef, args).apply()
+    Object exec(DataflowReadChannel source, ProcessDef processDef, Object... args) {
+        new ExecOp(source, processDef, args).apply()
     }
 
-    Object exec(DataflowReadChannel source, ChainableDef chainableDef, Closure closure) {
-        new ExecOp(source, chainableDef, closure).apply()
+    /*
+     * Implement `eval` operator 
+     */
+    Object eval(DataflowReadChannel source, Closure closure) {
+        def result = new EvalOp(source, closure).apply()
+        return result
     }
 
-    Object exec(DataflowReadChannel source, OpCall opCall, Object... args) {
-        new ExecOp(source, opCall, args).apply()
+    Object eval(DataflowReadChannel source, ChannelOut channelOut, Closure closure) {
+        def result = new EvalOp(channelOut, closure).apply()
+        return result
     }
 
-    Object exec(DataflowReadChannel source, OpCall opCall, Closure closure) {
-        new ExecOp(source, opCall, closure).apply()
-    }
 }

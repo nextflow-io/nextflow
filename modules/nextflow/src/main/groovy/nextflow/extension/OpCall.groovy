@@ -27,6 +27,10 @@ class OpCall implements Callable {
     final static private List<String> SPECIAL_NAMES = ["choice","merge","separate"]
 
     final static private String SET_OP_hack = 'set'
+    
+    final static private String EVAL_OP_hack = 'eval'
+
+    final static private String EXEC_OP_hack = 'exec'
 
     static ThreadLocal<OpCall> current = new ThreadLocal<>()
 
@@ -78,8 +82,20 @@ class OpCall implements Callable {
             return this
         }
 
-        if( args.size() )
+        if( methodName == EVAL_OP_hack ) {
+            source = left[0] as DataflowWriteChannel
+            args = ([left] as Object[]) + args
+            return this
+        }
+
+        if( args.size() ) {
+            if( methodName == EXEC_OP_hack ) {
+                source = left[0] as DataflowWriteChannel
+                args = (left[1..-1] as Object[]) + args
+                return this
+            }
             throw new ScriptRuntimeException("Multi-channel output cannot be applied to operator ${methodName} for which argument is already provided")
+        }
 
         source = left[0] as DataflowWriteChannel
         args = left[1..-1] as Object[]
