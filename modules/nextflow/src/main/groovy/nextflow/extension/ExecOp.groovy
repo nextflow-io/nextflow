@@ -19,7 +19,6 @@ package nextflow.extension
 
 import groovy.transform.CompileStatic
 import groovyx.gpars.dataflow.DataflowReadChannel
-import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.script.ProcessDef
 import nextflow.script.ChannelOut
 
@@ -34,7 +33,7 @@ class ExecOp {
     private ProcessDef processDef
 
     private DataflowReadChannel source
-    
+
     private Object[] args 
 
     ExecOp( DataflowReadChannel source, ProcessDef processDef, Object[] args ) {
@@ -48,10 +47,9 @@ class ExecOp {
     }
 
     Object apply() {
-        
-        // return processDef.invoke_o(resolveInputs())
+
         def result = processDef.run(resolveInputs())
-        
+
         return result
     }
 

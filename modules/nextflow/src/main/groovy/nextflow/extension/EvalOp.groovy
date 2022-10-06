@@ -31,7 +31,7 @@ import nextflow.script.ChannelOut
 class EvalOp {
 
     private Object source
-    
+
     private Closure closure
 
     EvalOp( ChannelOut source, Closure closure ) {

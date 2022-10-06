@@ -1499,20 +1499,25 @@ class OperatorImpl {
      * Implement `exec` operator 
      */
     Object exec(DataflowReadChannel source, ProcessDef processDef, Object... args) {
-        new ExecOp(source, processDef, args).apply()
+
+        return new ExecOp(source, processDef, args).apply()
     }
 
     /*
      * Implement `eval` operator 
      */
     Object eval(DataflowReadChannel source, Closure closure) {
-        def result = new EvalOp(source, closure).apply()
-        return result
+        // No need to set DAG Node
+        OpCall.current.get().ignoreDagNode = true
+
+        return new EvalOp(source, closure).apply()
     }
 
     Object eval(DataflowReadChannel source, ChannelOut channelOut, Closure closure) {
-        def result = new EvalOp(channelOut, closure).apply()
-        return result
+        // No need to set DAG Node
+        OpCall.current.get().ignoreDagNode = true
+
+        return new EvalOp(channelOut, closure).apply()
     }
 
 }
