@@ -70,6 +70,8 @@ flowchart LR
     resumeOrDie --> formatGuardError
     resumeOrDie --> formatErrorCause
 
+    checkErrorStrategy --> checkCachedOrLaunchTask
+
     formatTaskError --> getRndTip
 
     finalizeTask0 --> bindOutputs
