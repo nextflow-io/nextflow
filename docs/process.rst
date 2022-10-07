@@ -632,6 +632,9 @@ with the current execution context.
   own directory, and input files are automatically staged into this directory by Nextflow.
   This behavior guarantees that input files with the same name won't overwrite each other.
 
+  An example of when you may have to deal with that is when you have many input files to a task,
+  and some of these files may have the same filename. In this case, a solution with be to use 
+  the option `stageAs`.
 
 Input type ``env``
 ------------------
@@ -1093,10 +1096,9 @@ on the actual value of the ``species`` input.
   including them in the output file name.
 
   One example in which you'd need to manage the naming of output files is when you use the `publishDir` directive
-  to have output files also in a specific path. If two tasks have the same filename for their output and you want them
-  to be in the same path specified by `publishDir`, the last task to finish will overwrite the output of the first task.
-  Another example, can happen with input files to the same task, in which case you'll have a collision. For the former,
-  the `saveAs` option for `publishDir` is a solution. For the latter, `stageAs` will be helpful.
+  to have output files also in a specific path of your choice. If two tasks have the same filename for their output and you want them
+  to be in the same path specified by `publishDir`, the last task to finish will overwrite the output of the first task. You can
+  dynamically change that adding the `saveAs` option to your `publishDir` directive.
 
   To sum up, the use of output files with static names over dynamic ones is preferable whenever possible,
   because it will result in simpler and more portable code.
