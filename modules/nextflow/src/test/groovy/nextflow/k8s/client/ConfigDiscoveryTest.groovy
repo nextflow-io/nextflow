@@ -65,7 +65,7 @@ class ConfigDiscoveryTest extends Specification {
         when:
         def config = discovery.fromKubeConfig(CONFIG, null, null, null)
         then:
-        0 * discovery.discoverAuthToken('default',null) >> 'secret-token'
+        0 * discovery.discoverAuthToken(_, 'default',null) >> 'secret-token'
         1 * discovery.createKeyManagers(CLIENT_CERT.decodeBase64(), CLIENT_KEY.decodeBase64()) >>  KEY_MANAGERS
         config.server == 'https://localhost:6443'
         config.token == null
@@ -118,7 +118,7 @@ class ConfigDiscoveryTest extends Specification {
         when:
         def config = discovery.fromKubeConfig(CONFIG, 'docker-for-desktop', 'ns1', 'sa2')
         then:
-        0 * discovery.discoverAuthToken('ns1','sa2') >> 'secret-token'
+        0 * discovery.discoverAuthToken('docker-for-desktop','ns1','sa2') >> 'secret-token'
         1 * discovery.createKeyManagers(CLIENT_CERT.decodeBase64(), CLIENT_KEY.decodeBase64()) >>  KEY_MANAGERS
         config.server == 'https://localhost:6443'
         config.token == null
@@ -221,7 +221,7 @@ class ConfigDiscoveryTest extends Specification {
         when:
         def config = discovery.fromKubeConfig(CONFIG, null, null, null)
         then:
-        0 * discovery.discoverAuthToken() >> 'secret-token'
+        0 * discovery.discoverAuthToken(_,_,_) >> 'secret-token'
         0 * discovery.createKeyManagers( _, _ ) >> null
         config.server == 'https://localhost:6443'
         config.token == '90s090s98s7f8s'
@@ -267,7 +267,7 @@ class ConfigDiscoveryTest extends Specification {
         when:
         def config = discovery.fromKubeConfig(CONFIG, null, null, null)
         then:
-        1 * discovery.discoverAuthToken('default', null) >> 'secret-token'
+        1 * discovery.discoverAuthToken(_, _, _) >> 'secret-token'
         0 * discovery.createKeyManagers( _, _ ) >> null
         config.server == 'https://localhost:6443'
         config.token == 'secret-token'
