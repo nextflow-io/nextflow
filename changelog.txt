@@ -1,5 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.10.0-RC2 - 7 Oct 2022 
+- Improve K8s labels/annotation validation [a569afdf]
+- Bump fusion final url [80398880]
+- Bump nf-wave@0.5.1 [a2b44c4d]
+- Update docs 
+
 22.10.0-RC1 - 3 Oct 2022
 - Add module binaries enabling flag + docs [c50e178f] <Paolo Di Tommaso>
 - Add timestamp and fingerprint to wave request [a5a7e138] <Paolo Di Tommaso>
