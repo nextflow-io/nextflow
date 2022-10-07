@@ -1677,22 +1677,10 @@ process using the ``label`` directive more than one time.
 
 Labels are useful to organise workflow processes in separate groups which can be referenced
 in the configuration file to select and configure subset of processes having similar computing requirements.
-
 See the :ref:`config-process-selectors` documentation for details.
 
-The ``label`` directive can be also expressed as a `Map<key-value>` or a `key=value` sentence:
+See also: `resourceLabels`_
 
-  process bigTask {
-    label "region=eu-west-1"
-    label organization: 'MyOrganization'
-    label department: 'a department', group: 'a group'
-
-    '''
-    <task script>
-    '''
-  }
-
-These labels will be used to tag the process when pipeline is running in AWS, Google or K8s
 
 .. _process-machineType:
 
@@ -2053,6 +2041,32 @@ Multiple queues can be specified by separating their names with a comma for exam
 
 .. note:: This directive is only used by certain executors. Refer to the
   :ref:`executor-page` page to see which executors support this directive.
+
+
+.. _process-resourcelabels:
+
+resourceLabels
+--------------
+
+The ``resourceLabels`` directive allows you to specify custom name-value pairs
+that Nextflow applies to the computing resource used to carry out the process execution.
+Resource labels can be specified using the syntax shown below::
+
+  process my_task {
+    resourceLabels region: 'some-region', user: 'some-username'
+
+    '''
+    <task script>
+    '''
+  }
+
+The limits and the syntax of the corresponding cloud provider should be taken into consideration when using resource labels.
+
+.. note::
+  Resource labels are currently only supported by the :ref:`awsbatch-executor`,
+  :ref:`google-lifesciences-executor`, Google Cloud Batch and :ref:`k8s-executor` executors.
+
+See also `label`_.
 
 
 .. _process-scratch:
