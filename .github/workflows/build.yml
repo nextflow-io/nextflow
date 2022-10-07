@@ -8,6 +8,8 @@ on:
       - '!refs/tags/.*'
     tags-ignore:
       - '*'
+    paths:
+      - '!docs/**'
   pull_request:
     types: [opened, reopened, synchronize]
 
