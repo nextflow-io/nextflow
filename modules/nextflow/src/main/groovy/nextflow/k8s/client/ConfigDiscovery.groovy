@@ -124,7 +124,7 @@ class ConfigDiscovery {
             config.keyManagers = createKeyManagers(config.clientCert, config.clientKey)
         }
         else if( !config.token ) {
-            config.token = discoverAuthToken(config.namespace, serviceAccount)
+            config.token = discoverAuthToken(contextName, config.namespace, config.serviceAccount)
         }
 
         return config
@@ -161,11 +161,12 @@ class ConfigDiscovery {
         return kmf.getKeyManagers();
     }
 
-    String discoverAuthToken(String namespace, String serviceAccount) {
+    String discoverAuthToken(String context, String namespace, String serviceAccount) {
+        context ?= 'default'
         namespace ?= 'default'
         serviceAccount ?= 'default'
 
-        final cmd = "kubectl -n ${namespace} get secret `kubectl -n ${namespace} get serviceaccount ${serviceAccount} -o jsonpath='{.secrets[0].name}'` -o jsonpath='{.data.token}'"
+        final cmd = "kubectl --context $context -n ${namespace} get secret `kubectl --context $context -n ${namespace} get serviceaccount ${serviceAccount} -o jsonpath='{.secrets[0].name}'` -o jsonpath='{.data.token}'"
         final proc = new ProcessBuilder('bash','-o','pipefail','-c', cmd).redirectErrorStream(true).start()
         final status = proc.waitFor()
         if( status==0 ) {
