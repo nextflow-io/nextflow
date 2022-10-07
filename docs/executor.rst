@@ -192,6 +192,31 @@ Resource requests and other job characteristics can be controlled via the follow
 
 See the :ref:`Google Life Sciences <google-lifesciences>` page for further configuration details.
 
+.. _hyperqueue-executor:
+
+HyperQueue
+==========
+
+.. warning:: This is an incubating feature. It may change in future Nextflow releases.
+
+The ``hyperqueue`` executor allows you to run your pipeline script by using the `HyperQueue <https://github.com/It4innovations/hyperqueue>`_ job scheduler.
+
+Nextflow manages each process as a separate job that is submitted to the cluster by using the ``hq`` command line tool.
+
+Being so, the pipeline must be launched from a node where the ``hq`` command is available, that is, in a
+common usage scenario, the cluster `head` node.
+
+
+To enable the HTCondor executor simply set ``process.executor = 'hyperqueue'`` in the ``nextflow.config`` file.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+* :ref:`process-accelerator`
+* :ref:`process-clusterOptions`
+* :ref:`process-cpus`
+* :ref:`process-memory`
+* :ref:`process-time`
+
 
 .. _htcondor-executor:
 
@@ -317,8 +342,6 @@ Moab
 The ``moab`` executor allows you to run your pipeline script by using the
 `Moab <https://en.wikipedia.org/wiki/Moab_Cluster_Suite>`_ resource manager by
 `Adaptive Computing <http://www.adaptivecomputing.com/>`_.
-
-.. warning:: This is an incubating feature. It may change in future Nextflow releases.
 
 Nextflow manages each process as a separate job that is submitted to the cluster by using the ``msub`` command provided
 by the resource manager.
