@@ -1092,6 +1092,12 @@ on the actual value of the ``species`` input.
   Also, metadata can be associated with outputs by using the :ref:`tuple output <process-out-tuple>` qualifier, instead of
   including them in the output file name.
 
+  One example in which you'd need to manage the naming of output files is when you use the `publishDir` directive
+  to have output files also in a specific path. If two tasks have the same filename for their output and you want them
+  to be in the same path specified by `publishDir`, the last task to finish will overwrite the output of the first task.
+  Another example, can happen with input files to the same task, in which case you'll have a collision. For the former,
+  the `saveAs` option for `publishDir` is a solution. For the latter, `stageAs` will be helpful.
+
   To sum up, the use of output files with static names over dynamic ones is preferable whenever possible,
   because it will result in simpler and more portable code.
 
