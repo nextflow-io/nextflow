@@ -2052,9 +2052,10 @@ and emits the resulting collection as a single item. For example::
     [1,2,3,4]
     Done
 
+.. note:: Difference between ``toList`` and ``collect``
 
-The difference between ``toList`` and ``collect`` is that while ``collect`` produces
-nothing, when there is no input, ``toList`` produces an empty list. ``toList`` is
+The difference between the ``toList`` and ``collect`` operators is that while ``collect``
+produces nothing, when there is no input, ``toList`` produces an empty list. ``toList`` is
 equivallent to::
 
     collect().ifEmpty([])
