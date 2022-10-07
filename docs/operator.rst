@@ -2055,10 +2055,16 @@ and emits the resulting collection as a single item. For example::
 .. note:: Difference between ``toList`` and ``collect``
 
 The difference between the ``toList`` and ``collect`` operators is that while ``collect``
-produces nothing, when there is no input, ``toList`` produces an empty list. ``toList`` is
+produces nothing, when there is no input, ``toList`` produces an empty list. Besides,
+``collect`` also flattens one level.``toList`` is
 equivallent to::
 
     collect().ifEmpty([])
+
+Regarding the flatenning of one level, it can be seen with the following snippet::
+
+    Channel.fromList([1, [2, 3]]).collect().view { "collect: $it" }
+    Channel.fromList([1, [2, 3]]).toList().view { "toList: $it" }
 
 See also: `collect`_ operator.
 
