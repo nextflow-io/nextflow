@@ -45,6 +45,8 @@ credentials file just downloaded::
 
     export GOOGLE_APPLICATION_CREDENTIALS=/path/your/file/creds.json
 
+.. _google-batch:
+
 Cloud Batch
 ============
 
