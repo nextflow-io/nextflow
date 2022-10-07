@@ -132,6 +132,36 @@ image to use, i.e.::
 * Process output directories are not supported. For details see `#76 <https://github.com/ga4gh/task-execution-schemas/issues/76>`_.
 * Glob patterns in process output declarations are not supported. For details see `#77 <https://github.com/ga4gh/task-execution-schemas/issues/77>`_.
 
+.. _google-batch-executor:
+
+Google Cloud Batch
+===================
+
+`Google Cloud Batch <https://cloud.google.com/batch>`_ is a managed computing service that allows the execution of
+containerized workloads in the Google Cloud Platform infrastructure.
+
+Nextflow provides built-in support for the Batch API which allows the seamless deployment of a Nextflow pipeline
+in the cloud, offloading the process executions as pipelines (it requires Nextflow ``22.07.1-edge`` or later).
+
+The pipeline processes must specify the Docker image to use by defining the ``container`` directive, either in the pipeline
+script or the ``nextflow.config`` file. Moreover the pipeline work directory must be located in a Google Storage
+bucket.
+
+To enable this executor set the property ``process.executor = 'google-batch'`` in the ``nextflow.config`` file.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+* :ref:`process-accelerator`
+* :ref:`process-container`
+* :ref:`process-containerOptions`
+* :ref:`process-cpus`
+* :ref:`process-disk`
+* :ref:`process-machineType`
+* :ref:`process-memory`
+* :ref:`process-time`
+* :ref:`process-resourcelabels`
+
+See the :ref:`Google Cloud Batch <google-batch>` page for further configuration details.
 
 .. _google-lifesciences-executor:
 
@@ -142,7 +172,7 @@ Google Life Sciences
 containerized workloads in the Google Cloud Platform infrastructure.
 
 Nextflow provides built-in support for the Life Sciences API which allows the seamless deployment of a Nextflow pipeline
-in the cloud, offloading the process executions as pipelines (it requires Nextflow 20.01.0 or later).
+in the cloud, offloading the process executions as pipelines (it requires Nextflow ``20.01.0`` or later).
 
 The pipeline processes must specify the Docker image to use by defining the ``container`` directive, either in the pipeline
 script or the ``nextflow.config`` file. Moreover the pipeline work directory must be located in a Google Storage
