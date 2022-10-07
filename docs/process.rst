@@ -1097,8 +1097,8 @@ on the actual value of the ``species`` input.
 
   One example in which you'd need to manage the naming of output files is when you use the ``publishDir`` directive
   to have output files also in a specific path of your choice. If two tasks have the same filename for their output and you want them
-  to be in the same path specified by ``publishDir``, the last task to finish will overwrite the output of the first task. You can
-  dynamically change that adding the ``saveAs`` option to your ``publishDir`` directive.
+  to be in the same path specified by ``publishDir``, the last task to finish will overwrite the output of the task that finished before.
+  You can dynamically change that by adding the ``saveAs`` option to your ``publishDir`` directive.
 
   To sum up, the use of output files with static names over dynamic ones is preferable whenever possible,
   because it will result in simpler and more portable code.
