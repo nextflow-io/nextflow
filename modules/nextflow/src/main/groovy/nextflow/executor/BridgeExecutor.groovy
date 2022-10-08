@@ -147,7 +147,7 @@ class BridgeExecutor extends AbstractGridExecutor {
     /*
      *  Maps job status to nextflow status
      */
-    static private Map STATUS_MAP = [
+    static private Map<String,QueueStatus> STATUS_MAP = [
             'pending': QueueStatus.PENDING, 
             'running': QueueStatus.RUNNING,
             'done': QueueStatus.DONE, 
@@ -160,7 +160,7 @@ class BridgeExecutor extends AbstractGridExecutor {
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
-        def result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
         if( !text) 
             return result
 
