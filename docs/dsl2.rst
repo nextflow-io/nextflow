@@ -368,13 +368,24 @@ execution context. This way, `foo`` can be invoked in the ``workflow`` scope.
 Nextflow implicitly looks for the script file ``./some/module.nf`` resolving the path
 against the *including* script location.
 
-.. tip::
-  As of version ``22.10.0``, Nextflow looks for the module script also at the following path ``./some/module/main.nf`` i.e.
-  the module can be defined as a directory whose name matches the module name and contains a script named ``main.nf``.
-
 .. note::
     Relative paths must begin with the ``./`` prefix. Also, the ``include`` statement must be defined **outside** of the workflow definition.
 
+Module directory
+----------------
+
+As of version ``22.10.0``, the module can be defined as a directory whose name matches the module name and
+contains a script named ``main.nf``. For example::
+
+    some
+        \-module
+            \-main.nf
+
+When defined as a directory the module needs to be included specifying the module directory path::
+
+    include { foo } from './some/module'
+
+Module directories allows the use of module scoped binaries scripts. See `Module binaries`_ for details.
 
 Multiple inclusions
 -------------------
