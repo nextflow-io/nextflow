@@ -17,7 +17,6 @@
 
 package io.seqera.wave.plugin
 
-import java.time.OffsetDateTime
 
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -80,7 +79,7 @@ class SubmitContainerTokenRequest {
     /**
      * Request
      */
-    OffsetDateTime timestamp
+    String timestamp
 
     /**
      * Request unique fingerprint
