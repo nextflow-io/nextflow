@@ -371,6 +371,8 @@ against the *including* script location.
 .. note::
     Relative paths must begin with the ``./`` prefix. Also, the ``include`` statement must be defined **outside** of the workflow definition.
 
+.. _dsl2-module-directory:
+
 Module directory
 ----------------
 
@@ -378,8 +380,8 @@ As of version ``22.10.0``, the module can be defined as a directory whose name m
 contains a script named ``main.nf``. For example::
 
     some
-        \-module
-            \-main.nf
+        └-module
+            └-main.nf
 
 When defined as a directory the module needs to be included specifying the module directory path::
 
@@ -492,20 +494,20 @@ For example, let's suppose to have a project L with a module script defining 2 p
 The template files can be made available under the local ``templates`` directory::
 
     Project L
-        |-myModules.nf
-        |-templates
-            |-P1-template.sh
-            |-P2-template.sh
+        |─myModules.nf
+        └─templates
+            |─P1-template.sh
+            └─P2-template.sh
 
 Then, we have a second project A with a workflow that includes P1 and P2::
 
     Pipeline A
-        |-main.nf
+        └-main.nf
 
 Finally, we have a third project B with a workflow that includes again P1 and P2::
 
     Pipeline B
-        |-main.nf
+        └-main.nf
 
 With the possibility to keep the template files inside the project L, A and B can use the modules defined in L without any changes.
 A future prject C would do the same, just cloning L (if not available on the system) and including its module script.
@@ -520,26 +522,26 @@ Ultimately, having multiple template locations allows a more structured organiza
 has several module components, and all them use templates, the project could group module scripts and their templates as needed. For example::
 
     baseDir
-        |-main.nf
-        |-Phase0-Modules
-            |-mymodules1.nf
-            |-mymodules2.nf
-            |-templates
-                |-P1-template.sh
-                |-P2-template.sh
-        |-Phase1-Modules
-            |-mymodules3.nf
-            |-mymodules4.nf
-            |-templates
-                |-P3-template.sh
-                |-P4-template.sh
-        |-Phase2-Modules
-            |-mymodules5.nf
-            |-mymodules6.nf
-            |-templates
-                |-P5-template.sh
-                |-P6-template.sh
-                |-P7-template.sh
+        |─main.nf
+        └─Phase0-Modules
+            |─mymodules1.nf
+            |─mymodules2.nf
+            └─templates
+                |─P1-template.sh
+                |─P2-template.sh
+        └─Phase1-Modules
+            |─mymodules3.nf
+            |─mymodules4.nf
+            └─templates
+                |─P3-template.sh
+                └─P4-template.sh
+        └─Phase2-Modules
+            |─mymodules5.nf
+            |─mymodules6.nf
+            └─templates
+                |─P5-template.sh
+                |─P6-template.sh
+                └─P7-template.sh
 
 Module binaries
 -----------------
@@ -553,12 +555,12 @@ To enable this feature add the following setting in pipeline configuration file:
 The binary scripts must be placed in the module directory names ``<module-dir>/resources/usr/bin``::
 
     <module-dir>
-        |-main.nf
-        \-resources
-            \-usr
-                \-bin
-                    |-your-module-script1.sh
-                    \-another-module-script2.py
+        |─main.nf
+        └─resources
+            └─usr
+                └─bin
+                    |─your-module-script1.sh
+                    └─another-module-script2.py
 
 Those scripts will be accessible as any other command in the tasks environment, provided they have been granted
 the Linux execute permissions.

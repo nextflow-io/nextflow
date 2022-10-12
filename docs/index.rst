@@ -22,6 +22,7 @@ Contents:
    dsl2
    cli
    container
+   wave
    conda
    aws
    amazons3
