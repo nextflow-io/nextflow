@@ -20,6 +20,7 @@ package nextflow.util
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
+import nextflow.extension.Bolts
 
 /**
  * Model a semantic version number
@@ -33,6 +34,8 @@ class VersionNumber implements Comparable {
 
     private List<String> version
 
+    private String human
+
     /**
      * Create a version number object
      *
@@ -41,6 +44,7 @@ class VersionNumber implements Comparable {
      */
     VersionNumber(String str) {
         version = str ? str.tokenize('.-') : ['0']
+        human = str ? Bolts.stripStart(Bolts.stripEnd(str,'.-'),'.-') : '0'
     }
 
     /**
@@ -122,7 +126,7 @@ class VersionNumber implements Comparable {
     }
 
     String toString() {
-        version.join('.')
+        return human
     }
 
     @Override
