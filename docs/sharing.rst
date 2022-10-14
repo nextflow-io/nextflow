@@ -368,7 +368,7 @@ Then the pipeline can be accessed with Nextflow as shown below::
 
 
 In the above example replace ``my-repo`` with your own repository. Note also that AWS CodeCommit has different
-URLs depending the region in which you are working. 
+URLs depending the region in which you are working.
 
 .. note::
     The support for protocols other than HTTPS is not available at this time.
