@@ -82,6 +82,7 @@ class ContainerBuilderTest extends Specification {
         'docker'            | DockerBuilder
         'podman'            | PodmanBuilder
         'singularity'       | SingularityBuilder
+        'apptainer'         | ApptainerBuilder
         'shifter'           | ShifterBuilder
         'charliecloud'      | CharliecloudBuilder
         'udocker'           | UdockerBuilder
