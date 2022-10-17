@@ -133,6 +133,53 @@ class ContainerHandlerTest extends Specification {
     }
 
     @Unroll
+    def 'test normalize apptainer image #image' () {
+
+        given:
+        def n = new ContainerHandler([:], Paths.get('/root/dir'))
+
+        expect:
+        n.normalizeApptainerImageName(image) == expected
+
+        where:
+        image                      | expected
+        null                       | null
+        ''                         | null
+        '/abs/path/bar.img'        | '/abs/path/bar.img'
+        'file:///abs/path/bar.img' | '/abs/path/bar.img'
+        'file://foo/bar.img'       | '/root/dir/foo/bar.img'
+        'docker://library/busybox' | 'docker://library/busybox'
+        'shub://busybox'           | 'shub://busybox'
+        'foo://busybox'            | 'foo://busybox'
+        'foo'                      | 'docker://foo'
+        'foo:2.0'                  | 'docker://foo:2.0'
+        'foo.img'                  | 'docker://foo.img'
+        'quay.io/busybox'          | 'docker://quay.io/busybox'
+        'library://library/default/debian:7'    | 'library://library/default/debian:7'
+        'http://reg.io/v1/alpine:latest'        | 'http://reg.io/v1/alpine:latest'
+        'https://reg.io/v1/alpine:latest'       | 'https://reg.io/v1/alpine:latest'
+    }
+
+    def 'test apptainer relative path exists' () {
+
+        setup:
+        def base = Files.createTempDirectory('test')
+        def foo = base.resolve('foo'); foo.mkdir()
+        def bar = Files.createFile(foo.resolve('bar'))
+        def img = Files.createFile(base.resolve('bar.img'))
+        def n = new ContainerHandler([:], base)
+
+        expect:
+        n.normalizeApptainerImageName('foo/bar') == bar.toAbsolutePath().toString()
+        n.normalizeApptainerImageName('foo/baz') == 'docker://foo/baz'
+        n.normalizeApptainerImageName('bar.img') == img.toAbsolutePath().toString()
+
+        cleanup:
+        base.deleteDir()
+
+    }
+
+    @Unroll
     def 'test normalize method for docker' () {
         given:
         def n = Spy(new ContainerHandler([engine: 'docker', enabled: true, registry: registry]))
@@ -205,6 +252,7 @@ class ContainerHandlerTest extends Specification {
         result == 'docker://image'
 
     }
+
     @Unroll
     def 'test normalize method for singularity' () {
         given:
@@ -276,4 +324,74 @@ class ContainerHandlerTest extends Specification {
         '/some/container.img'   | '/some/container.img' | 0     | '/some/container.img'
     }
 
+    @Unroll
+    def 'test normalize method for apptainer' () {
+        given:
+        def BASE = Paths.get('/abs/path/')
+        def handler = Spy(new ContainerHandler(engine: 'apptainer', enabled: true, baseDir: BASE))
+
+        when:
+        def result = handler.normalizeImageName(IMAGE)
+
+        then:
+        1 * handler.normalizeApptainerImageName(IMAGE) >> NORMALIZED
+        X * handler.createApptainerCache(handler.config, NORMALIZED) >> EXPECTED
+        result == EXPECTED
+
+        where:
+        IMAGE                                       | NORMALIZED                                        | X           | EXPECTED
+        null                                        | null                                              |           0 | null
+        ''                                          | null                                              |           0 | null
+        '/abs/path/bar.img'                         | '/abs/path/bar.img'                               |           0 | '/abs/path/bar.img'
+        '/abs/path bar.img'                         | '/abs/path bar.img'                               |           0 | '/abs/path\\ bar.img'
+        'file:///abs/path/bar.img'                  | '/abs/path/bar.img'                               |           0 | '/abs/path/bar.img'
+        'foo.img'                                   | Paths.get('foo.img').toAbsolutePath().toString() |       0 | Paths.get('foo.img').toAbsolutePath().toString()
+        'shub://busybox'                            | 'shub://busybox'                                  |           1 | '/path/to/busybox'
+        'docker://library/busybox'                  | 'docker://library/busybox'                        |           1 | '/path/to/busybox'
+        'foo'                                       | 'docker://foo'                                    |           1 | '/path/to/foo'
+        'library://pditommaso/foo/bar.sif:latest'   | 'library://pditommaso/foo/bar.sif:latest'         |           1 | '/path/to/foo-bar-latest.img'
+    }
+
+    def 'should not invoke caching when engine is disabled' () {
+        given:
+        final handler = Spy(new ContainerHandler([engine: 'apptainer']))
+        final IMAGE = 'docker://foo.img'
+
+        when:
+        handler.config.enabled = false
+        def result = handler.normalizeImageName(IMAGE)
+        then:
+        1 * handler.normalizeApptainerImageName(IMAGE) >> IMAGE
+        0 * handler.createApptainerCache(_,_) >> null
+        result == IMAGE
+
+        when:
+        handler.config.enabled = true
+        result = handler.normalizeImageName(IMAGE)
+        then:
+        1 * handler.normalizeApptainerImageName(IMAGE) >> IMAGE
+        1 * handler.createApptainerCache(_,IMAGE) >> '/some/path/foo.img'
+        result == '/some/path/foo.img'
+    }
+
+    def 'should invoke apptainer cache' () {
+        given:
+        def handler = Spy(ContainerHandler,constructorArgs:[[engine: 'apptainer', enabled: true]])
+
+        when:
+        def result = handler.normalizeImageName(IMG)
+        then:
+        TIMES * handler.createApptainerCache(_, NORM) >> EXPECTED
+        
+        then:
+        result == EXPECTED
+
+        where:
+        IMG                     | NORM                  | TIMES | EXPECTED
+        'foo'                   | 'docker://foo'        | 1     | '/local/img/foo'
+        'library://foo:latest'  | 'library://foo:latest'| 1     | '/local/img/foo.img'
+        'http://bar:latest'     | 'http://bar:latest'   | 1     | '/local/http/foo.img'
+        'https://bar:latest'    | 'https://bar:latest'  | 1     | '/local/https/foo.img'
+        '/some/container.img'   | '/some/container.img' | 0     | '/some/container.img'
+    }
 }

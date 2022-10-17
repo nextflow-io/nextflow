@@ -25,6 +25,7 @@ import nextflow.Session
 import nextflow.container.ContainerConfig
 import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
+import nextflow.container.ApptainerBuilder
 import nextflow.processor.TaskBean
 import nextflow.util.MustacheTemplateEngine
 import spock.lang.Specification
@@ -854,6 +855,20 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.cleanup_cmd == ""
+        binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+    }
+
+    def 'should create wrapper with apptainer'() {
+        when:
+        def binding = newBashWrapperBuilder(
+                containerEnabled: true,
+                containerImage: 'docker://ubuntu:latest',
+                environment: [PATH: '/path/to/bin:$PATH', FOO: 'xxx'],
+                containerConfig: [enabled: true, engine: 'apptainer'] as ContainerConfig ).makeBinding()
+
+        then:
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
     }

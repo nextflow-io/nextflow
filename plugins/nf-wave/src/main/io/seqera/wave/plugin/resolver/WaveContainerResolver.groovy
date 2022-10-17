@@ -70,7 +70,7 @@ class WaveContainerResolver implements ContainerResolver {
             final image = defaultResolver.resolveImage(task, imageName)
             return waveContainer(task, image.target)
         }
-        else if( engine=='singularity' ) {
+        else if( engine=='singularity' || engine=='apptainer' ) {
             // remove any `docker://` prefix if any
             if( imageName.startsWith(DOCKER_PREFIX) )
                 imageName = imageName.substring(DOCKER_PREFIX.length())

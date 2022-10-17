@@ -1161,6 +1161,7 @@ class Session implements ISession {
     ContainerConfig getContainerConfig() {
 
         def engines = new LinkedList<Map>()
+        getContainerConfig0('apptainer', engines)
         getContainerConfig0('docker', engines)
         getContainerConfig0('podman', engines)
         getContainerConfig0('shifter', engines)

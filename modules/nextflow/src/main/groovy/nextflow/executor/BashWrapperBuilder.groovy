@@ -27,6 +27,7 @@ import groovy.util.logging.Slf4j
 import nextflow.container.ContainerBuilder
 import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
+import nextflow.container.ApptainerBuilder
 import nextflow.exception.ProcessException
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
@@ -417,7 +418,7 @@ class BashWrapperBuilder {
         if( containerBuilder ) {
             String cmd = env ? 'eval $(nxf_container_env); ' + launcher : launcher
             if( env && !containerConfig.entrypointOverride() ) {
-                if( containerBuilder instanceof SingularityBuilder )
+                if( containerBuilder instanceof SingularityBuilder || containerBuilder instanceof ApptainerBuilder ) {
                     cmd = 'cd $PWD; ' + cmd
                 cmd = "/bin/bash -c \"$cmd\""
             }

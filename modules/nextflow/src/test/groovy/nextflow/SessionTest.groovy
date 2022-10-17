@@ -371,6 +371,7 @@ class SessionTest extends Specification {
         'udocker'      | [enabled: true, x:'alpha', y: 'beta']
         'shifter'      | [enabled: true, x:'delta', y: 'gamma']
         'singularity'  | [enabled: true, x:'delta', y: 'gamma']
+        'apptainer'    | [enabled: true, x:'delta', y: 'gamma']
         'charliecloud' | [enabled: true, x:'delta', y: 'gamma']
     }
 

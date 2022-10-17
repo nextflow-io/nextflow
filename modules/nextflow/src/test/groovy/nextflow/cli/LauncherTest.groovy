@@ -224,6 +224,10 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-with-singularity', '-x') == ['run', '-with-singularity','-', '-x']
         launcher.normalizeArgs('run','-with-singularity', 'busybox') == ['run', '-with-singularity','busybox']
 
+        launcher.normalizeArgs('run','-with-apptainer') == ['run', '-with-apptainer','-']
+        launcher.normalizeArgs('run','-with-apptainer', '-x') == ['run', '-with-apptainer','-', '-x']
+        launcher.normalizeArgs('run','-with-apptainer', 'busybox') == ['run', '-with-apptainer','busybox']
+
         launcher.normalizeArgs('run','-with-charliecloud') == ['run', '-with-charliecloud','-']
         launcher.normalizeArgs('run','-with-charliecloud', '-x') == ['run', '-with-charliecloud','-', '-x']
         launcher.normalizeArgs('run','-with-charliecloud', 'busybox') == ['run', '-with-charliecloud','busybox']
