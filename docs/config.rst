@@ -470,6 +470,15 @@ For example, the following snippet shows how to configure Nextflow to send email
         smtp.starttls.required = true
     }
 
+.. note::
+  Some versions of Java (e.g. Java 11 Corretto) do not default to TLS v1.2, and as a result may have
+  issues with 3rd party integrations that enforce TLS v1.2 (e.g. Azure Active Directory OIDC). This problem can be
+  addressed by setting the following config option::
+
+    mail {
+        smtp.ssl.protocols = 'TLSv1.2'
+    }
+
 
 .. _config-manifest:
 
