@@ -384,6 +384,7 @@ class ConfigDiscoveryTest extends Specification {
         1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/token') >> TOKEN_FILE
         1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/namespace') >> NAMESPACE_FILE
         0 * discovery.createKeyManagers(_,_) >> null
+        and:
         config.server == 'foo.com:4343'
         config.namespace == 'foo-namespace'
         config.token == 'my-token'
@@ -392,12 +393,14 @@ class ConfigDiscoveryTest extends Specification {
 
         when:
         env = [ KUBERNETES_SERVICE_HOST: 'https://host.com' ]
-        config = discovery.fromCluster(env, null, null)
+        config = discovery.fromCluster(env, 'my-namespace', null)
         then:
         1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt') >> CERT_FILE
         1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/token') >> TOKEN_FILE
         1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/namespace') >> NAMESPACE_FILE
+        and:
         config.server == 'https://host.com'
+        config.namespace == 'my-namespace'
     }
 
     def 'should create  key managers' () {
