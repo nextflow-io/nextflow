@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.10.0 - 13 Oct 2022
+- Fix timestamp encoding [47a3a3c4]
+- Minor type change in Bridge executor [1f446ee1]
+- Bump nf-wave@0.5.2 [326803ff]
+
 22.10.0-RC3 - 7 Oct 2022 
 - Fix K8s context selection [58b354e6]
 

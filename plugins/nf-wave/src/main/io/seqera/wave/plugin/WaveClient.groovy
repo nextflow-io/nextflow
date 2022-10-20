@@ -136,7 +136,7 @@ class WaveClient {
                 condaFile: assets.condaFileEncoded(),
                 buildRepository: config().buildRepository(),
                 cacheRepository: config.cacheRepository(),
-                timestamp: OffsetDateTime.now(),
+                timestamp: OffsetDateTime.now().toString(),
                 fingerprint: assets.fingerprint()
         )
     }

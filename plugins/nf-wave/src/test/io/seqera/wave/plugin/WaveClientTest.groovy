@@ -22,7 +22,6 @@ import static java.nio.file.StandardOpenOption.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
-import java.time.OffsetDateTime
 
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpHandler
@@ -164,7 +163,7 @@ class WaveClientTest extends Specification {
         !req.containerConfig.layers
         and:
         req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
-        req.timestamp instanceof OffsetDateTime
+        req.timestamp instanceof String
     }
 
     def 'should create request object with dockerfile' () {
@@ -273,7 +272,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaRecipeToDockerFile(RECIPE) == '''\
-                FROM mambaorg/micromamba:0.25.1
+                FROM mambaorg/micromamba:0.27.0
                 RUN \\
                    micromamba install -y -n base -c defaults -c conda-forge \\
                    bwa=0.7.15 salmon=1.1.1 \\
@@ -307,7 +306,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaFileToDockerFile()== '''\
-                FROM mambaorg/micromamba:0.25.1
+                FROM mambaorg/micromamba:0.27.0
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                     micromamba clean -a -y
@@ -420,7 +419,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:0.25.1
+                    FROM mambaorg/micromamba:0.27.0
                     RUN \\
                        micromamba install -y -n base -c defaults -c conda-forge \\
                        salmon=1.2.3 \\
@@ -448,7 +447,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:0.25.1
+                    FROM mambaorg/micromamba:0.27.0
                     COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                     RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                         micromamba clean -a -y
