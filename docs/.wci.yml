@@ -1,0 +1,57 @@
+---
+# Metadata parsed by the workflow community initiative, https://workflows.community/systems
+# Registered at https://github.com/workflowscommunity/workflowscommunity.github.io/blob/main/_data/workflow_systems.yml
+name: nextflow
+
+headline: A DSL for data-driven computational pipelines
+
+description: |
+  Nextflow is a bioinformatics workflow manager that enables the development of portable and reproducible workflows. It supports deploying workflows on a variety of execution platforms including local, HPC schedulers, AWS Batch, Google Cloud Life Sciences, and Kubernetes. Additionally, it provides support for manage your workflow dependencies through built-in support for Conda, Docker, Podmand, Singularity, and Modules.
+
+language: Groovy
+
+documentation:
+  general: http://docs.nextflow.io
+  installation: https://www.nextflow.io/docs/latest/getstarted.html
+  tutorial: https://training.seqera.io
+
+social:
+  twitter: nextflowio
+  youtube: https://www.youtube.com/c/Nextflow
+
+execution_environment:
+  interfaces:
+    - GitHub
+    - GitLab
+    - BitBucket
+  resource_managers:
+    - Slurm
+    - LSF
+    - PBS/Torque
+    - PBS Pro
+    - SGE
+    - Moab
+    - HTCondor
+    - Bridge
+    - HyperQueue
+    - GLS
+    - NQSII
+    - OAR
+    - Local
+    - AWS
+    - GCP
+    - Azure
+    - Kubernetes
+    - Docker
+    - Podman
+    - Singularity
+    - CharlieCloud
+  transfer_protocols:
+    - HTTP
+    - HTTPS
+    - FTP
+    - Amazon S3
+    - Google Storage
+    - Azure Storage
+    - git+https
+
