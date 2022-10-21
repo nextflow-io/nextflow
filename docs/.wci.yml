@@ -42,10 +42,6 @@ execution_environment:
     - GCP
     - Azure
     - Kubernetes
-    - Docker
-    - Podman
-    - Singularity
-    - CharlieCloud
   transfer_protocols:
     - HTTP
     - HTTPS
