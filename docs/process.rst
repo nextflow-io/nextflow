@@ -537,6 +537,17 @@ section::
       foo('/some/data/file.txt')
     }
 
+In the case an input `path` doesn't exist, the process will be aborted. If you want the process will be executed
+independently if the file exists or not, you can set the attribute `nullable` as true:
+
+    process foo {
+      input:
+        path x, stageAs: 'data.txt', nullable:true from '/some/data/file.txt'
+
+      """
+      [[ -f data.txt ]] your_command --in data.txt || other_command
+      """
+    }
 
 Multiple input files
 --------------------
@@ -1004,6 +1015,7 @@ Name                Description
 ``type``            Type of paths returned, either ``file``, ``dir`` or ``any`` (default: ``any``, or ``file`` if the specified file name pattern contains a double star (``**``))
 ``maxDepth``        Maximum number of directory levels to visit (default: no limit)
 ``includeInputs``   When ``true`` any input files matching an output file glob pattern are included.
+``nullable``        When ``true`` emit a NullablePath instead to abort the process
 ================== =====================
 
 

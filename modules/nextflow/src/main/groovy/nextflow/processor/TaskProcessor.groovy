@@ -16,6 +16,8 @@
  */
 package nextflow.processor
 
+import nextflow.util.NullablePath
+
 import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
@@ -1505,6 +1507,10 @@ class TaskProcessor {
                 def path = param.glob ? splitter.strip(filePattern) : filePattern
                 def file = workDir.resolve(path)
                 def exists = param.followLinks ? file.exists() : file.exists(LinkOption.NOFOLLOW_LINKS)
+                if( !exists && param.nullable){
+                    file = new NullablePath(path)
+                    exists = true
+                }
                 if( exists )
                     result = [file]
                 else
@@ -1719,7 +1725,11 @@ class TaskProcessor {
         return new FileHolder(source, result)
     }
 
-    protected Path normalizeToPath( obj ) {
+    protected Path normalizeToPath( obj, boolean nullable=false ) {
+
+        if( obj instanceof NullablePath && !nullable)
+            throw new ProcessUnrecoverableException("Path value cannot be null")
+
         if( obj instanceof Path )
             return obj
 
@@ -1742,7 +1752,8 @@ class TaskProcessor {
         throw new ProcessUnrecoverableException("Not a valid path value: '$str'")
     }
 
-    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, FilePorter.Batch batch ) {
+    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, FilePorter.Batch batch,
+                                                      boolean nullable=false ) {
 
         Collection allItems = obj instanceof Collection ? obj : [obj]
         def len = allItems.size()
@@ -1752,7 +1763,7 @@ class TaskProcessor {
         for( def item : allItems ) {
 
             if( item instanceof Path || coerceToPath ) {
-                def path = normalizeToPath(item)
+                def path = normalizeToPath(item, nullable)
                 def target = executor.isForeignFile(path) ? batch.addToForeign(path) : path
                 def holder = new FileHolder(target)
                 files << holder

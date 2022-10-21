@@ -81,6 +81,11 @@ class FileOutParam extends BaseOutParam implements OutParam, OptionalParam, Path
      */
     boolean followLinks = true
 
+    /**
+     * When true, if file doesn't exist, emit a Nullable instead an exception
+     */
+    boolean nullable = false
+
     boolean glob = true
 
     private GString gstring
