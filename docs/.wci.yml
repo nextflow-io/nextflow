@@ -1,0 +1,53 @@
+---
+# Metadata parsed by the workflow community initiative, https://workflows.community/systems
+# Registered at https://github.com/workflowscommunity/workflowscommunity.github.io/blob/main/_data/workflow_systems.yml
+name: Nextflow
+
+headline: A DSL for data-driven computational pipelines
+
+description: |
+  Nextflow is an open-source workflow orchestrator that simplifies writing and deploying containerised data pipelines in a portable and scalable manner. It supports deploying workflows on a variety of execution platforms including local computers, HPC batch schedulers, Kubernetes and cloud platforms such as AWS, Azure and Google Cloud.
+
+language: Groovy
+
+documentation:
+  general: http://docs.nextflow.io
+  installation: https://www.nextflow.io/docs/latest/getstarted.html
+  tutorial: https://training.seqera.io
+
+social:
+  twitter: nextflowio
+  youtube: https://www.youtube.com/c/Nextflow
+
+execution_environment:
+  interfaces:
+    - GitHub
+    - GitLab
+    - BitBucket
+  resource_managers:
+    - Slurm
+    - LSF
+    - PBS/Torque
+    - PBS Pro
+    - SGE
+    - Moab
+    - HTCondor
+    - Bridge
+    - HyperQueue
+    - GLS
+    - NQSII
+    - OAR
+    - Local
+    - AWS
+    - GCP
+    - Azure
+    - Kubernetes
+  transfer_protocols:
+    - HTTP
+    - HTTPS
+    - FTP
+    - Amazon S3
+    - Google Storage
+    - Azure Storage
+    - Git+HTTPS
+
