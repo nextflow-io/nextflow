@@ -49,5 +49,5 @@ execution_environment:
     - Amazon S3
     - Google Storage
     - Azure Storage
-    - git+https
+    - Git+https
 
