@@ -669,7 +669,7 @@ to all processes matching the specified pattern condition. For example::
         }
     }
 
-The above configuration snippet sets 2 cpus and 4 GB of memory to the processes annotated with with a label ``foo``
+The above configuration snippet sets 2 cpus and 4 GB of memory to the processes annotated with a label ``foo``
 and ``bar``.
 
 A process selector can be negated prefixing it with the special character ``!``. For example::
@@ -973,7 +973,7 @@ NXF_CLOUD_DRIVER                Defines the default cloud driver to be used if n
 NXF_CONDA_CACHEDIR              Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 NXF_CONDA_ENABLED               Enable the use of Conda recipes defined by using the :ref:process-conda directive. (default: ``false``, requires version ``22.08.0-edge`` or later).
 NXF_DEBUG                       Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
-NXF_DEFAULT_DSL                 Defines the DSL version version that should be used in not specified otherwise in the script of config file (default: ``2``, requires version ``22.03.0-edge`` or later)
+NXF_DEFAULT_DSL                 Defines the DSL version that should be used in not specified otherwise in the script of config file (default: ``2``, requires version ``22.03.0-edge`` or later)
 NXF_DISABLE_JOBS_CANCELLATION   Disables the cancellation of child jobs on workflow execution termination (requires version ``21.12.0-edge`` or later).
 NXF_ENABLE_STRICT               Enable Nextflow *strict* execution mode (default: ``false``, requires version ``22.05.0-edge`` or later)
 NXF_ENABLE_SECRETS              Enable Nextflow secrets features (default: ``true``, requires version ``21.09.0-edge`` or later)
