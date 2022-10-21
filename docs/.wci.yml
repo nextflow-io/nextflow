@@ -1,7 +1,7 @@
 ---
 # Metadata parsed by the workflow community initiative, https://workflows.community/systems
 # Registered at https://github.com/workflowscommunity/workflowscommunity.github.io/blob/main/_data/workflow_systems.yml
-name: nextflow
+name: Nextflow
 
 headline: A DSL for data-driven computational pipelines
 
