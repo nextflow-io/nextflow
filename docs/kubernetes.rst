@@ -20,7 +20,7 @@ Concepts
 Kubernetes main abstraction is the `pod`. A `pod` defines the (desired) state of one or more containers i.e. required
 computing resources, storage, network configuration.
 
-Kubernetes abstracts also the storage provisioning through the definition of one more more persistent volumes that
+Kubernetes abstracts also the storage provisioning through the definition of one more persistent volumes that
 allow containers to access to the underlying storage systems in a transparent and portable manner.
 
 When using the ``k8s`` executor Nextflow deploys the workflow execution as a Kubernetes pod. This pod orchestrates

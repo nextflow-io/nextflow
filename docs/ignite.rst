@@ -7,7 +7,7 @@ Apache Ignite
 .. danger::
   This feature has been phased out and is no longer supported as of version 22.01.x.
 
-Nextflow can be be deployed in a *cluster* mode by using `Apache Ignite <https://ignite.apache.org/>`_, an in-memory data-grid
+Nextflow can be deployed in a *cluster* mode by using `Apache Ignite <https://ignite.apache.org/>`_, an in-memory data-grid
 and clustering platform.
 
 Apache Ignite is packaged with Nextflow itself, so you won't need to install it separately or configure other third party

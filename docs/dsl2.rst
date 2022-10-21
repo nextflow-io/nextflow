@@ -13,7 +13,7 @@ your workflow script::
     nextflow.enable.dsl=2
 
 .. tip::
-  As of version ``22.03.0-edge`` Nextflow defaults to DSL 2 if no version version is specified explicitly.
+  As of version ``22.03.0-edge`` Nextflow defaults to DSL 2 if no version is specified explicitly.
   You can restore the previous behavior setting in into your environment the following variable::
 
     export NXF_DEFAULT_DSL=1
