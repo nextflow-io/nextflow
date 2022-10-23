@@ -30,7 +30,7 @@ Operation               Description
 ===================== =====================
 ``list``                List secrets available in the current store e.g. ``nextflow secrets list``.
 ``get``                 Allows retrieving a secret value e.g. ``nextflow secrets get FOO``.
-``set``                 Allows creating creating a new secret or overriding an existing one e.g. ``nextflow secrets set FOO "Hello world"``
+``set``                 Allows creating a new secret or overriding an existing one e.g. ``nextflow secrets set FOO "Hello world"``
 ``delete``              Allows deleting an existing secret e.g. ``nextflow secrets delete FOO``.
 ===================== =====================
 
