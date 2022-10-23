@@ -138,7 +138,7 @@ NEXTFLOW CHANGE-LOG
 - Add share identifier to Aws Batch (#3089) [c0253aba] <Ben Sherman>
 - Improve Tower cache manager [0091afc5]
 - Improve S3 copy via xfer manager [02d2beae]
-- Reports a warning when using NXF vars in the config [009ec256]
+- Reports a warning when using NXF vars in the config [009ec256] <Marcel Ribeiro Dantas>
 - Make wake token cache duration config [5f955fc9]
 - Patch unable to start non-core plugin [a55f58ff]
 - Increase S3 upload chunk size to 100 MB [9c94a080]
