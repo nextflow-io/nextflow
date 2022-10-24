@@ -2052,6 +2052,16 @@ and emits the resulting collection as a single item. For example::
     [1,2,3,4]
     Done
 
+.. note::
+    There are two differences between ``toList`` and ``collect``:
+
+    * When there is no input, ``toList`` emits an empty list whereas ``collect`` emits nothing.
+    * By default, ``collect`` flattens list items by one level.
+
+    In other words, ``toList`` is equivalent to::
+
+        collect(flat: false).ifEmpty([])
+
 See also: `collect`_ operator.
 
 
