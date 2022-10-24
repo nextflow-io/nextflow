@@ -120,6 +120,10 @@ class AzFileSystemProvider extends FileSystemProvider {
 
     @Memoized
     protected BlobServiceClient createBlobServiceWithToken(String accountName, String sasToken) {
+        if( !sasToken )
+            throw new IllegalArgumentException("Missing Azure blob SAS token")
+        if( sasToken.length()<100 )
+            throw new IllegalArgumentException("Invalid Azure blob SAS token -- offending value: $sasToken")
         log.debug "Creating Azure blob storage client -- accountName: $accountName; sasToken: ${sasToken?.substring(0,10)}.."
 
         final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName);
