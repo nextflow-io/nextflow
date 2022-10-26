@@ -79,7 +79,7 @@ class CmdSecret extends CmdBase implements UsageAware {
         List<String> result = []
         if( !args ) {
             result << this.getClass().getAnnotation(Parameters).commandDescription()
-            result << 'Usage: nextflow secret <sub-command> [options]'
+            result << 'Usage: nextflow secrets <sub-command> [options]'
             result << ''
             result << 'Commands:'
             commands.collect{ it.name }.sort().each { result << "  $it".toString()  }
@@ -90,7 +90,7 @@ class CmdSecret extends CmdBase implements UsageAware {
             if( sub )
                 sub.usage(result)
             else {
-                throw new AbortOperationException("Unknown secret sub-command: ${args[0]}")
+                throw new AbortOperationException("Unknown secrets sub-command: ${args[0]}")
             }
         }
 
@@ -178,8 +178,8 @@ class CmdSecret extends CmdBase implements UsageAware {
 
         @Override
         void usage(List<String> result) {
-            result << 'Set a key-pair in the secret store'
-            result << "Usage: nextflow secret $name <NAME> <VALUE>".toString()
+            result << 'Set a key-pair in the secrets store'
+            result << "Usage: nextflow secrets $name <NAME> <VALUE>".toString()
             result << ''
             result << ''
         }
@@ -204,7 +204,7 @@ class CmdSecret extends CmdBase implements UsageAware {
         @Override
         void usage(List<String> result) {
             result << 'Get a secret value with the name'
-            result << "Usage: nextflow secret $name <NAME>".toString()
+            result << "Usage: nextflow secrets $name <NAME>".toString()
             result << ''
         }
     }
@@ -234,8 +234,8 @@ class CmdSecret extends CmdBase implements UsageAware {
 
         @Override
         void usage(List<String> result) {
-            result << 'List all names in the secret store'
-            result << "Usage: nextflow secret $name".toString()
+            result << 'List all names in the secrets store'
+            result << "Usage: nextflow secrets $name".toString()
             result << ''
         }
     }
@@ -261,8 +261,8 @@ class CmdSecret extends CmdBase implements UsageAware {
 
         @Override
         void usage(List<String> result) {
-            result << 'Delete an entry from the secret store'
-            result << "Usage: nextflow secret $name".toString()
+            result << 'Delete an entry from the secrets store'
+            result << "Usage: nextflow secrets $name".toString()
             result << ''
             addOption('secretName', result)
             result << ''
