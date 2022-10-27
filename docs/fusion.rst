@@ -99,7 +99,7 @@ Replace ``<YOUR PIPELINE>`` and ``<YOUR BUCKET>`` with a pipeline script and buc
 AWS Batch execution with S3 bucket as work directory
 ----------------------------------------------------
 
-Fusion file system allows the use of a S3 bucket as pipeline work directory with the AWS Batch executor. The use
+Fusion file system allows the use of an S3 bucket as a pipeline work directory with the AWS Batch executor. The use
 of Fusion makes obsolete the need to create and configure a custom AMI that includes the `aws` command line tool, when
 setting up the AWS Batch compute environment.
 
