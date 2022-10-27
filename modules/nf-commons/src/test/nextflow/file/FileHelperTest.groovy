@@ -990,7 +990,7 @@ class FileHelperTest extends Specification {
         def link = Files.createSymbolicLink(folder.resolve('link'), folder.resolve('x'))
 
         expect:
-        !FileHelper.isPathSymlink(Path.of('/bin'))
+        !FileHelper.isPathSymlink(Path.of('/home'))
         !FileHelper.isPathSymlink(Path.of('/unknown'))
         and:
         Files.exists(link)
