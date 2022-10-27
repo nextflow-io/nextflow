@@ -65,7 +65,7 @@ Use cases
 Local execution with S3 bucket as work directory
 ------------------------------------------------
 
-Fusion file system allows the use of a S3 bucket as pipeline work directory with the Nextflow local executor. This
+Fusion file system allows the use of an S3 bucket as a pipeline work directory with the Nextflow local executor. This
 configuration requires the use of Docker (or similar container engine) for the execution of your pipeline tasks.
 
 The AWS S3 bucket credentials should be made accessible via standard ``AWS_ACCESS_KEY_ID`` and ``AWS_SECRET_ACCESS_KEY``
