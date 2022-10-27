@@ -24,7 +24,7 @@ Requirements
 Fusion file system is designed to work with containerised workloads, therefore it requires the use of a container
 engine such as Docker or container native platform for the execution of your pipeline e.g. AWS Batch or Kubernetes.
 
-It also requires the user of :ref:`Wave containers<wave-page>` and Nextflow version ``22.10.0`` or later.
+It also requires the use of :ref:`Wave containers<wave-page>` and Nextflow version ``22.10.0`` or later.
 
 AWS S3 configuration
 --------------------
