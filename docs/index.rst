@@ -23,6 +23,7 @@ Contents:
    cli
    container
    wave
+   fusion
    conda
    aws
    amazons3
