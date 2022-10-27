@@ -131,7 +131,7 @@ Then you can run your pipeline using the following command::
 Kubernetes execution with S3 bucket as work directory
 -----------------------------------------------------
 
-Fusion file system allows the use of a S3 bucket as pipeline work directory with the Kubernetes executor.
+Fusion file system allows the use of an S3 bucket as a pipeline work directory with the Kubernetes executor.
 
 The use of Fusion makes obsolete the need to create and manage and separate persistent volume and shared file system
 in the Kubernetes cluster.
