@@ -174,5 +174,5 @@ Having the above configuration in place, you can run your pipeline using the fol
 More examples
 =============
 
-Check out the `Wave showcase repository <https://github.com/seqeralabs/wave-showcase>`_ for more examples how to use
+Check out the `Wave showcase repository <https://github.com/seqeralabs/wave-showcase>`_ for more examples on how to use
 Fusion file system.
