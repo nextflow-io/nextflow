@@ -141,5 +141,7 @@ trait TraceObserver {
      * @param source
      *      The source path at `workDir` folder.
      */
-    void onFilePublish(Path source, Path destination){}
+    void onFilePublish(Path source, Path destination){
+        onFilePublish(destination)
+    }
 }
