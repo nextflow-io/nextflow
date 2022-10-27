@@ -1,5 +1,17 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.10.1 - 27 Oct 2022
+- Fix mount pwd in the container when work dir is a symlink [ca397181] [b5b7d3cd] <Paolo Di Tommaso>
+- Fix secrets command name in the CLI (#3320) [ci fast] [321486df] <Marcel Ribeiro Dantas>
+- Fix ver num rendering [ci fast] #3226 [5312a25e] <Paolo Di Tommaso>
+- Fix K8s config namespace is not applied [b3d33e3b] <Paolo Di Tommaso>
+- Fix log fetching from remote storage [be356939] [3efa1a20] <Paolo Di Tommaso>
+- Update docs about default mail ssl protocol [ci skip] (#3299) [15ffffc1] <Ben Sherman>
+- Update docs repeated words from documentation (#3311) [ci skip] [d59ea186] <Marcel Ribeiro Dantas>
+- Update docs to clarify the difference between collect and toList (#3276) [7ee2b008] <Marcel Ribeiro Dantas>
+- Update docs [516a7441] <Paolo Di Tommaso>
+- Update docs adding Fusion [11eac707] <Paolo Di Tommaso>
+
 22.10.0 - 13 Oct 2022
 - Fix timestamp encoding [47a3a3c4]
 - Minor type change in Bridge executor [1f446ee1]
