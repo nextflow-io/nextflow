@@ -44,7 +44,7 @@ will be used by Nextflow to run the application and store the scratch data and t
 The workflow application has to be containerised using the usual Nextflow :ref:`container<process-container>` directive.
 
 .. tip::
-  The use of :ref:`wave-page` and :ref:`fusion-page` make obsolete the need to use a shared file system and configure
+  When using :ref:`wave-page` and :ref:`fusion-page` there is no need to use a shared file system and configure
   a persistent volume claim for the deployment of Nextflow pipeline with Kubernetes.
   You can ignore this requirement when using the Fusion file system feature. See the :ref:`fusion-page` documentation
   for further details.
