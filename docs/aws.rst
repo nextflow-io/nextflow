@@ -153,7 +153,7 @@ Nextflow requires to access the `AWS command line tool <https://aws.amazon.com/c
 which the job runs in order to stage the required input files and to copy back the resulting output files in the S3 storage.
 
 .. tip::
-  The use of :ref:`wave-page` and :ref:`fusion-page` make obsolete the need to configure the AWS command line tool in
+  When using :ref:`wave-page` and :ref:`fusion-page` there is no need to configure the AWS command line tool in
   the task containers or the host Ec2 instances for the deployment of Nextflow pipeline with AWS Batch.
   You can ignore this requirement when using the Fusion file system feature. See the :ref:`fusion-page` documentation
   for further details.
