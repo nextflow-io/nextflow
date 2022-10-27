@@ -23,6 +23,7 @@ import com.google.cloud.batch.v1.ComputeResource
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.LogsPolicy
 import com.google.cloud.batch.v1.Runnable
+import com.google.cloud.batch.v1.ServiceAccount
 import com.google.cloud.batch.v1.TaskGroup
 import com.google.cloud.batch.v1.TaskSpec
 import com.google.protobuf.Duration
@@ -153,20 +154,30 @@ class GoogleBatchTaskHandler extends TaskHandler {
 
         // instance policy
         final allocationPolicy = AllocationPolicy.newBuilder()
+        final instancePolicyOrTemplate = AllocationPolicy.InstancePolicyOrTemplate.newBuilder()
         final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
-        if( task.config.getAccelerator() )
+        if( task.config.getAccelerator() ) {
             instancePolicy.addAccelerators(
                 AllocationPolicy.Accelerator.newBuilder()
                     .setCount( task.config.getAccelerator().getRequest() )
                     .setType( task.config.getAccelerator().getType() )
             )
 
+            instancePolicyOrTemplate.setInstallGpuDrivers(true)
+        }
+
         if( executor.config.cpuPlatform )
             instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
 
         if( task.config.getMachineType() )
             instancePolicy.setMachineType( task.config.getMachineType() )
+
+        if( executor.config.serviceAccountEmail )
+            allocationPolicy.setServiceAccount(
+                ServiceAccount.newBuilder()
+                    .setEmail(executor.config.serviceAccountEmail)
+            )
 
         if( executor.config.preemptible )
             instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.PREEMPTIBLE )
@@ -175,7 +186,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
             instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.SPOT )
 
         allocationPolicy.addInstances(
-            AllocationPolicy.InstancePolicyOrTemplate.newBuilder()
+            instancePolicyOrTemplate
                 .setPolicy(instancePolicy)
         )
 

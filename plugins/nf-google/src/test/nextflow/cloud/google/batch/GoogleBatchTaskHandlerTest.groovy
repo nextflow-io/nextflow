@@ -107,6 +107,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getCpuPlatform() >> CPU_PLATFORM
                 getSpot() >> true
                 getNetwork() >> 'net-1'
+                getServiceAccountEmail() >> 'foo@bar.baz'
                 getSubnetwork() >> 'subnet-1'
                 getUsePrivateAddress() >> true
             }
@@ -126,7 +127,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getMachineType() >> MACHINE_TYPE
                 getMemory() >> MEM
                 getTime() >> TIMEOUT
-                getResourceLabels() >> [:]
+                getResourceLabels() >> [foo: 'bar']
             }
         }
 
@@ -138,8 +139,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
         then:
         def taskGroup = req.getTaskGroups(0)
         def runnable = taskGroup.getTaskSpec().getRunnables(0)
-        def instancePolicy = req.getAllocationPolicy().getInstances(0).getPolicy()
-        def networkInterface = req.getAllocationPolicy().getNetwork().getNetworkInterfaces(0)
+        def allocationPolicy = req.getAllocationPolicy()
+        def instancePolicy = allocationPolicy.getInstances(0).getPolicy()
+        def networkInterface = allocationPolicy.getNetwork().getNetworkInterfaces(0)
         and:
         taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == DISK.toMega()
         taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == CPUS * 1_000
@@ -150,6 +152,10 @@ class GoogleBatchTaskHandlerTest extends Specification {
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
         runnable.getContainer().getOptions() == CONTAINER_OPTS
         runnable.getContainer().getVolumesList() == ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        and:
+        allocationPolicy.getInstances(0).getInstallGpuDrivers() == true
+        allocationPolicy.getLabelsMap() == [foo: 'bar']
+        allocationPolicy.getServiceAccount().getEmail() == 'foo@bar.baz'
         and:
         instancePolicy.getAccelerators(0).getCount() == 1
         instancePolicy.getAccelerators(0).getType() == ACCELERATOR.type
@@ -162,35 +168,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
         networkInterface.getNoExternalIpAddress() == true
         and:
         req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
-    }
-
-    def 'should create submit request with resource labels spec' () {
-        given:
-        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
-        def CONTAINER_IMAGE = 'debian:latest'
-        def exec = Mock(GoogleBatchExecutor) {
-            getConfig() >> Mock(BatchConfig)
-        }
-        and:
-        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
-        def task = Mock(TaskRun) {
-            toTaskBean() >> bean
-            getHashLog() >> 'abcd1234'
-            getWorkDir() >> WORK_DIR
-            getContainer() >> CONTAINER_IMAGE
-            getConfig() >> Mock(TaskConfig) {
-                getCpus() >> 2
-                getResourceLabels() >> [ foo: 'bar']
-            }
-        }
-
-        and:
-        def handler = new GoogleBatchTaskHandler(task, exec)
-
-        when:
-        def req = handler.newSubmitRequest(task)
-        then:
-        req.getAllocationPolicy().getLabelsMap() == [foo:'bar']
     }
 
     def 'should create the trace record' () {
