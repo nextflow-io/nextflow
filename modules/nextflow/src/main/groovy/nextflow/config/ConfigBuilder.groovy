@@ -688,7 +688,7 @@ class ConfigBuilder {
             if( cmdRun.withWave != '-' )
                 config.wave.endpoint = cmdRun.withWave
             else if( !config.wave.endpoint )
-                config.wave.endpoint = 'https://default.host'
+                config.wave.endpoint = 'https://wave.seqera.io'
         }
 
         // -- nextflow setting

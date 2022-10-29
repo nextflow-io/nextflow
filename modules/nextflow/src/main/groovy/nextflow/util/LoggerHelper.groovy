@@ -207,6 +207,11 @@ class LoggerHelper {
         if( !debugConf.contains(AWS) && !traceConf.contains(AWS)) {
             createLogger(AWS, Level.WARN)
         }
+        // -- patch jgit warn
+        final JGIT = 'org.eclipse.jgit.util.FS'
+        if( !debugConf.contains(JGIT) && !traceConf.contains(JGIT)) {
+            createLogger(JGIT, Level.ERROR)
+        }
 
         // -- debug packages specified by the user
         for( String clazz : debugConf ) {

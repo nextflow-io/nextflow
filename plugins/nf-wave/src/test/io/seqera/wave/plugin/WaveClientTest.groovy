@@ -161,6 +161,9 @@ class WaveClientTest extends Specification {
         !req.containerFile
         !req.condaFile
         !req.containerConfig.layers
+        and:
+        req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
+        req.timestamp instanceof String
     }
 
     def 'should create request object with dockerfile' () {
@@ -269,7 +272,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaRecipeToDockerFile(RECIPE) == '''\
-                FROM mambaorg/micromamba:0.25.1
+                FROM mambaorg/micromamba:0.27.0
                 RUN \\
                    micromamba install -y -n base -c defaults -c conda-forge \\
                    bwa=0.7.15 salmon=1.1.1 \\
@@ -279,7 +282,7 @@ class WaveClientTest extends Specification {
 
     def 'should create dockerfile content with custom config' () {
         given:
-        def CONDA_OPTS = [baseImage:'my-base:123', commands: ['USER my-user', 'RUN apt-get update -y && apt-get install -y procps']]
+        def CONDA_OPTS = [mambaImage:'my-base:123', commands: ['USER my-user', 'RUN apt-get update -y && apt-get install -y procps']]
         def session = Mock(Session) { getConfig() >> [wave:[build:[conda:CONDA_OPTS]]]}
         def RECIPE = 'bwa=0.7.15 salmon=1.1.1'
         when:
@@ -303,7 +306,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaFileToDockerFile()== '''\
-                FROM mambaorg/micromamba:0.25.1
+                FROM mambaorg/micromamba:0.27.0
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                     micromamba clean -a -y
@@ -416,7 +419,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:0.25.1
+                    FROM mambaorg/micromamba:0.27.0
                     RUN \\
                        micromamba install -y -n base -c defaults -c conda-forge \\
                        salmon=1.2.3 \\
@@ -444,7 +447,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:0.25.1
+                    FROM mambaorg/micromamba:0.27.0
                     COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                     RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                         micromamba clean -a -y

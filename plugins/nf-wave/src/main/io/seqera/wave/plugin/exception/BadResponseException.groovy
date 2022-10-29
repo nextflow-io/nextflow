@@ -15,26 +15,15 @@
  *
  */
 
-package io.seqera.wave.plugin
+package io.seqera.wave.plugin.exception
 
-import nextflow.script.bundle.ResourcesBundle
-import nextflow.util.CacheHelper
-import spock.lang.Specification
+import groovy.transform.InheritConstructors
+
 /**
+ * Model an invalid HTTP response
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class WaveAssetsTest extends Specification {
-
-    def 'should compute hash key' () {
-        given:
-        def IMAGE = 'foo:latest'
-        def BUNDLE = Mock(ResourcesBundle) { fingerprint() >> '12345' }
-        
-        expect:
-        new WaveAssets(IMAGE).fingerprint() == CacheHelper.hasher([IMAGE]).hash().toString()
-//        new WaveAssets(IMAGE,BUNDLE).hashKey() == CacheHelper.hasher([IMAGE, BUNDLE]).hash().toString()
-
-    }
-
+@InheritConstructors
+class BadResponseException extends RuntimeException {
 }

@@ -13,7 +13,7 @@ your workflow script::
     nextflow.enable.dsl=2
 
 .. tip::
-  As of version ``22.03.0-edge`` Nextflow defaults to DSL 2 if no version version is specified explicitly.
+  As of version ``22.03.0-edge`` Nextflow defaults to DSL 2 if no version is specified explicitly.
   You can restore the previous behavior setting in into your environment the following variable::
 
     export NXF_DEFAULT_DSL=1
@@ -64,7 +64,7 @@ Process
 Process definition
 ------------------
 
-The new DSL separates the definition of a process from its invocation. The process definition follows the usual 
+The new DSL separates the definition of a process from its invocation. The process definition follows the usual
 syntax as described in the :ref:`process documentation <process-page>`. The only difference is that the
 ``from`` and ``into`` channel declarations have to be omitted.
 
@@ -149,7 +149,7 @@ can be used to reference the channel within the caller scope. For example::
       your_command --here
       '''
     }
-    
+
     workflow {
         foo()
         foo.out.samples_bam.view()
@@ -284,7 +284,7 @@ the entry point of execution for the workflow application.
 .. note::
   Implicit workflow definition is ignored when a script is included as a module. This
   allows the writing of a workflow script that can be used either as a library module or as
-  an application script. 
+  an application script.
 
 .. tip::
   A different workflow entrypoint can be specified using the ``-entry`` command line option.
@@ -371,10 +371,23 @@ against the *including* script location.
 .. note::
     Relative paths must begin with the ``./`` prefix. Also, the ``include`` statement must be defined **outside** of the workflow definition.
 
-.. warning::
-    From version 22.05.0 `include` directive can be used to import operators and functions from plugin if the path
-    match the pattern `plugin/<plugin-id>` so avoid to use `plugin` as folder for your module
+.. _dsl2-module-directory:
 
+Module directory
+----------------
+
+As of version ``22.10.0``, the module can be defined as a directory whose name matches the module name and
+contains a script named ``main.nf``. For example::
+
+    some
+        └-module
+            └-main.nf
+
+When defined as a directory the module needs to be included specifying the module directory path::
+
+    include { foo } from './some/module'
+
+Module directories allows the use of module scoped binaries scripts. See `Module binaries`_ for details.
 
 Multiple inclusions
 -------------------
@@ -466,7 +479,7 @@ The above snippet prints::
     Ciao world!
 
 Finally, the include option ``params`` allows the specification of one or more parameters without
-inheriting any value from the external environment. 
+inheriting any value from the external environment.
 
 
 .. _module-templates:
@@ -481,20 +494,20 @@ For example, let's suppose to have a project L with a module script defining 2 p
 The template files can be made available under the local ``templates`` directory::
 
     Project L
-        |-myModules.nf
-        |-templates
-            |-P1-template.sh
-            |-P2-template.sh
+        |─myModules.nf
+        └─templates
+            |─P1-template.sh
+            └─P2-template.sh
 
 Then, we have a second project A with a workflow that includes P1 and P2::
 
     Pipeline A
-        |-main.nf
+        └-main.nf
 
 Finally, we have a third project B with a workflow that includes again P1 and P2::
 
     Pipeline B
-        |-main.nf
+        └-main.nf
 
 With the possibility to keep the template files inside the project L, A and B can use the modules defined in L without any changes.
 A future prject C would do the same, just cloning L (if not available on the system) and including its module script.
@@ -509,27 +522,51 @@ Ultimately, having multiple template locations allows a more structured organiza
 has several module components, and all them use templates, the project could group module scripts and their templates as needed. For example::
 
     baseDir
-        |-main.nf
-        |-Phase0-Modules
-            |-mymodules1.nf
-            |-mymodules2.nf
-            |-templates
-                |-P1-template.sh
-                |-P2-template.sh
-        |-Phase1-Modules
-            |-mymodules3.nf
-            |-mymodules4.nf
-            |-templates
-                |-P3-template.sh
-                |-P4-template.sh
-        |-Phase2-Modules
-            |-mymodules5.nf
-            |-mymodules6.nf
-            |-templates
-                |-P5-template.sh
-                |-P6-template.sh
-                |-P7-template.sh
+        |─main.nf
+        └─Phase0-Modules
+            |─mymodules1.nf
+            |─mymodules2.nf
+            └─templates
+                |─P1-template.sh
+                |─P2-template.sh
+        └─Phase1-Modules
+            |─mymodules3.nf
+            |─mymodules4.nf
+            └─templates
+                |─P3-template.sh
+                └─P4-template.sh
+        └─Phase2-Modules
+            |─mymodules5.nf
+            |─mymodules6.nf
+            └─templates
+                |─P5-template.sh
+                |─P6-template.sh
+                └─P7-template.sh
 
+Module binaries
+-----------------
+
+As of version ``22.10.0``, modules can define binary scripts that are locally scoped to the processes defined by the tasks.
+
+To enable this feature add the following setting in pipeline configuration file::
+
+    nextflow.enable.moduleBinaries = true
+
+The binary scripts must be placed in the module directory names ``<module-dir>/resources/usr/bin``::
+
+    <module-dir>
+        |─main.nf
+        └─resources
+            └─usr
+                └─bin
+                    |─your-module-script1.sh
+                    └─another-module-script2.py
+
+Those scripts will be accessible as any other command in the tasks environment, provided they have been granted
+the Linux execute permissions.
+
+.. note::
+    This feature requires the use of a local or shared file system as the pipeline work directory.
 
 Channel forking
 ===============
@@ -660,7 +697,7 @@ DSL2 migration notes
           foo()
           bar()
         }
-        
+
 * The use of unqualified value and file elements into input tuples is not allowed anymore. Replace them with a corresponding
   ``val`` or ``path`` qualifier::
 

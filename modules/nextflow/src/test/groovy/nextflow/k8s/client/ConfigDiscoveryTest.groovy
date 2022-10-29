@@ -27,7 +27,6 @@ import test.TestHelper
  */
 class ConfigDiscoveryTest extends Specification {
 
-
     def 'should read config from file' () {
 
         given:
@@ -64,13 +63,67 @@ class ConfigDiscoveryTest extends Specification {
         def KEY_MANAGERS = [] as KeyManager[]
 
         when:
-        def config = discovery.fromConfig(CONFIG)
+        def config = discovery.fromKubeConfig(CONFIG, null, null, null)
         then:
-        0 * discovery.discoverAuthToken() >> 'secret-token'
+        0 * discovery.discoverAuthToken(_, 'default',null) >> 'secret-token'
         1 * discovery.createKeyManagers(CLIENT_CERT.decodeBase64(), CLIENT_KEY.decodeBase64()) >>  KEY_MANAGERS
         config.server == 'https://localhost:6443'
         config.token == null
         config.namespace == 'default'
+        config.serviceAccount == 'default'
+        config.clientCert == CLIENT_CERT.decodeBase64()
+        config.clientKey == CLIENT_KEY.decodeBase64()
+        config.sslCert == CERT_DATA.decodeBase64()
+        config.keyManagers.is( KEY_MANAGERS )
+        !config.verifySsl
+        !config.isFromCluster
+
+    }
+
+    def 'should read config from file with provided namespace' () {
+
+        given:
+        final CERT_DATA = "d29ybGQgaGVsbG8="
+        final CLIENT_CERT = "aGVsbG8gd29ybGQ="
+        final CLIENT_KEY = "Y2lhbyBtaWFv"
+
+        def CONFIG = TestHelper.createInMemTempFile('config')
+        CONFIG.text = """
+            apiVersion: v1
+            clusters:
+            - cluster:
+                insecure-skip-tls-verify: true
+                server: https://localhost:6443
+                certificate-authority-data: $CERT_DATA
+              name: docker-for-desktop-cluster
+            contexts:
+            - context:
+                cluster: docker-for-desktop-cluster
+                user: docker-for-desktop
+              name: docker-for-desktop
+            current-context: docker-for-desktop
+            kind: Config
+            preferences: {}
+            users:
+            - name: docker-for-desktop
+              user:
+                client-certificate-data: $CLIENT_CERT
+                client-key-data: $CLIENT_KEY
+            """
+                .stripIndent()
+
+        def discovery = Spy(ConfigDiscovery)
+        def KEY_MANAGERS = [] as KeyManager[]
+
+        when:
+        def config = discovery.fromKubeConfig(CONFIG, 'docker-for-desktop', 'ns1', 'sa2')
+        then:
+        0 * discovery.discoverAuthToken('docker-for-desktop','ns1','sa2') >> 'secret-token'
+        1 * discovery.createKeyManagers(CLIENT_CERT.decodeBase64(), CLIENT_KEY.decodeBase64()) >>  KEY_MANAGERS
+        config.server == 'https://localhost:6443'
+        config.token == null
+        config.namespace == 'ns1'
+        config.serviceAccount == 'sa2'
         config.clientCert == CLIENT_CERT.decodeBase64()
         config.clientKey == CLIENT_KEY.decodeBase64()
         config.sslCert == CERT_DATA.decodeBase64()
@@ -117,12 +170,13 @@ class ConfigDiscoveryTest extends Specification {
         def discovery = Spy(ConfigDiscovery)
 
         when:
-        def config = discovery.fromConfig(CONFIG)
+        def config = discovery.fromKubeConfig(CONFIG, null, null, null)
         then:
         1 * discovery.createKeyManagers( CLIENT_CERT_FILE.bytes, CLIENT_KEY_FILE.bytes ) >> KEY_MANAGERS
         config.server == 'https://localhost:6443'
         config.token == null
         config.namespace == 'default'
+        config.serviceAccount == 'default'
         config.clientCert == CLIENT_CERT_FILE.bytes
         config.clientKey == CLIENT_KEY_FILE.bytes
         config.sslCert == CA_FILE.bytes
@@ -165,13 +219,14 @@ class ConfigDiscoveryTest extends Specification {
         def discovery = Spy(ConfigDiscovery)
 
         when:
-        def config = discovery.fromConfig(CONFIG)
+        def config = discovery.fromKubeConfig(CONFIG, null, null, null)
         then:
-        0 * discovery.discoverAuthToken() >> 'secret-token'
+        0 * discovery.discoverAuthToken(_,_,_) >> 'secret-token'
         0 * discovery.createKeyManagers( _, _ ) >> null
         config.server == 'https://localhost:6443'
         config.token == '90s090s98s7f8s'
         config.namespace == 'default'
+        config.serviceAccount == 'default'
         !config.verifySsl
         !config.isFromCluster
 
@@ -210,13 +265,14 @@ class ConfigDiscoveryTest extends Specification {
         def discovery = Spy(ConfigDiscovery)
 
         when:
-        def config = discovery.fromConfig(CONFIG)
+        def config = discovery.fromKubeConfig(CONFIG, null, null, null)
         then:
-        1 * discovery.discoverAuthToken() >> 'secret-token'
+        1 * discovery.discoverAuthToken(_, _, _) >> 'secret-token'
         0 * discovery.createKeyManagers( _, _ ) >> null
         config.server == 'https://localhost:6443'
         config.token == 'secret-token'
         config.namespace == 'default'
+        config.serviceAccount == 'default'
         !config.verifySsl
         !config.isFromCluster
 
@@ -274,33 +330,36 @@ class ConfigDiscoveryTest extends Specification {
         '''.stripIndent()
 
         when:
-        def cfg1 = new ConfigDiscovery(context: 'dev-frontend').fromConfig(CONFIG)
+        def cfg1 = new ConfigDiscovery().fromKubeConfig(CONFIG, 'dev-frontend', null, null)
         then:
         cfg1.server == 'https://1.2.3.4'
         cfg1.sslCert == 'fake-ca-content'.bytes
         cfg1.isVerifySsl()
         cfg1.namespace == 'frontend'
+        cfg1.serviceAccount == 'default'
         cfg1.clientCert == 'fake-cert-content'.bytes
 
         when:
-        def cfg2 = new ConfigDiscovery(context: 'dev-storage').fromConfig(CONFIG)
+        def cfg2 = new ConfigDiscovery().fromKubeConfig(CONFIG, 'dev-storage', null, null)
         then:
         cfg2.server == 'https://1.2.3.4'
         cfg2.sslCert == 'fake-ca-content'.bytes
         cfg2.isVerifySsl()
         cfg2.namespace == 'storage'
+        cfg2.serviceAccount == 'default'
         cfg2.clientCert == 'fake-cert-content'.bytes
 
         when:
-        def cfg3 = new ConfigDiscovery(context: 'exp-scratch').fromConfig(CONFIG)
+        def cfg3 = new ConfigDiscovery().fromKubeConfig(CONFIG, 'exp-scratch', null, null)
         then:
         cfg3.server == 'https://5.6.7.8'
         cfg3.sslCert == null
         !cfg3.isVerifySsl()
         cfg3.namespace == 'default'
+        cfg3.serviceAccount == 'default'
 
         when:
-        new ConfigDiscovery(context: 'foo').fromConfig(CONFIG)
+        new ConfigDiscovery().fromKubeConfig(CONFIG, 'foo', null, null)
         then:
         thrown(IllegalArgumentException)
 
@@ -318,12 +377,14 @@ class ConfigDiscoveryTest extends Specification {
         def discovery = Spy(ConfigDiscovery)
 
         when:
-        def config = discovery.fromCluster([ KUBERNETES_SERVICE_HOST: 'foo.com', KUBERNETES_SERVICE_PORT: '4343' ])
+        def env = [ KUBERNETES_SERVICE_HOST: 'foo.com', KUBERNETES_SERVICE_PORT: '4343' ]
+        def config = discovery.fromCluster(env, null, null)
         then:
         1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt') >> CERT_FILE
         1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/token') >> TOKEN_FILE
         1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/namespace') >> NAMESPACE_FILE
         0 * discovery.createKeyManagers(_,_) >> null
+        and:
         config.server == 'foo.com:4343'
         config.namespace == 'foo-namespace'
         config.token == 'my-token'
@@ -331,12 +392,15 @@ class ConfigDiscoveryTest extends Specification {
         config.isFromCluster
 
         when:
-        config = discovery.fromCluster([ KUBERNETES_SERVICE_HOST: 'https://host.com' ])
+        env = [ KUBERNETES_SERVICE_HOST: 'https://host.com' ]
+        config = discovery.fromCluster(env, 'my-namespace', null)
         then:
         1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt') >> CERT_FILE
         1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/token') >> TOKEN_FILE
         1 * discovery.path('/var/run/secrets/kubernetes.io/serviceaccount/namespace') >> NAMESPACE_FILE
+        and:
         config.server == 'https://host.com'
+        config.namespace == 'my-namespace'
     }
 
     def 'should create  key managers' () {
