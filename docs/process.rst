@@ -632,8 +632,8 @@ with the current execution context.
   own directory, and input files are automatically staged into this directory by Nextflow.
   This behavior guarantees that input files with the same name won't overwrite each other.
 
-  An example of when you may have to deal with that is when you have many input files to a task,
-  and some of these files may have the same filename. In this case, a solution with be to use
+  An example of when you may have to deal with that is when you have many input files in a task,
+  and some of these files may have the same filename. In this case, a solution would be to use
   the option ``stageAs``.
 
 Input type ``env``
