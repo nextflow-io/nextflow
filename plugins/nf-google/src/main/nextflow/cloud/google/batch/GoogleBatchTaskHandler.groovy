@@ -158,12 +158,13 @@ class GoogleBatchTaskHandler extends TaskHandler {
         final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
         if( task.config.getAccelerator() ) {
-            instancePolicy.addAccelerators(
-                AllocationPolicy.Accelerator.newBuilder()
-                    .setCount( task.config.getAccelerator().getRequest() )
-                    .setType( task.config.getAccelerator().getType() )
-            )
+            final accelerator = AllocationPolicy.Accelerator.newBuilder()
+                .setCount( task.config.getAccelerator().getRequest() )
 
+            if( task.config.getAccelerator().getType() )
+                accelerator.setType( task.config.getAccelerator().getType() )
+
+            instancePolicy.addAccelerators(accelerator)
             instancePolicyOrTemplate.setInstallGpuDrivers(true)
         }
 
