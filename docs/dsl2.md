@@ -385,6 +385,8 @@ against the *including* script location.
 Relative paths must begin with the `./` prefix. Also, the `include` statement must be defined **outside** of the workflow definition.
 :::
 
+(dsl2-module-directory)=
+
 ### Module directory
 
 As of version `22.10.0`, the module can be defined as a directory whose name matches the module name and
