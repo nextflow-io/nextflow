@@ -406,6 +406,7 @@ The following settings are available:
 | computeResourceType | Define whether use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Pod`).                                                                                          |
 | fetchNodeName       | If you trace the hostname, activate this option (default: `false`, requires version `22.05.0-edge` or later).                                                                                     |
 | volumeClaims        | (deprecated)                                                                                                                                                                                      |
+| maxErrorRetry       | Defines the Kubernetes API max request retries (default is set to 4)                                                                                                                              |
 | httpReadTimeout     | Defines the Kubernetes client request HTTP connection read timeout e.g. `'60s'` (requires version `22.10.0` or later).                                                                            |
 | httpConnectTimeout  | Defines the Kubernetes client request HTTP connection timeout e.g. `'60s'` (requires version `22.10.0` or later).                                                                                 |
 
@@ -449,6 +450,18 @@ mail {
     smtp.starttls.required = true
 }
 ```
+
+:::{note}
+Some versions of Java (e.g. Java 11 Corretto) do not default to TLS v1.2, and as a result may have
+issues with 3rd party integrations that enforce TLS v1.2 (e.g. Azure Active Directory OIDC). This problem can be
+addressed by setting the following config option:
+
+```
+mail {
+    smtp.ssl.protocols = 'TLSv1.2'
+}
+```
+:::
 
 (config-manifest)=
 
@@ -645,7 +658,7 @@ process {
 }
 ```
 
-The above configuration snippet sets 2 cpus and 4 GB of memory to the processes annotated with with a label `foo`
+The above configuration snippet sets 2 cpus and 4 GB of memory to the processes annotated with a label `foo`
 and `bar`.
 
 A process selector can be negated prefixing it with the special character `!`. For example:
@@ -929,7 +942,7 @@ the underlying Java virtual machine.
 | NXF_CONDA_CACHEDIR            | Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all compute nodes.                                                                             |
 | NXF_CONDA_ENABLED             | Enable the use of Conda recipes defined by using the :ref:process-conda directive. (default: `false`, requires version `22.08.0-edge` or later).                                                                       |
 | NXF_DEBUG                     | Defines scripts debugging level: `1` dump task environment variables in the task log file; `2` enables command script execution tracing; `3` enables command wrapper execution tracing.                                |
-| NXF_DEFAULT_DSL               | Defines the DSL version version that should be used in not specified otherwise in the script of config file (default: `2`, requires version `22.03.0-edge` or later)                                                   |
+| NXF_DEFAULT_DSL               | Defines the DSL version that should be used in not specified otherwise in the script of config file (default: `2`, requires version `22.03.0-edge` or later)                                                   |
 | NXF_DISABLE_JOBS_CANCELLATION | Disables the cancellation of child jobs on workflow execution termination (requires version `21.12.0-edge` or later).                                                                                                  |
 | NXF_ENABLE_STRICT             | Enable Nextflow *strict* execution mode (default: `false`, requires version `22.05.0-edge` or later)                                                                                                                   |
 | NXF_ENABLE_SECRETS            | Enable Nextflow secrets features (default: ``true``, requires version ``21.09.0-edge`` or later)                                                                                                                       |

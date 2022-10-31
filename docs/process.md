@@ -661,6 +661,10 @@ with the current execution context.
 In most cases, you won't need to use dynamic file names, because each task is executed in its
 own directory, and input files are automatically staged into this directory by Nextflow.
 This behavior guarantees that input files with the same name won't overwrite each other.
+
+An example of when you may have to deal with that is when you have many input files in a task,
+and some of these files may have the same filename. In this case, a solution would be to use
+the `stageAs` option.
 :::
 
 ### Input type `env`
@@ -1132,6 +1136,11 @@ With Nextflow, in most cases, you don't need to manage the naming of output file
 in its own unique directory, so files produced by different tasks can't overwrite each other.
 Also, metadata can be associated with outputs by using the {ref}`tuple output <process-out-tuple>` qualifier, instead of
 including them in the output file name.
+
+One example in which you'd need to manage the naming of output files is when you use the `publishDir` directive
+to have output files also in a specific path of your choice. If two tasks have the same filename for their output and you want them
+to be in the same path specified by `publishDir`, the last task to finish will overwrite the output of the task that finished before.
+You can dynamically change that by adding the `saveAs` option to your `publishDir` directive.
 
 To sum up, the use of output files with static names over dynamic ones is preferable whenever possible,
 because it will result in simpler and more portable code.
@@ -1730,24 +1739,9 @@ and must end with an alphanumeric character.
 
 Labels are useful to organise workflow processes in separate groups which can be referenced
 in the configuration file to select and configure subset of processes having similar computing requirements.
-
 See the {ref}`config-process-selectors` documentation for details.
 
-The `label` directive can be also expressed as a `Map<key-value>` or a `key=value` sentence:
-
-```
-process bigTask {
-  label "region=eu-west-1"
-  label organization: 'MyOrganization'
-  label department: 'a department', group: 'a group'
-
-  '''
-  <task script>
-  '''
-}
-```
-
-These labels will be used to tag the process when pipeline is running in AWS, Google or K8s
+See also: [resourceLabels](#resourcelabels)
 
 (process-machinetype)=
 
@@ -2047,8 +2041,9 @@ Table of optional parameters that can be used with the `publishDir` directive:
 | path        | Specifies the directory where files need to be published. **Note**: the syntax `publishDir '/some/dir'` is a shortcut for `publishDir path: '/some/dir'`.                                                                                                                                                                                                                                                                                               |
 | saveAs      | A closure which, given the name of the file being published, returns the actual file name or a full path where the file is required to be stored. This can be used to rename or change the destination directory of the published files dynamically by using a custom strategy. Return the value `null` from the closure to *not* publish a file. This is useful when the process has multiple output files, but you want to publish only some of them. |
 | enabled     | Enable or disable the publish rule depending on the boolean value specified (default: `true`).                                                                                                                                                                                                                                                                                                                                                          |
-| tags        | Allow to associate tags with the target file e.g. `tag: [FOO: 'Hello world']` (EXPERIMENTAL, currently only supported by files stored on AWS S3, requires version `21.12.0-edge` or later).                                                                                                                                                                                                                                                             |
 | failOnError | When `true` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: `false`)                                                                                                                                                                                                                                                                                                            |
+| contentType | Allow specifying the media content type of the published file a.k.a. `MIME type <https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types>`_. If the boolean value ``true`` is specified the content type is inferred from the file extension (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Default: ``false``, requires `22.10.0`` or later).                                                                  |
+| tags        | Allow the association of arbitrary tags with the published file e.g. ``tag: [FOO: 'Hello world']`` (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Requires version ``21.12.0-edge`` or later).                                                                                                                                                                                                                                      |
 
 Table of publish modes:
 
@@ -2120,6 +2115,33 @@ process grid_job {
 This directive is only used by certain executors. Refer to the
 {ref}`executor-page` page to see which executors support this directive.
 :::
+
+(process-resourcelabels)=
+
+### resourceLabels
+
+The `resourceLabels` directive allows you to specify custom name-value pairs
+that Nextflow applies to the computing resource used to carry out the process execution.
+Resource labels can be specified using the syntax shown below:
+
+```
+process my_task {
+    resourceLabels region: 'some-region', user: 'some-username'
+
+    '''
+    <task script>
+    '''
+}
+```
+
+The limits and the syntax of the corresponding cloud provider should be taken into consideration when using resource labels.
+
+:::{note}
+  Resource labels are currently only supported by the {ref}`awsbatch-executor`,
+  {ref}`google-lifesciences-executor`, Google Cloud Batch and {ref}`k8s-executor` executors.
+:::
+
+See also: [label](#label)
 
 (process-scratch)=
 

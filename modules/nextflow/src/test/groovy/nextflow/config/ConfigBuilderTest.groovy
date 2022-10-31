@@ -27,6 +27,7 @@ import nextflow.cli.CmdRun
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
+import nextflow.trace.TraceHelper
 import nextflow.trace.WebLogObserver
 import nextflow.util.ConfigHelper
 import spock.lang.Ignore
@@ -38,6 +39,9 @@ import spock.lang.Unroll
  */
 class ConfigBuilderTest extends Specification {
 
+    def setup() {
+        TraceHelper.testTimestampFmt = '20221001'
+    }
 
     def 'build config object' () {
 
@@ -825,7 +829,7 @@ class ConfigBuilderTest extends Specification {
         then: // command line should override the config file
         config.trace instanceof Map
         config.trace.enabled
-        config.trace.file == 'trace.txt'
+        config.trace.file == 'trace-20221001.txt'
     }
 
     def 'should set session report options' () {
@@ -881,7 +885,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.report instanceof Map
         config.report.enabled
-        config.report.file == 'report.html'
+        config.report.file == 'report-20221001.html'
     }
 
 
@@ -938,7 +942,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.dag instanceof Map
         config.dag.enabled
-        config.dag.file == 'dag.dot'
+        config.dag.file == 'dag-20221001.dot'
     }
 
     def 'should set session weblog options' () {
@@ -1057,7 +1061,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.timeline instanceof Map
         config.timeline.enabled
-        config.timeline.file == 'timeline.html'
+        config.timeline.file == 'timeline-20221001.html'
     }
 
     def 'should set tower options' () {
@@ -1151,7 +1155,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.wave instanceof Map
         config.wave.enabled
-        config.wave.endpoint == 'https://default.host'
+        config.wave.endpoint == 'https://wave.seqera.io'
     }
 
     def 'should enable conda env' () {

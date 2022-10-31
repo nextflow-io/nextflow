@@ -717,6 +717,14 @@ Then you will be able to specify the tag `foo` or `bar` as an argument of the `-
 either the content of the first or the second channel. Multiple tag names can be specified separating them with a `,`
 character.
 
+The output can be formatted using the optional `pretty` boolean option:
+
+```
+Channel
+    .fromSRA('SRP043510')
+    .dump(tag:'foo', pretty: true)
+```
+
 ## filter
 
 The `filter` operator allows you to get only the items emitted by a channel that satisfy a condition and discarding
@@ -2196,6 +2204,18 @@ Channel
 [1,2,3,4]
 Done
 ```
+
+:::{note}
+There are two differences between `toList` and `collect`:
+
+* When there is no input, `toList` emits an empty list whereas `collect` emits nothing.
+* By default, `collect` flattens list items by one level.
+
+In other words, `toList` is equivalent to:
+```
+collect(flat: false).ifEmpty([])
+```
+:::
 
 See also: [collect](#collect) operator.
 

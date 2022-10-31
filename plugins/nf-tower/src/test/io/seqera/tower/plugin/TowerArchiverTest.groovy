@@ -18,7 +18,6 @@
 package io.seqera.tower.plugin
 
 import java.nio.file.Path
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 import nextflow.Session
@@ -45,7 +44,7 @@ class TowerArchiverTest extends Specification {
         def sess = Mock(Session) {
             getConfig() >> [:]
         }
-        def helper = TowerArchiver.create(sess, [NXF_ARCHIVE_DIR:'/data,http://bucket/data/export'], Mock(ExecutorService))
+        def helper = TowerArchiver.create(sess, [NXF_ARCHIVE_DIR:'/data,http://bucket/data/export'])
 
         expect:
         helper.getBaseDir() == Path.of('/data')
@@ -93,7 +92,7 @@ class TowerArchiverTest extends Specification {
     def 'should validate retry policy' () {
         given:
         def sess = Mock(Session) { getConfig() >> [:] }
-        def archiver = new TowerArchiver(Path.of('/foo'),Path.of('/bar'), sess, [:], Mock(ExecutorService))
+        def archiver = new TowerArchiver(Path.of('/foo'),Path.of('/bar'), sess, [:])
 
         expect:
         !archiver.retryPattern().matcher('hello').find()
@@ -113,7 +112,7 @@ class TowerArchiverTest extends Specification {
         and:
         def sess = Mock(Session) { getConfig() >> [:] }
         def exec = Executors.newSingleThreadExecutor()
-        def archiver = Spy(new TowerArchiver(folder,Path.of('/bar'), sess, [:], exec))
+        def archiver = Spy(new TowerArchiver(folder,Path.of('/bar'), sess, [:]))
         def target = folder.resolve('bar.txt')
 
         when:

@@ -136,6 +136,36 @@ data is exchanged using a local or shared file system.
 - Process output directories are not supported. For details see [#76](https://github.com/ga4gh/task-execution-schemas/issues/76).
 - Glob patterns in process output declarations are not supported. For details see [#77](https://github.com/ga4gh/task-execution-schemas/issues/77).
 
+(google-batch-executor)=
+
+## Google Cloud Batch
+
+[Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of
+containerized workloads in the Google Cloud Platform infrastructure.
+
+Nextflow provides built-in support for the Batch API which allows the seamless deployment of a Nextflow pipeline
+in the cloud, offloading the process executions as pipelines (it requires Nextflow `22.07.1-edge` or later).
+
+The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline
+script or the `nextflow.config` file. Moreover the pipeline work directory must be located in a Google Storage
+bucket.
+
+To enable this executor set the property `process.executor = 'google-batch'` in the `nextflow.config` file.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+* {ref}`process-accelerator`
+* {ref}`process-container`
+* {ref}`process-containerOptions`
+* {ref}`process-cpus`
+* {ref}`process-disk`
+* {ref}`process-machineType`
+* {ref}`process-memory`
+* {ref}`process-time`
+* {ref}`process-resourcelabels`
+
+See the {ref}`Google Cloud Batch <google-batch>` page for further configuration details.
+
 (google-lifesciences-executor)=
 
 ## Google Life Sciences
@@ -162,6 +192,31 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-time`
 
 See the {ref}`Google Life Sciences <google-lifesciences>` page for further configuration details.
+
+(hyperqueue-executor)=
+
+## HyperQueue
+
+:::{warning}
+This is an incubating feature. It may change in future Nextflow releases.
+:::
+
+The `hyperqueue` executor allows you to run your pipeline script by using the [HyperQueue](https://github.com/It4innovations/hyperqueue) job scheduler.
+
+Nextflow manages each process as a separate job that is submitted to the cluster by using the `hq` command line tool.
+
+Being so, the pipeline must be launched from a node where the `hq` command is available, that is, in a
+common usage scenario, the cluster `head` node.
+
+To enable the HTCondor executor simply set `process.executor = 'hyperqueue'` in the `nextflow.config` file.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+* {ref}`process-accelerator`
+* {ref}`process-clusterOptions`
+* {ref}`process-cpus`
+* {ref}`process-memory`
+* {ref}`process-time`
 
 (htcondor-executor)=
 

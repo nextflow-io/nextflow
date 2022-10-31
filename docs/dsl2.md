@@ -13,7 +13,7 @@ nextflow.enable.dsl=2
 ```
 
 :::{tip}
-As of version `22.03.0-edge` Nextflow defaults to DSL 2 if no version version is specified explicitly.
+As of version `22.03.0-edge` Nextflow defaults to DSL 2 if no version is specified explicitly.
 You can restore the previous behavior setting in into your environment the following variable:
 
 ```
@@ -385,10 +385,24 @@ against the *including* script location.
 Relative paths must begin with the `./` prefix. Also, the `include` statement must be defined **outside** of the workflow definition.
 :::
 
-:::{warning}
-From version 22.05.0 `include` directive can be used to import operators and functions from plugin if the path
-match the pattern `plugin/<plugin-id>` so avoid to use `plugin` as folder for your module
-:::
+### Module directory
+
+As of version `22.10.0`, the module can be defined as a directory whose name matches the module name and
+contains a script named `main.nf`. For example:
+
+```
+some
+└-module
+  └-main.nf
+```
+
+When defined as a directory the module needs to be included specifying the module directory path:
+
+```
+include { foo } from './some/module'
+```
+
+Module directories allows the use of module scoped binaries scripts. See [Module binaries](#module-binaries) for details.
 
 ### Multiple inclusions
 
@@ -506,24 +520,24 @@ The template files can be made available under the local `templates` directory:
 
 ```
 Project L
-    |-myModules.nf
-    |-templates
-        |-P1-template.sh
-        |-P2-template.sh
+|─myModules.nf
+└─templates
+  |─P1-template.sh
+  └─P2-template.sh
 ```
 
 Then, we have a second project A with a workflow that includes P1 and P2:
 
 ```
 Pipeline A
-    |-main.nf
+└-main.nf
 ```
 
 Finally, we have a third project B with a workflow that includes again P1 and P2:
 
 ```
 Pipeline B
-    |-main.nf
+└-main.nf
 ```
 
 With the possibility to keep the template files inside the project L, A and B can use the modules defined in L without any changes.
@@ -540,27 +554,56 @@ has several module components, and all them use templates, the project could gro
 
 ```
 baseDir
-    |-main.nf
-    |-Phase0-Modules
-        |-mymodules1.nf
-        |-mymodules2.nf
-        |-templates
-            |-P1-template.sh
-            |-P2-template.sh
-    |-Phase1-Modules
-        |-mymodules3.nf
-        |-mymodules4.nf
-        |-templates
-            |-P3-template.sh
-            |-P4-template.sh
-    |-Phase2-Modules
-        |-mymodules5.nf
-        |-mymodules6.nf
-        |-templates
-            |-P5-template.sh
-            |-P6-template.sh
-            |-P7-template.sh
+|─main.nf
+|─Phase0-Modules
+  |─mymodules1.nf
+  |─mymodules2.nf
+  └─templates
+    |─P1-template.sh
+    └─P2-template.sh
+|─Phase1-Modules
+  |─mymodules3.nf
+  |─mymodules4.nf
+  └─templates
+    |─P3-template.sh
+    └─P4-template.sh
+└─Phase2-Modules
+  |─mymodules5.nf
+  |─mymodules6.nf
+  └─templates
+    |─P5-template.sh
+    |─P6-template.sh
+    └─P7-template.sh
 ```
+
+### Module binaries
+
+As of version `22.10.0`, modules can define binary scripts that are locally scoped to the processes defined by the tasks.
+
+To enable this feature add the following setting in pipeline configuration file:
+
+```
+nextflow.enable.moduleBinaries = true
+```
+
+The binary scripts must be placed in the module directory names `<module-dir>/resources/usr/bin`:
+
+```
+<module-dir>
+|─main.nf
+└─resources
+  └─usr
+    └─bin
+      |─your-module-script1.sh
+      └─another-module-script2.py
+```
+
+Those scripts will be accessible as any other command in the tasks environment, provided they have been granted
+the Linux execute permissions.
+
+:::{note}
+This feature requires the use of a local or shared file system as the pipeline work directory.
+:::
 
 ## Channel forking
 

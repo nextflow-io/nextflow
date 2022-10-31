@@ -19,10 +19,14 @@ package nextflow.cloud.google.batch
 
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.executor.Executor
 import nextflow.executor.res.AcceleratorResource
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.script.BaseScript
+import nextflow.script.ProcessConfig
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -67,10 +71,10 @@ class GoogleBatchTaskHandlerTest extends Specification {
         taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == 0
         taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == 0
         and:
-        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/foo/scratch/.command.run 2>&1 | tee .command.log'
+        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/disks/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/disks/foo/scratch/.command.run 2>&1 | tee .command.log'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
         runnable.getContainer().getOptions() == ''
-        runnable.getContainer().getVolumesList() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
+        runnable.getContainer().getVolumesList() == ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
         and:
         instancePolicy.getAcceleratorsCount() == 0
         instancePolicy.getMachineType() == ''
@@ -142,10 +146,10 @@ class GoogleBatchTaskHandlerTest extends Specification {
         taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == MEM.toMega()
         taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == TIMEOUT.seconds
         and:
-        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/foo/scratch/.command.run 2>&1 | tee .command.log'
+        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/disks/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/disks/foo/scratch/.command.run 2>&1 | tee .command.log'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
         runnable.getContainer().getOptions() == CONTAINER_OPTS
-        runnable.getContainer().getVolumesList() == ['/mnt/foo/scratch:/mnt/foo/scratch:rw']
+        runnable.getContainer().getVolumesList() == ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
         and:
         instancePolicy.getAccelerators(0).getCount() == 1
         instancePolicy.getAccelerators(0).getType() == ACCELERATOR.type
@@ -189,4 +193,30 @@ class GoogleBatchTaskHandlerTest extends Specification {
         req.getAllocationPolicy().getLabelsMap() == [foo:'bar']
     }
 
+    def 'should create the trace record' () {
+        given:
+        def exec = Mock(Executor) { getName() >> 'google-batch' }
+        def processor = Mock(TaskProcessor) {
+            getExecutor() >> exec
+            getName() >> 'foo'
+            getConfig() >> new ProcessConfig(Mock(BaseScript))
+        }
+        and:
+        def task = Mock(TaskRun)
+        task.getProcessor() >> processor
+        task.getConfig() >> GroovyMock(TaskConfig)
+        and:
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.task = task
+        handler.@jobId = 'xyz-123'
+        handler.@uid = '789'
+
+        when:
+        def trace = handler.getTraceRecord()
+        then:
+        handler.isCompleted() >> false
+        and:
+        trace.native_id == 'xyz-123/789'
+        trace.executorName == 'google-batch'
+    }
 }

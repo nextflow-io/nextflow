@@ -1632,14 +1632,14 @@ class TaskProcessor {
     ResourcesBundle getModuleBundle() {
         final script = this.getOwnerScript()
         final meta = ScriptMeta.get(script)
-        return meta != null ? meta.getModuleBundle() : null
+        return meta?.isModule() ? meta.getModuleBundle() : null
     }
 
     @Memoized
     protected List<Path> getBinDirs() {
         final result = new ArrayList(10)
         // module bundle bin dir have priority, add before
-        if( moduleBundle!=null )
+        if( moduleBundle!=null && session.enableModuleBinaries() )
             result.addAll(moduleBundle.getBinDirs())
         // then add project bin dir
         if( executor.binDir )

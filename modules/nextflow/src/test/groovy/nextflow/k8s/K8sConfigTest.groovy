@@ -24,6 +24,8 @@ import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
 import nextflow.util.Duration
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -143,7 +145,19 @@ class K8sConfigTest extends Specification {
         client.serviceAccount == 'that'
         client.httpConnectTimeout == null // testing default null
         client.httpReadTimeout == null // testing default null
+        client.maxErrorRetry == 4
 
+    }
+
+    def 'should set maxErrorRetry' () {
+        given:
+        def CONFIG = [maxErrorRetry: 10, namespace: 'this', serviceAccount: 'that', client: [server: 'http://foo']]
+
+        when:
+        def config = new K8sConfig(CONFIG)
+        def client = config.getClient()
+        then:
+        client.maxErrorRetry == 10
     }
 
     def 'should create client config with http request timeouts' () {
@@ -168,19 +182,26 @@ class K8sConfigTest extends Specification {
 
     }
 
+    @Unroll
     def 'should create client config with discovery' () {
 
         given:
-        def CONTEXT = 'pizza'
-        def CONFIG = [context: CONTEXT]
+        def CONFIG = [context: CONTEXT, namespace: NAMESPACE, serviceAccount: SERVICE_ACCOUNT]
         K8sConfig config = Spy(K8sConfig, constructorArgs: [ CONFIG ])
 
         when:
         def client = config.getClient()
         then:
-        1 * config.clientDiscovery(CONTEXT) >> new ClientConfig(namespace: 'foo', server: 'bar')
-        client.server == 'bar'
-        client.namespace == 'foo'
+        1 * config.clientDiscovery(CONTEXT, NAMESPACE, SERVICE_ACCOUNT) >> new ClientConfig(namespace: NAMESPACE, server: SERVER)
+        and:
+        client.server == SERVER
+        client.namespace == NAMESPACE ?: 'default'
+        client.serviceAccount == SERVICE_ACCOUNT ?: 'default'
+
+        where:
+        CONTEXT     | SERVER    | NAMESPACE | SERVICE_ACCOUNT
+        'foo'       | 'host.com'| null      | null
+        'bar'       | 'this.com'| 'ns1'     | 'sa2'
 
     }
 

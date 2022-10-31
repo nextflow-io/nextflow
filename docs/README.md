@@ -1,4 +1,4 @@
-# Nextflow Documentation 
+# Nextflow Documentation
 
 Nextflow documentation is written using [Sphinx](http://www.sphinx-doc.org/), [MyST](https://myst-parser.readthedocs.io/en/latest/) which is an extended version of Markdown for Sphinx, and the [Read The Docs theme for Sphinx](https://github.com/readthedocs/sphinx_rtd_theme).
 
@@ -26,5 +26,5 @@ Then open the `_build/html/index.html` file in your browser and verify your chan
 
 ## License
 
-Nextflow documentation is distributed under 
+Nextflow documentation is distributed under
 [Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0) license](https://creativecommons.org/licenses/by-sa/4.0/).

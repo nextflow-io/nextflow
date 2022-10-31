@@ -22,6 +22,8 @@ dsl2
 cli
 container
 conda
+wave
+fusion
 aws
 amazons3
 azure
