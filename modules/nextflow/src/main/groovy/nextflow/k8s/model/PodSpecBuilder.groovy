@@ -340,12 +340,6 @@ class PodSpecBuilder {
             env.add(entry.toSpec())
         }
 
-        final res = [:]
-        if( this.cpus )
-            res.cpu = this.cpus
-        if( this.memory )
-            res.memory = this.memory
-
         final container = [ name: this.podName, image: this.imageName ]
         if( this.command )
             container.command = this.command
@@ -417,13 +411,16 @@ class PodSpecBuilder {
             container.env = env
 
         // add resources
-        if( res ) {
-            container.resources = [requests: res, limits: new HashMap<>(res)]
+        if( this.cpus ) {
+            container.resources = addCpuResources(this.cpus, container.resources as Map)
         }
 
-        // add gpu settings
-        if( accelerator ) {
-            container.resources = addAcceleratorResources(accelerator, container.resources as Map)
+        if( this.memory ) {
+            container.resources = addMemoryResources(this.memory, container.resources as Map)
+        }
+
+        if( this.accelerator ) {
+            container.resources = addAcceleratorResources(this.accelerator, container.resources as Map)
         }
 
         // add storage definitions ie. volumes and mounts
@@ -505,6 +502,36 @@ class PodSpecBuilder {
 
         return result
 
+    }
+
+    @PackageScope
+    @CompileDynamic
+    Map addCpuResources(Integer cpus, Map res) {
+        if( res == null )
+            res = [:]
+
+        final req = res.requests ?: [:]
+        req.cpu = cpus
+        res.requests = req
+
+        return res
+    }
+
+    @PackageScope
+    @CompileDynamic
+    Map addMemoryResources(String memory, Map res) {
+        if( res == null )
+            res = [:]
+
+        final req = res.requests ?: [:]
+        req.memory = memory
+        res.requests = req
+
+        final lim = res.limits ?: [:]
+        lim.memory = memory
+        res.limits = lim
+
+        return res
     }
 
     @PackageScope
