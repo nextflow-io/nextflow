@@ -23,9 +23,10 @@ and ultimately the pipeline execution flow itself, is implicitly defined by thes
 
 A Nextflow script looks like this:
 
-```
+```groovy
 // Declare syntax version
 nextflow.enable.dsl=2
+
 // Script parameters
 params.query = "/some/data/sample.fa"
 params.db = "/some/path/pdb"
@@ -56,8 +57,8 @@ process extractTopHits {
 }
 
 workflow {
-   def query_ch = Channel.fromPath(params.query)
-   blastSearch(query_ch, params.db) | extractTopHits | view
+  def query_ch = Channel.fromPath(params.query)
+  blastSearch(query_ch, params.db) | extractTopHits | view
 }
 ```
 
@@ -115,9 +116,9 @@ in that it simplifies the writing of code and is more approachable.
 
 Read the {ref}`script-page` section to learn about the Nextflow scripting language.
 
-% TODO Running pipeline
+<!-- TODO Running pipeline -->
 
-% TODO Pipeline parameters
+<!-- TODO Pipeline parameters -->
 
 ## Configuration options
 
@@ -127,9 +128,9 @@ This file can be used to define which executor to use, the process's environment
 
 A basic configuration file might look like this:
 
-```
+```groovy
 process {
-  executor='sge'
+  executor = 'sge'
   queue = 'cn-el6'
 }
 ```

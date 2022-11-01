@@ -24,13 +24,13 @@ or the repository URL after the `run` command. The qualified name is formed by t
 In other words if a Nextflow project is hosted, for example, in a GitHub repository at the address
 `http://github.com/foo/bar`, it can be executed by entering the following command in your shell terminal:
 
-```
+```bash
 nextflow run foo/bar
 ```
 
 or using the project URL:
 
-```
+```bash
 nextflow run http://github.com/foo/bar
 ```
 
@@ -42,7 +42,7 @@ In the second case, i.e. when using the project URL as name, the `-hub` option i
 
 You can try this feature out by simply entering the following command in your shell terminal:
 
-```
+```bash
 nextflow run nextflow-io/hello
 ```
 
@@ -64,13 +64,13 @@ Private repository access credentials can also be defined in the [SCM configurat
 Any Git branch, tag or commit ID defined in a project repository, can be used to specify the revision that you want to execute
 when launching a pipeline by adding the `-r` option to the run command line. So for example you could enter:
 
-```
+```bash
 nextflow run nextflow-io/hello -r mybranch
 ```
 
 or
 
-```
+```bash
 nextflow run nextflow-io/hello -r v1.1
 ```
 
@@ -89,7 +89,7 @@ to create new repositories or commit changes, etc.
 
 The `list` command allows you to list all the projects you have downloaded in your computer. For example:
 
-```
+```bash
 nextflow list
 ```
 
@@ -128,13 +128,13 @@ marked with a `*` on the left.
 The `pull` command allows you to download a project from a GitHub repository or to update it if
 that repository has already been downloaded. For example:
 
-```
+```bash
 nextflow pull nextflow-io/examples
 ```
 
 Altenatively, you can use the repository URL as the name of the project to pull:
 
-```
+```bash
 nextflow pull https://github.com/nextflow-io/examples
 ```
 
@@ -144,7 +144,7 @@ Downloaded pipeline projects are stored in the folder `$HOME/.nextflow/assets` i
 
 The `view` command allows you to quickly show the content of the pipeline script you have downloaded. For example:
 
-```
+```bash
 nextflow view nextflow-io/hello
 ```
 
@@ -154,7 +154,7 @@ By adding the `-l` option to the example above it will list the content of the r
 
 The `clone` command allows you to copy a Nextflow pipeline project to a directory of your choice. For example:
 
-```
+```bash
 nextflow clone nextflow-io/hello target-dir
 ```
 
@@ -168,7 +168,7 @@ back your changes by using the usual Git/GitHub workflow.
 
 Downloaded pipelines can be deleted by using the `drop` command, as shown below:
 
-```
+```bash
 nextflow drop nextflow-io/hello
 ```
 
@@ -183,11 +183,11 @@ of private server installations (of the same platforms).
 The configuration properties for each SCM platform are defined inside the `providers` section,
 properties for the same provider are grouped together with a common name and delimited with curly brackets as in this example:
 
-```
+```groovy
 providers {
     <provider-name> {
         property = value
-        :
+        // ...
     }
 }
 ```
@@ -217,14 +217,12 @@ version `20.10.0` or later).
 
 Create a `bitbucket` entry in the [SCM configuration file](#scm-configuration-file) specifying your user name and app password, as shown below:
 
-```
+```groovy
 providers {
-
     bitbucket {
         user = 'me'
         password = 'my-secret'
     }
-
 }
 ```
 
@@ -246,9 +244,8 @@ use the right configuration whether you are using the cloud service or a self-ho
 
 To access your local BitBucket Server create an entry in the [SCM configuration file](#scm-configuration-file) specifying as shown below:
 
-```
+```groovy
 providers {
-
     mybitbucket {
         platform = 'bitbucketserver'
         server = 'https://your.bitbucket.host.com'
@@ -256,7 +253,6 @@ providers {
         user = 'your-user'
         password = 'your-password or your-token'
     }
-
 }
 ```
 
@@ -264,14 +260,12 @@ providers {
 
 Create a `github` entry in the [SCM configuration file](#scm-configuration-file) specifying your user name and access token as shown below:
 
-```
+```groovy
 providers {
-
     github {
         user = 'your-user-name'
         password = 'your-personal-access-token'
     }
-
 }
 ```
 
@@ -285,15 +279,13 @@ Learn more about PAT and how to create it at [this link](https://docs.github.com
 Create a `gitlab` entry in the [SCM configuration file](#scm-configuration-file) specifying the user name, password and your API access token
 that can be found in your GitLab [account page](https://gitlab.com/profile/account) (sign in required). For example:
 
-```
+```groovy
 providers {
-
     gitlab {
         user = 'me'
         password = 'my-secret'
         token = 'YgpR8m7viH_ZYnC8YSe8'
     }
-
 }
 ```
 
@@ -308,9 +300,8 @@ When doing that the `token` field can be omitted.
 easy, it is suitable for building a private development environment in your network. To access your Gitea server, you
 have to provide all the credential information below:
 
-```
+```groovy
 providers {
-
     mygitea {
         server = 'http://your-domain.org/gitea'
         endpoint = 'http://your-domain.org/gitea/api/v1'
@@ -319,7 +310,6 @@ providers {
         password = 'your-password'
         token = 'your-api-token'
     }
-
 }
 ```
 
@@ -332,14 +322,12 @@ Nextflow has a builtin support for [Azure Repos](https://azure.microsoft.com/en-
 code management service hosted in the Azure cloud. To access your Azure Repos with Nextflow provide the repository credentials
 using the configuration snippet shown below:
 
-```
+```groovy
 providers {
-
     azurerepos {
         user = 'your-user-name'
         password = 'your-personal-access-token'
     }
-
 }
 ```
 
@@ -355,15 +343,13 @@ Git provider to access and to share pipelines code.
 To access your project hosted on AWS CodeCommit with Nextflow provide the repository credentials using the
 configuration snippet shown below:
 
-```
+```groovy
 providers {
-
     my_aws_repo {
         platform = 'codecommit'
         user = '<AWS ACCESS KEY>'
         password = '<AWS SECRET KEY>'
     }
-
 }
 ```
 
@@ -377,7 +363,7 @@ The `user` and `password` are optional settings, if omitted the
 
 Then the pipeline can be accessed with Nextflow as shown below:
 
-```
+```bash
 nextflow run https://git-codecommit.eu-west-1.amazonaws.com/v1/repos/my-repo
 ```
 
@@ -398,9 +384,8 @@ in your [SCM configuration file](#scm-configuration-file) .
 If, for example, the host name of your private GitLab server is `gitlab.acme.org`, you will need to have in the
 `$HOME/.nextflow/scm` file a configuration like the following:
 
-```
+```groovy
 providers {
-
     mygit {
         server = 'http://gitlab.acme.org'
         platform = 'gitlab'
@@ -408,20 +393,19 @@ providers {
         password = 'your-password'
         token = 'your-api-token'
     }
-
 }
 ```
 
 Then you will be able to run/pull a project with Nextflow using the following command line:
 
-```
-$ nextflow run foo/bar -hub mygit
+```bash
+nextflow run foo/bar -hub mygit
 ```
 
 Or, in alternative, using the Git clone URL:
 
-```
-$ nextflow run http://gitlab.acme.org/foo/bar.git
+```bash
+nextflow run http://gitlab.acme.org/foo/bar.git
 ```
 
 :::{note}
@@ -444,8 +428,8 @@ must be created as a [bare repository](https://mijingo.com/blog/what-is-a-bare-g
 Having, for example. a bare repository store at path `/shared/projects/foo.git`, Nextflow is able
 to run it using the following syntax:
 
-```
-$ nextflow run file:/shared/projects/foo.git
+```bash
+nextflow run file:/shared/projects/foo.git
 ```
 
 See [Git documentation](https://git-scm.com/book/en/v2/Git-on-the-Server-Getting-Git-on-a-Server) for
@@ -461,7 +445,7 @@ Nextflow only requires that the main script in your pipeline project is called `
 used by specifying the `manifest.mainScript` attribute in the `nextflow.config` file that must be
 included in your project. For example:
 
-```
+```groovy
 manifest.mainScript = 'my_very_long_script_name.nf'
 ```
 
@@ -475,13 +459,13 @@ For if your GitHub account name is `foo` and you have uploaded a project into a 
 repository URL will be `http://github.com/foo/bar` and people will able to download and run it by using either
 the command:
 
-```
+```bash
 nextflow run foo/bar
 ```
 
 or
 
-```
+```bash
 nextflow run http://github.com/foo/bar
 ```
 
@@ -520,7 +504,7 @@ will automatically be accessible in your pipeline without the need to specify an
 Any environment variable that may be required by the tools in your pipeline can be defined in the `nextflow.config` file
 by using the `env` scope and including it in the root directory of your project. For example:
 
-```
+```groovy
 env {
   DELTA = 'foo'
   GAMMA = 'bar'
@@ -546,7 +530,7 @@ use the implicit variable `baseDir` which locates the base directory of your pip
 For example, you can create a folder named `dataset/` in your repository root directory and copy there the
 required data file(s) you may need, then you can access this data in your script by writing:
 
-```
+```groovy
 sequences = file("$baseDir/dataset/sequences.fa")
 sequences.splitFasta {
     println it
@@ -558,17 +542,17 @@ sequences.splitFasta {
 Nextflow scripts can be easily parametrised to allow users to provide their own input data. Simply declare on the
 top of your script all the parameters it may require as shown below:
 
-```
+```groovy
 params.my_input = 'default input file'
 params.my_output = 'default output path'
 params.my_flag = false
-...
+// ...
 ```
 
 The actual parameter values can be provided when launching the script execution on the command line
 by prefixed the parameter name with a double minus character i.e. `--`, for example:
 
-```
+```bash
 nextflow run <your pipeline> --my_input /path/to/input/file --my_output /other/path --my_flag true
 ```
 
@@ -583,7 +567,7 @@ in the [Docker registry](https://registry.hub.docker.com).
 Then declare in the `nextflow.config` file, that you will include in your project, the name of the Docker image you
 have created. For example:
 
-```
+```groovy
 process.container = 'my-docker-image'
 docker.enabled = true
 ```

@@ -25,7 +25,7 @@ the corresponding feature is requested by a Nextflow pipeline.
 To use **non-default** plugins in your pipeline execution, you must declare them in the Nextflow configuration file,
 listing each plugin as shown below:
 
-```
+```groovy
 plugins {
   id 'nf-hello@0.1.0'
 }
@@ -35,7 +35,7 @@ The plugin identifier consists of the plugin name and plugin version separated b
 
 Alternatively, plugins can be required using the `-plugins` command line option:
 
-```
+```bash
 nextflow run <PIPELINE NAME> -plugins nf-hello@0.1.0
 ```
 
@@ -58,7 +58,7 @@ As of version `22.04.x`, Nextflow allows the inclusion of extension operators fr
 
 For example:
 
-```
+```groovy
 include { sqlInsert; fromQuery as selectFromTable } from 'plugin/nf-sqldb'
 
 def sql = "select * from FOO"
@@ -81,7 +81,7 @@ In the same way, as of version `22.09.x`, a plugin can export custom functions.
 
 For example, a plugin can export a util function to reverse a String:
 
-```
+```groovy
 @nextflow.plugin.extension.Function
 String reverseString( String origin ){
      origin.reverse()
@@ -90,7 +90,7 @@ String reverseString( String origin ){
 
 And this function can be used by the pipeline:
 
-```
+```groovy
 include { reverseString } from 'plugin/my-plugin'
 
 channel.of( reverseString('hi') )
@@ -100,6 +100,6 @@ The above snipped includes a function from the plugin and allows the channel to 
 
 In the same way as operators, functions can be aliased:
 
-```
+```groovy
 include { reverseString as anotherReverseMethod } from 'plugin/my-plugin'
 ```

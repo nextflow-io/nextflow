@@ -33,7 +33,7 @@ one or more boolean expression, each of which is identified by a unique label. O
 that evaluates to a *true* value, the current item is bound to a named channel as the label identifier.
 For example:
 
-```
+```groovy
 Channel
     .of(1, 2, 3, 40, 50)
     .branch {
@@ -45,8 +45,6 @@ Channel
  result.small.view { "$it is small" }
  result.large.view { "$it is large" }
 ```
-
-It shows:
 
 ```
 1 is small
@@ -63,7 +61,7 @@ due to the asynchronous execution of the `view` operator.
 
 A default fallback condition can be specified using `true` as the last branch condition:
 
-```
+```groovy
 Channel
     .from(1, 2, 3, 40, 50)
     .branch {
@@ -76,7 +74,7 @@ Channel
 The value returned by each branch condition can be customised by specifying an optional expression statement(s)
 just after the condition expression. For example:
 
-```
+```groovy
 Channel
     .from(1, 2, 3, 40, 50)
     .branch {
@@ -99,7 +97,7 @@ implicitly returned.
 To create a branch criteria as variable that can be passed as an argument to more than one
 `branch` operator use the `branchCriteria` built-in method as shown below:
 
-```
+```groovy
 def criteria = branchCriteria {
     small: it < 10
     large: it > 10
@@ -123,7 +121,7 @@ the source channel into subsets:
   either as a {ref}`regular expression <script-regexp>`, a Java class, a literal value, or a boolean predicate
   that has to be satisfied. For example:
 
-  ```
+  ```groovy
   Channel
       .of( 1, 2, 3, 1, 2, 3 )
       .buffer { it == 2 }
@@ -141,7 +139,7 @@ the source channel into subsets:
   Both conditions can be defined either as a {ref}`regular expression <script-regexp>`, a literal value,
   a Java class, or a boolean predicate that need to be satisfied. For example:
 
-  ```
+  ```groovy
   Channel
       .of( 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2 )
       .buffer( 2, 4 )
@@ -155,7 +153,7 @@ the source channel into subsets:
 - `buffer( size: n )`: transform the source channel in such a way that it emits tuples
   made up of `n` elements. An incomplete tuple is discarded. For example:
 
-  ```
+  ```groovy
   Channel
       .of( 1, 2, 3, 1, 2, 3, 1 )
       .buffer( size: 2 )
@@ -170,7 +168,7 @@ the source channel into subsets:
   If you want to emit the last items in a tuple containing less than `n` elements, simply
   add the parameter `remainder` specifying `true`, for example:
 
-  ```
+  ```groovy
   Channel
       .of( 1, 2, 3, 1, 2, 3, 1 )
       .buffer( size: 2, remainder: true )
@@ -186,7 +184,7 @@ the source channel into subsets:
 - `buffer( size: n, skip: m )`: as in the previous example, it emits tuples containing `n` elements,
   but skips `m` values before starting to collect the values for the next tuple (including the first emission). For example:
 
-  ```
+  ```groovy
   Channel
       .of( 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2 )
       .buffer( size:3, skip:2 )
@@ -219,7 +217,7 @@ where the item has to be sent. The first channel is identified by the index `0`,
 The following example sends all string items beginning with `Hello` into `queue1`,
 the others into `queue2`
 
-```
+```groovy
 source = Channel.from 'Hello world', 'Hola', 'Hello John'
 queue1 = Channel.create()
 queue2 = Channel.create()
@@ -244,7 +242,7 @@ See also: {ref}`channel-empty` factory method.
 
 The `collate` operator transforms a channel in such a way that the emitted values are grouped in tuples containing `n` items. For example:
 
-```
+```groovy
 Channel
     .of(1,2,3,1,2,3,1)
     .collate( 3 )
@@ -260,7 +258,7 @@ Channel
 As shown in the above example the last tuple may be incomplete e.g. contain fewer elements than the specified size.
 If you want to avoid this, specify `false` as the second parameter. For example:
 
-```
+```groovy
 Channel
     .of(1,2,3,1,2,3,1)
     .collate( 3, false )
@@ -275,7 +273,7 @@ Channel
 A second version of the `collate` operator allows you to specify, after the `size`, the `step` by which elements
 are collected in tuples. For example:
 
-```
+```groovy
 Channel
     .of(1,2,3,4)
     .collate( 3, 1 )
@@ -300,26 +298,28 @@ See also: [buffer](#buffer) operator.
 The `collect` operator collects all the items emitted by a channel to a `List` and return
 the resulting object as a sole emission. For example:
 
-```
+```groovy
 Channel
     .of( 1, 2, 3, 4 )
     .collect()
     .view()
+```
 
-# outputs
+```
 [1,2,3,4]
 ```
 
 An optional {ref}`closure <script-closure>` can be specified to transform each item before adding it to the resulting list.
 For example:
 
-```
+```groovy
 Channel
     .of( 'hello', 'ciao', 'bonjour' )
     .collect { it.length() }
     .view()
+```
 
-# outputs
+```
 [5,4,7]
 ```
 
@@ -339,7 +339,7 @@ The operator returns a new channel that emits the collected file(s).
 
 In the simplest case, just specify the name of a file where the entries have to be stored. For example:
 
-```
+```groovy
 Channel
     .of('alpha', 'beta', 'gamma')
     .collectFile(name: 'sample.txt', newLine: true)
@@ -354,7 +354,7 @@ into files whose name can be defined by a dynamic criteria. The grouping criteri
 that must return a pair in which the first element defines the file name for the group and the second element the actual
 value to be appended to that file. For example:
 
-```
+```groovy
 Channel
     .of('Hola', 'Ciao', 'Hello', 'Bonjour', 'Halo')
     .collectFile() { item ->
@@ -365,8 +365,6 @@ Channel
         println it.text
     }
 ```
-
-It will print:
 
 ```
 File 'B.txt' contains:
@@ -420,14 +418,12 @@ can be specified:
 
 For example the following snippet shows how sort the content of the result file alphabetically:
 
-```
+```groovy
 Channel
     .of('Z'..'A')
     .collectFile(name:'result', sort: true, newLine: true)
     .view { it.text }
 ```
-
-It will print:
 
 ```
 A
@@ -439,7 +435,7 @@ Z
 
 The following example shows how use a `closure` to collect and sort all sequences in a FASTA file from shortest to longest:
 
-```
+```groovy
 Channel
     .fromPath('/data/sequences.fa')
     .splitFasta( record: [id: true, sequence: true] )
@@ -463,14 +459,15 @@ folder can be specified by using the `tempDir` parameter.
 The `combine` operator combines (cartesian product) the items emitted by two channels or by a channel and a `Collection`
 object (as right operand). For example:
 
-```
+```groovy
 numbers = Channel.of(1, 2, 3)
 words = Channel.of('hello', 'ciao')
 numbers
     .combine(words)
     .view()
+```
 
-# outputs
+```
 [1, hello]
 [2, hello]
 [3, hello]
@@ -484,15 +481,16 @@ matching key. The index of the key element is specified by using the `by` parame
 multiple indexes can be specified with list a integers).
 For example:
 
-```
+```groovy
 left = Channel.of(['A', 1], ['B', 2], ['A', 3])
 right = Channel.of(['B', 'x'], ['B', 'y'], ['A', 'z'], ['A', 'w'])
 
 left
     .combine(right, by: 0)
     .view()
+```
 
-# outputs
+```
 [A, 1, z]
 [A, 3, z]
 [A, 1, w]
@@ -515,15 +513,13 @@ only after `all` the items proceeding from the channel `i th` were emitted.
 
 For example:
 
-```
+```groovy
 a = Channel.of('a', 'b', 'c')
 b = Channel.of(1, 2, 3)
 c = Channel.of('p', 'q')
 
 c.concat( b, a ).view()
 ```
-
-It will output:
 
 ```
 p
@@ -543,7 +539,7 @@ c
 The `count` operator creates a channel that emits a single item: a number that represents the total number of
 items emitted by the source channel. For example:
 
-```
+```groovy
 Channel
     .of(9,1,7,5)
     .count()
@@ -555,12 +551,12 @@ An optional parameter can be provided in order to select which items are to be c
 The selection criteria can be specified either as a {ref}`regular expression <script-regexp>`,
 a literal value, a Java class, or a boolean predicate that needs to be satisfied. For example:
 
-```
+```groovy
 Channel
     .of(4,1,7,1,1)
     .count(1)
     .view()
-    // -> 3
+// -> 3
 
 Channel
     .of('a','c','c','q','b')
@@ -583,7 +579,7 @@ The `countBy` operator creates a channel which emits an associative array (i.e. 
 that counts the occurrences of the emitted items in the source channel having the same key.
 For example:
 
-```
+```groovy
 Channel
     .of( 'x', 'y', 'x', 'x', 'z', 'y' )
     .countBy()
@@ -597,7 +593,7 @@ Channel
 An optional grouping criteria can be specified by using a {ref}`closure <script-closure>`
 that associates each item with the grouping key. For example:
 
-```
+```groovy
 Channel
     .of( 'hola', 'hello', 'ciao', 'bonjour', 'halo' )
     .countBy { it[0] }
@@ -619,14 +615,12 @@ for which they have a matching key.
 The key is defined, by default, as the first entry in an array, a list or map object,
 or the value itself for any other data type. For example:
 
-```
+```groovy
 source = Channel.of( [1, 'alpha'], [2, 'beta'] )
 target = Channel.of( [1, 'x'], [1, 'y'], [1, 'z'], [2,'p'], [2,'q'], [2,'t'] )
 
 source.cross(target).view()
 ```
-
-It will output:
 
 ```
 [ [1, alpha], [1, x] ]
@@ -642,9 +636,9 @@ emitted by the target channel (on the right) having the same key.
 
 There are two important caveats when using the `cross` operator:
 
-> 1. The operator is not `commutative`, i.e. the result of `a.cross(b)` is different from `b.cross(a)`
-> 2. The source channel should emits items for which there's no key repetition i.e. the emitted
->    items have an unique key identifier.
+1. The operator is not `commutative`, i.e. the result of `a.cross(b)` is different from `b.cross(a)`
+2. The source channel should emits items for which there's no key repetition i.e. the emitted
+   items have an unique key identifier.
 
 Optionally, a mapping function can be specified in order to provide a custom rule to associate an item to a key,
 in a similar manner as shown for the [phase](#phase) operator.
@@ -654,7 +648,7 @@ in a similar manner as shown for the [phase](#phase) operator.
 The `distinct` operator allows you to remove *consecutive* duplicated items from a channel, so that each emitted item
 is different from the preceding one. For example:
 
-```
+```groovy
 Channel
     .of( 1,1,2,2,2,3,1,1,2,2,3 )
     .distinct()
@@ -674,7 +668,7 @@ Done
 You can also specify an optional {ref}`closure <script-closure>` that customizes the way it distinguishes between distinct items.
 For example:
 
-```
+```groovy
 Channel
     .of( 1,1,2,2,2,3,1,1,2,4,6 )
     .distinct { it % 2 }
@@ -701,7 +695,7 @@ instead of modifying your script code.
 
 An optional `tag` parameter allows you to select which channel to dump. For example:
 
-```
+```groovy
 Channel
     .of(1,2,3)
     .map { it+1 }
@@ -719,7 +713,7 @@ character.
 
 The output can be formatted using the optional `pretty` boolean option:
 
-```
+```groovy
 Channel
     .fromSRA('SRP043510')
     .dump(tag:'foo', pretty: true)
@@ -734,7 +728,7 @@ a literal value, a type qualifier (i.e. a Java class) or any boolean predicate.
 The following example shows how to filter a channel by using a regular expression that returns only strings that
 begin with `a`:
 
-```
+```groovy
 Channel
     .of( 'a', 'b', 'aa', 'bc', 3, 4.5 )
     .filter( ~/^a.*/ )
@@ -749,7 +743,7 @@ aa
 The following example shows how to filter a channel by specifying the type qualifier `Number` so that only numbers
 are returned:
 
-```
+```groovy
 Channel
     .of( 'a', 'b', 'aa', 'bc', 3, 4.5 )
     .filter( Number )
@@ -765,7 +759,7 @@ Finally, a filtering condition can be defined by using any a boolean predicate. 
 a {ref}`closure <script-closure>` returning a boolean value. For example the following fragment shows how filter
 a channel emitting numbers so that the odd values are returned:
 
-```
+```groovy
 Channel
     .of( 1, 2, 3, 4, 5 )
     .filter { it % 2 == 1 }
@@ -792,7 +786,7 @@ The `first` operator creates a channel that returns the first item emitted by th
 the first item that matches an optional condition. The condition can be specified by using a {ref}`regular expression<script-regexp>`,
 a Java `class` type or any boolean predicate. For example:
 
-```
+```groovy
 // no condition is specified, emits the very first item: 1
 Channel
     .of( 1, 2, 3 )
@@ -828,7 +822,7 @@ this list is flattened so that each single item is emitted on its own.
 
 For example:
 
-```
+```groovy
 // create a channel of numbers
 numbers = Channel.of( 1, 2, 3 )
 
@@ -851,7 +845,7 @@ Done
 
 Associative arrays are handled in the same way, so that each array entry is emitted as a single key-value pair. For example:
 
-```
+```groovy
 Channel
     .of ( 1, 2, 3 )
     .flatMap { it -> [ number: it, square: it*it ] }
@@ -874,7 +868,7 @@ square: 9
 The `flatten` operator transforms a channel in such a way that every item of type `Collection` or `Array`
 is flattened so that each single entry is emitted separately by the resulting channel. For example:
 
-```
+```groovy
 Channel
     .of( [1,[2,3]], 4, [5,[6]] )
     .flatten()
@@ -904,7 +898,7 @@ array that maps each key to the set of items identified by that key.
 
 For example:
 
-```
+```groovy
 Channel
     .from('hello', 'ciao', 'hola', 'hi', 'bonjour')
     .groupBy { String str -> str[0] }
@@ -935,14 +929,12 @@ In other words, the operator transforms a sequence of tuple like *(K, V, W, ..)*
 
 For example:
 
-```
+```groovy
 Channel
     .of( [1,'A'], [1,'B'], [2,'C'], [3, 'B'], [1,'C'], [2, 'A'], [3, 'D'] )
     .groupTuple()
     .view()
 ```
-
-It prints:
 
 ```
 [1, [A, B, C]]
@@ -954,14 +946,12 @@ By default the first entry in the tuple is used as grouping key. A different key
 `by` parameter and specifying the index of the entry to be used as key (the index is zero-based). For example,
 grouping by the second value in each tuple:
 
-```
+```groovy
 Channel
     .of( [1,'A'], [1,'B'], [2,'C'], [3, 'B'], [1,'C'], [2, 'A'], [3, 'D'] )
     .groupTuple(by: 1)
     .view()
 ```
-
-The result is:
 
 ```
 [[1, 2], A]
@@ -1006,9 +996,11 @@ is applied is *empty* i.e. doesn't emit any value. Otherwise it will emit the sa
 
 Thus, the following example prints:
 
-```
+```groovy
 Channel .of(1,2,3) .ifEmpty('Hello') .view()
+```
 
+```
 1
 2
 3
@@ -1016,9 +1008,11 @@ Channel .of(1,2,3) .ifEmpty('Hello') .view()
 
 Instead, this one prints:
 
-```
+```groovy
 Channel .empty() .ifEmpty('Hello') .view()
+```
 
+```
 Hello
 ```
 
@@ -1038,7 +1032,7 @@ The `into` operator is no longer available in DSL2 syntax.
 The `into` operator connects a source channel to two or more target channels in such a way the values emitted by
 the source channel are copied to the target channels. For example:
 
-```
+```groovy
 Channel
     .of( 'a', 'b', 'c' )
     .into{ foo; bar }
@@ -1066,7 +1060,7 @@ A second version of the `into` operator takes an integer `n` as an argument and 
 a list of `n` channels, each of which emits a copy of the items that were emitted by the
 source channel. For example:
 
-```
+```groovy
 (foo, bar) = Channel.from( 'a','b','c').into(2)
 foo.view{ "Foo emit: " + it }
 bar.view{ "Bar emit: " + it }
@@ -1088,13 +1082,11 @@ a matching key. The key is defined, by default, as the first element in each ite
 
 For example:
 
-```
+```groovy
 left  = Channel.of(['X', 1], ['Y', 2], ['Z', 3], ['P', 7])
 right = Channel.of(['Z', 6], ['Y', 5], ['X', 4])
 left.join(right).view()
 ```
-
-The resulting channel emits:
 
 ```
 [Z, 3, 6]
@@ -1107,13 +1099,11 @@ The `index` of a different matching element can be specified by using the `by` p
 The `join` operator can emit all the pairs that are incomplete, i.e. the items for which a matching element
 is missing, by specifying the optional parameter `remainder` as shown below:
 
-```
+```groovy
 left  = Channel.of(['X', 1], ['Y', 2], ['Z', 3], ['P', 7])
 right = Channel.of(['Z', 6], ['Y', 5], ['X', 4])
 left.join(right, remainder: true).view()
 ```
-
-The above example prints:
 
 ```
 [Y, 2, 5]
@@ -1137,7 +1127,7 @@ The following parameters can be used with the `join` operator:
 
 The `last` operator creates a channel that only returns the last item emitted by the source channel. For example:
 
-```
+```groovy
 Channel
     .of( 1,2,3,4,5,6 )
     .last()
@@ -1156,7 +1146,7 @@ The `map` operator applies a function of your choosing to every item emitted by 
 returns the items so obtained as a new channel. The function applied is called the mapping function
 and is expressed with a {ref}`closure <script-closure>` as shown in the example below:
 
-```
+```groovy
 Channel
     .of( 1, 2, 3, 4, 5 )
     .map { it * it }
@@ -1179,7 +1169,7 @@ Done
 The `max` operator waits until the source channel completes, and then emits the item that has the greatest value.
 For example:
 
-```
+```groovy
 Channel
     .of( 8, 6, 2, 5 )
     .max()
@@ -1194,7 +1184,7 @@ An optional {ref}`closure <script-closure>` parameter can be specified in order 
 a function that returns the value to be compared. The example below shows how to find the string
 item that has the maximum length:
 
-```
+```groovy
 Channel
     .of("hello","hi","hey")
     .max { it.size() }
@@ -1208,7 +1198,7 @@ Channel
 Alternatively it is possible to specify a comparator function i.e. a {ref}`closure <script-closure>`
 taking two parameters that represent two emitted items to be compared. For example:
 
-```
+```groovy
 Channel
     .of("hello","hi","hey")
     .max { a,b -> a.size() <=> b.size() }
@@ -1224,7 +1214,7 @@ The `merge` operator lets you join items emitted by two (or more) channels into 
 For example, the following code merges two channels together: one which emits a series of odd integers
 and the other which emits a series of even integers:
 
-```
+```groovy
 odds  = Channel.of(1, 3, 5, 7, 9)
 evens = Channel.of(2, 4, 6)
 
@@ -1241,7 +1231,7 @@ odds
 
 An optional closure can be provided to customise the items emitted by the resulting merged channel. For example:
 
-```
+```groovy
 odds  = Channel.of(1, 3, 5, 7, 9)
 evens = Channel.of(2, 4, 6)
 
@@ -1267,7 +1257,7 @@ combined in a deterministic way. For this purpose, you can use the [join](#join)
 The `min` operator waits until the source channel completes, and then emits the item that has the lowest value.
 For example:
 
-```
+```groovy
 Channel
     .of( 8, 6, 2, 5 )
     .min()
@@ -1282,7 +1272,7 @@ An optional {ref}`closure <script-closure>` parameter can be specified in order 
 a function that returns the value to be compared. The example below shows how to find the string
 item that has the minimum length:
 
-```
+```groovy
 Channel
     .of("hello","hi","hey")
     .min { it.size() }
@@ -1296,7 +1286,7 @@ Channel
 Alternatively it is possible to specify a comparator function i.e. a {ref}`closure <script-closure>`
 taking two parameters that represent two emitted items to be compared. For example:
 
-```
+```groovy
 Channel
     .of("hello","hi","hey")
     .min { a,b -> a.size() <=> b.size() }
@@ -1311,7 +1301,7 @@ The `mix` operator combines the items emitted by two (or more) channels into a s
 
 For example:
 
-```
+```groovy
 c1 = Channel.of( 1, 2, 3 )
 c2 = Channel.of( 'a', 'b' )
 c3 = Channel.of( 'z' )
@@ -1361,7 +1351,7 @@ item from the input channel to the target channel.
 
 For example:
 
-```
+```groovy
 Channel.of(1, 2, 3, 4)
     .multiMap { it ->
         foo: it + 1
@@ -1372,8 +1362,6 @@ Channel.of(1, 2, 3, 4)
 result.foo.view { "foo $it" }
 result.bar.view { "bar $it" }
 ```
-
-It prints:
 
 ```
 foo 2
@@ -1390,7 +1378,7 @@ The mapping expression can be omitted when the value to be emitted is the same a
 the following one. If you just need to forward the same value to multiple channels,
 you can use the following shorthand:
 
-```
+```groovy
 Channel
     .of(1,2,3)
     .multiMap { it -> foo: bar: it }
@@ -1402,7 +1390,7 @@ As before, this creates two channels, but now both of them receive the same sour
 You can use the `multiMapCriteria` method to create a multi-map criteria as a variable
 that can be passed as an argument to one or more `multiMap` operations, as shown below:
 
-```
+```groovy
 def criteria = multiMapCriteria {
     small: it < 10
     large: it > 10
@@ -1436,13 +1424,11 @@ or the value itself for any other data type.
 
 For example:
 
-```
+```groovy
 ch1 = Channel.from( 1,2,3 )
 ch2 = Channel.from( 1,0,0,2,7,8,9,3 )
 ch1 .phase(ch2) .view()
 ```
-
-It prints:
 
 ```
 [1,1]
@@ -1453,13 +1439,11 @@ It prints:
 Optionally, a mapping function can be specified in order to provide a custom rule to associate an item to a key,
 as shown in the following example:
 
-```
+```groovy
 ch1 = Channel.from( [sequence: 'aaaaaa', id: 1], [sequence: 'bbbbbb', id: 2] )
 ch2 = Channel.from( [val: 'zzzz', id: 3], [val: 'xxxxx', id: 1], [val: 'yyyyy', id: 2])
 ch1 .phase(ch2) { it -> it.id } .view()
 ```
-
-It prints:
 
 ```
 [[sequence:aaaaaa, id:1], [val:xxxxx, id:1]]
@@ -1469,13 +1453,11 @@ It prints:
 Finally, the `phase` operator can emit all the pairs that are incomplete, i.e. the items for which a matching element
 is missing, by specifying the optional parameter `remainder` as shown below:
 
-```
+```groovy
 ch1 = Channel.from( 1,0,0,2,5,3 )
 ch2 = Channel.from( 1,2,3,4 )
 ch1 .phase(ch2, remainder: true) .view()
 ```
-
-It prints:
 
 ```
 [1, 1]
@@ -1501,13 +1483,11 @@ The `print` operator prints the items emitted by a channel to the standard outpu
 An optional {ref}`closure <script-closure>` parameter can be specified to customise how items are printed.
 For example:
 
-```
+```groovy
 Channel
     .from('foo', 'bar', 'baz', 'qux')
     .print { it.toUpperCase() + ' ' }
 ```
-
-It prints:
 
 ```
 FOO BAR BAZ QUX
@@ -1526,13 +1506,11 @@ The `println` operator is no longer available in DSL2 syntax. Use [view](#view) 
 The `println` operator prints the items emitted by a channel to the console standard output appending
 a *new line* character to each of them. For example:
 
-```
+```groovy
 Channel
     .from('foo', 'bar', 'baz', 'qux')
     .println()
 ```
-
-It prints:
 
 ```
 foo
@@ -1543,13 +1521,11 @@ qux
 
 An optional closure parameter can be specified to customise how items are printed. For example:
 
-```
+```groovy
 Channel
     .of('foo', 'bar', 'baz', 'qux')
     .view { "~ $it" }
 ```
-
-It prints:
 
 ```
 ~ foo
@@ -1565,7 +1541,7 @@ See also: [print](#print) and [view](#view).
 The `randomSample` operator allows you to create a channel emitting the specified number of items randomly taken
 from the channel to which is applied. For example:
 
-```
+```groovy
 Channel
     .of( 1..100 )
     .randomSample( 10 )
@@ -1577,7 +1553,7 @@ The above snippet will print 10 numbers in the range from 1 to 100.
 The operator supports a second parameter that allows you to set the initial `seed` for the random number generator.
 By setting it, the `randomSample` operator will always return the same pseudo-random sequence. For example:
 
-```
+```groovy
 Channel
     .of( 1..100 )
     .randomSample( 10, 234 )
@@ -1602,14 +1578,12 @@ as the sole output.
 
 For example:
 
-```
+```groovy
 Channel
     .of( 1, 2, 3, 4, 5 )
     .reduce { a, b -> println "a: $a b: $b"; return a+b }
     .view { "result = $it" }
 ```
-
-It prints the following output:
 
 ```
 a: 1 b: 2
@@ -1627,7 +1601,7 @@ the second parameter as the `i-th` item to be processed.
 Optionally you can specify a `seed` value in order to initialise the accumulator parameter
 as shown below:
 
-```
+```groovy
 myChannel.reduce( seedValue ) {  a, b -> ... }
 ```
 
@@ -1646,7 +1620,7 @@ The operator applies a mapping function of your choosing to every item emitted b
 This function must return a list of as many values as there are output channels. Each entry in the result
 list will be assigned to the output channel with the corresponding position index. For example:
 
-```
+```groovy
 queue1 = Channel.create()
 queue2 = Channel.create()
 
@@ -1671,7 +1645,7 @@ When the mapping function is omitted, the source channel must emit tuples of val
 splits the tuple in such a way that the value `i-th` in a tuple is assigned to the target channel with the corresponding position index.
 For example:
 
-```
+```groovy
 alpha = Channel.create()
 delta = Channel.create()
 
@@ -1682,8 +1656,6 @@ Channel
 alpha.view { "first : $it" }
 delta.view { "second: $it" }
 ```
-
-It will output:
 
 ```
 first : 1
@@ -1698,7 +1670,7 @@ A second version of the `separate` operator takes an integer `n` as an argument 
 each of which gets a value from the corresponding element in the list returned by the closure as explained above.
 For example:
 
-```
+```groovy
 source = Channel.from(1,2,3)
 (queue1, queue2, queue3) = source.separate(3) { a -> [a, a+1, a*a] }
 
@@ -1740,13 +1712,13 @@ See also: [multiMap](#multimap), [into](#into), [choice](#choice) and [map](#map
 The `set` operator assigns the channel to a variable whose name is specified as a closure parameter.
 For example:
 
-```
+```groovy
 Channel.of(10, 20, 30).set { my_channel }
 ```
 
 This is semantically equivalent to the following assignment:
 
-```
+```groovy
 my_channel = Channel.of(10, 20, 30)
 ```
 
@@ -1762,7 +1734,7 @@ list of records with a specified length.
 In the simplest case just apply the `splitCsv` operator to a channel emitting a CSV formatted text files or
 text entries. For example:
 
-```
+```groovy
 Channel
     .of( 'alpha,beta,gamma\n10,20,30\n70,80,90' )
     .splitCsv()
@@ -1775,7 +1747,7 @@ by its column index in the row object.
 When the CSV begins with a header line defining the column names, you can specify the parameter `header: true` which
 allows you to reference each value by its name, as shown in the following example:
 
-```
+```groovy
 Channel
     .of( 'alpha,beta,gamma\n10,20,30\n70,80,90' )
     .splitCsv(header: true)
@@ -1792,7 +1764,7 @@ It will print
 Alternatively you can provide custom header names by specifying a the list of strings in the `header` parameter
 as shown below:
 
-```
+```groovy
 Channel
     .of( 'alpha,beta,gamma\n10,20,30\n70,80,90' )
     .splitCsv(header: ['col1', 'col2', 'col3'], skip: 1 )
@@ -1824,7 +1796,7 @@ The number of sequences in each text chunk produced by the `splitFasta` operator
 the `by` parameter. The following example shows how to read a FASTA file and split it into chunks containing 10 sequences
 each:
 
-```
+```groovy
 Channel
      .fromPath('misc/sample.fa')
      .splitFasta( by: 10 )
@@ -1843,7 +1815,7 @@ information with ease.
 In order to split a FASTA content into record objects, simply use the `record` parameter specifying the map of
 required the fields, as shown in the example below:
 
-```
+```groovy
 Channel
      .fromPath('misc/sample.fa')
      .splitFasta( record: [id: true, seqString: true ])
@@ -1895,7 +1867,7 @@ The number of sequences in each text chunk produced by the `splitFastq` operator
 parameter `by`. The following example shows you how to read a FASTQ file and split it into chunks containing 10
 sequences each:
 
-```
+```groovy
 Channel
     .fromPath('misc/sample.fastq')
     .splitFastq( by: 10 )
@@ -1914,7 +1886,7 @@ data with ease.
 In order to split FASTQ sequences into record objects simply use the `record` parameter specifying the map of
 the required fields, or just specify `record: true` as in the example shown below:
 
-```
+```groovy
 Channel
     .fromPath('misc/sample.fastq')
     .splitFastq( record: true )
@@ -1924,7 +1896,7 @@ Channel
 Finally the `splitFastq` operator is able to split paired-end read pair FASTQ files. It must be applied to a channel
 which emits tuples containing at least two elements that are the files to be splitted. For example:
 
-```
+```groovy
 Channel
     .fromFilePairs('/my/data/SRR*_{1,2}.fastq', flat: true)
     .splitFastq(by: 100_000, pe: true, file: true)
@@ -1975,7 +1947,7 @@ into chunks containing `n` lines, which will be emitted by the resulting channel
 
 For example:
 
-```
+```groovy
 Channel
     .fromPath('/some/path/*.txt')
     .splitText()
@@ -1987,7 +1959,7 @@ It splits the content of the files with suffix `.txt`, and prints it line by lin
 By default the `splitText` operator splits each item into chunks of one line. You can define the number of lines in each chunk by using
 the parameter `by`, as shown in the following example:
 
-```
+```groovy
 Channel
     .fromPath('/some/path/*.txt')
     .splitText( by: 10 )
@@ -2000,7 +1972,7 @@ Channel
 An optional {ref}`closure <script-closure>` can be specified in order to transform the text chunks produced by the operator.
 The following example shows how to split text files into chunks of 10 lines and transform them to capital letters:
 
-```
+```groovy
 Channel
     .fromPath('/some/path/*.txt')
     .splitText( by: 10 ) { it.toUpperCase() }
@@ -2039,7 +2011,7 @@ This operator is deprecated. Use [combine](#combine) instead.
 The `spread` operator combines the items emitted by the source channel with all the values in an array
 or a `Collection` object specified as the operator argument. For example:
 
-```
+```groovy
 Channel
     .from(1,2,3)
     .spread(['a','b'])
@@ -2063,7 +2035,7 @@ Done
 The `sum` operator creates a channel that emits the sum of all the items emitted by the channel itself.
 For example:
 
-```
+```groovy
 Channel
     .of( 8, 6, 2, 5 )
     .sum()
@@ -2077,7 +2049,7 @@ The sum is 21
 An optional {ref}`closure <script-closure>` parameter can be specified in order to provide
 a function that, given an item, returns the value to be summed. For example:
 
-```
+```groovy
 Channel
     .of( 4, 1, 7, 5 )
     .sum { it * it }
@@ -2092,7 +2064,7 @@ Square: 91
 
 The `take` operator allows you to filter only the first `n` items emitted by a channel. For example:
 
-```
+```groovy
 Channel
     .of( 1, 2, 3, 4, 5, 6 )
     .take( 3 )
@@ -2121,7 +2093,7 @@ time it splits the source channel into a newly created channel that is returned 
 The `tap` can be useful in certain scenarios where you may be required to concatenate multiple operations,
 as in the following example:
 
-```
+```groovy
 log1 = Channel.create()
 log2 = Channel.create()
 
@@ -2156,7 +2128,7 @@ is that you won't need to previously create the target channel, because it is cr
 
 Using the closure syntax the above example can be rewritten as shown below:
 
-```
+```groovy
 Channel
     .of ( 'a', 'b', 'c' )
     .tap { log1 }
@@ -2176,7 +2148,7 @@ See also [into](#into) and [separate](#separate) operators.
 The `toInteger` operator allows you to convert the string values emitted by a channel to `Integer` values. For
 example:
 
-```
+```groovy
 Channel
     .of( '1', '7', '12' )
     .toInteger()
@@ -2193,7 +2165,7 @@ You can also use `toLong`, `toFloat`, and `toDouble` to convert to other numeric
 The `toList` operator collects all the items emitted by a channel to a `List` object
 and emits the resulting collection as a single item. For example:
 
-```
+```groovy
 Channel
     .of( 1, 2, 3, 4 )
     .toList()
@@ -2212,7 +2184,8 @@ There are two differences between `toList` and `collect`:
 * By default, `collect` flattens list items by one level.
 
 In other words, `toList` is equivalent to:
-```
+
+```groovy
 collect(flat: false).ifEmpty([])
 ```
 :::
@@ -2224,7 +2197,7 @@ See also: [collect](#collect) operator.
 The `toSortedList` operator collects all the items emitted by a channel to a `List` object where they are sorted
 and emits the resulting collection as a single item. For example:
 
-```
+```groovy
 Channel
     .of( 3, 2, 1, 4 )
     .toSortedList()
@@ -2238,7 +2211,7 @@ Done
 
 You may also pass a comparator closure as an argument to the `toSortedList` operator to customize the sorting criteria.  For example, to sort by the second element of a tuple in descending order:
 
-```
+```groovy
 Channel
     .of( ["homer", 5], ["bart", 2], ["lisa", 10], ["marge", 3], ["maggie", 7] )
     .toSortedList( { a, b -> b[1] <=> a[1] } )
@@ -2256,10 +2229,10 @@ See also: [collect](#collect) operator.
 The `transpose` operator transforms a channel in such a way that the emitted items are the result of a transposition
 of all tuple elements in each item. For example:
 
-```
+```groovy
 Channel.of(
-    ['a', ['p', 'q'], ['u','v']],
-    ['b', ['s', 't'], ['x','y']]
+    ['a', ['p', 'q'], ['u', 'v']],
+    ['b', ['s', 't'], ['x', 'y']]
     )
     .transpose()
     .view()
@@ -2287,7 +2260,7 @@ The `unique` operator allows you to remove duplicate items from a channel and on
 
 For example:
 
-```
+```groovy
 Channel
     .of( 1, 1, 1, 5, 7, 7, 7, 3, 3 )
     .unique()
@@ -2304,7 +2277,7 @@ Channel
 You can also specify an optional {ref}`closure <script-closure>` that customizes the way it distinguishes between unique items.
 For example:
 
-```
+```groovy
 Channel
     .of(1, 3, 4, 5)
     .unique { it % 2 }
@@ -2321,7 +2294,7 @@ Channel
 The `until` operator creates a channel that returns the items emitted by the source channel and stop when
 the condition specified is verified. For example:
 
-```
+```groovy
 Channel
     .of( 3, 2, 1, 5, 1, 5 )
     .until { it == 5 }
@@ -2342,7 +2315,7 @@ See also [take](#take).
 
 The `view` operator prints the items emitted by a channel to the console standard output. For example:
 
-```
+```groovy
 Channel.of(1, 2, 3).view()
 
 1
@@ -2355,13 +2328,11 @@ Each item is printed on a separate line unless otherwise specified by using the 
 How the channel items are printed can be controlled by using an optional closure parameter. The closure must return
 the actual value of the item to be printed:
 
-```
+```groovy
 Channel.of(1, 2, 3)
     .map { it -> [it, it*it] }
     .view { num, sqr -> "Square of: $num is $sqr" }
 ```
-
-It prints:
 
 ```
 Square of: 1 is 1

@@ -8,7 +8,7 @@ simplifies the writing of complex data analysis pipelines.
 To enable this feature you need to define the following directive at the beginning of
 your workflow script:
 
-```
+```groovy
 nextflow.enable.dsl=2
 ```
 
@@ -16,7 +16,7 @@ nextflow.enable.dsl=2
 As of version `22.03.0-edge` Nextflow defaults to DSL 2 if no version is specified explicitly.
 You can restore the previous behavior setting in into your environment the following variable:
 
-```
+```bash
 export NXF_DEFAULT_DSL=1
 ```
 :::
@@ -30,7 +30,7 @@ the Nextflow configuration file using the same notation shown above.
 
 Nextflow allows the definition of custom functions in the workflow script using the following syntax:
 
-```
+```groovy
 def <function name> ( arg1, arg, .. ) {
     <function body>
 }
@@ -38,7 +38,7 @@ def <function name> ( arg1, arg, .. ) {
 
 For example:
 
-```
+```groovy
 def foo() {
     'Hello world'
 }
@@ -58,7 +58,7 @@ Functions implicitly return the result of the last evaluated statement.
 The keyword `return` can be used to explicitly exit from a function and return the specified value.
 For example:
 
-```
+```groovy
 def fib( x ) {
     if( x <= 1 )
         return x
@@ -78,7 +78,7 @@ syntax as described in the {ref}`process documentation <process-page>`. The only
 Then a process can be invoked as a function in the `workflow` scope, passing the expected
 input channels as parameters as if it were a custom function. For example:
 
-```
+```groovy
 nextflow.enable.dsl=2
 
 process foo {
@@ -121,7 +121,7 @@ Processes having matching *input-output* declaration can be composed so that the
 of the first process is passed as input to the next process. Taking in consideration
 the previous example, it's possible to write the following:
 
-```
+```groovy
 workflow {
     bar(foo())
 }
@@ -132,7 +132,7 @@ workflow {
 A process output can also be accessed using the `out` attribute on the corresponding
 process object. For example:
 
-```
+```groovy
 workflow {
     foo()
     bar(foo.out)
@@ -149,7 +149,7 @@ using the array element operator e.g. `out[0]`, `out[1]`, etc. or using
 The `emit` option can be added to the process output definition to assign a name identifier. This name
 can be used to reference the channel within the caller scope. For example:
 
-```
+```groovy
 process foo {
   output:
     path '*.bam', emit: samples_bam
@@ -169,7 +169,7 @@ workflow {
 
 The `emit` option can be used also to name the stdout:
 
-```
+```groovy
 process sayHello {
     input:
         val cheers
@@ -197,7 +197,7 @@ workflow {
 The `workflow` keyword allows the definition of sub-workflow components that enclose the
 invocation of one or more processes and operators:
 
-```
+```groovy
 workflow my_pipeline {
     foo()
     bar( foo.out.collect() )
@@ -211,7 +211,7 @@ another workflow component definition as any other function or process with `my_
 
 A workflow component can access any variable and parameter defined in the outer scope:
 
-```
+```groovy
 params.data = '/some/data/file'
 
 workflow my_pipeline {
@@ -226,7 +226,7 @@ workflow my_pipeline {
 
 A workflow component can declare one or more input channels using the `take` keyword. For example:
 
-```
+```groovy
 workflow my_pipeline {
     take: data
     main:
@@ -242,7 +242,7 @@ When the `take` keyword is used, the beginning of the workflow body must be iden
 
 Then, the input can be specified as an argument in the workflow invocation statement:
 
-```
+```groovy
 workflow {
     my_pipeline( channel.from('/some/data') )
 }
@@ -257,7 +257,7 @@ such as a number, string, list, etc, it is implicitly converted to a {ref}`value
 
 A workflow component can declare one or more output channels using the `emit` keyword. For example:
 
-```
+```groovy
 workflow my_pipeline {
     main:
       foo(data)
@@ -276,7 +276,7 @@ to access each output channel as described for the [Process output](#process-out
 If the output channel is assigned to an identifier in the `emit` declaration, such identifier can be used
 to reference the channel within the caller scope. For example:
 
-```
+```groovy
 workflow my_pipeline {
    main:
      foo(data)
@@ -308,7 +308,7 @@ A different workflow entrypoint can be specified using the `-entry` command line
 Workflows defined in your script or imported with [Module inclusion](#module-inclusion) can be invoked and composed
 as any other process in your application.
 
-```
+```groovy
 workflow flow1 {
     take: data
     main:
@@ -366,7 +366,7 @@ A component defined in a module script can be imported into another Nextflow scr
 
 For example:
 
-```
+```groovy
 include { foo } from './some/module'
 
 workflow {
@@ -400,7 +400,7 @@ some
 
 When defined as a directory the module needs to be included specifying the module directory path:
 
-```
+```groovy
 include { foo } from './some/module'
 ```
 
@@ -412,7 +412,7 @@ A Nextflow script allows the inclusion of an arbitrary number of modules and com
 components need to be included from the same module script, the component names can be
 specified in the same inclusion using the curly brackets notation as shown below:
 
-```
+```groovy
 include { foo; bar } from './some/module'
 
 workflow {
@@ -428,7 +428,7 @@ When including a module component, it's possible to specify an *alias* with the 
 This allows the inclusion and the invocation of components with the same name
 in your script using different names. For example:
 
-```
+```groovy
 include { foo } from './some/module'
 include { foo as bar } from './other/module'
 
@@ -440,7 +440,7 @@ workflow {
 
 The same is possible when including the same component multiple times from the same module script as shown below:
 
-```
+```groovy
 include { foo; foo as bar } from './some/module'
 
 workflow {
@@ -453,7 +453,7 @@ workflow {
 
 A module script can define one or more parameters using the same syntax of a Nextflow workflow script:
 
-```
+```groovy
 params.foo = 'Hello'
 params.bar = 'world!'
 
@@ -464,7 +464,7 @@ def sayHello() {
 
 Then, parameters are inherited from the including context. For example:
 
-```
+```groovy
 params.foo = 'Hola'
 params.bar = 'Mundo'
 
@@ -493,7 +493,7 @@ Define all pipeline parameters at the beginning of the script *before* any `incl
 The option `addParams` can be used to extend the module parameters without affecting the external
 scope. For example:
 
-```
+```groovy
 include {sayHello} from './some/module' addParams(foo: 'Ciao')
 
 workflow {
@@ -584,7 +584,7 @@ As of version `22.10.0`, modules can define binary scripts that are locally scop
 
 To enable this feature add the following setting in pipeline configuration file:
 
-```
+```groovy
 nextflow.enable.moduleBinaries = true
 ```
 
@@ -613,7 +613,7 @@ Using the new DSL, Nextflow channels are automatically forked when connecting tw
 
 For example:
 
-```
+```groovy
 channel
     .from('Hello','Hola','Ciao')
     .set{ cheers }
@@ -637,7 +637,7 @@ writing of workflow scripts more fluent and readable.
 
 Nextflow processes and operators can be composed using the `|` *pipe* operator. For example:
 
-```
+```groovy
 process foo {
     input:
     val data
@@ -663,7 +663,7 @@ to uppercase and finally, the last {ref}`operator-view` operator prints it.
 The `&` *and* operator allows feeding of two or more processes with the content of the same
 channel(s). For example:
 
-```
+```groovy
 process foo {
     input:
     val data
@@ -701,7 +701,7 @@ using the {ref}`operator-view` operator.
 The break-line operator `\` can be used to split long statements over multiple lines.
 The above snippet can also be written as:
 
-```
+```groovy
 workflow {
     channel.from('Hello') \
       | map { it.reverse() } \
@@ -724,7 +724,7 @@ workflow {
 
 - Anonymous and unwrapped includes are not supported anymore. Replace them with an explicit module inclusion. For example:
 
-  ```
+  ```groovy
   include './some/library'
   include bar from './other/library'
 
@@ -736,7 +736,7 @@ workflow {
 
   Should be replaced with:
 
-  ```
+  ```groovy
   include { foo } from './some/library'
   include { bar } from './other/library'
 
@@ -749,7 +749,7 @@ workflow {
 - The use of unqualified value and file elements into input tuples is not allowed anymore. Replace them with a corresponding
   `val` or `path` qualifier:
 
-  ```
+  ```groovy
   process foo {
   input:
     tuple X, 'some-file.bam'
@@ -763,7 +763,7 @@ workflow {
 
   Use:
 
-  ```
+  ```groovy
   process foo {
   input:
     tuple val(X), path('some-file.bam')
@@ -778,7 +778,7 @@ workflow {
 - The use of unqualified value and file elements into output tuples is not allowed anymore. Replace them with a corresponding
   `val` or `path` qualifier:
 
-  ```
+  ```groovy
   process foo {
   output:
     tuple X, 'some-file.bam'
@@ -793,7 +793,7 @@ workflow {
 
   Use:
 
-  ```
+  ```groovy
   process foo {
   output:
     tuple val(X), path('some-file.bam')

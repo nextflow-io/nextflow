@@ -94,7 +94,7 @@ the submission of workflow tasks to a remote execution back-end exposing a TES A
 
 To use this feature define the following variables in the workflow launching environment:
 
-```
+```bash
 export NXF_MODE=ga4gh
 export NXF_EXECUTOR=tes
 export NXF_EXECUTOR_TES_ENDPOINT='http://back.end.com'
@@ -106,7 +106,7 @@ normalized and the requests to TES will fail.
 Then you will be able to run your workflow over TES using the usual Nextflow command line. Be sure to specify the Docker
 image to use, i.e.:
 
-```
+```bash
 nextflow run rnaseq-nf -with-docker alpine
 ```
 
@@ -118,7 +118,7 @@ If the variable `NXF_EXECUTOR_TES_ENDPOINT` is omitted the default endpoint is `
 You can use a local [Funnel](https://ohsu-comp-bio.github.io/funnel/) server using the following launch
 command line:
 
-```
+```bash
 ./funnel server --Server.HTTPPort 8000 --LocalStorage.AllowedDirs $HOME run
 ```
 

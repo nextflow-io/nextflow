@@ -58,7 +58,7 @@ It is possible to modify it in such a way that it can handle any number of input
 
 In order to make the above script able to handle any number of files simply replace `line 3` with the following line:
 
-```
+```groovy
 sequences = Channel.fromPath(params.in)
 ```
 
@@ -68,7 +68,7 @@ channel emits all the files that match the pattern specified by the parameter `p
 Given that you saved the script to a file named `example.nf` and you have a list of `FASTA` files in a folder
 named `dataset/`, you can execute it by entering this command:
 
-```
+```bash
 nextflow example.nf --in 'dataset/*.fa'
 ```
 

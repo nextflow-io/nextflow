@@ -8,7 +8,7 @@ The process definition starts with the keyword `process`, followed by process na
 delimited by curly brackets. The process body must contain a string which represents the command or, more generally,
 a script that is executed by it. A basic process looks like the following example:
 
-```
+```groovy
 process sayHello {
     """
     echo 'Hello world!' > file
@@ -54,7 +54,7 @@ in a Bash script. Naturally, the script may only use commands that are available
 The script block can be a simple string or a multi-line string. The latter approach makes it easier to write
 scripts with multiple commands spanning multiple lines. For example:
 
-```
+```groovy
 process doMoreThings {
   """
   blastp -db $db -query query.fa -outfmt 6 > blast_result
@@ -82,7 +82,7 @@ When you need to access a system environment variable in your script, you have t
 
 If you don't need to access any Nextflow variables, you can define your script block with single-quotes:
 
-```
+```groovy
 process printPath {
   '''
   echo The path is: $PATH
@@ -93,7 +93,7 @@ process printPath {
 Otherwise, you can define your script with double-quotes and escape the system environment variables by
 prefixing them with a back-slash `\` character, as shown in the following example:
 
-```
+```groovy
 process doOtherThings {
   """
   blastp -db \$DB -query query.fa -outfmt 6 > blast_result
@@ -125,7 +125,7 @@ more useful than Perl, whereas for others you may need to use Python because it 
 To use a language other than Bash, simply start your process script with the corresponding
 [shebang](<http://en.wikipedia.org/wiki/Shebang_(Unix)>). For example:
 
-```
+```groovy
 process perlStuff {
     """
     #!/usr/bin/perl
@@ -162,7 +162,7 @@ For example, you can use flow control statements (`if`, `switch`, etc) to execut
 the process inputs. The only difference here is that you must explicitly declare the `script` guard, whereas before
 it was not required. Here is an example:
 
-```
+```groovy
 mode = 'tcoffee'
 
 process align {
@@ -203,7 +203,7 @@ independently from the overall pipeline execution.
 A template is simply a shell script file that Nextflow is able to execute by using the `template` function
 as shown below:
 
-```
+```groovy
 process templateExample {
     input:
     val STR
@@ -223,7 +223,7 @@ an absolute template path.
 
 The template script may contain any code that can be executed by the underlying environment. For example:
 
-```
+```bash
 #!/bin/bash
 echo "process started at `date`"
 echo $STR
@@ -254,7 +254,7 @@ the exclamation mark `!` character, instead of the usual dollar `$` character, t
 This way, it is possible to use both Nextflow and Bash variables in the same script without having to escape
 the latter, which makes process scripts easier to read and maintain. For example:
 
-```
+```groovy
 process myTask {
     input:
     val str
@@ -290,7 +290,7 @@ Nextflow processes can also execute native Groovy code as the task itself, using
 
 For example:
 
-```
+```groovy
 process simpleSum {
     input:
     val x
@@ -323,7 +323,7 @@ This feature is experimental. It may change in future versions.
 As of version 20.11.0-edge, you can define a command **stub**, which replaces the actual process command when
 the `-stub-run` or `-stub` command line option:
 
-```
+```groovy
 process INDEX {
   input:
     path transcriptome
@@ -395,7 +395,7 @@ The available input qualifiers are listed in the following table:
 The `val` qualifier accepts any data type. It can be accessed in the process script
 by using the specified input name, as shown in the following example:
 
-```
+```groovy
 process basicExample {
   input:
   val x
@@ -428,7 +428,7 @@ the value `3` was processed before the others.
 When the process declares exactly one input, the pipe `|` operator can be used to provide inputs to the process,
 instead of passing it as a parameter. Both methods have identical semantics:
 
-```
+```groovy
 process basicExample {
   input:
   val x
@@ -463,7 +463,7 @@ The `path` qualifier allows you to provide input files to the process execution 
 the files into the process execution directory, and they can be accessed in the script by using the specified
 input name. For example:
 
-```
+```groovy
 process blastThemAll {
   input:
   path query_file
@@ -487,21 +487,21 @@ There may be cases where your task needs to use a file whose name is fixed, i.e.
 with the actual provided file. In this case, you can specify a fixed name with the `name` attribute in the
 input file parameter definition, as shown in the following example:
 
-```
+```groovy
 input:
 path query_file, name: 'query.fa'
 ```
 
 or, using a shorter syntax:
 
-```
+```groovy
 input:
 path 'query.fa'
 ```
 
 The previous example can be re-written as shown below:
 
-```
+```groovy
 process blastThemAll {
   input:
   path 'query.fa'
@@ -530,7 +530,7 @@ accept a string literal path. The string value should be an absolute path, i.e. 
 prefixed with a `/` character or a supported URI protocol (`file://`, `http://`, `s3://`, etc),
 and it cannot contain special characters (`\n`, etc).
 
-```
+```groovy
 process foo {
   input:
   path x
@@ -549,7 +549,7 @@ The `stageAs` option allows you to control how the file should be named in the t
 directory. You can provide a specific name or a pattern as described in the [Multiple input files](#multiple-input-files)
 section:
 
-```
+```groovy
 process foo {
   input:
   path x, stageAs: 'data.txt'
@@ -573,7 +573,7 @@ When the input has a fixed file name and a collection of files is received by th
 the file name will be appended with a numerical suffix representing its ordinal position
 in the list. For example:
 
-```
+```groovy
 process blastThemAll {
     input:
     path 'seq'
@@ -614,7 +614,7 @@ replaced depending on the cardinality of the received input collection.
 
 The following example shows how a wildcard can be used in the input file definition:
 
-```
+```groovy
 process blastThemAll {
     input:
     path 'seq?.fa'
@@ -640,7 +640,7 @@ identifier or the `*` wildcard.
 When the input file name is specified by using the `name` option or a string literal, you
 can also use other input values as variables in the file name string. For example:
 
-```
+```groovy
 process simpleCount {
   input:
   val x
@@ -672,7 +672,7 @@ the `stageAs` option.
 The `env` qualifier allows you to define an environment variable in the process execution context based
 on the input value. For example:
 
-```
+```groovy
 process printEnv {
     input:
     env HELLO
@@ -700,7 +700,7 @@ The `stdin` qualifier allows you to forward the input value to the
 [standard input](http://en.wikipedia.org/wiki/Standard_streams#Standard_input_.28stdin.29)
 of the process script. For example:
 
-```
+```groovy
 process printAll {
   input:
   stdin str
@@ -742,7 +742,7 @@ The `tuple` qualifier allows you to group multiple values into a single input de
 when a channel emits tuples of values that need to be handled separately. Each element in the tuple
 is associated with a corresponding element in the `tuple` definition. For example:
 
-```
+```groovy
 process tupleExample {
     input:
     tuple val(x), path('latin.txt')
@@ -769,7 +769,7 @@ exactly the same as standalone `path` inputs.
 The `each` qualifier allows you to repeat the execution of a process for each item in a collection,
 each time a new value is received. For example:
 
-```
+```groovy
 process alignSequences {
   input:
   path seq
@@ -795,7 +795,7 @@ set of parameters.
 
 Input repeaters can be applied to files as well. For example:
 
-```
+```groovy
 process alignSequences {
   input:
   path seq
@@ -846,7 +846,7 @@ the process to wait, even if the other channels have values.
 
 For example:
 
-```
+```groovy
 process foo {
   input:
   val x
@@ -882,7 +882,7 @@ because the underlying value is applied repeatedly.
 
 To better understand this behavior, compare the previous example with the following one:
 
-```
+```groovy
 process bar {
   input:
   val x
@@ -953,7 +953,7 @@ The available output qualifiers are listed in the following table:
 The `val` qualifier allows you to output any Nextflow variable defined in the process. A common use case is to
 output a variable that was defined in the `input` block, as shown in the following example:
 
-```
+```groovy
 process foo {
   input:
   each x
@@ -977,7 +977,7 @@ workflow {
 The output value can be a value literal, an input variable, any other Nextflow variable
 in the process scope, or a value expression. For example:
 
-```
+```groovy
 process foo {
   input:
   path infile
@@ -1020,7 +1020,7 @@ does not support all of the extra options provided by `path`.
 
 The `path` qualifier allows you to output one or more files produced by the process. For example:
 
-```
+```groovy
 process randomNum {
   output:
   path 'result.txt'
@@ -1056,7 +1056,7 @@ A `path` output can be defined with any of the additional options defined in the
 When an output file name contains a `*` or `?` wildcard character, it is interpreted as a [glob][glob] path matcher.
 This allows you to capture multiple files into a list and emit the list as a single value. For example:
 
-```
+```groovy
 process splitLetters {
     output:
     path 'chunk_*'
@@ -1107,7 +1107,7 @@ When an output file name needs to be expressed dynamically, it is possible to de
 string which references variables in the `input` block or in the script global context.
 For example:
 
-```
+```groovy
 process align {
   input:
   val species
@@ -1152,7 +1152,7 @@ because it will result in simpler and more portable code.
 
 The `env` qualifier allows you to output a variable defined in the process execution environment:
 
-```
+```groovy
 process myTask {
     output:
     env FOO
@@ -1174,7 +1174,7 @@ workflow {
 
 The `stdout` qualifier allows you to output the `stdout` of the executed process:
 
-```
+```groovy
 process sayHello {
     output:
     stdout
@@ -1204,7 +1204,7 @@ The `set` output type has been deprecated. Use `tuple` instead.
 The `tuple` qualifier allows you to output multiple values in a single channel. It is useful
 when you need to associate outputs with metadata, for example:
 
-```
+```groovy
 process blast {
   input:
     val species
@@ -1241,7 +1241,7 @@ there are situations where it is valid for a process to not generate output. In 
 `optional: true` may be added to the output definition, which tells Nextflow not to fail the
 process if the declared output is not produced:
 
-```
+```groovy
 output:
     path("output.txt"), optional: true
 ```
@@ -1257,7 +1257,7 @@ The condition can be any expression that returns a boolean value.
 
 It can be useful to enable/disable the process execution depending on the state of various inputs and parameters. For example:
 
-```
+```groovy
 process find {
   input:
   path proteins
@@ -1348,7 +1348,7 @@ This may be useful to initialise the underlying cluster environment or for other
 
 For example:
 
-```
+```groovy
 process foo {
   beforeScript 'source /cluster/bin/setup'
 
@@ -1378,7 +1378,7 @@ to identify univocally the outputs produced by the process execution.
 The cache is enabled by default, you can disable it for a specific process by setting the `cache`
 directive to `false`. For example:
 
-```
+```groovy
 process noCacheThis {
   cache false
 
@@ -1419,7 +1419,7 @@ package manager.
 Nextflow automatically sets up an environment for the given package names listed by in the `conda` directive.
 For example:
 
-```
+```groovy
 process foo {
   conda 'bwa=0.7.15'
 
@@ -1447,7 +1447,7 @@ It requires the Docker daemon to be running in machine where the pipeline is exe
 
 For example:
 
-```
+```groovy
 process runThisInDocker {
   container 'dockerbox:tag'
 
@@ -1475,7 +1475,7 @@ The `containerOptions` directive allows you to specify any container execution o
 container engine (ie. Docker, Singularity, etc). This can be useful to provide container settings
 only for a specific process e.g. mount a custom path:
 
-```
+```groovy
 process runThisWithDocker {
     container 'busybox:latest'
     containerOptions '--volume /data/db:/db'
@@ -1500,7 +1500,7 @@ This feature is not supported by the {ref}`k8s-executor` and {ref}`google-lifesc
 The `cpus` directive allows you to define the number of (logical) CPU required by the process' task.
 For example:
 
-```
+```groovy
 process big_job {
   cpus 8
   executor 'sge'
@@ -1526,7 +1526,7 @@ running process `stdout` file, showing it in the shell terminal.
 
 For example:
 
-```
+```groovy
 process sayHello {
   debug true
 
@@ -1547,7 +1547,7 @@ Without specifying `debug true`, you won't see the `Hello` string printed out wh
 
 The `disk` directive allows you to define how much local disk storage the process is allowed to use. For example:
 
-```
+```groovy
 process big_job {
     disk '2 GB'
     executor 'cirrus'
@@ -1603,7 +1603,7 @@ it just reports a message notifying you of the error event.
 
 For example:
 
-```
+```groovy
 process ignoreAnyError {
   errorStrategy 'ignore'
 
@@ -1619,7 +1619,7 @@ By definition, a command script fails when it ends with a non-zero exit status.
 The `retry` error strategy allows you to re-submit for execution a process
 returning an error condition. For example:
 
-```
+```groovy
 process retryIfFail {
   errorStrategy 'retry'
 
@@ -1670,7 +1670,7 @@ configuration. The following values can be used:
 
 The following example shows how to set the process's executor:
 
-```
+```groovy
 process doSomething {
   executor 'sge'
 
@@ -1691,7 +1691,7 @@ Each executor supports additional directives and `executor` configuration option
 The `ext` is a special directive used as *namespace* for user custom process directives. This can be useful for
 advanced configuration options. For example:
 
-```
+```groovy
 process mapping {
   container "biocontainers/star:${task.ext.version}"
 
@@ -1708,7 +1708,7 @@ process mapping {
 In the above example, the process uses a container whose version is controlled by the `ext.version` property.
 This can be defined in the `nextflow.config` file as shown below:
 
-```
+```groovy
 process.ext.version = '2.5.3'
 ```
 
@@ -1719,7 +1719,7 @@ process.ext.version = '2.5.3'
 The `label` directive allows the annotation of processes with mnemonic identifier of your choice.
 For example:
 
-```
+```groovy
 process bigTask {
   label 'big_mem'
 
@@ -1752,7 +1752,7 @@ when running using the {ref}`Google Life Sciences <google-lifesciences-executor>
 
 This directive is optional and if specified overrides the cpus and memory directives:
 
-```
+```groovy
 process foo {
   machineType 'n1-highmem-8'
 
@@ -1775,7 +1775,7 @@ See also: [cpus](#cpus) and [memory](#memory).
 The `maxErrors` directive allows you to specify the maximum number of times a process can fail when using the `retry` error strategy.
 By default this directive is disabled, you can set it as shown in the example below:
 
-```
+```groovy
 process retryIfFail {
   errorStrategy 'retry'
   maxErrors 5
@@ -1802,7 +1802,7 @@ By default this value is equals to the number of CPU cores available minus 1.
 
 If you want to execute a process in a sequential manner, set this directive to one. For example:
 
-```
+```groovy
 process doNotParallelizeIt {
   maxForks 1
 
@@ -1820,7 +1820,7 @@ The `maxRetries` directive allows you to define the maximum number of times a pr
 re-submitted in case of failure. This value is applied only when using the `retry` error strategy. By default
 only one retry is allowed, you can increase this value as shown below:
 
-```
+```groovy
 process retryIfFail {
     errorStrategy 'retry'
     maxRetries 3
@@ -1846,7 +1846,7 @@ See also: [errorStrategy](#errorstrategy) and [maxErrors](#maxerrors).
 
 The `memory` directive allows you to define how much memory the process is allowed to use. For example:
 
-```
+```groovy
 process big_job {
     memory '2 GB'
     executor 'sge'
@@ -1884,7 +1884,7 @@ environment in your pipeline.
 In a process definition you can use the `module` directive to load a specific module version to be used in the
 process execution environment. For example:
 
-```
+```groovy
 process basicExample {
   module 'ncbi-blast/2.2.27'
 
@@ -1898,7 +1898,7 @@ You can repeat the `module` directive for each module you need to load. Alternat
 can be specified in a single `module` directive by separating all the module names by using a `:`
 (colon) character as shown below:
 
-```
+```groovy
  process manyModules {
 
    module 'ncbi-blast/2.2.27:t_coffee/10.0:clustalw/2.1'
@@ -1916,7 +1916,7 @@ can be specified in a single `module` directive by separating all the module nam
 The `penv` directive  allows you to define the parallel environment to be used when submitting a parallel task to the
 {ref}`SGE <sge-executor>` resource manager. For example:
 
-```
+```groovy
 process big_job {
   cpus 4
   penv 'smp'
@@ -1942,7 +1942,7 @@ and config maps when using the {ref}`k8s-executor` executor.
 
 For example:
 
-```
+```groovy
 process your_task {
   pod env: 'FOO', value: 'bar'
 
@@ -1981,7 +1981,7 @@ The `pod` directive allows the definition of the following options:
 When defined in the Nextflow configuration file, a pod setting can be defined using the canonical
 associative array syntax. For example:
 
-```
+```groovy
 process {
   pod = [env: 'FOO', value: 'bar']
 }
@@ -1989,7 +1989,7 @@ process {
 
 When more than one setting needs to be provides they must be enclosed in a list definition as shown below:
 
-```
+```groovy
 process {
   pod = [ [env: 'FOO', value: 'bar'], [secret: 'my-secret/key1', mountPath: '/etc/file.txt'] ]
 }
@@ -2003,7 +2003,7 @@ Some settings, including environment variables, configs, secrets, volume claims,
 
 The `publishDir` directive allows you to publish the process output files to a specified folder. For example:
 
-```
+```groovy
 process foo {
     publishDir '/data/chunks'
 
@@ -2060,7 +2060,7 @@ Table of publish modes:
 The `mode` value must be specified as a string literal, i.e. in quotes. Multiple parameters
 need to be separated by a colon character. For example:
 
-```
+```groovy
 process foo {
     publishDir '/data/chunks', mode: 'copy', overwrite: false
 
@@ -2087,7 +2087,7 @@ should not try to access output files through the publish directory, but through
 The `queue` directory allows you to set the `queue` where jobs are scheduled when using a grid based executor
 in your pipeline. For example:
 
-```
+```groovy
 process grid_job {
     queue 'long'
     executor 'sge'
@@ -2100,7 +2100,7 @@ process grid_job {
 
 Multiple queues can be specified by separating their names with a comma for example:
 
-```
+```groovy
 process grid_job {
     queue 'short,long,cn-el6'
     executor 'sge'
@@ -2124,7 +2124,7 @@ The `resourceLabels` directive allows you to specify custom name-value pairs
 that Nextflow applies to the computing resource used to carry out the process execution.
 Resource labels can be specified using the syntax shown below:
 
-```
+```groovy
 process my_task {
     resourceLabels region: 'some-region', user: 'some-username'
 
@@ -2155,7 +2155,7 @@ Only the files declared as output in the process definition will be copied in th
 
 In its basic form simply specify `true` at the directive value, as shown below:
 
-```
+```groovy
 process simpleTask {
   scratch true
 
@@ -2174,7 +2174,7 @@ If this variable does not exist, it will create a new temporary directory by usi
 A custom environment variable, other than `$TMPDIR`, can be specified by simply using it as the scratch value, for
 example:
 
-```
+```groovy
 scratch '$MY_GRID_TMP'
 ```
 
@@ -2183,7 +2183,7 @@ pipeline script context.
 
 You can also provide a specific folder path as scratch value, for example:
 
-```
+```groovy
 scratch '/tmp/my/path'
 ```
 
@@ -2219,7 +2219,7 @@ In more detail, it affects the process execution in two main ways:
 The following example shows how to use the `storeDir` directive to create a directory containing a BLAST database
 for each species specified by an input parameter:
 
-```
+```groovy
 process formatBlastDatabases {
   storeDir '/db/genomes'
 
@@ -2284,7 +2284,7 @@ See also: [scratch](#scratch).
 The `tag` directive allows you to associate each process execution with a custom label, so that it will be easier
 to identify them in the log file or in the trace execution report. For example:
 
-```
+```groovy
 process foo {
   tag "$code"
 
@@ -2317,7 +2317,7 @@ See also {ref}`Trace execution report <trace-report>`
 
 The `time` directive allows you to define how long a process is allowed to run. For example:
 
-```
+```groovy
 process big_job {
     time '1h'
 
@@ -2354,7 +2354,7 @@ based on the process inputs.
 In order to be defined in a dynamic manner, the directive's value needs to be expressed using a
 {ref}`closure <script-closure>`, as in the following example:
 
-```
+```groovy
 process foo {
   executor 'sge'
   queue { entries > 100 ? 'long' : 'short' }
@@ -2382,7 +2382,7 @@ All directives can be assigned a dynamic value except the following:
 Assigning a string value with one or more variables is always resolved in a dynamic manner, and therefore
 is equivalent to the above syntax. For example, the above directive can also be written as:
 
-```
+```groovy
 queue "${ entries > 100 ? 'long' : 'short' }"
 ```
 
@@ -2394,7 +2394,7 @@ optional named attributes, whereas the closure syntax is only resolved dynamical
 You can retrieve the current value of a dynamic directive in the process script by using the implicit variable `task`,
 which holds the directive values defined in the current task. For example:
 
-```
+```groovy
 process foo {
   queue { entries > 100 ? 'long' : 'short' }
 
@@ -2418,7 +2418,7 @@ Instead, using a higher limit that fits all the tasks in your execution could si
 The [Dynamic directives](#dynamic-directives) evaluation feature can be used to modify the amount of computing resources requested in case
 of a process failure and try to re-execute it using a higher limit. For example:
 
-```
+```groovy
 process foo {
     memory { 2.GB * task.attempt }
     time { 1.hour * task.attempt }
@@ -2447,7 +2447,7 @@ network congestion. In these cases immediately re-executing the task will likely
 the identical error. A retry with an exponential backoff delay can better recover these error
 conditions:
 
-```
+```groovy
 process foo {
   errorStrategy { sleep(Math.pow(2, task.attempt) * 200 as long); return 'retry' }
   maxRetries 5

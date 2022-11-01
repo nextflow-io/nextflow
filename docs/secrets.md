@@ -29,7 +29,7 @@ Nextflow provides a command named `secrets`. This command allows four simple ope
 
 Once create the secrets can be used in the pipeline configuration file as implicit variables using the `secrets` scope:
 
-```
+```groovy
 aws {
   accessKey = secrets.MY_ACCESS_KEY
   secretKey = secrets.MY_SECRET_KEY
@@ -47,7 +47,7 @@ Secrets **cannot** be assigned to pipeline parameters.
 
 Secrets can be access by pipeline processes by using the `secret` directive. For example:
 
-```
+```groovy
 process someJob {
     secret 'MY_ACCESS_KEY'
     secret 'MY_SECRET_KEY'

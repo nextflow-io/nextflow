@@ -8,7 +8,7 @@
 
 The `nextflow log` command shows information about executed pipelines in the current folder:
 
-```
+```bash
 nextflow log <run name> [options]
 ```
 
@@ -80,7 +80,7 @@ task folder: $folder
 
 Then, the following command will output a markdown file containing the script, exit status and folder of all executed tasks:
 
-```
+```bash
 nextflow log goofy_kilby -t my-template.md > execution-report.md
 ```
 
@@ -88,7 +88,7 @@ nextflow log goofy_kilby -t my-template.md > execution-report.md
 
 The `filter` option makes it possible to select which entries to include in the log report. Any valid groovy boolean expression on the log fields can be used to define the filter condition. For example:
 
-```
+```bash
 nextflow log goofy_kilby -filter 'name =~ /foo.*/ && status == "FAILED"'
 ```
 
@@ -107,7 +107,7 @@ about a workflow execution. The report is organised in the three main sections: 
 To enable the creation of this report add the `-with-report` command line option when launching the pipeline
 execution. For example:
 
-```
+```bash
 nextflow run <pipeline name> -with-report [file name]
 ```
 
@@ -166,7 +166,7 @@ script, including: submission time, start time, completion time, cpu and memory 
 In order to create the execution trace file add the `-with-trace` command line option when launching the pipeline execution.
 For example:
 
-```
+```bash
 nextflow run <pipeline name> -with-trace
 ```
 
@@ -274,7 +274,7 @@ As each process can spawn many tasks, colors are used to identify those tasks be
 To enable the creation of the timeline report add the `-with-timeline` command line option when launching the pipeline
 execution. For example:
 
-```
+```bash
 nextflow run <pipeline name> -with-timeline [file name]
 ```
 
@@ -294,7 +294,7 @@ in the [DOT format](http://www.graphviz.org/content/dot-language).
 The execution DAG can be rendered in a different format by specifying an output file name which has an extension
 corresponding to the required format. For example:
 
-```
+```bash
 nextflow run <script-name> -with-dag flowchart.png
 ```
 
@@ -326,7 +326,7 @@ Visit the [Mermaid documentation](https://mermaid-js.github.io/mermaid/#/flowcha
 
 Here is the Mermaid diagram produced by Nextflow for the above example:
 
-```
+```mermaid
 flowchart TD
     p0((Channel.fromPath))
     p1([ifEmpty])
@@ -373,21 +373,21 @@ And the final image produced with the [Mermaid Live Editor](https://mermaid-js.g
 Nextflow can send detailed workflow execution metadata and runtime statistics to a HTTP endpoint.
 To enable this feature, use the `-with-weblog` as shown below:
 
-```
+```bash
 nextflow run <pipeline name> -with-weblog [url]
 ```
 
 Workflow events are sent as HTTP POST requests to the given URL. The message consists of the
 following JSON structure:
 
-```
+```json
 {
-  "runName": <run name>,
-  "runId": <uuid>,
-  "event": <started|process_submitted|process_started|process_completed|error|completed>,
-  "utcTime": <UTC timestamp>,
-  "trace": { ... },
-  "metadata": { ... }
+  "runName": "<run name>",
+  "runId": "<uuid>",
+  "event": "<started|process_submitted|process_started|process_completed|error|completed>",
+  "utcTime": "<UTC timestamp>",
+  "trace": {  },
+  "metadata": {  }
 }
 ```
 
@@ -413,7 +413,7 @@ When a workflow execution is started, a message like the following is posted to 
 properties in the parameter scope will look different for your workflow. Here is an example output from the `nf-core/hlatyping`
 pipeline with the weblog feature enabled:
 
-```
+```json
 {
   "runName": "friendly_pesquet",
   "runId": "170aa09c-105f-49d0-99b4-8eb6a146e4a7",
@@ -514,7 +514,7 @@ pipeline with the weblog feature enabled:
 
 Once a process is completed, a message like the following is posted to the specified end-point:
 
-```
+```json
 {
   "runName": "friendly_pesquet",
   "runId": "170aa09c-105f-49d0-99b4-8eb6a146e4a7",

@@ -13,7 +13,7 @@ The built-in function `sendMail` allows you to send a mail message from a workfl
 The mail attributes are specified as named parameters or providing an equivalent associative array as argument.
 For example:
 
-```
+```groovy
 sendMail( to: 'you@gmail.com',
           subject: 'Catch up',
           body: 'Hi, how are you!',
@@ -22,7 +22,7 @@ sendMail( to: 'you@gmail.com',
 
 therefore this is equivalent to write:
 
-```
+```groovy
 mail = [ to: 'you@gmail.com',
          subject: 'Catch up',
          body: 'Hi, how are you!',
@@ -54,7 +54,7 @@ The following parameters can be specified:
 
 An second version of the `sendMail` allows a more idiomatic syntax:
 
-```
+```groovy
 sendMail {
     to 'you@gmail.com'
     from 'me@gmail.com'
@@ -100,7 +100,7 @@ Moreover for each attachment it's possible to specify one or more of the followi
 
 For example:
 
-```
+```groovy
 sendMail {
     to 'you@dot.com'
     attach '/some/file.txt', fileName: 'manuscript.txt'
@@ -122,7 +122,7 @@ eventually provided by the underlying system (eg. `sendmail` or `mail`).
 If your system does not provide access to none of the above you can configure a SMTP server in the `nextflow.config` file.
 For example:
 
-```
+```groovy
 mail {
     smtp.host = 'your.smtp-server.com'
     smtp.port = 475
@@ -137,7 +137,7 @@ See the {ref}`mail scope <config-mail>` section to learn more the mail server co
 You can use the `sendMail` function with a {ref}`workflow completion handler <metadata-completion-handler>`
 to notify the completion of a workflow completion. For example:
 
-```
+```groovy
 workflow.onComplete {
 
     def msg = """\
@@ -166,7 +166,7 @@ when a workflow execution terminates.
 
 To enable simply specify the `-N` option when launching the pipeline execution. For example:
 
-```
+```bash
 nextflow run <pipeline name> -N <recipient address>
 ```
 

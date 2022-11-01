@@ -27,7 +27,7 @@ to use UTF-8 encoding when editing Nextflow scripts with your preferred text edi
 
 To print something is as easy as using one of the `print` or `println` methods.
 
-```
+```groovy
 println "Hello, World!"
 ```
 
@@ -38,7 +38,7 @@ to the printed string.
 
 To define a variable, simply assign a value to it:
 
-```
+```groovy
 x = 1
 println x
 
@@ -59,19 +59,19 @@ println x
 
 A List object can be defined by placing the list items in square brackets:
 
-```
+```groovy
 myList = [1776, -1, 33, 99, 0, 928734928763]
 ```
 
 You can access a given item in the list with square-bracket notation (indexes start at 0):
 
-```
+```groovy
 println myList[0]
 ```
 
 In order to get the length of the list use the `size` method:
 
-```
+```groovy
 println myList.size()
 ```
 
@@ -85,7 +85,7 @@ Learn more about lists:
 
 Maps are used to store *associative arrays* (also known as *dictionaries*). They are unordered collections of heterogeneous, named data:
 
-```
+```groovy
 scores = [ "Brett":100, "Pete":"Did not finish", "Andrew":86.87934 ]
 ```
 
@@ -94,14 +94,14 @@ and `Andrew` is a floating-point number.
 
 We can access the values in a map in two main ways:
 
-```
+```groovy
 println scores["Pete"]
 println scores.Pete
 ```
 
 To add data to or modify a map, the syntax is similar to adding values to list:
 
-```
+```groovy
 scores["Pete"] = 3
 scores["Cedric"] = 120
 ```
@@ -118,7 +118,7 @@ Learn more about maps:
 
 An array or a list object can used to assign to multiple variables at once:
 
-```
+```groovy
 (a, b, c) = [10, 20, 'foo']
 assert a == 10 && b == 20 && c == 'foo'
 ```
@@ -132,7 +132,7 @@ Read more about [Multiple assignment](http://www.groovy-lang.org/semantics.html#
 One of the most important features of any programming language is the ability to execute different code under
 different conditions. The simplest way to do this is to use the `if` construct:
 
-```
+```groovy
 x = Math.random()
 if( x < 0.5 ) {
     println "You lost."
@@ -146,14 +146,14 @@ else {
 
 Strings can be defined by enclosing text in single or double quotes (`'` or `"` characters):
 
-```
+```groovy
 println "he said 'cheese' once"
 println 'he said "cheese!" again'
 ```
 
 Strings can be concatenated with `+`:
 
-```
+```groovy
 a = "world"
 print "hello " + a + "\n"
 ```
@@ -168,7 +168,7 @@ Double-quoted strings support variable interpolations, while single-quoted strin
 In practice, double-quoted strings can contain the value of an arbitrary variable by prefixing its name with the `$` character,
 or the value of any expression by using the `${expression}` syntax, similar to Bash/shell scripts:
 
-```
+```groovy
 foxtype = 'quick'
 foxcolor = ['b', 'r', 'o', 'w', 'n']
 println "The $foxtype ${foxcolor.join()} fox"
@@ -188,7 +188,7 @@ $x + $y
 
 A block of text that span multiple lines can be defined by delimiting it with triple single or double quotes:
 
-```
+```groovy
 text = """
     hello there James
     how are you today?
@@ -202,7 +202,7 @@ single-quoted multi-line strings do not.
 
 As in Bash/shell scripts, terminating a line in a multi-line string with a `\` character prevents a newline character from separating that line from the one that follows:
 
-```
+```groovy
 myLongCmdline = """
     blastp \
     -in $input_query \
@@ -262,7 +262,7 @@ The following variables are implicitly defined in the `task` object of each proc
 The `task` object also contains the values of all process directives for the given task,
 which allows you to access these settings at runtime. For examples:
 
-```
+```groovy
 process foo {
   script:
   """
@@ -286,7 +286,7 @@ Thus, you can define a chunk of code and then pass it around as if it were a str
 
 More formally, you can create functions that are defined as *first-class objects*.
 
-```
+```groovy
 square = { it * it }
 ```
 
@@ -296,7 +296,7 @@ The `it` identifier is an implicit variable that represents the value that is pa
 Once compiled the function object is assigned to the variable `square` as any other variable assignments shown previously.
 Now we can do something like this:
 
-```
+```groovy
 println square(9)
 ```
 
@@ -305,7 +305,7 @@ and get the value 81.
 This is not very interesting until we find that we can pass the function `square` as an argument to other functions or methods.
 Some built-in functions take a function like this as an argument. One example is the `collect` method on lists:
 
-```
+```groovy
 [ 1, 2, 3, 4 ].collect(square)
 ```
 
@@ -313,7 +313,7 @@ This expression says: Create an array with the values 1, 2, 3 and 4, then call i
 closure we defined above. The `collect` method runs through each item in the array, calls the closure on the item,
 then puts the result in a new array, resulting in:
 
-```
+```groovy
 [ 1, 4, 9, 16 ]
 ```
 
@@ -323,7 +323,7 @@ By default, closures take a single parameter called `it`, but you can also creat
 For example, the method `Map.each()` can take a closure with two arguments, to which it binds the `key` and the associated `value`
 for each key-value pair in the `Map`. Here, we use the obvious variable names `key` and `value` in our closure:
 
-```
+```groovy
 printMapClosure = { key, value ->
     println "$key = $value"
 }
@@ -347,7 +347,7 @@ and is defined in the place where it needs to be used.
 
 As an example showing both these features, see the following code fragment:
 
-```
+```groovy
 myMap = ["China": 1 , "India" : 2, "USA" : 3]
 
 result = 0
@@ -369,14 +369,14 @@ Regular expressions are available via the `~/pattern/` syntax and the `=~` and `
 
 Use `=~` to check whether a given pattern occurs anywhere in a string:
 
-```
+```groovy
 assert 'foo' =~ /foo/       // return TRUE
 assert 'foobar' =~ /foo/    // return TRUE
 ```
 
 Use `==~` to check whether a string matches a given regular expression pattern exactly.
 
-```
+```groovy
 assert 'foo' ==~ /foo/       // return TRUE
 assert 'foobar' ==~ /foo/    // return FALSE
 ```
@@ -384,7 +384,7 @@ assert 'foobar' ==~ /foo/    // return FALSE
 It is worth noting that the `~` operator creates a Java `Pattern` object from the given string,
 while the `=~` operator creates a Java `Matcher` object.
 
-```
+```groovy
 x = ~/abc/
 println x.class
 // prints java.util.regex.Pattern
@@ -403,7 +403,7 @@ You may also be interested in this post: [Groovy: Don't Fear the RegExp](https:/
 
 To replace pattern occurrences in a given string, use the `replaceFirst` and `replaceAll` methods:
 
-```
+```groovy
 x = "colour".replaceFirst(/ou/, "o")
 println x
 // prints: color
@@ -422,7 +422,7 @@ the remaining elements are the strings that match each group.
 
 Here's how it works:
 
-```
+```groovy
 programVersion = '2.7.3-beta'
 m = programVersion =~ /(\d+)\.(\d+)\.(\d+)-?(.+)/
 
@@ -435,7 +435,7 @@ assert m[0][4] == 'beta'
 
 Applying some syntactic sugar, you can do the same in just one line of code:
 
-```
+```groovy
 programVersion = '2.7.3-beta'
 (full, major, minor, patch, flavor) = (programVersion =~ /(\d+)\.(\d+)\.(\d+)-?(.+)/)[0]
 
@@ -451,7 +451,7 @@ println flavor  // beta
 You can remove part of a `String` value using a regular expression pattern. The first match found is
 replaced with an empty String:
 
-```
+```groovy
 // define the regexp pattern
 wordStartsWithGr = ~/(?i)\s+Gr\w+/
 
@@ -462,13 +462,13 @@ wordStartsWithGr = ~/(?i)\s+Gr\w+/
 
 Remove the first 5-character word from a string:
 
-```
+```groovy
 assert ('Remove first match of 5 letter word' - ~/\b\w{5}\b/) == 'Remove  match of 5 letter word'
 ```
 
 Remove the first number with its trailing whitespace from a string:
 
-```
+```groovy
 assert ('Line contains 20 characters' - ~/\d+\s+/) == 'Line contains characters'
 ```
 
@@ -481,7 +481,7 @@ assert ('Line contains 20 characters' - ~/\d+\s+/) == 'Line contains characters'
 To access and work with files, use the `file` method, which returns a file system object
 given a file path string:
 
-```
+```groovy
 myFile = file('some/path/to/my_file.file')
 ```
 
@@ -492,7 +492,7 @@ When using the wildcard characters `*`, `?`, `[]` and `{}`, the argument is inte
 and the `file` method returns a list object holding the paths of files whose names match the specified pattern, or an
 empty list if no match is found:
 
-```
+```groovy
 listOfFiles = file('some/path/*.fa')
 ```
 
@@ -503,7 +503,7 @@ Two asterisks (`**`) in a glob pattern works like `*` but also searches through 
 By default, wildcard characters do not match directories or hidden files. For example, if you want to include hidden
 files in the result list, add the optional parameter `hidden`:
 
-```
+```groovy
 listWithHidden = file('some/path/*.fa', hidden: true)
 ```
 
@@ -537,13 +537,13 @@ Given a file variable, declared using the `file` method as shown in the previous
 is as easy as getting the value of the file's `text` property, which returns the file content
 as a string value:
 
-```
+```groovy
 print myFile.text
 ```
 
 Similarly, you can save a string value to a file by simply assigning it to the file's `text` property:
 
-```
+```groovy
 myFile.text = 'Hello world!'
 ```
 
@@ -553,26 +553,26 @@ The above assignment overwrites any existing file contents, and implicitly creat
 
 In order to append a string value to a file without erasing existing content, you can use the `append` method:
 
-```
+```groovy
 myFile.append('Add this line\n')
 ```
 
 Or use the left shift operator, a more idiomatic way to append text content to a file:
 
-```
+```groovy
 myFile << 'Add a line more\n'
 ```
 
 Binary data can managed in the same way, just using the file property `bytes` instead of `text`. Thus, the following
 example reads the file and returns its content as a byte array:
 
-```
+```groovy
 binaryContent = myFile.bytes
 ```
 
 Or you can save a byte array data buffer to a file, by simply writing:
 
-```
+```groovy
 myFile.bytes = binaryBuffer
 ```
 
@@ -587,7 +587,7 @@ reading/writing a file line by line or using a fixed size buffer.
 In order to read a text file line by line you can use the method `readLines()` provided by the file object, which
 returns the file content as a list of strings:
 
-```
+```groovy
 myFile = file('some/my_file.txt')
 allLines = myFile.readLines()
 for( line : allLines ) {
@@ -597,7 +597,7 @@ for( line : allLines ) {
 
 This can also be written in a more idiomatic syntax:
 
-```
+```groovy
 file('some/my_file.txt')
     .readLines()
     .each { println it }
@@ -610,7 +610,7 @@ this reason, do not use it to read big files.
 
 To process a big file, use the method `eachLine`, which reads only a single line at a time into memory:
 
-```
+```groovy
 count = 0
 myFile.eachLine { str ->
     println "line ${count++}: $str"
@@ -624,7 +624,7 @@ The classes `Reader` and `InputStream` provide fine control for reading text and
 The method `newReader` creates a [Reader](http://docs.oracle.com/javase/7/docs/api/java/io/Reader.html) object
 for the given file that allows you to read the content as single characters, lines or arrays of characters:
 
-```
+```groovy
 myReader = myFile.newReader()
 String line
 while( line = myReader.readLine() ) {
@@ -636,7 +636,7 @@ myReader.close()
 The method `withReader` works similarly, but automatically calls the `close` method for you when you have finished
 processing the file. So, the previous example can be written more simply as:
 
-```
+```groovy
 myFile.withReader {
     String line
     while( line = it.readLine() ) {
@@ -675,7 +675,7 @@ respectively, including low-level operations for single characters or bytes, and
 For example, given two file objects `sourceFile` and `targetFile`, the following code copies the
 first file's content into the second file, replacing all `U` characters with `X`:
 
-```
+```groovy
 sourceFile.withReader { source ->
     targetFile.withWriter { target ->
         String line
@@ -711,14 +711,14 @@ methods available for writing data to files.
 Let's assume that you need to walk through a directory of your choice. You can define the `myDir` variable
 that points to it:
 
-```
+```groovy
 myDir = file('any/path')
 ```
 
 The simplest way to get a directory list is by using the methods `list` or `listFiles`,
 which return a collection of first-level elements (files and directories) of a directory:
 
-```
+```groovy
 allFiles = myDir.list()
 for( def file : allFiles ) {
     println file
@@ -733,7 +733,7 @@ returns a list of file objects that allow you to access file metadata (size, las
 The `eachFile` method allows you to iterate through the first-level elements only
 (just like `listFiles`). As with other `each-` methods, `eachFiles` takes a closure as a parameter:
 
-```
+```groovy
 myDir.eachFile { item ->
     if( item.isFile() ) {
         println "${item.getName()} - size: ${item.size()}"
@@ -761,14 +761,14 @@ See also: Channel {ref}`channel-path` method.
 
 Given a file variable representing a nonexistent directory, like the following:
 
-```
+```groovy
 myDir = file('any/path')
 ```
 
 the method `mkdir` creates a directory at the given path, returning `true` if the directory is created
 successfully, and `false` otherwise:
 
-```
+```groovy
 result = myDir.mkdir()
 println result ? "OK" : "Cannot create directory: $myDir"
 ```
@@ -779,7 +779,7 @@ If the parent directories do not exist, the above method will fail and return `f
 
 The method `mkdirs` creates the directory named by the file object, including any nonexistent parent directories:
 
-```
+```groovy
 myDir.mkdirs()
 ```
 
@@ -787,7 +787,7 @@ myDir.mkdirs()
 
 Given a file, the method `mklink` creates a *file system link* for that file using the path specified as a parameter:
 
-```
+```groovy
 myFile = file('/some/path/file.txt')
 myFile.mklink('/user/name/link-to-file.txt')
 ```
@@ -804,7 +804,7 @@ Table of optional parameters:
 The method `copyTo` copies a file into a new file or into a directory, or copies a directory to a new
 directory:
 
-```
+```groovy
 myFile.copyTo('new_name.txt')
 ```
 
@@ -815,7 +815,7 @@ a directory, the source file will be copied into that directory, maintaining the
 
 When the source file is a directory, all its content is copied to the target directory:
 
-```
+```groovy
 myDir = file('/some/path')
 myDir.copyTo('/some/new/path')
 ```
@@ -835,7 +835,7 @@ exist, it is treated as a regular file, with any missing parent directories crea
 
 You can move a file by using the method `moveTo`:
 
-```
+```groovy
 myFile = file('/some/path/file.txt')
 myFile.moveTo('/another/path/new_file.txt')
 ```
@@ -848,7 +848,7 @@ maintaining the file's original name.
 
 When the source is a directory, all the directory content is moved to the target directory:
 
-```
+```groovy
 myDir = file('/any/dir_a')
 myDir.moveTo('/any/dir_b')
 ```
@@ -875,7 +875,7 @@ same caveat as that given above for `copyTo`.
 
 You can rename a file or directory by simply using the `renameTo` file method:
 
-```
+```groovy
 myFile = file('my_file.txt')
 myFile.renameTo('new_file_name.txt')
 ```
@@ -885,7 +885,7 @@ myFile.renameTo('new_file_name.txt')
 The file method `delete` deletes the file or directory at the given path, returning `true` if the
 operation succeeds, and `false` otherwise:
 
-```
+```groovy
 myFile = file('some/file.txt')
 result = myFile.delete()
 println result ? "OK" : "Cannot delete: $myFile"
@@ -918,7 +918,7 @@ The following methods can be used on a file variable created by using the `file`
 
 For example, the following line prints a file name and size:
 
-```
+```groovy
 println "File ${myFile.getName() size: ${myFile.size()}"
 ```
 
@@ -936,20 +936,20 @@ Given a file variable representing a file (or directory), the method `getPermiss
 [Linux symbolic notation](http://en.wikipedia.org/wiki/File_system_permissions#Symbolic_notation)
 e.g. `rw-rw-r--`:
 
-```
+```groovy
 permissions = myFile.getPermissions()
 ```
 
 Similarly, the method `setPermissions` sets the file's permissions using the same notation:
 
-```
+```groovy
 myFile.setPermissions('rwxr-xr-x')
 ```
 
 A second version of the `setPermissions` method sets a file's permissions given three digits representing,
 respectively, the `owner`, `group` and `other` permissions:
 
-```
+```groovy
 myFile.setPermissions(7,5,5)
 ```
 
@@ -960,13 +960,13 @@ Learn more about [File permissions numeric notation](http://en.wikipedia.org/wik
 Nextflow provides transparent integration of HTTP/S and FTP protocols for handling remote resources
 as local file system objects. Simply specify the resource URL as the argument of the `file` object:
 
-```
+```groovy
 pdb = file('http://files.rcsb.org/header/5FID.pdb')
 ```
 
 Then, you can access it as a local file as described in the previous sections:
 
-```
+```groovy
 println pdb.text
 ```
 
@@ -983,7 +983,7 @@ Write and list operations are not supported for HTTP/S and FTP files.
 
 The `countLines` methods counts the lines in a text files.
 
-```
+```groovy
 def sample = file('/data/sample.txt')
 println sample.countLines()
 ```
@@ -996,7 +996,7 @@ automatically uncompressed.
 The `countFasta` method counts the number of records in [FASTA](https://en.wikipedia.org/wiki/FASTA_format)
 formatted file.
 
-```
+```groovy
 def sample = file('/data/sample.fasta')
 println sample.countFasta()
 ```
@@ -1009,7 +1009,7 @@ automatically uncompressed.
 The `countFastq` method counts the number of records in a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format)
 formatted file.
 
-```
+```groovy
 def sample = file('/data/sample.fastq')
 println sample.countFastq()
 ```

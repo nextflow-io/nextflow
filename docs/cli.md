@@ -1253,7 +1253,7 @@ Pipeline script can use an arbitrary number of parameters that can be overridden
 using the command line or the Nextflow configuration file. Any script parameter can be specified
 on the command line prefixing the parameter name with double dash characters e.g.:
 
-```
+```bash
 nextflow run <my script> --foo Hello
 ```
 
@@ -1269,7 +1269,7 @@ When a command line parameter includes one or more glob characters, i.e. wildcar
 the parameter value needs to be enclosed in quotes to prevent Bash expansion and preserve
 the glob characters. For example:
 
-```
+```bash
 nextflow run <my script> --files "*.fasta"
 ```
 :::

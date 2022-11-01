@@ -9,9 +9,9 @@ to make programmatic calls to AWS services.
 
 You can provide your AWS access keys using the standard AWS variables shown below:
 
-> - `AWS_ACCESS_KEY_ID`
-> - `AWS_SECRET_ACCESS_KEY`
-> - `AWS_DEFAULT_REGION`
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_DEFAULT_REGION`
 
 If `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are not defined in the environment, Nextflow will attempt to
 retrieve credentials from your `~/.aws/credentials` or `~/.aws/config` files. The `default` profile can be
@@ -177,10 +177,10 @@ See the sections below to learn how to create a custom AMI and install the AWS C
 
 1. In the AWS Console, create a [Compute environment](http://docs.aws.amazon.com/batch/latest/userguide/compute_environments.html) (CE) in your AWS Batch Service.
 
-   > 1. If you are using a custom AMI (see following sections), the AMI ID must be specified in the CE configuration
-   > 2. Make sure to select an AMI (either custom or existing) with Docker installed (see following sections)
-   > 3. Make sure the policy `AmazonS3FullAccess` (granting access to S3 buckets) is attached to the instance role configured for the CE
-   > 4. If you plan to use Docker images from Amazon ECS container, make sure the `AmazonEC2ContainerServiceforEC2Role` policy is also attached to the instance role
+   1. If you are using a custom AMI (see following sections), the AMI ID must be specified in the CE configuration
+   2. Make sure to select an AMI (either custom or existing) with Docker installed (see following sections)
+   3. Make sure the policy `AmazonS3FullAccess` (granting access to S3 buckets) is attached to the instance role configured for the CE
+   4. If you plan to use Docker images from Amazon ECS container, make sure the `AmazonEC2ContainerServiceforEC2Role` policy is also attached to the instance role
 
 2. In the AWS Console, create (at least) one [Job Queue](https://docs.aws.amazon.com/batch/latest/userguide/job_queues.html) and bind it to the Compute environment.
 
@@ -201,7 +201,7 @@ When configuring your pipeline:
 
 An example `nextflow.config` file is shown below:
 
-```
+```groovy
 plugins {
     id 'nf-amazon'
 }
@@ -258,7 +258,7 @@ Container options must be passed in their long from for "--option value" or shor
 
 Few examples:
 
-```
+```groovy
 containerOptions '--tmpfs /run:rw,noexec,nosuid,size=128 --tmpfs /app:ro,size=64'
 
 containerOptions '-e MYVAR1 --env MYVAR2=foo2 --env MYVAR3=foo3 --memory-swap 3240000 --memory-swappiness 20 --shm-size 16000000'
@@ -324,7 +324,7 @@ the necessary dependencies.
 
 The following snippet shows how to install AWS CLI with [Miniconda](https://conda.io/miniconda.html) in the home folder:
 
-```
+```bash
 cd $HOME
 sudo yum install -y bzip2 wget
 wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
@@ -348,7 +348,7 @@ Modifying this directory structure, after the installation, will cause the tool 
 To configure Nextflow to use this installation, specify the `cliPath` parameter in the {ref}`AWS Batch<config-aws-batch>`
 configuration as shown below:
 
-```
+```groovy
 aws.batch.cliPath = '/home/ec2-user/miniconda/bin/aws'
 ```
 
@@ -372,7 +372,7 @@ however if you create your AMI starting from a different AMI that does not have 
 
 The following snippet shows how to install Docker on an Amazon EC2 instance:
 
-```
+```bash
 sudo yum update -y
 sudo amazon-linux-extras install docker
 sudo yum install docker
@@ -381,7 +381,7 @@ sudo service docker start
 
 Then, add the `ec2-user` to the docker group so you can execute Docker commands without using `sudo`:
 
-```
+```bash
 sudo usermod -a -G docker ec2-user
 ```
 
@@ -400,7 +400,7 @@ you can also install it on any EC2 instance that supports the Amazon ECS specifi
 
 To install the agent, follow these steps:
 
-```
+```bash
 sudo amazon-linux-extras disable docker
 sudo amazon-linux-extras install -y ecs
 sudo systemctl enable --now ecs
@@ -408,7 +408,7 @@ sudo systemctl enable --now ecs
 
 To test the installation:
 
-```
+```bash
 curl -s http://localhost:51678/v1/metadata | python -mjson.tool (test)
 ```
 
@@ -432,7 +432,7 @@ you created. You can then associate a process execution with this *Job definitio
 directive and specifing, in place of the container image name, the Job definition name prefixed by the
 `job-definition://` string, as shown below:
 
-```
+```groovy
 process.container = 'job-definition://your-job-definition-name'
 ```
 
@@ -445,7 +445,7 @@ Pipeline input data can be stored either locally or in a [S3](https://aws.amazon
 The pipeline execution must specifies a AWS Storage bucket where jobs intermediate results are stored with the
 `-bucket-dir` command line options. For example:
 
-```
+```bash
 nextflow run my-pipeline -bucket-dir s3://my-bucket/some/path
 ```
 
@@ -464,7 +464,7 @@ To enable this feature use one or more {ref}`config-process-selectors` in your N
 the AWS Batch {ref}`configuration <aws-batch-config>` only to a subset of processes in your workflow.
 For example:
 
-```
+```groovy
 aws {
     region = 'eu-west-1'
     batch {
@@ -488,7 +488,7 @@ with the {ref}`process-label` `bigTask`, the remaining process with run in the l
 
 User provided container volume mounts can be provided as shown below:
 
-```
+```groovy
 aws {
   region = 'eu-west-1'
   batch {
@@ -501,7 +501,7 @@ Multiple volumes can be specified using a comma separated paths. The usual Docke
 can be used to specify complex volumes for which the container paths is different from the host paths
 or to specify *read-only* option. For example:
 
-```
+```groovy
 aws {
   region = 'eu-west-1'
   batch {

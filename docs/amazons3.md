@@ -20,7 +20,7 @@ s3://my-bucket/data/sequences.fa
 The usual file operations can be applied on a path handle created using the above notation. For example the content
 of a S3 file can be printed as shown below:
 
-```
+```groovy
 println file('s3://my-bucket/data/sequences.fa').text
 ```
 
@@ -38,7 +38,7 @@ Amazon access credentials can be provided in two ways:
 The AWS access and secret keys can be specified by using the `aws` section in the `nextflow.config` configuration
 file as shown below:
 
-```
+```groovy
 aws {
   accessKey = '<Your AWS access key>'
   secretKey = '<Your AWS secret key>'
@@ -51,12 +51,12 @@ places, including environment variables and local AWS configuration files.
 
 Nextflow looks for AWS credentials in the following order:
 
-> 1. the `nextflow.config` file in the pipeline execution directory
-> 2. the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
-> 3. the environment variables `AWS_ACCESS_KEY` and `AWS_SECRET_KEY`
-> 4. the `default` profile in the AWS credentials file located at `~/.aws/credentials`
-> 5. the `default` profile in the AWS client configuration file located at `~/.aws/config`
-> 6. the temporary AWS credentials provided by an IAM instance role. See [IAM Roles](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html) documentation for details.
+1. the `nextflow.config` file in the pipeline execution directory
+2. the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
+3. the environment variables `AWS_ACCESS_KEY` and `AWS_SECRET_KEY`
+4. the `default` profile in the AWS credentials file located at `~/.aws/credentials`
+5. the `default` profile in the AWS client configuration file located at `~/.aws/config`
+6. the temporary AWS credentials provided by an IAM instance role. See [IAM Roles](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html) documentation for details.
 
 More information regarding [AWS Security Credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html)
 are available in Amazon documentation.
@@ -77,7 +77,7 @@ documentation.
 To use an AWS China region, please make sure to specify the corresponding AWS API S3 endpoint in the Nextflow configuration
 file as shown below:
 
-```
+```groovy
 aws.client.endpoint = "https://s3.cn-north-1.amazonaws.com.cn"
 ```
 

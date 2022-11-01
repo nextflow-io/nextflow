@@ -36,7 +36,7 @@ distributed cluster, depending on where you want to run your pipeline.
 You won't need to modify your Nextflow script in order to run it with Charliecloud. Simply specify the docker image from
 where the containers are started by using the `-with-charliecloud` command line option. For example:
 
-```
+```bash
 nextflow run <your script> -with-charliecloud [container]
 ```
 
@@ -53,7 +53,7 @@ it behaves in a completely transparent manner without requiring extra steps or a
 If you want to avoid entering the Container image as a command line parameter, you can define it in the Nextflow configuration
 file. For example you can add the following lines in the `nextflow.config` file:
 
-```
+```groovy
 process.container = '/path/to/container'
 charliecloud.enabled = true
 ```
@@ -86,14 +86,14 @@ To pull images from a third party Docker registry simply provide the URL to the 
 Docker Hub is assumed. For example this can be used to pull an image from quay.io and convert it automatically
 to the Charliecloud container format:
 
-```
+```groovy
 process.container = 'https://quay.io/biocontainers/multiqc:1.3--py35_2'
 charliecloud.enabled = true
 ```
 
 Whereas this would pull from Docker Hub:
 
-```
+```groovy
 process.container = 'nextflow/examples:latest'
 charliecloud.enabled = true
 ```
@@ -104,7 +104,7 @@ It is possible to specify a different container for each process definition in y
 let's suppose you have two processes named `foo` and `bar`. You can specify two different containers
 in the `nextflow.config` file as shown below:
 
-```
+```groovy
 process {
     withName:foo {
         container = 'image_name_1'
@@ -144,7 +144,7 @@ explained in this excellent tutorial: [How to use Docker on OSX](http://viget.co
 You won't need to modify your Nextflow script in order to run it with Docker. Simply specify the Docker image from
 where the containers are started by using the `-with-docker` command line option. For example:
 
-```
+```bash
 nextflow run <your script> -with-docker [docker image]
 ```
 
@@ -161,7 +161,7 @@ it behaves in a completely transparent manner without requiring extra steps or a
 If you want to avoid entering the Docker image as a command line parameter, you can define it in the Nextflow configuration
 file. For example you can add the following lines in the `nextflow.config` file:
 
-```
+```groovy
 process.container = 'nextflow/examples:latest'
 docker.enabled = true
 ```
@@ -184,7 +184,7 @@ It is possible to specify a different Docker image for each process definition i
 suppose you have two processes named `foo` and `bar`. You can specify two different Docker images for them
 in the Nextflow script as shown below:
 
-```
+```groovy
 process foo {
   container 'image_name_1'
 
@@ -204,7 +204,7 @@ process bar {
 
 Alternatively, the same containers definitions can be provided by using the `nextflow.config` file as shown below:
 
-```
+```groovy
 process {
     withName:foo {
         container = 'image_name_1'
@@ -249,7 +249,7 @@ Podman limits using cpuset for cpus and memory such is only possible using sudo.
 You won't need to modify your Nextflow script in order to run it with Podman. Simply specify the Podman image from
 where the containers are started by using the `-with-podman` command line option. For example:
 
-```
+```bash
 nextflow run <your script> -with-podman [OCI container image]
 ```
 
@@ -266,7 +266,7 @@ it behaves in a completely transparent manner without requiring extra steps or a
 If you want to avoid entering the Podman image as a command line parameter, you can define it in the Nextflow configuration
 file. For example you can add the following lines in the `nextflow.config` file:
 
-```
+```groovy
 process.container = 'nextflow/examples:latest'
 podman.enabled = true
 ```
@@ -289,7 +289,7 @@ It is possible to specify a different container image for each process definitio
 suppose you have two processes named `foo` and `bar`. You can specify two different container images for them
 in the Nextflow script as shown below:
 
-```
+```groovy
 process foo {
   container 'image_name_1'
 
@@ -309,7 +309,7 @@ process bar {
 
 Alternatively, the same containers definitions can be provided by using the `nextflow.config` file as shown below:
 
-```
+```groovy
 process {
     withName:foo {
         container = 'image_name_1'
@@ -358,7 +358,7 @@ how to build Shifter images see the [official documentation](https://docs.nersc.
 
 The integration for Shifter, at this time, requires you to set up the following parameters in your config file:
 
-```
+```groovy
 process.container = "dockerhub_user/image_name:image_tag"
 shifter.enabled = true
 ```
@@ -375,7 +375,7 @@ It is possible to specify a different Shifter image for each process definition 
 let's suppose you have two processes named `foo` and `bar`. You can specify two different Shifter images
 specifying them in the `nextflow.config` file as shown below:
 
-```
+```groovy
 process {
     withName:foo {
         container = 'image_name_1'
@@ -430,7 +430,7 @@ The integration for Singularity follows the same execution model implemented for
 Nextflow script in order to run it with Singularity. Simply specify the Singularity image
 file from where the containers are started by using the `-with-singularity` command line option. For example:
 
-```
+```bash
 nextflow run <your script> -with-singularity [singularity image file]
 ```
 
@@ -447,7 +447,7 @@ it behaves in a completely transparent manner without requiring extra steps or a
 If you want to avoid entering the Singularity image as a command line parameter, you can define it in the Nextflow
 configuration file. For example you can add the following lines in the `nextflow.config` file:
 
-```
+```groovy
 process.container = '/path/to/singularity.img'
 singularity.enabled = true
 ```
@@ -476,7 +476,7 @@ It is possible to specify a different Singularity image for each process definit
 let's suppose you have two processes named `foo` and `bar`. You can specify two different Singularity images
 specifing them in the `nextflow.config` file as shown below:
 
-```
+```groovy
 process {
     withName:foo {
         container = 'image_name_1'
@@ -508,7 +508,7 @@ Nextflow automatically tries to pull an image with the specified name from the D
 If you want Nextflow to check only for local file images, prefix the container name with the `file://` pseudo-protocol.
 For example:
 
-```
+```groovy
 process.container = 'file:///path/to/singularity.img'
 singularity.enabled = true
 ```
@@ -521,7 +521,7 @@ relative to the workflow launch directory.
 To pull images from the Singularity Hub or a third party Docker registry simply prefix the image name
 with the `shub://`, `docker://` or `docker-daemon://` pseudo-protocol as required by the Singularity tool. For example:
 
-```
+```groovy
 process.container = 'docker://quay.io/biocontainers/multiqc:1.3--py35_2'
 singularity.enabled = true
 ```
@@ -532,7 +532,7 @@ Additionally, the Docker engine will not work with containers specified as `dock
 
 Nextflow version 18.10 introduced support for the [Singularity Library](https://cloud.sylabs.io/library/) repository. This feature also requires Singularity 3.0:
 
-```
+```groovy
 process.container = 'library://library/default/alpine:3.8'
 ```
 

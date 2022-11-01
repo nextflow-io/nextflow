@@ -55,7 +55,7 @@ To avoid downloading the dependencies, you can also use the `nextflow-VERSION-al
 
 Having Nextflow installed in your computer you can update to the latest version using the following command:
 
-```
+```bash
 nextflow self-update
 ```
 
@@ -63,7 +63,7 @@ nextflow self-update
 You can temporarily switch to a specific version of Nextflow by prefixing the `nextflow` command
 with the `NXF_VER` environment variable. For example:
 
-```
+```bash
 NXF_VER=20.04.0 nextflow run hello
 ```
 :::
@@ -77,7 +77,7 @@ use most recent updates and experimental features.
 
 To use the latest edge release run the following snippet in your shell terminal:
 
-```
+```bash
 export NXF_EDGE=1
 nextflow self-update
 ```
@@ -88,7 +88,7 @@ nextflow self-update
 
 Copy the following example into your favourite text editor and save it to a file named `tutorial.nf`
 
-```
+```groovy
 params.str = 'Hello world!'
 
 process splitLetters {
@@ -123,7 +123,7 @@ The resulting strings are emitted on the `result` channel and the final output i
 
 Execute the script by entering the following command in your terminal:
 
-```
+```bash
 nextflow run tutorial.nf
 ```
 
@@ -169,7 +169,7 @@ This helps a lot when testing or modifying part of your pipeline without having 
 For the sake of this tutorial, modify the `convertToUpper` process in the previous example, replacing the
 process script with the string `rev $x`, so that the process looks like this:
 
-```
+```groovy
 process convertToUpper {
   input:
     path x
@@ -184,7 +184,7 @@ process convertToUpper {
 
 Then save the file with the same name, and execute it by adding the `-resume` option to the command line:
 
-```
+```bash
 nextflow run tutorial.nf -resume
 ```
 
@@ -218,7 +218,7 @@ Their value can be specified on the command line by prefixing the parameter name
 For the sake of this tutorial, you can try to execute the previous example specifying a different input
 string parameter, as shown below:
 
-```
+```bash
 nextflow run tutorial.nf --str 'Bonjour le monde'
 ```
 

@@ -9,7 +9,7 @@
 The implicit `workflow` object allows you to access some workflow and runtime metadata in your Nextflow scripts.
 For example:
 
-```
+```groovy
 println "Project : $workflow.projectDir"
 println "Git info: $workflow.repository - $workflow.revision [$workflow.commitId]"
 println "Cmd line: $workflow.commandLine"
@@ -74,7 +74,7 @@ requirement eventually needed by your workflow script. The required version stri
 comparison operators eg `>`, `>=`, `=`, etc. or postfixed with the `+` operator to specify a minimal version
 requirement. For example:
 
-```
+```groovy
 if( !nextflow.version.matches('21.04+') ) {
     println "This workflow requires Nextflow version 21.04 or greater -- You are running version $nextflow.version"
     exit 1
@@ -92,7 +92,7 @@ using an asynchronous handler.
 The `onComplete` event handler is invoked by the framework when the workflow execution is completed. It allows one
 to access the workflow termination status and other useful information. For example:
 
-```
+```groovy
 workflow.onComplete {
     println "Pipeline completed at: $workflow.complete"
     println "Execution status: ${ workflow.success ? 'OK' : 'failed' }"
@@ -108,7 +108,7 @@ If you want an e-mail notification on completion, check {ref}`mail-page`.
 The `onError` event handler is invoked by Nextflow when a runtime or process error caused the pipeline execution to stop.
 For example:
 
-```
+```groovy
 workflow.onError {
     println "Oops... Pipeline execution stopped with the following message: ${workflow.errorMessage}"
 }
@@ -129,7 +129,7 @@ decouple the handling of pipeline events from the main script logic.
 When the event handlers are included in a configuration file the only difference is that the `onComplete` and
 the `onError` closures have to be defined by using the assignment operator as shown below:
 
-```
+```groovy
 workflow.onComplete = {
     // any workflow property can be used here
     println "Pipeline complete"

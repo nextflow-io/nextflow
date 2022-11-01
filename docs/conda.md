@@ -48,7 +48,7 @@ As of version `22.08.0-edge`, the use of Conda recipes specified using the {ref}
 directive needs to be enabled explicitly by setting the option shown below in the pipeline
 configuration file (i.e. `nextflow.config`):
 
-```
+```groovy
 conda.enabled = true
 ```
 
@@ -61,7 +61,7 @@ Conda package names can specified using the `conda` directive. Multiple package 
 by separating them with a blank space.
 For example:
 
-```
+```groovy
 process foo {
   conda 'bwa samtools multiqc'
 
@@ -85,7 +85,7 @@ the channel name as shown here `bioconda::bwa=0.7.15`.
 Conda environments can also be defined using one or more Conda environment files. This is a file that
 lists the required packages and channels structured using the YAML format. For example:
 
-```
+```yaml
 name: my-env
 channels:
   - conda-forge
@@ -100,7 +100,7 @@ Read the Conda documentation for more details about how to create [environment f
 
 The path of an environment file can be specified using the `conda` directive:
 
-```
+```groovy
 process foo {
   conda '/some/path/my-env.yaml'
 
@@ -132,7 +132,7 @@ Like before, the extension matters. Make sure the dependencies file has a `.txt`
 If you already have a local Conda environment, you can use it in your workflow specifying the
 installation directory of such environment by using the `conda` directive:
 
-```
+```groovy
 process foo {
   conda '/path/to/an/existing/env/directory'
 
@@ -158,7 +158,7 @@ the workflow execution.
 Specifying the Conda environments in a separate configuration {ref}`profile <config-profiles>` is therefore
 recommended to allow the execution via a command line option and to enhance the workflow portability. For example:
 
-```
+```groovy
 profiles {
   conda {
     process.conda = 'samtools'

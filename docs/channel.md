@@ -44,7 +44,7 @@ inputs are all value channels.
 
 For example:
 
-```
+```groovy
 process foo {
   input:
   val x
@@ -89,7 +89,7 @@ The `create` method is no longer available in DSL2 syntax.
 
 Creates a new channel, as shown below:
 
-```
+```groovy
 channelObj = Channel.create()
 ```
 
@@ -112,7 +112,7 @@ This method is deprecated. Use [of](#of) or [fromList](#fromlist) instead.
 The `from` method allows you to create a channel emitting any sequence of values that are specified as the method argument,
 for example:
 
-```
+```groovy
 ch = Channel.from( 1, 3, 5, 7 )
 ch.subscribe { println "value: $it" }
 ```
@@ -129,7 +129,7 @@ value: 7
 
 The following example shows how to create a channel from a *range* of numbers or strings:
 
-```
+```groovy
 zeroToNine = Channel.from( 0..9 )
 strings = Channel.from( 'A'..'Z' )
 ```
@@ -143,7 +143,7 @@ emits the collection entries as individual items.
 Thus the following two declarations produce an identical result even though in the first case the items are specified
 as multiple arguments while in the second case as a single list object argument:
 
-```
+```groovy
 Channel.from( 1, 3, 5, 7, 9 )
 Channel.from( [1, 3, 5, 7, 9] )
 ```
@@ -151,7 +151,7 @@ Channel.from( [1, 3, 5, 7, 9] )
 But when more than one argument is provided, they are always managed as *single* emissions. Thus, the following example
 creates a channel emitting three entries each of which is a list containing two elements:
 
-```
+```groovy
 Channel.from( [1, 2], [5,6], [7,9] )
 ```
 
@@ -166,7 +166,7 @@ This feature requires Nextflow version 19.10.0 or later.
 The `fromList` method allows you to create a channel emitting the values provided as a list of elements,
 for example:
 
-```
+```groovy
 Channel
     .fromList( ['a', 'b', 'c', 'd'] )
     .view { "value: $it" }
@@ -190,7 +190,7 @@ See also: [of](#of) factory method.
 You can create a channel emitting one or more file paths by using the `fromPath` method and specifying a path string
 as an argument. For example:
 
-```
+```groovy
 myFileChannel = Channel.fromPath( '/data/some/bigfile.txt' )
 ```
 
@@ -204,7 +204,7 @@ object for the specified file.
 Whenever the `fromPath` argument contains a `*` or `?` wildcard character it is interpreted as a [glob][glob] path matcher.
 For example:
 
-```
+```groovy
 myFileChannel = Channel.fromPath( '/data/big/*.txt' )
 ```
 
@@ -217,7 +217,7 @@ This syntax is generally used for matching complete paths. Curly brackets specif
 
 For example:
 
-```
+```groovy
 files = Channel.fromPath( 'data/**.fa' )
 moreFiles = Channel.fromPath( 'data/**/*.fa' )
 pairFiles = Channel.fromPath( 'data/file_{1,2}.fq' )
@@ -233,7 +233,7 @@ As in Linux Bash, the `*` wildcard does not catch hidden files (i.e. files whose
 
 In order to include hidden files, you need to start your pattern with a period character or specify the `hidden: true` option. For example:
 
-```
+```groovy
 expl1 = Channel.fromPath( '/path/.*' )
 expl2 = Channel.fromPath( '/path/.*.fa' )
 expl3 = Channel.fromPath( '/path/*', hidden: true )
@@ -248,7 +248,7 @@ it won't return directory paths.
 You may use the parameter `type` specifying the value `file`, `dir` or `any` in order to define what kind of paths
 you want. For example:
 
-```
+```groovy
 myFileChannel = Channel.fromPath( '/path/*b', type: 'dir' )
 myFileChannel = Channel.fromPath( '/path/a*', type: 'any' )
 ```
@@ -269,7 +269,7 @@ and directory starting with a `a` prefix.
 :::{note}
 Multiple paths or glob patterns can be specified using a list:
 
-```
+```groovy
 Channel.fromPath( ['/some/path/*.fq', '/other/path/*.fastq'] )
 ```
 :::
@@ -282,7 +282,7 @@ The `fromFilePairs` method creates a channel emitting the file pairs matching a 
 The matching files are emitted as tuples in which the first element is the grouping key of the matching
 pair and the second element is the list of files (sorted in lexicographical order). For example:
 
-```
+```groovy
 Channel
     .fromFilePairs('/my/data/SRR*_{1,2}.fastq')
     .view()
@@ -307,7 +307,7 @@ Alternatively it is possible to implement a custom file pair grouping strategy p
 given the current file as parameter, returns the grouping key.
 For example:
 
-```
+```groovy
 Channel
     .fromFilePairs('/some/data/*', size: -1) { file -> file.extension }
     .view { ext, files -> "Files with the extension $ext are $files" }
@@ -328,7 +328,7 @@ Table of optional parameters available:
 :::{note}
 Multiple glob patterns can be specified using a list:
 
-```
+```groovy
 Channel.fromFilePairs( ['/some/data/SRR*_{1,2}.fastq', '/other/data/QFF*_{1,2}.fastq'] )
 ```
 :::
@@ -344,7 +344,7 @@ This feature requires Nextflow version 19.04.0 or later.
 The `fromSRA` method queries the [NCBI SRA](https://www.ncbi.nlm.nih.gov/sra) database and returns a channel emitting
 the FASTQ files matching the specified criteria i.e project or accession number(s). For example:
 
-```
+```groovy
 Channel
     .fromSRA('SRP043510')
     .view()
@@ -364,7 +364,7 @@ It returns:
 
 Multiple accession IDs can be specified using a list object:
 
-```
+```groovy
 ids = ['ERR908507', 'ERR908506', 'ERR908505']
 Channel
     .fromSRA(ids)
@@ -412,7 +412,7 @@ This feature requires Nextflow version 19.10.0 of later.
 The `of` method allows you to create a channel that emits the arguments provided to it,
 for example:
 
-```
+```groovy
 ch = Channel.of( 1, 3, 5, 7 )
 ch.view { "value: $it" }
 ```
@@ -429,7 +429,7 @@ value: 7
 
 Ranges of values are expanded accordingly:
 
-```
+```groovy
 Channel
     .of(1..23, 'X', 'Y')
     .view()
@@ -457,7 +457,7 @@ See also: [fromList](#fromlist) factory method.
 The `value` method is used to create a value channel. An optional (not `null`) argument
 can be specified to bind the channel to a specific value. For example:
 
-```
+```groovy
 expl1 = Channel.value()
 expl2 = Channel.value( 'Hello there' )
 expl3 = Channel.value( [1,2,3,4,5] )
@@ -477,7 +477,7 @@ a [glob][glob] path matching criteria.
 
 For example:
 
-```
+```groovy
 Channel
     .watchPath( '/path/*.fa' )
     .subscribe { println "Fasta file: $it" }
@@ -494,7 +494,7 @@ second argument that specifies what event(s) to watch. The supported events are:
 
 You can specify more than one of these events by using a comma separated string as shown below:
 
-```
+```groovy
 Channel
     .watchPath( '/path/*.fa', 'create,modify' )
     .subscribe { println "File created or modified: $it" }
@@ -521,7 +521,7 @@ The `bind` method is no longer available in DSL2 syntax.
 Channel objects provide a `bind( )` method which is the basic operation to send a message over the channel.
 For example:
 
-```
+```groovy
 myChannel = Channel.create()
 myChannel.bind( 'Hello world' )
 ```
@@ -537,7 +537,7 @@ The `<<` operator is no longer available in DSL2 syntax.
 The operator `<<` is just a syntax sugar for the `bind` method. Thus, the following example produces
 an identical result as the previous one:
 
-```
+```groovy
 myChannel = Channel.create()
 myChannel << 'Hello world'
 ```
@@ -550,7 +550,7 @@ The `subscribe` method allows you to execute a user defined function each time a
 
 The emitted value is passed implicitly to the specified function. For example:
 
-```
+```groovy
 // define a channel emitting three values
 source = Channel.of( 'alpha', 'beta', 'delta' )
 
@@ -572,7 +572,7 @@ Read the {ref}`script-closure` section to learn more about closures.
 If needed the closure parameter can be defined explicitly, using a name other than `it` and, optionally,
 specifying the expected value type, as shown in the following example:
 
-```
+```groovy
 Channel
     .of( 'alpha', 'beta', 'lambda' )
     .subscribe { String str ->
@@ -597,7 +597,7 @@ The `subscribe` method may accept one or more of the following event handlers:
 
 For example:
 
-```
+```groovy
 Channel
     .of( 1, 2, 3 )
     .subscribe onNext: { println it }, onComplete: { println 'Done' }

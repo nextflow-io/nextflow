@@ -12,7 +12,7 @@ environment in which a tool runs.
 The most common case will be to pick up your end-user Google credentials from your
 workstation. You can create these by running the command:
 
-```
+```bash
 gcloud auth application-default login
 ```
 
@@ -41,9 +41,11 @@ If you don't have it, the credentials file can be download from the Google Cloud
 Then, define the following variable replacing the path in the example with the one of your
 credentials file just downloaded:
 
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS="/path/your/file/creds.json"
 ```
-export GOOGLE_APPLICATION_CREDENTIALS=/path/your/file/creds.json
-```
+
+(google-batch)=
 
 ## Cloud Batch
 
@@ -58,14 +60,14 @@ in the cloud, offloading the process executions through the Google Cloud service
 The support for Google Batch requires Nextflow version `22.07.1-edge` or later. If you have already Nextflow
 installed make sure to update to the latest edge release using these commands:
 
-```
+```bash
 export NXF_EDGE=1
 nextflow -self-update
 ```
 
 If you don't have Nextflow, install it with command below:
 
-```
+```bash
 curl get.nextflow.io | bash
 ```
 
@@ -92,7 +94,7 @@ Create or edit the file `nextflow.config` in your project root directory. The co
 
 Example:
 
-```
+```groovy
 process {
     executor = 'google-batch'
     container = 'your/container:latest'
@@ -146,7 +148,7 @@ instances may be utilized using the `machineType` directive
 
 Examples:
 
-```
+```groovy
 process custom_resources_task {
     cpus 8
     memory '40 GB'
@@ -173,7 +175,7 @@ locally or in a Google Storage bucket.
 The pipeline execution must specify a Google Storage bucket where the workflow's intermediate results are stored using
 the `-work-dir` command line options. For example:
 
-```
+```bash
 nextflow run <script or project name> -work-dir gs://my-bucket/some/path
 ```
 
@@ -190,7 +192,7 @@ The Google Storage path needs to contain at least sub-directory. Don't use only 
 
 Spot instances are supported adding the following setting in the Nextflow config file:
 
-```
+```groovy
 google {
     batch.spot = true
 }
@@ -200,7 +202,7 @@ Since this type of virtual machines can be retired by the provider before the jo
 to add the following retry strategy to your config file to instruct Nextflow to automatically re-execute a job
 if the virtual machine was terminated preemptively:
 
-```
+```groovy
 process {
     errorStrategy = { task.exitStatus==14 ? 'retry' : 'terminate' }
     maxRetries = 5
@@ -231,7 +233,7 @@ supported:
 The support for Google Cloud requires Nextflow version `20.01.0` or later. To install it define the following variables
 in your system environment:
 
-```
+```bash
 export NXF_VER=20.01.0
 export NXF_MODE=google
 ```
@@ -278,7 +280,7 @@ Create a `nextflow.config` file in the project root directory. The config must s
 
 Example:
 
-```
+```groovy
 process {
     executor = 'google-lifesciences'
     container = 'your/container:latest'
@@ -340,7 +342,7 @@ instances may be utilized using the `machineType` directive
 
 Examples:
 
-```
+```groovy
 process custom_resources_task {
     cpus 8
     memory '40 GB'
@@ -372,7 +374,7 @@ locally or in a Google Storage bucket.
 The pipeline execution must specify a Google Storage bucket where the workflow's intermediate results are stored using
 the `-work-dir` command line options. For example:
 
-```
+```bash
 nextflow run <script or project name> -work-dir gs://my-bucket/some/path
 ```
 
@@ -385,7 +387,7 @@ pipeline work bucket. Use this feature with caution being careful to avoid unnec
 
 Preemptible instances are supported adding the following setting in the Nextflow config file:
 
-```
+```groovy
 google {
     lifeSciences.preemptible = true
 }
@@ -395,7 +397,7 @@ Since this type of virtual machines can be retired by the provider before the jo
 to add the following retry strategy to your config file to instruct Nextflow to automatically re-execute a job
 if the virtual machine was terminated preemptively:
 
-```
+```groovy
 process {
   errorStrategy = { task.exitStatus==14 ? 'retry' : 'terminate' }
   maxRetries = 5
@@ -420,7 +422,7 @@ To enable this feature use one or more {ref}`config-process-selectors` in your N
 the Google Pipelines *executor* only to a subset of processes in your workflow.
 For example:
 
-```
+```groovy
 process {
     withLabel: bigTask {
         executor = 'google-lifesciences'
@@ -438,7 +440,7 @@ Then deploy the workflow execution using the `-bucket-dir` to specify a Google S
 for the jobs computed by the Google Pipeline service and, optionally, the `-work-dir` to
 specify the local storage for the jobs computed locally:
 
-```
+```bash
 nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
 ```
 

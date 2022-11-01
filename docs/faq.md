@@ -10,13 +10,13 @@ A: The idea here is to create a *channel* that will trigger a process
 execution for each of your files. First define a parameter that specifies where
 the input files are:
 
-```
+```groovy
 params.input = "data/*.fa"
 ```
 
 Each of the files in the data directory can be made into a channel with:
 
-```
+```groovy
 vegetable_datasets = Channel.fromPath(params.input)
 ```
 
@@ -26,7 +26,7 @@ in the vegetable datasets. For example, each input file may contain a
 collection of unaligned sequences. We can specify a process to align
 them as follows:
 
-```
+```groovy
 process clustalw2_align {
     input:
     file vegetable_fasta from vegetable_datasets
@@ -53,7 +53,7 @@ used as input for a further process.
 
 A: First we can specify a results directory as shown below:
 
-```
+```groovy
 results_path = $PWD/results
 ```
 
@@ -61,7 +61,7 @@ The best way to manage this is to have the channel emit a tuple
 containing both the file base name (`broccoli`) and the full file path
 (`data/broccoli.fa`):
 
-```
+```groovy
 datasets = Channel
                 .fromPath(params.input)
                 .map { file -> tuple(file.baseName, file) }
@@ -70,7 +70,7 @@ datasets = Channel
 And in the process we can then reference these variables (`datasetID`
 and `datasetFile`):
 
-```
+```groovy
 process clustalw2_align {
     publishDir "$results_path/$datasetID"
 
@@ -101,19 +101,19 @@ A: A channel can be consumed only by one process or operator (except if channel 
 duplicate a channel before calling it as an input in different processes.
 First we create the channel emitting the input files:
 
-```
+```groovy
 vegetable_datasets = Channel.fromPath(params.input)
 ```
 
 Next we can split it into two channels by using the {ref}`operator-into` operator:
 
-```
+```groovy
 vegetable_datasets.into { datasets_clustalw; datasets_tcoffee }
 ```
 
 Then we can define a process for aligning the datasets with *ClustalW*:
 
-```
+```groovy
 process clustalw2_align {
     input:
     file vegetable_fasta from datasets_clustalw
@@ -130,7 +130,7 @@ process clustalw2_align {
 
 And a process for aligning the datasets with *T-Coffee*:
 
-```
+```groovy
 process tcoffee_align {
     input:
     file vegetable_fasta from datasets_tcoffee
@@ -167,7 +167,7 @@ First we place copy (or create a symlink to) the `esl-reformat`
 executable to the project's bin folder. From above we see the *ClustalW*
 alignments are in the channel `clustalw_alns`:
 
-```
+```groovy
 process phylip_reformat {
     input:
     file clustalw_alignment from clustalw_alns
@@ -201,7 +201,7 @@ process generate_bootstrap_replicates {
 To perform a process *n* times, we can specify the input to be
 `each x from y..z`. For example:
 
-```
+```groovy
 bootstrapReplicates=100
 
 process bootstrapReplicateTrees {
@@ -233,7 +233,7 @@ the files by using a simple for-loop.
 
 This is also useful if all the items of a channel are required to be in the work directory.
 
-```
+```groovy
 process concatenateBootstrapReplicates {
     publishDir "$results_path/$datasetID/concatenate"
 
@@ -260,6 +260,6 @@ process concatenateBootstrapReplicates {
 
 A: Sometimes it is necessary to use a different version of Nextflow for a specific feature or testing purposes. Nextflow is able to automatically pull versions when the `NXF_VER` environment variable is defined on the commandline.
 
-```
+```bash
 NXF_VER=21.04 nextflow run main.nf
 ```
