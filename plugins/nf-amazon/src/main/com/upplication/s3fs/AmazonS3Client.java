@@ -64,6 +64,10 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.RegionUtils;
+import com.amazonaws.services.glacier.AmazonGlacier;
+import com.amazonaws.services.glacier.AmazonGlacierClientBuilder;
+import com.amazonaws.services.glacier.transfer.ArchiveTransferManager;
+import com.amazonaws.services.glacier.transfer.ArchiveTransferManagerBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.Headers;
@@ -114,8 +118,10 @@ import org.slf4j.LoggerFactory;
 public class AmazonS3Client {
 
 	private static final Logger log = LoggerFactory.getLogger(AmazonS3Client.class);
-	
+
 	private AmazonS3 client;
+
+	private AmazonGlacier glacierClient;
 
 	private CannedAccessControlList cannedAcl;
 
@@ -131,8 +137,11 @@ public class AmazonS3Client {
 
 	private Integer uploadMaxThreads = 10;
 
-	public AmazonS3Client(AmazonS3 client){
+	private ArchiveTransferManager glacierTransferManager;
+
+	public AmazonS3Client(AmazonS3 client) {
 		this.client = client;
+		this.glacierClient = null;
 	}
 
 	public AmazonS3Client(ClientConfiguration config, AWSCredentials creds, String region) {
@@ -140,9 +149,17 @@ public class AmazonS3Client {
 				.standard()
 				.withCredentials(new AWSStaticCredentialsProvider(creds))
 				.withClientConfiguration(config)
-				.withRegion( region )
+				.withRegion(region)
+				.build();
+
+		this.glacierClient = AmazonGlacierClientBuilder
+				.standard()
+				.withCredentials(new AWSStaticCredentialsProvider(creds))
+				.withClientConfiguration(config)
+				.withRegion(region)
 				.build();
 	}
+
 	/**
 	 * @see com.amazonaws.services.s3.AmazonS3Client#listBuckets()
 	 */
@@ -329,6 +346,10 @@ public class AmazonS3Client {
 		return client;
 	}
 
+	public AmazonGlacier getGlacierClient() {
+		return glacierClient;
+	}
+
 	public void setRegion(String regionName) {
 		Region region = RegionUtils.getRegion(regionName);
 		if( region == null )
@@ -503,6 +524,15 @@ public class AmazonS3Client {
 		return transferManager;
 	}
 
+	synchronized ArchiveTransferManager glacierTransferManager() {
+		if( glacierTransferManager==null ) {
+			glacierTransferManager = new ArchiveTransferManagerBuilder()
+					.withGlacierClient(getGlacierClient())
+					.build();
+		}
+		return glacierTransferManager;
+	}
+
 	public void downloadFile(S3Path source, File target) {
 		Download download = transferManager()
 				.download(source.getBucket(), source.getKey(), target);
@@ -510,9 +540,13 @@ public class AmazonS3Client {
 			download.waitForCompletion();
 		}
 		catch (InterruptedException e) {
-			log.debug("S3 download file: s3://{}/{} interrupted",source.getBucket(), source.getKey());
+			log.debug("S3 download file: s3://{}/{} interrupted", source.getBucket(), source.getKey());
 			Thread.currentThread().interrupt();
 		}
+	}
+
+	public void downloadGlacierFile(S3Path source, File target) {
+		glacierTransferManager().download(source.getBucket(), source.getKey(), target);
 	}
 
 	public void downloadDirectory(S3Path source, File targetFile) throws IOException {
@@ -522,7 +556,7 @@ public class AmazonS3Client {
 		// see https://github.com/aws/aws-sdk-java/issues/1321
 		//
 		// just traverse to source path a copy all files
-		// 
+		//
 		final Path target = targetFile.toPath();
 		final List<Download> allDownloads = new ArrayList<>();
 
