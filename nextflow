@@ -62,7 +62,7 @@ function get_abs_filename() {
 
 function get() {
     if command -v curl &>/dev/null; then
-        GET="curl -fSL '$1' -o '$2'"
+        GET="curl -fsSL '$1' -o '$2'"
     elif command -v wget &>/dev/null; then
         GET="wget '$1' -O '$2' >/dev/null 2>&1"
     else
