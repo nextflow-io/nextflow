@@ -21,7 +21,9 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
 /**
- * Implements a common builder both for Apptainer and Singularity container engines
+ * Implements a builder for Singularity containerisation
+ *
+ * see http://singularity.lbl.gov
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
