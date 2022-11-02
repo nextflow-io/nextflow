@@ -42,18 +42,15 @@ cli=''; for x in "$@"; do cli+="'$x' "; done
 # the NXF_USRMAP hold the user ID in the host environment
 if [[ "$NXF_USRMAP" ]]; then
 # create a `nextflow` user with the provided ID
-
 groupadd docker
 useradd -u "$NXF_USRMAP" -G docker -s /bin/bash nextflow
 
 # then change the docker socket ownership to `nextflow` user
 # and change the $NXF_HOME ownership to `nextflow` user
-
 chown nextflow /var/run/docker.sock
 chown -R nextflow /.nextflow
 
 # finally run the target command with `nextflow` user
-
 su nextflow << EOF
 [[ "$NXF_DEBUG_ENTRY" ]] && set -x
 exec bash -c "$cli"
