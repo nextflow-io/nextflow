@@ -46,9 +46,6 @@ class CH {
     }
 
     static synchronized private DataflowReadChannel getRead1(DataflowQueue queue) {
-        if( !NF.isDsl2() )
-            return queue
-
         def broadcast = bridges.get(queue)
         if( broadcast == null ) {
             broadcast = new DataflowBroadcast()
@@ -58,8 +55,6 @@ class CH {
     }
 
     static private DataflowReadChannel getRead2(DataflowBroadcast channel) {
-        if( !NF.isDsl2() )
-            throw new IllegalStateException("Broadcast channel are only allowed in a workflow definition scope")
         channel.createReadChannel()
     }
 
@@ -95,13 +90,9 @@ class CH {
     }
 
     static DataflowWriteChannel create(boolean value=false) {
-        if( value )
-            return new DataflowVariable()
-
-        if( NF.isDsl2() )
-            return new DataflowBroadcast()
-
-        return new DataflowQueue()
+        return value
+            ? new DataflowVariable()
+            : new DataflowBroadcast()
     }
 
     static boolean isChannel(obj) {
@@ -141,22 +132,12 @@ class CH {
 
 
     static DataflowWriteChannel emit(DataflowWriteChannel ch, Object value) {
-        if(NF.isDsl2()) {
-            session().addIgniter { ch.bind(value) }
-        }
-        else {
-            ch.bind(value)
-        }
+        session().addIgniter { ch.bind(value) }
         return ch
     }
 
     static <T extends DataflowWriteChannel> T emitValues(T ch, Collection items) {
-        if(NF.dsl2) {
-            session().addIgniter {-> for( def it : items ) ch.bind(it) }
-        }
-        else {
-            for( def it : items ) ch.bind(it)
-        }
+        session().addIgniter {-> for( def it : items ) ch.bind(it) }
         return ch
     }
 

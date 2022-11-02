@@ -42,8 +42,6 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     protected List<DataflowWriteChannel> outChannels = new ArrayList<>(10)
 
-    protected OutParam.Mode mode = BasicMode.standard
-
     @PackageScope
     boolean singleton
 
@@ -65,10 +63,8 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     void lazyInit() {
 
-        if( intoObj instanceof TokenVar[] ) {
-            if( NF.dsl2 )
-                throw new IllegalArgumentException("Not a valid output channel argument: $intoObj")
-            for( def it : intoObj ) { lazyInitImpl(it) }
+        if( intoObj instanceof TokenVar || intoObj instanceof TokenVar[] ) {
+            throw new IllegalArgumentException("Not a valid output channel argument: $intoObj")
         }
         else if( intoObj != null ) {
             lazyInitImpl(intoObj)
@@ -86,14 +82,9 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     @PackageScope
     void lazyInitImpl( def target ) {
-        def channel = null
-        if( target instanceof TokenVar ) {
-            assert !NF.dsl2
-            channel = outputValToChannel(target.name)
-        }
-        else if( target != null ) {
-            channel = outputValToChannel(target)
-        }
+        def channel = (target != null)
+            ? outputValToChannel(target)
+            : null
 
         if( channel ) {
             outChannels.add(channel)
@@ -131,7 +122,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
                 }
 
                 // instantiate the new channel
-                channel = CH.create( singleton && mode==BasicMode.standard )
+                channel = CH.create( singleton )
 
                 // bind it to the script on-fly
                 if( local != '-' && binding ) {
@@ -159,20 +150,6 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         return this
     }
 
-    BaseOutParam into( def value ) {
-        if( NF.dsl2 )
-            throw new ScriptRuntimeException("Process clause `into` should not be provided when using DSL 2")
-        this.intoObj = value
-        return this
-    }
-
-    BaseOutParam into( TokenVar... vars ) {
-        if( NF.dsl2 )
-            throw new ScriptRuntimeException("Process clause `into` should not be provided when using DSL 2")
-        intoObj = vars
-        return this
-    }
-
     void setInto( Object obj ) {
         intoObj = obj
     }
@@ -182,28 +159,11 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         return outChannels ? outChannels.get(0) : null
     }
 
-    @Deprecated
-    List<DataflowWriteChannel> getOutChannels() {
-        init()
-        return outChannels
-    }
-
     String getName() {
         if( nameObj != null )
             return nameObj.toString()
         throw new IllegalStateException("Missing 'name' property in output parameter")
     }
-
-
-    BaseOutParam mode( def mode ) {
-        final msg = "Process output `mode` is not supported anymore"
-        if( NF.isDsl2() )
-            throw new DeprecationException(msg)
-        this.mode = BasicMode.parseValue(mode)
-        return this
-    }
-
-    OutParam.Mode getMode() { mode }
 
     @Override
     BaseOutParam setOptions(Map<String,?> opts) {

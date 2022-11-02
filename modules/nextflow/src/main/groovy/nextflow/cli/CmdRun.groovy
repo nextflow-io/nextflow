@@ -60,9 +60,6 @@ class CmdRun extends CmdBase implements HubOptions {
 
     static final public List<String> VALID_PARAMS_FILE = ['json', 'yml', 'yaml']
 
-    static final public DSL2 = '2'
-    static final public DSL1 = '1'
-
     static {
         // install the custom pool factory for GPars threads
         GParsConfig.poolFactory = new CustomPoolFactory()
@@ -231,7 +228,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-entry'], description = 'Entry workflow name to be executed', arity = 1)
     String entryName
 
-    @Parameter(names=['-dsl1'], description = 'Execute the workflow using DSL1 syntax')
+    @Parameter(names=['-dsl1'], hidden = true)
     boolean dsl1
 
     @Parameter(names=['-dsl2'], description = 'Execute the workflow using DSL2 syntax')
@@ -288,8 +285,8 @@ class CmdRun extends CmdBase implements HubOptions {
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
 
-        if( dsl1 && dsl2 )
-            throw new AbortOperationException("Command line options `-dsl1` and `-dsl2` cannot be specified at the same time")
+        if( dsl1 )
+            throw new AbortOperationException("DSL1 is no longer supported, please downgrade your Nextflow version or update your pipeline to DSL2")
 
         checkRunName()
 
@@ -373,49 +370,13 @@ class CmdRun extends CmdBase implements HubOptions {
             log.debug "Enabling nextflow strict mode"
             NextflowMeta.instance.strictMode(true)
         }
-        // -- determine dsl mode
-        final dsl = detectDslMode(config, scriptFile.main.text, sysEnv)
-        NextflowMeta.instance.enableDsl(dsl)
         // -- show launch info
-        final ver = NF.dsl2 ? DSL2 : DSL1
         final repo = scriptFile.repository ?: scriptFile.source
         final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$repo`"
         if( scriptFile.repository )
-            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
+            log.info "${head} [$runName] DSL2 - revision: ${scriptFile.revisionInfo}"
         else
-            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.getScriptId()?.substring(0,10)}"
-    }
-
-    static String detectDslMode(ConfigMap config, String scriptText, Map sysEnv) {
-        // -- try determine DSL version from config file
-
-        final dsl = config.navigate('nextflow.enable.dsl') as String
-
-        // -- script can still override the DSL version
-        final scriptDsl = NextflowMeta.checkDslMode(scriptText)
-        if( scriptDsl ) {
-            log.debug("Applied DSL=$scriptDsl from script declararion")
-            return scriptDsl
-        }
-        else if( dsl ) {
-            log.debug("Applied DSL=$dsl from config declaration")
-            return dsl
-        }
-        // -- if still unknown try probing for DSL1
-        if( NextflowMeta.probeDsl1(scriptText) ) {
-            log.debug "Applied DSL=1 by probing script field"
-            return DSL1
-        }
-
-        final envDsl = sysEnv.get('NXF_DEFAULT_DSL')
-        if( envDsl ) {
-            log.debug "Applied DSL=$envDsl from NXF_DEFAULT_DSL variable"
-            return envDsl
-        }
-        else {
-            log.debug "Applied DSL=2 by global default"
-            return DSL2
-        }
+            log.info "${head} [$runName] DSL2 - revision: ${scriptFile.getScriptId()?.substring(0,10)}"
     }
 
     protected void checkRunName() {

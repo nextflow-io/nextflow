@@ -274,28 +274,6 @@ class ConfigParser {
         return parse(loadScript(text))
     }
 
-    /**
-     * Parse the given script into a configuration object (a Map)
-     * (This method creates a new class to parse the script each time it is called.)
-     * @param script The script to parse
-     * @return A Map of maps that can be navigating with dot de-referencing syntax to obtain configuration entries
-     */
-    @Deprecated
-    ConfigObject parse(Script script) {
-        return parse(script, null)
-    }
-
-    /**
-     * Parses a Script represented by the given URL into a ConfigObject
-     *
-     * @param location The location of the script to parse
-     * @return The ConfigObject instance
-     */
-    @Deprecated
-    ConfigObject parse(URL location) {
-        return parse(loadScript(location.text), FileHelper.asPath(location.toURI()))
-    }
-
     ConfigObject parse(File file) {
         return parse(file.toPath())
     }

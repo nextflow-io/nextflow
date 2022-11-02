@@ -63,7 +63,7 @@ class CountFastaOpTest extends Specification {
                 .stripIndent()
 
         when:
-        def result = Channel.from( str, str2 ).countFasta()
+        def result = Channel.of( str, str2 ).countFasta()
         then:
         result.val == 8
 
@@ -112,7 +112,7 @@ class CountFastaOpTest extends Specification {
                 .stripIndent()
 
         when:
-        def result = Channel.from( file1, file2 ).countFasta()
+        def result = Channel.of( file1, file2 ).countFasta()
         then:
         result.val == 10
 

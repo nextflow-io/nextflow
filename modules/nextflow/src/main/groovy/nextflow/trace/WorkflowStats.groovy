@@ -156,12 +156,6 @@ class WorkflowStats implements Cloneable {
     /**
      * @return Succeed tasks count
      */
-    @Deprecated
-    int getSucceedCount() { gtz(succeededCount) }
-
-    /**
-     * @return Succeed tasks count
-     */
     int getSucceededCount() { gtz(succeededCount) }
 
     /**

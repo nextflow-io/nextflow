@@ -367,22 +367,6 @@ class FileHelper {
     }
 
     /**
-     * NOTE: this cannot be accessed by a remote system
-     *
-     * @return The file system defined by the {@code Session#workDir} attribute
-     */
-    @Memoized
-    @Deprecated
-    static FileSystem getWorkDirFileSystem() {
-        def result = Global.session?.workDir?.getFileSystem()
-        if( !result ) {
-            log.warn "Session working directory file system not defined -- fallback on JVM default file system"
-            result = FileSystems.getDefault()
-        }
-        result
-    }
-
-    /**
      * Check if the specified path is a NFS mount
      *
      * @param path The path to verify

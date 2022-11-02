@@ -76,9 +76,6 @@ class TaskBean implements Serializable, Cloneable {
 
     String afterScript
 
-    @Deprecated
-    boolean containerExecutable
-
     boolean containerNative
 
     boolean containerEnabled

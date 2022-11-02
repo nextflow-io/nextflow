@@ -31,7 +31,7 @@ class TransposeOpTest extends Specification {
     def 'should transpose tuple' () {
 
         given:
-        def ch = Channel.from(['a',[1,2,3],'p','q'], ['b',[4,5,6],'x','y'])
+        def ch = Channel.of(['a',[1,2,3],'p','q'], ['b',[4,5,6],'x','y'])
 
         when:
         def result = new TransposeOp(ch).apply()
@@ -51,7 +51,7 @@ class TransposeOpTest extends Specification {
     def 'should transpose multiple tuples' () {
 
         given:
-        def ch = Channel.from(['a',[1,2,3],['p','q']], ['b',[4,5,6],['x','y']])
+        def ch = Channel.of(['a',[1,2,3],['p','q']], ['b',[4,5,6],['x','y']])
 
         when:
         def result = new TransposeOp(ch).apply()
@@ -69,7 +69,7 @@ class TransposeOpTest extends Specification {
     def 'should transpose multiple tuples with remainder' () {
 
         given:
-        def ch = Channel.from(['a',[1,2,3],['p','q']], ['b',[4,5],['x','y','z']])
+        def ch = Channel.of(['a',[1,2,3],['p','q']], ['b',[4,5],['x','y','z']])
 
         when:
         def result = new TransposeOp(ch, [remainder:true]).apply()
@@ -89,7 +89,7 @@ class TransposeOpTest extends Specification {
     def 'should transpose tuple by 1' () {
 
         given:
-        def ch = Channel.from(['a',[1,2,3],['p','q']], ['b',[4,5,6],['x','y']])
+        def ch = Channel.of(['a',[1,2,3],['p','q']], ['b',[4,5,6],['x','y']])
 
         when:
         def result = new TransposeOp(ch, [by:1]).apply()
@@ -137,7 +137,7 @@ class TransposeOpTest extends Specification {
     def 'should transpose tuple 3' () {
 
         given:
-        def ch = Channel.from(['a','b'], ['c','d'], ['e','f'])
+        def ch = Channel.of(['a','b'], ['c','d'], ['e','f'])
 
         when:
         def result = new TransposeOp(ch).apply()
@@ -153,7 +153,7 @@ class TransposeOpTest extends Specification {
     def 'should transpose values' () {
 
         given:
-        def ch = Channel.from('a','b','c','d')
+        def ch = Channel.of('a','b','c','d')
 
         when:
         def result = new TransposeOp(ch).apply()

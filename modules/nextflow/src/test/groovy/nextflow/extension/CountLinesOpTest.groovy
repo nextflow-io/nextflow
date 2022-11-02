@@ -53,7 +53,7 @@ class CountLinesOpTest extends Specification {
             '''
                 .stripIndent().strip()
 
-        def result = Channel.from(str, str2, str3).countLines()
+        def result = Channel.of(str, str2, str3).countLines()
         then:
         result.val == 11
 

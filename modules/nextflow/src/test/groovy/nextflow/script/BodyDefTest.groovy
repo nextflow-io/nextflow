@@ -109,7 +109,7 @@ class BodyDefTest extends Specification {
 
                 process simpleTask  {
                     input:
-                    val x from 'hola'
+                    val x
 
                     """
                     echo ${alpha}
@@ -122,6 +122,9 @@ class BodyDefTest extends Specification {
                     """
                 }
 
+                workflow {
+                    simpleTask('hola')
+                }
                 '''
         runner.setScript(script).execute()
         then:

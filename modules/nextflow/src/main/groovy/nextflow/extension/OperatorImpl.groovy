@@ -741,100 +741,6 @@ class OperatorImpl {
         }
     }
 
-    /**
-     * Sorts all collection members into groups determined by the supplied mapping closure
-     *
-     * @param source
-     * @param mapper
-     * @return
-     */
-    @Deprecated
-    DataflowWriteChannel<Map> groupBy(final DataflowReadChannel source, final params = null ) {
-        int index = 0
-        Closure mapper = DEFAULT_MAPPING_CLOSURE
-
-        if( params instanceof Closure )
-            mapper = params
-
-        else if( params instanceof Number ) {
-            index = params as int
-        }
-        else if( params != null ) {
-            throw new IllegalArgumentException("Not a valid `group` argument: $params")
-        }
-
-        final target = new DataflowVariable()
-        final int len = mapper.getMaximumNumberOfParameters()
-        reduceImpl(source, target, [:]) { Map map, item ->
-            def key = len == 2 ? mapper.call(item,index) : mapper.call(item)
-            def list = map.get(key)
-            list = list ? list << item : [item]
-            map.put(key, list)
-            return map
-        }
-
-        return target
-    }
-
-    @Deprecated
-    DataflowWriteChannel spread( final DataflowReadChannel source, Object other ) {
-
-        final target = CH.create()
-
-        def inputs
-        switch(other) {
-            case DataflowExpression:
-                inputs = other
-                break
-            case DataflowReadChannel:
-                inputs = ToListOp.apply((DataflowReadChannel)other);
-                break
-            case Collection:
-                inputs = Channel.value(other)
-                OpCall.current.get().inputs.add(inputs)
-                break
-            case (Object[]):
-                inputs = Channel.value(other as List)
-                OpCall.current.get().inputs.add(inputs)
-                break
-            default:
-                throw new IllegalArgumentException("Not a valid argument for 'spread' operator [${other?.class?.simpleName}]: ${other} -- Use a Collection or a channel instead. ")
-        }
-
-        final stopOnFirst = source instanceof DataflowExpression
-        final listener = new DataflowEventAdapter() {
-            @Override
-            void afterRun(DataflowProcessor processor, List<Object> messages) {
-                if( !stopOnFirst ) return
-                processor.terminate()
-                target.bind(Channel.STOP)
-            }
-
-            @Override
-            boolean onException(final DataflowProcessor processor, final Throwable e) {
-                OperatorImpl.log.error("@unknown", e)
-                session.abort(e)
-                return true;
-            }
-        }
-
-        final params = [:]
-        params.inputs = [source, inputs]
-        params.outputs = [target]
-        params.listeners = [listener]
-
-        newOperator(params) { a, b ->
-            def proc = ((DataflowProcessor) getDelegate())
-            def left = [a]
-            def right = (b instanceof List ? b : [b])
-            [left, right]
-                    .combinations()
-                    .each{ Collection it -> proc.bindOutput(it.flatten())  }
-        }
-
-        return target
-    }
-
     DataflowWriteChannel combine( DataflowReadChannel left, Object right ) {
         combine(left, null, right)
     }
@@ -1044,35 +950,6 @@ class OperatorImpl {
 
 
     /**
-     * Phase channels
-     *
-     * @param source
-     * @param other
-     * @param mapper
-     * @return
-     */
-    @Deprecated
-    DataflowWriteChannel phase( DataflowReadChannel source, Map opts, DataflowReadChannel other, Closure mapper = null ) {
-
-        def target = new PhaseOp(source,other)
-                        .setMapper(mapper)
-                        .setOpts(opts)
-                        .apply()
-
-        return target
-    }
-
-    @Deprecated
-    DataflowWriteChannel phase( DataflowReadChannel source, DataflowReadChannel other, Closure mapper = null ) {
-
-        def target = new PhaseOp(source,other)
-                        .setMapper(mapper)
-                        .apply()
-
-        return target
-    }
-
-    /**
      * Implements the default mapping strategy, having the following strategy:
      * <pre>
      *     Map -> first entry key
@@ -1150,80 +1027,12 @@ class OperatorImpl {
         return target
     }
 
-
-    /**
-     * When the items emitted by the source channel are tuples of values, the operator separate allows you to specify a
-     * list of channels as parameters, so that the value i-th in a tuple will be assigned to the target channel
-     * with the corresponding position index.
-     *
-     * @param source The source channel
-     * @param outputs An open array of target channels
-     */
-    @DeprecatedDsl2
-    void separate( DataflowReadChannel source, final DataflowWriteChannel... outputs ) {
-        new SeparateOp(source, outputs as List<DataflowWriteChannel>).apply()
-    }
-
-    @DeprecatedDsl2
-    void separate(final DataflowReadChannel source, final List<DataflowWriteChannel> outputs) {
-        new SeparateOp(source, outputs).apply()
-    }
-
-    @DeprecatedDsl2
-    void separate(final DataflowReadChannel source, final List<DataflowWriteChannel> outputs, final Closure<List> code) {
-        new SeparateOp(source, outputs, code).apply()
-    }
-
-    @DeprecatedDsl2
-    List<DataflowReadChannel> separate( final DataflowReadChannel source, int n ) {
-        def outputs = new SeparateOp(source, n).apply()
-        return outputs
-    }
-
-    @DeprecatedDsl2
-    List<DataflowReadChannel> separate( final DataflowReadChannel source, int n, Closure mapper  ) {
-        def outputs = new SeparateOp(source, n, mapper).apply()
-        return outputs
-    }
-
-    @DeprecatedDsl2
-    void into( DataflowReadChannel source, final DataflowWriteChannel... targets ) {
-        new IntoOp(source, targets as List<DataflowWriteChannel>).apply()
-    }
-
-    @DeprecatedDsl2
-    List<DataflowReadChannel> into( final DataflowReadChannel source, int n ) {
-        def outputs = new IntoOp(source,n).apply().getOutputs()
-        return outputs
-    }
-
-    /**
-     * Forward source dataflow channel *into* one or more dataflow channels. For example:
-     * <pre>
-     *     Channel.from( ... )
-     *            .map { ... }
-     *            .into { foo; bar }
-     * </pre>
-     *
-     * It creates two new dataflow variables named {@code foo} and {@code bar} and copied the map
-     * result into them.
-     *
-     * @param source The source dataflow channel which items are copied into newly created dataflow variables.
-     * @param holder A closure that defines one or more variable names into which source items are copied.
-     */
-    @DeprecatedDsl2
-    void into( DataflowReadChannel source, Closure holder ) {
-        def outputs = new IntoOp(source,holder).apply().getOutputs()
-        OpCall.current.get().outputs.addAll(outputs)
-    }
-
-
     /**
      * Implements a tap that create implicitly a new dataflow variable in the global script context.
      * For example:
      *
      * <pre>
-     *     Channel.from(...)
+     *     Channel.of(...)
      *            .tap { newChannelName }
      *            .map { ... }
      *  </pre>
@@ -1270,29 +1079,6 @@ class OperatorImpl {
         return result
     }
 
-    /**
-     * Print the channel content to the console standard output
-     * @param source
-     * @param closure
-     */
-    @DeprecatedDsl2(message='Operator `print` is deprecated -- Use `view` instead')
-    void print(final DataflowReadChannel<?> source, Closure closure = null) {
-        final print0 = { def obj = closure ? closure.call(it) : it; session.printConsole(obj?.toString(),false) }
-        subscribeImpl(source, [onNext: print0])
-    }
-
-    /**
-     * Print the channel content to the console standard output
-     * @param source
-     * @param closure
-     */
-    @DeprecatedDsl2(message='Operator `println` is deprecated -- Use `view` instead')
-    void println(final DataflowReadChannel<?> source, Closure closure = null) {
-        final print0 = { def obj = closure ? closure.call(it) : it; session.printConsole(obj?.toString(),true) }
-        subscribeImpl(source, [onNext: print0])
-    }
-
-
     static private final Map PARAMS_VIEW = [newLine: Boolean]
 
     /**
@@ -1324,11 +1110,6 @@ class OperatorImpl {
 
     DataflowWriteChannel view(final DataflowReadChannel source, Closure closure = null) {
         view(source, Collections.emptyMap(), closure)
-    }
-
-    @Deprecated
-    void choice(final DataflowReadChannel source, final List<DataflowWriteChannel> outputs, final Closure<Integer> code) {
-        new ChoiceOp(source,outputs,code).apply()
     }
 
     // NO DAG
@@ -1428,11 +1209,6 @@ class OperatorImpl {
         return result
     }
 
-    @Deprecated
-    DataflowWriteChannel countText(DataflowReadChannel source) {
-        countLines(source)
-    }
-
     /**
      * Implement a `set` operator e.g.
      * <pre>
@@ -1488,9 +1264,4 @@ class OperatorImpl {
                 .getOutput()
     }
 
-    @Deprecated
-    ChannelOut fork(DataflowReadChannel source, Closure<TokenMultiMapDef> action) {
-        log.warn "Operator `fork` has been renamed to `multiMap`"
-        multiMap(source, action)
-    }
 }

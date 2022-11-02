@@ -30,8 +30,8 @@ class MixOp2Test extends Dsl2Spec {
     def 'should mix channels'() {
         when:
         def result = dsl_eval('''
-            c1 = Channel.from( 1,2,3 )
-            c2 = Channel.from( 'a','b' )
+            c1 = Channel.of( 1,2,3 )
+            c2 = Channel.of( 'a','b' )
             c3 = Channel.value( 'z' )
             c1.mix(c2,c3)
             
@@ -51,7 +51,7 @@ class MixOp2Test extends Dsl2Spec {
     def 'should mix with value channels'() {
         when:
         def result = dsl_eval('''
-            Channel.value(1).mix( Channel.from([2,3])  )
+            Channel.value(1).mix( Channel.of([2,3])  )
             ''')
         then:
         result.toList().val.sort() == [1,2,3]

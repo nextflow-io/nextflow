@@ -80,10 +80,6 @@ class OpXformImpl implements ASTTransformation {
 
     static final public String MULTIMAP_CRITERIA_FUN = 'multiMapCriteria'
 
-    @Deprecated static final public String FORK_METHOD_NAME = 'fork'
-
-    @Deprecated static final public String FORK_CRITERIA_FUN = 'forkCriteria'
-
     SourceUnit unit
 
     static class BranchCondition {
@@ -386,14 +382,6 @@ class OpXformImpl implements ASTTransformation {
                 return ret
             if( name==MULTIMAP_CRITERIA_FUN && args.size()==1 && m.objectExpression.text=='this')
                 return ret
-            if( name==FORK_METHOD_NAME && args.size()==1 ) {
-                log.debug "Operator `fork` has been renamed to `multiMap`"
-                return ret
-            }
-            if( name==FORK_CRITERIA_FUN && args.size()==1 && m.objectExpression.text=='this') {
-                log.warn "Function `forkCriteria` has been renamed to `multiMapCriteria`"
-                return ret
-            }
 
         }
         return null

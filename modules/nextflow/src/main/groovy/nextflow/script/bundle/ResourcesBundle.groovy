@@ -105,14 +105,6 @@ class ResourcesBundle {
         return new HashSet<Path>(content.values())
     }
 
-    @Deprecated
-    List<Path> getPathsList() {
-        final result = new ArrayList<Path>(content.size())
-        for( String name : getEntries() )
-            result.add(path(name))
-        return result
-    }
-
     Path path(String name) {
         return content.get(name)
     }

@@ -78,7 +78,7 @@ class SplitFastqOperatorTest extends Specification {
     def 'should split a fastq' () {
 
         when:
-        def target = Channel.from(READS).splitFastq(by:2)
+        def target = Channel.of(READS).splitFastq(by:2)
         then:
         target.val == '''
             @SRR636272.19519409/1
@@ -113,7 +113,7 @@ class SplitFastqOperatorTest extends Specification {
         def folder = Files.createTempDirectory('test')
 
         when:
-        def target = Channel.from(READS).splitFastq(by:2, compress:true, file:folder)
+        def target = Channel.of(READS).splitFastq(by:2, compress:true, file:folder)
         then:
         gunzip(target.val) == '''
             @SRR636272.19519409/1
@@ -148,7 +148,7 @@ class SplitFastqOperatorTest extends Specification {
     def 'should split read pairs' () {
 
         when:
-        def result = Channel.from([['sample_id',READS,READS2]]).splitFastq(by:1, elem:[1,2]).toList().val
+        def result = Channel.of([['sample_id',READS,READS2]]).splitFastq(by:1, elem:[1,2]).toList().val
 
         then:
         result.size() ==4
@@ -218,7 +218,7 @@ class SplitFastqOperatorTest extends Specification {
         def result
 
         when:
-        channel = Channel.from([['sample_id',file1,file2]]).splitFastq(by:1, pe:true)
+        channel = Channel.of([['sample_id',file1,file2]]).splitFastq(by:1, pe:true)
         result = channel.val
         then:
         result[0] == 'sample_id'

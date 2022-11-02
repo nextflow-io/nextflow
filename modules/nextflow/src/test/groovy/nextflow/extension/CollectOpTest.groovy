@@ -36,7 +36,7 @@ class CollectOpTest extends Specification {
     def 'should collect items into a list'() {
 
         when:
-        def source = Channel.from(1,2,3)
+        def source = Channel.of(1,2,3)
         def result = source.collect()
         then:
         result.val == [1,2,3]

@@ -57,28 +57,6 @@ class IncludeDef {
     @PackageScope Map addedParams
     private Session session
 
-    @Deprecated
-    IncludeDef( String module ) {
-        final msg = "Anonymous module inclusion is deprecated -- Replace `include '${module}'` with `include { MODULE_NAME } from '${module}'`"
-        if( NF.isDsl2() )
-            throw new DeprecationException(msg)
-        log.warn msg
-        this.path = module
-        this.modules = new ArrayList<>(1)
-        this.modules << new Module(null,null)
-    }
-
-    IncludeDef(TokenVar token, String alias=null) {
-        def component = token.name; if(alias) component += " as $alias"
-        def msg = "Unwrapped module inclusion is deprecated -- Replace `include $component from './MODULE/PATH'` with `include { $component } from './MODULE/PATH'`"
-        if( NF.isDsl2() )
-            throw new DeprecationException(msg)
-        log.warn msg
-
-        this.modules = new ArrayList<>(1)
-        this.modules << new Module(token.name, alias)
-    }
-
     protected IncludeDef(List<Module> modules) {
         this.modules = new ArrayList<>(modules)
     }

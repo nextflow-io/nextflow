@@ -43,27 +43,12 @@ class NF {
         NextflowDelegatingMetaClass.provider.operatorNames().contains(name)
     }
 
-    static boolean isDsl1() {
-        !NextflowMeta.instance.isDsl2()
-    }
-
-    static boolean isDsl2() {
-        NextflowMeta.instance.isDsl2()
-    }
-
-    @Deprecated
-    static boolean isDsl2Final() {
-        NextflowMeta.instance.isDsl2Final()
-    }
-
     static Binding getBinding() {
-        isDsl2() ? ExecutionStack.binding() : session().getBinding()
+        ExecutionStack.binding()
     }
 
     static String lookupVariable(value) {
-        if( isDsl2() )
-            return WorkflowBinding.lookup(value)
-        return session().getBinding().getVariableName(value)
+        return WorkflowBinding.lookup(value)
     }
 
     static boolean isStrictMode() {

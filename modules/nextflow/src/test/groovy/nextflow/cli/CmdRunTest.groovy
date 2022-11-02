@@ -279,69 +279,6 @@ class CmdRunTest extends Specification {
         false       | '../some/path'
     }
 
-    def 'should determine dsl mode' () {
-        given:
-        def DSL1_SCRIPT = '''
-        process foo {
-          input: 
-          file x from ch
-        }
-        '''
-
-        def DSL2_SCRIPT = '''
-        process foo {
-          input: 
-          file x
-        }
-        
-        workflow { foo() }
-        '''
-
-        expect:
-        // default to DSL2 if nothing is specified
-        CmdRun.detectDslMode(new ConfigMap(), '', [:]) == '2'
-
-        and:
-        // take from the config
-        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:1]]]), '', [:]) == '1'
-
-        and:
-        // the script declaration has priority
-        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:1]]]), 'nextflow.enable.dsl=3', [:]) == '3'
-
-        and:
-        // env variable is ignored when the config is provided
-        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:1]]]), 'echo hello', [NXF_DEFAULT_DSL:'4']) == '1'
-
-        and:
-        // env variable is used if nothing else is specified
-        CmdRun.detectDslMode(new ConfigMap(), 'echo hello', [NXF_DEFAULT_DSL:'4']) == '4'
-
-        and:
-        // dsl mode is taken from the config
-        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:4]]]), DSL1_SCRIPT, [:]) == '4'
-
-        and:
-        // dsl mode is taken from the config
-        CmdRun.detectDslMode(new ConfigMap([nextflow:[enable:[dsl:4]]]), DSL2_SCRIPT, [:]) == '4'
-
-        and:
-        // detect version from DSL1 script
-        CmdRun.detectDslMode(new ConfigMap(), DSL1_SCRIPT, [NXF_DEFAULT_DSL:'2']) == '1'
-
-        and:
-        // detect version from DSL1 script
-        CmdRun.detectDslMode(new ConfigMap(), DSL1_SCRIPT, [:]) == '1'
-
-        and:
-        // detect version from env
-        CmdRun.detectDslMode(new ConfigMap(), DSL2_SCRIPT, [NXF_DEFAULT_DSL:'2']) == '2'
-
-        and:
-        // detect version from global default
-        CmdRun.detectDslMode(new ConfigMap(), DSL2_SCRIPT, [:]) == '2'
-    }
-
     def 'should warn for invalid config vars' () {
         given:
         def ENV = [NXF_ANSI_SUMMARY: 'true']

@@ -188,8 +188,6 @@ class TaskContextTest extends Specification {
         result == temp.resolve('templates/foo.txt')
 
         when:
-        // it's a DSL2 module
-        NextflowMeta.instance.enableDsl2()
         NextflowDelegatingMetaClass.provider = Mock(ExtensionProvider) { operatorNames() >> new HashSet<String>() }
         def meta = ScriptMeta.register(script)
         meta.setScriptPath(temp.resolve('modules/my-module/main.nf'))
@@ -206,7 +204,6 @@ class TaskContextTest extends Specification {
 
         cleanup:
         NextflowDelegatingMetaClass.provider = null
-        NextflowMeta.instance.disableDsl2()
         temp?.deleteDir()
     }
 

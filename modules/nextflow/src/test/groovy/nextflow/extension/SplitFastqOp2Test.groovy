@@ -66,7 +66,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
         '''.stripIndent().leftTrim()
 
 
-    def 'should split pair-ended using dsl2' () {
+    def 'should split pair-ended' () {
         given:
         def folder = Files.createTempDirectory('test')
         def file1 = folder.resolve('one.fq'); file1.text = READS
@@ -77,7 +77,7 @@ class SplitFastqOp2Test extends Dsl2Spec {
 
         when:
         channel = dsl_eval("""
-            Channel.from([['sample_id', file("$file1"), file("$file2")]]).splitFastq(by:1, pe:true)
+            Channel.of([['sample_id', file("$file1"), file("$file2")]]).splitFastq(by:1, pe:true)
         """)
 
         result = channel.val

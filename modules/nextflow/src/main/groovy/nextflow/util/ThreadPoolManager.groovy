@@ -54,12 +54,6 @@ class ThreadPoolManager {
         this.name = name
     }
 
-    @Deprecated
-    ThreadPoolManager(String name, Map config) {
-        this.name = name
-        withConfig(config)
-    }
-
     ThreadPoolManager withConfig(Map config) {
         this.minThreads = config.navigate("threadPool.${name}.minThreads", DEFAULT_MIN_THREAD) as Integer
         this.maxThreads = config.navigate("threadPool.${name}.maxThreads", DEFAULT_MAX_THREAD) as Integer

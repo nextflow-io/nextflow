@@ -173,27 +173,27 @@ class ChannelTest extends Specification {
         DataflowQueue result
 
         when:
-        result = Channel.from('hola')
+        result = Channel.of('hola')
         then:
         result.val == 'hola'
         result.val == Channel.STOP
 
         when:
-        result = Channel.from('alpha','delta')
+        result = Channel.of('alpha','delta')
         then:
         result.val == 'alpha'
         result.val == 'delta'
         result.val == Channel.STOP
 
         when:
-        result = Channel.from(['alpha','delta'])
+        result = Channel.of(['alpha','delta'])
         then:
         result.val == 'alpha'
         result.val == 'delta'
         result.val == Channel.STOP
 
         when:
-        result = Channel.from([])
+        result = Channel.of([])
         then:
         result.val == Channel.STOP
     }

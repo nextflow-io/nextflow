@@ -55,7 +55,6 @@ import nextflow.Session
 import nextflow.ast.NextflowDSLImpl
 import nextflow.ast.TaskCmdXform
 import nextflow.ast.TaskTemplateVarsXform
-import nextflow.cloud.CloudSpotTerminationException
 import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
 import nextflow.exception.MissingFileException
@@ -82,7 +81,6 @@ import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
-import nextflow.script.params.BasicMode
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
@@ -532,10 +530,6 @@ class TaskProcessor {
     }
 
     private start(DataflowProcessor op) {
-        if( !NF.dsl2 ) {
-            op.start()
-            return
-        }
         session.addIgniter {
             log.debug "Starting process > $name"
             op.start()
@@ -972,7 +966,7 @@ class TaskProcessor {
             if( error instanceof Error ) throw error
 
             // -- retry without increasing the error counts
-            if( task && (error.cause instanceof NodeTerminationException || error.cause instanceof CloudSpotTerminationException) ) {
+            if( task && (error.cause instanceof NodeTerminationException) ) {
                 if( error.cause instanceof NodeTerminationException )
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
                 else
@@ -1361,26 +1355,8 @@ class TaskProcessor {
                 continue
             }
 
-            if( param.mode == BasicMode.standard ) {
-                log.trace "Process $name > Binding out param: ${param} = ${list}"
-                bindOutParam(param, list)
-            }
-
-            else if( param.mode == BasicMode.flatten ) {
-                log.trace "Process $name > Flatting out param: ${param} = ${list}"
-                CollectionHelper.flatten( list ) {
-                    bindOutParam( param, it )
-                }
-            }
-
-            else if( param.mode == TupleOutParam.CombineMode.combine ) {
-                log.trace "Process $name > Combining out param: ${param} = ${list}"
-                final combs = (List<List>)list.combinations()
-                for( def it : combs ) { bindOutParam(param, it) }
-            }
-
-            else
-                throw new IllegalStateException("Unknown bind output parameter type: ${param}")
+            log.trace "Process $name > Binding out param: ${param} = ${list}"
+            bindOutParam(param, list)
         }
 
         // -- finally prints out the task output when 'debug' is true

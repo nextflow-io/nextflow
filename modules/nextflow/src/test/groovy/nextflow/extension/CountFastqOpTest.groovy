@@ -67,7 +67,7 @@ class CountFastqOpTest extends Specification {
 
 
         when:
-        def result = Channel.from( READS, READS2 ).countFastq()
+        def result = Channel.of( READS, READS2 ).countFastq()
         then:
         result.val == 7
 
@@ -123,7 +123,7 @@ class CountFastqOpTest extends Specification {
 
 
         when:
-        def result = Channel.from(file1, file2).countFastq()
+        def result = Channel.of(file1, file2).countFastq()
         then:
         result.val == 9
 

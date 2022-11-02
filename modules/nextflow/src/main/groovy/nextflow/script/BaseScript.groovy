@@ -62,33 +62,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     /**
-     * Holds the configuration object which will used to execution the user tasks
-     */
-    protected Map getConfig() {
-        final msg = "The access of `config` object is deprecated"
-        if( NF.dsl2 )
-            throw new DeprecationException(msg)
-        log.warn(msg)
-        session.getConfig()
-    }
-
-    /**
      * Access to the last *process* object -- only for testing purpose
      */
     @PackageScope
     TaskProcessor getTaskProcessor() { taskProcessor }
-
-    /**
-     * Enable disable task 'echo' configuration property
-     * @param value
-     */
-    protected void echo(boolean value = true) {
-        final msg = "The use of `echo` method has been deprecated"
-        if( NF.dsl2 )
-            throw new DeprecationException(msg)
-        log.warn(msg)
-        session.getConfig().process.echo = value
-    }
 
     private void setup() {
         binding.owner = this
@@ -104,16 +81,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.setVariable('moduleDir', meta.moduleDir )
     }
 
-    protected process( String name, Closure<BodyDef> body ) {
-        if( NF.isDsl2() ) {
-            def process = new ProcessDef(this,body,name)
-            meta.addDefinition(process)
-        }
-        else {
-            // legacy process definition an execution
-            taskProcessor = processFactory.createProcessor(name, body)
-            taskProcessor.run()
-        }
+    protected process(String name, Closure<BodyDef> body) {
+        def process = new ProcessDef(this,body,name)
+        meta.addDefinition(process)
     }
 
     /**
@@ -122,30 +92,21 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * @param body The implementation body of the workflow
      * @return The result of workflow execution
      */
-    protected workflow(Closure<BodyDef> workflowBody) {
-        if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to allow the definition of workflow components")
-
-        // launch the execution
-        final workflow = new WorkflowDef(this, workflowBody)
+    protected workflow(Closure<BodyDef> body) {
+        final workflow = new WorkflowDef(this, body)
         if( !binding.entryName )
             this.entryFlow = workflow
         meta.addDefinition(workflow)
     }
 
-    protected workflow(String name, Closure<BodyDef> workflowDef) {
-        if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to allow the definition of workflow components")
-
-        final workflow = new WorkflowDef(this,workflowDef,name)
+    protected workflow(String name, Closure<BodyDef> body) {
+        final workflow = new WorkflowDef(this,body,name)
         if( binding.entryName==name )
             this.entryFlow = workflow
         meta.addDefinition(workflow)
     }
 
     protected IncludeDef include( IncludeDef include ) {
-        if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to import module files")
         if(ExecutionStack.withinWorkflow())
             throw new IllegalStateException("Include statement is not allowed within a workflow definition")
         include .setSession(session)
@@ -153,20 +114,25 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     Object invokeMethod(String name, Object args) {
-        if(NF.isDsl2())
-            binding.invokeMethod(name, args)
-        else
-            super.invokeMethod(name, args)
+        binding.invokeMethod(name, args)
     }
 
-    private runDsl1() {
-        session.notifyBeforeWorkflowExecution()
-        final ret = runScript()
-        session.notifyAfterWorkflowExecution()
-        return ret
+    Object run() {
+        setup()
+        ExecutionStack.push(this)
+        try {
+            run0()
+        }
+        catch(InvocationTargetException e) {
+            // provide the exception cause which is more informative than InvocationTargetException
+            throw(e.cause ?: e)
+        }
+        finally {
+            ExecutionStack.pop()
+        }
     }
 
-    private runDsl2() {
+    private run0() {
         final result = runScript()
         if( meta.isModule() ) {
             return result
@@ -184,22 +150,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( !entryFlow ) {
             if( meta.getLocalWorkflowNames() )
                 log.warn "No entry workflow specified"
-            if( meta.getLocalProcessNames() ) {
-                final msg = """\
-                        =============================================================================
-                        =                                WARNING                                    =
-                        = You are running this script using DSL2 syntax, however it does not        = 
-                        = contain any 'workflow' definition so there's nothing for Nextflow to run. =
-                        =                                                                           =
-                        = If this script was written using Nextflow DSL1 syntax, please add the     = 
-                        = setting 'nextflow.enable.dsl=1' to the nextflow.config file or use the    =
-                        = command-line option '-dsl1' when running the pipeline.                    =
-                        =                                                                           =
-                        = More details at this link: https://www.nextflow.io/docs/latest/dsl2.html  =
-                        =============================================================================
-                        """.stripIndent()
-                throw new AbortOperationException(msg)
-            }
             return result
         }
 
@@ -208,21 +158,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
         final ret = entryFlow.invoke_a(BaseScriptConsts.EMPTY_ARGS)
         session.notifyAfterWorkflowExecution()
         return ret
-    }
-
-    Object run() {
-        setup()
-        ExecutionStack.push(this)
-        try {
-            NF.dsl2 ? runDsl2() : runDsl1()
-        }
-        catch(InvocationTargetException e) {
-            // provide the exception cause which is more informative than InvocationTargetException
-            throw(e.cause ?: e)
-        }
-        finally {
-            ExecutionStack.pop()
-        }
     }
 
     protected abstract Object runScript()

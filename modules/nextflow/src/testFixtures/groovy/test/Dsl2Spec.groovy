@@ -29,9 +29,6 @@ import nextflow.NextflowMeta
 @Slf4j
 class Dsl2Spec extends BaseSpec {
 
-    def setupSpec() { NextflowMeta.instance.enableDsl2() }
-    def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
-
     def dsl_eval(String str) {
         new MockScriptRunner().setScript(str).execute()
     }
@@ -40,9 +37,8 @@ class Dsl2Spec extends BaseSpec {
         new MockScriptRunner().setScript(path).execute()
     }
 
-
     def dsl_eval(String entry, String str) {
-        new MockScriptRunner()
-                .setScript(str).execute(null, entry)
+        new MockScriptRunner().setScript(str).execute(null, entry)
     }
+
 }

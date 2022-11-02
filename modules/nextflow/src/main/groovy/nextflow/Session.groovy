@@ -459,10 +459,6 @@ class Session implements ISession {
         checkConfig()
         notifyFlowBegin()
 
-        if( !NextflowMeta.instance.isDsl2() ) {
-            return
-        }
-
         // bridge any dataflow queue into a broadcast channel
         CH.broadcast()
 
@@ -813,8 +809,7 @@ class Session implements ISession {
         final enabled = config.navigate('nextflow.enable.configProcessNamesValidation', true) as boolean
         if( enabled ) {
             final names = ScriptMeta.allProcessNames()
-            final ver = "dsl${NF.dsl1 ?'1' :'2'}"
-            log.debug "Workflow process names [$ver]: ${names.join(', ')}"
+            log.debug "Workflow process names [DSL2]: ${names.join(', ')}"
             validateConfig(names)
         }
         else {

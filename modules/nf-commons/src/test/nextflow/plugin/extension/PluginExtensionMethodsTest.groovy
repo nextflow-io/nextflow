@@ -425,7 +425,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         }
         workflow{
             main:
-                Channel.from('hi') | sayHello
+                Channel.of('hi') | sayHello
             emit:
                 sayHello.out
         }
@@ -471,7 +471,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         }
         workflow{
             main:
-                Channel.from('hi') | foo
+                Channel.of('hi') | foo
             emit:
                 foo.out
         }

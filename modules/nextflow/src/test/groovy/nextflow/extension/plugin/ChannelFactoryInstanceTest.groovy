@@ -148,20 +148,23 @@ class ChannelFactoryInstanceTest extends Specification {
                 .loadPluginExtensionMethods("nf-foo",ext2, ['omega':'omega'])
         and:
         def SCRIPT = '''
-            def ch1 = channel.alpha([1,2,3])
-            def ch2 = channel.omega(['X','Y','Z'])
-            
             process sayHello {
               input:
-                val x from ch1
-                val y from ch2
+                val x
+                val y
               output: 
-                val z into ch3 
+                val z 
               exec:
                 z = "$x $y"
             }
-            
-            ch3.toSortedList()
+
+            workflow {
+                ch1 = channel.alpha([1,2,3])
+                ch2 = channel.omega(['X','Y','Z'])
+                ch3 = sayHello(ch1, ch2)
+
+                ch3.toSortedList()
+            }
             '''
 
         when:

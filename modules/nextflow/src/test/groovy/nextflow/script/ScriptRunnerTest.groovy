@@ -73,13 +73,16 @@ class ScriptRunnerTest extends Specification {
             '''
             process simpleTask  {
                 input:
-                val x from 1
+                val x
                 output:
                 stdout into result
 
                 """echo $x"""
             }
 
+            workflow {
+                simpleTask(1)
+            }
             '''
         runner.setScript(script).execute()
         then:
@@ -97,14 +100,17 @@ class ScriptRunnerTest extends Specification {
             '''
             process task2  {
                 input:
-                val x from 1
-                val y from ([3])
+                val x
+                val y
                 output:
                 stdout result
 
                 """echo $x - $y"""
             }
 
+            workflow {
+                task2(1, [3])
+            }
             '''
         runner.setScript(script).execute()
 
@@ -127,11 +133,15 @@ class ScriptRunnerTest extends Specification {
             '''
             process test  {
                 input:
-                val x from 1
+                val x
                 output:
                 stdout result
 
                 "echo $x"
+            }
+
+            workflow {
+                test(1)
             }
             '''
         runner.setScript(script).execute()

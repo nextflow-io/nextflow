@@ -176,8 +176,8 @@ class ParamsOutTest extends Specification {
             process hola {
               output:
               file x
-              file 'y' mode flatten
-              file p into q mode standard
+              file 'y'
+              file p into q
 
               return ''
             }
@@ -201,18 +201,15 @@ class ParamsOutTest extends Specification {
         out1.name == 'x'
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.'x'
-        out1.mode == BasicMode.standard
 
         out2.class == FileOutParam
         out2.name == null
         out2.outChannel == null
-        out2.mode == BasicMode.flatten
 
         out3.class == FileOutParam
         out3.name == 'p'
         out3.outChannel instanceof DataflowQueue
         out3.outChannel == binding.q
-        out3.mode == BasicMode.standard
         !binding.containsKey('p')
     }
 
@@ -544,8 +541,8 @@ class ParamsOutTest extends Specification {
             process hola {
               output:
                 set(x) into p
-                set(y, '-', '*.fa') into q mode flatten
-                set(stdout, z) into t mode combine
+                set(y, '-', '*.fa') into q
+                set(stdout, z) into t
 
               return ''
             }
@@ -568,7 +565,6 @@ class ParamsOutTest extends Specification {
         out1.inner[0] instanceof ValueOutParam
         out1.inner[0].name == 'x'
         out1.inner[0].index == 0
-        out1.mode == BasicMode.standard
 
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.q
@@ -583,7 +579,6 @@ class ParamsOutTest extends Specification {
         out2.inner[2].filePattern == '*.fa'
         out2.inner[2].index == 1
         out2.inner.size() ==3
-        out2.mode == BasicMode.flatten
 
         out3.outChannel instanceof DataflowQueue
         out3.outChannel == binding.t
@@ -594,7 +589,6 @@ class ParamsOutTest extends Specification {
         out3.inner[1] instanceof ValueOutParam
         out3.inner[1].name == 'z'
         out3.inner[1].index == 2
-        out3.mode == TupleOutParam.CombineMode.combine
 
     }
 
@@ -605,8 +599,8 @@ class ParamsOutTest extends Specification {
             process hola {
               output:
                 tuple val(x) into p
-                tuple val(y), stdout, file('*.fa') into q mode flatten
-                tuple stdout, val(z) into t mode combine
+                tuple val(y), stdout, file('*.fa') into q
+                tuple stdout, val(z) into t
 
               return ''
             }
@@ -629,7 +623,6 @@ class ParamsOutTest extends Specification {
         out0.inner[0] instanceof ValueOutParam
         out0.inner[0].name == 'x'
         out0.inner[0].index == 0
-        out0.mode == BasicMode.standard
 
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.q
@@ -644,7 +637,6 @@ class ParamsOutTest extends Specification {
         out1.inner[2].filePattern == '*.fa'
         out1.inner[2].index == 1
         out1.inner.size() ==3
-        out1.mode == BasicMode.flatten
 
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.t
@@ -655,7 +647,6 @@ class ParamsOutTest extends Specification {
         out2.inner[1] instanceof ValueOutParam
         out2.inner[1].name == 'z'
         out2.inner[1].index == 2
-        out2.mode == TupleOutParam.CombineMode.combine
 
     }
 
@@ -820,49 +811,6 @@ class ParamsOutTest extends Specification {
         outs.ofType(StdOutParam) == [o1]
         outs.ofType(ValueOutParam) == [v1,v2]
         outs.ofType(TupleOutParam,StdOutParam) == [o1, s1, s2]
-
-    }
-
-
-    def testModeParam() {
-
-        setup:
-        def p = new TupleOutParam(new Binding(), [])
-        when:
-        p.mode(value)
-        then:
-        p.getMode() == expected
-
-        where:
-        value                   | expected
-        'combine'               | TupleOutParam.CombineMode.combine
-        new TokenVar('combine') | TupleOutParam.CombineMode.combine
-        'flatten'               | BasicMode.flatten
-        new TokenVar('flatten') | BasicMode.flatten
-
-    }
-
-    def testWrongMode() {
-
-        when:
-        def p = new TupleOutParam(new Binding(), [])
-        p.mode('unknown')
-        then:
-        thrown(IllegalArgumentException)
-
-    }
-
-    def testDefaultMode() {
-
-        setup:
-        def bind = new Binding()
-        def list = []
-
-        expect:
-        new StdOutParam(bind, list).mode == BasicMode.standard
-        new ValueOutParam(bind, list).mode == BasicMode.standard
-        new FileOutParam(bind, list).mode == BasicMode.standard
-        new TupleOutParam(bind, list).mode == BasicMode.standard
 
     }
 

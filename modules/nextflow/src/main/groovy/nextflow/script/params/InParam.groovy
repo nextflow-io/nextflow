@@ -32,10 +32,6 @@ interface InParam extends Cloneable {
 
     Object getRawChannel()
 
-    InParam from( Object value )
-
-    InParam from( Object... values )
-
     short index
 
     short mapIndex

@@ -179,11 +179,6 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
         return tmp ? "source /dev/stdin <<<\"\$(cat <(grep -w $filter $tmp))\"" : null
     }
 
-    @Deprecated
-    String getSecretsEnv() {
-        return getSecretsEnv(null)
-    }
-
     /**
      * Creates temporary file containing secrets to be included in the task environment
      *

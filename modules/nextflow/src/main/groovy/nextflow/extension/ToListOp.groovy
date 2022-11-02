@@ -68,9 +68,4 @@ class ToListOp {
         }
     }
 
-    @Deprecated
-    static DataflowVariable apply( DataflowReadChannel source ) {
-        new ToListOp(source).apply()
-    }
-
 }

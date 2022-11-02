@@ -275,29 +275,6 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         throw new IllegalArgumentException("Unsupported target path: ${targetDir.toUriString()}")
     }
 
-    @Deprecated
-    protected String stageOutCommand( String source, String target, String mode ) {
-        assert mode
-
-        def cmd
-        if( mode == 'copy' )
-            cmd = 'cp -fRL'
-        else if( mode == 'move' )
-            cmd = 'mv -f'
-        else if( mode == 'rsync' )
-            return "rsync -rRl ${Escape.path(source)} ${Escape.path(target)}"
-        else
-            throw new IllegalArgumentException("Unknown stage-out strategy: $mode")
-
-        final p = source.lastIndexOf('/')
-        if( p<=0 ) {
-            return "$cmd ${Escape.path(source)} ${Escape.path(target)}"
-        }
-
-        def path  = new File(target,source.substring(0,p)).toString()
-        return "mkdir -p ${Escape.path(path)} && $cmd ${Escape.path(source)} ${Escape.path(path)}"
-    }
-
     /**
      * Normalize path that contains glob star wildcards (i.e. double star character) since
      * they are not supported by plain BASH

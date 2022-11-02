@@ -105,7 +105,7 @@ class MultiMapOpTest extends Dsl2Spec {
                 bar: it*it
             }
 
-            ch1 = Channel.from(1,2,3).multiMap(criteria)  
+            ch1 = Channel.of(1,2,3).multiMap(criteria)  
             
             ch1.foo.view { "foo:$it" }
             ch1.bar.view { "bar:$it" }

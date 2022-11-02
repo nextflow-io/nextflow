@@ -49,21 +49,19 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'afterScript',
             'beforeScript',
             'cache',
-            'conda',
-            'cpus',
-            'container',
-            'containerOptions',
             'cleanup',
             'clusterOptions',
+            'conda',
+            'container',
+            'containerOptions',
+            'cpus',
             'debug',
             'disk',
-            'echo', // deprecated
             'errorStrategy',
             'executor',
             'ext',
-            'machineType',
-            'queue',
             'label',
+            'machineType',
             'maxErrors',
             'maxForks',
             'maxRetries',
@@ -72,23 +70,23 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'penv',
             'pod',
             'publishDir',
+            'queue',
+            'resourceLabels',
             'scratch',
+            'secret',
             'shell',
+            'stageInMode',
+            'stageOutMode',
             'storeDir',
             'tag',
             'time',
             // input-output qualifiers
             'file',
-            'set',
             'val',
             'each',
             'env',
-            'secret',
             'stdin',
-            'stdout',
-            'stageInMode',
-            'stageOutMode',
-            'resourceLabels'
+            'stdout'
     ]
 
     /**
@@ -533,12 +531,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         new EachInParam(this).bind(obj)
     }
 
-    InParam _in_set( Object... obj ) {
-        final msg = "Input of type `set` is deprecated -- Use `tuple` instead"
-        if( NF.isDsl2() ) throw new DeprecationException(msg)
-        new TupleInParam(this).bind(obj)
-    }
-
     InParam _in_tuple( Object... obj ) {
         new TupleInParam(this).bind(obj)
     }
@@ -601,12 +593,6 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
                     .setOptions(opts)
                     .bind(obj)
         }
-    }
-
-    OutParam _out_set( Object... obj ) {
-        final msg = "Output of type `set` is deprecated -- Use `tuple` instead"
-        if( NF.isDsl2() ) throw new DeprecationException(msg)
-        new TupleOutParam(this) .bind(obj)
     }
 
     OutParam _out_tuple( Object... obj ) {

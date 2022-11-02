@@ -81,23 +81,9 @@ abstract class BaseInParam extends BaseParam implements InParam {
             return CH.getReadChannel(value)
         }
 
-        if( NF.isDsl2() ) {
-            final result = CH.value()
-            result.bind(value)
-            return result
-        }
-
-        // wrap any collections with a DataflowQueue
-        if( value instanceof Collection ) {
-            return CH.emitAndClose(CH.queue(), value)
-        }
-
-        // wrap any array with a DataflowQueue
-        if ( value && value.class.isArray() ) {
-            return CH.emitAndClose(CH.queue(), value as Collection)
-        }
-
-        value!=null ? CH.value(value) : CH.value() 
+        final result = CH.value()
+        result.bind(value)
+        return result
     }
 
 
@@ -170,13 +156,6 @@ abstract class BaseInParam extends BaseParam implements InParam {
         throw new IllegalArgumentException(message)
     }
 
-    BaseInParam from( def obj ) {
-        if( NF.isDsl2() )
-            throw new ScriptRuntimeException("Process clause `from` should not be provided when using DSL 2")
-        setFrom(obj)
-        return this
-    }
-
     void setFrom( obj ) {
         checkFromNotNull(obj)
         fromObject = obj
@@ -188,22 +167,6 @@ abstract class BaseInParam extends BaseParam implements InParam {
         if( CH.isChannel(inChannel) )
             return inChannel
         throw new IllegalStateException("Missing input channel")
-    }
-
-    BaseInParam from( Object... obj ) {
-
-        def normalize = obj.collect {
-            if( it instanceof DataflowReadChannel )
-                throw new IllegalArgumentException("Multiple channels are not allowed on 'from' input declaration")
-
-            if( it instanceof Closure )
-                return it.call()
-            else
-                it
-        }
-
-        fromObject = normalize as List
-        return this
     }
 
     def decodeInputs( List inputs ) {

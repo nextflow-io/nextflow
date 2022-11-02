@@ -743,7 +743,7 @@ class ParamsInTest extends Specification {
               val x from "$foo"
               val y from "${alpha.beta}"
               val x from Channel.value("$bar")
-              val z from Channel.from("$baz")
+              val z from Channel.of("$baz")
               
               script:
               """

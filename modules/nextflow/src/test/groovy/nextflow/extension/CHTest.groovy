@@ -18,26 +18,12 @@ class CHTest extends Specification {
     def 'should create dataflow variable or queue' () {
 
         expect:
-        CH.create() instanceof DataflowQueue
-        CH.create(false) instanceof DataflowQueue
-        CH.create(true) instanceof DataflowVariable
-
-        CH.createBy(new DataflowVariable()) instanceof DataflowVariable
-        CH.createBy(new DataflowQueue()) instanceof DataflowQueue
-
-
-        when:
-        NextflowMeta.instance.enableDsl2()
-        then:
         CH.create() instanceof DataflowBroadcast
         CH.create(false) instanceof DataflowBroadcast
         CH.create(true) instanceof DataflowVariable
 
         CH.createBy(new DataflowVariable()) instanceof DataflowVariable
         CH.createBy(new DataflowQueue()) instanceof DataflowBroadcast
-
-        cleanup:
-        NextflowMeta.instance.disableDsl2()
 
     }
 

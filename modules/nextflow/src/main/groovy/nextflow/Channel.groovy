@@ -83,18 +83,6 @@ class Channel  {
     }
 
     /**
-     * Create an new channel
-     *
-     * @return The channel instance
-     */
-    @Deprecated
-    static DataflowChannel create() {
-        if( NF.isDsl2() )
-            throw new DeprecationException("Channel `create` method is not supported any more")
-        return CH.queue()
-    }
-
-    /**
      * Create a empty channel i.e. only emits a STOP signal
      *
      * @return The channel instance
@@ -132,26 +120,6 @@ class Channel  {
         }
     }
 
-    /**
-     * Creates a channel sending the items in the collection over it
-     *
-     * @param items
-     * @return
-     */
-    @Deprecated
-    static DataflowWriteChannel from( Collection items ) {
-        final result = from0(items)
-        NodeMarker.addSourceNode('Channel.from', result)
-        return result
-    }
-
-    static private DataflowWriteChannel from0( Collection items ) {
-        final result = CH.create()
-        if( items != null )
-            CH.emitAndClose(result, items)
-        return result
-    }
-
     static DataflowWriteChannel fromList( Collection items ) {
         final result = CH.create()
         CH.emitAndClose(result, items as List)
@@ -159,33 +127,6 @@ class Channel  {
         return result
     }
     
-    /**
-     * Creates a channel sending the items in the collection over it
-     *
-     * @param items
-     * @return
-     */
-    @Deprecated
-    static DataflowWriteChannel from( Object... items ) {
-        final result = from0(items as List)
-        NodeMarker.addSourceNode('Channel.from', result)
-        return result
-    }
-
-    /**
-     * Convert an object into a *channel* variable that emits that object
-     *
-     * @param obj
-     * @return
-     */
-    @Deprecated
-    static DataflowVariable just( obj = null ) {
-        if( NF.dsl2 )
-            throw new DeprecationException("The operator `just` is not available anymore -- Use `value` instead.")
-        log.warn "The operator `just` is deprecated -- Use `value` instead."
-        value(obj)
-    }
-
     static DataflowVariable value( obj = null ) {
         obj != null ? CH.value(obj) : CH.value()
     }
@@ -231,10 +172,7 @@ class Channel  {
             }
         }
 
-        if( NF.isDsl2() )
-            session.addIgniter { timer.schedule( task as TimerTask, millis ) }  
-        else 
-            timer.schedule( task as TimerTask, millis )
+        session.addIgniter { timer.schedule( task as TimerTask, millis ) }  
         
         return result
     }
@@ -277,12 +215,7 @@ class Channel  {
     private static DataflowWriteChannel<Path> fromPath0( Map opts, List allPatterns ) {
 
         final result = CH.create()
-        if( NF.isDsl2() ) {
-            session.addIgniter { pumpFiles0(result, opts, allPatterns) }
-        }
-        else {
-            pumpFiles0(result, opts, allPatterns)
-        }
+        session.addIgniter { pumpFiles0(result, opts, allPatterns) }
         return result
     }
     
@@ -315,14 +248,9 @@ class Channel  {
                         : new DirWatcherV2(syntax,folder,pattern,skipHidden,events,fs)
         watcher.onComplete { result.bind(STOP) }
 
-        if( NF.isDsl2() )  {
-            session.addIgniter {
-                watcher.apply { Path file -> result.bind(file.toAbsolutePath()) }   
-            }   
-        }
-        else {
-            watcher.apply { Path file -> result.bind(file.toAbsolutePath()) }
-        }
+        session.addIgniter {
+            watcher.apply { Path file -> result.bind(file.toAbsolutePath()) }   
+        }   
 
         return result
     }
@@ -466,10 +394,7 @@ class Channel  {
         // -- a channel from the path
         final fromOpts = fetchParams0(VALID_FROM_PATH_PARAMS, options)
         final files = new DataflowQueue()
-        if( NF.isDsl2() )
-            session.addIgniter { pumpFilePairs0(files,fromOpts,allPatterns) }
-        else 
-            pumpFilePairs0(files,fromOpts,allPatterns)
+        session.addIgniter { pumpFilePairs0(files,fromOpts,allPatterns) }
 
         // -- map the files to a tuple like ( ID, filePath )
         final mapper = { path, int index ->
@@ -610,12 +535,7 @@ class Channel  {
 
         def target = new DataflowQueue()
         def explorer = new SraExplorer(target, opts).setQuery(query)
-        if( NF.isDsl2() ) {
-            session.addIgniter { fetchSraFiles0(explorer) }
-        }
-        else {
-            fetchSraFiles0(explorer)
-        }
+        session.addIgniter { fetchSraFiles0(explorer) }
 
         NodeMarker.addSourceNode('Channel.fromSRA', target)
         return target

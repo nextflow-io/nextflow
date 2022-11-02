@@ -60,7 +60,7 @@ class ScriptIncludesTest extends Dsl2Spec {
                 "echo 'hello'"
         }
         workflow {
-            foo(Channel.from(new Foo(id: "hello_world")))
+            foo(Channel.of(new Foo(id: "hello_world")))
         }
         """
 
@@ -137,7 +137,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         include { foo } from "$MODULE" 
         workflow {
            emit:
-           channel.of('hello world').map { foo(it) }
+           Channel.of('hello world').map { foo(it) }
         }
         """
 
@@ -167,7 +167,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         include { foo } from "$MODULE" 
         workflow {
            emit:
-           channel.of('hello world').map { 
+           Channel.of('hello world').map { 
             [ witharg : foo(it), withdefault : foo() ] 
            }
         }
@@ -206,7 +206,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         include { foo } from "$MODULE" 
         workflow {
            emit:
-           channel.from( foo() ).flatMap { foo(it, it*2) } 
+           Channel.of( foo() ).flatMap { foo(it, it*2) } 
         }
         """
 
@@ -243,7 +243,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         include { foo } from "$MODULE" 
         workflow {
            emit:
-           channel.from( foo(1, 2, 3) ) 
+           Channel.of( foo(1, 2, 3) ) 
         }
         """
 
@@ -464,7 +464,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         SCRIPT.text = """
         include { foo } from "$MODULE" 
-        hello_ch = Channel.from('world')
+        hello_ch = Channel.of('world')
         
         workflow {
             main: foo(hello_ch)
@@ -505,7 +505,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         include { foo } from './module.nf'
 
         workflow {
-          main: ch1 = Channel.from('world')
+          main: ch1 = Channel.of('world')
                 ch2 = Channel.value(['x', '/some/file'])
                 foo(ch1, ch2)
           emit: foo.out  

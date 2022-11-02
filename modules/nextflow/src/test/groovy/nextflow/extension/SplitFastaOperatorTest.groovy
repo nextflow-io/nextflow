@@ -70,7 +70,7 @@ class SplitFastaOperatorTest extends Specification {
     def 'should split fasta in sequences'() {
 
         given:
-        def sequences = Channel.from(fasta1).splitFasta()
+        def sequences = Channel.of(fasta1).splitFasta()
 
         expect:
         with(sequences) {
@@ -86,7 +86,7 @@ class SplitFastaOperatorTest extends Specification {
     def 'should split fasta in records' () {
 
         given:
-        def records = Channel.from(fasta1, fasta2).splitFasta(record:[id:true])
+        def records = Channel.of(fasta1, fasta2).splitFasta(record:[id:true])
         expect:
         records.val == [id:'1aboA']
         records.val == [id:'1ycsB']
@@ -117,7 +117,7 @@ class SplitFastaOperatorTest extends Specification {
 
         given:
         def target = Channel.create()
-        Channel.from(fasta1,fasta2).splitFasta(record:[id:true], into: target)
+        Channel.of(fasta1,fasta2).splitFasta(record:[id:true], into: target)
 
         expect:
         target.val == [id:'1aboA']
@@ -153,7 +153,7 @@ class SplitFastaOperatorTest extends Specification {
         def target = Channel.create()
 
         when:
-        Channel.from(F1,F3).splitFasta(by:2, into: target)
+        Channel.of(F1,F3).splitFasta(by:2, into: target)
         then:
         target.val == '>1\nAAA\n>2\nBBB\n'
         target.val == '>3\nCCC\n'
@@ -194,7 +194,7 @@ class SplitFastaOperatorTest extends Specification {
         def target = Channel.create()
 
         when:
-        Channel.from(F1,F3).splitFasta(by:2, limit:4, into: target)
+        Channel.of(F1,F3).splitFasta(by:2, limit:4, into: target)
         then:
         target.val == '>1\nAAA\n>2\nBBB\n'
         target.val == '>3\nCCC\n>4\nDDD\n'
