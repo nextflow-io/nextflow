@@ -28,13 +28,13 @@ import spock.lang.Unroll
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class SingularityCacheTest extends Specification {
+class ApptainerCacheTest extends Specification {
 
     @Unroll
     def 'should return a simple name given an image url'() {
 
         given:
-        def helper = new SingularityCache(Mock(ContainerConfig))
+        def helper = new ApptainerCache(Mock(ContainerConfig))
 
         expect:
         helper.simpleName(url) == expected
@@ -58,7 +58,7 @@ class SingularityCacheTest extends Specification {
         def dir = Files.createTempDirectory('test')
 
         when:
-        def cache = new SingularityCache([libraryDir: "$dir"] as ContainerConfig)
+        def cache = new ApptainerCache([libraryDir: "$dir"] as ContainerConfig)
         then:
         cache.getLibraryDir() == dir
 
@@ -72,7 +72,7 @@ class SingularityCacheTest extends Specification {
         def dir = Files.createTempDirectory('test')
 
         when:
-        def cache = new SingularityCache(GroovyMock(ContainerConfig), [NXF_SINGULARITY_LIBRARYDIR: "$dir"])
+        def cache = new ApptainerCache(GroovyMock(ContainerConfig), [NXF_APPTAINER_LIBRARYDIR: "$dir"])
         then:
         cache.getLibraryDir() == dir
 
@@ -86,7 +86,7 @@ class SingularityCacheTest extends Specification {
         def dir = Files.createTempDirectory('test')
 
         when:
-        def cache = new SingularityCache([cacheDir: "$dir"] as ContainerConfig)
+        def cache = new ApptainerCache([cacheDir: "$dir"] as ContainerConfig)
         then:
         cache.getCacheDir() == dir
 
@@ -100,7 +100,7 @@ class SingularityCacheTest extends Specification {
         def dir = Files.createTempDirectory('test')
 
         when:
-        def cache = new SingularityCache(GroovyMock(ContainerConfig), [NXF_SINGULARITY_CACHEDIR: "$dir"])
+        def cache = new ApptainerCache(GroovyMock(ContainerConfig), [NXF_APPTAINER_CACHEDIR: "$dir"])
         then:
         cache.getCacheDir() == dir
 
@@ -109,7 +109,7 @@ class SingularityCacheTest extends Specification {
     }
 
 
-    def 'should run singularity pull command'() {
+    def 'should run apptainer pull command'() {
 
         given:
         def dir = Files.createTempDirectory('test')
@@ -119,7 +119,7 @@ class SingularityCacheTest extends Specification {
         def TEMP_FILE = dir.resolve('foo-latest.pulling'); TEMP_FILE.text = 'foo'
         ContainerConfig config = [noHttps: true]
         and:
-        def cache = Spy(new SingularityCache(config))
+        def cache = Spy(new ApptainerCache(config))
 
         when:
         def result = cache.downloadContainerImage(IMAGE)
@@ -128,7 +128,7 @@ class SingularityCacheTest extends Specification {
         1 * cache.localCachePath(IMAGE) >> TARGET_FILE
         1 * cache.getTempImagePath(TARGET_FILE) >> TEMP_FILE
         and:
-        1 * cache.runCommand("singularity pull --nohttps --name ${TEMP_FILE.name} $IMAGE > /dev/null", dir) >> 0
+        1 * cache.runCommand("apptainer pull --nohttps --name ${TEMP_FILE.name} $IMAGE > /dev/null", dir) >> 0
         and:
         TARGET_FILE.exists()
         !TEMP_FILE.exists()
@@ -149,7 +149,7 @@ class SingularityCacheTest extends Specification {
         def container = dir.resolve(LOCAL)
         container.text = 'dummy'
         and:
-        def cache = Spy(SingularityCache)
+        def cache = Spy(ApptainerCache)
 
         when:
         def result = cache.downloadContainerImage(IMAGE)
@@ -173,7 +173,7 @@ class SingularityCacheTest extends Specification {
         def container = dir.resolve(LOCAL)
         container.text = 'dummy'
         and:
-        def cache = Spy(SingularityCache)
+        def cache = Spy(ApptainerCache)
 
         when:
         def result = cache.downloadContainerImage(IMAGE)
@@ -190,7 +190,7 @@ class SingularityCacheTest extends Specification {
 
     @Ignore
     @Timeout(1)
-    def 'should pull a singularity image' () {
+    def 'should pull a apptainer image' () {
 
         given:
         def IMAGE = 'docker://pditommaso/foo:latest'
@@ -198,12 +198,12 @@ class SingularityCacheTest extends Specification {
         def dir = Paths.get('/test/path')
         def container = dir.resolve(LOCAL)
         and:
-        def cache = Spy(SingularityCache)
+        def cache = Spy(ApptainerCache)
 
         when:
         def file = cache.getCachePathFor(IMAGE)
         then:
-        1 * cache.downloadContainerImage(IMAGE) >> container
+        1 * cache.downloadApptainerImage(IMAGE) >> container
         file == container
     }
 

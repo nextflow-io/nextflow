@@ -55,6 +55,12 @@ class SingularityCache {
     @PackageScope
     SingularityCache() {}
 
+    protected String getBinaryName() { return 'singularity' }
+
+    protected String getAppName() { getBinaryName().capitalize() }
+
+    protected String getEnvPrefix() { getBinaryName().toUpperCase() }
+
     /**
      * Create a Singularity cache object
      *
@@ -105,7 +111,7 @@ class SingularityCache {
     Path checkDir(String str) {
         def result = Paths.get(str)
         if( !result.exists() && !result.mkdirs() ) {
-            throw new IOException("Failed to create Singularity cache directory: $str -- Make sure a file with the same name does not exist and you have write permission")
+            throw new IOException("Failed to create ${appName} cache directory: $str -- Make sure a file with the same name does not exist and you have write permission")
         }
         return result.toAbsolutePath()
     }
@@ -114,7 +120,7 @@ class SingularityCache {
     Path existsDir(String str) {
         def result = Paths.get(str)
         if( !result.exists() ) {
-            throw new IOException("Missing Singularity library directory: $str")
+            throw new IOException("Missing ${appName} library directory: $str")
         }
         return result.toAbsolutePath()
     }
@@ -139,17 +145,17 @@ class SingularityCache {
         if( str )
             return checkDir(str)
 
-        str = env.get('NXF_SINGULARITY_CACHEDIR')
+        str = env.get("NXF_${envPrefix}_CACHEDIR".toString())
         if( str )
             return checkDir(str)
 
-        str = env.get('SINGULARITY_PULLFOLDER')
+        str = env.get("${envPrefix}_PULLFOLDER".toString())
         if( str )
             return checkDir(str)
 
         def workDir = Global.session.workDir
         if( workDir.fileSystem != FileSystems.default ) {
-            throw new IOException("Cannot store Singularity image to a remote work directory -- Use a POSIX compatible work directory or specify an alternative path with the `NXF_SINGULARITY_CACHEDIR` env variable")
+            throw new IOException("Cannot store ${appName} image to a remote work directory -- Use a POSIX compatible work directory or specify an alternative path with the `NXF_${envPrefix}_CACHEDIR` env variable")
         }
 
         missingCacheDir = true
@@ -173,7 +179,7 @@ class SingularityCache {
      */
     @PackageScope
     Path getLibraryDir() {
-        def str = config.libraryDir as String ?: env.get('NXF_SINGULARITY_LIBRARYDIR')
+        def str = config.libraryDir as String ?: env.get("NXF_${envPrefix}_LIBRARYDIR".toString())
         if( str )
             return existsDir(str)
 
@@ -209,12 +215,12 @@ class SingularityCache {
      * @return  the container image local {@link Path}
      */
     @PackageScope
-    Path downloadSingularityImage(String imageUrl) {
+    Path downloadContainerImage(String imageUrl) {
         // check for the image in the local library dir
         // see https://github.com/nextflow-io/nextflow/issues/1879
         final libraryPath = localLibraryPath(imageUrl)
         if( libraryPath?.exists() ) {
-            log.debug "Singularity found local library for image=$imageUrl; path=$libraryPath"
+            log.debug "${appName} found local library for image=$imageUrl; path=$libraryPath"
             return libraryPath
         }
 
@@ -222,17 +228,17 @@ class SingularityCache {
         // if the image does not exist in the cache dir, download it
         final localPath = localCachePath(imageUrl)
         if( localPath.exists() ) {
-            log.debug "Singularity found local store for image=$imageUrl; path=$localPath"
+            log.debug "${appName} found local store for image=$imageUrl; path=$localPath"
             return localPath
         }
 
         final file = new File("${localPath.parent}/.${localPath.name}.lock")
-        final wait = "Another Nextflow instance is pulling the Singularity image $imageUrl -- please wait the download completes"
+        final wait = "Another Nextflow instance is pulling the ${appName} image $imageUrl -- please wait the download completes"
         final err =  "Unable to acquire exclusive lock after $pullTimeout on file: $file"
 
         final mutex = new FileMutex(target: file, timeout: pullTimeout, waitMessage: wait, errorMessage: err)
         try {
-            mutex .lock { downloadSingularityImage0(imageUrl, localPath) }
+            mutex .lock { downloadContainerImage0(imageUrl, localPath) }
         }
         finally {
             file.delete()
@@ -243,30 +249,30 @@ class SingularityCache {
 
 
     @PackageScope
-    Path downloadSingularityImage0(String imageUrl, Path targetPath) {
+    Path downloadContainerImage0(String imageUrl, Path targetPath) {
 
         if( targetPath.exists() ) {
             // If we're here we're an additional process that has waited for the pulling
             // before we got the mutex to advance here.
-            log.debug "Singularity found local store for image=$imageUrl; path=$targetPath"
+            log.debug "${appName} found local store for image=$imageUrl; path=$targetPath"
             return targetPath
         }
-        log.trace "Singularity pulling remote image `$imageUrl`"
+        log.trace "${appName} pulling remote image `$imageUrl`"
 
         if( missingCacheDir )
-            log.warn1 "Singularity cache directory has not been defined -- Remote image will be stored in the path: $targetPath.parent -- Use env variable NXF_SINGULARITY_CACHEDIR to specify a different location"
+            log.warn1 "${appName} cache directory has not been defined -- Remote image will be stored in the path: $targetPath.parent -- Use env variable NXF_${envPrefix}_CACHEDIR to specify a different location"
 
-        log.info "Pulling Singularity image $imageUrl [cache $targetPath]"
+        log.info "Pulling ${appName} image $imageUrl [cache $targetPath]"
 
         // Construct a temporary name for the image file
         final tmpFile = getTempImagePath(targetPath)
         final noHttpsOption = (config.noHttps)? '--nohttps' : ''
 
-        String cmd = "singularity pull ${noHttpsOption} --name ${Escape.path(tmpFile.name)} $imageUrl > /dev/null"
+        String cmd = "${binaryName} pull ${noHttpsOption} --name ${Escape.path(tmpFile.name)} $imageUrl > /dev/null"
         try {
             runCommand( cmd, tmpFile.parent )
             Files.move( tmpFile, targetPath )
-            log.debug "Singularity pull complete image=$imageUrl path=$targetPath"
+            log.debug "${appName} pull complete image=$imageUrl path=$targetPath"
         }
         catch( Exception e ){
             // clean-up to avoid to keep eventually corrupted image file
@@ -278,7 +284,7 @@ class SingularityCache {
 
     @PackageScope
     int runCommand( String cmd, Path storePath ) {
-        log.trace """Singularity pull
+        log.trace """${appName} pull
                      command: $cmd
                      timeout: $pullTimeout
                      folder : $storePath""".stripIndent()
@@ -287,7 +293,7 @@ class SingularityCache {
         final builder = new ProcessBuilder(['bash','-c',cmd])
         // workaround due to Singularity issue --> https://github.com/singularityware/singularity/issues/847#issuecomment-319097420
         builder.directory(storePath.toFile())
-        builder.environment().remove('SINGULARITY_PULLFOLDER')
+        builder.environment().remove("${envPrefix}_PULLFOLDER".toString())
         final proc = builder.start()
         final err = new StringBuilder()
         final consumer = proc.consumeProcessErrorStream(err)
@@ -315,18 +321,18 @@ class SingularityCache {
     @PackageScope
     DataflowVariable<Path> getLazyImagePath(String imageUrl) {
         if( imageUrl in localImageNames ) {
-            log.trace "Singularity found local cache for image `$imageUrl`"
+            log.trace "${appName} found local cache for image `$imageUrl`"
             return localImageNames[imageUrl]
         }
 
         synchronized (localImageNames) {
             def result = localImageNames[imageUrl]
             if( result == null ) {
-                result = new LazyDataflowVariable<Path>({ downloadSingularityImage(imageUrl) })
+                result = new LazyDataflowVariable<Path>({ downloadContainerImage(imageUrl) })
                 localImageNames[imageUrl] = result
             }
             else {
-                log.trace "Singularity found local cache for image `$imageUrl` (2)"
+                log.trace "${appName} found local cache for image `$imageUrl` (2)"
             }
             return result
         }
@@ -347,8 +353,8 @@ class SingularityCache {
         if( promise.isError() )
             throw new IllegalStateException(promise.getError())
         if( !result )
-            throw new IllegalStateException("Cannot pull Singularity image `$url`")
-        log.trace "Singularity cache for `$url` path=$result"
+            throw new IllegalStateException("Cannot pull ${appName} image `$url`")
+        log.trace "${appName} cache for `$url` path=$result"
         return result
     }
 

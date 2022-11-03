@@ -39,6 +39,8 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
             return new PodmanBuilder(containerImage)
         if( engine == 'singularity' )
             return new SingularityBuilder(containerImage)
+        if( engine == 'apptainer' )
+            return new ApptainerBuilder(containerImage)
         if( engine == 'udocker' )
             return new UdockerBuilder(containerImage)
         if( engine == 'shifter' )

@@ -252,6 +252,10 @@ class Launcher {
                 normalized << '-'
             }
 
+            else if( current == '-with-apptainer' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
             else if( current == '-with-charliecloud' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '-'
             }
