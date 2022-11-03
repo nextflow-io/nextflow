@@ -348,7 +348,7 @@ Public images from other registries are still pulled (if requested by a Task) wh
 Active Directory Authentication
 ===============================
 
-As of version ``22.09.7-edge``, `Service Principal <https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal>`_ credentials can optionally be used instead of Shared Keys for Azure Batch and Storage accounts. 
+As of version ``22.11.0-edge``, `Service Principal <https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal>`_ credentials can optionally be used instead of Shared Keys for Azure Batch and Storage accounts. 
 
 The Service Principal should have the at least the following role assignments :
 

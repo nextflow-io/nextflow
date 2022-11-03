@@ -66,8 +66,8 @@ class AzFileSystemProvider extends FileSystemProvider {
 
     public static final String SCHEME = 'az'
 
-    private Map<String, String> env = new HashMap<>(System.getenv())
-    private Map<String, AzFileSystem> fileSystems = [:]
+    private Map<String,String> env = new HashMap<>(System.getenv())
+    private Map<String,AzFileSystem> fileSystems = [:]
     private String sasToken = null
     private String accountKey = null
 

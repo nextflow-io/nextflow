@@ -1,5 +1,4 @@
 /*
- * Copyright 2021, Microsoft Corp
  * Copyright 2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,7 +39,6 @@ class AzActiveDirectoryOpts {
         this.servicePrincipalSecret = config.servicePrincipalSecret ?: sysEnv.get('AZURE_CLIENT_SECRET')
         this.tenantId = config.tenantId ?: sysEnv.get('AZURE_TENANT_ID')
     }
-
 
     Map<String, Object> getEnv() {
         Map<String, Object> props = new HashMap<>();

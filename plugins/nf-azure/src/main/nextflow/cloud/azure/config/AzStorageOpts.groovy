@@ -29,12 +29,12 @@ import nextflow.util.Duration
 @CompileStatic
 class AzStorageOpts {
 
-    private Map<String, String> sysEnv
+    private Map<String,String> sysEnv
     String accountKey
     String accountName
     String sasToken
     Duration tokenDuration
-    Map<String, AzFileShareOpts> fileShares
+    Map<String,AzFileShareOpts> fileShares
 
 
     AzStorageOpts(Map config, Map<String, String> env = null) {
@@ -45,11 +45,11 @@ class AzStorageOpts {
         this.sasToken = config.sasToken
         this.tokenDuration = (config.tokenDuration as Duration) ?: Duration.of('48h')
         this.fileShares = parseFileShares(config.fileShares instanceof Map ? config.fileShares as Map<String, Map>
-                : Collections.<String, Map> emptyMap())
+                : Collections.<String,Map> emptyMap())
 
     }
 
-    Map<String, Object> getEnv() {
+    Map<String,Object> getEnv() {
         Map<String, Object> props = new HashMap<>();
         props.put(AzFileSystemProvider.AZURE_STORAGE_ACCOUNT_KEY, accountKey)
         props.put(AzFileSystemProvider.AZURE_STORAGE_ACCOUNT_NAME, accountName)
