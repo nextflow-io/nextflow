@@ -581,7 +581,8 @@ class WaveClientTest extends Specification {
 
     def 'should send request with tower access token' () {
         given:
-        def sess = Mock(Session) {getConfig() >> [wave:[:], tower:[accessToken:'foo', workspaceId:123]] }
+        def config = [wave:[:], tower:[accessToken:'foo', workspaceId:123, endpoint: 'http://foo.com']]
+        def sess = Mock(Session) {getConfig() >> config }
         and:
         def wave = Spy(new WaveClient(sess))
         def assets = Mock(WaveAssets)
@@ -594,6 +595,7 @@ class WaveClientTest extends Specification {
             assert (it[0] == request)
             assert (it[0] as SubmitContainerTokenRequest).towerAccessToken == 'foo'
             assert (it[0] as SubmitContainerTokenRequest).towerWorkspaceId == 123
+            assert (it[0] as SubmitContainerTokenRequest).towerEndpoint == 'http://foo.com'
         }
 
     }
