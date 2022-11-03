@@ -63,7 +63,7 @@ class TraceHelper {
             Files.newBufferedWriter(path, Charset.defaultCharset(), openOptions(overwrite))
         }
         catch (FileAlreadyExistsException e) {
-            throw new AbortOperationException("$type file already exists: ${path.toUriString()}", e)
+            throw new AbortOperationException("$type file already exists: ${path.toUriString()} -- enable the relevant `overwrite` option in your config file to overwrite existing files", e)
         }
     }
 }
