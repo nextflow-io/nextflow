@@ -42,6 +42,11 @@ class SubmitContainerTokenRequest {
     Long towerWorkspaceId
 
     /**
+     * Tower endpoint
+     */
+    String towerEndpoint
+
+    /**
      * Container image to be pulled
      */
     String containerImage
