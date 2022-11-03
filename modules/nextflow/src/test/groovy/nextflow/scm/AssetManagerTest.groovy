@@ -73,7 +73,7 @@ class AssetManagerTest extends Specification {
     }
 
     // Helper method to grab the default brasnch if set in ~/.gitconfig
-    String getUserDefaultBranch() {
+    String getLocalDefaultBranch() {
         def defaultBranch = 'master'
         def gitconfig = Paths.get(System.getProperty('user.home'),'.gitconfig');
         if(gitconfig.exists()) {
@@ -477,7 +477,7 @@ class AssetManagerTest extends Specification {
         then:
         script.localPath == dir
         script.commitId == commit.name()
-        script.revision == getUserDefaultBranch()
+        script.revision == getLocalDefaultBranch()
         script.parent == dir
         script.text == "println 'Hello world'"
         script.repository == 'https://github.com/nextflow-io/nextflow'
@@ -494,7 +494,7 @@ class AssetManagerTest extends Specification {
         then:
         script.localPath == dir
         script.commitId == commit.name()
-        script.revision == getUserDefaultBranch()
+        script.revision == getLocalDefaultBranch()
         script.parent == dir
         script.text == "this is foo content"
         script.repository == 'https://github.com/nextflow-io/nextflow'
