@@ -72,6 +72,18 @@ class AssetManagerTest extends Specification {
         AssetManager.root = tempDir.root.toFile()
     }
 
+    // Helper method to grab the default brasnch if set in ~/.gitconfig
+    String getUserDefaultBranch() {
+        def defaultBranch = 'master'
+        def gitconfig = Paths.get(System.getProperty('user.home'),'.gitconfig');
+        if(gitconfig.exists()) {
+            def config = new Config()
+            config.fromText(gitconfig.text)
+            defaultBranch = config.getString('init', null, 'defaultBranch') ?: 'master'
+        }
+        return defaultBranch
+    }
+
     def testList() {
 
         given:
@@ -445,15 +457,6 @@ class AssetManagerTest extends Specification {
         dir.resolve('nextflow.config').text = 'manifest {  }'
         dir.resolve('foo.nf').text = 'this is foo content'
 
-        // Use this user's custom defaultBranch name if set in ~/.gitconfig
-        def defaultBranch = 'master'
-        def gitconfig = Paths.get(System.getProperty('user.home'),'.gitconfig');
-        if(gitconfig.exists()) {
-            def config = new Config()
-            config.fromText(gitconfig.text)
-            defaultBranch = config.getString('init', null, 'defaultBranch') ?: 'master'
-        }
-
         def init = Git.init()
         def repo = init.setDirectory( dir.toFile() ).call()
         repo.add().addFilepattern('.').call()
@@ -474,7 +477,7 @@ class AssetManagerTest extends Specification {
         then:
         script.localPath == dir
         script.commitId == commit.name()
-        script.revision == defaultBranch
+        script.revision == getUserDefaultBranch()
         script.parent == dir
         script.text == "println 'Hello world'"
         script.repository == 'https://github.com/nextflow-io/nextflow'
@@ -491,7 +494,7 @@ class AssetManagerTest extends Specification {
         then:
         script.localPath == dir
         script.commitId == commit.name()
-        script.revision == defaultBranch
+        script.revision == getUserDefaultBranch()
         script.parent == dir
         script.text == "this is foo content"
         script.repository == 'https://github.com/nextflow-io/nextflow'
