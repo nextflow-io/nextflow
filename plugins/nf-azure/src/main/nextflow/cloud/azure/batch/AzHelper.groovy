@@ -40,6 +40,24 @@ import nextflow.util.Duration
 @CompileStatic
 class AzHelper {
 
+    static private AzPath az0(Path path){
+        if( path !instanceof AzPath )
+            throw new IllegalArgumentException("Not a valid Azure path: $path [${path?.getClass()?.getName()}]")
+        return (AzPath)path
+    }
+
+    static String toHttpUrl(Path path, String sas=null) {
+        def url = az0(path).blobClient().getBlobUrl()
+        url = URLDecoder.decode(url, 'UTF-8').stripEnd('/')
+        return !sas ? url : "${url}?${sas}"
+    }
+
+    static String toContainerUrl(Path path, String sas) {
+        def url = az0(path).containerClient().getBlobContainerUrl()
+        url = URLDecoder.decode(url, 'UTF-8').stripEnd('/')
+        return !sas ? url : "${url}?${sas}"
+    }
+
     static BlobContainerSasPermission CONTAINER_PERMS = new BlobContainerSasPermission()
             .setAddPermission(true)
             .setCreatePermission(true)
@@ -79,23 +97,6 @@ class AzHelper {
             .setObject(true)
             .setService(true)
 
-    static private AzPath az0(Path path) {
-        if (path !instanceof AzPath)
-            throw new IllegalArgumentException("Not a valid Azure path: $path [${path?.getClass()?.getName()}]")
-        return (AzPath) path
-    }
-
-    static String toHttpUrl(Path path, String sas = null) {
-        def url = az0(path).blobClient().getBlobUrl()
-        url = URLDecoder.decode(url, 'UTF-8').stripEnd('/')
-        return !sas ? url : "${url}?${sas}"
-    }
-
-    static String toContainerUrl(Path path, String sas) {
-        def url = az0(path).containerClient().getBlobContainerUrl()
-        url = URLDecoder.decode(url, 'UTF-8').stripEnd('/')
-        return !sas ? url : "${url}?${sas}"
-    }
 
     static String generateContainerSasWithActiveDirectory(Path path, Duration duration) {
         final key = generateUserDelegationKey(az0(path), duration)
@@ -157,5 +158,4 @@ class AzHelper {
 
         return client.generateAccountSas(signature)
     }
-
 }

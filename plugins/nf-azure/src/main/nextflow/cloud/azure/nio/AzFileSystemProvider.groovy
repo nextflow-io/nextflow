@@ -219,7 +219,7 @@ class AzFileSystemProvider extends FileSystemProvider {
      */
     synchronized AzFileSystem newFileSystem0(String bucket, Map<String, ?> config) throws IOException {
 
-        if (fileSystems.containsKey(bucket))
+        if( fileSystems.containsKey(bucket) )
             throw new FileSystemAlreadyExistsException("File system already exists for Azure blob container: `$bucket`")
 
         final accountName = config.get(AZURE_STORAGE_ACCOUNT_NAME) as String
@@ -231,7 +231,7 @@ class AzFileSystemProvider extends FileSystemProvider {
         final tenantId = config.get(AZURE_TENANT_ID) as String
 
 
-        if (!accountName)
+        if( !accountName )
             throw new IllegalArgumentException("Missing AZURE_STORAGE_ACCOUNT_NAME")
 
         def client

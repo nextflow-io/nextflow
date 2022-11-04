@@ -42,7 +42,7 @@ class AzPathFactory extends FileSystemPathFactory {
 
     @Override
     protected Path parseUri(String uri) {
-        if (!uri.startsWith('az://'))
+        if( !uri.startsWith('az://') )
             return null
 
         final storageConfigEnv = AzConfig.getConfig().storage().getEnv()

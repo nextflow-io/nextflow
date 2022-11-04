@@ -41,11 +41,11 @@ class AzConfig {
     private AzActiveDirectoryOpts activeDirectoryOpts
 
     AzConfig(Map azure) {
-        this.batchOpts = new AzBatchOpts((Map) azure.batch ?: Collections.emptyMap())
-        this.storageOpts = new AzStorageOpts((Map) azure.storage ?: Collections.emptyMap())
-        this.registryOpts = new AzRegistryOpts((Map) azure.registry ?: Collections.emptyMap())
-        this.azcopyOpts = new AzCopyOpts((Map) azure.azcopy ?: Collections.emptyMap())
-        this.retryConfig = new AzRetryConfig((Map) azure.retryPolicy ?: Collections.emptyMap())
+        this.batchOpts = new AzBatchOpts( (Map)azure.batch ?: Collections.emptyMap() )
+        this.storageOpts = new AzStorageOpts( (Map)azure.storage ?: Collections.emptyMap() )
+        this.registryOpts = new AzRegistryOpts( (Map)azure.registry ?: Collections.emptyMap() )
+        this.azcopyOpts = new AzCopyOpts( (Map)azure.azcopy ?: Collections.emptyMap() )
+        this.retryConfig = new AzRetryConfig( (Map)azure.retryPolicy ?: Collections.emptyMap() )
         this.activeDirectoryOpts = new AzActiveDirectoryOpts((Map) azure.activeDirectory ?: Collections.emptyMap())
     }
 
@@ -62,10 +62,10 @@ class AzConfig {
     AzActiveDirectoryOpts activeDirectory() { activeDirectoryOpts }
 
     static AzConfig getConfig(Session session) {
-        if (!session)
+        if( !session )
             throw new IllegalStateException("Missing Nextflow session")
 
-        new AzConfig((Map) session.config.azure ?: Collections.emptyMap())
+        new AzConfig( (Map)session.config.azure ?: Collections.emptyMap()  )
     }
 
     static AzConfig getConfig() {
