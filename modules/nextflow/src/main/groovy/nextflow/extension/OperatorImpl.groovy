@@ -546,7 +546,6 @@ class OperatorImpl {
      * @param source The source channel
      * @return A {@code DataflowVariable} returning the a {@code Map} containing the counting values for each key
      */
-    @Deprecated
     DataflowWriteChannel<Map> countBy(final DataflowReadChannel source ) {
         countBy(source, { it })
     }
@@ -558,7 +557,6 @@ class OperatorImpl {
      * @param criteria
      * @return
      */
-    @Deprecated
     DataflowWriteChannel<Map> countBy(final DataflowReadChannel source, final Closure criteria ) {
 
         final target = new DataflowVariable()
