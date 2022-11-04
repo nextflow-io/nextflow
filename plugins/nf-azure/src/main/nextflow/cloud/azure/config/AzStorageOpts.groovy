@@ -43,9 +43,9 @@ class AzStorageOpts {
         this.accountKey = config.accountKey ?: sysEnv.get('AZURE_STORAGE_ACCOUNT_KEY')
         this.accountName = config.accountName ?: sysEnv.get('AZURE_STORAGE_ACCOUNT_NAME')
         this.sasToken = config.sasToken
-        this.tokenDuration = (config.tokenDuration as Duration) ?: Duration.of('12h')
-        this.fileShares = parseFileShares(config.fileShares instanceof Map ? config.fileShares as Map<String,Map>
-                : Collections.<String,Map>emptyMap())
+        this.tokenDuration = (config.tokenDuration as Duration) ?: Duration.of('48h')
+        this.fileShares = parseFileShares(config.fileShares instanceof Map ? config.fileShares as Map<String, Map>
+                : Collections.<String,Map> emptyMap())
 
     }
 

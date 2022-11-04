@@ -45,10 +45,14 @@ class AzPathFactory extends FileSystemPathFactory {
         if( !uri.startsWith('az://') )
             return null
 
-        final cfg = AzConfig.getConfig().storage()
+        final storageConfigEnv = AzConfig.getConfig().storage().getEnv()
+
+        final activeDirectoryConfigEnv = AzConfig.getConfig().activeDirectory().getEnv()
+
+        final configEnv = storageConfigEnv + activeDirectoryConfigEnv
 
         // find the related file system
-        final fs = getFileSystem(uri0(uri), cfg.getEnv())
+        final fs = getFileSystem(uri0(uri), configEnv)
 
         // resulting az path
         return fs.getPath(uri.substring(4))
