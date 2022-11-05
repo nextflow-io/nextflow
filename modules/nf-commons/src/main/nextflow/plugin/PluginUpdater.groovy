@@ -21,8 +21,13 @@ import static java.nio.file.StandardCopyOption.*
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.function.Predicate
 
 import com.github.zafarkhaja.semver.Version
+import dev.failsafe.Failsafe
+import dev.failsafe.RetryPolicy
+import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
@@ -158,7 +163,7 @@ class PluginUpdater extends UpdateManager {
         log.info "Downloading plugin ${id}@${version}"
 
         // 2. Download to temporary location
-        Path downloaded = downloadPlugin(id, version);
+        Path downloaded = safeDownloadPlugin(id, version);
 
         // 3. unzip the content and delete downloaded file
         Path dir = FileUtils.expandIfZip(downloaded)
@@ -175,6 +180,34 @@ class PluginUpdater extends UpdateManager {
         }
 
         return pluginPath
+    }
+
+    protected Path safeDownloadPlugin(String id, String version) {
+        final CheckedSupplier<Path> supplier = () -> downloadPlugin(id, version)
+        final policy = retryPolicy(id,version)
+        return Failsafe.with(policy).get(supplier)
+    }
+
+    protected <T> RetryPolicy<T> retryPolicy(String id, String version) {
+        final listener = new dev.failsafe.event.EventListener<ExecutionAttemptedEvent<T>>() {
+            @Override
+            void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
+                log.debug("Failed to download plugin: $id; version: $version - attempt: ${event.attemptCount}", event.lastFailure)
+            }
+        }
+
+        final condition = new Predicate<Throwable>() {
+            @Override
+            boolean test(Throwable error) {
+                return error?.cause instanceof ConnectException
+            }
+        }
+
+        return RetryPolicy.<T>builder()
+                .handleIf(condition)
+                .withMaxAttempts(3)
+                .onRetry(listener)
+                .build()
     }
 
     protected void safeMove(Path source, Path target) {

@@ -33,6 +33,7 @@ dependencies {
     api 'com.google.guava:guava:31.1-jre'
     api 'org.pf4j:pf4j:3.4.1'
     api 'org.pf4j:pf4j-update:2.3.0'
+    api 'dev.failsafe:failsafe:3.1.0'
 
     /* testImplementation inherited from top gradle build file */
     testImplementation(testFixtures(project(":nextflow")))
