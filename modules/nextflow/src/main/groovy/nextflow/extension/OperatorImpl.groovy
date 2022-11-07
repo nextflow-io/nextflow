@@ -1499,6 +1499,8 @@ class OperatorImpl {
      * Implement `exec` operator 
      */
     Object exec(DataflowReadChannel source, ProcessDef processDef, Object... args) {
+        // don't set DAG Node
+        OpCall.current.get().ignoreDagNode = true
 
         return new ExecOp(source, processDef, args).apply()
     }
@@ -1507,14 +1509,14 @@ class OperatorImpl {
      * Implement `eval` operator 
      */
     Object eval(DataflowReadChannel source, Closure closure) {
-        // No need to set DAG Node
+        // don't set DAG Node
         OpCall.current.get().ignoreDagNode = true
 
         return new EvalOp(source, closure).apply()
     }
 
     Object eval(DataflowReadChannel source, ChannelOut channelOut, Closure closure) {
-        // No need to set DAG Node
+        // don't set DAG Node
         OpCall.current.get().ignoreDagNode = true
 
         return new EvalOp(channelOut, closure).apply()

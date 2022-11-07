@@ -39,7 +39,6 @@ class ExecOp {
     ExecOp( DataflowReadChannel source, ProcessDef processDef, Object[] args ) {
         assert processDef != null
         assert source != null
-        assert args
 
         this.source = source
         this.processDef = processDef
