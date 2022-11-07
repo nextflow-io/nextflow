@@ -140,8 +140,21 @@ class GoogleBatchTaskHandler extends TaskHandler {
             .addAllCommands( ['/bin/bash','-o','pipefail','-c', cmd.toString()] )
             .addAllVolumes( launcher.getContainerMounts() )
 
+        if( task.config.getAccelerator() )
+            container
+                .addVolumes('/var/lib/nvidia/lib64:/usr/local/nvidia/lib64')
+                .addVolumes('/var/lib/nvidia/bin:/usr/local/nvidia/bin')
+
+        def containerOptions = ''
+
         if( task.config.getContainerOptions() )
-            container.setOptions( task.config.getContainerOptions() )
+            containerOptions += task.config.getContainerOptions()
+
+        if( task.config.getAccelerator() )
+            containerOptions += ' --privileged'
+
+        if( containerOptions )
+            container.setOptions( containerOptions )
 
         // task spec
         taskSpec

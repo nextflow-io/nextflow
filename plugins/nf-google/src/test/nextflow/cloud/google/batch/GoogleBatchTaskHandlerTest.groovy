@@ -150,8 +150,12 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/disks/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/disks/foo/scratch/.command.run 2>&1 | tee .command.log'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
-        runnable.getContainer().getOptions() == CONTAINER_OPTS
-        runnable.getContainer().getVolumesList() == ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        runnable.getContainer().getOptions() == '--this --that --privileged'
+        runnable.getContainer().getVolumesList() == [
+            '/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw',
+            '/var/lib/nvidia/lib64:/usr/local/nvidia/lib64',
+            '/var/lib/nvidia/bin:/usr/local/nvidia/bin'
+        ]
         and:
         allocationPolicy.getInstances(0).getInstallGpuDrivers() == true
         allocationPolicy.getLabelsMap() == [foo: 'bar']
