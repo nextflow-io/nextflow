@@ -60,7 +60,7 @@ class WaveAssets {
     }
 
     @Memoized
-    String hashKey() {
+    String fingerprint() {
         final allMeta = new ArrayList(10)
         allMeta.add( this.containerImage )
         allMeta.add( this.moduleResources?.fingerprint() )

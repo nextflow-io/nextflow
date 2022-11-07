@@ -822,6 +822,10 @@ class Session implements ISession {
         }
     }
 
+    boolean enableModuleBinaries() {
+        config.navigate('nextflow.enable.moduleBinaries', false) as boolean
+    }
+
     @PackageScope VersionNumber getCurrentVersion() {
         new VersionNumber(APP_VER)
     }
@@ -1162,6 +1166,7 @@ class Session implements ISession {
         getContainerConfig0('shifter', engines)
         getContainerConfig0('udocker', engines)
         getContainerConfig0('singularity', engines)
+        getContainerConfig0('apptainer', engines)
         getContainerConfig0('charliecloud', engines)
 
         def enabled = engines.findAll { it.enabled?.toString() == 'true' }

@@ -42,6 +42,11 @@ class SubmitContainerTokenRequest {
     Long towerWorkspaceId
 
     /**
+     * Tower endpoint
+     */
+    String towerEndpoint
+
+    /**
      * Container image to be pulled
      */
     String containerImage
@@ -61,9 +66,29 @@ class SubmitContainerTokenRequest {
      */
     String condaFile
 
+    /**
+     * The request container platform
+     */
     String containerPlatform
 
+    /**
+     * The target repository where the built container needs to be stored
+     */
     String buildRepository
 
+    /**
+     * The container repository to cache build layers
+     */
     String cacheRepository
+
+    /**
+     * Request
+     */
+    String timestamp
+
+    /**
+     * Request unique fingerprint
+     */
+    String fingerprint
+
 }

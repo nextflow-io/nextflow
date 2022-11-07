@@ -103,6 +103,8 @@ public final class S3OutputStream extends OutputStream {
 
     private String kmsKeyId;
 
+    private String contentType;
+
     /**
      * Indicates if the stream has been closed.
      */
@@ -214,6 +216,11 @@ public final class S3OutputStream extends OutputStream {
 
     public S3OutputStream setKmsKeyId(String kmsKeyId) {
         this.kmsKeyId = kmsKeyId;
+        return this;
+    }
+
+    public S3OutputStream setContentType(String type) {
+        this.contentType = type;
         return this;
     }
 
@@ -422,6 +429,7 @@ public final class S3OutputStream extends OutputStream {
     private InitiateMultipartUploadResult initiateMultipartUpload() throws IOException {
         final InitiateMultipartUploadRequest request = //
                 new InitiateMultipartUploadRequest(objectId.getBucket(), objectId.getKey());
+        final ObjectMetadata metadata = new ObjectMetadata();
 
         if (storageClass != null) {
             request.setStorageClass(storageClass);
@@ -436,8 +444,12 @@ public final class S3OutputStream extends OutputStream {
         }
 
         if( storageEncryption != null ) {
-            final ObjectMetadata metadata = new ObjectMetadata();
             metadata.setSSEAlgorithm(storageEncryption.toString());
+            request.setObjectMetadata(metadata);
+        }
+
+        if( contentType != null ) {
+            metadata.setContentType(contentType);
             request.setObjectMetadata(metadata);
         }
 
@@ -613,6 +625,10 @@ public final class S3OutputStream extends OutputStream {
 
         if( storageEncryption != null ) {
             meta.setSSEAlgorithm( storageEncryption.toString() );
+        }
+
+        if( contentType != null ) {
+            meta.setContentType(contentType);
         }
 
         if( log.isTraceEnabled() ) {

@@ -85,7 +85,7 @@ to the Charliecloud container format::
 
     process.container = 'https://quay.io/biocontainers/multiqc:1.3--py35_2'
     charliecloud.enabled = true
- 
+
 Whereas this would pull from Docker Hub::
 
     process.container = 'nextflow/examples:latest'
@@ -112,7 +112,7 @@ in the ``nextflow.config`` file as shown below::
 
 Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
 
-Advanced settings 
+Advanced settings
 -----------------
 
 Charliecloud advanced configuration settings are described in :ref:`config-charliecloud` section in the Nextflow
@@ -309,7 +309,7 @@ Alternatively, the same containers definitions can be provided by using the ``ne
 
 Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
 
-Advanced settings 
+Advanced settings
 -----------------
 
 Podman advanced configuration settings are described in :ref:`config-podman` section in the Nextflow configuration page.
@@ -527,7 +527,7 @@ latter overrides the former).
 .. warning::
     When using a compute cluster, the Singularity cache directory must reside in a shared filesystem accessible to all compute nodes.
 
-.. danger:: 
+.. danger::
     When pulling Docker images, Singularity may be unable to determine the container size if the image was
     stored using an old Docker format, resulting in a pipeline execution error. See the Singularity documentation for details.
 

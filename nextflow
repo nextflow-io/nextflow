@@ -16,7 +16,7 @@
 #  limitations under the License.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'22.09.7-edge'}
+NXF_VER=${NXF_VER:-'22.10.0'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -64,7 +64,7 @@ function get() {
     if command -v curl &>/dev/null; then
         GET="curl -fsSL '$1' -o '$2'"
     elif command -v wget &>/dev/null; then
-        GET="wget -q '$1' -O '$2'"
+        GET="wget '$1' -O '$2' >/dev/null 2>&1"
     else
         echo_red "ERROR: Cannot find 'curl' nor 'wget' utility --  please install one of them"
         exit 1
