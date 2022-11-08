@@ -29,9 +29,9 @@ import nextflow.util.SimpleHttpClient
 @CompileStatic
 class TowerFactory implements TraceObserverFactory {
 
-    private Map<String, String> env
+    private Map<String,String> env
 
-    TowerFactory() {
+    TowerFactory(){
         env = System.getenv()
     }
 
@@ -43,23 +43,21 @@ class TowerFactory implements TraceObserverFactory {
         Duration requestInterval = config.navigate('tower.requestInterval') as Duration
         Duration aliveInterval = config.navigate('tower.aliveInterval') as Duration
 
-        if (!isEnabled)
+        if( !isEnabled )
             return Collections.emptyList()
 
-        if (!endpoint || endpoint == '-')
+        if ( !endpoint || endpoint=='-' )
             endpoint = env.get('TOWER_API_ENDPOINT') ?: TowerClient.DEF_ENDPOINT_URL
-        if (endpoint.endsWith('/'))
-            throw new IllegalArgumentException("Tower endpoint URL should not end with a `/` character -- offending value: $endpoint")
 
         final tower = new TowerClient(session, endpoint).withEnvironment(env)
-        if (aliveInterval)
+        if( aliveInterval )
             tower.aliveInterval = aliveInterval
-        if (requestInterval)
+        if( requestInterval )
             tower.requestInterval = requestInterval
         // error handling settings
         tower.maxRetries = config.navigate('tower.maxRetries', 5) as int
         tower.backOffBase = config.navigate('tower.backOffBase', SimpleHttpClient.DEFAULT_BACK_OFF_BASE) as int
-        tower.backOffDelay = config.navigate('tower.backOffDelay', SimpleHttpClient.DEFAULT_BACK_OFF_DELAY) as int
+        tower.backOffDelay = config.navigate('tower.backOffDelay', SimpleHttpClient.DEFAULT_BACK_OFF_DELAY  ) as int
         // when 'TOWER_WORKFLOW_ID' is provided in the env, it's a tower made launch
         // therefore the workspace should only be taken from the env
         // otherwise check into the config file and fallback in the env
@@ -71,11 +69,13 @@ class TowerFactory implements TraceObserverFactory {
         // register auth provider
         // note: this is needed to authorize access to resources via XFileSystemProvider used by NF
         // it's not needed by the tower client logic
-        XAuthRegistry.instance.register(provider(endpoint, tower.accessToken))
+        XAuthRegistry.instance.register(provider(tower.endpoint, tower.accessToken))
         return result
     }
 
     protected XAuthProvider provider(String endpoint, String accessToken) {
+        if (endpoint.endsWith('/'))
+            throw new IllegalArgumentException("Tower endpoint URL should not end with a `/` character -- offending value: $endpoint")
         final refreshToken = env.get('TOWER_REFRESH_TOKEN')
         return new TowerXAuth(endpoint, accessToken, refreshToken)
     }
