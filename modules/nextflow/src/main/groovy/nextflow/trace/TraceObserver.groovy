@@ -136,12 +136,12 @@ trait TraceObserver {
      * Method that is invoke when an output file is published
      * into a `publishDir` folder.
      *
-     * @param source
-     *      The source path at `workDir` folder.
      * @param destination
      *      The destination path at `publishDir` folder.
+     * @param source
+     *      The source path at `workDir` folder.
      */
-    void onFilePublish(Path source, Path destination){
+    void onFilePublish(Path destination, Path source){
         onFilePublish(destination)
     }
 }
