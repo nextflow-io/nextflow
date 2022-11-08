@@ -140,7 +140,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
             .addAllCommands( ['/bin/bash','-o','pipefail','-c', cmd.toString()] )
             .addAllVolumes( launcher.getContainerMounts() )
 
-        if( task.config.getAccelerator() )
+        if( task.config.getAccelerator() && task.config.getAccelerator().getType()?.toLowerCase().startsWith('nvidia-') )
             container
                 .addVolumes('/var/lib/nvidia/lib64:/usr/local/nvidia/lib64')
                 .addVolumes('/var/lib/nvidia/bin:/usr/local/nvidia/bin')
