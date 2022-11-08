@@ -20,6 +20,7 @@ package nextflow.util
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
+import com.google.common.net.InetAddresses
 import groovy.transform.CompileStatic
 /**
  * String helper routines
@@ -113,5 +114,23 @@ class StringUtils {
         return new StringBuilder(source)
                 .replace(matcher.start(groupToReplace), matcher.end(groupToReplace), replacement)
                 .toString()
+    }
+
+    static boolean isIpV6String(String address) {
+        if( !address || !address.contains(':') )
+            return false
+        try {
+            InetAddresses.forString(address).getAddress().length==16
+        }
+        catch (IllegalArgumentException e) {
+            return false
+        }
+    }
+
+    static String formatHostName(String host, String port) {
+        if( !port || !host )
+            return host
+        final ipv6 = isIpV6String(host)
+        return ipv6 ? "[$host]:$port" : "$host:$port"
     }
 }
