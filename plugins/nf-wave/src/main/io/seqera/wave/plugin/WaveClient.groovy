@@ -145,6 +145,7 @@ class WaveClient {
         final req = makeRequest(assets)
         req.towerAccessToken = tower.accessToken
         req.towerWorkspaceId = tower.workspaceId
+        req.towerEndpoint = tower.endpoint
         return sendRequest(req)
     }
 
@@ -154,7 +155,8 @@ class WaveClient {
                 containerImage: image,
                 containerConfig: containerConfig,
                 towerAccessToken: tower.accessToken,
-                towerWorkspaceId: tower.workspaceId )
+                towerWorkspaceId: tower.workspaceId,
+                towerEndpoint: tower.endpoint )
         return sendRequest(request)
     }
 

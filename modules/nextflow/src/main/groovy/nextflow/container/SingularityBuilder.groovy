@@ -16,8 +16,10 @@
  */
 
 package nextflow.container
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
 /**
  * Implements a builder for Singularity containerisation
  *
@@ -34,6 +36,8 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
     SingularityBuilder(String name) {
         this.image = name
     }
+
+    protected String getBinaryName() { 'singularity' }
 
     @Override
     SingularityBuilder params(Map params) {
@@ -59,6 +63,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
         return this
     }
 
+    @Override
     SingularityBuilder addRunOptions(String str) {
         runOptions.add(str)
         return this
@@ -71,7 +76,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
         appendEnv(result)
 
-        result << 'singularity '
+        result << getBinaryName() << ' '
 
         if( engineOptions )
             result << engineOptions.join(' ') << ' '
@@ -107,11 +112,12 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
     }
 
     protected String prefixEnv(String key) {
-        if( key.startsWith('SINGULARITY_') )
+        final PREFIX = getBinaryName().toUpperCase()
+        if( key.startsWith(PREFIX+'_') )
             return key
-        if( key.startsWith('SINGULARITYENV_') )
+        if( key.startsWith(PREFIX+'ENV_') )
             return key
-        return "SINGULARITYENV_$key"
+        return PREFIX+'ENV_'+key
     }
 
     @Override

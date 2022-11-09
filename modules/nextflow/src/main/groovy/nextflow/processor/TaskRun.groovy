@@ -324,6 +324,8 @@ class TaskRun implements Cloneable {
 
     TaskProcessor.RunType runType = TaskProcessor.RunType.SUBMIT
 
+    BodyDef body
+
     TaskRun clone() {
         final taskClone = (TaskRun)super.clone()
         taskClone.context = context.clone()
@@ -374,6 +376,13 @@ class TaskRun implements Cloneable {
             return script?.toString()
         }
     }
+
+    String getTraceScript() {
+        return template!=null && body.source
+            ? body.source
+            : getScript()
+    }
+
 
     /**
      * Check whenever there are values to be cached
@@ -662,6 +671,7 @@ class TaskRun implements Cloneable {
         this.code.setResolveStrategy(Closure.DELEGATE_ONLY)
 
         // -- set the task source
+        this.body = body
         // note: this may be overwritten when a template file is used
         this.source = body.source
 
@@ -672,7 +682,7 @@ class TaskRun implements Cloneable {
         // when the task is implemented by a script string
         // Invoke the closure which returns the script with all the variables replaced with the actual values
         try {
-            def result = code.call()
+            final result = code.call()
             if ( result instanceof Path ) {
                 script = renderTemplate(result, body.isShell)
             }

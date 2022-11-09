@@ -136,4 +136,35 @@ class StringUtilsTest extends Specification {
         'http://foo/bar'        | 'http://foo/bar'
         'http://secret@foo/bar' | 'http://sec****@foo/bar'
     }
+
+    def 'should check ipv6' () {
+        expect:
+        StringUtils.isIpV6String('2001:db8:42:1:2:3:1:443')
+    }
+
+    @Unroll
+    def 'should check is ipv6'  () {
+        expect:
+        StringUtils.isIpV6String(ADDR) == EXPECTED
+        where:
+        ADDR                    | EXPECTED
+        null                    | false
+        'foo.com'               | false
+        'foo.com'               | false
+        '127.0.0.0'             | false
+        '2001:db8:42:1::1:443'  | true
+    }
+
+    @Unroll
+    def 'should format host name'  () {
+        expect:
+        StringUtils.formatHostName(HOST, PORT) == EXPECTED
+        where:
+        HOST                    | PORT      | EXPECTED
+        'foo.com'               | null      | 'foo.com'
+        'foo.com'               | '80'      | 'foo.com:80'
+        '127.0.0.0'             | '8000'    | '127.0.0.0:8000'
+        '2001:db8:42:1::1:443'  | null      | '2001:db8:42:1::1:443'
+        '2001:db8:42:1::1:443'  | '8000'    | '[2001:db8:42:1::1:443]:8000'
+    }
 }
