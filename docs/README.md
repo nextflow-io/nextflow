@@ -5,10 +5,12 @@ Nextflow documentation is written using [Sphinx](http://www.sphinx-doc.org/), [M
 
 ## Dependencies
 
+The most convenient approach is to create a Conda environment with Python 3.7 (other versions may work but haven't been tested).
+
 The build dependencies can be installed with `pip`:
 
 ```bash
-pip install sphinx==3.5.4 myst-parser==0.17.0 sphinx_rtd_theme==1.0.0
+pip install sphinx==5.3.0 myst-parser==0.18.1 sphinx-rtd-theme==1.1.1
 ```
 
 
