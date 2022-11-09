@@ -23,6 +23,7 @@ import com.google.cloud.batch.v1.ComputeResource
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.LogsPolicy
 import com.google.cloud.batch.v1.Runnable
+import com.google.cloud.batch.v1.ServiceAccount
 import com.google.cloud.batch.v1.TaskGroup
 import com.google.cloud.batch.v1.TaskSpec
 import com.google.protobuf.Duration
@@ -139,8 +140,25 @@ class GoogleBatchTaskHandler extends TaskHandler {
             .addAllCommands( ['/bin/bash','-o','pipefail','-c', cmd.toString()] )
             .addAllVolumes( launcher.getContainerMounts() )
 
-        if( task.config.getContainerOptions() )
-            container.setOptions( task.config.getContainerOptions() )
+        final accel = task.config.getAccelerator()
+        // add nvidia specific driver paths
+        // see https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
+        if(  accel && accel.type.toLowerCase().startsWith('nvidia-') ) {
+            container
+                .addVolumes('/var/lib/nvidia/lib64:/usr/local/nvidia/lib64')
+                .addVolumes('/var/lib/nvidia/bin:/usr/local/nvidia/bin')
+        }
+
+        def containerOptions= task.config.getContainerOptions() ?: ''
+        // accelerator requires privileged option
+        // https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
+        if( task.config.getAccelerator() ) {
+            if( containerOptions ) containerOptions += ' '
+            containerOptions += '--privileged'
+        }
+
+        if( containerOptions )
+            container.setOptions( containerOptions )
 
         // task spec
         taskSpec
@@ -153,20 +171,31 @@ class GoogleBatchTaskHandler extends TaskHandler {
 
         // instance policy
         final allocationPolicy = AllocationPolicy.newBuilder()
+        final instancePolicyOrTemplate = AllocationPolicy.InstancePolicyOrTemplate.newBuilder()
         final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
-        if( task.config.getAccelerator() )
-            instancePolicy.addAccelerators(
-                AllocationPolicy.Accelerator.newBuilder()
-                    .setCount( task.config.getAccelerator().getRequest() )
-                    .setType( task.config.getAccelerator().getType() )
-            )
+        if( task.config.getAccelerator() ) {
+            final accelerator = AllocationPolicy.Accelerator.newBuilder()
+                .setCount( task.config.getAccelerator().getRequest() )
+
+            if( task.config.getAccelerator().getType() )
+                accelerator.setType( task.config.getAccelerator().getType() )
+
+            instancePolicy.addAccelerators(accelerator)
+            instancePolicyOrTemplate.setInstallGpuDrivers(true)
+        }
 
         if( executor.config.cpuPlatform )
             instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
 
         if( task.config.getMachineType() )
             instancePolicy.setMachineType( task.config.getMachineType() )
+
+        if( executor.config.serviceAccountEmail )
+            allocationPolicy.setServiceAccount(
+                ServiceAccount.newBuilder()
+                    .setEmail(executor.config.serviceAccountEmail)
+            )
 
         if( executor.config.preemptible )
             instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.PREEMPTIBLE )
@@ -175,7 +204,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
             instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.SPOT )
 
         allocationPolicy.addInstances(
-            AllocationPolicy.InstancePolicyOrTemplate.newBuilder()
+            instancePolicyOrTemplate
                 .setPolicy(instancePolicy)
         )
 
