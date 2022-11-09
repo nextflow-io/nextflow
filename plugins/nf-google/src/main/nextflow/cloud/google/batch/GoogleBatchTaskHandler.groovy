@@ -140,18 +140,22 @@ class GoogleBatchTaskHandler extends TaskHandler {
             .addAllCommands( ['/bin/bash','-o','pipefail','-c', cmd.toString()] )
             .addAllVolumes( launcher.getContainerMounts() )
 
-        if( task.config.getAccelerator() && task.config.getAccelerator().getType()?.toLowerCase().startsWith('nvidia-') )
+        final accel = task.config.getAccelerator()
+        // add nvidia specific driver paths
+        // see https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
+        if(  accel && accel.type.toLowerCase().startsWith('nvidia-') ) {
             container
                 .addVolumes('/var/lib/nvidia/lib64:/usr/local/nvidia/lib64')
                 .addVolumes('/var/lib/nvidia/bin:/usr/local/nvidia/bin')
+        }
 
-        def containerOptions = ''
-
-        if( task.config.getContainerOptions() )
-            containerOptions += task.config.getContainerOptions()
-
-        if( task.config.getAccelerator() )
-            containerOptions += ' --privileged'
+        def containerOptions= task.config.getContainerOptions() ?: ''
+        // accelerator requires privileged option
+        // https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
+        if( task.config.getAccelerator() ) {
+            if( containerOptions ) containerOptions += ' '
+            containerOptions += '--privileged'
+        }
 
         if( containerOptions )
             container.setOptions( containerOptions )
