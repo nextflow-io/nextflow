@@ -52,7 +52,7 @@ class CliOptions {
     /**
      * the packages to trace
      */
-    @Parameter(names='-trace', hidden = true)
+    @Parameter(names='-trace', description = 'Add processes execution tracing to log')
     List<String> trace
 
     /**
