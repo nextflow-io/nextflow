@@ -50,4 +50,11 @@ class XAuthRegistry {
         return false
     }
 
+    boolean refreshToken(URLConnection connection) {
+        for( XAuthProvider it : providers ) {
+            if( it.refreshToken(connection) )
+                return true
+        }
+        return false
+    }
 }

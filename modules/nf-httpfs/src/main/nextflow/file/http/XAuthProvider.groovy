@@ -32,4 +32,6 @@ interface XAuthProvider {
      */
     boolean authorize( URLConnection connection )
 
+    boolean refreshToken( URLConnection connection )
+
 }
