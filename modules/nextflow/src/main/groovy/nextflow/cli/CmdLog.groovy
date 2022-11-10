@@ -87,7 +87,7 @@ class CmdLog extends CmdBase implements CacheBase {
     @Parameter(names=['-q','-quiet'], description = 'Show only run names', arity = 0)
     boolean quiet
 
-    @Parameter
+    @Parameter(description = 'Run name or session id')
     List<String> args
 
     private Script filterScript
