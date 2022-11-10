@@ -379,7 +379,7 @@ class PublishDir {
             processFileImpl(source, destination)
         }
 
-        notifyFilePublish(destination)
+        notifyFilePublish(destination, source)
     }
 
     private String real0(Path p) {
@@ -506,10 +506,10 @@ class PublishDir {
         }
     }
 
-    protected void notifyFilePublish(Path destination) {
+    protected void notifyFilePublish(Path destination, Path source=null) {
         final sess = Global.session
         if (sess instanceof Session) {
-            sess.notifyFilePublish(destination)
+            sess.notifyFilePublish(destination, source)
         }
     }
 
