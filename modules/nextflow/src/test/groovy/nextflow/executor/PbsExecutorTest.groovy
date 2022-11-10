@@ -67,7 +67,6 @@ class PbsExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
-
         when:
         task.config = new TaskConfig()
         task.config.queue = 'alpha'
@@ -82,7 +81,6 @@ class PbsExecutorTest extends Specification {
                 NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
-
 
         when:
         task.config = new TaskConfig()
@@ -100,8 +98,6 @@ class PbsExecutorTest extends Specification {
                 NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
-
-
 
         when:
         task.config = new TaskConfig()
@@ -158,6 +154,21 @@ class PbsExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
+        when:
+        task.config = new TaskConfig()
+        task.config.clusterOptions = '-l nodes=1:x86:ppn=4'
+        task.config.cpus = 2
+        task.config.memory = '8g'
+        then:
+        executor.getHeaders(task) == '''
+                #PBS -N nf-task_name
+                #PBS -o /work/dir/.command.log
+                #PBS -j oe
+                #PBS -l nodes=1:x86:ppn=4
+                #PBS -l mem=8gb
+                NXF_CHDIR=/work/dir
+                '''
+                .stripIndent().leftTrim()
     }
 
     def WorkDirWithBlanks() {

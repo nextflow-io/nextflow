@@ -66,6 +66,7 @@ class PbsProExecutor extends PbsExecutor {
             res << "ncpus=${task.config.getCpus()}".toString()
         }
         if( task.config.memory ) {
+            // https://www.osc.edu/documentation/knowledge_base/out_of_memory_oom_or_excessive_memory_usage
             res << "mem=${task.config.getMemory().getMega()}mb".toString()
         }
         if( res ) {

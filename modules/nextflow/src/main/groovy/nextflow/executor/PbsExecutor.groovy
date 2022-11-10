@@ -49,8 +49,19 @@ class PbsExecutor extends AbstractGridExecutor {
             result << '-q'  << (String)task.config.queue
         }
 
+        // cluster options
+        if( task.config.clusterOptions ) {
+            result << task.config.clusterOptions.toString() << ''
+        }
+
+        // task cpus
         if( task.config.cpus > 1 ) {
-            result << '-l' << "nodes=1:ppn=${task.config.cpus}"
+            if( task.config.clusterOptions && task.config.clusterOptions.indexOf('-l') != -1 ) {
+                log.warn1 'cpus directive is ignored when clusterOptions contains -l option\ntip: clusterOptions = { "-l nodes=1:ppn=${task.cpus}:..." }'
+            }
+            else {
+                result << '-l' << "nodes=1:ppn=${task.config.cpus}"
+            }
         }
 
         // max task duration
@@ -63,11 +74,6 @@ class PbsExecutor extends AbstractGridExecutor {
         if( task.config.memory ) {
             // https://www.osc.edu/documentation/knowledge_base/out_of_memory_oom_or_excessive_memory_usage
             result << "-l" << "mem=${task.config.memory.toString().replaceAll(/[\s]/,'').toLowerCase()}"
-        }
-
-        // -- at the end append the command script wrapped file name
-        if( task.config.clusterOptions ) {
-            result << task.config.clusterOptions.toString() << ''
         }
 
         return result
