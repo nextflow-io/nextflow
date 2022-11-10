@@ -479,7 +479,7 @@ Print the resolved pipeline configuration.
 
 **Usage** ::
 
-    $ nextflow config [options] project name
+    $ nextflow config [options] [project name or path]
 
 **Description**
 
