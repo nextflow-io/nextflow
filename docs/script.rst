@@ -251,11 +251,11 @@ The following variables are implicitly defined in the ``task`` object of each pr
 Name            Description
 =============== ========================
 ``attempt``     The current task attempt
-``hash``        The task unique hash Id
+``hash``        The task unique hash Id. NOTE: This is only available for processes that run native code via ``exec:``.
 ``index``       The task index (corresponds to ``task_id`` in the execution trace)
-``name``        The current task name
+``name``        The current task name. NOTE: This is only available for processes that run native code via ``exec:``.
 ``process``     The current process name
-``workDir``     The task unique directory. NOTE: This is only available for processes that run native code via the ``exec:`` statement.
+``workDir``     The task unique directory. NOTE: This is only available for processes that run native code via ``exec:``.
 =============== ========================
 
 The ``task`` object also contains the values of all process directives for the given task,
