@@ -61,7 +61,7 @@ class CmdLog extends CmdBase implements CacheBase {
     static final public NAME = 'log'
 
     @Parameter(names = ['-s'], description='Character used to separate column values')
-    String sep = '\t'
+    String sep = '\\t'
 
     @Parameter(names=['-f','-fields'], description = 'Comma separated list of fields to include in the printed log -- Use the `-l` option to show the list of available fields')
     String fields
