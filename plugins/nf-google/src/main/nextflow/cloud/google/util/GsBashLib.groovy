@@ -54,7 +54,7 @@ class GsBashLib extends BashFunLib<GsBashLib> {
     }
 
     protected makeLib() {
-        def ret = '''
+        '''
         nxf_gs_download() {
             local source=$1
             local target=$2
