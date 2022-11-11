@@ -39,7 +39,7 @@ import nextflow.util.Duration
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.parser.Parser
-import org.jsoup.safety.Whitelist
+import org.jsoup.safety.Safelist
 /**
  * This class implements the send mail functionality
  *
@@ -396,7 +396,7 @@ class Mailer {
         document.select("br").append("\\n");
         document.select("p").prepend("\\n");
         String s = document.html().replaceAll("\\\\n", "\n");
-        def result = Jsoup.clean(s, "", Whitelist.none(), new Document.OutputSettings().prettyPrint(false));
+        def result = Jsoup.clean(s, "", Safelist.none(), new Document.OutputSettings().prettyPrint(false));
         Parser.unescapeEntities(result, false)
     }
 
