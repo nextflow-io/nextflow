@@ -863,7 +863,7 @@ lastModified        Returns the file last modified timestamp i.e. a long as Linu
 
 For example, the following line prints a file name and size::
 
-  println "File ${myFile.getName() size: ${myFile.size()}"
+  println "File ${myFile.getName()} size: ${myFile.size()}"
 
 .. tip::
     The invocation of any method name starting with the ``get`` prefix can be shortcut by
