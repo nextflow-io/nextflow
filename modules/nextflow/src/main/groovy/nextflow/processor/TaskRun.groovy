@@ -362,6 +362,9 @@ class TaskRun implements Cloneable {
             catch( IllegalStateException e ) {
                 log.debug "Cannot access `tag` property for task: $baseName ($index)"
             }
+            catch( Exception e ) {
+                log.debug "Unable to evaluate `tag` property for task: $baseName ($index)", e
+            }
 
         // fallback on the current task index, however do not set the 'name' attribute
         // so it has a chance to recover the 'sampleId' at next invocation
