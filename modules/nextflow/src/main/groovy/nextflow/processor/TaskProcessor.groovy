@@ -915,7 +915,7 @@ class TaskProcessor {
                 task.exitStatus = exitCode
             }
 
-            log.info "[${task.hashLog}] Cached process > ${safeTaskName(task)}"
+            log.info "[${task.hashLog}] Cached process > ${task.name}"
             // -- notify cached event
             if( entry )
                 session.notifyTaskCached(new CachedTaskHandler(task,entry.trace))
