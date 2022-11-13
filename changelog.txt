@@ -1,5 +1,22 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.10.2 - 13 Nov 2022
+- Fix initialize the plugin once it's defined (#3360) [dd150b92]
+- Fix tags typo in docs (#3355) [ci skip] [b82df4e0]
+- Fix unexpected error on task resume [ci fast] [e02e8c27]
+- Fix template script in trace record [cf828a68]
+- Fix ip v6 support for K8s executor [ci fast] [53af5a7c]
+- Fix refresh token for tower served resources [9dec2b66] #3366
+- Fix full path scheme on error [1399f451]
+- Add note to some process implicit variables [ci skip] (#3373) [0374f63a]
+- Add retry policy on plugin download failure [e8dbec3f]
+- Add examples of when dynamic output filenames are important (#3275) [ci skip] [72a17306]
+- Update google batch java sdk, add serviceAccountEmail and installGpuDrivers (#3324) [7f7007a8]
+- Update github actions to v3 (#3376) [ci fast] [d3b4a837]
+- Update error messages and docs with new report filename behavior [ci fast] [f5725480]
+- Bump nf-tower@1.5.6 [164edf7c]
+- Bump nf-google@1.4.5 [30cb118d]
+
 22.10.1 - 27 Oct 2022
 - Fix mount pwd in the container when work dir is a symlink [ca397181] [b5b7d3cd] <Paolo Di Tommaso>
 - Fix secrets command name in the CLI (#3320) [ci fast] [321486df] <Marcel Ribeiro Dantas>
