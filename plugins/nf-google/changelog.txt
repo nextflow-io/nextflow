@@ -1,8 +1,17 @@
 nf-google changelog
 ===================
-1.4.3 - 26 Sep 2022
+1.4.5 - 13 Nov 2022
+- Fix support for serviceAccountEmail and GPU accelerator [7f7007a8] #7f7007a8
+- Bump Google Batch sdk 0.5.0
+
+1.4.4 - 26 Sep 2022
 - Update Google Batch mount point with the requirements [5aec28ac]
 - Apply GCP resourceLabels to the VirtualMachine (#3234) [2275c03c] <Doug Daniels>
+
+1.4.3 - 22 Sep 2022
+- Add shutdown to Google Batch client [8f413cf7]
+- Add native_id to Google Batch handler [352b4239]
+- Bump groovy 3.0.13 [4a17e198]
 
 1.4.2 - 1 Sep 2022
 - Add support for resource labels for google batch (#3168) (#3170) [2d24917b] (#2853) [5d0b7c35]
