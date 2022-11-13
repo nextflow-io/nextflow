@@ -754,13 +754,13 @@ class TaskProcessor {
                 if( resumeDir )
                     exists = resumeDir.exists()
 
-                log.trace "[${task.name}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
+                log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
                 def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), resumeDir, hash, entry)
                 if( cached )
                     break
             }
             catch (Throwable t) {
-                log.warn1("[$task.name] Unable to resume cached task -- See log file for details", causedBy: t)
+                log.warn1("[${safeTaskName(task)}] Unable to resume cached task -- See log file for details", causedBy: t)
             }
 
             if( exists ) {
@@ -797,7 +797,7 @@ class TaskProcessor {
      */
     final boolean checkStoredOutput( TaskRun task ) {
         if( !task.config.storeDir ) {
-            log.trace "[$task.name] Store dir not set -- return false"
+            log.trace "[${safeTaskName(task)}] Store dir not set -- return false"
             return false
         }
 
@@ -813,12 +813,12 @@ class TaskProcessor {
             return true
         }
         if( invalid ) {
-            checkWarn "[$task.name] StoreDir can only be used when using 'file' outputs"
+            checkWarn "[${safeTaskName(task)}] StoreDir can only be used when using 'file' outputs"
             return false
         }
 
         if( !task.config.getStoreDir().exists() ) {
-            log.trace "[$task.name] Store dir does not exists > ${task.config.storeDir} -- return false"
+            log.trace "[${safeTaskName(task)}] Store dir does not exists > ${task.config.storeDir} -- return false"
             // no folder -> no cached result
             return false
         }
@@ -829,7 +829,7 @@ class TaskProcessor {
             task.config.exitStatus = TaskConfig.EXIT_ZERO
             // -- check if all output resources are available
             collectOutputs(task)
-            log.info "[skipping] Stored process > ${task.name}"
+            log.info "[skipping] Stored process > ${safeTaskName(task)}"
             // set the exit code in to the task object
             task.exitStatus = TaskConfig.EXIT_ZERO
             task.cached = true
@@ -840,7 +840,7 @@ class TaskProcessor {
             return true
         }
         catch( MissingFileException | MissingValueException e ) {
-            log.trace "[$task.name] Missed store > ${e.getMessage()} -- folder: ${task.config.storeDir}"
+            log.trace "[${safeTaskName(task)}] Missed store > ${e.getMessage()} -- folder: ${task.config.storeDir}"
             task.exitStatus = Integer.MAX_VALUE
             task.workDir = null
             return false
@@ -865,13 +865,13 @@ class TaskProcessor {
                 str = exitFile.text?.trim()
             }
             catch( IOException e ) {
-                log.trace "[$task.name] Exit file can't be read > $exitFile -- return false -- Cause: ${e.message}"
+                log.trace "[${safeTaskName(task)}] Exit file can't be read > $exitFile -- return false -- Cause: ${e.message}"
                 return false
             }
 
             exitCode = str.isInteger() ? str.toInteger() : null
             if( !task.isSuccess(exitCode) ) {
-                log.trace "[$task.name] Exit code is not valid > $str -- return false"
+                log.trace "[${safeTaskName(task)}] Exit code is not valid > $str -- return false"
                 return false
             }
         }
@@ -880,12 +880,12 @@ class TaskProcessor {
          * verify cached context map
          */
         if( !entry ) {
-            log.trace "[$task.name] Missing cache entry -- return false"
+            log.trace "[${safeTaskName(task)}] Missing cache entry -- return false"
             return false
         }
 
         if( task.hasCacheableValues() && !entry.context ) {
-            log.trace "[$task.name] Missing cache context -- return false"
+            log.trace "[${safeTaskName(task)}] Missing cache context -- return false"
             return false
         }
 
@@ -915,7 +915,7 @@ class TaskProcessor {
                 task.exitStatus = exitCode
             }
 
-            log.info "[${task.hashLog}] Cached process > ${task.name}"
+            log.info "[${task.hashLog}] Cached process > ${safeTaskName(task)}"
             // -- notify cached event
             if( entry )
                 session.notifyTaskCached(new CachedTaskHandler(task,entry.trace))
@@ -925,7 +925,7 @@ class TaskProcessor {
             return true
         }
         catch( MissingFileException | MissingValueException e ) {
-            log.trace "[$task.name] Missed cache > ${e.getMessage()} -- folder: $folder"
+            log.trace "[${safeTaskName(task)}] Missed cache > ${e.getMessage()} -- folder: $folder"
             task.exitStatus = Integer.MAX_VALUE
             task.workDir = null
             return false
@@ -963,7 +963,7 @@ class TaskProcessor {
      */
     @PackageScope
     final synchronized resumeOrDie( TaskRun task, Throwable error ) {
-        log.trace "Handling unexpected condition for\n  task: $task\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
+        log.debug "Handling unexpected condition for\n  task: name=${safeTaskName(task)}; work-dir=${task.workDirStr}\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         ErrorStrategy errorStrategy = TERMINATE
         final message = []
@@ -1029,7 +1029,7 @@ class TaskProcessor {
             }
 
             def dumpStackTrace = log.isTraceEnabled()
-            message << "Error executing process > '${task?.name ?: name}'"
+            message << "Error executing process > '${safeTaskName(task)}'"
             switch( error ) {
                 case ProcessException:
                     formatTaskError( message, error, task )
@@ -1055,6 +1055,12 @@ class TaskProcessor {
         }
 
         return new TaskFault(error: error, task: task, report: message.join('\n'))
+    }
+
+    protected String safeTaskName(TaskRun task)  {
+        return task!=null
+                ? task.lazyName()
+                : name
     }
 
     protected ErrorStrategy checkErrorStrategy( TaskRun task, ProcessException error, final int taskErrCount, final int procErrCount ) {
@@ -1086,7 +1092,7 @@ class TaskProcessor {
                         checkCachedOrLaunchTask( taskCopy, taskCopy.hash, false )
                     }
                     catch( Throwable e ) {
-                        log.error("Unable to re-submit task `${taskCopy.name}`", e)
+                        log.error("Unable to re-submit task `${safeTaskName(taskCopy)}`", e)
                         session.abort(e)
                     }
                 } as Runnable)
@@ -1470,11 +1476,11 @@ class TaskProcessor {
     protected void collectStdOut( TaskRun task, StdOutParam param, def stdout ) {
 
         if( stdout == null && task.type == ScriptType.SCRIPTLET ) {
-            throw new IllegalArgumentException("Missing 'stdout' for process > ${task.name}")
+            throw new IllegalArgumentException("Missing 'stdout' for process > ${safeTaskName(task)}")
         }
 
         if( stdout instanceof Path && !stdout.exists() ) {
-            throw new MissingFileException("Missing 'stdout' file: ${stdout.toUriString()} for process > ${task.name}")
+            throw new MissingFileException("Missing 'stdout' file: ${stdout.toUriString()} for process > ${safeTaskName(task)}")
         }
 
         task.setOutput(param, stdout)
@@ -1497,7 +1503,7 @@ class TaskProcessor {
                 // filter the inputs
                 if( result && !param.includeInputs ) {
                     result = filterByRemovingStagedInputs(task, result, workDir)
-                    log.trace "Process ${task.name} > after removing staged inputs: ${result}"
+                    log.trace "Process ${safeTaskName(task)} > after removing staged inputs: ${result}"
                     inputsRemovedFlag |= (result.size()==0)
                 }
             }
@@ -1508,14 +1514,14 @@ class TaskProcessor {
                 if( exists )
                     result = [file]
                 else
-                    log.debug "Process `${task.name}` is unable to find [${file.class.simpleName}]: `$file` (pattern: `$filePattern`)"
+                    log.debug "Process `${safeTaskName(task)}` is unable to find [${file.class.simpleName}]: `$file` (pattern: `$filePattern`)"
             }
 
             if( result )
                 allFiles.addAll(result)
 
             else if( !param.optional ) {
-                def msg = "Missing output file(s) `$filePattern` expected by process `${task.name}`"
+                def msg = "Missing output file(s) `$filePattern` expected by process `${safeTaskName(task)}`"
                 if( inputsRemovedFlag )
                     msg += " (note: input files are not included in the default matching set)"
                 throw new MissingFileException(msg)
@@ -2088,7 +2094,7 @@ class TaskProcessor {
     private void traceInputsHashes( TaskRun task, List entries, CacheHelper.HashMode mode, hash ) {
 
         def buffer = new StringBuilder()
-        buffer.append("[${task.name}] cache hash: ${hash}; mode: $mode; entries: \n")
+        buffer.append("[${safeTaskName(task)}] cache hash: ${hash}; mode: $mode; entries: \n")
         for( Object item : entries ) {
             buffer.append( "  ${CacheHelper.hasher(item, mode).hash()} [${item?.getClass()?.getName()}] $item \n")
         }
@@ -2125,7 +2131,7 @@ class TaskProcessor {
      * @return {@code TaskDef}
      */
     final protected void submitTask( TaskRun task, HashCode hash, Path folder ) {
-        log.trace "[${task.name}] actual run folder: ${folder}"
+        log.trace "[${safeTaskName(task)}] actual run folder: ${folder}"
 
         makeTaskContextStage3(task, hash, folder)
 
@@ -2142,7 +2148,7 @@ class TaskProcessor {
                 return true
             }
 
-            log.trace "Task ${task.name} is not executed because `when` condition is not verified"
+            log.trace "Task ${safeTaskName(task)} is not executed because `when` condition is not verified"
             finalizeTask0(task)
             return false
         }
@@ -2160,20 +2166,20 @@ class TaskProcessor {
      */
     @PackageScope
     final finalizeTask( TaskRun task ) {
-        log.trace "finalizing process > ${task.name} -- $task"
+        log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
         def fault = null
         try {
             // -- verify task exit status
             if( task.error )
-                throw new ProcessFailedException("Process `${task.name}` failed", task.error)
+                throw new ProcessFailedException("Process `${safeTaskName(task)}` failed", task.error)
 
             if( task.type == ScriptType.SCRIPTLET ) {
                 if( task.exitStatus == Integer.MAX_VALUE )
-                    throw new ProcessFailedException("Process `${task.name}` terminated for an unknown reason -- Likely it has been terminated by the external system")
+                    throw new ProcessFailedException("Process `${safeTaskName(task)}` terminated for an unknown reason -- Likely it has been terminated by the external system")
 
                 if ( !task.isSuccess() )
-                    throw new ProcessFailedException("Process `${task.name}` terminated with an error exit status (${task.exitStatus})")
+                    throw new ProcessFailedException("Process `${safeTaskName(task)}` terminated with an error exit status (${task.exitStatus})")
             }
 
             // -- expose task exit status to make accessible as output value
@@ -2211,7 +2217,7 @@ class TaskProcessor {
      * @param producedFiles The map of files to be bind the outputs
      */
     private void finalizeTask0( TaskRun task ) {
-        log.trace "Finalize process > ${task.name}"
+        log.trace "Finalize process > ${safeTaskName(task)}"
 
         // -- bind output (files)
         if( task.canBind ) {
