@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.5.6 - 13 Nov
+- Fix refresh token for tower served resources [9dec2b66] #3366
+
 1.5.5 - 3 Oct
 - Fix hanging test [44c04874] <Paolo Di Tommaso>
 
