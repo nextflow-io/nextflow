@@ -17,10 +17,13 @@
 
 package nextflow.mail
 
+import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import nextflow.file.FileHelper
 
 /**
  * Model a mail attachment
@@ -61,7 +64,7 @@ class Attachment {
             this.file = attach
         }
         else if( attach instanceof Path ) {
-            this.file = attach.toFile()
+            this.file = toFile0(attach)
         }
         else if( attach instanceof String || attach instanceof GString ) {
             this.file = new File(attach.toString())
@@ -101,5 +104,15 @@ class Attachment {
         }
 
         return null
+    }
+
+    protected File toFile0(Path source) {
+        if ( source.fileSystem == FileSystems.default )
+            return source.toFile()
+        final tempDir = Files.createTempDirectory('nf-mail-attach')
+        tempDir.toFile().deleteOnExit()
+        final target = tempDir.resolve(source.getName())
+        FileHelper.copyPath(source, target)
+        return target.toFile()
     }
 }
