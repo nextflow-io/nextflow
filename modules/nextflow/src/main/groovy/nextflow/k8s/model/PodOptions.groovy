@@ -66,13 +66,14 @@ class PodOptions {
     private Boolean privileged
     
     PodOptions( List<Map> options=null ) {
-        envVars = new HashSet<>()
-        mountConfigMaps = new HashSet<>()
-        mountCsiEphemerals = new HashSet<>()
-        mountSecrets = new HashSet<>()
-        mountClaims = new HashSet<>()
+        int size = options ? options.size() : 0
+        envVars = new HashSet<>(size)
+        mountCsiEphemerals = new HashSet<>(size)
+        mountSecrets = new HashSet<>(size)
+        mountConfigMaps = new HashSet<>(size)
+        mountClaims = new HashSet<>(size)
         automountServiceAccountToken = true
-        tolerations = new ArrayList<Map>()
+        tolerations = new ArrayList<Map>(size)
         init(options)
     }
 
@@ -96,14 +97,14 @@ class PodOptions {
         else if( entry.env && entry.config ) {
             envVars << PodEnv.config(entry.env, entry.config)
         }
+        else if( entry.mountPath && entry.secret ) {
+            mountSecrets << new PodMountSecret(entry)
+        }
         else if( entry.mountPath && entry.config ) {
             mountConfigMaps << new PodMountConfig(entry)
         }
         else if( entry.mountPath && entry.csi ) {
             mountCsiEphemerals << new PodMountCsiEphemeral(entry)
-        }
-        else if( entry.mountPath && entry.secret ) {
-            mountSecrets << new PodMountSecret(entry)
         }
         else if( entry.mountPath && entry.volumeClaim ) {
             mountClaims << new PodVolumeClaim(entry)
