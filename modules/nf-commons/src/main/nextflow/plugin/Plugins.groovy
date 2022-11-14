@@ -17,6 +17,8 @@
 
 package nextflow.plugin
 
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.pf4j.PluginManager
@@ -37,6 +39,10 @@ class Plugins {
 
     static synchronized void init(boolean embeddedMode=false) {
         INSTANCE.init(embeddedMode)
+    }
+
+    static synchronized void init(Path root, String mode, CustomPluginManager pluginManager) {
+        INSTANCE.init(root, mode, pluginManager)
     }
 
     static synchronized void setup(Map config = Collections.emptyMap()) {

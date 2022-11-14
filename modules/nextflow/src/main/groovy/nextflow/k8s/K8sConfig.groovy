@@ -17,6 +17,8 @@
 
 package nextflow.k8s
 
+import javax.annotation.Nullable
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -30,6 +32,7 @@ import nextflow.k8s.model.PodOptions
 import nextflow.k8s.model.PodSecurityContext
 import nextflow.k8s.model.PodVolumeClaim
 import nextflow.k8s.model.ResourceType
+import nextflow.util.Duration
 
 /**
  * Model Kubernetes specific settings defined in the nextflow
@@ -125,8 +128,11 @@ class K8sConfig implements Map<String,Object> {
      *      container entrypoint (it does however require to have a bash shell as the image entrypoint)
      *
      */
-    boolean preserveContainerEntrypoint() {
-        return target.preserveContainerEntrypoint
+    boolean entrypointOverride() {
+        def result = target.entrypointOverride
+        if( result == null )
+            result = System.getenv('NXF_CONTAINER_ENTRYPOINT_OVERRIDE')
+        return result
     }
 
     /**
@@ -200,32 +206,59 @@ class K8sConfig implements Map<String,Object> {
         return result ? result.claimName : null
     }
 
-
     @Memoized
     ClientConfig getClient() {
 
         final result = ( target.client instanceof Map
-                ? clientFromMap(target.client as Map)
-                : clientDiscovery(target.context as String)
+                ? clientFromNextflow(target.client as Map, target.namespace as String, target.serviceAccount as String)
+                : clientDiscovery(target.context as String, target.namespace as String, target.serviceAccount as String)
         )
 
-        if( target.namespace ) {
-            result.namespace = target.namespace as String
-        }
+        if( target.httpConnectTimeout )
+            result.httpConnectTimeout = target.httpConnectTimeout as Duration
 
-        if( target.serviceAccount ) {
-            result.serviceAccount = target.serviceAccount as String
-        }
+        if( target.httpReadTimeout )
+            result.httpReadTimeout = target.httpReadTimeout as Duration
+
+        if( target.maxErrorRetry )
+            result.maxErrorRetry = target.maxErrorRetry as Integer
 
         return result
     }
 
-    @PackageScope ClientConfig clientFromMap( Map map ) {
-        ClientConfig.fromMap(map)
+    /**
+     * Get the K8s client config from the declaration made in the Nextflow config file
+     *
+     * @param map
+     *      A map representing the clint configuration options define in the nextflow
+     *      config file
+     * @param namespace
+     *      The K8s namespace to be used. If omitted {@code default} is used.
+     * @param serviceAccount
+     *      The K8s service account to be used. If omitted {@code default} is used.
+     * @return
+     *      The Kubernetes {@link ClientConfig} object
+     */
+    @PackageScope ClientConfig clientFromNextflow(Map map, @Nullable String namespace, @Nullable String serviceAccount ) {
+        ClientConfig.fromNextflowConfig(map,namespace,serviceAccount)
     }
 
-    @PackageScope ClientConfig clientDiscovery( String ctx ) {
-        ClientConfig.discover(ctx)
+    /**
+     * Discover the K8s client config from the execution environment
+     * that can be either a `.kube/config` file or service meta file
+     * when running in a pod.
+     *
+     * @param contextName
+     *      The name of the configuration context to be used
+     * @param namespace
+     *      The Kubernetes namespace to be used
+     * @param serviceAccount
+     *      The Kubernetes serviceAccount to be used
+     * @return
+     *      The discovered Kube {@link ClientConfig} object
+     */
+    @PackageScope ClientConfig clientDiscovery(String contextName, String namespace, String serviceAccount) {
+        ClientConfig.discover(contextName, namespace, serviceAccount)
     }
 
     void checkStorageAndPaths(K8sClient client) {

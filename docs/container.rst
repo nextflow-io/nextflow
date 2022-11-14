@@ -21,7 +21,8 @@ suited for use in HPC environments. Its main advantage is that it can be used wi
 making use of user namespaces in the Linux kernel. Charliecloud is able to pull from Docker registries.
 
 .. note::
-    This feature requires Nextflow version ``21.03.0-edge`` or later and Charliecloud ``v0.22`` or later.
+    This feature requires at least Nextflow version ``21.03.0-edge`` and a Charliecloud version between ``v0.22`` and ``v0.27``.
+    As of Nextflow version ``22.09.0-edge``, Charliecloud ``v0.28`` or later is required.
 
 .. warning::
     This feature is experimental. Using it in a production environment is not recommended.
@@ -29,7 +30,7 @@ making use of user namespaces in the Linux kernel. Charliecloud is able to pull 
 Prerequisites
 -------------
 
-You will need Charliecloud version ``0.22`` or later installed on your execution environment e.g. your computer or a
+You will need Charliecloud installed in your execution environment e.g. on your computer or a
 distributed cluster, depending on where you want to run your pipeline.
 
 How it works
@@ -84,7 +85,7 @@ to the Charliecloud container format::
 
     process.container = 'https://quay.io/biocontainers/multiqc:1.3--py35_2'
     charliecloud.enabled = true
- 
+
 Whereas this would pull from Docker Hub::
 
     process.container = 'nextflow/examples:latest'
@@ -111,7 +112,7 @@ in the ``nextflow.config`` file as shown below::
 
 Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
 
-Advanced settings 
+Advanced settings
 -----------------
 
 Charliecloud advanced configuration settings are described in :ref:`config-charliecloud` section in the Nextflow
@@ -308,7 +309,7 @@ Alternatively, the same containers definitions can be provided by using the ``ne
 
 Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
 
-Advanced settings 
+Advanced settings
 -----------------
 
 Podman advanced configuration settings are described in :ref:`config-podman` section in the Nextflow configuration page.
@@ -526,7 +527,7 @@ latter overrides the former).
 .. warning::
     When using a compute cluster, the Singularity cache directory must reside in a shared filesystem accessible to all compute nodes.
 
-.. danger:: 
+.. danger::
     When pulling Docker images, Singularity may be unable to determine the container size if the image was
     stored using an old Docker format, resulting in a pipeline execution error. See the Singularity documentation for details.
 

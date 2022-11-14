@@ -27,6 +27,7 @@ import com.amazonaws.services.ec2.model.Instance
 import com.amazonaws.services.ecs.AmazonECS
 import com.amazonaws.services.ecs.model.DescribeContainerInstancesRequest
 import com.amazonaws.services.ecs.model.DescribeTasksRequest
+import com.amazonaws.services.ecs.model.InvalidParameterException
 import com.amazonaws.services.logs.AWSLogs
 import com.amazonaws.services.logs.model.GetLogEventsRequest
 import com.amazonaws.services.logs.model.OutputLogEvent
@@ -104,19 +105,25 @@ class AwsBatchHelper {
         final describeTaskReq = new DescribeTasksRequest()
                 .withCluster(clusterArn)
                 .withTasks(taskArn)
-        final containers = ecsClient
-                .describeTasks(describeTaskReq)
-                .getTasks()
-                *.getContainerInstanceArn()
-        if( containers.size()==1 ) {
-            return containers.get(0)
+        try {
+            final describeTasksResult = ecsClient.describeTasks(describeTaskReq)
+            final containers =
+                    describeTasksResult.getTasks()
+                    *.getContainerInstanceArn()
+            if( containers.size()==1 ) {
+                return containers.get(0)
+            }
+            if( containers.size()==0 ) {
+                log.debug "Unable to find container id for clusterArn=$clusterArn and taskArn=$taskArn"
+                return null
+            }
+            else
+                throw new IllegalStateException("Found more than one container for taskArn=$taskArn")
         }
-        if( containers.size()==0 ) {
-            log.debug "Unable to find container id for clusterArn=$clusterArn and taskArn=$taskArn"
+        catch (InvalidParameterException e) {
+            log.debug "Cannot find container id for clusterArn=$clusterArn and taskArn=$taskArn - The task is likely running on another cluster"
             return null
         }
-        else
-            throw new IllegalStateException("Found more than one container for taskArn=$taskArn")
     }
 
     private String getInstanceIdByClusterAndContainerId(String clusterArn, String containerId) {
@@ -195,7 +202,7 @@ class AwsBatchHelper {
     String getTaskLogStream(String jobId) {
         final streamId = getLogStreamId(jobId)
         if( !streamId ) {
-            log.debug "Unable to find cloudwatch log stream for batch job id=$jobId"
+            log.debug "Unable to find CloudWatch log stream for batch job id=$jobId"
             return null
         }
 

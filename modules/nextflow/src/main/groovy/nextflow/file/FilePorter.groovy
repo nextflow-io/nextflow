@@ -39,6 +39,8 @@ import nextflow.exception.ProcessStageException
 import nextflow.extension.FilesEx
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
+import nextflow.util.ThreadPoolManager
+
 /**
  * Move foreign (ie. remote) files to the staging work area
  *
@@ -57,7 +59,7 @@ class FilePorter {
 
     final Map<Path,FileTransfer> stagingTransfers = new HashMap<>()
 
-    @Lazy private ExecutorService threadPool = session.getFileTransferThreadPool()
+    private ExecutorService threadPool
 
     private Duration pollTimeout
 
@@ -69,6 +71,9 @@ class FilePorter {
         this.session = session
         maxRetries = session.config.navigate('filePorter.maxRetries') as Integer ?: MAX_RETRIES
         pollTimeout = session.config.navigate('filePorter.pollTimeout') as Duration ?: POLL_TIMEOUT
+        threadPool = new ThreadPoolManager('FileTransfer')
+                .withConfig(session.config)
+                .createAndRegisterShutdownCallback(session)
     }
 
     Batch newBatch(Path stageDir) { new Batch(stageDir) }
@@ -284,7 +289,7 @@ class FilePorter {
         }
 
         private Path stageForeignFile0(Path source, Path target) {
-            if( target.exists() && checkPathIntegrity(source,target) ) {
+            if( target.exists() ) {
                 log.debug "Local cache found for foreign file ${source.toUriString()} at ${target.toUriString()}"
                 return target
             }
@@ -294,63 +299,6 @@ class FilePorter {
             return FileHelper.copyPath(source, target)
         }
 
-        private boolean checkPathIntegrity(Path source, Path target) {
-            boolean same
-            try {
-                // the file must have the same size. this is needed
-                // to prevent re-using broken files left by a previous interrupted download
-                final attrs = Files.readAttributes(source, BasicFileAttributes)
-                same = attrs.isDirectory()
-                    ? checkDirIntegrity0(source, target)
-                    : attrs.size() == Files.size(target)
-            }
-            catch (Exception e) {
-                log.debug "Unable to determine stage file integrity: source=$source; target=$target", e
-                same = false
-            }
-            finally {
-                // if the files sizes don't match, delete it
-                if( !same ) {
-                    log.debug "Invalid cached stage path - deleting: $target"
-                    safeDelete(target)
-                }
-                return same
-            }
-        }
-
-        private boolean checkDirIntegrity0(Path sourceDir, Path targetDir) {
-
-            // traverse the sourceDir directory and for each file check exists
-            // a corresponding file in the target directory having the same size
-            boolean same = true
-            Files.walkFileTree(sourceDir, new SimpleFileVisitor<Path>() {
-                FileVisitResult visitFile(Path sourceFile, BasicFileAttributes attrs) {
-                    final rel = sourceDir.relativize(sourceFile).toString()
-
-                    if( attrs.size() != Files.size(targetDir.resolve(rel)) ) {
-                        same = false
-                        return FileVisitResult.TERMINATE
-                    }
-                    else {
-                        same = true
-                        return FileVisitResult.CONTINUE
-                    }
-                }} )
-            return same
-        }
-        
-        private void safeDelete(Path target) {
-            try {
-                if( Files.isDirectory(target) )
-                    FilesEx.deleteDir(target)
-                else
-                    Files.delete(target)
-            }
-            catch (Exception e) {
-                log.warn "Unable to delete staged file: $target", e
-            }
-        }
-
         synchronized String getMessageAndClear() {
             def result = message
             message = null
@@ -358,12 +306,17 @@ class FilePorter {
         }
     }
 
-
-    static protected Path getCachePathFor(Path filePath, Path stageDir) {
+    static protected Path getCachePathFor(Path sourcePath, Path stageDir) {
         final dirPath = stageDir.toUriString() // <-- use a string to avoid changes in the dir to alter the hashing
-        final hash = CacheHelper.hasher([filePath, dirPath]).hash().toString()
-        final result = getCacheDir0(stageDir, hash).resolve(filePath.getName())
-        return result
+        int i=0
+        while( true ) {
+            final  uniq = [sourcePath, dirPath, i++]
+            final hash = CacheHelper.hasher(uniq).hash().toString()
+            final targetPath = getCacheDir0(stageDir, hash).resolve(sourcePath.getName())
+            final exist = targetPath.exists()
+            if( !exist || checkPathIntegrity(sourcePath, targetPath) )
+                return targetPath
+        }
     }
 
     static private Path getCacheDir0(Path workDir, String hash) {
@@ -371,10 +324,49 @@ class FilePorter {
         def result = workDir.resolve( "$bucket/${hash.substring(2)}")
 
         if( !FilesEx.mkdirs(result) ) {
-            throw new IOException("Unable to create cache directory: $result -- Verify file system access permissions or if a file having the same name exists")
+            throw new IOException("Unable to create cache directory: $result -- Make sure a file with the same name doesn't exist and you have write permissions")
         }
         return result.toAbsolutePath()
     }
 
+    static private boolean checkPathIntegrity(Path source, Path target) {
+        try {
+            // the file must have the same size. this is needed
+            // to prevent re-using broken files left by a previous interrupted download
+            final attrs = Files.readAttributes(source, BasicFileAttributes)
+            final same = attrs.isDirectory()
+                    ? checkDirIntegrity0(source, target)
+                    : attrs.size() == Files.size(target)
+            return same
+        }
+        catch (NoSuchFileException e) {
+            log.warn "Path integrity check failed because the following file has been deleted: $e.message -- make sure to not run more than one nextflow instance using the same work directory"
+            return false
+        }
+        catch (Exception e) {
+            log.debug "Unable to determine stage file integrity: source=$source; target=$target", e
+            return false
+        }
+    }
 
+    static private boolean checkDirIntegrity0(Path sourceDir, Path targetDir) {
+
+        // traverse the sourceDir directory and for each file check exists
+        // a corresponding file in the target directory having the same size
+        boolean same = true
+        Files.walkFileTree(sourceDir, new SimpleFileVisitor<Path>() {
+            FileVisitResult visitFile(Path sourceFile, BasicFileAttributes attrs) {
+                final rel = sourceDir.relativize(sourceFile).toString()
+
+                if( attrs.size() != Files.size(targetDir.resolve(rel)) ) {
+                    same = false
+                    return FileVisitResult.TERMINATE
+                }
+                else {
+                    same = true
+                    return FileVisitResult.CONTINUE
+                }
+            }} )
+        return same
+    }
 }

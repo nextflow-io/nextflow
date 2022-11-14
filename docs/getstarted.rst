@@ -89,9 +89,6 @@ Your first script
 
 Copy the following example into your favourite text editor and save it to a file named ``tutorial.nf`` ::
 
-    #!/usr/bin/env nextflow
-    nextflow.enable.dsl=2
-
     params.str = 'Hello world!'
 
     process splitLetters {
@@ -105,7 +102,7 @@ Copy the following example into your favourite text editor and save it to a file
 
     process convertToUpper {
       input:
-        file x
+        path x
       output:
         stdout
 
@@ -167,15 +164,14 @@ For the sake of this tutorial, modify the ``convertToUpper`` process in the prev
 process script with the string ``rev $x``, so that the process looks like this::
 
     process convertToUpper {
-        input:
-        file x from letters
+      input:
+        path x
+      output:
+        stdout
 
-        output:
-        stdout result
-
-        """
-        rev $x
-        """
+      """
+      rev $x
+      """
     }
 
 Then save the file with the same name, and execute it by adding the ``-resume`` option to the command line::
