@@ -17,17 +17,28 @@
 
 package nextflow.mail
 
+import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.Path
 
+import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import groovy.util.logging.Slf4j
+import nextflow.file.FileHelper
+import nextflow.util.MemoryUnit
 
 /**
  * Model a mail attachment
  */
+@Slf4j
+@CompileStatic
 @ToString(includeNames = true)
 @EqualsAndHashCode
 class Attachment {
+
+    private static final MemoryUnit MAX_SIZE = MemoryUnit.of('20MB')
+
     /**
      * The attachment file
      */
@@ -61,7 +72,7 @@ class Attachment {
             this.file = attach
         }
         else if( attach instanceof Path ) {
-            this.file = attach.toFile()
+            this.file = toFile0(attach)
         }
         else if( attach instanceof String || attach instanceof GString ) {
             this.file = new File(attach.toString())
@@ -101,5 +112,29 @@ class Attachment {
         }
 
         return null
+    }
+
+    private File toFile0(Path source) {
+        checkPath(source)
+        if ( source.fileSystem == FileSystems.default )
+            return source.toFile()
+        final tempDir = Files.createTempDirectory('nf-mail-attach')
+        tempDir.toFile().deleteOnExit()
+        final target = tempDir.resolve(source.getName())
+        FileHelper.copyPath(source, target)
+        return target.toFile()
+    }
+
+    private void checkPath(Path source) {
+        final attrs = FileHelper.readAttributes(source)
+        if( !attrs )
+            return
+        final size = MemoryUnit.of(attrs.size())
+        if( size>MAX_SIZE ) {
+            log.warn("Mail attachment should not be bigger than ${MAX_SIZE} - check file: ${source.toUriString()}")
+        }
+        if( attrs.isDirectory() ) {
+            throw new IllegalArgumentException("Mail attachment cannot be a directory - offending path: ${source.toUriString()}")
+        }
     }
 }

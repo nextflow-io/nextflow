@@ -17,7 +17,10 @@
 
 package nextflow.mail
 
+import java.nio.file.Path
+
 import spock.lang.Specification
+import test.TestHelper
 
 /**
  *
@@ -37,7 +40,7 @@ class AttachmentTest extends Specification {
 
     }
 
-    def 'should crate attachment'  () {
+    def 'should create attachment'  () {
 
         given:
         Attachment attach
@@ -75,6 +78,19 @@ class AttachmentTest extends Specification {
         attach.resource == 'jar:foo.png'
         attach.fileName == 'foo.png'
 
+    }
+
+    def 'should attach remote path' () {
+        given:
+        Attachment attach
+        Path remoteFile = TestHelper.createInMemTempFile('report.txt', 'Hello world')
+
+        when:
+        attach = new Attachment(remoteFile)
+        then:
+        attach.file.name == 'report.txt'
+        attach.fileName == 'report.txt'
+        attach.file.text == 'Hello world'
     }
 
 }
