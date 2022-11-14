@@ -117,7 +117,7 @@ class AmazonClientFactory {
         }
 
         if( !accessKey && !fetchIamRole() )
-            throw new AbortOperationException("Missing AWS security credentials -- Provide access/security keys pair or define a IAM instance profile (suggested)")
+            throw new AbortOperationException("Missing AWS security credentials -- Provide access/security keys pair or define an IAM instance profile (suggested)")
 
         // -- get the aws default region
         region = config.region ?: Global.getAwsRegion() ?: fetchRegion()

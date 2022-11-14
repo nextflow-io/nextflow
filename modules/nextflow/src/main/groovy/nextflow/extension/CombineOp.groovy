@@ -29,7 +29,7 @@ import nextflow.Channel
 import static nextflow.extension.DataflowHelper.addToList
 import static nextflow.extension.DataflowHelper.makeKey
 /**
- * Implements the {@link OperatorEx#spread(groovyx.gpars.dataflow.DataflowReadChannel, java.lang.Object)} operator
+ * Implements the {@link OperatorImpl#spread(groovyx.gpars.dataflow.DataflowReadChannel, java.lang.Object)} operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -76,7 +76,7 @@ class CombineOp {
     }
 
     CombineOp setPivot( pivot ) {
-        this.pivot = pivot instanceof List ? (List)pivot : [pivot]
+        this.pivot = (List<Integer>)(pivot instanceof List<Integer> ? pivot : [pivot])
         return this
     }
 

@@ -32,6 +32,7 @@ import nextflow.cloud.aws.AmazonClientFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
+import nextflow.executor.fusion.FusionHelper
 import nextflow.extension.FilesEx
 import nextflow.processor.ParallelPollingMonitor
 import nextflow.processor.TaskHandler
@@ -53,6 +54,8 @@ import org.pf4j.ExtensionPoint
 @ServiceName('awsbatch')
 @CompileStatic
 class AwsBatchExecutor extends Executor implements ExtensionPoint {
+
+    private Map<String,String> sysEnv = System.getenv()
 
     /**
      * Proxy to throttle AWS batch client requests
@@ -109,7 +112,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
          */
         if( !(workDir instanceof S3Path) ) {
             session.abort()
-            throw new AbortOperationException("When using `$name` executor a S3 bucket must be provided as working directory either using -bucket-dir or -work-dir command line option")
+            throw new AbortOperationException("When using `$name` executor an S3 bucket must be provided as working directory using either the `-bucket-dir` or `-work-dir` command line option")
         }
     }
 
@@ -124,8 +127,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         /*
          * upload local binaries
          */
-        def disableBinDir = session.getExecConfigProp(name, 'disableRemoteBinDir', false)
-        if( session.binDir && !session.binDir.empty() && !disableBinDir ) {
+        if( session.binDir && !session.binDir.empty() && !session.disableRemoteBinDir ) {
             def s3 = getTempDir()
             log.info "Uploading local `bin` scripts folder to ${s3.toUriString()}/bin"
             remoteBinDir = FilesEx.copyTo(session.binDir, s3)
@@ -185,12 +187,14 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
 
         final pollInterval = session.getPollInterval(name, Duration.of('10 sec'))
         final dumpInterval = session.getMonitorDumpInterval(name)
+        final capacity = session.getQueueSize(name, 1000)
 
         final def params = [
                 name: name,
                 session: session,
                 pollInterval: pollInterval,
-                dumpInterval: dumpInterval
+                dumpInterval: dumpInterval,
+                capacity: capacity
         ]
 
         log.debug "Creating parallel monitor for executor '$name' > pollInterval=$pollInterval; dumpInterval=$dumpInterval"
@@ -217,7 +221,8 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
      */
     private ThrottlingExecutor createExecutorService(String name) {
 
-        final qs = session.getQueueSize(name, 5_000)
+        // queue size can be overridden by submitter options below
+        final qs = 5_000
         final limit = session.getExecConfigProp(name,'submitRateLimit','50/s') as String
         final size = Runtime.runtime.availableProcessors() * 5
 
@@ -240,6 +245,11 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
     @CompileDynamic
     protected Map getConfigOpts() {
         session.config?.executor?.submitter as Map
+    }
+
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session, sysEnv)
     }
 
     protected void logRateLimitChange(RateUnit rate) {

@@ -38,6 +38,17 @@ class PodSpecBuilder {
 
     static enum MetaType { LABEL, ANNOTATION }
 
+    static enum SegmentType {
+        PREFIX (253),
+        NAME (63),
+        VALUE (63)
+
+        private final int maxSize;
+        SegmentType(int maxSize) {
+            this.maxSize = maxSize;
+        }
+    }
+
     static @PackageScope AtomicInteger VOLUMES = new AtomicInteger()
 
     String podName
@@ -79,6 +90,8 @@ class PodSpecBuilder {
     Collection<PodMountConfig> configMaps = []
 
     Collection<PodMountEmptyDir> emptyDirs = []
+
+    Collection<PodMountCsiEphemeral> csiEphemerals = []
 
     Collection<PodMountSecret> secrets = []
 
@@ -245,6 +258,16 @@ class PodSpecBuilder {
     PodSpecBuilder withEmptyDir( PodMountEmptyDir emptyDir ) {
         this.emptyDirs.add(emptyDir)
         return this
+    } 
+
+    PodSpecBuilder withCsiEphemerals( Collection<PodMountCsiEphemeral> csiEphemerals ) {
+        this.csiEphemerals.addAll(csiEphemerals)
+        return this
+    }
+
+    PodSpecBuilder withCsiEphemeral( PodMountCsiEphemeral csiEphemeral ) {
+        this.csiEphemerals.add(csiEphemeral)
+        return this
     }
 
     PodSpecBuilder withSecrets( Collection<PodMountSecret> secrets ) {
@@ -292,6 +315,9 @@ class PodSpecBuilder {
         // -- emptyDirs
         if( opts.getMountEmptyDirs() )
             emptyDirs.addAll( opts.getMountEmptyDirs() )
+        // -- csi ephemeral volumes
+        if( opts.getMountCsiEphemerals() )
+            csiEphemerals.addAll( opts.getMountCsiEphemerals() )
         // -- secrets
         if( opts.getMountSecrets() )
             secrets.addAll( opts.getMountSecrets() )
@@ -445,8 +471,8 @@ class PodSpecBuilder {
         }
 
         // add storage definitions ie. volumes and mounts
-        final mounts = []
-        final volumes = []
+        final List<Map> mounts = []
+        final List<Map> volumes = []
         final namesMap = [:]
 
         // creates a volume name for each unique claim name
@@ -456,7 +482,7 @@ class PodSpecBuilder {
             volumes << [name: volName, persistentVolumeClaim: [claimName: claimName]]
         }
 
-        // -- volume claims
+        // -- persistent volume claims
         for( PodVolumeClaim entry : volumeClaims ) {
             //check if we already have a volume for the pvc
             final name = namesMap.get(entry.claimName)
@@ -481,17 +507,24 @@ class PodSpecBuilder {
             volumes << [name: name, emptyDir: entry.emptyDir]
         }
 
-        // host mounts
+        // -- csi ephemeral volumes
+        for( PodMountCsiEphemeral entry : csiEphemerals ) {
+            final name = nextVolName()
+            mounts << [name: name, mountPath: entry.mountPath, readOnly: entry.csi.readOnly ?: false]
+            volumes << [name: name, csi: entry.csi]
+        }
+
+        // -- secret volumes
+        for( PodMountSecret entry : secrets ) {
+            final name = nextVolName()
+            secretToSpec(name, entry, mounts, volumes)
+        }
+
+        // -- host path volumes
         for( PodHostMount entry : hostMounts ) {
             final name = nextVolName()
             mounts << [name: name, mountPath: entry.mountPath]
             volumes << [name: name, hostPath: [path: entry.hostPath]]
-        }
-
-        // secret volumes
-        for( PodMountSecret entry : secrets ) {
-            final name = nextVolName()
-            secretToSpec(name, entry, mounts, volumes)
         }
 
 
@@ -604,9 +637,9 @@ class PodSpecBuilder {
     protected Map sanitize(Map map, MetaType kind) {
         final result = new HashMap(map.size())
         for( Map.Entry entry : map ) {
-            final key = sanitize0(entry.key, kind)
+            final key = sanitizeKey(entry.key as String, kind)
             final value = (kind == MetaType.LABEL)
-                ? sanitize0(entry.value, kind)
+                ? sanitizeValue(entry.value, kind, SegmentType.VALUE)
                 : entry.value
 
             result.put(key, value)
@@ -614,15 +647,30 @@ class PodSpecBuilder {
         return result
     }
 
+    protected String sanitizeKey(String value, MetaType kind) {
+        final parts = value.tokenize('/')
+        
+        if (parts.size() == 2) {
+            return "${sanitizeValue(parts[0], kind, SegmentType.PREFIX)}/${sanitizeValue(parts[1], kind, SegmentType.NAME)}"
+        }
+        if( parts.size() == 1 ) {
+            return sanitizeValue(parts[0], kind, SegmentType.NAME)
+        }
+        else {
+            throw new IllegalArgumentException("Invalid key in pod ${kind.toString().toLowerCase()} -- Key can only contain exactly one '/' character")
+        }
+    }
+
+
     /**
      * Sanitize a string value to contain only alphanumeric characters, '-', '_' or '.',
      * and to start and end with an alphanumeric character.
      */
-    protected String sanitize0(value, MetaType kind) {
+    protected String sanitizeValue(value, MetaType kind, SegmentType segment) {
         def str = String.valueOf(value)
-        if( str.length() > 63 ) {
-            log.debug "K8s $kind exceeds allowed size: 63 -- offending str=$str"
-            str = str.substring(0,63)
+        if( str.length() > segment.maxSize ) {
+            log.debug "K8s $kind $segment exceeds allowed size: $segment.maxSize -- offending str=$str"
+            str = str.substring(0,segment.maxSize)
         }
         str = str.replaceAll(/[^a-zA-Z0-9\.\_\-]+/, '_')
         str = str.replaceAll(/^[^a-zA-Z0-9]+/, '')

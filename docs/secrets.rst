@@ -8,9 +8,6 @@ Secrets
 As of version ``21.09.0-edge``, Nextflow adds the built-in support for pipeline secrets to allow users to handle
 and manage sensitive information for pipeline execution in a safe manner.
 
-.. warning::
-    This feature is experimental, and may change in a future release.
-
 How it works
 ============
 
@@ -21,25 +18,20 @@ owner.
 When the pipeline execution is launched Nextflow inject the secrets in pipeline jobs without leaking them
 into temporary execution files. The secrets are accessible into the job command via environment variables.
 
-.. note::
-    This feature must be enabled by setting the following environment variable in the launch environment::
-
-        export NXF_ENABLE_SECRETS=true
-
 
 Command line
 ============
 
-When enabling this feature Nextflow provides a new command named ``secrets``. This command allow four simple
+Nextflow provides a command named ``secrets``. This command allows four simple
 operations:
 
 ===================== =====================
 Operation               Description
 ===================== =====================
 ``list``                List secrets available in the current store e.g. ``nextflow secrets list``.
-``get``                 Allows retrieving a secret value e.g. ``nextflow secrets get -n FOO``.
-``put``                 Allows creating creating a new secret or overriding an existing one e.g. ``nextflow secrets put -n FOO -v "Hello world"``
-``delete``              Allows deleting an existing secret e.g. ``nextflow secrets delete -n FOO``.
+``get``                 Allows retrieving a secret value e.g. ``nextflow secrets get FOO``.
+``set``                 Allows creating a new secret or overriding an existing one e.g. ``nextflow secrets set FOO "Hello world"``
+``delete``              Allows deleting an existing secret e.g. ``nextflow secrets delete FOO``.
 ===================== =====================
 
 Configuration file
@@ -52,11 +44,11 @@ Once create the secrets can be used in the pipeline configuration file as implic
       secretKey = secrets.MY_SECRET_KEY
     }
 
-The above above snippet access the secrets ``MY_ACCESS_KEY`` and ``MY_SECRET_KEY`` previously and assign them to
+The above snippet access the secrets ``MY_ACCESS_KEY`` and ``MY_SECRET_KEY`` previously and assign them to
 the corresponding AWS credentials settings.
 
 .. warning::
-    Secrets **cannot** be assigned to pipeline parameters. 
+    Secrets **cannot** be assigned to pipeline parameters.
 
 
 Process secrets
@@ -82,5 +74,7 @@ process execution environment holding the values defines in the secret store.
     in the example above, otherwise a variable with the same will be evaluated in the Nextflow script
     context instead of the command script.
 
-.. warning::
+.. note::
     This feature is only available when using the local or grid executors (Slurm, Grid Engine, etc).
+    The AWS Batch executor allows the use of secrets when deploying the pipeline execution via
+    `Nextflow Tower <https://seqera.io/blog/pipeline-secrets-secure-handling-of-sensitive-information-in-tower/>`_.

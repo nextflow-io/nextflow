@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Seqera Labs.
+ * Copyright (c) 2019-2022, Seqera Labs.
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -38,7 +38,7 @@ class TowerFactory implements TraceObserverFactory {
     @Override
     Collection<TraceObserver> create(Session session) {
         final config = session.config
-        Boolean isEnabled = config.navigate('tower.enabled') as Boolean
+        Boolean isEnabled = config.navigate('tower.enabled') as Boolean || env.get('TOWER_WORKFLOW_ID')
         String endpoint = config.navigate('tower.endpoint') as String
         Duration requestInterval = config.navigate('tower.requestInterval') as Duration
         Duration aliveInterval = config.navigate('tower.aliveInterval') as Duration
@@ -58,7 +58,12 @@ class TowerFactory implements TraceObserverFactory {
         tower.maxRetries = config.navigate('tower.maxRetries', 5) as int
         tower.backOffBase = config.navigate('tower.backOffBase', SimpleHttpClient.DEFAULT_BACK_OFF_BASE) as int
         tower.backOffDelay = config.navigate('tower.backOffDelay', SimpleHttpClient.DEFAULT_BACK_OFF_DELAY  ) as int
-        tower.workspaceId = config.navigate('tower.workspaceId', env.get('TOWER_WORKSPACE_ID'))
+        // when 'TOWER_WORKFLOW_ID' is provided in the env, it's a tower made launch
+        // therefore the workspace should only be taken from the env
+        // otherwise check into the config file and fallback in the env
+        tower.workspaceId = env.get('TOWER_WORKFLOW_ID')
+                ? env.get('TOWER_WORKSPACE_ID')
+                : config.navigate('tower.workspaceId', env.get('TOWER_WORKSPACE_ID'))
         final result = new ArrayList(1)
         result.add(tower)
         // register auth provider
@@ -69,19 +74,9 @@ class TowerFactory implements TraceObserverFactory {
     }
 
     protected XAuthProvider provider(String endpoint, String accessToken) {
-        assert !endpoint.endsWith('/'), "Tower endpoint URL should end with a `/` character"
-        final pattern = ~/(?i)^$endpoint\/.*$/
-        new XAuthProvider() {
-            @Override
-            boolean authorize(URLConnection conn) {
-                final req = conn.getURL().toString()
-                if( pattern.matcher(req).matches() && !conn.getRequestProperty('Authorization') ) {
-                    log.trace "Authorizing request connection to: $req"
-                    conn.setRequestProperty('Authorization', "Bearer $accessToken")
-                    return true
-                }
-                return false
-            }
-        }
+        if (endpoint.endsWith('/'))
+            throw new IllegalArgumentException("Tower endpoint URL should not end with a `/` character -- offending value: $endpoint")
+        final refreshToken = env.get('TOWER_REFRESH_TOKEN')
+        return new TowerXAuth(endpoint, accessToken, refreshToken)
     }
 }

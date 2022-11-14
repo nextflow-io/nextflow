@@ -194,7 +194,8 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
                     network: 'net/123',
                     subnetwork: 'sub/192',
                     serviceAccountEmail: 'myaccount@developer.gserviceaccount.com',
-                    usePrivateAddress: true ))
+                    usePrivateAddress: true,
+                    resourceLabels: [foo:'bar'] ))
         then:
         with(resources3) {
             getVirtualMachine().getMachineType() == type
@@ -208,6 +209,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
             getVirtualMachine().getAccelerators()[0].getType()=='nvidia-tesla-k80'
             getVirtualMachine().getBootDiskSizeGb() == 75
             getVirtualMachine().getCpuPlatform() == 'Intel Skylake'
+            getVirtualMachine().getLabels() == [foo: 'bar']
             getVirtualMachine().getNetwork().getUsePrivateAddress()
             getVirtualMachine().getNetwork().getNetwork() == 'net/123'
             getVirtualMachine().getNetwork().getSubnetwork() == 'sub/192'
@@ -476,7 +478,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
         and:
 
         def pipeline = new Pipeline()
-        def req = new GoogleLifeSciencesSubmitRequest(location: 'LOC-1', project: 'PRJ-X', taskName: 'foo')
+        def req = new GoogleLifeSciencesSubmitRequest(location: 'LOC-1', project: 'PRJ-X', taskName: 'foo', resourceLabels: [a:'b'])
 
         when:
         def result = helper.submitPipeline(req)
@@ -489,7 +491,7 @@ class GoogleLifeSciencesHelperTest extends GoogleSpecification {
         1 * helper.createMainAction(req) >> main
         1 * helper.createResources(req) >> res
         1 * helper.createPipeline([stage, main, unstage], res, req.timeout) >> pipeline
-        1 * helper.runPipeline('PRJ-X','LOC-1', pipeline, [taskName: 'foo']) >> operation
+        1 * helper.runPipeline('PRJ-X','LOC-1', pipeline, [taskName: 'foo', a:'b']) >> operation
         and:
         result == operation
     }

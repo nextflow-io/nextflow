@@ -196,7 +196,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
 
     BaseOutParam mode( def mode ) {
-        final msg = "Process output `mode` is not supported any more"
+        final msg = "Process output `mode` is not supported anymore"
         if( NF.isDsl2() )
             throw new DeprecationException(msg)
         this.mode = BasicMode.parseValue(mode)
@@ -213,11 +213,11 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     BaseOutParam setEmit( value ) {
         if( isNestedParam() )
-            throw new IllegalArgumentException("Output `emit` option it not allowed in tuple components")
+            throw new IllegalArgumentException("Output `emit` option is not allowed in tuple components")
         if( !value )
             throw new IllegalArgumentException("Missing output `emit` name")
         if( !ConfigHelper.isValidIdentifier(value) ) {
-            final msg = "Output emit '$value' is not valid a name -- Make sure it starts with an alphabetic or underscore character and it does not contain any blank, dot or other special characters"
+            final msg = "Output emit '$value' is not a valid name -- Make sure it starts with an alphabetic or underscore character and it does not contain any blank, dot or other special characters"
             if( NF.strictMode )
                 throw new IllegalArgumentException(msg)
             log.warn(msg)

@@ -22,7 +22,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 /**
- * Implements the {@link OperatorEx#concat} operator
+ * Implements the {@link OperatorImpl#concat} operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

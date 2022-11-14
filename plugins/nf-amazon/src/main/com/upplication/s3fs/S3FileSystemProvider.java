@@ -164,11 +164,10 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	}
 
 	@Override
-	public FileSystem newFileSystem(URI uri, Map<String, ?> env)
-			throws IOException {
+	public FileSystem newFileSystem(URI uri, Map<String, ?> env) throws IOException {
 		Preconditions.checkNotNull(uri, "uri is null");
-		Preconditions.checkArgument(uri.getScheme().equals("s3"),
-				"uri scheme must be 's3': '%s'", uri);
+		Preconditions.checkArgument(uri.getScheme().equals("s3"), "uri scheme must be 's3': '%s'", uri);
+
 		// first try to load amazon props
 		props = loadAmazonProperties();
 		Object accessKey = props.getProperty(ACCESS_KEY);
@@ -198,8 +197,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		// if this instance already has a S3FileSystem, throw exception
 		// otherwise set
 		if (!fileSystem.compareAndSet(null, result)) {
-			throw new FileSystemAlreadyExistsException(
-					"S3 filesystem already exists. Use getFileSystem() instead");
+			throw new FileSystemAlreadyExistsException("S3 filesystem already exists. Use getFileSystem() instead");
 		}
 
 		return result;
@@ -210,8 +208,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		FileSystem fileSystem = this.fileSystem.get();
 
 		if (fileSystem == null) {
-			throw new FileSystemNotFoundException(
-					String.format("S3 filesystem not yet created. Use newFileSystem() instead"));
+			throw new FileSystemNotFoundException("S3 filesystem not yet created. Use newFileSystem() instead");
 		}
 
 		return fileSystem;
@@ -240,8 +237,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	}
 
     @Override
-    public DirectoryStream<Path> newDirectoryStream(Path dir,
-                                                    DirectoryStream.Filter<? super Path> filter) throws IOException {
+    public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
 
         Preconditions.checkArgument(dir instanceof S3Path,
                 "path must be an instance of %s", S3Path.class.getName());
@@ -417,6 +413,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 				.setStorageClass(props.getProperty("upload_storage_class"))
 				.setStorageEncryption(props.getProperty("storage_encryption"))
 				.setKmsKeyId(props.getProperty("storage_kms_key_id"))
+				.setContentType(fileToUpload.getContentType())
 				.setTags(fileToUpload.getTagsList());
 		return stream;
 	}
@@ -449,6 +446,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
         // and we can use the File SeekableByteChannel implementation
 		final SeekableByteChannel seekable = Files .newByteChannel(tempFile, options);
 		final List<Tag> tags = ((S3Path) path).getTagsList();
+		final String contentType = ((S3Path) path).getContentType();
 
 		return new SeekableByteChannel() {
 			@Override
@@ -478,10 +476,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
                         */
                         s3Path.getFileSystem()
                                 .getClient()
-                                .putObject(s3Path.getBucket(), s3Path.getKey(),
-                                        stream,
-                                        metadata,
-										tags);
+                                .putObject(s3Path.getBucket(), s3Path.getKey(), stream, metadata, tags, contentType);
                     }
                 }
                 else {
@@ -552,8 +547,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 		s3Path.getFileSystem()
 				.getClient()
-				.putObject(s3Path.getBucket(), keyName,
-						new ByteArrayInputStream(new byte[0]), metadata, tags);
+				.putObject(s3Path.getBucket(), keyName, new ByteArrayInputStream(new byte[0]), metadata, tags, null);
 	}
 
 	@Override
@@ -615,20 +609,21 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 		AmazonS3Client client = s3Source.getFileSystem() .getClient();
 
-        final ObjectMetadata sourceObjMetadata = s3Source.getFileSystem().getClient().getObjectMetadata(s3Source.getBucket(), s3Source.getKey());
+		final ObjectMetadata sourceObjMetadata = s3Source.getFileSystem().getClient().getObjectMetadata(s3Source.getBucket(), s3Source.getKey());
 		final S3MultipartOptions opts = props != null ? new S3MultipartOptions(props) : new S3MultipartOptions();
-		final int chunkSize = opts.getChunkSize();
+		final long maxSize = opts.getMaxCopySize();
 		final long length = sourceObjMetadata.getContentLength();
 		final List<Tag> tags = ((S3Path) target).getTagsList();
-		
-		if( length <= chunkSize ) {
+		final String contentType = ((S3Path) target).getContentType();
+
+		if( length <= maxSize ) {
 			CopyObjectRequest copyObjRequest = new CopyObjectRequest(s3Source.getBucket(), s3Source.getKey(),s3Target.getBucket(), s3Target.getKey());
-			log.trace("Copy file via copy object - source: source={}, target={}, tags={}", s3Source, s3Target,tags);
-			client.copyObject(copyObjRequest, tags);
+			log.trace("Copy file via copy object - source: source={}, target={}, tags={}", s3Source, s3Target, tags);
+			client.copyObject(copyObjRequest, tags, contentType);
 		}
 		else {
 			log.trace("Copy file via multipart upload - source: source={}, target={}, tags={}", s3Source, s3Target, tags);
-			client.multipartCopyObject(s3Source, s3Target, length, opts, tags);
+			client.multipartCopyObject(s3Source, s3Target, length, opts, tags, contentType);
 		}
 	}
 
