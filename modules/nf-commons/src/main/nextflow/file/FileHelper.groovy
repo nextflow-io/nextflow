@@ -1051,8 +1051,8 @@ class FileHelper {
         try {
             Files.readAttributes(path,BasicFileAttributes,options)
         }
-        catch( IOException e ) {
-            log.trace "Unable to read attributes for file: $path"
+        catch( IOException|UnsupportedOperationException|SecurityException e ) {
+            log.trace "Unable to read attributes for file: $path - cause: ${e.message}"
             return null
         }
     }
