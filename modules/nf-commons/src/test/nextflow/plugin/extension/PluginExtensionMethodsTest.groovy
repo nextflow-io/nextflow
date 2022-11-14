@@ -498,4 +498,21 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
 
     }
 
+    def 'should allows to include all functions'() {
+        given:
+        def SCRIPT_TEXT= '''
+        nextflow.enable.strict = true
+                
+        include { _ } from 'plugin/nf-test-plugin-hello' 
+        
+        channel.of( sayHello() ).goodbye() 
+        '''
+
+        when:
+        def result = dsl_eval(SCRIPT_TEXT)
+
+        then:
+        result.val == 'hi'
+        result.val == Channel.STOP
+    }
 }

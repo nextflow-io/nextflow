@@ -124,6 +124,21 @@ class PluginExtensionProvider implements ExtensionProvider {
         final definedFactories= getDeclaredFactoryExtensionMethods0(ext.getClass())
         // find all functions defined in the plugin
         final definedFunctions= getDeclaredFunctionsExtensionMethods0(ext.getClass())
+        if( includedNames.get('_')){
+            def mapOp = definedOperators.inject([:],{map, op->
+                map[op] = op
+                map
+            }) as Map<String,String>
+            def mapFact = definedFactories.inject([:],{map, op->
+                map[op] = op
+                map
+            }) as Map<String,String>
+            def mapFunc = definedFunctions.inject([:],{map, op->
+                map[op] = op
+                map
+            }) as Map<String,String>
+            includedNames = mapOp.deepMerge(mapFact.deepMerge(mapFunc))
+        }
         for( Map.Entry<String,String> entry : includedNames ) {
             String realName = entry.key
             String aliasName = entry.value

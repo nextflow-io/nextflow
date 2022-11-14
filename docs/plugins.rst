@@ -101,3 +101,6 @@ In the same way as operators, functions can be aliased::
 
     include { reverseString as anotherReverseMethod } from 'plugin/my-plugin'
 
+As of version `22.11.0` you can include all operatos and functions a plugin exports using the '_' expression
+
+    include { _ } from 'plugin/my-plugin'
