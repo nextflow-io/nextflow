@@ -85,9 +85,11 @@ class PodSpecBuilder {
 
     AcceleratorResource accelerator
 
-    Collection<PodMountSecret> secrets = []
-
     Collection<PodMountConfig> configMaps = []
+
+    Collection<PodMountCsiEphemeral> csiEphemerals = []
+
+    Collection<PodMountSecret> secrets = []
 
     Collection<PodHostMount> hostMounts = []
 
@@ -234,6 +236,16 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withCsiEphemerals( Collection<PodMountCsiEphemeral> csiEphemerals ) {
+        this.csiEphemerals.addAll(csiEphemerals)
+        return this
+    }
+
+    PodSpecBuilder withCsiEphemeral( PodMountCsiEphemeral csiEphemeral ) {
+        this.csiEphemerals.add(csiEphemeral)
+        return this
+    }
+
     PodSpecBuilder withSecrets( Collection<PodMountSecret> secrets ) {
         this.secrets.addAll(secrets)
         return this
@@ -273,12 +285,15 @@ class PodSpecBuilder {
         // -- env vars
         if( opts.getEnvVars() )
             envVars.addAll( opts.getEnvVars() )
-        // -- secrets
-        if( opts.getMountSecrets() )
-            secrets.addAll( opts.getMountSecrets() )
         // -- configMaps
         if( opts.getMountConfigMaps() )
             configMaps.addAll( opts.getMountConfigMaps() )
+        // -- csi ephemeral volumes
+        if( opts.getMountCsiEphemerals() )
+            csiEphemerals.addAll( opts.getMountCsiEphemerals() )
+        // -- secrets
+        if( opts.getMountSecrets() )
+            secrets.addAll( opts.getMountSecrets() )
         // -- volume claims 
         if( opts.getVolumeClaims() )
             volumeClaims.addAll( opts.getVolumeClaims() )
@@ -438,7 +453,7 @@ class PodSpecBuilder {
             volumes << [name: volName, persistentVolumeClaim: [claimName: claimName]]
         }
 
-        // -- volume claims
+        // -- persistent volume claims
         for( PodVolumeClaim entry : volumeClaims ) {
             //check if we already have a volume for the pvc
             final name = namesMap.get(entry.claimName)
@@ -456,17 +471,24 @@ class PodSpecBuilder {
             configMapToSpec(name, entry, mounts, volumes)
         }
 
-        // host mounts
+        // -- csi ephemeral volumes
+        for( PodMountCsiEphemeral entry : csiEphemerals ) {
+            final name = nextVolName()
+            mounts << [name: name, mountPath: entry.mountPath, readOnly: entry.csi.readOnly ?: false]
+            volumes << [name: name, csi: entry.csi]
+        }
+
+        // -- secret volumes
+        for( PodMountSecret entry : secrets ) {
+            final name = nextVolName()
+            secretToSpec(name, entry, mounts, volumes)
+        }
+
+        // -- host path volumes
         for( PodHostMount entry : hostMounts ) {
             final name = nextVolName()
             mounts << [name: name, mountPath: entry.mountPath]
             volumes << [name: name, hostPath: [path: entry.hostPath]]
-        }
-
-        // secret volumes
-        for( PodMountSecret entry : secrets ) {
-            final name = nextVolName()
-            secretToSpec(name, entry, mounts, volumes)
         }
 
 
