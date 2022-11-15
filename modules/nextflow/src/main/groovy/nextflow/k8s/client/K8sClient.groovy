@@ -199,6 +199,7 @@ class K8sClient {
         return new K8sResponseJson(resp.text)
     }
 
+
     K8sResponseJson jobCreate(Map req, Path saveYamlPath=null) {
 
         if( saveYamlPath ) try {
@@ -209,6 +210,42 @@ class K8sClient {
         }
 
         jobCreate(JsonOutput.toJson(req))
+    }
+
+    /**
+     * Create a mpijob
+     *
+     * See
+     *  https://github.com/kubeflow/mpi-operator
+     *
+     * @param spec
+     * @return
+     */
+    K8sResponseJson mpiJobCreate(String req) {
+        assert req
+        final action = "/apis/kubeflow.org/v2beta1/namespaces/$config.namespace/mpijobs"
+        final resp = post(action, req)
+        trace('POST', action, resp.text)
+        return new K8sResponseJson(resp.text)
+    }
+
+    K8sResponseJson mpiJobCreate(Map req, Path saveYamlPath=null) {
+
+        if( saveYamlPath ) try {
+            saveYamlPath.text = new Yaml().dump(req).toString()
+        }
+        catch( Exception e ) {
+            log.debug "WARN: unable to save request yaml -- cause: ${e.message ?: e}"
+        }
+
+        mpiJobCreate(JsonOutput.toJson(req))
+    }
+
+    K8sResponseJson mpiJobDelete(String name) {
+        final action1 = "/apis/kubeflow.org/v2beta1/namespaces/$config.namespace/mpijobs/$name"
+        final resp1 = delete(action1)
+        trace('DELETE', action1, resp1.text)
+        new K8sResponseJson(resp1.text)
     }
 
     /**

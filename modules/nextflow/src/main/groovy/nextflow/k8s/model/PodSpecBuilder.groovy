@@ -85,6 +85,10 @@ class PodSpecBuilder {
 
     boolean automountServiceAccountToken = true
 
+    Integer mpiJobWorkers = 1
+
+    String sshAuthMountPath
+
     AcceleratorResource accelerator
 
     Collection<PodMountConfig> configMaps = []
@@ -354,6 +358,9 @@ class PodSpecBuilder {
         // -- privileged
         privileged = opts.privileged
 
+        sshAuthMountPath = opts.sshAuthMountPath
+        mpiJobWorkers = opts.mpiJobWorkers
+
         return this
     }
 
@@ -562,6 +569,47 @@ class PodSpecBuilder {
 
         return result
 
+    }
+
+    Map buildAsMPIJob() {        
+        final worker = build()
+        Map workerSpec = worker.spec as Map
+        List containers = workerSpec.containers as List
+        Map container = containers[0] as Map
+        container.remove('command')
+        container.remove('args')
+
+        withCpus(1)
+        withMemory("2048Mi")
+        final launcher = build()
+
+        final result = [
+           apiVersion: 'kubeflow.org/v2beta1',
+           kind: 'MPIJob',
+           metadata: launcher.metadata,
+           spec: [
+              slotsPerWorker: 1,
+              runPolicy: [
+                cleanPodPolicy: 'All'
+              ],
+              sshAuthMountPath: this.sshAuthMountPath,
+              mpiReplicaSpecs: [
+                Launcher: [
+                  replicas: 1,
+                  template: [
+                    spec: launcher.spec
+                  ]
+                ],
+                Worker: [
+                  replicas: this.mpiJobWorkers,
+                  template: [
+                    spec: worker.spec
+                  ]
+                ]
+              ]
+           ]
+        ]
+        return result
     }
 
     @PackageScope

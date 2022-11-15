@@ -412,6 +412,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         new PodOptions((List)get('pod'))
     }
 
+    String getComputeResourceType() {
+        get('computeResourceType') as String
+    }
+
     AcceleratorResource getAccelerator() {
         final value = get('accelerator')
         if( value instanceof Number )

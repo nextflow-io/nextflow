@@ -23,7 +23,7 @@ package nextflow.k8s.model
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 enum ResourceType {
-    Pod, Job;
+    Pod, Job, MPIJob;
 
     String lower() {
         return this.name().toLowerCase()

@@ -66,6 +66,10 @@ class PodOptions {
     private List<Map> tolerations
 
     private Boolean privileged
+
+    private Integer mpiJobWorkers
+
+    private String sshAuthMountPath 
     
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
@@ -150,6 +154,12 @@ class PodOptions {
         }
         else if( entry.privileged instanceof Boolean ) {
             this.privileged = entry.privileged as Boolean
+        }
+        else if( entry.sshAuthMountPath ) {
+            this.sshAuthMountPath = entry.sshAuthMountPath as String
+        }
+        else if( entry.mpiJobWorkers ) {
+            this.mpiJobWorkers = entry.mpiJobWorkers as Integer
         }
         else
             throw new IllegalArgumentException("Unknown pod options: $entry")
@@ -285,6 +295,9 @@ class PodOptions {
 
         //  privileged execution
         result.privileged = other.privileged!=null ? other.privileged : this.privileged
+
+        result.mpiJobWorkers = other.mpiJobWorkers!=0 ? other.mpiJobWorkers : this.mpiJobWorkers
+        result.sshAuthMountPath = other.sshAuthMountPath!=null ? other.sshAuthMountPath : this.sshAuthMountPath
 
         return result
     }
