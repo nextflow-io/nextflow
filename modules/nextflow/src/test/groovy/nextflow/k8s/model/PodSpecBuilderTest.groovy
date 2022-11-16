@@ -271,7 +271,7 @@ class PodSpecBuilderTest extends Specification {
                                     ],
                                     resources:[
                                             requests: ['foo.org/gpu':5, cpu:8, memory:'100Gi'],
-                                            limits:['foo.org/gpu':10, cpu:8, memory:'100Gi'] ]
+                                            limits:['foo.org/gpu':10, memory:'100Gi'] ]
                                    ]
                            ]
                    ]
@@ -767,16 +767,16 @@ class PodSpecBuilderTest extends Specification {
         res.limits == null
 
         when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, type:'foo.org'), [limits: [cpus: 2]])
+        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, type: 'foo.org'), [requests: [cpu: 2]])
         then:
-        res.requests == ['foo.org/gpu': 5]
-        res.limits == [cpus:2]
+        res.requests == [cpu: 2, 'foo.org/gpu': 5]
+        res.limits == null
 
         when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, limit: 10, type:'foo.org'), [limits: [cpus: 2]])
+        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, limit: 10, type: 'foo.org'), [requests: [cpu: 2]])
         then:
-        res.requests == ['foo.org/gpu': 5]
-        res.limits == [cpus:2, 'foo.org/gpu': 10]
+        res.requests == [cpu: 2, 'foo.org/gpu': 5]
+        res.limits == ['foo.org/gpu': 10]
 
         when:
         res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, type:'example.com/fpga'), null)
@@ -785,10 +785,10 @@ class PodSpecBuilderTest extends Specification {
         res.limits == null
 
         when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, limit: 10, type:'example.com/fpga'), [limits: [cpus: 2]])
+        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, limit: 10, type: 'example.com/fpga'), [requests: [cpu: 2]])
         then:
-        res.requests == ['example.com/fpga': 5]
-        res.limits == [cpus:2, 'example.com/fpga': 10]
+        res.requests == [cpu: 2, 'example.com/fpga': 5]
+        res.limits == ['example.com/fpga': 10]
     }
 
 
