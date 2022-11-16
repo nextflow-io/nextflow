@@ -135,12 +135,12 @@ function install() {
 function launch_nextflow() {
     # the launch command line
     local cmdline=()
-    # remove leading and trailing double-quotes 
+    # remove leading and trailing double-quotes
     for x in "${launcher[@]}"; do
         x="${x%\"}"
         x="${x#\"}"
-        cmdline+=("$x") 
-    done 
+        cmdline+=("$x")
+    done
 
     if [[ "$bg" ]]; then
       local pid_file="${NXF_PID_FILE:-.nextflow.pid}"
@@ -237,9 +237,6 @@ if [[ "$dockerize" ]]; then
   exit 1
 fi
 
-CAPSULE_LOG=${CAPSULE_LOG:=''}
-CAPSULE_RESET=${CAPSULE_RESET:=''}
-CAPSULE_CACHE_DIR=${CAPSULE_CACHE_DIR:="$NXF_HOME/capsule"}
 
 NXF_PACK=one
 NXF_MODE=${NXF_MODE:-''}
@@ -254,11 +251,11 @@ NXF_HOST=${HOSTNAME:-localhost}
 
 # Determine the path to this file
 if [[ $NXF_PACK = all ]]; then
-    NXF_BIN=$(which "$0" 2>/dev/null)
-    [ $? -gt 0 -a -f "$0" ] && NXF_BIN="./$0"
+    echo "NXF_PACK=all is deprecated"
+    exit 1
 fi
 
-# use nextflow custom java home path 
+# use nextflow custom java home path
 if [[ "$NXF_JAVA_HOME" ]]; then
   JAVA_HOME="$NXF_JAVA_HOME"
   unset JAVA_CMD
@@ -333,14 +330,11 @@ fi
 
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}
 declare -a JAVA_OPTS=()
-JAVA_OPTS+=(-Dfile.encoding=UTF-8 -Dcapsule.trampoline -Dcapsule.java.cmd="$JAVA_CMD" -Dcom.sun.security.enableAIAcaIssuers=true)
+JAVA_OPTS+=(-Dfile.encoding=UTF-8 -Dcom.sun.security.enableAIAcaIssuers=true)
 if [[ $cmd == console ]]; then bg=1;
 else JAVA_OPTS+=(-Djava.awt.headless=true)
 fi
 
-[[ "$JAVA_HOME" ]] && JAVA_OPTS+=(-Dcapsule.java.home="$JAVA_HOME")
-[[ "$CAPSULE_LOG" ]] && JAVA_OPTS+=(-Dcapsule.log=$CAPSULE_LOG)
-[[ "$CAPSULE_RESET" ]] && JAVA_OPTS+=(-Dcapsule.reset=true)
 [[ "$cmd" != "run" && "$cmd" != "node" ]] && JAVA_OPTS+=(-XX:+TieredCompilation -XX:TieredStopAtLevel=1)
 [[ "$NXF_OPTS" ]] && JAVA_OPTS+=($NXF_OPTS)
 [[ "$NXF_CLASSPATH" ]] && export NXF_CLASSPATH
@@ -349,7 +343,6 @@ fi
 [[ "$NXF_TEMP" ]] && JAVA_OPTS+=(-Djava.io.tmpdir="$NXF_TEMP")
 [[ "${jvmopts[@]}" ]] && JAVA_OPTS+=("${jvmopts[@]}")
 export JAVA_CMD
-export CAPSULE_CACHE_DIR
 export NXF_PLUGINS_DIR
 export NXF_PLUGINS_MODE
 export NXF_PLUGINS_DEFAULT
@@ -363,7 +356,7 @@ else MD5=''
 fi
 
 # when no md5 command is available fallback on default execution
-if [ ! "$MD5" ] || [ "$CAPSULE_RESET" ]; then
+if [ ! "$MD5" ]; then
     launcher=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
     launch_nextflow
     exit 1
@@ -393,13 +386,8 @@ fi
 if [ -s "$LAUNCH_FILE" ] && [ "$LAUNCH_FILE" -nt "$NXF_BIN" ]; then
     declare -a launcher="($(cat "$LAUNCH_FILE"))"
 else
-    # otherwise run the capsule and get the result classpath in the 'launcher' and save it to a file
-    cli=($("$JAVA_CMD" "${JAVA_OPTS[@]}" -jar "$NXF_BIN"))
-    [[ $? -ne 0 ]] && echo_red 'Unable to initialize nextflow environment' && exit 1
-
-    # first string between double quotes is the full path to java, also blank spaces are included
-    # remainder string are arguments
-    # we extract first part into `cmd_base`` and remainder into `cmd_tail`` and convert them to array as previous version
+    # otherwise parse the command and get the result classpath in the 'launcher' and save it to a file
+    cli=("\"$JAVA_CMD\"" "${JAVA_OPTS[@]}" -jar "$NXF_BIN")
     cmd_pattern='"([^"]*)"(.*)'
     [[ "${cli[@]}" =~ $cmd_pattern ]]
     cmd_base=(${BASH_REMATCH[1]})

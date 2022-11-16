@@ -1,3 +1,6 @@
+plugins {
+    id "com.github.johnrengelman.shadow" version "7.1.2"
+}
 apply plugin: 'groovy'
 apply plugin: 'application'
 
@@ -69,4 +72,18 @@ application {
 
 run{
     args( (project.hasProperty("runCmd") ? project.findProperty("runCmd") : "set a cmd to run").split(' ') )
+}
+
+shadowJar {
+    archiveClassifier='one'
+    manifest {
+        attributes 'Main-Class': "$mainClassName"
+    }
+    mergeServiceFiles()
+    mergeGroovyExtensionModules()
+    doLast {
+        ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)
+        ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: nextflowDir, overwrite: true)
+        println "\n+ Nextflow package copied to: $releaseDir"
+    }
 }
