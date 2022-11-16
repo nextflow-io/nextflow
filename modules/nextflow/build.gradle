@@ -81,9 +81,4 @@ shadowJar {
     }
     mergeServiceFiles()
     mergeGroovyExtensionModules()
-    doLast {
-        ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)
-        ant.copy(file: "$buildDir/libs/nextflow-${version}-one.jar", todir: nextflowDir, overwrite: true)
-        println "\n+ Nextflow package copied to: $releaseDir"
-    }
 }

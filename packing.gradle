@@ -92,7 +92,11 @@ protected coordinates( it ) {
  * Compile and pack all packages
  */
 task pack( dependsOn: [clean, compile, ":nextflow:shadowJar"]) {
-
+    doLast {
+        ant.copy(file: "modules/nextflow/build/libs/nextflow-${version}-one.jar", todir: releaseDir, overwrite: true)
+        ant.copy(file: "modules/nextflow/build/libs/nextflow-${version}-one.jar", todir: nextflowDir, overwrite: true)
+        println "\n+ Nextflow package `ONE` copied to: $releaseDir"
+    }
 }
 
 
