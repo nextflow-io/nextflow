@@ -222,7 +222,7 @@ class PodmanBuilderTest extends Specification {
         new PodmanBuilder('fedora')
                 .setCpus(3)
                 .build()
-                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --cpus 3.0 fedora'
+                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --cpu-shares 3072 fedora'
 
         new PodmanBuilder('fedora')
                 .setMemory(new MemoryUnit('100m'))
@@ -230,10 +230,10 @@ class PodmanBuilderTest extends Specification {
                 .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --memory 100m fedora'
 
         new PodmanBuilder('fedora')
-                .setCpus(1.414)
+                .setCpus(1)
                 .setMemory(new MemoryUnit('400m'))
                 .build()
-                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --cpus 1.4 --memory 400m fedora'
+                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --cpu-shares 1024 --memory 400m fedora'
 
     }
 }
