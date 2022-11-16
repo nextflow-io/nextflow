@@ -89,9 +89,9 @@ class PodSpecBuilder {
 
     Collection<PodMountConfig> configMaps = []
 
-    Collection<PodMountEmptyDir> emptyDirs = []
-
     Collection<PodMountCsiEphemeral> csiEphemerals = []
+
+    Collection<PodMountEmptyDir> emptyDirs = []
 
     Collection<PodMountSecret> secrets = []
 
@@ -250,16 +250,6 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withEmptyDirs( Collection<PodMountEmptyDir> emptyDirs ) {
-        this.emptyDirs.addAll(emptyDirs)
-        return this
-    }
-
-    PodSpecBuilder withEmptyDir( PodMountEmptyDir emptyDir ) {
-        this.emptyDirs.add(emptyDir)
-        return this
-    } 
-
     PodSpecBuilder withCsiEphemerals( Collection<PodMountCsiEphemeral> csiEphemerals ) {
         this.csiEphemerals.addAll(csiEphemerals)
         return this
@@ -269,6 +259,16 @@ class PodSpecBuilder {
         this.csiEphemerals.add(csiEphemeral)
         return this
     }
+
+    PodSpecBuilder withEmptyDirs( Collection<PodMountEmptyDir> emptyDirs ) {
+        this.emptyDirs.addAll(emptyDirs)
+        return this
+    }
+
+    PodSpecBuilder withEmptyDir( PodMountEmptyDir emptyDir ) {
+        this.emptyDirs.add(emptyDir)
+        return this
+    } 
 
     PodSpecBuilder withSecrets( Collection<PodMountSecret> secrets ) {
         this.secrets.addAll(secrets)
@@ -312,12 +312,12 @@ class PodSpecBuilder {
         // -- configMaps
         if( opts.getMountConfigMaps() )
             configMaps.addAll( opts.getMountConfigMaps() )
-        // -- emptyDirs
-        if( opts.getMountEmptyDirs() )
-            emptyDirs.addAll( opts.getMountEmptyDirs() )
         // -- csi ephemeral volumes
         if( opts.getMountCsiEphemerals() )
             csiEphemerals.addAll( opts.getMountCsiEphemerals() )
+        // -- emptyDirs
+        if( opts.getMountEmptyDirs() )
+            emptyDirs.addAll( opts.getMountEmptyDirs() )
         // -- secrets
         if( opts.getMountSecrets() )
             secrets.addAll( opts.getMountSecrets() )
@@ -495,18 +495,18 @@ class PodSpecBuilder {
             configMapToSpec(name, entry, mounts, volumes)
         }
 
-        // -- emptyDir volumes
-        for( PodMountEmptyDir entry : emptyDirs ) {
-            final name = nextVolName()
-            mounts << [name: name, mountPath: entry.mountPath]
-            volumes << [name: name, emptyDir: entry.emptyDir]
-        }
-
         // -- csi ephemeral volumes
         for( PodMountCsiEphemeral entry : csiEphemerals ) {
             final name = nextVolName()
             mounts << [name: name, mountPath: entry.mountPath, readOnly: entry.csi.readOnly ?: false]
             volumes << [name: name, csi: entry.csi]
+        }
+
+        // -- emptyDir volumes
+        for( PodMountEmptyDir entry : emptyDirs ) {
+            final name = nextVolName()
+            mounts << [name: name, mountPath: entry.mountPath]
+            volumes << [name: name, emptyDir: entry.emptyDir]
         }
 
         // -- secret volumes

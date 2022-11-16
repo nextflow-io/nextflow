@@ -33,8 +33,8 @@ class PodOptionsTest extends Specification {
         then:
         options.getEnvVars() == [] as Set
         options.getMountConfigMaps() == [] as Set
-        options.getMountEmptyDirs() == [] as Set
         options.getMountCsiEphemerals() == [] as Set
+        options.getMountEmptyDirs() == [] as Set
         options.getMountSecrets() == [] as Set
         options.getAutomountServiceAccountToken() == true
     }
@@ -96,23 +96,6 @@ class PodOptionsTest extends Specification {
         ] as Set
     }
 
-    def 'should return emptyDir mounts' () {
-
-        given:
-        def options = [
-                [mountPath: '/scratch1', emptyDir: [medium: 'Memory']],
-                [mountPath: '/scratch2', emptyDir: [medium: 'Disk']]
-        ]
-
-        when:
-        def emptyDirs = new PodOptions(options).getMountEmptyDirs()
-        then:
-        emptyDirs.size() == 2
-        emptyDirs == [
-                new PodMountEmptyDir(options[0]),
-                new PodMountEmptyDir(options[1]) ] as Set
-    }
-
     def 'should return csi ephemeral mounts' () {
 
         given:
@@ -134,6 +117,22 @@ class PodOptionsTest extends Specification {
         ] as Set
     }
 
+    def 'should return emptyDir mounts' () {
+
+        given:
+        def options = [
+                [mountPath: '/scratch1', emptyDir: [medium: 'Memory']],
+                [mountPath: '/scratch2', emptyDir: [medium: 'Disk']]
+        ]
+
+        when:
+        def emptyDirs = new PodOptions(options).getMountEmptyDirs()
+        then:
+        emptyDirs.size() == 2
+        emptyDirs == [
+                new PodMountEmptyDir(options[0]),
+                new PodMountEmptyDir(options[1]) ] as Set
+    }
 
     def 'should return secret mounts' () {
 
@@ -265,8 +264,8 @@ class PodOptionsTest extends Specification {
                 [secret: 'x', mountPath: '/x'],
                 [volumeClaim: 'z', mountPath: '/z'],
 
-                [emptyDir: [:], mountPath: '/scratch1'],
                 [csi: [driver: 'inline.storage.kubernetes.io'], mountPath: '/data'],
+                [emptyDir: [:], mountPath: '/scratch1'],
                 [securityContext: [runAsUser: 1000, fsGroup: 200, allowPrivilegeEscalation: true]],
                 [nodeSelector: 'foo=X, bar=Y'],
                 [automountServiceAccountToken: false],
@@ -321,20 +320,14 @@ class PodOptionsTest extends Specification {
             new PodMountCsiEphemeral([driver: 'inline.storage.kubernetes.io'], '/data')
         ] as Set
 
+        opts.getMountEmptyDirs() == [
+            new PodMountEmptyDir([:], '/scratch1'),
+        ] as Set
+
         opts.getMountSecrets() == [
             new PodMountSecret('secret/key', '/etc/secret'),
             new PodMountSecret('x', '/x')
         ] as Set
-
-        opts.getMountConfigMaps() == [
-                new PodMountConfig('data/key', '/data/file.txt'),
-                new PodMountConfig('y', '/y'),
-        ] as Set
-
-        opts.getMountEmptyDirs() == [
-                new PodMountEmptyDir([:], '/scratch1'),
-        ] as Set
-
 
         opts.getVolumeClaims() == [
             new PodVolumeClaim('pvc','/mnt/claim'),

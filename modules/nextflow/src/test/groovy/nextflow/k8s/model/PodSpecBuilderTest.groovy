@@ -392,6 +392,39 @@ class PodSpecBuilderTest extends Specification {
 
     }
 
+    def 'should get csi ephemeral mounts' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withWorkDir('/path')
+                .withCommand(['echo'])
+                .withCsiEphemeral(new PodMountCsiEphemeral(csi: [driver: 'inline.storage.kubernetes.io', readOnly: true], mountPath: '/data'))
+                .build()
+        then:
+        spec ==  [
+                apiVersion: 'v1',
+                kind: 'Pod',
+                metadata: [name: 'foo', namespace: 'default'],
+                spec: [
+                        restartPolicy: 'Never',
+                        containers: [[
+                                name: 'foo',
+                                image: 'busybox',
+                                command: ['echo'],
+                                workingDir: '/path',
+                                volumeMounts: [
+                                        [name: 'vol-1', mountPath: '/data', readOnly: true]
+                                ]
+                        ]],
+                        volumes: [
+                                [name: 'vol-1', csi: [driver: 'inline.storage.kubernetes.io', readOnly: true]]
+                        ]
+                ]
+        ]
+    }
+
     def 'should get empty dir mounts' () {
 
         when:
@@ -423,39 +456,6 @@ class PodSpecBuilderTest extends Specification {
                         volumes: [
                                 [name: 'vol-1', emptyDir: [medium: 'Disk']],
                                 [name: 'vol-2', emptyDir: [medium: 'Memory']]
-                        ]
-                ]
-        ]
-    }
-
-    def 'should get csi ephemeral mounts' () {
-
-        when:
-        def spec = new PodSpecBuilder()
-                .withPodName('foo')
-                .withImageName('busybox')
-                .withWorkDir('/path')
-                .withCommand(['echo'])
-                .withCsiEphemeral(new PodMountCsiEphemeral(csi: [driver: 'inline.storage.kubernetes.io', readOnly: true], mountPath: '/data'))
-                .build()
-        then:
-        spec ==  [
-                apiVersion: 'v1',
-                kind: 'Pod',
-                metadata: [name: 'foo', namespace: 'default'],
-                spec: [
-                        restartPolicy: 'Never',
-                        containers: [[
-                                name: 'foo',
-                                image: 'busybox',
-                                command: ['echo'],
-                                workingDir: '/path',
-                                volumeMounts: [
-                                        [name: 'vol-1', mountPath: '/data', readOnly: true]
-                                ]
-                        ]],
-                        volumes: [
-                                [name: 'vol-1', csi: [driver: 'inline.storage.kubernetes.io', readOnly: true]]
                         ]
                 ]
         ]

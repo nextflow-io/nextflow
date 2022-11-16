@@ -41,9 +41,9 @@ class PodOptions {
 
     private Collection<PodMountConfig> mountConfigMaps
 
-    private Collection<PodMountEmptyDir> mountEmptyDirs
-
     private Collection<PodMountCsiEphemeral> mountCsiEphemerals
+
+    private Collection<PodMountEmptyDir> mountEmptyDirs
 
     private Collection<PodMountSecret> mountSecrets
 
@@ -70,10 +70,10 @@ class PodOptions {
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         envVars = new HashSet<>(size)
+        mountConfigMaps = new HashSet<>(size)
         mountCsiEphemerals = new HashSet<>(size)
         mountEmptyDirs = new HashSet<>(size)
         mountSecrets = new HashSet<>(size)
-        mountConfigMaps = new HashSet<>(size)
         mountClaims = new HashSet<>(size)
         automountServiceAccountToken = true
         tolerations = new ArrayList<Map>(size)
@@ -100,17 +100,17 @@ class PodOptions {
         else if( entry.env && entry.config ) {
             envVars << PodEnv.config(entry.env, entry.config)
         }
-        else if( entry.mountPath && entry.emptyDir != null ) {
-            mountEmptyDirs << new PodMountEmptyDir(entry)
-        }
-        else if( entry.mountPath && entry.secret ) {
-            mountSecrets << new PodMountSecret(entry)
-        }
         else if( entry.mountPath && entry.config ) {
             mountConfigMaps << new PodMountConfig(entry)
         }
         else if( entry.mountPath && entry.csi ) {
             mountCsiEphemerals << new PodMountCsiEphemeral(entry)
+        }
+        else if( entry.mountPath && entry.emptyDir != null ) {
+            mountEmptyDirs << new PodMountEmptyDir(entry)
+        }
+        else if( entry.mountPath && entry.secret ) {
+            mountSecrets << new PodMountSecret(entry)
         }
         else if( entry.mountPath && entry.volumeClaim ) {
             mountClaims << new PodVolumeClaim(entry)
@@ -160,9 +160,9 @@ class PodOptions {
 
     Collection<PodMountConfig> getMountConfigMaps() { mountConfigMaps }
 
-    Collection<PodMountEmptyDir> getMountEmptyDirs() { mountEmptyDirs }
-
     Collection<PodMountCsiEphemeral> getMountCsiEphemerals() { mountCsiEphemerals }
+
+    Collection<PodMountEmptyDir> getMountEmptyDirs() { mountEmptyDirs }
 
     Collection<PodMountSecret> getMountSecrets() { mountSecrets }
 
@@ -226,13 +226,13 @@ class PodOptions {
         result.mountConfigMaps.addAll( mountConfigMaps )
         result.mountConfigMaps.addAll( other.mountConfigMaps )
 
-        // empty dirs
-        result.mountEmptyDirs.addAll( mountEmptyDirs )
-        result.mountEmptyDirs.addAll( other.mountEmptyDirs )
-
         // csi ephemeral volumes
         result.mountCsiEphemerals.addAll( mountCsiEphemerals )
         result.mountCsiEphemerals.addAll( other.mountCsiEphemerals )
+
+        // empty dirs
+        result.mountEmptyDirs.addAll( mountEmptyDirs )
+        result.mountEmptyDirs.addAll( other.mountEmptyDirs )
 
         // secrets
         result.mountSecrets.addAll( mountSecrets )
