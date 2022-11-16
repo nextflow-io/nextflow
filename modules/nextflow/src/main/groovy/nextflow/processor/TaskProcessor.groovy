@@ -968,6 +968,7 @@ class TaskProcessor {
         ErrorStrategy errorStrategy = TERMINATE
         final message = []
         try {
+            task.error = error
             // -- do not recoverable error, just re-throw it
             if( error instanceof Error ) throw error
 
