@@ -140,18 +140,18 @@ class DockerBuilderTest extends Specification {
         new DockerBuilder('fedora')
                 .setCpus(2)
                 .build()
-                .runCommand == 'docker run -i --cpus 2.0 -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i --cpu-shares 2048 -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
-                .setCpus(1.414)
+                .setCpus(1)
                 .build()
-                .runCommand == 'docker run -i --cpus 1.4 -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i --cpu-shares 1024 -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
-                .setCpus(2.5)
+                .setCpus(8)
                 .setCpuset('1,2')
                 .build()
-                .runCommand == 'docker run -i --cpus 2.5 --cpuset-cpus 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i --cpu-shares 8192 --cpuset-cpus 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
                 .params(legacy: true)

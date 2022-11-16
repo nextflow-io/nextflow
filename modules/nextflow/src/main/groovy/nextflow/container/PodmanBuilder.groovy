@@ -115,7 +115,7 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
             result << '--privileged '
 
         if( cpus ) {
-            result << "--cpus ${String.format(Locale.ROOT, "%.1f", cpus)} "
+            result << "--cpu-shares ${cpus * 1024} "
         }
 
         if( memory ) {
