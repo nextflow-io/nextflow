@@ -781,52 +781,21 @@ class PodSpecBuilderTest extends Specification {
     }
 
 
-    def 'should return the resources map' () {
+    @Unroll
+    def 'should determine the accelerator type' () {
 
         given:
         def builder = new PodSpecBuilder()
 
-        when:
-        def res = builder.addAcceleratorResources(new AcceleratorResource(request:2, limit: 5), null)
-        then:
-        res.requests == ['nvidia.com/gpu': 2]
-        res.limits == ['nvidia.com/gpu': 5]
+        expect:
+        builder.getAcceleratorType(new AcceleratorResource(type: TYPE)) == STR
 
-        when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(limit: 5, type:'foo'), null)
-        then:
-        res.requests == ['foo.com/gpu': 5]
-        res.limits == ['foo.com/gpu': 5]
-
-        when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, type:'foo.org'), null)
-        then:
-        res.requests == ['foo.org/gpu': 5]
-        res.limits == null
-
-        when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, type: 'foo.org'), [requests: [cpu: 2]])
-        then:
-        res.requests == [cpu: 2, 'foo.org/gpu': 5]
-        res.limits == null
-
-        when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, limit: 10, type: 'foo.org'), [requests: [cpu: 2]])
-        then:
-        res.requests == [cpu: 2, 'foo.org/gpu': 5]
-        res.limits == ['foo.org/gpu': 10]
-
-        when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, type:'example.com/fpga'), null)
-        then:
-        res.requests == ['example.com/fpga': 5]
-        res.limits == null
-
-        when:
-        res = builder.addAcceleratorResources(new AcceleratorResource(request: 5, limit: 10, type: 'example.com/fpga'), [requests: [cpu: 2]])
-        then:
-        res.requests == [cpu: 2, 'example.com/fpga': 5]
-        res.limits == ['example.com/fpga': 10]
+        where:
+        TYPE               | STR
+        null               | 'nvidia.com/gpu'
+        'foo'              | 'foo.com/gpu'
+        'foo.org'          | 'foo.org/gpu'
+        'example.com/fpga' | 'example.com/fpga'
     }
 
 
