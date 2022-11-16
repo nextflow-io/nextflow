@@ -120,7 +120,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-foo',
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:1], limits:[cpu:1] ],
+                                     resources:[ requests: [cpu:1] ],
                                      env: [  [name:'NXF_OWNER', value:'501:502'] ]
                                     ]
                             ]
@@ -154,7 +154,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-abc',
                                      image:'user/alpine:1.0',
                                      command:['/bin/bash', '-ue', '/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits:[cpu:4, memory:'16384Mi'] ]
+                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits:[memory:'16384Mi'] ]
                                     ]
                             ]
                     ]
@@ -234,7 +234,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-foo',
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:1], limits:[cpu:1] ],
+                                     resources:[ requests: [cpu:1] ],
                                      env: [  [name:'NXF_OWNER', value:'501:502'] ]
                                     ]
                             ]
@@ -267,7 +267,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-abc',
                                      image:'user/alpine:1.0',
                                      command:['/bin/bash', '-ue', '/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits:[cpu:4, memory:'16384Mi'] ]
+                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits: [memory:'16384Mi'] ]
                                     ]
                             ]
                     ]
@@ -314,7 +314,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-123',
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','/some/work/dir/.command.run'],
-                                     resources:[requests:[cpu:1], limits:[cpu:1]]
+                                     resources:[requests:[cpu:1]]
                                     ]
                             ]
                     ]
