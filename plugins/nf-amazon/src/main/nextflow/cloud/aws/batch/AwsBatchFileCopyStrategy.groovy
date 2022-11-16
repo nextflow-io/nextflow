@@ -100,7 +100,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     String stageInputFile( Path path, String targetName ) {
         final isUsingLustreFsx = !opts.getFsxFileSystemsMountCommands().isEmpty()
         if( isUsingLustreFsx ) {
-            return "cp ${Escape.path(path)} ${Escape.path(targetName)}"
+            return "cp -r ${Escape.path(path)} ${Escape.path(targetName)}"
         }
         // third param should not be escaped, because it's used in the grep match rule
         def stage_cmd = opts.maxTransferAttempts > 1
@@ -134,7 +134,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             uploads=()
             IFS=\$'\\n'
             for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                uploads+=("cp '\$name' ${Escape.path(targetDir)}")
+                uploads+=("cp -r '\$name' ${Escape.path(targetDir)}")
             done
             unset IFS
             nxf_parallel "\${uploads[@]}"
@@ -184,7 +184,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     @Override
     String copyFile( String name, Path target ) {
         final isUsingLustreFsx = !opts.getFsxFileSystemsMountCommands().isEmpty()
-        final copyCommandWhenUsingLustre = "cp ${Escape.path(name)} ${Escape.path(target.getParent())}"
+        final copyCommandWhenUsingLustre = "cp -r ${Escape.path(name)} ${Escape.path(target.getParent())}"
         final copyCommandWhenUsingS3 = "nxf_s3_upload ${Escape.path(name)} s3:/${Escape.path(target.getParent())}"
         return isUsingLustreFsx ? copyCommandWhenUsingLustre : copyCommandWhenUsingS3
     }
