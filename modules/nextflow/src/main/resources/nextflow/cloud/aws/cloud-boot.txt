@@ -32,12 +32,21 @@ region="${zone::-1}"
 [[ '!{dockerPull}' ]] && for x in '!{dockerPull}'; do docker pull $x || true; done
 
 #
+# Mount fsx file systems if provided
+#
+mountCommandsString="!{fsxFileSystemsMountCommands}"
+IFS=';' read -ra mountCommandsArray <<< "$mountCommandsString"
+[[ '!{fsxFileSystemsMountCommands}' ]] && for fsxMountCommand in "${mountCommandsArray[@]}"; do $fsxMountCommand || true; done
+
+#
 # Install NEXTFLOW and launch it
 #
-version="v!{nextflow.version}"
-curl -fsSL http://www.nextflow.io/releases/${version}/nextflow  > $HOME/nextflow
-chmod +x $HOME/nextflow
-$HOME/nextflow -download
+if [[ '!{customNextflowBinaryUrl}' ]]; then
+  curl -s https://get.nextflow.io --output nextflow
+  NXF_PACK="all" NXF_URL="!{customNextflowBinaryUrl}" NXF_VER=${version} NXF_MODE="ignite" NXF_EXECUTOR="ignite" bash nextflow info
+  chmod +x $HOME/nextflow
+  $HOME/nextflow -download
+fi
 
 # pull the nextflow pipeline repo
 [[ '!{nextflow.pull}' ]] && $HOME/nextflow pull '!{nextflow.pull}'

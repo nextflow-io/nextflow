@@ -154,6 +154,11 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         return cmd
     }
 
+    @Override
+    String getTempDir( Path workDir ) {
+        return "/tmp"
+    }
+
     /**
      * Creates the script to unstage the result output files from the scratch directory
      * to the shared working directory

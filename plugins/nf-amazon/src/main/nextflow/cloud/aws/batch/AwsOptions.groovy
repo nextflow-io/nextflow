@@ -70,6 +70,15 @@ class AwsOptions implements CloudTransferOptions {
      */
     List<String> getVolumes() { volumes != null ? Collections.unmodifiableList(volumes) : Collections.<String>emptyList() }
 
+    /**
+     * Lustre fsx mount commands
+     */
+    String fsxFileSystemsMountCommands
+
+    List<String> getFsxFileSystemsMountCommands() {
+        return fsxFileSystemsMountCommands ? fsxFileSystemsMountCommands.tokenize(';') : Collections.<String>emptyList()
+    }
+
     /* Only for testing purpose */
     protected AwsOptions() { }
 
@@ -86,6 +95,7 @@ class AwsOptions implements CloudTransferOptions {
         maxTransferAttempts = session.config.navigate('aws.batch.maxTransferAttempts', MAX_TRANSFER_ATTEMPTS) as int
         delayBetweenAttempts = session.config.navigate('aws.batch.delayBetweenAttempts', DEFAULT_DELAY_BETWEEN_ATTEMPTS) as Duration
         region = session.config.navigate('aws.region') as String
+        fsxFileSystemsMountCommands = session.config.navigate('cloud.fsxFileSystemsMountCommands')
         volumes = makeVols(session.config.navigate('aws.batch.volumes'))
         jobRole = session.config.navigate('aws.batch.jobRole')
         fetchInstanceType = session.config.navigate('aws.batch.fetchInstanceType')

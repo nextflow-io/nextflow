@@ -96,9 +96,11 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         /*
          * make sure the work dir is a S3 bucket
          */
-        if( !(workDir instanceof S3Path) ) {
+        def isUsingLustre = session.config.navigate('cloud.fsxFileSystemsMountCommands')
+        log.debug "Checking workdir validation, isUsingLustre $isUsingLustre"
+        if( !(workDir instanceof S3Path) && !isUsingLustre ) {
             session.abort()
-            throw new AbortOperationException("When using `$name` executor a S3 bucket must be provided as working directory either using -bucket-dir or -work-dir command line option")
+            throw new AbortOperationException("When using `$name` executor and we are not using Lustre storage a S3 bucket must be provided as working directory either using -bucket-dir or -work-dir command line option")
         }
     }
 
@@ -251,6 +253,20 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
     @PackageScope
     ThrottlingExecutor getReaper() { reaper }
 
+    String getInstanceIdByQueueAndTaskArn(String queue, String taskArn) {
+        try {
+            return helper?.getInstanceIdByQueueAndTaskArn(queue, taskArn)
+        }
+        catch ( AccessDeniedException e ) {
+            log.warn "Unable to retrieve AWS Batch instance Id | ${e.message}"
+            return null
+        }
+        catch( Exception e ) {
+            log.warn "Unable to retrieve AWS batch instance id for queue=$queue; task=$taskArn | ${e.message}", e
+            return null
+        }
+    }
+
 
     CloudMachineInfo getMachineInfoByQueueAndTaskArn(String queue, String taskArn) {
         try {
@@ -267,14 +283,4 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
             return null
         }
     }
-
 }
-
-
-
-
-
-
-
-
-

@@ -248,12 +248,6 @@ class BashWrapperBuilder {
             binding.container_env = null
         }
 
-        /*
-         * staging input files when required
-         */
-        final stagingScript = copyStrategy.getStageInputFilesScript(inputFiles)
-        binding.stage_inputs = stagingScript ? "# stage input files\n${stagingScript}" : null
-
         binding.stdout_file = TaskRun.CMD_OUTFILE
         binding.stderr_file = TaskRun.CMD_ERRFILE
         binding.trace_file = TaskRun.CMD_TRACE
@@ -262,6 +256,13 @@ class BashWrapperBuilder {
         binding.launch_cmd = getLaunchCommand(interpreter,env)
         binding.stage_cmd = getStageCommand()
         binding.unstage_cmd = getUnstageCommand()
+
+        /*
+         * staging input and unstage output files when required
+        */
+        final stagingScript = copyStrategy.getStageInputFilesScript(inputFiles)
+        binding.stage_inputs = stagingScript ? "# stage input files\n${stagingScript}" : null
+
         binding.unstage_controls = changeDir || shouldUnstageOutputs() ? getUnstageControls() : null
 
         if( changeDir || shouldUnstageOutputs() ) {
@@ -277,7 +278,8 @@ class BashWrapperBuilder {
         binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*} || true" : null
 
         binding.trace_script = isTraceRequired() ? getTraceScript(binding) : null
-        
+        binding.temp_dir = "\${1:-${copyStrategy.getTempDir(workDir)}}"
+
         return binding
     }
 

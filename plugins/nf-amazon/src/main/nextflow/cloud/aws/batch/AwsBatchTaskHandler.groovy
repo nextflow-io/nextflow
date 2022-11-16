@@ -227,6 +227,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final job = describeJob(jobId)
         final done = job?.status in ['SUCCEEDED', 'FAILED']
         if( done ) {
+            log.trace "[AWS BATCH] Completed task: jobId=$jobId"
             // finalize the task
             task.exitStatus = readExitFile()
             task.stdout = outputFile
@@ -504,7 +505,17 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // the cmd list to launch it
         def opts = getAwsOptions()
         def aws = opts.getAwsCli()
-        def cmd = "trap \"{ ret=\$?; $aws s3 cp --only-show-errors ${TaskRun.CMD_LOG} s3:/${getLogFile()}||true; exit \$ret; }\" EXIT; $aws s3 cp --only-show-errors s3:/${getWrapperFile()} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
+        def isUsingLustreFsx = !opts.getFsxFileSystemsMountCommands().isEmpty()
+        def logCopyCommand = isUsingLustreFsx
+                ? "trap \"{ ret=\$?; cp ${TaskRun.CMD_LOG} ${getLogFile()} 2> /dev/null; exit \$ret; }\" EXIT; "
+                : "trap \"{ ret=\$?; $aws s3 cp --request-payer --sse AES256 --only-show-errors ${TaskRun.CMD_LOG} s3:/${getLogFile()}||true; exit \$ret; }\" EXIT; "
+        // Note(ruben): Since we do not download the .command.run from s3 bucket and due the fact that is auto imported
+        // through the link capacity of fsx when mounting we have already access to the file. So, we just need to make it
+        // executable and run it
+        def runCopyCommand = isUsingLustreFsx
+                ? "chmod +x ${getWrapperFile()}; ${getWrapperFile()} 2>&1 | tee ${TaskRun.CMD_LOG}"
+                : "$aws s3 cp --request-payer --sse AES256 --only-show-errors s3:/${getWrapperFile()} - | bash 2>&1 | tee ${TaskRun.CMD_LOG}"
+        def cmd = "${logCopyCommand}${runCopyCommand}"
         // final launcher command
         return ['bash','-o','pipefail','-c', cmd.toString() ]
     }
@@ -618,8 +629,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( machineInfo )
             return machineInfo
         if( queueName && taskArn && executor.awsOptions.fetchInstanceType ) {
+            def instanceId = executor.getInstanceIdByQueueAndTaskArn(queueName, taskArn)
             machineInfo = executor.getMachineInfoByQueueAndTaskArn(queueName, taskArn)
-            log.trace "[AWS BATCH] jobId=$jobId; queue=$queueName; task=$taskArn => machineInfo=$machineInfo"
+            log.trace "[AWS BATCH] jobId=$jobId; queue=$queueName; task=$taskArn => machineInfo=$machineInfo; instanceId=$instanceId\""
         }
         return machineInfo
     }

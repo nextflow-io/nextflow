@@ -82,6 +82,11 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
 
     @Override
     String getStageInputFilesScript(Map<String,Path> inputFiles) {
+        final isUsingLustreFsx = !opts.getFsxFileSystemsMountCommands().isEmpty()
+        if( isUsingLustreFsx ) {
+            log.trace "[USING LUSTRE FSX] stage_inputs."
+            return super.getStageInputFilesScript(inputFiles) + '\n'
+        }
         def result = 'downloads=()\n'
         result += super.getStageInputFilesScript(inputFiles) + '\n'
         result += 'nxf_parallel "${downloads[@]}"\n'
@@ -93,6 +98,10 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String stageInputFile( Path path, String targetName ) {
+        final isUsingLustreFsx = !opts.getFsxFileSystemsMountCommands().isEmpty()
+        if( isUsingLustreFsx ) {
+            return "cp ${Escape.path(path)} ${Escape.path(targetName)}"
+        }
         // third param should not be escaped, because it's used in the grep match rule
         def stage_cmd = opts.maxTransferAttempts > 1
                 ? "downloads+=(\"nxf_cp_retry nxf_s3_download s3:/${Escape.path(path)} ${Escape.path(targetName)}\")"
@@ -117,6 +126,20 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         for( String it : patterns )
             escape.add( Escape.path(it) )
 
+        def isUsingLustreFsx = !opts.getFsxFileSystemsMountCommands().isEmpty()
+
+        if ( isUsingLustreFsx ) {
+            log.trace "[USING LUSTRE FSX] unstage_outputs."
+            return """\
+            uploads=()
+            IFS=\$'\\n'
+            for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
+                uploads+=("cp '\$name' ${Escape.path(targetDir)}")
+            done
+            unset IFS
+            nxf_parallel "\${uploads[@]}"
+            """.stripIndent(true)
+        }
         return """\
             uploads=()
             IFS=\$'\\n'
@@ -128,13 +151,23 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             """.stripIndent(true)
     }
 
+    @Override
+    String getTempDir( Path targetDir ) {
+        final isUsingLustreFsx = !opts.getFsxFileSystemsMountCommands().isEmpty()
+        return isUsingLustreFsx ? "${Escape.path(targetDir)}" : super.getTempDir(targetDir)
+    }
+
     /**
      * {@inheritDoc}
      */
     @Override
     String touchFile( Path file ) {
         final aws = opts.getAwsCli()
-        "echo start | $aws s3 cp --only-show-errors - s3:/${Escape.path(file)}"
+        def encryption = opts.storageEncryption ? "--sse $opts.storageEncryption " : ''
+        final isUsingLustreFsx = !opts.getFsxFileSystemsMountCommands().isEmpty()
+        final touchCommandWhenUsingLustre = "echo start > ${Escape.path(file)}"
+        final touchCommandWhenUsingS3 = "echo start | $aws s3 cp --only-show-errors $encryption - s3:/${Escape.path(file)}"
+        return isUsingLustreFsx ? touchCommandWhenUsingLustre : touchCommandWhenUsingS3
     }
 
     /**
@@ -150,7 +183,10 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     @Override
     String copyFile( String name, Path target ) {
-        "nxf_s3_upload ${Escape.path(name)} s3:/${Escape.path(target.getParent())}"
+        final isUsingLustreFsx = !opts.getFsxFileSystemsMountCommands().isEmpty()
+        final copyCommandWhenUsingLustre = "cp ${Escape.path(name)} ${Escape.path(target.getParent())}"
+        final copyCommandWhenUsingS3 = "nxf_s3_upload ${Escape.path(name)} s3:/${Escape.path(target.getParent())}"
+        return isUsingLustreFsx ? copyCommandWhenUsingLustre : copyCommandWhenUsingS3
     }
 
     /**
@@ -158,7 +194,11 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      */
     String exitFile( Path path ) {
         final aws = opts.getAwsCli()
-        "| $aws s3 cp --only-show-errors - s3:/${Escape.path(path)} || true"
+        def encryption = opts.storageEncryption ? "--sse $opts.storageEncryption " : ''
+        final isUsingLustreFsx = !opts.getFsxFileSystemsMountCommands().isEmpty()
+        final exitCommandWhenUsingLustre = "> ${Escape.path(path)}"
+        final exitCommandWhenUsingS3 = "| $aws s3 cp --only-show-errors $encryption - s3:/${Escape.path(path)} || true"
+        return isUsingLustreFsx ? exitCommandWhenUsingLustre : exitCommandWhenUsingS3
     }
 
     /**

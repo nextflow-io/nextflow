@@ -100,4 +100,9 @@ class IgScriptStagingStrategy extends IgFileStagingStrategy implements ScriptFil
         return null
     }
 
+    @Override
+    String getTempDir( Path workDir ) {
+        return "/tmp"
+    }
+
 }

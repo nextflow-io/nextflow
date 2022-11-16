@@ -41,6 +41,13 @@ interface ScriptFileCopyStrategy {
      * @return A BASH snippet included in the wrapper script that un-stages the task output files
      */
     String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir)
+    
+    /**
+     * @param targetDir The directory where output files need to be unstaged ie. stored
+     * @return the path string for the temp directory
+     */
+    String getTempDir( Path targetDir )
+
 
     /**
      * Command to 'touch' a file

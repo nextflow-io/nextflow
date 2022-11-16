@@ -101,4 +101,11 @@ class TesFileCopyStrategy implements ScriptFileCopyStrategy {
         if(container) throw new UnsupportedOperationException()
         TaskProcessor.bashEnvironmentScript(env,false)
     }
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    String getTempDir(Path targetDir) {
+        return ''
+    }
 }
