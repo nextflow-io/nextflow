@@ -85,9 +85,11 @@ class PodSpecBuilder {
 
     AcceleratorResource accelerator
 
-    Collection<PodMountSecret> secrets = []
-
     Collection<PodMountConfig> configMaps = []
+
+    Collection<PodMountCsiEphemeral> csiEphemerals = []
+
+    Collection<PodMountSecret> secrets = []
 
     Collection<PodHostMount> hostMounts = []
 
@@ -234,6 +236,16 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withCsiEphemerals( Collection<PodMountCsiEphemeral> csiEphemerals ) {
+        this.csiEphemerals.addAll(csiEphemerals)
+        return this
+    }
+
+    PodSpecBuilder withCsiEphemeral( PodMountCsiEphemeral csiEphemeral ) {
+        this.csiEphemerals.add(csiEphemeral)
+        return this
+    }
+
     PodSpecBuilder withSecrets( Collection<PodMountSecret> secrets ) {
         this.secrets.addAll(secrets)
         return this
@@ -273,12 +285,15 @@ class PodSpecBuilder {
         // -- env vars
         if( opts.getEnvVars() )
             envVars.addAll( opts.getEnvVars() )
-        // -- secrets
-        if( opts.getMountSecrets() )
-            secrets.addAll( opts.getMountSecrets() )
         // -- configMaps
         if( opts.getMountConfigMaps() )
             configMaps.addAll( opts.getMountConfigMaps() )
+        // -- csi ephemeral volumes
+        if( opts.getMountCsiEphemerals() )
+            csiEphemerals.addAll( opts.getMountCsiEphemerals() )
+        // -- secrets
+        if( opts.getMountSecrets() )
+            secrets.addAll( opts.getMountSecrets() )
         // -- volume claims 
         if( opts.getVolumeClaims() )
             volumeClaims.addAll( opts.getVolumeClaims() )
@@ -339,12 +354,6 @@ class PodSpecBuilder {
         for( PodEnv entry : this.envVars ) {
             env.add(entry.toSpec())
         }
-
-        final res = [:]
-        if( this.cpus )
-            res.cpu = this.cpus
-        if( this.memory )
-            res.memory = this.memory
 
         final container = [ name: this.podName, image: this.imageName ]
         if( this.command )
@@ -417,13 +426,16 @@ class PodSpecBuilder {
             container.env = env
 
         // add resources
-        if( res ) {
-            container.resources = [requests: res, limits: new HashMap<>(res)]
+        if( this.cpus ) {
+            container.resources = addCpuResources(this.cpus, container.resources as Map)
         }
 
-        // add gpu settings
-        if( accelerator ) {
-            container.resources = addAcceleratorResources(accelerator, container.resources as Map)
+        if( this.memory ) {
+            container.resources = addMemoryResources(this.memory, container.resources as Map)
+        }
+
+        if( this.accelerator ) {
+            container.resources = addAcceleratorResources(this.accelerator, container.resources as Map)
         }
 
         // add storage definitions ie. volumes and mounts
@@ -438,7 +450,7 @@ class PodSpecBuilder {
             volumes << [name: volName, persistentVolumeClaim: [claimName: claimName]]
         }
 
-        // -- volume claims
+        // -- persistent volume claims
         for( PodVolumeClaim entry : volumeClaims ) {
             //check if we already have a volume for the pvc
             final name = namesMap.get(entry.claimName)
@@ -456,17 +468,24 @@ class PodSpecBuilder {
             configMapToSpec(name, entry, mounts, volumes)
         }
 
-        // host mounts
+        // -- csi ephemeral volumes
+        for( PodMountCsiEphemeral entry : csiEphemerals ) {
+            final name = nextVolName()
+            mounts << [name: name, mountPath: entry.mountPath, readOnly: entry.csi.readOnly ?: false]
+            volumes << [name: name, csi: entry.csi]
+        }
+
+        // -- secret volumes
+        for( PodMountSecret entry : secrets ) {
+            final name = nextVolName()
+            secretToSpec(name, entry, mounts, volumes)
+        }
+
+        // -- host path volumes
         for( PodHostMount entry : hostMounts ) {
             final name = nextVolName()
             mounts << [name: name, mountPath: entry.mountPath]
             volumes << [name: name, hostPath: [path: entry.hostPath]]
-        }
-
-        // secret volumes
-        for( PodMountSecret entry : secrets ) {
-            final name = nextVolName()
-            secretToSpec(name, entry, mounts, volumes)
         }
 
 
@@ -508,7 +527,34 @@ class PodSpecBuilder {
     }
 
     @PackageScope
-    @CompileDynamic
+    Map addCpuResources(Integer cpus, Map res) {
+        if( res == null )
+            res = [:]
+
+        final req = res.requests as Map ?: new LinkedHashMap<>(10)
+        req.cpu = cpus
+        res.requests = req
+
+        return res
+    }
+
+    @PackageScope
+    Map addMemoryResources(String memory, Map res) {
+        if( res == null )
+            res = new LinkedHashMap(10)
+
+        final req = res.requests as Map ?: new LinkedHashMap(10)
+        req.memory = memory
+        res.requests = req
+
+        final lim = res.limits as Map ?: new LinkedHashMap(10)
+        lim.memory = memory
+        res.limits = lim
+
+        return res
+    }
+
+    @PackageScope
     String getAcceleratorType(AcceleratorResource accelerator) {
 
         def type = accelerator.type ?: 'nvidia.com'
@@ -526,7 +572,6 @@ class PodSpecBuilder {
 
 
     @PackageScope
-    @CompileDynamic
     Map addAcceleratorResources(AcceleratorResource accelerator, Map res) {
 
         if( res == null )
@@ -535,12 +580,12 @@ class PodSpecBuilder {
         def type = getAcceleratorType(accelerator)
 
         if( accelerator.request ) {
-            final req = res.requests ?: new LinkedHashMap<>(2)
+            final req = res.requests as Map ?: new LinkedHashMap<>(2)
             req.put(type, accelerator.request)
             res.requests = req
         }
         if( accelerator.limit ) {
-            final lim = res.limits ?: new LinkedHashMap<>(2)
+            final lim = res.limits as Map ?: new LinkedHashMap<>(2)
             lim.put(type, accelerator.limit)
             res.limits = lim
         }
