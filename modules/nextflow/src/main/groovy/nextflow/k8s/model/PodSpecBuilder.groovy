@@ -466,7 +466,7 @@ class PodSpecBuilder {
             res.limits['memory'] = this.memory
         }
 
-        if( this.memory ) {
+        if( this.disk ) {
             res.requests['ephemeral-storage'] = this.disk
             res.limits['ephemeral-storage'] = this.disk
         }
