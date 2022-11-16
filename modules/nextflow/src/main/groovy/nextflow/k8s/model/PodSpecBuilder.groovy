@@ -505,12 +505,11 @@ class PodSpecBuilder {
     }
 
     @PackageScope
-    @CompileDynamic
     Map addCpuResources(Integer cpus, Map res) {
         if( res == null )
             res = [:]
 
-        final req = res.requests ?: [:]
+        final req = res.requests as Map ?: new LinkedHashMap<>(10)
         req.cpu = cpus
         res.requests = req
 
@@ -518,16 +517,15 @@ class PodSpecBuilder {
     }
 
     @PackageScope
-    @CompileDynamic
     Map addMemoryResources(String memory, Map res) {
         if( res == null )
-            res = [:]
+            res = new LinkedHashMap(10)
 
-        final req = res.requests ?: [:]
+        final req = res.requests as Map ?: new LinkedHashMap(10)
         req.memory = memory
         res.requests = req
 
-        final lim = res.limits ?: [:]
+        final lim = res.limits as Map ?: new LinkedHashMap(10)
         lim.memory = memory
         res.limits = lim
 
@@ -535,7 +533,6 @@ class PodSpecBuilder {
     }
 
     @PackageScope
-    @CompileDynamic
     String getAcceleratorType(AcceleratorResource accelerator) {
 
         def type = accelerator.type ?: 'nvidia.com'
@@ -553,7 +550,6 @@ class PodSpecBuilder {
 
 
     @PackageScope
-    @CompileDynamic
     Map addAcceleratorResources(AcceleratorResource accelerator, Map res) {
 
         if( res == null )
@@ -562,12 +558,12 @@ class PodSpecBuilder {
         def type = getAcceleratorType(accelerator)
 
         if( accelerator.request ) {
-            final req = res.requests ?: new LinkedHashMap<>(2)
+            final req = res.requests as Map ?: new LinkedHashMap<>(2)
             req.put(type, accelerator.request)
             res.requests = req
         }
         if( accelerator.limit ) {
-            final lim = res.limits ?: new LinkedHashMap<>(2)
+            final lim = res.limits as Map ?: new LinkedHashMap<>(2)
             lim.put(type, accelerator.limit)
             res.limits = lim
         }
