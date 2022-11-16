@@ -15,23 +15,24 @@
  *
  */
 
-package nextflow.file.http
+package nextflow.container
+
+import groovy.transform.CompileStatic
 
 /**
- * Implements a pluggable authentication provider for {@link XFileSystemProvider}
+ * Implements a builder for Apptainer containerisation
+ *
+ * see https://apptainer.org
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface XAuthProvider {
+@CompileStatic
+class ApptainerBuilder extends SingularityBuilder {
 
-    /**
-     * Implementing class should check whenever accept and authorise the connection
-     *
-     * @param connection A {@link URLConnection} object instance to be authorised
-     * @return {@code true} if the connection object has been authorised or {@code false} otherwise
-     */
-    boolean authorize( URLConnection connection )
+    ApptainerBuilder(String name) {
+        super(name)
+    }
 
-    boolean refreshToken( URLConnection connection )
-
+    @Override
+    protected String getBinaryName() { 'apptainer' }
 }

@@ -74,7 +74,7 @@ class GraphObserver implements TraceObserver {
             if( overwrite && (attrs.isDirectory() || !file.delete()) )
                 throw new AbortOperationException("Unable to overwrite existing DAG file: ${file.toUriString()}")
             else if( !overwrite )
-                throw new AbortOperationException("DAG file already exists: ${file.toUriString()}")
+                throw new AbortOperationException("DAG file already exists: ${file.toUriString()} -- enable `dag.overwrite` in your config file to overwrite existing DAG files")
         }
     }
 

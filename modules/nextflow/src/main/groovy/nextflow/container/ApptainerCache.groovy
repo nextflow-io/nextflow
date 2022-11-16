@@ -15,23 +15,25 @@
  *
  */
 
-package nextflow.file.http
+package nextflow.container
+
+import groovy.transform.CompileStatic
 
 /**
- * Implements a pluggable authentication provider for {@link XFileSystemProvider}
+ * Handle caching of remote Apptainer images
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface XAuthProvider {
+@CompileStatic
+class ApptainerCache extends SingularityCache {
 
-    /**
-     * Implementing class should check whenever accept and authorise the connection
-     *
-     * @param connection A {@link URLConnection} object instance to be authorised
-     * @return {@code true} if the connection object has been authorised or {@code false} otherwise
-     */
-    boolean authorize( URLConnection connection )
+    /** only for testing */
+    protected ApptainerCache() {}
 
-    boolean refreshToken( URLConnection connection )
+    ApptainerCache(ContainerConfig config, Map<String,String> env=null) {
+        super(config, env)
+    }
 
+    @Override
+    protected String getBinaryName() { 'apptainer' }
 }

@@ -272,7 +272,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaRecipeToDockerFile(RECIPE) == '''\
-                FROM mambaorg/micromamba:0.25.1
+                FROM mambaorg/micromamba:0.27.0
                 RUN \\
                    micromamba install -y -n base -c defaults -c conda-forge \\
                    bwa=0.7.15 salmon=1.1.1 \\
@@ -306,7 +306,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaFileToDockerFile()== '''\
-                FROM mambaorg/micromamba:0.25.1
+                FROM mambaorg/micromamba:0.27.0
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                     micromamba clean -a -y
@@ -419,7 +419,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:0.25.1
+                    FROM mambaorg/micromamba:0.27.0
                     RUN \\
                        micromamba install -y -n base -c defaults -c conda-forge \\
                        salmon=1.2.3 \\
@@ -447,7 +447,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:0.25.1
+                    FROM mambaorg/micromamba:0.27.0
                     COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                     RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                         micromamba clean -a -y
@@ -581,7 +581,8 @@ class WaveClientTest extends Specification {
 
     def 'should send request with tower access token' () {
         given:
-        def sess = Mock(Session) {getConfig() >> [wave:[:], tower:[accessToken:'foo', workspaceId:123]] }
+        def config = [wave:[:], tower:[accessToken:'foo', workspaceId:123, endpoint: 'http://foo.com']]
+        def sess = Mock(Session) {getConfig() >> config }
         and:
         def wave = Spy(new WaveClient(sess))
         def assets = Mock(WaveAssets)
@@ -594,6 +595,7 @@ class WaveClientTest extends Specification {
             assert (it[0] == request)
             assert (it[0] as SubmitContainerTokenRequest).towerAccessToken == 'foo'
             assert (it[0] as SubmitContainerTokenRequest).towerWorkspaceId == 123
+            assert (it[0] as SubmitContainerTokenRequest).towerEndpoint == 'http://foo.com'
         }
 
     }

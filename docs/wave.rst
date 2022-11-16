@@ -37,8 +37,9 @@ Wave can be used in any Nextflow pipeline by adding the following snippet to you
      accessToken = '<your access token>'
    }
 
-The use of the Tower access token is not mandatory, however, it's required to enable access to private repositories
-and it allows higher service rate limits compared to anonymous users.
+.. tip::
+  The use of the Tower access token is not mandatory, however, it's required to enable access to private repositories
+  and it allows higher service rate limits compared to anonymous users.
 
 Use cases
 =========

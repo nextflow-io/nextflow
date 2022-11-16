@@ -39,6 +39,8 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
             return new PodmanBuilder(containerImage)
         if( engine == 'singularity' )
             return new SingularityBuilder(containerImage)
+        if( engine == 'apptainer' )
+            return new ApptainerBuilder(containerImage)
         if( engine == 'udocker' )
             return new UdockerBuilder(containerImage)
         if( engine == 'shifter' )
@@ -57,7 +59,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     protected List<String> engineOptions = []
 
-    protected Float cpus
+    protected Integer cpus
 
     protected String cpuset
 
@@ -92,7 +94,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
         return (V)this
     }
 
-    V setCpus(Float value) {
+    V setCpus(Integer value) {
         this.cpus = value
         return (V)this
     }

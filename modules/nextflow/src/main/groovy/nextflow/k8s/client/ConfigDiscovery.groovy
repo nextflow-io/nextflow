@@ -23,6 +23,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyStore
+import static nextflow.util.StringUtils.formatHostName
 
 import groovy.util.logging.Slf4j
 import org.yaml.snakeyaml.Yaml
@@ -81,16 +82,19 @@ class ConfigDiscovery {
 
         final host = env.get('KUBERNETES_SERVICE_HOST')
         final port = env.get('KUBERNETES_SERVICE_PORT')
-        final server = host + ( port ? ":$port" : '' )
+        final server = formatHostName(host, port)
 
         final cert = path('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt').bytes
         final token = path('/var/run/secrets/kubernetes.io/serviceaccount/token').text
         final namespace = path('/var/run/secrets/kubernetes.io/serviceaccount/namespace').text
 
-        if( namespace && namespace != cfgNamespace )
-            log.warn ("K8s namespace provided in the nextflow configuration does not match with pod namespace")
-
-        new ClientConfig( server: server, token: token, namespace: namespace, serviceAccount: serviceAccount, sslCert: cert, isFromCluster: true )
+        return new ClientConfig(
+                server: server,
+                token: token,
+                namespace: cfgNamespace ?: namespace,
+                serviceAccount: serviceAccount,
+                sslCert: cert,
+                isFromCluster: true )
     }
 
     protected Path path(String path) {
