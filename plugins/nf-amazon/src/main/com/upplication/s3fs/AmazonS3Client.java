@@ -64,10 +64,6 @@ import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.RegionUtils;
-import com.amazonaws.services.glacier.AmazonGlacier;
-import com.amazonaws.services.glacier.AmazonGlacierClientBuilder;
-import com.amazonaws.services.glacier.transfer.ArchiveTransferManager;
-import com.amazonaws.services.glacier.transfer.ArchiveTransferManagerBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.Headers;
@@ -122,8 +118,6 @@ public class AmazonS3Client {
 
 	private AmazonS3 client;
 
-	private AmazonGlacier glacierClient;
-
 	private CannedAccessControlList cannedAcl;
 
 	private String kmsKeyId;
@@ -138,22 +132,12 @@ public class AmazonS3Client {
 
 	private Integer uploadMaxThreads = 10;
 
-	private ArchiveTransferManager glacierTransferManager;
-
 	public AmazonS3Client(AmazonS3 client) {
 		this.client = client;
-		this.glacierClient = null;
 	}
 
 	public AmazonS3Client(ClientConfiguration config, AWSCredentials creds, String region) {
 		this.client = AmazonS3ClientBuilder
-				.standard()
-				.withCredentials(new AWSStaticCredentialsProvider(creds))
-				.withClientConfiguration(config)
-				.withRegion(region)
-				.build();
-
-		this.glacierClient = AmazonGlacierClientBuilder
 				.standard()
 				.withCredentials(new AWSStaticCredentialsProvider(creds))
 				.withClientConfiguration(config)
@@ -347,10 +331,6 @@ public class AmazonS3Client {
 		return client;
 	}
 
-	public AmazonGlacier getGlacierClient() {
-		return glacierClient;
-	}
-
 	public void setRegion(String regionName) {
 		Region region = RegionUtils.getRegion(regionName);
 		if( region == null )
@@ -525,15 +505,6 @@ public class AmazonS3Client {
 		return transferManager;
 	}
 
-	synchronized ArchiveTransferManager glacierTransferManager() {
-		if( glacierTransferManager==null ) {
-			glacierTransferManager = new ArchiveTransferManagerBuilder()
-					.withGlacierClient(getGlacierClient())
-					.build();
-		}
-		return glacierTransferManager;
-	}
-
 	public void downloadFile(S3Path source, File target) {
 		Download download = transferManager()
 				.download(source.getBucket(), source.getKey(), target);
@@ -541,22 +512,22 @@ public class AmazonS3Client {
 			download.waitForCompletion();
 		}
 		catch (InterruptedException e) {
-			log.debug("S3 download file: s3://{}/{} interrupted", source.getBucket(), source.getKey());
+			log.debug("S3 download s3://{}/{} interrupted", source.getBucket(), source.getKey());
 			Thread.currentThread().interrupt();
 		}
 		catch (AmazonS3Exception e) {
 			if( e.getMessage().contains("storage class") ) {
-				log.warn("S3 object couldn't be retrieved, retrying as Glacier object");
-				downloadGlacierFile(source, target);
+				log.warn("S3 download s3://{}/{} failed due to storage class, attempting to restore from Glacier", source.getBucket(), source.getKey());
+
+				int expirationInDays = 1;
+				client.restoreObject(source.getBucket(), source.getKey(), expirationInDays);
+
+				downloadFile(source, target);
 			}
 			else {
 				throw e;
 			}
 		}
-	}
-
-	public void downloadGlacierFile(S3Path source, File target) {
-		glacierTransferManager().download(source.getBucket(), source.getKey(), target);
 	}
 
 	public void downloadDirectory(S3Path source, File targetFile) throws IOException {
