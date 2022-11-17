@@ -165,7 +165,8 @@ class GoogleBatchTaskHandler extends TaskHandler {
             .setComputeResource(computeResource)
             .addRunnables(
                 Runnable.newBuilder()
-                    .setContainer(container)
+                        .setContainer(container)
+                        .setIgnoreExitStatus(true)
             )
             .addAllVolumes( launcher.getVolumes() )
 
