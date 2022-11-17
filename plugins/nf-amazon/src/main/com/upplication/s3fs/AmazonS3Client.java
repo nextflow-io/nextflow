@@ -72,6 +72,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.AccessControlList;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
@@ -542,6 +543,15 @@ public class AmazonS3Client {
 		catch (InterruptedException e) {
 			log.debug("S3 download file: s3://{}/{} interrupted", source.getBucket(), source.getKey());
 			Thread.currentThread().interrupt();
+		}
+		catch (AmazonS3Exception e) {
+			if( e.getMessage().contains("storage class") ) {
+				log.warn("S3 object couldn't be retrieved, retrying as Glacier object");
+				downloadGlacierFile(source, target);
+			}
+			else {
+				throw e;
+			}
 		}
 	}
 
