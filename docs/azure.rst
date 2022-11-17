@@ -392,8 +392,8 @@ Name                                           Description
 azure.activeDirectory.servicePrincipalId        The service principal client ID
 azure.activeDirectory.servicePrincipalSecret    The service principal client secret
 azure.activeDirectory.tenantId                  The Azure tenant ID
-azure.azcopy.blockSize                          The block size (in MiB) when uploading to Azure Storage, and downloading from Azure Storage (default: 4 , requires ``nf-azure@0.13.1``).
-azure.azcopy.blobTier                           The blob tier to be used while uploading to Azure Storage (default: 'None' , requires ``nf-azure@0.13.1``).
+azure.azcopy.blockSize                          The block size (in MiB) when uploading to Azure Storage, and downloading from Azure Storage (default: 4 , requires ``nf-azure@0.15.0``).
+azure.azcopy.blobTier                           The blob tier to be used while uploading to Azure Storage (default: 'None' , requires ``nf-azure@0.15.0``).
 azure.azcopy.overwrite                          Overwrite the conflicting files and blobs at the destination if this flag is set to true. (default: "false")
 azure.storage.accountName                       The blob storage account name
 azure.storage.accountKey                        The blob storage account key
