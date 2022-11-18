@@ -22,6 +22,8 @@ import java.nio.file.Files
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -128,5 +130,18 @@ class GlobalTest extends Specification {
         Global.normalizeAwsClientConfig(config).upload_retry_sleep == '5000'
     }
 
+    @Unroll
+    def 'should get aws s3 endpoint' () {
+
+        expect:
+        Global.getAwsS3Endpoint0(ENV, CONFIG) == EXPECTED
+
+        where:
+        ENV                             | CONFIG                                    | EXPECTED
+        [:]                             | [:]                                       | null
+        [AWS_S3_ENDPOINT: 'http://foo'] | [:]                                       | 'http://foo'
+        [:]                             | [aws:[client:[endpoint: 'http://bar']]]   | 'http://bar'
+        [AWS_S3_ENDPOINT: 'http://foo'] | [aws:[client:[endpoint: 'http://bar']]]   | 'http://bar'  // <-- config should have priority
+    }
 
 }
