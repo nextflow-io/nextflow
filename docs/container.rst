@@ -172,8 +172,9 @@ your pipeline execution.
 Multiple containers
 -------------------
 
-It is possible to specify a different Docker image for each process definition in your pipeline script. Let's
-suppose you have two processes named ``foo`` and ``bar``. You can specify two different Docker images for them
+It is possible to specify a different Docker image for each process definition in your pipeline script. However,
+this can't be done with `-with-docker`, since it doesn't support process selectors in the `nextflow.config` file.
+Let's suppose you have two processes named ``foo`` and ``bar``. You can specify two different Docker images for them
 in the Nextflow script as shown below::
 
     process foo {
@@ -209,6 +210,10 @@ Alternatively, the same containers definitions can be provided by using the ``ne
 
 
 Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
+
+After running your pipeline, you can easily check what container image each process used with the following command::
+
+    nextflow log last -f name,container
 
 Advanced settings
 -----------------
