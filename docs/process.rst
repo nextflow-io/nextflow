@@ -1028,7 +1028,7 @@ Another example with multiple output qualifiers::
 
     process foo {
       output:
-      path('last_result.txt'), path('result.txt', hidden: true)
+      tuple path('last_result.txt'), path('result.txt', hidden: true)
 
       '''
       echo 'another new line' >> result.txt
