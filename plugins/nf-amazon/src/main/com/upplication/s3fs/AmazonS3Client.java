@@ -99,11 +99,9 @@ import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.services.s3.transfer.UploadContext;
 import com.upplication.s3fs.util.S3MultipartOptions;
-import nextflow.Global;
-import nextflow.Session;
 import nextflow.util.Duration;
-import nextflow.util.ThreadPoolBuilder;
 import nextflow.util.ThreadPoolHelper;
+import nextflow.util.ThreadPoolManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -491,14 +489,12 @@ public class AmazonS3Client {
 	synchronized TransferManager transferManager() {
 		if( transferManager==null ) {
 			log.debug("Creating S3 transfer manager pool - chunk-size={}; max-treads={};", uploadChunkSize, uploadMaxThreads);
-			transferPool = ThreadPoolBuilder.io(1, uploadMaxThreads, 100, "s3-transfer-manager");
+			transferPool = ThreadPoolManager.create("S3TransferManager", uploadMaxThreads);
 			transferManager = TransferManagerBuilder.standard()
 					.withS3Client(getClient())
 					.withMinimumUploadPartSize(uploadChunkSize)
 					.withExecutorFactory(() -> transferPool)
 					.build();
-			// add thread pool shutdown callback
-			Global.onCleanup((it) -> { Session sess=(Session) it; showdownTransferPool(sess != null && sess.isAborted()); });
 		}
 		return transferManager;
 	}
