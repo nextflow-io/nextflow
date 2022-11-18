@@ -38,8 +38,8 @@ dependencies {
     api('org.eclipse.jgit:org.eclipse.jgit:6.2.0.202206071550-r')
     api ('javax.activation:activation:1.1.1')
     api ('javax.mail:mail:1.4.7')
-    api ('org.yaml:snakeyaml:1.30')
-    api ('org.jsoup:jsoup:1.14.3')
+    api ('org.yaml:snakeyaml:1.33')
+    api ('org.jsoup:jsoup:1.15.3')
     api 'jline:jline:2.9'
     api 'org.pf4j:pf4j:3.4.1'
     api 'dev.failsafe:failsafe:3.1.0'
