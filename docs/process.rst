@@ -1010,10 +1010,10 @@ Name                Description
 ================== =====================
 
 The parenthesis are optional for input and output qualifiers, but when you want to set an additional option and there
-are more than one input or output, you must use parenthesis so that Nextflow knows what input or output you're
+is more than one input or output qualifier, you must use parenthesis so that Nextflow knows what qualifier you're
 referring to.
 
-One example with a single output::
+One example with a single output qualifier::
 
     process foo {
       output:
@@ -1024,7 +1024,7 @@ One example with a single output::
       '''
     }
 
-Another example with multiple outputs::
+Another example with multiple output qualifiers::
 
     process foo {
       output:
