@@ -82,7 +82,7 @@ class ClientConfig {
     }
 
     String toString() {
-        "${this.class.getSimpleName()}[ server=$server, namespace=$namespace, token=${cut(token)}, sslCert=${cut(sslCert)}, clientCert=${cut(clientCert)}, clientKey=${cut(clientKey)}, verifySsl=$verifySsl, fromFile=$isFromCluster, httpReadTimeout=$httpReadTimeout, httpConnectTimeout=$httpConnectTimeout, maxErrorRetry=$maxErrorRetry ]"
+        "${this.class.getSimpleName()}[ server=$server, namespace=$namespace, serviceAccount=$serviceAccount, token=${cut(token)}, sslCert=${cut(sslCert)}, clientCert=${cut(clientCert)}, clientKey=${cut(clientKey)}, verifySsl=$verifySsl, fromFile=$isFromCluster, httpReadTimeout=$httpReadTimeout, httpConnectTimeout=$httpConnectTimeout, maxErrorRetry=$maxErrorRetry ]"
     }
 
     private String cut(String str) {
@@ -95,43 +95,45 @@ class ClientConfig {
         cut(bytes.encodeBase64().toString())
     }
 
-    static ClientConfig discover(String context=null) {
-        new ConfigDiscovery(context: context).discover()
+    static ClientConfig discover(String context, String namespace, String serviceAccount) {
+        new ConfigDiscovery().discover(context, namespace, serviceAccount)
     }
 
-    static ClientConfig fromMap(Map map) {
-        def result = new ClientConfig()
-        if( map.server )
-            result.server = map.server
+    static ClientConfig fromNextflowConfig(Map opts, String namespace, String serviceAccount) {
+        final result = new ClientConfig()
 
-        if( map.token )
-            result.token = map.token
-        else if( map.tokenFile )
-            result.token = Paths.get(map.tokenFile.toString()).getText('UTF-8')
+        if( opts.server )
+            result.server = opts.server
 
-        if( map.namespace )
-            result.namespace = map.namespace
+        if( opts.token )
+            result.token = opts.token
+        else if( opts.tokenFile )
+            result.token = Paths.get(opts.tokenFile.toString()).getText('UTF-8')
 
-        if( map.verifySsl )
-            result.verifySsl = map.verifySsl as boolean
+        result.namespace = namespace ?: opts.namespace ?: 'default'
 
-        if( map.sslCert )
-            result.sslCert = map.sslCert.toString().decodeBase64()
-        else if( map.sslCertFile )
-            result.sslCert = Paths.get(map.sslCertFile.toString()).bytes
+        result.serviceAccount = serviceAccount ?: 'default'
 
-        if( map.clientCert )
-            result.clientCert = map.clientCert.toString().decodeBase64()
-        else if( map.clientCertFile )
-            result.clientCert = Paths.get(map.clientCertFile.toString()).bytes
+        if( opts.verifySsl )
+            result.verifySsl = opts.verifySsl as boolean
 
-        if( map.clientKey )
-            result.clientKey = map.clientKey.toString().decodeBase64()
-        else if( map.clientKeyFile )
-            result.clientKey = Paths.get(map.clientKeyFile.toString()).bytes
+        if( opts.sslCert )
+            result.sslCert = opts.sslCert.toString().decodeBase64()
+        else if( opts.sslCertFile )
+            result.sslCert = Paths.get(opts.sslCertFile.toString()).bytes
 
-        if( map.maxErrorRetry )
-            result.maxErrorRetry = map.maxErrorRetry as Integer
+        if( opts.clientCert )
+            result.clientCert = opts.clientCert.toString().decodeBase64()
+        else if( opts.clientCertFile )
+            result.clientCert = Paths.get(opts.clientCertFile.toString()).bytes
+
+        if( opts.clientKey )
+            result.clientKey = opts.clientKey.toString().decodeBase64()
+        else if( opts.clientKeyFile )
+            result.clientKey = Paths.get(opts.clientKeyFile.toString()).bytes
+
+        if( opts.maxErrorRetry )
+            result.maxErrorRetry = opts.maxErrorRetry as Integer
 
         return result
     }

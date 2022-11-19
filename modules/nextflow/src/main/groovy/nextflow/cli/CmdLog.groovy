@@ -27,6 +27,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
+import nextflow.plugin.Plugins
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskTemplateEngine
 import nextflow.trace.TraceRecord
@@ -60,7 +61,7 @@ class CmdLog extends CmdBase implements CacheBase {
     static final public NAME = 'log'
 
     @Parameter(names = ['-s'], description='Character used to separate column values')
-    String sep = '\t'
+    String sep = '\\t'
 
     @Parameter(names=['-f','-fields'], description = 'Comma separated list of fields to include in the printed log -- Use the `-l` option to show the list of available fields')
     String fields
@@ -86,7 +87,7 @@ class CmdLog extends CmdBase implements CacheBase {
     @Parameter(names=['-q','-quiet'], description = 'Show only run names', arity = 0)
     boolean quiet
 
-    @Parameter
+    @Parameter(description = 'Run name or session id')
     List<String> args
 
     private Script filterScript
@@ -140,6 +141,7 @@ class CmdLog extends CmdBase implements CacheBase {
      */
     @Override
     void run() {
+        Plugins.init()
         init()
 
         // -- show the list of expected fields and exit

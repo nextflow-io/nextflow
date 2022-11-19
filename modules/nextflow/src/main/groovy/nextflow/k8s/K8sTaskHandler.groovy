@@ -223,11 +223,14 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         // add computing resources
         final cpus = taskCfg.getCpus()
         final mem = taskCfg.getMemory()
+        final disk = taskCfg.getDisk()
         final acc = taskCfg.getAccelerator()
         if( cpus )
             builder.withCpus(cpus)
         if( mem )
             builder.withMemory(mem)
+        if( disk )
+            builder.withDisk(disk)
         if( acc )
             builder.withAccelerator(acc)
 

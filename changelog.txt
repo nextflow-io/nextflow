@@ -1,5 +1,76 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.10.2 - 13 Nov 2022
+- Fix initialize the plugin once it's defined (#3360) [dd150b92]
+- Fix tags typo in docs (#3355) [ci skip] [b82df4e0]
+- Fix unexpected error on task resume [ci fast] [e02e8c27]
+- Fix template script in trace record [cf828a68]
+- Fix ip v6 support for K8s executor [ci fast] [53af5a7c]
+- Fix refresh token for tower served resources [9dec2b66] #3366
+- Fix full path scheme on error [1399f451]
+- Add note to some process implicit variables [ci skip] (#3373) [0374f63a]
+- Add retry policy on plugin download failure [e8dbec3f]
+- Add examples of when dynamic output filenames are important (#3275) [ci skip] [72a17306]
+- Update google batch java sdk, add serviceAccountEmail and installGpuDrivers (#3324) [7f7007a8]
+- Update github actions to v3 (#3376) [ci fast] [d3b4a837]
+- Update error messages and docs with new report filename behavior [ci fast] [f5725480]
+- Bump nf-tower@1.5.6 [164edf7c]
+- Bump nf-google@1.4.5 [30cb118d]
+
+22.10.1 - 27 Oct 2022
+- Fix mount pwd in the container when work dir is a symlink [ca397181] [b5b7d3cd] <Paolo Di Tommaso>
+- Fix secrets command name in the CLI (#3320) [ci fast] [321486df] <Marcel Ribeiro Dantas>
+- Fix ver num rendering [ci fast] #3226 [5312a25e] <Paolo Di Tommaso>
+- Fix K8s config namespace is not applied [b3d33e3b] <Paolo Di Tommaso>
+- Fix log fetching from remote storage [be356939] [3efa1a20] <Paolo Di Tommaso>
+- Update docs about default mail ssl protocol [ci skip] (#3299) [15ffffc1] <Ben Sherman>
+- Update docs repeated words from documentation (#3311) [ci skip] [d59ea186] <Marcel Ribeiro Dantas>
+- Update docs to clarify the difference between collect and toList (#3276) [7ee2b008] <Marcel Ribeiro Dantas>
+- Update docs [516a7441] <Paolo Di Tommaso>
+- Update docs adding Fusion [11eac707] <Paolo Di Tommaso>
+
+22.10.0 - 13 Oct 2022
+- Fix timestamp encoding [47a3a3c4]
+- Minor type change in Bridge executor [1f446ee1]
+- Bump nf-wave@0.5.2 [326803ff]
+
+22.10.0-RC3 - 7 Oct 2022 
+- Fix K8s context selection [58b354e6]
+
+22.10.0-RC2 - 7 Oct 2022 
+- Improve K8s labels/annotation validation [a569afdf]
+- Bump fusion final url [80398880]
+- Bump nf-wave@0.5.1 [a2b44c4d]
+- Update docs 
+
+22.10.0-RC1 - 3 Oct 2022
+- Add module binaries enabling flag + docs [c50e178f] <Paolo Di Tommaso>
+- Add timestamp and fingerprint to wave request [a5a7e138] <Paolo Di Tommaso>
+- Add missing inputs to the incremental task "test" (#1442) [ci fast] [f85d59a6] <Thodoris Sotiropoulos>
+- Add support for refresh token to Wave [ed9f25f1] <Paolo Di Tommaso>
+- Add pretty option to dump operator [ci fast] [4218b299] <Paolo Di Tommaso>
+- Add support for custom S3 content type [02afa332] <Paolo Di Tommaso>
+- Get rid of  file name rolling for report files [a762ed59] <Paolo Di Tommaso>
+- Ignore JGit warning when missing git tool [a94fa9c1] <Paolo Di Tommaso>
+- Remove jobname limit to HyperQueue executor (#3251) [99604ccb] <Henrik Nortamo>
+- Rename baseImage to mambaImage [ci fast] [50086028] <Paolo Di Tommaso>
+- Fix failing test [ci fast] [e6790003] <Paolo Di Tommaso>
+- Fix K8s cluster token when using serviceAccount [c3364d0f] <Paolo Di Tommaso>
+- Fix hanging test [44c04874] <Paolo Di Tommaso>
+- Improve docs (#3212) [ci skip] [5d80388c] <Marcel Ribeiro Dantas>
+- Bump fusion snapshot [ci skip] [8e03f655] <Paolo Di Tommaso>
+- Bump wave endpoint [a044cc6a] <Paolo Di Tommaso>
+- Bump nf-wave@0.4.5 [7424dc4b] <Paolo Di Tommaso>
+- Bump fusion config v0.5.1 [4dbdf112] <Paolo Di Tommaso>
+- Bump nf-wave@0.5.0
+- Bump nf-tower@1.5.5
+- Bump nf-amazon@1.11.0
+
+22.09.7-edge - 28 Sep 2022
+- Fix Issue copying file bigger than 5gb to S3 [18fd9a44]
+- Fix chmod command to accommodate hidden files in bindir (or empty bindir) (#3247) [a0fcc7b0] <Abhinav Sharma>
+- Bump nf-amazon@1.10.7 [f7f96e6f] 
+
 22.09.6-edge - 26 Sep 2022
 - Add SocketTimeoutException to k8s client request retry [527e0d5d]
 - Add MaxErrorRetry to K8s config [58be2128]
@@ -96,7 +167,7 @@ NEXTFLOW CHANGE-LOG
 - Add share identifier to Aws Batch (#3089) [c0253aba] <Ben Sherman>
 - Improve Tower cache manager [0091afc5]
 - Improve S3 copy via xfer manager [02d2beae]
-- Reports a warning when using NXF vars in the config [009ec256]
+- Reports a warning when using NXF vars in the config [009ec256] <Marcel Ribeiro Dantas>
 - Make wake token cache duration config [5f955fc9]
 - Patch unable to start non-core plugin [a55f58ff]
 - Increase S3 upload chunk size to 100 MB [9c94a080]

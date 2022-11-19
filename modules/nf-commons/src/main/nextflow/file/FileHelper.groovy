@@ -429,6 +429,31 @@ class FileHelper {
     }
 
     /**
+     * @return
+     *      {@code true} when the current session working directory is a symlink path
+     *      {@code false otherwise}
+     */
+    static boolean getWorkDirIsSymlink() {
+        isPathSymlink(Global.session.workDir)
+    }
+
+    @Memoized
+    static boolean isPathSymlink(Path path) {
+        if( path.fileSystem!=FileSystems.default )
+            return false
+        try {
+            return path != path.toRealPath()
+        }
+        catch (NoSuchFileException e) {
+            return false
+        }
+        catch (IOException e) {
+            log.debug "Unable to determine symlink status for path: $path - cause: ${e.message}"
+            return false
+        }
+    }
+
+    /**
      * Experimental. Check if a file exists making a second try on NFS mount
      * to avoid false negative.
      *
@@ -1026,8 +1051,8 @@ class FileHelper {
         try {
             Files.readAttributes(path,BasicFileAttributes,options)
         }
-        catch( IOException e ) {
-            log.trace "Unable to read attributes for file: $path"
+        catch( IOException|UnsupportedOperationException|SecurityException e ) {
+            log.trace "Unable to read attributes for file: $path - cause: ${e.message}"
             return null
         }
     }
