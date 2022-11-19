@@ -100,6 +100,9 @@ class PodOptions {
         else if( entry.env && entry.config ) {
             envVars << PodEnv.config(entry.env, entry.config)
         }
+        else if( entry.mountPath && entry.secret ) {
+            mountSecrets << new PodMountSecret(entry)
+        }
         else if( entry.mountPath && entry.config ) {
             mountConfigMaps << new PodMountConfig(entry)
         }
@@ -108,9 +111,6 @@ class PodOptions {
         }
         else if( entry.mountPath && entry.emptyDir != null ) {
             mountEmptyDirs << new PodMountEmptyDir(entry)
-        }
-        else if( entry.mountPath && entry.secret ) {
-            mountSecrets << new PodMountSecret(entry)
         }
         else if( entry.mountPath && entry.volumeClaim ) {
             mountClaims << new PodVolumeClaim(entry)
