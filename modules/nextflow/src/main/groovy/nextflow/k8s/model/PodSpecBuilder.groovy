@@ -89,6 +89,8 @@ class PodSpecBuilder {
 
     String sshAuthMountPath
 
+    String computeResourceType
+
     AcceleratorResource accelerator
 
     Collection<PodMountConfig> configMaps = []
@@ -360,6 +362,7 @@ class PodSpecBuilder {
 
         sshAuthMountPath = opts.sshAuthMountPath
         mpiJobWorkers = opts.mpiJobWorkers
+        computeResourceType = opts.computeResourceType
 
         return this
     }
@@ -543,6 +546,10 @@ class PodSpecBuilder {
     }
 
     Map buildAsJob() {
+	if( computeResourceType == ResourceType.MPIJob.name() ) {
+            return buildAsMPIJob()
+        }
+
         final pod = build()
 
         // job metadata
@@ -571,6 +578,7 @@ class PodSpecBuilder {
 
     }
 
+    @PackageScope
     Map buildAsMPIJob() {        
         final worker = build()
         Map workerSpec = worker.spec as Map

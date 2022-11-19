@@ -70,6 +70,8 @@ class PodOptions {
     private Integer mpiJobWorkers
 
     private String sshAuthMountPath 
+ 
+    private String computeResourceType
     
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
@@ -160,6 +162,9 @@ class PodOptions {
         }
         else if( entry.mpiJobWorkers ) {
             this.mpiJobWorkers = entry.mpiJobWorkers as Integer
+        }
+        else if( entry.computeResourceType ) {
+            this.computeResourceType = entry.computeResourceType as String
         }
         else
             throw new IllegalArgumentException("Unknown pod options: $entry")
@@ -298,6 +303,7 @@ class PodOptions {
 
         result.mpiJobWorkers = other.mpiJobWorkers!=0 ? other.mpiJobWorkers : this.mpiJobWorkers
         result.sshAuthMountPath = other.sshAuthMountPath!=null ? other.sshAuthMountPath : this.sshAuthMountPath
+        result.computeResourceType = other.computeResourceType!=null ? other.computeResourceType : this.computeResourceType
 
         return result
     }

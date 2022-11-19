@@ -114,7 +114,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     protected K8sConfig getK8sConfig() { executor.getK8sConfig() }
 
-    protected boolean useJobResource() { resourceType==ResourceType.Job }
+    protected boolean useJobResource() { resourceType==ResourceType.Job || resourceType==ResourceType.MPIJob }
 
     protected List<String> getContainerMounts() {
 
@@ -252,22 +252,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 builder.withEnv(PodEnv.value(it.key, it.value))
         }
 
-        final computeResourceType = taskCfg.getComputeResourceType()
-        if ( computeResourceType ) {
-            if ( computeResourceType == ResourceType.Job.name() ) {
-               return builder.buildAsJob()
-            }
-            if ( computeResourceType == ResourceType.Pod.name() ) {
-               return builder.build()
-            } 
-            if ( computeResourceType == ResourceType.MPIJob.name() ) {
-               return builder.buildAsMPIJob()
-            }
-        } else {
-            return useJobResource()
-                ? builder.buildAsJob()
-                : builder.build()
-        }
+        return useJobResource()
+             ? builder.buildAsJob()
+             : builder.build()
     }
 
     protected PodOptions getPodOptions() {
@@ -312,27 +299,25 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         builder.build()
 
         final req = newSubmitRequest(task)
-        final computeResourceType = task.getConfig().getComputeResourceType()
        
         def resp
- 
-        if ( computeResourceType ) {
-	   if ( computeResourceType == ResourceType.Job.name() ) {
-               resp = client.jobCreate(req, yamlDebugPath())
-            } else if ( computeResourceType == ResourceType.Pod.name() ) {
-               resp = client.podCreate(req, yamlDebugPath())
-            } else if ( computeResourceType == ResourceType.MPIJob.name() ) {
-               resp = client.mpiJobCreate(req, yamlDebugPath())
-               resourceType = ResourceType.Job
-            }
-        } else 
-           resp = useJobResource()
-                   ? client.jobCreate(req, yamlDebugPath())
-                   : client.podCreate(req, yamlDebugPath())
 
+        switch(req.kind) {
+           case 'Pod':
+               resp = client.podCreate(req, yamlDebugPath())
+               break
+           case 'Job':
+               resp = client.jobCreate(req, yamlDebugPath())
+               break
+           case 'MPIJob':
+               resp = client.mpiJobCreate(req, yamlDebugPath())
+               resourceType = ResourceType.MPIJob
+               break  
+        }
+ 
         if( !resp.metadata?.name )
             throw new K8sResponseException("Missing created ${resourceType.lower()} name", resp)
-        if ( computeResourceType == ResourceType.MPIJob.name() )
+        if ( resourceType == ResourceType.MPIJob )
             this.podName = resp.metadata.name+"-launcher"
         else
             this.podName = resp.metadata.name
@@ -521,7 +506,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         try {
             if ( useJobResource() ) {
                 client.jobDelete(podName)
-		if ( task.getConfig().getComputeResourceType() == ResourceType.MPIJob.name() )
+		if ( resourceType == ResourceType.MPIJob )
                     client.mpiJobDelete(podName.minus("-launcher"))
             } else
                 client.podDelete(podName)
