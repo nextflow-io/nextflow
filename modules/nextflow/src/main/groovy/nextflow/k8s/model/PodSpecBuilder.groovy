@@ -79,6 +79,8 @@ class PodSpecBuilder {
 
     String memory
 
+    String disk
+
     String serviceAccount
 
     boolean automountServiceAccountToken = true
@@ -88,6 +90,8 @@ class PodSpecBuilder {
     Collection<PodMountConfig> configMaps = []
 
     Collection<PodMountCsiEphemeral> csiEphemerals = []
+
+    Collection<PodMountEmptyDir> emptyDirs = []
 
     Collection<PodMountSecret> secrets = []
 
@@ -180,6 +184,16 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withDisk(String disk) {
+        this.disk = disk
+        return this
+    }
+
+    PodSpecBuilder withDisk(MemoryUnit disk)  {
+        this.disk = "${disk.mega}Mi".toString()
+        return this
+    }
+
     PodSpecBuilder withAccelerator(AcceleratorResource acc) {
         this.accelerator = acc
         return this
@@ -246,6 +260,16 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withEmptyDirs( Collection<PodMountEmptyDir> emptyDirs ) {
+        this.emptyDirs.addAll(emptyDirs)
+        return this
+    }
+
+    PodSpecBuilder withEmptyDir( PodMountEmptyDir emptyDir ) {
+        this.emptyDirs.add(emptyDir)
+        return this
+    } 
+
     PodSpecBuilder withSecrets( Collection<PodMountSecret> secrets ) {
         this.secrets.addAll(secrets)
         return this
@@ -291,6 +315,9 @@ class PodSpecBuilder {
         // -- csi ephemeral volumes
         if( opts.getMountCsiEphemerals() )
             csiEphemerals.addAll( opts.getMountCsiEphemerals() )
+        // -- emptyDirs
+        if( opts.getMountEmptyDirs() )
+            emptyDirs.addAll( opts.getMountEmptyDirs() )
         // -- secrets
         if( opts.getMountSecrets() )
             secrets.addAll( opts.getMountSecrets() )
@@ -438,6 +465,10 @@ class PodSpecBuilder {
             container.resources = addAcceleratorResources(this.accelerator, container.resources as Map)
         }
 
+        if( this.disk ) {
+            container.resources = addDiskResources(this.disk, container.resources as Map)
+        }
+
         // add storage definitions ie. volumes and mounts
         final List<Map> mounts = []
         final List<Map> volumes = []
@@ -473,6 +504,13 @@ class PodSpecBuilder {
             final name = nextVolName()
             mounts << [name: name, mountPath: entry.mountPath, readOnly: entry.csi.readOnly ?: false]
             volumes << [name: name, csi: entry.csi]
+        }
+
+        // -- emptyDir volumes
+        for( PodMountEmptyDir entry : emptyDirs ) {
+            final name = nextVolName()
+            mounts << [name: name, mountPath: entry.mountPath]
+            volumes << [name: name, emptyDir: entry.emptyDir]
         }
 
         // -- secret volumes
@@ -549,6 +587,22 @@ class PodSpecBuilder {
 
         final lim = res.limits as Map ?: new LinkedHashMap(10)
         lim.memory = memory
+        res.limits = lim
+
+        return res
+    }
+
+    @PackageScope
+    Map addDiskResources(String diskRequest, Map res) {
+        if( res == null )
+            res = new LinkedHashMap(10)
+
+        final req = res.requests as Map ?: new LinkedHashMap(10)
+        req.'ephemeral-storage' = diskRequest
+        res.requests = req
+
+        final lim = res.limits as Map ?: new LinkedHashMap(10)
+        lim.'ephemeral-storage' = diskRequest
         res.limits = lim
 
         return res
