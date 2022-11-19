@@ -186,7 +186,7 @@ class TowerReports {
             for (int p=0; p < matchers.size(); p++) {
                 if (matchers.get(p).matches(destination)) {
                     final reportEntry = this.reportsEntries.get(p)
-                    writer.send { PrintWriter it -> writeRecord(it, reportEntry, destination) }
+                    writer.send((PrintWriter it) -> writeRecord(it, reportEntry, destination))
                     return true
                 }
             }
@@ -194,7 +194,7 @@ class TowerReports {
         return false
     }
 
-    protected writeRecord(PrintWriter it, Map.Entry<String,Map<String,String>> reportEntry, Path destination) {
+    private writeRecord(PrintWriter it, Map.Entry<String,Map<String,String>> reportEntry, Path destination) {
         try {
             final target = destination.toUriString()
             final numRep = totalReports.incrementAndGet()

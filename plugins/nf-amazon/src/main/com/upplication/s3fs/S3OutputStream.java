@@ -33,7 +33,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Phaser;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonClientException;
@@ -56,11 +55,9 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.util.Base64;
 import com.upplication.s3fs.util.ByteBufferInputStream;
 import com.upplication.s3fs.util.S3MultipartOptions;
-import nextflow.Global;
-import nextflow.Session;
 import nextflow.util.Duration;
-import nextflow.util.ThreadPoolBuilder;
 import nextflow.util.ThreadPoolHelper;
+import nextflow.util.ThreadPoolManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static java.util.Objects.requireNonNull;
@@ -102,6 +99,8 @@ public final class S3OutputStream extends OutputStream {
     private SSEAlgorithm storageEncryption;
 
     private String kmsKeyId;
+
+    private String contentType;
 
     /**
      * Indicates if the stream has been closed.
@@ -214,6 +213,11 @@ public final class S3OutputStream extends OutputStream {
 
     public S3OutputStream setKmsKeyId(String kmsKeyId) {
         this.kmsKeyId = kmsKeyId;
+        return this;
+    }
+
+    public S3OutputStream setContentType(String type) {
+        this.contentType = type;
         return this;
     }
 
@@ -422,6 +426,7 @@ public final class S3OutputStream extends OutputStream {
     private InitiateMultipartUploadResult initiateMultipartUpload() throws IOException {
         final InitiateMultipartUploadRequest request = //
                 new InitiateMultipartUploadRequest(objectId.getBucket(), objectId.getKey());
+        final ObjectMetadata metadata = new ObjectMetadata();
 
         if (storageClass != null) {
             request.setStorageClass(storageClass);
@@ -436,8 +441,12 @@ public final class S3OutputStream extends OutputStream {
         }
 
         if( storageEncryption != null ) {
-            final ObjectMetadata metadata = new ObjectMetadata();
             metadata.setSSEAlgorithm(storageEncryption.toString());
+            request.setObjectMetadata(metadata);
+        }
+
+        if( contentType != null ) {
+            metadata.setContentType(contentType);
             request.setObjectMetadata(metadata);
         }
 
@@ -615,6 +624,10 @@ public final class S3OutputStream extends OutputStream {
             meta.setSSEAlgorithm( storageEncryption.toString() );
         }
 
+        if( contentType != null ) {
+            meta.setContentType(contentType);
+        }
+
         if( log.isTraceEnabled() ) {
             log.trace("S3 putObject {}", request);
         }
@@ -647,15 +660,7 @@ public final class S3OutputStream extends OutputStream {
      */
     static synchronized ExecutorService getOrCreateExecutor(int maxThreads) {
         if( executorSingleton == null ) {
-            ThreadPoolExecutor pool = ThreadPoolBuilder.io(
-                    1,
-                    maxThreads,
-                    maxThreads*3,
-                    "S3OutputStream");
-            executorSingleton = pool;
-            log.trace("Created singleton upload executor -- max-treads: {}", maxThreads);
-            // register shutdown hook
-            Global.onCleanup((it) -> { Session sess=(Session) it; shutdownExecutor(sess!=null && sess.isAborted()); });
+            executorSingleton = ThreadPoolManager.create("S3StreamUploader", maxThreads);
         }
         return executorSingleton;
     }

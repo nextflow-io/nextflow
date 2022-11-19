@@ -153,6 +153,8 @@ class PluginExtensionProvider implements ExtensionProvider {
                 throw new IllegalStateException("Extension '$realName' it isn't defined by plugin ${pluginId}")
             }
         }
+        // initialise the plugin session
+        ext.checkInit((Session)Global.session)
         return instance = this
     }
 
