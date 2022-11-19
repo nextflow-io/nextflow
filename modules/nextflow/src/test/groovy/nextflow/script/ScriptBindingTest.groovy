@@ -17,12 +17,10 @@
 
 package nextflow.script
 
-import spock.lang.Specification
-
 import java.nio.file.Paths
 
 import nextflow.Session
-import nextflow.util.ReadOnlyMap
+import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -75,35 +73,6 @@ class ScriptBindingTest extends Specification {
         bindings.getVariable('HOME') == '/this/path'
         
         bindings.getVariables().keySet() == ['args','params','variable_x'] as Set
-
-    }
-
-    def 'test read only map' () {
-
-        setup:
-        ReadOnlyMap map1 = new ReadOnlyMap([:], ['x','y'])
-        ReadOnlyMap map2 = new ReadOnlyMap([x:1,y:2,z:3])
-
-        when:
-        map1.x = 10
-        map1.z = 30
-
-        map2.x = 10
-        map2.y = 20
-        map2.p = 30
-        map2.q = 40
-
-
-        then:
-        map1.x == null
-        map1.z == 30
-
-        map2.x == 1
-        map2.y == 2
-        map2.z == 3
-        map2.p == 30
-        map2.q == 40
-
 
     }
 

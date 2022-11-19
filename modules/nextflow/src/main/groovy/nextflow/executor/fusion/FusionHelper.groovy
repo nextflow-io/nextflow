@@ -17,11 +17,15 @@
 
 package nextflow.executor.fusion
 
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import nextflow.Session
 import nextflow.container.ContainerBuilder
 import nextflow.container.ContainerConfig
+import nextflow.extension.FilesEx
+import nextflow.io.BucketParser
 
 /**
  * Helper method to handle fusion common logic
@@ -46,6 +50,7 @@ class FusionHelper {
         final engine = containerConfig.getEngine()
         final containerBuilder = ContainerBuilder.create(engine, containerName)
                 .addMountWorkDir(false)
+                .addRunOptions('--rm')
                 .params(containerConfig)
                 .params(privileged: true)
 
@@ -70,4 +75,23 @@ class FusionHelper {
 
         return containerCmd
     }
+
+    static Path toContainerMount(Path path, String scheme, Set<String> buckets) {
+        if( path == null )
+            return null
+
+        final p = BucketParser.from( FilesEx.toUriString(path) )
+
+        if( p.scheme != scheme )
+            throw new IllegalArgumentException("Unexpected path for Fusion script launcher: ${path.toUriString()}")
+
+        final result = "/fusion/$p.scheme/${p.bucket}${p.path}"
+        buckets.add(p.bucket)
+        return Path.of(result)
+    }
+
+    static Path toContainerMount(Path path, String scheme) {
+        return toContainerMount(path, scheme, new HashSet<String>(1))
+    }
+
 }

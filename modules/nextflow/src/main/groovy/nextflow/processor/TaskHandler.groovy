@@ -171,7 +171,7 @@ abstract class TaskHandler {
         record.container = task.getContainer()
         record.attempt = task.config.attempt
 
-        record.script = task.getScript()
+        record.script = task.getTraceScript()
         record.scratch = task.getScratch()
         record.workdir = task.getWorkDirStr()
         record.queue = task.config.queue
@@ -242,6 +242,5 @@ abstract class TaskHandler {
     final void decProcessForks() {
         task.processor.forksCount?.decrement()
     }
-
 
 }

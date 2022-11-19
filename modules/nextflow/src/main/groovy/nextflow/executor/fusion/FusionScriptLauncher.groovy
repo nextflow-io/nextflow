@@ -17,13 +17,15 @@
 
 package nextflow.executor.fusion
 
+import static nextflow.executor.fusion.FusionHelper.*
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.executor.BashWrapperBuilder
-import nextflow.extension.FilesEx
-import nextflow.io.BucketParser
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
 import nextflow.util.Escape
@@ -82,20 +84,6 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         return "NXF_CHDIR=${Escape.path(bean.workDir)}\n"
     }
 
-    static protected Path toContainerMount(Path path, String scheme, Set<String> buckets) {
-        if( path == null )
-            return null
-
-        final p = BucketParser.from( FilesEx.toUriString(path) )
-
-        if( p.scheme != scheme )
-            throw new IllegalArgumentException("Unexpected path for Fusion script launcher: ${path.toUriString()}")
-
-        final result = "/fusion/$p.scheme/${p.bucket}${p.path}"
-        buckets.add(p.bucket)
-        return Path.of(result)
-    }
-
     Path toContainerMount(Path path) {
         toContainerMount(path,scheme,buckets)
     }
@@ -111,6 +99,14 @@ class FusionScriptLauncher extends BashWrapperBuilder {
             final result = new LinkedHashMap(10)
             result.NXF_FUSION_WORK = work
             result.NXF_FUSION_BUCKETS = buckets
+            final endpoint = Global.getAwsS3Endpoint()
+            final creds = exportAwsAccessKeys() ? Global.getAwsCredentials() : Collections.<String>emptyList()
+            if( creds ) {
+                result.AWS_ACCESS_KEY_ID = creds[0]
+                result.AWS_SECRET_ACCESS_KEY = creds[1]
+            }
+            if( endpoint )
+                result.AWS_S3_ENDPOINT = endpoint
             env = result
         }
         return env
@@ -131,4 +127,12 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
     }
 
+    boolean exportAwsAccessKeys() {
+        exportAwsAccessKeys0()
+    }
+
+    @Memoized
+    protected boolean exportAwsAccessKeys0() {
+        return Global.config?.navigate('fusion.exportAwsAccessKeys', false)
+    }
 }
