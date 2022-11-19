@@ -338,9 +338,18 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         try {
             final delta =  now - timestamp;
             if( !state || delta >= 1_000) {
-                def newState = useJobResource()
-                        ? client.jobState(podName)
-                        : client.podState(podName)
+                def newState
+                switch(resourceType) {
+		    case ResourceType.Job:
+		        newState = client.jobState(podName)
+                        break
+                    case ResourceType.Pod:
+                        newState = client.podState(podName)
+                        break
+                    case ResourceType.MPIJob:
+                        newState = client.mpiJobState(podName)
+                        break
+		}
                 if( newState ) {
                    log.trace "[K8s] Get ${resourceType.lower()}=$podName state=$newState"
                    state = newState
@@ -477,9 +486,11 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         
         if( podName ) {
             log.trace "[K8s] deleting ${resourceType.lower()} name=$podName"
-            if ( useJobResource() )
+            if ( useJobResource() ) {
                 client.jobDelete(podName)
-            else
+                if ( resourceType == ResourceType.MPIJob )
+                    client.mpiJobDelete(podName.minus("-launcher"))
+            } else
                 client.podDelete(podName)
         }
         else {

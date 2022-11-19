@@ -435,6 +435,25 @@ class K8sClient {
         }
     }
 
+    /**
+     * MPIJob is not instantly created but indirectly via operator thus its real Job might not exist yet.
+     */
+    Map mpiJobState( String jobName ) {
+        for( int i = 1; i <= 5; i++ ) {
+            try {
+	        return jobState(jobName) 
+	    } 
+            catch (K8sResponseException err) {
+                if( err.response.code != 404 ) {
+	            throw err
+		} else {
+		    final long delay = (Math.pow(3, i - 1) as long) * 250
+                    sleep( delay )
+		}
+            }
+        }
+    }
+
     protected Map jobStateFallback0(String jobName) {
         final K8sResponseJson jobResp = jobStatus(jobName)
         final jobStatus = jobResp.status as Map
