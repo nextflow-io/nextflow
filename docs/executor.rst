@@ -85,6 +85,27 @@ Resource requests and other job characteristics can be controlled via the follow
 * :ref:`process-time`
 
 
+.. _flux-executor:
+
+Flux Framework Executor
+=======================
+
+The ``flux`` executor allows you to run your pipeline script by using `Flux Framework <https://flux-framework.org>`_.
+
+Akin to slurm, Nextflow manages each process as a separate job that is submitted to the cluster by using the ``flux mini submit`` command.
+
+To enable the Flux executor simply set ``process.executor = 'flux'`` in the ``nextflow.config`` file.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+* :ref:`process-clusterOptions`
+* :ref:`process-cpus`
+* :ref:`process-queue`
+* :ref:`process-time`
+
+.. note:: Flux does not support specifying memory. 
+
+
 .. _ga4ghtes-executor:
 
 GA4GH TES

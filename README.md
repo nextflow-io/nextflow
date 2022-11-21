@@ -105,6 +105,7 @@ Currently the following clusters are supported:
   + [LSF](https://www.nextflow.io/docs/latest/executor.html#lsf)
   + [SLURM](https://www.nextflow.io/docs/latest/executor.html#slurm)
   + [PBS/Torque](https://www.nextflow.io/docs/latest/executor.html#pbs-torque)
+  + [Flux](https://www.nextflow.io/docs/latest/executor.html#flux)
   + [HyperQueue (beta)](https://www.nextflow.io/docs/latest/executor.html#hyperqueue)
   + [HTCondor (beta)](https://www.nextflow.io/docs/latest/executor.html#htcondor)
   + [Moab](https://www.nextflow.io/docs/latest/executor.html#moab)

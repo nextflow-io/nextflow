@@ -6,6 +6,7 @@
 .cache/*
 .nextflow*
 .node-nextflow*
+.devcontainer
 **/build/**
 build/**
 modules/**/build/

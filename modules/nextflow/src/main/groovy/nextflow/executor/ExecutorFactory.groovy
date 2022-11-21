@@ -45,6 +45,7 @@ class ExecutorFactory {
     final static Map<String, Class<? extends Executor>> BUILT_IN_EXECUTORS = [
             'nope': NopeExecutor,
             'local': LocalExecutor,
+            'flux': FluxExecutor,
             'sge':  SgeExecutor,
             'oge':  SgeExecutor,
             'uge':  SgeExecutor,
