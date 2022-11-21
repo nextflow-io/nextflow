@@ -247,7 +247,18 @@ abstract class RepositoryProvider {
                 break
 
             for( def item : list ) {
-                result.add( parse(item) )
+                final entry = parse(item)
+                if( result.contains(entry) ) {
+                    log.debug("Duplicate entry detected on request '$request'")
+                    return result
+                }
+                result.add(entry)
+            }
+
+            // prevent endless looping
+            if( page==100 ) {
+                log.warn("Too many requests '$request'")
+                break
             }
         }
         return result
