@@ -131,6 +131,7 @@ class WaveClient {
 
         return new SubmitContainerTokenRequest(
                 containerImage: assets.containerImage,
+                containerPlatform: assets.containerPlatform,
                 containerConfig: containerConfig,
                 containerFile: assets.dockerFileEncoded(),
                 condaFile: assets.condaFileEncoded(),
@@ -337,10 +338,16 @@ class WaveClient {
                     ? projectResources(session.binDir)
                     : null
 
+        /*
+         * the container platform to be used
+         */
+        final platform = config.containerPlatform()
+
         // read the container config and go ahead
         final containerConfig = this.resolveContainerConfig()
         return new WaveAssets(
                     containerImage,
+                    platform,
                     bundle,
                     containerConfig,
                     dockerScript,
