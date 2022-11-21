@@ -56,6 +56,15 @@ class WaveConfigTest extends Specification {
         opts.endpoint() == 'http://localhost'
     }
 
+    def 'should config containerPlatform' () {
+        when:
+        // config options have priority over sys env
+        def opts = new WaveConfig([enabled:true, containerPlatform: 'linux/arm64'], [:])
+        then:
+        opts.enabled()
+        opts.containerPlatform() == 'linux/arm64'
+    }
+
     def 'should remove ending slash' () {
         when:
         def opts = new WaveConfig([enabled:true, endpoint: 'http://localhost/v1//'])
