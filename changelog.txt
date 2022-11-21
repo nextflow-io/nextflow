@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.10.3 - 21 Nov 2022
+- Prevent infinite loop while fetching git tags/branches [73a59d33]
+- Bump nf-amazon@1.11.1 [f9b54ce3]
+- Improve S3 thread pool config [01541b0a]
+
 22.10.2 - 13 Nov 2022
 - Fix initialize the plugin once it's defined (#3360) [dd150b92]
 - Fix tags typo in docs (#3355) [ci skip] [b82df4e0]
