@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+1.11.1 - 21 Oct 2022
+- Improve S3 thread pool config [01541b0a]
+
 1.11.0 - 3 Oct 2022
 - Add support for custom S3 content type [02afa332] <Paolo Di Tommaso>
 - Get rid of  file name rolling for report files [a762ed59] <Paolo Di Tommaso>
