@@ -37,6 +37,7 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ScriptType
+import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.FileOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
@@ -111,7 +112,7 @@ class TaskProcessorTest extends Specification {
         noExceptionThrown()
         builder.environment().X == '1'
         builder.environment().Y == '2'
-        builder.environment().PATH == "${binFolder.toString()}:\$PATH"
+        builder.environment().PATH == "\$PATH:${binFolder.toString()}"
 
         when:
         session = new Session([env: [X:"1", Y:"2", PATH:'/some']])
@@ -123,11 +124,35 @@ class TaskProcessorTest extends Specification {
         noExceptionThrown()
         builder.environment().X == '1'
         builder.environment().Y == '2'
-        builder.environment().PATH == "${binFolder.toString()}:/some"
+        builder.environment().PATH == "/some:${binFolder.toString()}"
 
         cleanup:
         home.deleteDir()
 
+    }
+
+    @Unroll
+    def 'should add module bin paths to task env' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:] }
+        def executor = Mock(Executor) { getBinDir() >> Path.of('/project/bin')}
+        and:
+        TaskProcessor processor = Spy(TaskProcessor, constructorArgs: [[session:session, executor:executor]])
+        and:
+        when:
+        def result = processor.getProcessEnvironment()
+        then:
+        session.enableModuleBinaries() >> MODULE_BIN
+        processor.getModuleBundle() >> Mock(ResourcesBundle)  { getBinDirs() >> [Path.of('/foo'), Path.of('/bar')] }
+        processor.isLocalWorkDir() >> LOCAL
+        and:
+        result == EXPECTED
+
+        where:
+        LOCAL   | MODULE_BIN    | EXPECTED
+        false   | false         | [:]
+        true    | false         | [PATH:'$PATH:/project/bin']
+        true    | true          | [PATH:'$PATH:/foo:/bar:/project/bin']
     }
 
     def 'should fetch interpreter from shebang line'() {

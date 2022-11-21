@@ -155,7 +155,7 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
             copy.remove('PATH')
         // when a remote bin directory is provide managed it properly
         if( config.remoteBinDir ) {
-            result << "chmod +x $localTaskDir/nextflow-bin/*\n"
+            result << "chmod +x $localTaskDir/nextflow-bin/* || true\n"
             result << "export PATH=$localTaskDir/nextflow-bin:\$PATH\n"
         }
         // finally render the environment

@@ -40,7 +40,7 @@ import nextflow.util.PathTrie
 @CompileStatic
 class GoogleBatchScriptLauncher extends BashWrapperBuilder {
 
-    private static final String MOUNT_ROOT = '/mnt'
+    private static final String MOUNT_ROOT = '/mnt/disks'
 
     private CloudStoragePath remoteWorkDir
     private Path remoteBinDir
@@ -81,7 +81,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder {
         // make it change to the task work dir
         bean.headerScript = headerScript(bean)
         // enable use of local scratch dir
-        if( !scratch )
+        if( scratch==null )
             scratch = true
     }
 

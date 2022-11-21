@@ -23,6 +23,7 @@ import com.google.cloud.batch.v1.ComputeResource
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.LogsPolicy
 import com.google.cloud.batch.v1.Runnable
+import com.google.cloud.batch.v1.ServiceAccount
 import com.google.cloud.batch.v1.TaskGroup
 import com.google.cloud.batch.v1.TaskSpec
 import com.google.protobuf.Duration
@@ -30,11 +31,11 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
-import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.trace.TraceRecord
 /**
  * Implements a task handler for Google Batch executor
  * 
@@ -43,8 +44,6 @@ import nextflow.processor.TaskStatus
 @Slf4j
 @CompileStatic
 class GoogleBatchTaskHandler extends TaskHandler {
-
-    public final static String DEFAULT_DISK_NAME = 'nf-pipeline-work'
 
     private GoogleBatchExecutor executor
 
@@ -119,9 +118,6 @@ class GoogleBatchTaskHandler extends TaskHandler {
         final taskSpec = TaskSpec.newBuilder()
         final computeResource = ComputeResource.newBuilder()
 
-        if( executor.config.bootDiskSize )
-            computeResource.setBootDiskMib( executor.config.bootDiskSize.getMega() )
-
         computeResource.setCpuMilli( task.config.getCpus() * 1000 )
 
         if( task.config.getMemory() )
@@ -133,6 +129,10 @@ class GoogleBatchTaskHandler extends TaskHandler {
                     .setSeconds( task.config.getTime().toSeconds() )
             )
 
+        final disk = task.config.getDisk() ?: executor.config.bootDiskSize
+        if( disk )
+            computeResource.setBootDiskMib( disk.getMega() )
+
         // container
         final cmd = "trap \"{ cp ${TaskRun.CMD_LOG} ${launcher.workDirMount}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${launcher.workDirMount}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
         final container = Runnable.Container.newBuilder()
@@ -140,8 +140,25 @@ class GoogleBatchTaskHandler extends TaskHandler {
             .addAllCommands( ['/bin/bash','-o','pipefail','-c', cmd.toString()] )
             .addAllVolumes( launcher.getContainerMounts() )
 
-        if( task.config.getContainerOptions() )
-            container.setOptions( task.config.getContainerOptions() )
+        final accel = task.config.getAccelerator()
+        // add nvidia specific driver paths
+        // see https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
+        if(  accel && accel.type.toLowerCase().startsWith('nvidia-') ) {
+            container
+                .addVolumes('/var/lib/nvidia/lib64:/usr/local/nvidia/lib64')
+                .addVolumes('/var/lib/nvidia/bin:/usr/local/nvidia/bin')
+        }
+
+        def containerOptions= task.config.getContainerOptions() ?: ''
+        // accelerator requires privileged option
+        // https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
+        if( task.config.getAccelerator() ) {
+            if( containerOptions ) containerOptions += ' '
+            containerOptions += '--privileged'
+        }
+
+        if( containerOptions )
+            container.setOptions( containerOptions )
 
         // task spec
         taskSpec
@@ -154,30 +171,31 @@ class GoogleBatchTaskHandler extends TaskHandler {
 
         // instance policy
         final allocationPolicy = AllocationPolicy.newBuilder()
+        final instancePolicyOrTemplate = AllocationPolicy.InstancePolicyOrTemplate.newBuilder()
         final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
-        if( task.config.getAccelerator() )
-            instancePolicy.addAccelerators(
-                AllocationPolicy.Accelerator.newBuilder()
-                    .setCount( task.config.getAccelerator().getRequest() )
-                    .setType( task.config.getAccelerator().getType() )
-            )
+        if( task.config.getAccelerator() ) {
+            final accelerator = AllocationPolicy.Accelerator.newBuilder()
+                .setCount( task.config.getAccelerator().getRequest() )
+
+            if( task.config.getAccelerator().getType() )
+                accelerator.setType( task.config.getAccelerator().getType() )
+
+            instancePolicy.addAccelerators(accelerator)
+            instancePolicyOrTemplate.setInstallGpuDrivers(true)
+        }
 
         if( executor.config.cpuPlatform )
             instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
 
-        if( task.config.getDisk() )
-            instancePolicy.addDisks(
-                AllocationPolicy.AttachedDisk.newBuilder()
-                    .setDeviceName( DEFAULT_DISK_NAME )
-                    .setNewDisk(
-                        AllocationPolicy.Disk.newBuilder()
-                            .setSizeGb( task.config.getDisk().getGiga() )
-                    )
-            )
-
         if( task.config.getMachineType() )
             instancePolicy.setMachineType( task.config.getMachineType() )
+
+        if( executor.config.serviceAccountEmail )
+            allocationPolicy.setServiceAccount(
+                ServiceAccount.newBuilder()
+                    .setEmail(executor.config.serviceAccountEmail)
+            )
 
         if( executor.config.preemptible )
             instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.PREEMPTIBLE )
@@ -186,7 +204,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
             instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.SPOT )
 
         allocationPolicy.addInstances(
-            AllocationPolicy.InstancePolicyOrTemplate.newBuilder()
+            instancePolicyOrTemplate
                 .setPolicy(instancePolicy)
         )
 
@@ -213,6 +231,8 @@ class GoogleBatchTaskHandler extends TaskHandler {
                     .addNetworkInterfaces(networkInterface)
             )
 
+        allocationPolicy.putAllLabels(task.config.getResourceLabels())
+
         // create the job
         return Job.newBuilder()
             .addTaskGroups(
@@ -228,17 +248,24 @@ class GoogleBatchTaskHandler extends TaskHandler {
     }
 
     /**
-     * @return Retrieve the submitted pod state
+     * @return Retrieve the submitted job state
      */
     protected String getJobState() {
         final now = System.currentTimeMillis()
         final delta =  now - timestamp;
         if( !jobState || delta >= 1_000) {
-            def newState = client.getJobState(jobId)
+            final status = client.getJobStatus(jobId)
+            final newState = status?.state as String
             if( newState ) {
                 log.trace "[GOOGLE BATCH] Get job=$jobId state=$newState"
                 jobState = newState
                 timestamp = now
+            }
+            if( newState == 'SCHEDULED' ) {
+                final eventsCount = status.getStatusEventsCount()
+                final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
+                if( lastEvent?.getDescription()?.contains('CODE_GCE_QUOTA_EXCEEDED') )
+                    log.warn1 "Batch job cannot be run: ${lastEvent.getDescription()}"
             }
         }
         return jobState
@@ -302,6 +329,15 @@ class GoogleBatchTaskHandler extends TaskHandler {
         else {
             log.debug "[GOOGLE BATCH] Oops.. invalid delete action"
         }
+    }
+
+    @Override
+    TraceRecord getTraceRecord() {
+        def result = super.getTraceRecord()
+        if( jobId && uid ) {
+            result.put('native_id', "$jobId/$uid")
+        }
+        return result
     }
 
 }

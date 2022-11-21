@@ -30,6 +30,13 @@ import groovy.transform.ToString
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
 class SubmitContainerTokenResponse {
+    /**
+     * A unique authorization token assigned to this request
+     */
     String containerToken
+
+    /**
+     * The fully qualified wave container name to be used
+     */
     String targetImage
 }

@@ -27,6 +27,7 @@ import nextflow.cli.CmdRun
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
+import nextflow.trace.TraceHelper
 import nextflow.trace.WebLogObserver
 import nextflow.util.ConfigHelper
 import spock.lang.Ignore
@@ -38,6 +39,9 @@ import spock.lang.Unroll
  */
 class ConfigBuilderTest extends Specification {
 
+    def setup() {
+        TraceHelper.testTimestampFmt = '20221001'
+    }
 
     def 'build config object' () {
 
@@ -702,7 +706,7 @@ class ConfigBuilderTest extends Specification {
         new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         def e = thrown(AbortOperationException)
-        e.message == 'You have requested to run with Docker but no image were specified'
+        e.message == 'You have requested to run with Docker but no image was specified'
 
         when:
         file.text =
@@ -714,7 +718,7 @@ class ConfigBuilderTest extends Specification {
         new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
         e = thrown(AbortOperationException)
-        e.message == 'You have requested to run with Docker but no image were specified'
+        e.message == 'You have requested to run with Docker but no image was specified'
 
     }
 
@@ -825,7 +829,7 @@ class ConfigBuilderTest extends Specification {
         then: // command line should override the config file
         config.trace instanceof Map
         config.trace.enabled
-        config.trace.file == 'trace.txt'
+        config.trace.file == 'trace-20221001.txt'
     }
 
     def 'should set session report options' () {
@@ -881,7 +885,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.report instanceof Map
         config.report.enabled
-        config.report.file == 'report.html'
+        config.report.file == 'report-20221001.html'
     }
 
 
@@ -938,7 +942,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.dag instanceof Map
         config.dag.enabled
-        config.dag.file == 'dag.dot'
+        config.dag.file == 'dag-20221001.dot'
     }
 
     def 'should set session weblog options' () {
@@ -1057,7 +1061,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.timeline instanceof Map
         config.timeline.enabled
-        config.timeline.file == 'timeline.html'
+        config.timeline.file == 'timeline-20221001.html'
     }
 
     def 'should set tower options' () {
@@ -1089,6 +1093,137 @@ class ConfigBuilderTest extends Specification {
         config.tower.enabled
         config.tower.endpoint == 'http://bar.com'
 
+        when:
+        config = new ConfigObject()
+        config.tower.endpoint = 'http://foo.com'
+        builder.configRunOptions(config, env, new CmdRun(withTower: '-'))
+        then:
+        config.tower instanceof Map
+        config.tower.enabled
+        config.tower.endpoint == 'http://foo.com'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withTower: '-'))
+        then:
+        config.tower instanceof Map
+        config.tower.enabled
+        config.tower.endpoint == 'https://api.tower.nf'
+    }
+
+    def 'should set wave options' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.wave
+
+        when:
+        config = new ConfigObject()
+        config.wave.endpoint = 'http://foo.com'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.wave instanceof Map
+        !config.wave.enabled
+        config.wave.endpoint == 'http://foo.com'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withWave: 'http://bar.com'))
+        then:
+        config.wave instanceof Map
+        config.wave.enabled
+        config.wave.endpoint == 'http://bar.com'
+
+        when:
+        config = new ConfigObject()
+        config.wave.endpoint = 'http://foo.com'
+        builder.configRunOptions(config, env, new CmdRun(withWave: '-'))
+        then:
+        config.wave instanceof Map
+        config.wave.enabled
+        config.wave.endpoint == 'http://foo.com'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withWave: '-'))
+        then:
+        config.wave instanceof Map
+        config.wave.enabled
+        config.wave.endpoint == 'https://wave.seqera.io'
+    }
+
+    def 'should enable conda env' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.conda
+
+        when:
+        config = new ConfigObject()
+        config.conda.createOptions = 'something'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.conda instanceof Map
+        !config.conda.enabled
+        config.conda.createOptions == 'something'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withConda: 'my-recipe.yml'))
+        then:
+        config.conda instanceof Map
+        config.conda.enabled
+        config.process.conda == 'my-recipe.yml'
+
+        when:
+        config = new ConfigObject()
+        config.conda.enabled = true
+        builder.configRunOptions(config, env, new CmdRun(withConda: 'my-recipe.yml'))
+        then:
+        config.conda instanceof Map
+        config.conda.enabled
+        config.process.conda == 'my-recipe.yml'
+
+        when:
+        config = new ConfigObject()
+        config.process.conda = 'my-recipe.yml'
+        builder.configRunOptions(config, env, new CmdRun(withConda: '-'))
+        then:
+        config.conda instanceof Map
+        config.conda.enabled
+        config.process.conda == 'my-recipe.yml'
+    }
+
+    def 'should disable conda env' () {
+        given:
+        def file = Files.createTempFile('test','config')
+        file.deleteOnExit()
+        file.text =
+                '''
+                conda {
+                    enabled = true
+                }
+                '''
+
+        when:
+        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        def run = new CmdRun(withoutConda: true)
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        then:
+        !config.conda.enabled
+        !config.process.conda
     }
 
     def 'SHOULD SET `RESUME` OPTION'() {

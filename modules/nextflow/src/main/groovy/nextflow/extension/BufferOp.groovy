@@ -179,7 +179,7 @@ class BufferOp {
 
             @Override
             boolean onException(DataflowProcessor processor, Throwable e) {
-                OperatorEx.log.error("@unknown", e)
+                OperatorImpl.log.error("@unknown", e)
                 session.abort(e)
                 return true
             }

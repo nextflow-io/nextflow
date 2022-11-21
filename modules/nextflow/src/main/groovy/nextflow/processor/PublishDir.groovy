@@ -38,7 +38,6 @@ import nextflow.NF
 import nextflow.Session
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
-import nextflow.file.FileTransferPool
 import nextflow.file.TagAwareFile
 import nextflow.util.PathTrie
 /**
@@ -97,6 +96,12 @@ class PublishDir {
      */
     private def tags
 
+    /**
+     * The content type of the file. Currently only supported by AWS S3.
+     * This can be either a MIME type content type string or a Boolean value
+     */
+    private contentType
+
     private PathMatcher matcher
 
     private FileSystem sourceFileSystem
@@ -110,7 +115,7 @@ class PublishDir {
     private String taskName
 
     @Lazy
-    private ExecutorService threadPool = FileTransferPool.getExecutorService()
+    private ExecutorService threadPool = { def sess = Global.session as Session; sess.publishDirExecutorService() }()
 
     void setPath( Closure obj ) {
         setPath( obj.call() as Path )
@@ -186,6 +191,11 @@ class PublishDir {
 
         if( params.tags != null )
             result.tags = params.tags
+
+        if( params.contentType instanceof Boolean )
+            result.contentType = params.contentType
+        else if( params.contentType )
+            result.contentType = params.contentType as String
 
         return result
     }
@@ -295,6 +305,13 @@ class PublishDir {
         if( this.tags!=null && destination instanceof TagAwareFile ) {
             destination.setTags( resolveTags(this.tags) )
         }
+        // apply content type
+        if( contentType && destination instanceof TagAwareFile ) {
+            final String type = this.contentType instanceof Boolean
+                    ? Files.probeContentType(source)
+                    : this.contentType.toString()
+            destination.setContentType(type)
+        }
 
         if( inProcess ) {
             safeProcessFile(source, destination)
@@ -362,7 +379,7 @@ class PublishDir {
             processFileImpl(source, destination)
         }
 
-        notifyFilePublish(destination)
+        notifyFilePublish(destination, source)
     }
 
     private String real0(Path p) {
@@ -399,7 +416,7 @@ class PublishDir {
         final t1 = real0(target)
         final s1 = real0(sourceDir)
         if( t1.startsWith(s1) ) {
-            def msg = "Refuse to publish file since destination path conflicts with the task work directory!"
+            def msg = "Refusing to publish file since destination path conflicts with the task work directory!"
             if( taskName )
                 msg += "\n- offending task  : $taskName"
             msg += "\n- offending file  : $target"
@@ -489,10 +506,10 @@ class PublishDir {
         }
     }
 
-    protected void notifyFilePublish(Path destination) {
+    protected void notifyFilePublish(Path destination, Path source=null) {
         final sess = Global.session
         if (sess instanceof Session) {
-            sess.notifyFilePublish(destination)
+            sess.notifyFilePublish(destination, source)
         }
     }
 

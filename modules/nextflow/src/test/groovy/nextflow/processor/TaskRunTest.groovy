@@ -24,6 +24,7 @@ import ch.grengine.Grengine
 import nextflow.Session
 import nextflow.ast.TaskCmdXform
 import nextflow.container.ContainerConfig
+import nextflow.container.resolver.ContainerInfo
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
@@ -356,6 +357,19 @@ class TaskRunTest extends Specification {
 
     }
 
+    def 'should return container fingerprint' () {
+        given:
+        def HASH = '12345'
+        def task = Spy(TaskRun)
+
+        when:
+        def result = task.getContainerFingerprint()
+        then:
+        task.getContainerInfo0() >> new ContainerInfo('a','b',HASH)
+        and:
+        result == '12345'
+    }
+
 
     def 'should render template and set task attributes'() {
 
@@ -484,7 +498,7 @@ class TaskRunTest extends Specification {
         then:
         task.script == '$BASH_VAR >interpolated value<'
         task.source == '$BASH_VAR #{nxf_var}'
-
+        task.traceScript == '$BASH_VAR >interpolated value<'
     }
 
     def 'should resolve a task template file' () {
@@ -509,7 +523,7 @@ class TaskRunTest extends Specification {
         task.script == 'echo Ciao mondo'
         task.source == 'echo ${say_hello}'
         task.template == file
-
+        task.traceScript == 'template($file)'
     }
 
     def 'should resolve a shell template file, ignore BASH variables and parse !{xxx} ones' () {
@@ -534,7 +548,7 @@ class TaskRunTest extends Specification {
         task.script == 'echo $HOME ~ Foo bar'
         task.source == 'echo $HOME ~ !{user_name}'
         task.template == file
-
+        task.traceScript == 'template($file)'
     }
 
     def 'should resolve a shell template file, ignore BASH variables and parse #{xxx} ones' () {
@@ -560,7 +574,7 @@ class TaskRunTest extends Specification {
         task.script == 'echo $HOME ~ Foo bar'
         task.source == 'echo $HOME ~ #{user_name}'
         task.template == file
-
+        task.traceScript == 'template($file)'
     }
 
     def 'should check container native flag' () {

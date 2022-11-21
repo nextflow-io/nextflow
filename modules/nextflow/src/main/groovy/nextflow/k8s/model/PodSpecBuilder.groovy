@@ -38,6 +38,17 @@ class PodSpecBuilder {
 
     static enum MetaType { LABEL, ANNOTATION }
 
+    static enum SegmentType {
+        PREFIX (253),
+        NAME (63),
+        VALUE (63)
+
+        private final int maxSize;
+        SegmentType(int maxSize) {
+            this.maxSize = maxSize;
+        }
+    }
+
     static @PackageScope AtomicInteger VOLUMES = new AtomicInteger()
 
     String podName
@@ -68,15 +79,21 @@ class PodSpecBuilder {
 
     String memory
 
+    String disk
+
     String serviceAccount
 
     boolean automountServiceAccountToken = true
 
     AcceleratorResource accelerator
 
-    Collection<PodMountSecret> secrets = []
-
     Collection<PodMountConfig> configMaps = []
+
+    Collection<PodMountCsiEphemeral> csiEphemerals = []
+
+    Collection<PodMountEmptyDir> emptyDirs = []
+
+    Collection<PodMountSecret> secrets = []
 
     Collection<PodHostMount> hostMounts = []
 
@@ -167,6 +184,16 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withDisk(String disk) {
+        this.disk = disk
+        return this
+    }
+
+    PodSpecBuilder withDisk(MemoryUnit disk)  {
+        this.disk = "${disk.mega}Mi".toString()
+        return this
+    }
+
     PodSpecBuilder withAccelerator(AcceleratorResource acc) {
         this.accelerator = acc
         return this
@@ -223,6 +250,26 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withCsiEphemerals( Collection<PodMountCsiEphemeral> csiEphemerals ) {
+        this.csiEphemerals.addAll(csiEphemerals)
+        return this
+    }
+
+    PodSpecBuilder withCsiEphemeral( PodMountCsiEphemeral csiEphemeral ) {
+        this.csiEphemerals.add(csiEphemeral)
+        return this
+    }
+
+    PodSpecBuilder withEmptyDirs( Collection<PodMountEmptyDir> emptyDirs ) {
+        this.emptyDirs.addAll(emptyDirs)
+        return this
+    }
+
+    PodSpecBuilder withEmptyDir( PodMountEmptyDir emptyDir ) {
+        this.emptyDirs.add(emptyDir)
+        return this
+    } 
+
     PodSpecBuilder withSecrets( Collection<PodMountSecret> secrets ) {
         this.secrets.addAll(secrets)
         return this
@@ -262,12 +309,18 @@ class PodSpecBuilder {
         // -- env vars
         if( opts.getEnvVars() )
             envVars.addAll( opts.getEnvVars() )
-        // -- secrets
-        if( opts.getMountSecrets() )
-            secrets.addAll( opts.getMountSecrets() )
         // -- configMaps
         if( opts.getMountConfigMaps() )
             configMaps.addAll( opts.getMountConfigMaps() )
+        // -- csi ephemeral volumes
+        if( opts.getMountCsiEphemerals() )
+            csiEphemerals.addAll( opts.getMountCsiEphemerals() )
+        // -- emptyDirs
+        if( opts.getMountEmptyDirs() )
+            emptyDirs.addAll( opts.getMountEmptyDirs() )
+        // -- secrets
+        if( opts.getMountSecrets() )
+            secrets.addAll( opts.getMountSecrets() )
         // -- volume claims 
         if( opts.getVolumeClaims() )
             volumeClaims.addAll( opts.getVolumeClaims() )
@@ -328,12 +381,6 @@ class PodSpecBuilder {
         for( PodEnv entry : this.envVars ) {
             env.add(entry.toSpec())
         }
-
-        final res = [:]
-        if( this.cpus )
-            res.cpu = this.cpus
-        if( this.memory )
-            res.memory = this.memory
 
         final container = [ name: this.podName, image: this.imageName ]
         if( this.command )
@@ -406,13 +453,20 @@ class PodSpecBuilder {
             container.env = env
 
         // add resources
-        if( res ) {
-            container.resources = [requests: res, limits: new HashMap<>(res)]
+        if( this.cpus ) {
+            container.resources = addCpuResources(this.cpus, container.resources as Map)
         }
 
-        // add gpu settings
-        if( accelerator ) {
-            container.resources = addAcceleratorResources(accelerator, container.resources as Map)
+        if( this.memory ) {
+            container.resources = addMemoryResources(this.memory, container.resources as Map)
+        }
+
+        if( this.accelerator ) {
+            container.resources = addAcceleratorResources(this.accelerator, container.resources as Map)
+        }
+
+        if( this.disk ) {
+            container.resources = addDiskResources(this.disk, container.resources as Map)
         }
 
         // add storage definitions ie. volumes and mounts
@@ -427,7 +481,7 @@ class PodSpecBuilder {
             volumes << [name: volName, persistentVolumeClaim: [claimName: claimName]]
         }
 
-        // -- volume claims
+        // -- persistent volume claims
         for( PodVolumeClaim entry : volumeClaims ) {
             //check if we already have a volume for the pvc
             final name = namesMap.get(entry.claimName)
@@ -445,17 +499,31 @@ class PodSpecBuilder {
             configMapToSpec(name, entry, mounts, volumes)
         }
 
-        // host mounts
+        // -- csi ephemeral volumes
+        for( PodMountCsiEphemeral entry : csiEphemerals ) {
+            final name = nextVolName()
+            mounts << [name: name, mountPath: entry.mountPath, readOnly: entry.csi.readOnly ?: false]
+            volumes << [name: name, csi: entry.csi]
+        }
+
+        // -- emptyDir volumes
+        for( PodMountEmptyDir entry : emptyDirs ) {
+            final name = nextVolName()
+            mounts << [name: name, mountPath: entry.mountPath]
+            volumes << [name: name, emptyDir: entry.emptyDir]
+        }
+
+        // -- secret volumes
+        for( PodMountSecret entry : secrets ) {
+            final name = nextVolName()
+            secretToSpec(name, entry, mounts, volumes)
+        }
+
+        // -- host path volumes
         for( PodHostMount entry : hostMounts ) {
             final name = nextVolName()
             mounts << [name: name, mountPath: entry.mountPath]
             volumes << [name: name, hostPath: [path: entry.hostPath]]
-        }
-
-        // secret volumes
-        for( PodMountSecret entry : secrets ) {
-            final name = nextVolName()
-            secretToSpec(name, entry, mounts, volumes)
         }
 
 
@@ -497,7 +565,50 @@ class PodSpecBuilder {
     }
 
     @PackageScope
-    @CompileDynamic
+    Map addCpuResources(Integer cpus, Map res) {
+        if( res == null )
+            res = [:]
+
+        final req = res.requests as Map ?: new LinkedHashMap<>(10)
+        req.cpu = cpus
+        res.requests = req
+
+        return res
+    }
+
+    @PackageScope
+    Map addMemoryResources(String memory, Map res) {
+        if( res == null )
+            res = new LinkedHashMap(10)
+
+        final req = res.requests as Map ?: new LinkedHashMap(10)
+        req.memory = memory
+        res.requests = req
+
+        final lim = res.limits as Map ?: new LinkedHashMap(10)
+        lim.memory = memory
+        res.limits = lim
+
+        return res
+    }
+
+    @PackageScope
+    Map addDiskResources(String diskRequest, Map res) {
+        if( res == null )
+            res = new LinkedHashMap(10)
+
+        final req = res.requests as Map ?: new LinkedHashMap(10)
+        req.'ephemeral-storage' = diskRequest
+        res.requests = req
+
+        final lim = res.limits as Map ?: new LinkedHashMap(10)
+        lim.'ephemeral-storage' = diskRequest
+        res.limits = lim
+
+        return res
+    }
+
+    @PackageScope
     String getAcceleratorType(AcceleratorResource accelerator) {
 
         def type = accelerator.type ?: 'nvidia.com'
@@ -515,7 +626,6 @@ class PodSpecBuilder {
 
 
     @PackageScope
-    @CompileDynamic
     Map addAcceleratorResources(AcceleratorResource accelerator, Map res) {
 
         if( res == null )
@@ -524,12 +634,12 @@ class PodSpecBuilder {
         def type = getAcceleratorType(accelerator)
 
         if( accelerator.request ) {
-            final req = res.requests ?: new LinkedHashMap<>(2)
+            final req = res.requests as Map ?: new LinkedHashMap<>(2)
             req.put(type, accelerator.request)
             res.requests = req
         }
         if( accelerator.limit ) {
-            final lim = res.limits ?: new LinkedHashMap<>(2)
+            final lim = res.limits as Map ?: new LinkedHashMap<>(2)
             lim.put(type, accelerator.limit)
             res.limits = lim
         }
@@ -568,9 +678,9 @@ class PodSpecBuilder {
     protected Map sanitize(Map map, MetaType kind) {
         final result = new HashMap(map.size())
         for( Map.Entry entry : map ) {
-            final key = sanitize0(entry.key, kind)
+            final key = sanitizeKey(entry.key as String, kind)
             final value = (kind == MetaType.LABEL)
-                ? sanitize0(entry.value, kind)
+                ? sanitizeValue(entry.value, kind, SegmentType.VALUE)
                 : entry.value
 
             result.put(key, value)
@@ -578,15 +688,30 @@ class PodSpecBuilder {
         return result
     }
 
+    protected String sanitizeKey(String value, MetaType kind) {
+        final parts = value.tokenize('/')
+        
+        if (parts.size() == 2) {
+            return "${sanitizeValue(parts[0], kind, SegmentType.PREFIX)}/${sanitizeValue(parts[1], kind, SegmentType.NAME)}"
+        }
+        if( parts.size() == 1 ) {
+            return sanitizeValue(parts[0], kind, SegmentType.NAME)
+        }
+        else {
+            throw new IllegalArgumentException("Invalid key in pod ${kind.toString().toLowerCase()} -- Key can only contain exactly one '/' character")
+        }
+    }
+
+
     /**
      * Sanitize a string value to contain only alphanumeric characters, '-', '_' or '.',
      * and to start and end with an alphanumeric character.
      */
-    protected String sanitize0(value, MetaType kind) {
+    protected String sanitizeValue(value, MetaType kind, SegmentType segment) {
         def str = String.valueOf(value)
-        if( str.length() > 63 ) {
-            log.debug "K8s $kind exceeds allowed size: 63 -- offending str=$str"
-            str = str.substring(0,63)
+        if( str.length() > segment.maxSize ) {
+            log.debug "K8s $kind $segment exceeds allowed size: $segment.maxSize -- offending str=$str"
+            str = str.substring(0,segment.maxSize)
         }
         str = str.replaceAll(/[^a-zA-Z0-9\.\_\-]+/, '_')
         str = str.replaceAll(/^[^a-zA-Z0-9]+/, '')

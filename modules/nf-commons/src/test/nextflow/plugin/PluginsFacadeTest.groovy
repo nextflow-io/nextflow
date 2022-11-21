@@ -67,7 +67,8 @@ class PluginsFacadeTest extends Specification {
         def defaults = new DefaultPlugins(plugins: [
                 'nf-amazon': new PluginSpec('nf-amazon', '0.1.0'),
                 'nf-google': new PluginSpec('nf-google', '0.1.0'),
-                'nf-tower': new PluginSpec('nf-tower', '0.1.0')
+                'nf-tower': new PluginSpec('nf-tower', '0.1.0'),
+                'nf-wave': new PluginSpec('nf-wave', '0.1.0')
         ])
         and:
         def handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
@@ -85,6 +86,12 @@ class PluginsFacadeTest extends Specification {
 
         when:
         handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
+        result = handler.pluginsRequirement([tower:[enabled:false]])
+        then:
+        result == []
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
         result = handler.pluginsRequirement([tower:[enabled:true]])
         then:
         result == [ new PluginSpec('nf-tower', '0.1.0') ]
@@ -94,6 +101,12 @@ class PluginsFacadeTest extends Specification {
         result = handler.pluginsRequirement([:])
         then:
         result == [ new PluginSpec('nf-tower', '0.1.0') ]
+
+        when:
+        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
+        result = handler.pluginsRequirement([wave:[enabled:true]])
+        then:
+        result == [ new PluginSpec('nf-wave', '0.1.0') ]
 
         when:
         handler = new PluginsFacade(defaultPlugins: defaults, env: [:])

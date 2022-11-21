@@ -27,10 +27,8 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.exception.DuplicateModuleFunctionException
-import nextflow.exception.DuplicateModuleIncludeException
 import nextflow.exception.MissingModuleComponentException
-import nextflow.script.bundle.ModuleBundle
-
+import nextflow.script.bundle.ResourcesBundle
 /**
  * Holds a nextflow script meta-data such as the
  * defines processes and workflows, the included modules
@@ -111,7 +109,6 @@ class ScriptMeta {
         this.clazz = script.class
         for( def entry : definedFunctions0(script) ) {
             addDefinition(entry)
-            incFunctionCount(entry.name)
         }
     }
 
@@ -144,7 +141,25 @@ class ScriptMeta {
             log.warn(msg)
         }
     }
-    
+
+    void checkComponentName(ComponentDef component, String name) {
+        if( component !instanceof ProcessDef && component !instanceof FunctionDef ) {
+            return
+        }
+        if (functionsCount.get(component.name)) {
+            final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
+            if (NF.isStrictMode())
+                throw new DuplicateModuleFunctionException(msg)
+            log.warn(msg)
+        }
+        if (imports.get(component.name)) {
+            final msg = "A process with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
+            if (NF.isStrictMode())
+                throw new DuplicateModuleFunctionException(msg)
+            log.warn(msg)
+        }
+    }
+
     /*
      * This method invocation is made by the NF AST transformer to pass
      * the process names declared in the workflow script. This is only required
@@ -173,14 +188,16 @@ class ScriptMeta {
 
     static List<FunctionDef> definedFunctions0(BaseScript script) {
         final allMethods = script.class.getDeclaredMethods()
-        final result = new ArrayList(allMethods.length)
+        final result = new ArrayList<FunctionDef>(allMethods.length)
         for( Method method : allMethods ) {
             if( !Modifier.isPublic(method.getModifiers()) ) continue
             if( Modifier.isStatic(method.getModifiers())) continue
             if( method.name.startsWith('super$')) continue
             if( method.name in INVALID_FUNCTION_NAMES ) continue
 
-            result.add(new FunctionDef(script, method))
+            // If method is already into the list, maybe with other signature, it's not necessary to include it again
+            if( result.find{it.name == method.name}) continue
+            result.add(new FunctionDef(script, method.name))
         }
         return result
     }
@@ -189,7 +206,11 @@ class ScriptMeta {
         final name = component.name
         if( !module && NF.hasOperator(name) )
             log.warn "${component.type.capitalize()} with name '$name' overrides a built-in operator with the same name"
+        checkComponentName(component, name)
         definitions.put(component.name, component)
+        if( component instanceof FunctionDef ){
+            incFunctionCount(name)
+        }
         return this
     }
 
@@ -297,12 +318,7 @@ class ScriptMeta {
         assert component
 
         final name = alias ?: component.name
-        final existing = getComponent(name)
-        if (existing) {
-            def msg = "A ${existing.type} with name '$name' is already defined in the current context"
-            throw new DuplicateModuleIncludeException(msg)
-        }
-
+        checkComponentName(component, name)
         if( name != component.name ) {
             imports.put(name, component.cloneWithName(name))
         }
@@ -312,13 +328,13 @@ class ScriptMeta {
     }
 
     @Memoized
-    ModuleBundle getModuleBundle() {
+    ResourcesBundle getModuleBundle() {
         if( !scriptPath )
             throw new IllegalStateException("Module scriptPath has not been defined yet")
         if( scriptPath.getName()!='main.nf' )
             return null
-        final bundlePath = scriptPath.resolveSibling('bundle')
-        return ModuleBundle.scan(bundlePath)
+        final bundlePath = scriptPath.resolveSibling('resources')
+        return ResourcesBundle.scan(bundlePath)
     }
 
 }

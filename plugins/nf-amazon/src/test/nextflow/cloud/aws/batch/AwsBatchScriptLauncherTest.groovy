@@ -159,7 +159,7 @@ class AwsBatchScriptLauncherTest extends Specification {
         then:
         binding.task_env == '''\
                     aws s3 cp --recursive --only-show-errors s3://bucket/bin $PWD/nextflow-bin
-                    chmod +x $PWD/nextflow-bin/*
+                    chmod +x $PWD/nextflow-bin/* || true
                     export PATH=$PWD/nextflow-bin:$PATH
                     export FOO="xxx"
                     '''.stripIndent()
@@ -344,6 +344,33 @@ class AwsBatchScriptLauncherTest extends Specification {
 
         folder.resolve('.command.run').text.contains('NXF_SCRATCH="$(set +u; nxf_mktemp /foo/bar/tmp)"')
 
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'test should disable scratch'() {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        /*
+         * simple bash run
+         */
+        when:
+        def opts = new AwsOptions(cliPath:'/conda/bin/aws', region: 'eu-west-1')
+        def bash = new AwsBatchScriptLauncher([
+                name: 'Hello 1',
+                workDir: folder,
+                script: 'echo Hello world!',
+                scratch: false
+        ] as TaskBean, opts)
+        bash.build()
+
+        then:
+        Files.exists(folder.resolve('.command.sh'))
+        Files.exists(folder.resolve('.command.run'))
+
+        folder.resolve('.command.run').text.contains("NXF_SCRATCH=''")
 
         cleanup:
         folder?.deleteDir()

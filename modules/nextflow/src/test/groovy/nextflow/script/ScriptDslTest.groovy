@@ -537,7 +537,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(MissingProcessException)
-        err.message == "Missing process or function with name 'hello'"
+        err.message == "Missing process or function hello()"
     }
 
 
@@ -564,7 +564,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(MissingProcessException)
-        err.message == "Missing process or function with name 'sleeper_2' -- Did you mean 'sleeper' instead?"
+        err.message == "Missing process or function sleeper_2() -- Did you mean 'sleeper' instead?"
     }
 
     def 'should fail because is not defined /3' () {
@@ -593,7 +593,7 @@ class ScriptDslTest extends Dsl2Spec {
         then:
         def err = thrown(MissingProcessException)
         err.message ==  '''\
-                        Missing process or function with name 'sleeper3'
+                        Missing process or function sleeper3()
                         
                         Did you mean any of these instead?
                           sleeper1

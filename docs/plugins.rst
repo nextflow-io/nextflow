@@ -77,4 +77,27 @@ the ``selectFromTable`` alias in the script.
     The prefix ``plugin/`` must precede the plugin name in the include ``from`` statement.
 
 
+Import custom functions from plugin
+===================================
+
+In the same way, as of version `22.09.x`, a plugin can export custom functions.
+
+For example, a plugin can export a util function to reverse a String::
+
+     @nextflow.plugin.extension.Function
+     String reverseString( String origin ){
+          origin.reverse()
+     }
+
+And this function can be used by the pipeline::
+
+    include { reverseString } from 'plugin/my-plugin'
+
+    channel.of( reverseString('hi') )
+
+The above snipped includes a function from the plugin and allows the channel to call it directly.
+
+In the same way as operators, functions can be aliased::
+
+    include { reverseString as anotherReverseMethod } from 'plugin/my-plugin'
 

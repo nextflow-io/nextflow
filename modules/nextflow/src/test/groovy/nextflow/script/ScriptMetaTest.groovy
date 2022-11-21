@@ -3,7 +3,7 @@ package nextflow.script
 import java.nio.file.Files
 
 import groovy.transform.InheritConstructors
-import nextflow.exception.DuplicateModuleIncludeException
+import nextflow.NF
 import test.Dsl2Spec
 import test.TestHelper
 
@@ -19,6 +19,10 @@ class ScriptMetaTest extends Dsl2Spec {
         protected Object runScript() { null }
     }
 
+    def setupSpec(){
+        NF.init()
+    }
+
     def 'should return all defined names' () {
 
         given:
@@ -26,7 +30,7 @@ class ScriptMetaTest extends Dsl2Spec {
 
         def proc1 = new ProcessDef(script, Mock(Closure), 'proc1')
         def proc2 = new ProcessDef(script, Mock(Closure), 'proc2')
-        def func1 = new FunctionDef(name: 'func1')
+        def func1 = new FunctionDef(name: 'func1', alias: 'func1')
         def work1 = new WorkflowDef(name:'work1')
 
         def meta = new ScriptMeta(script)
@@ -61,19 +65,19 @@ class ScriptMetaTest extends Dsl2Spec {
         def meta3 = new ScriptMeta(script3)
 
         // defs in the root script
-        def func1 = new FunctionDef(name: 'func1')
+        def func1 = new FunctionDef(name: 'func1', alias: 'func1')
         def proc1 = new ProcessDef(script1, Mock(Closure), 'proc1')
         def work1 = new WorkflowDef(name:'work1')
         meta1.addDefinition(proc1, func1, work1)
 
         // defs in the second script imported in the root namespace
-        def func2 = new FunctionDef(name: 'func2')
+        def func2 = new FunctionDef(name: 'func2', alias: 'func2')
         def proc2 = new ProcessDef(script2, Mock(Closure), 'proc2')
         def work2 = new WorkflowDef(name:'work2')
         meta2.addDefinition(proc2, func2, work2)
 
         // defs in the third script imported in a separate namespace
-        def func3 = new FunctionDef(name: 'func3')
+        def func3 = new FunctionDef(name: 'func3', alias: 'func3')
         def proc3 = new ProcessDef(script2, Mock(Closure), 'proc3')
         def work3 = new WorkflowDef(name:'work3')
         meta3.addDefinition(proc3, func3, work3)
@@ -120,7 +124,6 @@ class ScriptMetaTest extends Dsl2Spec {
         meta.addModule0(comp1)
         then:
         2 * comp1.getName() >> 'foo'
-        1 * meta.getComponent('foo') >> null
         meta.@imports.get('foo') == comp1
 
         // should a component to imports with alias name
@@ -129,13 +132,12 @@ class ScriptMetaTest extends Dsl2Spec {
         meta.addModule0(comp1, 'bar')
         then:
         1 * comp1.getName() >> 'foo'
-        1 * meta.getComponent('bar') >> null
         1 * comp1.cloneWithName('bar') >> comp2
         meta.@imports.get('bar') == comp2
 
     }
 
-    def 'should throw a duplicate process name exception' () {
+    def 'should not throw a duplicate process name exception' () {
         given:
         def meta = Spy(ScriptMeta)
         def comp1 = Mock(ComponentDef)
@@ -144,10 +146,7 @@ class ScriptMetaTest extends Dsl2Spec {
         meta.@imports.clear()
         meta.addModule0(comp1)
         then:
-        1 * comp1.getName() >> 'foo'
-        1 * meta.getComponent('foo') >> comp1
-
-        thrown(DuplicateModuleIncludeException)
+        2 * comp1.getName() >> 'foo'
     }
 
     def 'should get module bundle' () {
@@ -155,14 +154,14 @@ class ScriptMetaTest extends Dsl2Spec {
         def folder = TestHelper.createInMemTempDir()
         and:
         def mod = folder.resolve('mod1'); mod.mkdir()
-        mod.resolve('bundle').mkdir()
+        mod.resolve('resources').mkdir()
         and:
         def scriptPath = mod.resolve('main.nf')
         def dockerPath = mod.resolve('Dockerfile')
         Files.createFile(scriptPath)
         Files.createFile(dockerPath)
-        Files.createFile(mod.resolve('bundle/foo.txt'))
-        Files.createFile(mod.resolve('bundle/bar.txt'))
+        Files.createFile(mod.resolve('resources/foo.txt'))
+        Files.createFile(mod.resolve('resources/bar.txt'))
         and:
         def meta = new ScriptMeta(scriptPath: scriptPath)
 

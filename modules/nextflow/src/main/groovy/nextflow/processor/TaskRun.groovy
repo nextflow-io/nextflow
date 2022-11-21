@@ -26,8 +26,8 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.conda.CondaCache
-import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
+import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
@@ -35,10 +35,9 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
-import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
-import nextflow.script.bundle.ModuleBundle
+import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
@@ -325,6 +324,8 @@ class TaskRun implements Cloneable {
 
     TaskProcessor.RunType runType = TaskProcessor.RunType.SUBMIT
 
+    BodyDef body
+
     TaskRun clone() {
         final taskClone = (TaskRun)super.clone()
         taskClone.context = context.clone()
@@ -343,6 +344,14 @@ class TaskRun implements Cloneable {
         return copy
     }
 
+    String lazyName() {
+        if( name )
+            return name
+        // fallback on the current task index, however do not set the 'name' attribute
+        // so it has a chance to recover the 'sampleId' at next invocation
+        return processor.singleton ? processor.name : "$processor.name ($index)"
+    }
+
     String getName() {
         if( name )
             return name
@@ -357,10 +366,11 @@ class TaskRun implements Cloneable {
             catch( IllegalStateException e ) {
                 log.debug "Cannot access `tag` property for task: $baseName ($index)"
             }
+            catch( Exception e ) {
+                log.debug "Unable to evaluate `tag` property for task: $baseName ($index)", e
+            }
 
-        // fallback on the current task index, however do not set the 'name' attribute
-        // so it has a chance to recover the 'sampleId' at next invocation
-        return processor.singleton ? baseName : "$baseName ($index)"
+        return lazyName()
     }
 
     String getScript() {
@@ -371,6 +381,13 @@ class TaskRun implements Cloneable {
             return script?.toString()
         }
     }
+
+    String getTraceScript() {
+        return template!=null && body.source
+            ? body.source
+            : getScript()
+    }
+
 
     /**
      * Check whenever there are values to be cached
@@ -563,36 +580,44 @@ class TaskRun implements Cloneable {
 
     @Memoized
     Path getCondaEnv() {
-        if( !config.conda )
+        if( !config.conda || !processor.session.getCondaConfig().isEnabled() )
             return null
 
-        final cfg = processor.session.config.conda as Map ?: Collections.emptyMap()
-        final cache = new CondaCache(new CondaConfig(cfg))
+        final cache = new CondaCache(processor.session.getCondaConfig())
         cache.getCachePathFor(config.conda as String)
+    }
+
+    @Memoized
+    protected ContainerInfo getContainerInfo0() {
+        // fetch the container image from the config
+        def configImage = config.getContainer()
+        // the boolean `false` literal can be provided
+        // to signal the absence of the container
+        if( configImage == false )
+            return null
+        if( !configImage )
+            configImage = null
+
+        final res = ContainerResolverProvider.load()
+        final info = res.resolveImage(this, configImage as String)
+        return info
     }
 
     /**
      * The name of a docker container where the task is supposed to run when provided
      */
     String getContainer() {
-        // fetch the container image from the config
-        def imageImage = config.getContainer()
-        // the boolean `false` literal can be provided
-        // to signal the absence of the container
-        if( imageImage == false )
-            return null
-        if( !imageImage )
-            imageImage = null
-
-        final res = ContainerResolverProvider.load()
-        final target = res.resolveImage(this, imageImage as String)
-        return target
+        final info = getContainerInfo0()
+        return info?.target
     }
 
-    ModuleBundle getModuleBundle() {
-        final script = this.getProcessor().getOwnerScript()
-        final meta = ScriptMeta.get(script)
-        return meta != null ? meta.getModuleBundle() : null
+    String getContainerFingerprint() {
+        final info = getContainerInfo0()
+        return info?.hashKey
+    }
+
+    ResourcesBundle getModuleBundle() {
+        return this.getProcessor().getModuleBundle()
     }
 
     /**
@@ -651,6 +676,7 @@ class TaskRun implements Cloneable {
         this.code.setResolveStrategy(Closure.DELEGATE_ONLY)
 
         // -- set the task source
+        this.body = body
         // note: this may be overwritten when a template file is used
         this.source = body.source
 
@@ -661,7 +687,7 @@ class TaskRun implements Cloneable {
         // when the task is implemented by a script string
         // Invoke the closure which returns the script with all the variables replaced with the actual values
         try {
-            def result = code.call()
+            final result = code.call()
             if ( result instanceof Path ) {
                 script = renderTemplate(result, body.isShell)
             }

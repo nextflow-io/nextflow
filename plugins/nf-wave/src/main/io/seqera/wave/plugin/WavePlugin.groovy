@@ -17,16 +17,23 @@
 
 package io.seqera.wave.plugin
 
+import io.seqera.wave.plugin.cli.WaveCmdEntry
+import nextflow.cli.PluginExecAware
 import nextflow.plugin.BasePlugin
 import org.pf4j.PluginWrapper
-
 /**
  * Wave plugin entrypoint
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class WavePlugin extends BasePlugin {
+class WavePlugin extends BasePlugin implements PluginExecAware {
+
+    @Delegate
+    private WaveCmdEntry cmd
+
     WavePlugin(PluginWrapper wrapper) {
         super(wrapper)
+        this.cmd = new WaveCmdEntry()
     }
+
 }
