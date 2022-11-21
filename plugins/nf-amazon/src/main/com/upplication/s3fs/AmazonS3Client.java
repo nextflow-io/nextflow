@@ -518,15 +518,43 @@ public class AmazonS3Client {
 		catch (AmazonS3Exception e) {
 			if( e.getMessage().contains("storage class") ) {
 				log.warn("S3 download s3://{}/{} failed due to storage class, attempting to restore from Glacier", source.getBucket(), source.getKey());
-
-				int expirationInDays = 1;
-				client.restoreObject(source.getBucket(), source.getKey(), expirationInDays);
-
+				restoreFromGlacier(source.getBucket(), source.getKey());
 				downloadFile(source, target);
 			}
 			else {
 				throw e;
 			}
+		}
+	}
+
+	protected void restoreFromGlacier(String bucketName, String key) {
+		int expirationInDays = 1;
+		int sleepMillis = 5000;
+
+		try {
+			client.restoreObject(bucketName, key, expirationInDays);
+		}
+		catch (AmazonS3Exception e) {
+			if( e.getMessage().contains("RestoreAlreadyInProgress") ) {
+				log.debug("S3 restore s3://{}/{} already in progress", bucketName, key);
+			}
+			else {
+				throw e;
+			}
+		}
+
+		try {
+			boolean ongoingRestore = true;
+			while( ongoingRestore ) {
+				Thread.currentThread().sleep(sleepMillis);
+				ongoingRestore = client.getObjectMetadata(bucketName, key).getOngoingRestore();
+
+				log.debug("S3 restore s3://{}/{} ongoing...", bucketName, key);
+			}
+		}
+		catch (InterruptedException e) {
+			log.debug("S3 restore s3://{}/{} interrupted", bucketName, key);
+			Thread.currentThread().interrupt();
 		}
 	}
 

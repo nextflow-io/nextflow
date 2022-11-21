@@ -1337,5 +1337,21 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         cleanup:
         deleteBucket(bucket1)
     }
-    
+
+    def 'should restore and download object from Glacier' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def target = folder.resolve('archive.txt')
+        and:
+        def source = s3path("s3://nextflow-ci-dev/archive.txt")
+
+        when:
+        FileHelper.copyPath(source, target)
+        then:
+        target.exists()
+        
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }
