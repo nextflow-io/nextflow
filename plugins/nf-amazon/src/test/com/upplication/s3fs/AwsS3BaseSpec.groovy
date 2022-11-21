@@ -22,6 +22,11 @@ trait AwsS3BaseSpec {
 
     abstract AmazonS3 getS3Client()
 
+    S3Path s3path(String path) {
+        path = path.replaceAll(~'^s3://(?!/)','s3:///')
+        return (S3Path) Path.of(new URI(path))
+    }
+
     String createBucket(String bucketName) {
         s3Client.createBucket(bucketName)
         return bucketName

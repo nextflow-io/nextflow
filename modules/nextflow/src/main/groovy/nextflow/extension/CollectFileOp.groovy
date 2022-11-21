@@ -32,7 +32,7 @@ import nextflow.util.CacheHelper
 import static nextflow.util.CacheHelper.HashMode
 import static nextflow.util.CheckHelper.checkParams
 /**
- * Implements the body of {@link OperatorEx#collectFile(groovyx.gpars.dataflow.DataflowReadChannel)} operator
+ * Implements the body of {@link OperatorImpl#collectFile(groovyx.gpars.dataflow.DataflowReadChannel)} operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -80,11 +80,8 @@ class CollectFileOp {
         defineStoreDirAndFileName()
         defineHashingParams()
 
-        Global.onShutdown {
-            // make sure to delete the collector on termination
-            collector.safeClose()
-        }
-
+        // make sure to delete the collector on termination
+        Global.onCleanup((it) -> collector.safeClose())
     }
 
     protected FileCollector getCollector() {

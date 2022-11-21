@@ -92,7 +92,7 @@ class ChannelEx {
     @Deprecated
     static DataflowWriteChannel close(DataflowWriteChannel source) {
         if( NF.isDsl2() )
-            throw new DeprecationException("Channel `close` method is not supported any more")
+            throw new DeprecationException("Channel `close` method is not supported anymore")
         return CH.close0(source)
     }
 

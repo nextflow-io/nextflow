@@ -1,5 +1,228 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.10.2 - 13 Nov 2022
+- Fix initialize the plugin once it's defined (#3360) [dd150b92]
+- Fix tags typo in docs (#3355) [ci skip] [b82df4e0]
+- Fix unexpected error on task resume [ci fast] [e02e8c27]
+- Fix template script in trace record [cf828a68]
+- Fix ip v6 support for K8s executor [ci fast] [53af5a7c]
+- Fix refresh token for tower served resources [9dec2b66] #3366
+- Fix full path scheme on error [1399f451]
+- Add note to some process implicit variables [ci skip] (#3373) [0374f63a]
+- Add retry policy on plugin download failure [e8dbec3f]
+- Add examples of when dynamic output filenames are important (#3275) [ci skip] [72a17306]
+- Update google batch java sdk, add serviceAccountEmail and installGpuDrivers (#3324) [7f7007a8]
+- Update github actions to v3 (#3376) [ci fast] [d3b4a837]
+- Update error messages and docs with new report filename behavior [ci fast] [f5725480]
+- Bump nf-tower@1.5.6 [164edf7c]
+- Bump nf-google@1.4.5 [30cb118d]
+
+22.10.1 - 27 Oct 2022
+- Fix mount pwd in the container when work dir is a symlink [ca397181] [b5b7d3cd] <Paolo Di Tommaso>
+- Fix secrets command name in the CLI (#3320) [ci fast] [321486df] <Marcel Ribeiro Dantas>
+- Fix ver num rendering [ci fast] #3226 [5312a25e] <Paolo Di Tommaso>
+- Fix K8s config namespace is not applied [b3d33e3b] <Paolo Di Tommaso>
+- Fix log fetching from remote storage [be356939] [3efa1a20] <Paolo Di Tommaso>
+- Update docs about default mail ssl protocol [ci skip] (#3299) [15ffffc1] <Ben Sherman>
+- Update docs repeated words from documentation (#3311) [ci skip] [d59ea186] <Marcel Ribeiro Dantas>
+- Update docs to clarify the difference between collect and toList (#3276) [7ee2b008] <Marcel Ribeiro Dantas>
+- Update docs [516a7441] <Paolo Di Tommaso>
+- Update docs adding Fusion [11eac707] <Paolo Di Tommaso>
+
+22.10.0 - 13 Oct 2022
+- Fix timestamp encoding [47a3a3c4]
+- Minor type change in Bridge executor [1f446ee1]
+- Bump nf-wave@0.5.2 [326803ff]
+
+22.10.0-RC3 - 7 Oct 2022 
+- Fix K8s context selection [58b354e6]
+
+22.10.0-RC2 - 7 Oct 2022 
+- Improve K8s labels/annotation validation [a569afdf]
+- Bump fusion final url [80398880]
+- Bump nf-wave@0.5.1 [a2b44c4d]
+- Update docs 
+
+22.10.0-RC1 - 3 Oct 2022
+- Add module binaries enabling flag + docs [c50e178f] <Paolo Di Tommaso>
+- Add timestamp and fingerprint to wave request [a5a7e138] <Paolo Di Tommaso>
+- Add missing inputs to the incremental task "test" (#1442) [ci fast] [f85d59a6] <Thodoris Sotiropoulos>
+- Add support for refresh token to Wave [ed9f25f1] <Paolo Di Tommaso>
+- Add pretty option to dump operator [ci fast] [4218b299] <Paolo Di Tommaso>
+- Add support for custom S3 content type [02afa332] <Paolo Di Tommaso>
+- Get rid of  file name rolling for report files [a762ed59] <Paolo Di Tommaso>
+- Ignore JGit warning when missing git tool [a94fa9c1] <Paolo Di Tommaso>
+- Remove jobname limit to HyperQueue executor (#3251) [99604ccb] <Henrik Nortamo>
+- Rename baseImage to mambaImage [ci fast] [50086028] <Paolo Di Tommaso>
+- Fix failing test [ci fast] [e6790003] <Paolo Di Tommaso>
+- Fix K8s cluster token when using serviceAccount [c3364d0f] <Paolo Di Tommaso>
+- Fix hanging test [44c04874] <Paolo Di Tommaso>
+- Improve docs (#3212) [ci skip] [5d80388c] <Marcel Ribeiro Dantas>
+- Bump fusion snapshot [ci skip] [8e03f655] <Paolo Di Tommaso>
+- Bump wave endpoint [a044cc6a] <Paolo Di Tommaso>
+- Bump nf-wave@0.4.5 [7424dc4b] <Paolo Di Tommaso>
+- Bump fusion config v0.5.1 [4dbdf112] <Paolo Di Tommaso>
+- Bump nf-wave@0.5.0
+- Bump nf-tower@1.5.5
+- Bump nf-amazon@1.11.0
+
+22.09.7-edge - 28 Sep 2022
+- Fix Issue copying file bigger than 5gb to S3 [18fd9a44]
+- Fix chmod command to accommodate hidden files in bindir (or empty bindir) (#3247) [a0fcc7b0] <Abhinav Sharma>
+- Bump nf-amazon@1.10.7 [f7f96e6f] 
+
+22.09.6-edge - 26 Sep 2022
+- Add SocketTimeoutException to k8s client request retry [527e0d5d]
+- Add MaxErrorRetry to K8s config [58be2128]
+- Add tags propagation to AWS Batch [d64eeffc]
+- Fix task resume when updating fusion layer [f38fd2db]
+- Fix Channel merge still deprecated for DSL2 (#3220) [d27384d2] <Kibubu>
+- Apply GCP resourceLabels to the VirtualMachine (#3234) [2275c03c] <Doug Daniels>
+- Update Google Batch mount point with the requirements [5aec28ac]
+- Improve wave error reporting [73842215]
+- Bump fusion 0.4.x [26f1f896]
+
+22.09.5-edge - 21 Sep 2022
+- Use default wave strategy [abbfa7f4]
+- Handle errors reported by tower report writer [0e814647]
+- Fix AWS S3 copy object [b3b90d23]
+
+22.09.4-edge - 19 Sep 2022
+- Add Fusion display name [f789d457]
+- Add container cleanup [cd2ae7dc]
+- Add Wave interactive debug session [ce7fa651]
+- Add support for wave build and cache repositories[692043ff]
+- Add shutdown to Google Batch client  [8f413cf7]
+- Add native_id to Google Batch handler [352b4239]
+- Add java sts library to enable use of IRSA in k8s (#3207) [62df42c3] <Vishwas>
+- Add support for module custon bin dirs [77f55262]
+- Add support for tower token to wave client [928d5b04]
+- Update CLI docs (#3200) [8acebee6] <Marcel Ribeiro Dantas>
+- Fix issue with empty report file [9cc4f079]
+- Do not return resource bundle for root module [775c7ed9]
+- Improve tower config [ee03c243]
+- Bump groovy 3.0.13 [4a17e198]
+
+22.09.3-edge - 10 Sep 2022
+- Add fusion support to K8s executor (#3142) [6bb27b32]
+- Fix shutdown/cleanup hooks invocation [f4185070]
+- Fix Use smaller buffer size for S3 stream uploader [8c643074] [9926d15d]
+- Fix Azure NPE on missing pool opts [d5c0aabd]
+- Fix handling of targetDir when using Fusion fs [2091b272]
+- Document aws.batch.retryMode config  (#3195) [56f75e0c] <Abhinav Sharma>
+
+22.09.2-edge - 7 Sep 2022
+- Fix thread pool race condition on shutdown [8d2b0587]
+- Fix Intermediate multipart upload requires a minimum size (#3193) [0b66aed6] <Jorge Aguilera>
+- Fix fusion enable detection [3ef91512]
+- Add before-afterScript warning to docs (#3167) [09464590] <Kibubu>
+- Add httpReadTimeout and httpConnectTimeout config to K8s client [064f9bc4]
+- Add support for Wave build & cache repos [98a275ba]
+- Finalise secrets feature (#3161) [49021b82]
+- Update executor retry config docs (#3001) [aed6c234]
+- Change Azure test pool name [0c724504]
+- Improve Wave error reporting [b11d0f11]
+- Remove unneeded launcher file remapping [a255118d] <Paolo Di Tommaso>
+- Update Azure vm types [80f5fbe4]
+- Update docs logos (#3174) [529bad81] <Phil Ewels>
+
+22.09.1-edge - 1 Sep 2022 
+- Add support for Charliecloud v0.28 (#3116) [84f43a33] <Patrick Hüther>
+- Add Support for EC-encrypted keys for K8s client [fd759d09]
+- Add support for Bridge batch scheduler (#3106) [343c17e6] <Eric Bonnet>
+- Add fusion support to local executor [17160bb0] [6cfb51e7]
+- Add getTags and getBranches to BitBucketServer [53bd89cd]
+- Add retry strategy to httpfs client [55f9c87b]
+- Add support for project resources [c2ad6566]
+- Add mamba build options [987a13cb] <Paolo Di Tommaso>
+- Fix Do not override tower endpoint in the config [41fb1ad0]
+- Fix Hyperqueue job names must be less than 40 chars #3151 [8e43670b]
+- Fix typo in ConfigBuilder.groovy (#3143) [659e6108] <Mike Lee>
+- Fix Resume for dynamic resolved containers  [13483ff2]
+- Improve fusion env handling [10f35b60]
+- Improve foreign file(s) cache detection logic [3a9352c8]
+- Rename ModuleBundle to ResourcesBundle [0e51dc0f]
+- Use quiet output mode for hyperqueue executor (#3103) [70a91fdf] <Ben Sherman>
+- Wave improve conda settings [6f087fec]
+- Improve secrets cmd (#3158) [115b2f3d] <Jorge Aguilera>
+- Improve Wave resolution strategy [2eb700c6]
+- Improve Az Batch err handling and testing [85d31e8d] <Paolo Di Tommaso>
+- Bump google-cloud-batch 0.2.2 
+- Bump spock 2.2 
+
+22.09.0-edge - [SKIPPED]
+
+22.08.2-edge - 16 Aug 2022
+- Fix queueSize setting is not honoured by AWS Batch executor (again) #3117 [1733bb2e]
+- Add `files()` method to docs (#3123) [00bb8896] <Ben Sherman>
+- Refactor wave packing [bc876986]
+- Improve logging [aa380d5f]
+- Update dockerfile [e6329282]
+
+22.08.1-edge - 11 Aug 2022
+- Add support for disabling config include [e0859a12]
+- Add experimental fusion support [1854f1f2]
+- Add support for plugin provided function extension (#3079) [16230c2b] <Jorge Aguilera>
+- Add support for AWS Batch logs group (#3092) [4ef043ac] <Ben Sherman>
+- Add share identifier to Aws Batch (#3089) [c0253aba] <Ben Sherman>
+- Improve Tower cache manager [0091afc5]
+- Improve S3 copy via xfer manager [02d2beae]
+- Reports a warning when using NXF vars in the config [009ec256] <Marcel Ribeiro Dantas>
+- Make wake token cache duration config [5f955fc9]
+- Patch unable to start non-core plugin [a55f58ff]
+- Increase S3 upload chunk size to 100 MB [9c94a080]
+- Change Google Batch disk directive to override boot disk size (#3097) [7e1c0686] <Ben Sherman>
+- Fix queueSize setting is not honoured by AWS Batch executor (#3093) [d07bb52b] <Ben Sherman>
+- Fix Allow disabling scratch with Google Batch [e8e5c721]
+- Fix Emit relative path when relative parameter is set (#3072) [39797759] <Jorge Aguilera>
+- Bump nf-wave@0.3.0 [e46d341d]
+- Bump nf-tower@1.5.1 [cdc2be53]
+- Bump nf-google@1.4.1 [c39935a5]
+- Bump nf-amazon@1.10.0 [ccdf62d0]
+
+22.08.0-edge - 1 Aug 2022
+- Add warning to env config docs (#3083) [ca933c16] <Ben Sherman>
+- Add -with-conda CLI option (#3073) [98b2ac80]
+- Add simple wave plugin cli commands [8888b866]
+- Add default wave plugin [7793a0ec]
+- Add boot disk, cpu platform to google batch (#3058) [17a8483d] <Ben Sherman>
+- Add support for GPU accelerator to Google Batch (#3056) [f34ad7f6] <Ben Sherman>
+- Add support for archive dir to tower plugin [c234681a]
+- Add support tower cache backup/restore [bc2f9d13]
+- Add disk directive to google batch (#3057) [ec6e290c] <Ben Sherman>
+- Add retry when Azure submit fails with OperationTimedOut [6a3f9742]
+- Add warning when Google Batch quota is exceeded (#3066) [6b9c52ad] <Ben Sherman>
+- Allow fully disabling history file [0a45f858]
+- Allow the support function overloading and default parameters (#3011) [042d3857] <Jorge Aguilera>
+- Improve S3 file upload/download via Transfer manager [7e8d2a5a] <Jorge Aguilera>
+- Prevent overriding container entrypoint [b3a4bf85]
+- Update FileTransfer pool settings [503aafce]
+- Remove deprecated commands [93228b4b]
+- Prevent nextflow config to break tower launch [e059a724]
+- Refactor Google Batch executor to use Java API (#3044) [31a6e85c] <Ben Sherman>
+- Fix Unable to disable scratch attribute with AWS Batch [1770f73a]
+- Fix unit test setting explicit permissions for test files [1c821139] <Jorge Aguilera>
+- Fix Default plugins are overriden by config plugins [46cf3bfa] <Paolo Di Tommaso>
+- Fix S3 transfer download directory [b7bf9fe5]
+- Fix NPE while setting S3 ObjectMetada #3031 [d6163431] <Jorge Aguilera>
+- Fix Unable to retrieve AWS batch instance type #1658 [3c4d4d3b]
+- Fix AWS Batch job definition conflict (#3048) [e5084418]
+- Fix JAVA_TOOL_OPTIONS breaking launch #1716 [0e7b416d]
+- Fix add ps shared objects to Dockerfile (#3033) [1c23b40a] <Ben Sherman>
+- Parallelize build integration tests [807800a3]
+- Bump google-cloud-nio:0.124.8 [dfaa9d19]
+- Bump groovy 3.0.12 [5c900b91]
+- Bump Moment.js 2.29.4 [a9ced868]
+- Bump gson@2.9.0 [12f17176]
+- Bump nf-azure@0.13.4 
+- Bump nf-google@1.4.0
+- Bump nf-tower@1.5.0
+- Bump nf-wave@0.2.1
+- Bump nf-amazon@1.9.0
+
+22.04.5 - 15 Jul 2022
+- Allow fully disabling history file [1a36c9bc]
+
 22.07.1-edge - 13 Jul 2022
 - Add support for Google Batch API v1 [4c116d58] [e85d87ee]
 - Add time directive support for K8s executor (#2948) [2b6f70a8] <romanaduraciova>

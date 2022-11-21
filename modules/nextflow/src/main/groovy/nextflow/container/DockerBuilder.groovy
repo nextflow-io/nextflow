@@ -93,6 +93,9 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         if( params.containsKey('mountFlags') )
             this.mountFlags0 = params.mountFlags
 
+        if( params.containsKey('privileged') )
+            this.privileged = params.privileged?.toString() == 'true'
+
         return this
     }
 
@@ -117,7 +120,7 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         result << 'run -i '
 
         if( cpus && !legacy )
-            result << "--cpus ${cpus.toDecimalString()} "
+            result << "--cpu-shares ${(Integer) (cpus.toDecimal() * 1024)} "
 
         if( cpuset ) {
             if( legacy )
@@ -150,6 +153,9 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         if( runOptions )
             result << runOptions.join(' ') << ' '
+
+        if( privileged )
+            result << '--privileged '
 
         // the name is after the user option so it has precedence over any options provided by the user
         if( name )

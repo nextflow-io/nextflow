@@ -19,10 +19,11 @@ package nextflow.cloud.google.batch
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import com.google.cloud.batch.v1.GCS
+import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.cloud.google.batch.model.TaskVolume
 import nextflow.executor.BashWrapperBuilder
 import nextflow.extension.FilesEx
 import nextflow.processor.TaskBean
@@ -39,7 +40,7 @@ import nextflow.util.PathTrie
 @CompileStatic
 class GoogleBatchScriptLauncher extends BashWrapperBuilder {
 
-    private static final String MOUNT_ROOT = '/mnt'
+    private static final String MOUNT_ROOT = '/mnt/disks'
 
     private CloudStoragePath remoteWorkDir
     private Path remoteBinDir
@@ -80,7 +81,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder {
         // make it change to the task work dir
         bean.headerScript = headerScript(bean)
         // enable use of local scratch dir
-        if( !scratch )
+        if( scratch==null )
             scratch = true
     }
 
@@ -110,22 +111,30 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder {
     List<String> getContainerMounts() {
         final result = new ArrayList(10)
         for( String it : pathTrie.longest() ) {
-            result.add("$MOUNT_ROOT$it:$MOUNT_ROOT$it:rw".toString() )
+            result.add( "${MOUNT_ROOT}${it}:${MOUNT_ROOT}${it}:rw".toString() )
+        }
+        return result
+    }
+
+    List<Volume> getVolumes() {
+        final result = new ArrayList(10)
+        for( String it : buckets ) {
+            result.add(
+                Volume.newBuilder()
+                    .setGcs(
+                        GCS.newBuilder()
+                            .setRemotePath(it)
+                    )
+                    .setMountPath( "${MOUNT_ROOT}/${it}".toString() )
+                    .addAllMountOptions( ['-o rw,allow_other', '-implicit-dirs'] )
+                    .build()
+            )
         }
         return result
     }
 
     String getWorkDirMount() {
         return workDir.toString()
-    }
-
-    List<TaskVolume> getTaskVolumes() {
-        final result = new ArrayList(10)
-        final opts = ["-o rw,allow_other", "-implicit-dirs"]
-        for( String it : buckets ) {
-            result << new TaskVolume(gcs:[remotePath: it], mountPath: "${MOUNT_ROOT}/$it".toString(), mountOptions: opts)
-        }
-        return result
     }
 
     @Override

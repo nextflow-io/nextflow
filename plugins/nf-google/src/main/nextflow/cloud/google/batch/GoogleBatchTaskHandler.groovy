@@ -18,25 +18,24 @@ package nextflow.cloud.google.batch
 
 import java.nio.file.Path
 
+import com.google.cloud.batch.v1.AllocationPolicy
+import com.google.cloud.batch.v1.ComputeResource
+import com.google.cloud.batch.v1.Job
+import com.google.cloud.batch.v1.LogsPolicy
+import com.google.cloud.batch.v1.Runnable
+import com.google.cloud.batch.v1.ServiceAccount
+import com.google.cloud.batch.v1.TaskGroup
+import com.google.cloud.batch.v1.TaskSpec
+import com.google.protobuf.Duration
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
-import nextflow.cloud.google.batch.client.BatchConfig
-import nextflow.cloud.google.batch.model.AllocationPolicy
-import nextflow.cloud.google.batch.model.BatchJob
-import nextflow.cloud.google.batch.model.ComputeResource
-import nextflow.cloud.google.batch.model.NetworkInterface
-import nextflow.cloud.google.batch.model.NetworkPolicy
-import nextflow.cloud.google.batch.model.ProvisioningModel
-import nextflow.cloud.google.batch.model.TaskContainer
-import nextflow.cloud.google.batch.model.TaskGroup
-import nextflow.cloud.google.batch.model.TaskRunnable
-import nextflow.cloud.google.batch.model.TaskSpec
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.trace.TraceRecord
 /**
  * Implements a task handler for Google Batch executor
  * 
@@ -107,93 +106,166 @@ class GoogleBatchTaskHandler extends TaskHandler {
          * create submit request
          */
         final req = newSubmitRequest(task)
-        log.debug "[GOOGLE BATCH] new job request > $req"
+        log.trace "[GOOGLE BATCH] new job request > $req"
         final resp = client.submitJob(jobId, req)
-        this.uid = resp.get('uid')
+        this.uid = resp.getUid()
         this.status = TaskStatus.SUBMITTED
-        log.debug "[GOOGLE BATCH] submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}; resp=$resp"
+        log.debug "[GOOGLE BATCH] submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
     }
 
-    protected BatchJob newSubmitRequest(TaskRun task) {
-        final batchJob = new BatchJob()
+    protected Job newSubmitRequest(TaskRun task) {
+        // resource requirements
+        final taskSpec = TaskSpec.newBuilder()
+        final computeResource = ComputeResource.newBuilder()
 
-        final spec = new TaskSpec()
-        final res = new ComputeResource()
-        // CPUs requirement
-        res.cpuMilli = task.config.getCpuUnits().toMillis()
-        // memory requirement
+        computeResource.setCpuMilli( task.config.getCpuUnits().toMillis() )
+
         if( task.config.getMemory() )
-            res.memoryMib = task.config.getMemory().getMega().toInteger()
-        // timeout requirement
+            computeResource.setMemoryMib( task.config.getMemory().getMega() )
+
         if( task.config.getTime() )
-            spec.withMaxRunDuration(task.config.getTime() )
+            taskSpec.setMaxRunDuration(
+                Duration.newBuilder()
+                    .setSeconds( task.config.getTime().toSeconds() )
+            )
+
+        final disk = task.config.getDisk() ?: executor.config.bootDiskSize
+        if( disk )
+            computeResource.setBootDiskMib( disk.getMega() )
+
+        // container
+        final cmd = "trap \"{ cp ${TaskRun.CMD_LOG} ${launcher.workDirMount}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${launcher.workDirMount}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
+        final container = Runnable.Container.newBuilder()
+            .setImageUri( task.container )
+            .addAllCommands( ['/bin/bash','-o','pipefail','-c', cmd.toString()] )
+            .addAllVolumes( launcher.getContainerMounts() )
+
+        final accel = task.config.getAccelerator()
+        // add nvidia specific driver paths
+        // see https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
+        if(  accel && accel.type.toLowerCase().startsWith('nvidia-') ) {
+            container
+                .addVolumes('/var/lib/nvidia/lib64:/usr/local/nvidia/lib64')
+                .addVolumes('/var/lib/nvidia/bin:/usr/local/nvidia/bin')
+        }
+
+        def containerOptions= task.config.getContainerOptions() ?: ''
+        // accelerator requires privileged option
+        // https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
+        if( task.config.getAccelerator() ) {
+            if( containerOptions ) containerOptions += ' '
+            containerOptions += '--privileged'
+        }
+
+        if( containerOptions )
+            container.setOptions( containerOptions )
 
         // task spec
-        final cmd = "trap \"{ cp ${TaskRun.CMD_LOG} ${launcher.workDirMount}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${launcher.workDirMount}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
-        final container = new TaskContainer()
-                .withImageUri(task.container)
-                .withCommands(['/bin/bash','-o','pipefail','-c', cmd.toString()])
-                // note: container must mount the base work directory
-                .withVolumes(launcher.getContainerMounts())
-                .withOptions(task.config.getContainerOptions())
+        taskSpec
+            .setComputeResource(computeResource)
+            .addRunnables(
+                Runnable.newBuilder()
+                    .setContainer(container)
+            )
+            .addAllVolumes( launcher.getVolumes() )
 
-        spec.addRunnable(new TaskRunnable(container: container))
-                .withVolumes(launcher.getTaskVolumes())
-                .withComputeResources(res)
+        // instance policy
+        final allocationPolicy = AllocationPolicy.newBuilder()
+        final instancePolicyOrTemplate = AllocationPolicy.InstancePolicyOrTemplate.newBuilder()
+        final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
-        // allocation policy
-        final allocPolicy = new AllocationPolicy()
-        final networkPolicy= networkPolicy(executor.config)
-        if( networkPolicy )
-            allocPolicy.withNetworkPolicy(networkPolicy)
+        if( task.config.getAccelerator() ) {
+            final accelerator = AllocationPolicy.Accelerator.newBuilder()
+                .setCount( task.config.getAccelerator().getRequest() )
+
+            if( task.config.getAccelerator().getType() )
+                accelerator.setType( task.config.getAccelerator().getType() )
+
+            instancePolicy.addAccelerators(accelerator)
+            instancePolicyOrTemplate.setInstallGpuDrivers(true)
+        }
+
+        if( executor.config.cpuPlatform )
+            instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
+
         if( task.config.getMachineType() )
-            allocPolicy.withMachineType( task.config.getMachineType() )
+            instancePolicy.setMachineType( task.config.getMachineType() )
+
+        if( executor.config.serviceAccountEmail )
+            allocationPolicy.setServiceAccount(
+                ServiceAccount.newBuilder()
+                    .setEmail(executor.config.serviceAccountEmail)
+            )
+
         if( executor.config.preemptible )
-            allocPolicy.withProvisioningModel(ProvisioningModel.PREEMPTIBLE)
+            instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.PREEMPTIBLE )
+
         if( executor.config.spot )
-            allocPolicy.withProvisioningModel(ProvisioningModel.SPOT)
-        
-        // create the task group
-        batchJob
-            .addTaskGroup(new TaskGroup().withTaskSpec(spec))
-            .withAllocationPolicy(allocPolicy)
-        return batchJob
-    }
+            instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.SPOT )
 
-    protected NetworkPolicy networkPolicy(BatchConfig config) {
-        NetworkInterface result=null
-        // set the network
-        if( config.network ) {
-            if(!result) result = new NetworkInterface()
-            result.withNetwork(config.network)
+        allocationPolicy.addInstances(
+            instancePolicyOrTemplate
+                .setPolicy(instancePolicy)
+        )
+
+        // network policy
+        final networkInterface = AllocationPolicy.NetworkInterface.newBuilder()
+        def hasNetworkPolicy = false
+
+        if( executor.config.network ) {
+            hasNetworkPolicy = true
+            networkInterface.setNetwork( executor.config.network )
         }
-        // set the subnetwork
-        if( config.subnetwork ) {
-            if(!result) result = new NetworkInterface()
-            result.withSubnetwork(config.subnetwork)
+        if( executor.config.subnetwork ) {
+            hasNetworkPolicy = true
+            networkInterface.setSubnetwork( executor.config.subnetwork )
         }
-        // set private address
-        if( config.usePrivateAddress ) {
-            if(!result) result = new NetworkInterface()
-            result.withNoExternalIpAddress(true)
+        if( executor.config.usePrivateAddress ) {
+            hasNetworkPolicy = true
+            networkInterface.setNoExternalIpAddress( true )
         }
 
-        return result
-                ? new NetworkPolicy().withNetworkInterfaces(result)
-                : null
+        if( hasNetworkPolicy )
+            allocationPolicy.setNetwork(
+                AllocationPolicy.NetworkPolicy.newBuilder()
+                    .addNetworkInterfaces(networkInterface)
+            )
+
+        allocationPolicy.putAllLabels(task.config.getResourceLabels())
+
+        // create the job
+        return Job.newBuilder()
+            .addTaskGroups(
+                TaskGroup.newBuilder()
+                    .setTaskSpec(taskSpec)
+            )
+            .setAllocationPolicy(allocationPolicy)
+            .setLogsPolicy(
+                LogsPolicy.newBuilder()
+                    .setDestination(LogsPolicy.Destination.CLOUD_LOGGING)
+            )
+            .build()
     }
+
     /**
-     * @return Retrieve the submitted pod state
+     * @return Retrieve the submitted job state
      */
     protected String getJobState() {
         final now = System.currentTimeMillis()
         final delta =  now - timestamp;
         if( !jobState || delta >= 1_000) {
-            def newState = client.getJobState(jobId)
+            final status = client.getJobStatus(jobId)
+            final newState = status?.state as String
             if( newState ) {
-                log.trace "[GOOGLE BATCH] Get Batch job=$jobId state=$newState"
+                log.trace "[GOOGLE BATCH] Get job=$jobId state=$newState"
                 jobState = newState
                 timestamp = now
+            }
+            if( newState == 'SCHEDULED' ) {
+                final eventsCount = status.getStatusEventsCount()
+                final lastEvent = eventsCount > 0 ? status.getStatusEvents(eventsCount - 1) : null
+                if( lastEvent?.getDescription()?.contains('CODE_GCE_QUOTA_EXCEEDED') )
+                    log.warn1 "Batch job cannot be run: ${lastEvent.getDescription()}"
             }
         }
         return jobState
@@ -251,12 +323,21 @@ class GoogleBatchTaskHandler extends TaskHandler {
     @Override
     void kill() {
         if( isSubmitted() ) {
-            log.trace "[GOOGLE BATCH] deleting pod name=$jobId"
-            client.deleteJobs(jobId)
+            log.trace "[GOOGLE BATCH] deleting job name=$jobId"
+            client.deleteJob(jobId)
         }
         else {
             log.debug "[GOOGLE BATCH] Oops.. invalid delete action"
         }
+    }
+
+    @Override
+    TraceRecord getTraceRecord() {
+        def result = super.getTraceRecord()
+        if( jobId && uid ) {
+            result.put('native_id', "$jobId/$uid")
+        }
+        return result
     }
 
 }

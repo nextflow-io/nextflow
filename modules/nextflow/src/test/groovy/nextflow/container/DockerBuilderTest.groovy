@@ -141,18 +141,18 @@ class DockerBuilderTest extends Specification {
         new DockerBuilder('fedora')
                 .setCpus(2)
                 .build()
-                .runCommand == 'docker run -i --cpus 2.0 -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i --cpu-shares 2048 -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
-                .setCpus(CpuUnit.of(1.4))
+                .setCpus(1.4)
                 .build()
-                .runCommand == 'docker run -i --cpus 1.4 -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i --cpu-shares 1433 -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
-                .setCpus(CpuUnit.of(2.5))
+                .setCpus(8)
                 .setCpuset('1,2')
                 .build()
-                .runCommand == 'docker run -i --cpus 2.5 --cpuset-cpus 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
+                .runCommand == 'docker run -i --cpu-shares 8192 --cpuset-cpus 1,2 -v "$PWD":"$PWD" -w "$PWD" fedora'
 
         new DockerBuilder('fedora')
                 .params(legacy: true)
@@ -182,6 +182,11 @@ class DockerBuilderTest extends Specification {
                 .setMemory(new MemoryUnit('100M'))
                 .build()
                 .runCommand == 'docker run -i --cpuset-cpus 1-3 --memory 100m -v "$PWD":"$PWD" -w "$PWD" fedora'
+
+        new DockerBuilder('fedora')
+                .params(privileged: true)
+                .build()
+                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --privileged fedora'
 
     }
 

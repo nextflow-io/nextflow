@@ -71,7 +71,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         // when a remote bin directory is provide managed it properly
         if( opts.remoteBinDir ) {
             result << "${opts.getAwsCli()} s3 cp --recursive --only-show-errors s3:/${opts.remoteBinDir} \$PWD/nextflow-bin\n"
-            result << "chmod +x \$PWD/nextflow-bin/*\n"
+            result << "chmod +x \$PWD/nextflow-bin/* || true\n"
             result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"
         }
         // finally render the environment

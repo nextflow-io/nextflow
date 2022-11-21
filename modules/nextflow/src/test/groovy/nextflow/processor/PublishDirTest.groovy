@@ -17,11 +17,9 @@
 
 package nextflow.processor
 
-
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.util.concurrent.TimeUnit
 
 import nextflow.Session
 import spock.lang.Specification
@@ -180,9 +178,8 @@ class PublishDirTest extends Specification {
         ] as Set
         def publisher = new PublishDir(path: publishDir, mode: 'copy')
         publisher.apply( outputs, task )
-
-        session.fileTransferThreadPool.shutdown()
-        session.fileTransferThreadPool.awaitTermination(5, TimeUnit.SECONDS)
+        and:
+        session.@publishPoolManager.shutdown(false)
 
         then:
         publishDir.resolve('file1.txt').text == 'aaa'

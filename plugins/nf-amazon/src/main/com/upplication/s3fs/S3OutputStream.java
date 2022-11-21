@@ -33,8 +33,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Phaser;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.amazonaws.AmazonClientException;
@@ -57,7 +55,9 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.util.Base64;
 import com.upplication.s3fs.util.ByteBufferInputStream;
 import com.upplication.s3fs.util.S3MultipartOptions;
-import nextflow.util.ThreadPoolBuilder;
+import nextflow.util.Duration;
+import nextflow.util.ThreadPoolHelper;
+import nextflow.util.ThreadPoolManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static java.util.Objects.requireNonNull;
@@ -72,36 +72,14 @@ import static java.util.Objects.requireNonNull;
 
 public final class S3OutputStream extends OutputStream {
 
-    /**
-     * Hack a LinkedBlockingQueue to make the offer method blocking
-     *
-     * http://stackoverflow.com/a/4522411/395921
-     *
-     * @param <E>
-     */
-    static class LimitedQueue<E> extends LinkedBlockingQueue<E>
-    {
-        public LimitedQueue(int maxSize)
-        {
-            super(maxSize);
-        }
-
-        @Override
-        public boolean offer(E e)
-        {
-            // turn offer() and add() into a blocking calls (unless interrupted)
-            try {
-                put(e);
-                return true;
-            } catch(InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            }
-            return false;
-        }
-    }
 
     private static final Logger log = LoggerFactory.getLogger(S3OutputStream.class);
 
+    /**
+     * Minimum multipart chunk size 5MB
+     * https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html
+     */
+    private static final int MIN_MULTIPART_UPLOAD = 5 * 1024 * 1024;
 
     /**
      * Amazon S3 API implementation to use.
@@ -121,6 +99,8 @@ public final class S3OutputStream extends OutputStream {
     private SSEAlgorithm storageEncryption;
 
     private String kmsKeyId;
+
+    private String contentType;
 
     /**
      * Indicates if the stream has been closed.
@@ -175,13 +155,13 @@ public final class S3OutputStream extends OutputStream {
      */
     private int partsCount;
 
-    private int chunkSize;
+    private int bufferSize;
 
     private CannedAccessControlList cannedAcl;
 
     private List<Tag> tags;
 
-    private AtomicInteger bufferCounter = new AtomicInteger();
+    private final AtomicInteger bufferCounter = new AtomicInteger();
 
     /**
      * Creates a new {@code S3OutputStream} that writes data directly into the S3 object with the given {@code objectId}.
@@ -192,13 +172,13 @@ public final class S3OutputStream extends OutputStream {
         this.s3 = requireNonNull(s3);
         this.objectId = requireNonNull(objectId);
         this.request = request;
-        this.chunkSize = request.getChunkSize();
+        this.bufferSize = request.getBufferSize();
     }
 
     private ByteBuffer expandBuffer(ByteBuffer byteBuffer) {
         
         final float expandFactor = 2.5f;
-        final int newCapacity = Math.min( (int)(byteBuffer.capacity() * expandFactor), chunkSize );
+        final int newCapacity = Math.min( (int)(byteBuffer.capacity() * expandFactor), bufferSize );
 
         // cast to prevent Java 8 / Java 11 cross compile-runtime error
         // https://www.morling.dev/blog/bytebuffer-and-the-dreaded-nosuchmethoderror/
@@ -236,6 +216,11 @@ public final class S3OutputStream extends OutputStream {
         return this;
     }
 
+    public S3OutputStream setContentType(String type) {
+        this.contentType = type;
+        return this;
+    }
+
     /**
      * @return A MD5 message digester
      */
@@ -265,7 +250,7 @@ public final class S3OutputStream extends OutputStream {
             md5 = createMd5();
         }
         else if( !buf.hasRemaining() ) {
-            if( buf.position() < chunkSize ) {
+            if( buf.position() < bufferSize ) {
                 buf = expandBuffer(buf);
             }
             else {
@@ -288,17 +273,21 @@ public final class S3OutputStream extends OutputStream {
      */
     @Override
     public void flush() throws IOException {
-        // send out the current current
-        uploadBuffer(buf);
-        // clear the current buffer
-        buf = null;
-        md5 = null;
+        // send out the current buffer
+        if( uploadBuffer(buf, false) ) {
+            // clear the current buffer
+            buf = null;
+            md5 = null;
+        }
     }
 
     private ByteBuffer allocate() {
 
         if( partsCount==0 ) {
-            return ByteBuffer.allocate(10 * 1024);
+            // this class is expected to be used to upload small files
+            // start with a small buffer and growth if more space if necessary
+            final int initialSize = 100 * 1024;
+            return ByteBuffer.allocate(initialSize);
         }
 
         // try to reuse a buffer from the poll
@@ -308,8 +297,8 @@ public final class S3OutputStream extends OutputStream {
         }
         else {
             // allocate a new buffer
-            log.debug("Allocating new buffer of {} bytes, total buffers {}", request.getChunkSize(), bufferCounter.incrementAndGet());
-            result = ByteBuffer.allocateDirect(request.getChunkSize());
+            log.debug("Allocating new buffer of {} bytes, total buffers {}", bufferSize, bufferCounter.incrementAndGet());
+            result = ByteBuffer.allocate(bufferSize);
         }
 
         return result;
@@ -320,10 +309,17 @@ public final class S3OutputStream extends OutputStream {
      * Upload the given buffer to S3 storage in a asynchronous manner.
      * NOTE: when the executor service is busy (i.e. there are any more free threads)
      * this method will block
+     *
+     * return: true if the buffer can be reused, false if still needs to be used
      */
-    private void uploadBuffer(ByteBuffer buf) throws IOException {
+    private boolean uploadBuffer(ByteBuffer buf, boolean last) throws IOException {
         // when the buffer is empty nothing to do
-        if( buf == null || buf.position()==0 ) { return; }
+        if( buf == null || buf.position()==0 ) { return false; }
+
+        // Intermediate uploads needs to have at least MIN bytes
+        if( buf.position() < MIN_MULTIPART_UPLOAD && !last){
+            return false;
+        }
 
         if (partsCount == 0) {
             init();
@@ -331,6 +327,8 @@ public final class S3OutputStream extends OutputStream {
 
         // set the buffer in read mode and submit for upload
         executor.submit( task(buf, md5.digest(), ++partsCount) );
+
+        return true;
     }
 
     /**
@@ -349,7 +347,7 @@ public final class S3OutputStream extends OutputStream {
         partETags = new LinkedBlockingQueue<>();
         phaser = new Phaser();
         phaser.register();
-        log.trace("Starting S3 upload: {}; chunk-size: {}; max-threads: {}", uploadId, request.getChunkSize(), request.getMaxThreads());
+        log.trace("[S3 phaser] Register - Starting S3 upload: {}; chunk-size: {}; max-threads: {}", uploadId, bufferSize, request.getMaxThreads());
     }
 
 
@@ -364,6 +362,7 @@ public final class S3OutputStream extends OutputStream {
     private Runnable task(final ByteBuffer buffer, final byte[] checksum, final int partIndex) {
 
         phaser.register();
+        log.trace("[S3 phaser] Task register");
         return new Runnable() {
             @Override
             public void run() {
@@ -376,6 +375,7 @@ public final class S3OutputStream extends OutputStream {
                     log.error("Upload: {} > Error for part: {}\nCaused by: {}", uploadId, partIndex, writer.toString());
                 }
                 finally {
+                    log.trace("[S3 phaser] Task arriveAndDeregisterphaser");
                     phaser.arriveAndDeregister();
                 }
             }
@@ -404,9 +404,10 @@ public final class S3OutputStream extends OutputStream {
         else {
             // -- upload remaining chunk
             if( buf != null )
-                uploadBuffer(buf);
+                uploadBuffer(buf, true);
 
             // -- shutdown upload executor and await termination
+            log.trace("[S3 phaser] Close arriveAndAwaitAdvance");
             phaser.arriveAndAwaitAdvance();
 
             // -- complete upload process
@@ -425,6 +426,7 @@ public final class S3OutputStream extends OutputStream {
     private InitiateMultipartUploadResult initiateMultipartUpload() throws IOException {
         final InitiateMultipartUploadRequest request = //
                 new InitiateMultipartUploadRequest(objectId.getBucket(), objectId.getKey());
+        final ObjectMetadata metadata = new ObjectMetadata();
 
         if (storageClass != null) {
             request.setStorageClass(storageClass);
@@ -439,8 +441,12 @@ public final class S3OutputStream extends OutputStream {
         }
 
         if( storageEncryption != null ) {
-            final ObjectMetadata metadata = new ObjectMetadata();
             metadata.setSSEAlgorithm(storageEncryption.toString());
+            request.setObjectMetadata(metadata);
+        }
+
+        if( contentType != null ) {
+            metadata.setContentType(contentType);
             request.setObjectMetadata(metadata);
         }
 
@@ -544,6 +550,7 @@ public final class S3OutputStream extends OutputStream {
             log.warn("Failed to abort multipart upload {}: {}", uploadId, e.getMessage());
         }
         aborted = true;
+        log.trace("[S3 phaser] MultipartUpload arriveAndDeregister");
         phaser.arriveAndDeregister();
     }
 
@@ -617,6 +624,10 @@ public final class S3OutputStream extends OutputStream {
             meta.setSSEAlgorithm( storageEncryption.toString() );
         }
 
+        if( contentType != null ) {
+            meta.setContentType(contentType);
+        }
+
         if( log.isTraceEnabled() ) {
             log.trace("S3 putObject {}", request);
         }
@@ -649,13 +660,7 @@ public final class S3OutputStream extends OutputStream {
      */
     static synchronized ExecutorService getOrCreateExecutor(int maxThreads) {
         if( executorSingleton == null ) {
-            ThreadPoolExecutor pool = ThreadPoolBuilder.io(
-                    1,
-                    maxThreads,
-                    maxThreads*3,
-                    "S3OutputStream");
-            executorSingleton = pool;
-            log.trace("Created singleton upload executor -- max-treads: {}", maxThreads);
+            executorSingleton = ThreadPoolManager.create("S3StreamUploader", maxThreads);
         }
         return executorSingleton;
     }
@@ -663,27 +668,19 @@ public final class S3OutputStream extends OutputStream {
     /**
      * Shutdown the executor and clear the singleton
      */
-    public static synchronized void shutdownExecutor(boolean hard) {
-        log.trace("Uploader shutdown -- Executor: {}", executorSingleton);
-
-        if( executorSingleton != null ) {
-            if( hard )
-                executorSingleton.shutdownNow();
-            else
-                executorSingleton.shutdown();
+    static void shutdownExecutor(boolean hard) {
+        if( hard ) {
+            executorSingleton.shutdownNow();
+        }
+        else {
+            executorSingleton.shutdown();
             log.trace("Uploader await completion");
-            awaitExecutorCompletion();
-            executorSingleton = null;
+            final String waitMsg = "[AWS S3] Waiting stream uploader to complete (%d files)";
+            final String exitMsg = "[AWS S3] Exiting before stream uploader thread pool complete -- Some files maybe lost";
+            ThreadPoolHelper.await(executorSingleton, Duration.of("1h") ,waitMsg, exitMsg);
             log.trace("Uploader shutdown completed");
+            executorSingleton = null;
         }
     }
 
-    private static void awaitExecutorCompletion() {
-        try {
-            executorSingleton.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
-        }
-        catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-    }
 }

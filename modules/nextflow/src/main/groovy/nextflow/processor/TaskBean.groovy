@@ -61,9 +61,9 @@ class TaskBean implements Serializable, Cloneable {
 
     ContainerConfig containerConfig
 
-    String containerCpuset
-
     CpuUnit containerCpus
+
+    String containerCpuset
 
     MemoryUnit containerMemory
 
@@ -94,13 +94,15 @@ class TaskBean implements Serializable, Cloneable {
 
     String stageOutMode
 
-    Path binDir
+    List<Path> binDirs
 
     def cleanup
 
     boolean secretNative
 
     List<String> secretNames
+
+    Map<String,String> resourceLabels
 
     @PackageScope
     TaskBean() {
@@ -148,10 +150,11 @@ class TaskBean implements Serializable, Cloneable {
 
         this.inputFiles = task.getInputFilesMap()
         this.outputFiles = task.getOutputFilesNames()
-        this.binDir = task.getProcessor().getExecutor().getBinDir()
+        this.binDirs = task.getProcessor().getBinDirs()
         this.stageInMode = task.config.getStageInMode()
         this.stageOutMode = task.config.getStageOutMode()
 
+        this.resourceLabels = task.config.getResourceLabels()
     }
 
     @Override
