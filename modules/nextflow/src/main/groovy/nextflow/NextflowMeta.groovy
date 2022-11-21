@@ -174,12 +174,12 @@ class NextflowMeta {
             throw new IllegalArgumentException("Unknown nextflow mode=${matcher.group(1)}")
     }
 
-    static boolean probeDls1(String script) {
+    static boolean probeDsl1(String script) {
         try {
             return (hasDsl1Input(script) || hasDsl1Output(script)) && !hasWorkflowDef(script)
         }
         catch (Throwable e) {
-            log.debug "Unable to probe dsl version" ,e
+            log.debug "Unable to infer DSL version", e
             return false
         }
     }

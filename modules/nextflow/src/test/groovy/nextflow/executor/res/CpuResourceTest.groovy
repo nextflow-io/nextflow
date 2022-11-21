@@ -35,9 +35,9 @@ class CpuResourceTest extends Specification {
 
         where:
         VALUE                   | REQ   | LIM
-        1                       | 1     | 1
+        1                       | 1     | null
         [request: 2]            | 2     | null
-        [limit: 4]              | 4     | 4
+        [limit: 4]              | null  | 4
         [request: 2, limit: 4]  | 2     | 4
     }
 

@@ -24,14 +24,11 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.container.CharliecloudBuilder
 import nextflow.container.ContainerBuilder
 import nextflow.container.DockerBuilder
-import nextflow.container.PodmanBuilder
-import nextflow.container.ShifterBuilder
 import nextflow.container.SingularityBuilder
-import nextflow.container.UdockerBuilder
 import nextflow.exception.ProcessException
+import nextflow.file.FileHelper
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -468,23 +465,7 @@ class BashWrapperBuilder {
 
     @PackageScope
     ContainerBuilder createContainerBuilder0(String engine) {
-        /*
-         * create a builder instance given the container engine
-         */
-        if( engine == 'docker' )
-            return new DockerBuilder(containerImage)
-        if( engine == 'podman' )
-            return new PodmanBuilder(containerImage)
-        if( engine == 'singularity' )
-            return new SingularityBuilder(containerImage)
-        if( engine == 'udocker' )
-            return new UdockerBuilder(containerImage)
-        if( engine == 'shifter' )
-            return new ShifterBuilder(containerImage)
-        if( engine == 'charliecloud' )
-            return new CharliecloudBuilder(containerImage)
-        //
-        throw new IllegalArgumentException("Unknown container engine: $engine")
+        ContainerBuilder.create(engine, containerImage)
     }
 
     protected boolean getAllowContainerMounts() {
@@ -512,7 +493,7 @@ class BashWrapperBuilder {
             builder.addMountForInputs(inputFiles)
 
         if( allowContainerMounts )
-            builder.addMount(binDir)
+            builder.addMounts(binDirs)
 
         if(this.containerMount)
             builder.addMount(containerMount)
@@ -582,7 +563,7 @@ class BashWrapperBuilder {
         // The current work directory should be mounted only when
         // the task is executed in a temporary scratch directory (ie changeDir != null)
         // See https://github.com/nextflow-io/nextflow/issues/1710
-        builder.addMountWorkDir( changeDir as boolean )
+        builder.addMountWorkDir( changeDir as boolean || FileHelper.getWorkDirIsSymlink() )
 
         builder.build()
         return builder

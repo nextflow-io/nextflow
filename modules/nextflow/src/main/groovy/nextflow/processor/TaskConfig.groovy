@@ -309,7 +309,7 @@ class TaskConfig extends LazyMap implements Cloneable {
         def value = get('module')
 
         if( value instanceof List ) {
-            def result = []
+            List<String> result = []
             for( String name : value ) {
                 result.addAll( name.tokenize(':') )
             }
@@ -369,6 +369,9 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid PublishDir collection [${dirs.getClass().getName()}] $dirs")
     }
 
+    def getContainer() {
+        return get('container')
+    }
 
     /**
      * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values
@@ -433,6 +436,21 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( opts!=null )
             throw new IllegalArgumentException("Invalid `containerOptions` directive value: $opts [${opts.getClass().getName()}]")
         return CmdLineOptionMap.emptyOption()
+    }
+
+    Map<String, String> getResourceLabels() {
+        return get('resourceLabels') as Map<String, String> ?: Collections.<String,String>emptyMap()
+    }
+
+    String getResourceLabelsAsString() {
+        final res = getResourceLabels()
+        final result = new StringBuilder()
+        int c=0
+        for( Map.Entry<String,String> it : res ) {
+            if(c++>0) result.append(',')
+            result.append(it.key).append('=').append(it.value)
+        }
+        return result
     }
 
     /**

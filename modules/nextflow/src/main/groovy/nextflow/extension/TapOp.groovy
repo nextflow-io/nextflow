@@ -26,7 +26,7 @@ import groovyx.gpars.dataflow.operator.CopyChannelsClosure
 import nextflow.NF
 import static nextflow.extension.DataflowHelper.newOperator
 /**
- * Implements the {@link OperatorEx#tap} operator
+ * Implements the {@link OperatorImpl#tap} operator
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -72,7 +72,7 @@ class TapOp {
         names.each { item ->
             def channel = CH.createBy(source)
             if( binding.hasVariable(item) )
-                log.warn "A variable named '${item}' already exists in script global context -- Consider renaming it "
+                log.warn "A variable named '${item}' already exists in the script global context -- Consider renaming it "
 
             binding.setVariable(item, channel)
             outputs << channel

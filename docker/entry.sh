@@ -27,7 +27,7 @@
 #
 # Finally it switches the `nextflow` user using the `su` command and
 # executes the original target command line.
-# 
+#
 # authors:
 #  Paolo Di Tommaso
 #  Emilio Palumbo
@@ -39,13 +39,17 @@
 # wrap cli args with single quote to avoid wildcard expansion
 cli=''; for x in "$@"; do cli+="'$x' "; done
 
-# the NXF_USRMAP hold the user ID in the host environment 
+# the NXF_USRMAP hold the user ID in the host environment
 if [[ "$NXF_USRMAP" ]]; then
-# create a `nextflow` user with the provided ID 
-# then change the docker socker ownership to `nextflow` user 
-addgroup docker
-adduser -u $NXF_USRMAP -G docker -s /bin/bash -D nextflow
-chown nextflow /var/run/docker.sock  
+# create a `nextflow` user with the provided ID
+groupadd docker
+useradd -u "$NXF_USRMAP" -G docker -s /bin/bash nextflow
+
+# then change the docker socket ownership to `nextflow` user
+# and change the $NXF_HOME ownership to `nextflow` user
+chown nextflow /var/run/docker.sock
+chown -R nextflow /.nextflow
+
 # finally run the target command with `nextflow` user
 su nextflow << EOF
 [[ "$NXF_DEBUG_ENTRY" ]] && set -x
@@ -53,6 +57,6 @@ exec bash -c "$cli"
 EOF
 
 # otherwise just execute the command
-else 
+else
 exec bash -c "$cli"
 fi

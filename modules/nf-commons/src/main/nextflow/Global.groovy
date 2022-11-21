@@ -16,8 +16,10 @@
  */
 
 package nextflow
+
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.function.Consumer
 
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -25,6 +27,7 @@ import nextflow.util.Duration
 import nextflow.util.IniFile
 import nextflow.util.MemoryUnit
 import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang.exception.ExceptionUtils
 /**
  * Hold global variables
  *
@@ -158,7 +161,7 @@ class Global {
     }
 
     static String getAwsRegion(Map env=null, Map config=null) {
-        if( env==null ) env = System.getenv()
+        if( env==null ) env = SysEnv.get()
         if( config==null ) config = this.config
 
         // check nxf config file
@@ -187,7 +190,7 @@ class Global {
     }
 
     static List<String> getAwsCredentials() {
-        getAwsCredentials(System.getenv(), config)
+        getAwsCredentials(SysEnv.get(), config)
     }
 
     static Map<String,?> getAwsClientConfig() {
@@ -196,6 +199,14 @@ class Global {
         }
 
         return null
+    }
+
+    static String getAwsS3Endpoint() {
+        getAwsS3Endpoint0(SysEnv.get(), config ?: Collections.emptyMap())
+    }
+
+    static protected String getAwsS3Endpoint0(Map<String,String> env, Map<String,Object> config) {
+        config.navigate('aws.client.endpoint', env.get('AWS_S3_ENDPOINT'))
     }
 
     /**
@@ -241,16 +252,20 @@ class Global {
      *
      * @param callback A closure to be executed on application shutdown
      */
-    static void onShutdown(Closure callback) {
+    static void onCleanup(Consumer<ISession> callback) {
+        if( callback==null ) {
+            log.warn "Cleanup consumer cannot be null\n${ExceptionUtils.getStackTrace(new Exception())}"
+            return 
+        }
         hooks.add(callback)
     }
 
-    static final private List<Closure> hooks = []
+    static final private List<Consumer<ISession>> hooks = []
 
     static synchronized cleanUp() {
-        for( Closure c : hooks ) {
+        for( Consumer<ISession> c : hooks ) {
             try {
-                c.call()
+                c.accept(session)
             }
             catch( Exception e ) {
                 log.debug("Error during on cleanup", e )

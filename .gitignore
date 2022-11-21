@@ -6,6 +6,7 @@
 .cache/*
 .nextflow*
 .node-nextflow*
+.devcontainer
 **/build/**
 build/**
 modules/**/build/
@@ -36,4 +37,4 @@ gradle.properties
 .launch.classpath
 plugins-prod
 sandbox
-wave-demo
+wave-tests

@@ -35,7 +35,7 @@ class CpuResource {
     final Integer limit
 
     CpuResource( Number value ) {
-        this(limit: value)
+        this(request: value)
     }
 
     CpuResource( Map res ) {
@@ -47,7 +47,6 @@ class CpuResource {
             this.request = res.request as int
         }
         else if( res.limit != null ) {
-            this.request = res.limit as int
             this.limit = res.limit as int
         }
     }

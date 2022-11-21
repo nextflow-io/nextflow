@@ -1,0 +1,41 @@
+/*
+ * Copyright (c) 2019, Seqera Labs.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
+ *
+ * This Source Code Form is "Incompatible With Secondary Licenses", as
+ * defined by the Mozilla Public License, v. 2.0.
+ */
+
+apply plugin: 'java'
+apply plugin: 'java-test-fixtures'
+apply plugin: 'idea'
+apply plugin: 'groovy'
+
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main']
+    main.resources.srcDirs = ['src/resources']
+    test.groovy.srcDirs = ['src/test']
+    test.java.srcDirs = []
+    test.resources.srcDirs = []
+}
+
+configurations {
+    // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
+    runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+}
+
+dependencies {
+    compileOnly project(':nextflow')
+    compileOnly 'org.slf4j:slf4j-api:1.7.10'
+    compileOnly 'org.pf4j:pf4j:3.4.1'
+    api 'org.apache.commons:commons-compress:1.21'
+    api 'com.google.code.gson:gson:2.9.0'
+
+    testImplementation(testFixtures(project(":nextflow")))
+    testImplementation "org.codehaus.groovy:groovy:3.0.10"
+    testImplementation "org.codehaus.groovy:groovy-nio:3.0.10"
+}

@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.CpuResource
+import nextflow.executor.res.DiskResource
 import nextflow.executor.res.MemoryResource
 import groovy.util.logging.Slf4j
 
@@ -38,6 +39,17 @@ import groovy.util.logging.Slf4j
 class PodSpecBuilder {
 
     static enum MetaType { LABEL, ANNOTATION }
+
+    static enum SegmentType {
+        PREFIX (253),
+        NAME (63),
+        VALUE (63)
+
+        private final int maxSize;
+        SegmentType(int maxSize) {
+            this.maxSize = maxSize;
+        }
+    }
 
     static @PackageScope AtomicInteger VOLUMES = new AtomicInteger()
 
@@ -69,15 +81,21 @@ class PodSpecBuilder {
 
     MemoryResource memory
 
+    DiskResource disk
+
+    AcceleratorResource accelerator
+
     String serviceAccount
 
     boolean automountServiceAccountToken = true
 
-    AcceleratorResource accelerator
+    Collection<PodMountConfig> configMaps = []
+
+    Collection<PodMountCsiEphemeral> csiEphemerals = []
+
+    Collection<PodMountEmptyDir> emptyDirs = []
 
     Collection<PodMountSecret> secrets = []
-
-    Collection<PodMountConfig> configMaps = []
 
     Collection<PodHostMount> hostMounts = []
 
@@ -158,13 +176,18 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withMemory( MemoryResource mem ) {
-        this.memory = mem
+    PodSpecBuilder withMemory( MemoryResource memory ) {
+        this.memory = memory
         return this
     }
 
-    PodSpecBuilder withAccelerator( AcceleratorResource acc ) {
-        this.accelerator = acc
+    PodSpecBuilder withDisk( DiskResource disk ) {
+        this.disk = disk
+        return this
+    }
+
+    PodSpecBuilder withAccelerator( AcceleratorResource accelerator ) {
+        this.accelerator = accelerator
         return this
     }
 
@@ -219,6 +242,26 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withCsiEphemerals( Collection<PodMountCsiEphemeral> csiEphemerals ) {
+        this.csiEphemerals.addAll(csiEphemerals)
+        return this
+    }
+
+    PodSpecBuilder withCsiEphemeral( PodMountCsiEphemeral csiEphemeral ) {
+        this.csiEphemerals.add(csiEphemeral)
+        return this
+    }
+
+    PodSpecBuilder withEmptyDirs( Collection<PodMountEmptyDir> emptyDirs ) {
+        this.emptyDirs.addAll(emptyDirs)
+        return this
+    }
+
+    PodSpecBuilder withEmptyDir( PodMountEmptyDir emptyDir ) {
+        this.emptyDirs.add(emptyDir)
+        return this
+    } 
+
     PodSpecBuilder withSecrets( Collection<PodMountSecret> secrets ) {
         this.secrets.addAll(secrets)
         return this
@@ -258,12 +301,18 @@ class PodSpecBuilder {
         // -- env vars
         if( opts.getEnvVars() )
             envVars.addAll( opts.getEnvVars() )
-        // -- secrets
-        if( opts.getMountSecrets() )
-            secrets.addAll( opts.getMountSecrets() )
         // -- configMaps
         if( opts.getMountConfigMaps() )
             configMaps.addAll( opts.getMountConfigMaps() )
+        // -- csi ephemeral volumes
+        if( opts.getMountCsiEphemerals() )
+            csiEphemerals.addAll( opts.getMountCsiEphemerals() )
+        // -- emptyDirs
+        if( opts.getMountEmptyDirs() )
+            emptyDirs.addAll( opts.getMountEmptyDirs() )
+        // -- secrets
+        if( opts.getMountSecrets() )
+            secrets.addAll( opts.getMountSecrets() )
         // -- volume claims 
         if( opts.getVolumeClaims() )
             volumeClaims.addAll( opts.getVolumeClaims() )
@@ -396,37 +445,42 @@ class PodSpecBuilder {
             container.env = env
 
         // add resources
-        def res = [requests: [:], limits: [:]]
+        final res = [
+            requests: new LinkedHashMap(10),
+            limits: new LinkedHashMap(10)
+        ] as Map
 
-        if( cpus?.request ) {
-            res.requests.put('cpu', cpus.request)
-        }
-        if( cpus?.limit ) {
-            res.limits.put('cpu', cpus.limit)
-        }
-
-        if( memory?.request ) {
-            res.requests.put('memory', "${memory.request.toMega()}Mi")
-        }
-        if( memory?.limit ) {
-            res.limits.put('memory', "${memory.limit.toMega()}Mi")
+        if( this.cpus ) {
+            if( this.cpus.request ) res.requests['cpu'] = this.cpus.request
+            if( this.cpus.limit ) res.limits['cpu'] = this.cpus.limit
         }
 
-        final acceleratorType = getAcceleratorType(accelerator)
-
-        if( accelerator?.request ) {
-            res.requests.put(acceleratorType, accelerator.request)
-        }
-        if( accelerator?.limit ) {
-            res.limits.put(acceleratorType, accelerator.limit)
+        if( this.memory ) {
+            if( this.memory.request ) res.requests['memory'] = this.memory.request.toMega() + 'Mi'
+            if( this.memory.limit ) res.limits['memory'] = this.memory.limit.toMega() + 'Mi'
         }
 
-        if( !res.requests.isEmpty() || !res.limits.isEmpty() )
+        if( this.disk ) {
+            if( this.disk.request ) res.requests['ephemeral-storage'] = this.disk.request.toMega() + 'Mi'
+            if( this.disk.limit ) res.limits['ephemeral-storage'] = this.disk.limit.toMega() + 'Mi'
+        }
+
+        if( this.accelerator ) {
+            final type = getAcceleratorType(this.accelerator)
+            if( this.accelerator.request ) res.requests[type] = this.accelerator.request
+            if( this.accelerator.limit ) res.limits[type] = this.accelerator.limit
+        }
+
+        if( !res.requests )
+            res.remove('requests')
+        if( !res.limits )
+            res.remove('limits')
+        if( res )
             container.resources = res
 
         // add storage definitions ie. volumes and mounts
-        final mounts = []
-        final volumes = []
+        final List<Map> mounts = []
+        final List<Map> volumes = []
         final namesMap = [:]
 
         // creates a volume name for each unique claim name
@@ -436,7 +490,7 @@ class PodSpecBuilder {
             volumes << [name: volName, persistentVolumeClaim: [claimName: claimName]]
         }
 
-        // -- volume claims
+        // -- persistent volume claims
         for( PodVolumeClaim entry : volumeClaims ) {
             //check if we already have a volume for the pvc
             final name = namesMap.get(entry.claimName)
@@ -454,17 +508,31 @@ class PodSpecBuilder {
             configMapToSpec(name, entry, mounts, volumes)
         }
 
-        // host mounts
+        // -- csi ephemeral volumes
+        for( PodMountCsiEphemeral entry : csiEphemerals ) {
+            final name = nextVolName()
+            mounts << [name: name, mountPath: entry.mountPath, readOnly: entry.csi.readOnly ?: false]
+            volumes << [name: name, csi: entry.csi]
+        }
+
+        // -- emptyDir volumes
+        for( PodMountEmptyDir entry : emptyDirs ) {
+            final name = nextVolName()
+            mounts << [name: name, mountPath: entry.mountPath]
+            volumes << [name: name, emptyDir: entry.emptyDir]
+        }
+
+        // -- secret volumes
+        for( PodMountSecret entry : secrets ) {
+            final name = nextVolName()
+            secretToSpec(name, entry, mounts, volumes)
+        }
+
+        // -- host path volumes
         for( PodHostMount entry : hostMounts ) {
             final name = nextVolName()
             mounts << [name: name, mountPath: entry.mountPath]
             volumes << [name: name, hostPath: [path: entry.hostPath]]
-        }
-
-        // secret volumes
-        for( PodMountSecret entry : secrets ) {
-            final name = nextVolName()
-            secretToSpec(name, entry, mounts, volumes)
         }
 
 
@@ -506,17 +574,16 @@ class PodSpecBuilder {
     }
 
     @PackageScope
-    @CompileDynamic
-    String getAcceleratorType(AcceleratorResource accelerator) {
+    static String getAcceleratorType(AcceleratorResource accelerator) {
 
-        def type = accelerator?.type ?: 'nvidia.com'
+        def type = accelerator.type ?: 'nvidia.com'
 
-        // Assume the user has fully specified the resource type.
-        if ( type.contains('/') ) return type
+        if ( type.contains('/') )
+            // Assume the user has fully specified the resource type.
+            return type
 
         // Assume we're using GPU and update as necessary.
         if( !type.contains('.') ) type += '.com'
-
         type += '/gpu'
 
         return type
@@ -553,9 +620,9 @@ class PodSpecBuilder {
     protected Map sanitize(Map map, MetaType kind) {
         final result = new HashMap(map.size())
         for( Map.Entry entry : map ) {
-            final key = sanitize0(entry.key, kind)
+            final key = sanitizeKey(entry.key as String, kind)
             final value = (kind == MetaType.LABEL)
-                ? sanitize0(entry.value, kind)
+                ? sanitizeValue(entry.value, kind, SegmentType.VALUE)
                 : entry.value
 
             result.put(key, value)
@@ -563,15 +630,30 @@ class PodSpecBuilder {
         return result
     }
 
+    protected String sanitizeKey(String value, MetaType kind) {
+        final parts = value.tokenize('/')
+        
+        if (parts.size() == 2) {
+            return "${sanitizeValue(parts[0], kind, SegmentType.PREFIX)}/${sanitizeValue(parts[1], kind, SegmentType.NAME)}"
+        }
+        if( parts.size() == 1 ) {
+            return sanitizeValue(parts[0], kind, SegmentType.NAME)
+        }
+        else {
+            throw new IllegalArgumentException("Invalid key in pod ${kind.toString().toLowerCase()} -- Key can only contain exactly one '/' character")
+        }
+    }
+
+
     /**
      * Sanitize a string value to contain only alphanumeric characters, '-', '_' or '.',
      * and to start and end with an alphanumeric character.
      */
-    protected String sanitize0(value, MetaType kind) {
+    protected String sanitizeValue(value, MetaType kind, SegmentType segment) {
         def str = String.valueOf(value)
-        if( str.length() > 63 ) {
-            log.debug "K8s $kind exceeds allowed size: 63 -- offending str=$str"
-            str = str.substring(0,63)
+        if( str.length() > segment.maxSize ) {
+            log.debug "K8s $kind $segment exceeds allowed size: $segment.maxSize -- offending str=$str"
+            str = str.substring(0,segment.maxSize)
         }
         str = str.replaceAll(/[^a-zA-Z0-9\.\_\-]+/, '_')
         str = str.replaceAll(/^[^a-zA-Z0-9]+/, '')

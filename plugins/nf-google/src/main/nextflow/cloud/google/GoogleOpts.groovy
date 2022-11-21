@@ -35,7 +35,7 @@ import nextflow.exception.AbortOperationException
 @CompileStatic
 class GoogleOpts {
 
-    static final String DEFAULT_LOCATION = 'us-central1'
+    static final public String DEFAULT_LOCATION = 'us-central1'
 
     static Map<String,String> env = System.getenv()
 
@@ -119,6 +119,7 @@ class GoogleOpts {
         return config
     }
 
+    @Memoized // make memoized to prevent multiple access to the creds file
     GoogleCredentials getCredentials() {
         return makeCreds(credsFile)
     }
@@ -127,7 +128,7 @@ class GoogleOpts {
         GoogleCredentials result
         if( credsFile ) {
             log.debug "Google auth via application credentials file: $credsFile"
-            result = GoogleCredentials .fromStream(new FileInputStream(credsFile))
+            result = GoogleCredentials.fromStream(new FileInputStream(credsFile))
         }
         else {
             log.debug "Google auth via application DEFAULT"

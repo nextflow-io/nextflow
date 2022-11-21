@@ -17,6 +17,7 @@
 
 package nextflow.scm
 
+
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
@@ -77,6 +78,7 @@ class BitbucketRepositoryProviderTest extends Specification {
         result.contains( new RepositoryProvider.TagInfo('v1.0', '755ba829cbc4f28dcb3c16b9dcc1c49c7ee47ff5') )
     }
 
+    @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
     def 'should list branches' () {
         given:
         def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')

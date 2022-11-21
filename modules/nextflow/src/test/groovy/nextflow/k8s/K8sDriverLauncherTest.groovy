@@ -362,7 +362,7 @@ class K8sDriverLauncherTest extends Specification {
                         ],
                         resources: [
                             requests: [cpu: 2, memory: '200Mi'],
-                            limits: [cpu: 2, memory: '200Mi']
+                            limits: [memory: '200Mi']
                         ],
                         volumeMounts: [
                             [name:'vol-1', mountPath:'/mnt/path/data'],
