@@ -436,6 +436,16 @@ Resource requests and other job characteristics can be controlled via the follow
 * :ref:`process-queue`
 * :ref:`process-time`
 
+.. tip::
+  In Nextflow version 22.11.0-edge or later, it is possible to specify resource settings with both the ``clusterOptions`` and
+  the ``cpus`` directives by specifying the cluster options dynamically::
+
+    cpus = 2
+    clusterOptions = { "-l nodes=1:ppn=${task.cpus}:..." }
+
+  This technique allows you to specify ``clusterOptions`` once for all processes, including any options that are specific
+  to your cluster, and use the standard resource directives throughout the rest of your pipeline.
+
 
 .. _pbspro-executor:
 
@@ -461,9 +471,11 @@ Resource requests and other job characteristics can be controlled via the follow
 * :ref:`process-time`
 
 .. tip::
-  In Nextflow version 22.10 or later, it is possible to specify resource settings with both ``clusterOptions`` and other
-  directives such as ``cpus`` and ``memory`` by specifying the cluster options dynamically::
+  In Nextflow version 22.11.0-edge or later, it is possible to specify resource settings with both the ``clusterOptions`` and
+  the ``cpus`` and ``memory`` directives by specifying the cluster options dynamically::
 
+    cpus = 2
+    memory = 8.GB
     clusterOptions = { "-l select=1:ncpus=${task.cpus}:mem=${task.memory.toMega()}mb:..." }
 
   This technique allows you to specify ``clusterOptions`` once for all processes, including any options that are specific
