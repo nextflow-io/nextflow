@@ -158,11 +158,33 @@ class WaveClientTest extends Specification {
         def req = wave.makeRequest(WaveAssets.fromImage(IMAGE))
         then:
         req.containerImage == IMAGE
+        !req.containerPlatform
         !req.containerFile
         !req.condaFile
         !req.containerConfig.layers
         and:
         req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
+        req.timestamp instanceof String
+    }
+
+    def 'should create request object and platform' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        def IMAGE =  'foo:latest'
+        def PLATFORM = 'amd64'
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromImage(IMAGE, PLATFORM))
+        then:
+        req.containerImage == IMAGE
+        req.containerPlatform == PLATFORM
+        and:
+        !req.containerFile
+        !req.condaFile
+        !req.containerConfig.layers
+        and:
+        req.fingerprint == 'd31044e6594126479585c0cdca15c15e'
         req.timestamp instanceof String
     }
 
@@ -209,7 +231,7 @@ class WaveClientTest extends Specification {
         def wave = new WaveClient(session)
 
         when:
-        def req = wave.makeRequest(new WaveAssets(null, null, null, DOCKERFILE, CONDAFILE))
+        def req = wave.makeRequest(new WaveAssets(null, null, null, null, DOCKERFILE, CONDAFILE))
         then:
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == DOCKERFILE
@@ -230,7 +252,7 @@ class WaveClientTest extends Specification {
         WaveClient wave = Spy(WaveClient, constructorArgs: [session])
 
         when:
-        def assets = new WaveAssets('my:image', MODULE_RES)
+        def assets = new WaveAssets('my:image', null, MODULE_RES)
         def req = wave.makeRequest(assets)
         then:
         1 * wave.makeLayer(MODULE_RES) >> MODULE_LAYER
@@ -252,7 +274,7 @@ class WaveClientTest extends Specification {
         WaveClient wave = Spy(WaveClient, constructorArgs: [session])
 
         when:
-        def assets = new WaveAssets('my:image', MODULE_RES, null, null, null, PROJECT_RES)
+        def assets = new WaveAssets('my:image', null, MODULE_RES, null, null, null, PROJECT_RES)
         def req = wave.makeRequest(assets)
         then:
         1 * wave.makeLayer(MODULE_RES) >> MODULE_LAYER
@@ -326,6 +348,27 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, IMAGE)
         then:
         assets.containerImage == IMAGE
+        !assets.moduleResources
+        !assets.dockerFileContent
+        !assets.containerConfig
+        !assets.condaFile
+        !assets.projectResources
+        !assets.containerPlatform
+    }
+
+    def 'should create asset with image and platform' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[containerPlatform:'linux/amd64']]}
+        def task = Mock(TaskRun) { getConfig() >> [:] }
+        def IMAGE = 'foo:latest'
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, IMAGE)
+        then:
+        assets.containerImage == IMAGE
+        assets.containerPlatform == 'linux/amd64'
         !assets.moduleResources
         !assets.dockerFileContent
         !assets.containerConfig
