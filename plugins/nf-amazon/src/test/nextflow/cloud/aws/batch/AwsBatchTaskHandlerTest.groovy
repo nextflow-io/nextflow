@@ -96,7 +96,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4.0'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
         req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
         req.getContainerOverrides().getCommand() == ['bash', '-c', 'something']
@@ -117,7 +117,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4.0'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
         req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
         req.getContainerOverrides().getCommand() == ['bash', '-c', 'something']
@@ -147,7 +147,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4.0'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
         req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
         req.getContainerOverrides().getCommand() == ['bash', '-c', 'something']
 
@@ -164,7 +164,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req2.getJobName() == 'batchtask'
         req2.getJobQueue() == 'queue1'
         req2.getJobDefinition() == 'job-def:1'
-        req2.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4.0'
+        req2.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
         req2.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
         req2.getContainerOverrides().getCommand() ==['bash', '-c', 'something']
         req2.getShareIdentifier() == 'priority/high'
@@ -193,7 +193,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def res = req.getContainerOverrides().getResourceRequirements()
         res.size()==3
         and:
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4.0'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
         req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
         req.getContainerOverrides().getResourceRequirements().find { it.type=='GPU'}.getValue() == '2'
     }
@@ -889,7 +889,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getJobName() == 'batchtask'
         req.getJobQueue() == 'queue1'
         req.getJobDefinition() == 'job-def:1'
-        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4.0'
+        req.getContainerOverrides().getResourceRequirements().find { it.type=='VCPU'}.getValue() == '4'
         req.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
         req.getContainerOverrides().getEnvironment() == [VAR_FOO, VAR_BAR]
         req.getContainerOverrides().getCommand() == ['sh', '-c','hello']
