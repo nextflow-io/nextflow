@@ -85,6 +85,9 @@ class ScriptBinding extends WorkflowBinding {
             params.putAll((Map)vars.params)
         }
         vars.params = params
+
+        // create InputPlaceholder
+        vars._ = new InputPlaceholder()
     }
 
     ScriptBinding(Session session) {
@@ -191,7 +194,12 @@ class ScriptBinding extends WorkflowBinding {
             if( NF.isDsl2() ) throw new DeprecationException(msg)
             log.warn(msg)
         }
-        if( name != 'args' && name != 'params' )
+        if( name == '_' ) {
+            final msg = 'The use of the identifier `_` as variable name is discouraged and will be deprecated in a future version'
+            // if( NF.isDsl2() ) throw new DeprecationException(msg)
+            log.warn(msg)
+        }
+        if( name != 'args' && name != 'params' && name != '_' )
             super.setVariable(name, value)
     }
 
