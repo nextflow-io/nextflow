@@ -1,0 +1,7 @@
+nf-wave changelog
+==================
+0.6.0 - 23 Nov 2022
+- Add support for Wave containerPlatform [10d56ca1]
+- Add tower endpoint to wave [b725ddc4]
+- Bump micromamba@1.0.0 [c7fd5d26]
+- Bump micromamba:0.27.0 [904c9409]
