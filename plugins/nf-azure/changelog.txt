@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+0.15.0 - 23 Nov 2022
+- Allow identity based authentication on Azure Batch (#3132) [a08611be]
+- Add Azure SAS token validation [e2244b48]
+
 0.14.1 - 10 Sep 2022
 - Fix Azure NPE on missing pool opts [d5c0aabd]
 - Fix shutdown/cleanup hooks invocation [f4185070
