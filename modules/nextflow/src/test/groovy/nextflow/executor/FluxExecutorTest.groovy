@@ -89,6 +89,12 @@ class FluxExecutorTest extends Specification {
         task.config.clusterOptions = '--tasks-per-node=4 --cpus-per-node=4'
         then:
         executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'mini', 'submit', '--setattr=cwd=/work/path', '--job-name="nf-my_task"', '--output=/work/path/.command.log', '--time-limit=60', '--tasks-per-node=4', '--cpus-per-node=4', '/bin/bash', 'job.sh']
+
+        when:
+        task.config = new TaskConfig()
+        task.config.flux = [terminalOutput: true]
+        then:
+        executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'mini', 'submit', '--setattr=cwd=/work/path', '--job-name="nf-my_task"', '/bin/bash', 'job.sh']
     }
 
     def testWorkDirWithBlanks() {
@@ -144,7 +150,7 @@ class FluxExecutorTest extends Specification {
         def executor = [:] as FluxExecutor
         then:
         usr
-        executor.queueStatusCommand(null) == ['flux', 'jobs', '--suppress-header', '--format="{id.f58} {status_abbrev}"', '--since="-15m"', '--user', usr]
-        executor.queueStatusCommand('xxx') == ['flux', 'jobs', '--suppress-header', '--format="{id.f58} {status_abbrev}"', '--since="-15m"', '--queue', 'xxx', '--user', usr]
+        executor.queueStatusCommand(null) == ['sh', '-c', "flux jobs --suppress-header --format=\"{id.f58} {status_abbrev}\" --since=\"-15m\" --user=" + usr]
+        executor.queueStatusCommand('xxx') == ['sh', '-c', "flux jobs --suppress-header --format=\"{id.f58} {status_abbrev}\" --since=\"-15m\" --queue=xxx --user=" + usr]
     }
 }
