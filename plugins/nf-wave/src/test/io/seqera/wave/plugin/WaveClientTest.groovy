@@ -294,7 +294,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaRecipeToDockerFile(RECIPE) == '''\
-                FROM mambaorg/micromamba:0.27.0
+                FROM mambaorg/micromamba:1.0.0
                 RUN \\
                    micromamba install -y -n base -c defaults -c conda-forge \\
                    bwa=0.7.15 salmon=1.1.1 \\
@@ -328,7 +328,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaFileToDockerFile()== '''\
-                FROM mambaorg/micromamba:0.27.0
+                FROM mambaorg/micromamba:1.0.0
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                     micromamba clean -a -y
@@ -462,7 +462,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:0.27.0
+                    FROM mambaorg/micromamba:1.0.0
                     RUN \\
                        micromamba install -y -n base -c defaults -c conda-forge \\
                        salmon=1.2.3 \\
@@ -490,7 +490,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:0.27.0
+                    FROM mambaorg/micromamba:1.0.0
                     COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                     RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                         micromamba clean -a -y
