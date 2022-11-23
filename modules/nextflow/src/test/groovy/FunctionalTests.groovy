@@ -744,4 +744,22 @@ class FunctionalTests extends Specification {
         def abort = thrown(AbortRunException)
         runner.session.fault.report ==~ /(?s).*-- Check script '(.*?)' at line: 10.*/
     }
+
+    /**
+     * test chaining collect method
+     */
+    def 'test collect' () {
+
+        setup:
+        def script = '''
+            nextflow.enable.dsl=2
+            Channel.of('a','b') | collect { it.toUpperCase() }
+            '''
+        when:
+        def runner = new TestScriptRunner( [:] )
+
+        then:
+        runner.setScript(script).execute().value == ['A', 'B']
+
+    }
 }

@@ -17,6 +17,8 @@
 
 package nextflow
 
+import nextflow.extension.OpCall
+
 import static nextflow.util.CheckHelper.*
 
 import java.nio.file.FileSystem
@@ -624,6 +626,23 @@ class Channel  {
     static private void fetchSraFiles0(SraExplorer explorer) {
         def future = CompletableFuture.runAsync ({ explorer.apply() } as Runnable)
         fromPath0Future = future.exceptionally(Channel.&handlerException)
+    }
+
+    /**
+     * Issue: https://github.com/nextflow-io/nextflow/issues/3378
+     * as GroovyDefault implements a `collect` method by default for the script the user is not able
+     * to use the collect operator when chaining methods (i.e. channel.of('a') | collect | view )
+     *
+     * importing this method as static via ScriptParser tells to the compiler to use it instead default method
+     *
+     * The return of the method needs to be undefined (def) to avoid errors in compile time
+     *
+     * @param args
+     * @return
+     */
+    static def collect( Closure args=null ){
+        final result = OpCall.create("collect", args)
+        return result
     }
 
 }

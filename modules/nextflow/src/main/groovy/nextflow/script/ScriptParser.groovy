@@ -118,6 +118,7 @@ class ScriptParser {
         importCustomizer.addImports( ValueObject.name )
         importCustomizer.addImport( 'channel', Channel.name )
         importCustomizer.addStaticStars( Nextflow.name )
+        importCustomizer.addStaticImport( Channel.name, "collect")
 
         config = new CompilerConfiguration()
         config.addCompilationCustomizers( importCustomizer )
