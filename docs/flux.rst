@@ -77,7 +77,7 @@ You can choose just to build the Docker image from the root of the repository:
 
 .. code-block:: console
     
-    $ docker build -f docker/flux/.devcontainer/Dockerfile -t nextflow-flux .
+    $ docker build -f docker/flux/.devcontainer/Dockerfile --platform linux/amd64 -o type=docker -t nextflow-flux .
 
 
 And then shell into the container for a development environment. You'd need to bind

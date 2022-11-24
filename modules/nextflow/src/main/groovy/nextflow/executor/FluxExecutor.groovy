@@ -61,7 +61,12 @@ class FluxExecutor extends AbstractGridExecutor {
         List<String> result = ['flux', 'mini', 'submit']
         result << '--setattr=cwd=' + quote(task.workDir)
         result << '--job-name="' + getJobNameFor(task) + '"'
-        result << '--output=' + quote(task.workDir.resolve(TaskRun.CMD_LOG))  // -o OUTFILE
+
+        // Only write output to file if user doesn't want written entirely to terminal
+        Boolean terminalOutput = task.config.navigate('flux.terminalOutput') as Boolean
+        if ( !terminalOutput ) {
+            result << '--output=' + quote(task.workDir.resolve(TaskRun.CMD_LOG))  // -o OUTFILE
+        }
 
         if( task.config.cpus > 1 ) {
             result << '--cores-per-task=' + task.config.cpus.toString()
@@ -129,17 +134,18 @@ class FluxExecutor extends AbstractGridExecutor {
     protected List<String> queueStatusCommand(Object queue) {
 
         // Look at jobs from last 15 minutes
-        final result = ['flux', 'jobs', '--suppress-header', '--format="{id.f58} {status_abbrev}"', '--since="-15m"']
+        String command = 'flux jobs --suppress-header --format="{id.f58} {status_abbrev}" --since="-15m"'
 
         if( queue )
-            result << '--queue' << queue.toString()
+            command += ' --queue=' + queue.toString()
 
         final user = System.getProperty('user.name')
         if( user )
-            result << '--user' << user
+            command += ' --user=' + user
         else
             log.debug "Cannot retrieve current user"
 
+        final result = ['sh', '-c', command]
         return result
     }
 

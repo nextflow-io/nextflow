@@ -103,6 +103,8 @@ Resource requests and other job characteristics can be controlled via the follow
 * :ref:`process-queue`
 * :ref:`process-time`
 
+Additionally, to have Flux print all output to stderr and stdout, add `flux.terminalOutput` to be true.
+
 .. note:: Flux does not support specifying memory. 
 
 
