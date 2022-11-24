@@ -16,16 +16,16 @@
  * limitations under the License.
  */
 
-seqs = file("$baseDir/data/seqs/*.fastq")
+seqs = channel.fromList(file("$baseDir/data/seqs/*.fastq"))
 
 workflow {
-  proc1(seqs)
-  proc2(seqs)
-  proc3(seqs)
-  proc4(seqs)
-  proc5(seqs)
-  proc6(seqs)
-  proc7(seqs)
+  seqs | proc1
+  seqs | proc2
+  seqs | proc3
+  seqs | proc4
+  seqs | proc5
+  seqs | proc6
+  seqs | proc7
 }
 
 process proc1 {

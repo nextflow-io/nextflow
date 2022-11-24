@@ -21,7 +21,7 @@
    file x
 
    output:
-   file x into result
+   file x
 
    'echo foo'
  }
