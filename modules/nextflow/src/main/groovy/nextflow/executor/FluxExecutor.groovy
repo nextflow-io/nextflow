@@ -63,7 +63,7 @@ class FluxExecutor extends AbstractGridExecutor {
         result << '--job-name="' + getJobNameFor(task) + '"'
 
         // Only write output to file if user doesn't want written entirely to terminal
-        Boolean terminalOutput = task.config.navigate('flux.terminalOutput') as Boolean
+        Boolean terminalOutput = session.config.navigate('flux.terminalOutput') as Boolean
         if ( !terminalOutput ) {
             result << '--output=' + quote(task.workDir.resolve(TaskRun.CMD_LOG))  // -o OUTFILE
         }
