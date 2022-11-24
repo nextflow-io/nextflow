@@ -15,25 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
 list = 'alpha,delta,gamma'.tokenize(',')
+
+workflow {
+  foo(list)
+  bar(list)
+}
 
 process foo {
   debug true
   input:
-  each x from list
+  each x
 
   script:
   template(task.command)
 
 }
 
-
 process bar {
   debug true
   input:
-  each x from list
+  each x 
 
   script:
   template(task.command)
