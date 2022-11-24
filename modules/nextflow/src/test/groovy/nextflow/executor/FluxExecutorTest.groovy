@@ -18,6 +18,7 @@
 package nextflow.executor
 import java.nio.file.Paths
 
+import nextflow.Session
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -49,8 +50,12 @@ class FluxExecutorTest extends Specification {
 
     def testGetCommandLine() {
 
-        setup:
-        def executor = [:] as FluxExecutor
+        given:
+        def session = Mock(Session) {
+            getConfig() >> [:]
+        }
+        and:
+        def executor = new FluxExecutor(session: session)
 
         // mock process
         def proc = Mock(TaskProcessor)
@@ -90,22 +95,38 @@ class FluxExecutorTest extends Specification {
         then:
         executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'mini', 'submit', '--setattr=cwd=/work/path', '--job-name="nf-my_task"', '--output=/work/path/.command.log', '--time-limit=60', '--tasks-per-node=4', '--cpus-per-node=4', '/bin/bash', 'job.sh']
 
-        when:
+    }
+
+    def testSubmitCommandWithTerminalOutput() {
+        given:
+        def session = Mock(Session) {
+            getConfig() >> [flux:[terminalOutput: true]]
+        }
+        and:
+        def executor = new FluxExecutor(session: session)
+        // mock process
+        def proc = Mock(TaskProcessor)
+        // task object
+        def task = new TaskRun()
+        task.processor = proc
+        task.name = 'my task'
+        task.workDir = Paths.get('/work/path')
         task.config = new TaskConfig()
-        task.config.flux = [terminalOutput: true]
-        then:
+        
+        expect:
         executor.getSubmitCommandLine(task, Paths.get('/some/path/job.sh')) == ['flux', 'mini', 'submit', '--setattr=cwd=/work/path', '--job-name="nf-my_task"', '/bin/bash', 'job.sh']
+
     }
 
     def testWorkDirWithBlanks() {
 
-        setup:
-        def executor = Spy(FluxExecutor)
-
-        // mock process
+        given:
+        def session = Mock(Session) {
+            getConfig() >> [:]
+        }
+        and:
+        def executor = new FluxExecutor(session: session)
         def proc = Mock(TaskProcessor)
-
-        // task object
         def task = new TaskRun()
         task.processor = proc
         task.workDir = Paths.get('/work/some data/path')
