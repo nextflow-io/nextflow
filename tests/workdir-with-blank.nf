@@ -18,7 +18,7 @@
 
 process foo {
     input:
-    each x from 1,2,3
+    each x
 
     output:
     file result_data
@@ -28,4 +28,6 @@ process foo {
     """
 }
 
-workflow { foo() }
+workflow {
+  channel.of(1,2,3) | foo
+}
