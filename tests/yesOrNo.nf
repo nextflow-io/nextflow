@@ -15,13 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
+workflow {
+  channel.of(1,2) | yesOrNo
+}
 
 process yesOrNo {
     debug true
 
     input:
-    val x from 1,2
+    val x
 
     script:
     if( x == 1 ) {

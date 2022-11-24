@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
 def rule( file ) {
   if( file == 'file_1.txt' )
@@ -32,10 +31,14 @@ def rule( file ) {
 process foo {
   publishDir path: 'results', saveAs: this.&rule
 
-  input: each x from 1,2,3
-  output: file '*.txt'
+  input: each x
+  output: path '*.txt'
   """
   touch file_${x}.txt
   """
 
+}
+
+workflow {
+  foo([1,2,3])
 }

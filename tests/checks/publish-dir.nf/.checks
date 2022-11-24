@@ -5,7 +5,7 @@ echo First run
 $NXF_RUN | tee stdout
 
 [[ `grep INFO .nextflow.log | grep -c 'Submitted process > align'` == 3 ]] || false
-[[ `grep INFO .nextflow.log | grep -c 'Submitted process > combine'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > my_combine'` == 1 ]] || false
 cmp stdout .expected || false
 
 [[ -f data/alpha.bai ]] || false
@@ -28,7 +28,7 @@ echo Second run
 $NXF_RUN | tee stdout
 
 [[ `grep INFO .nextflow.log | grep -c 'Submitted process > align'` == 3 ]] || false
-[[ `grep INFO .nextflow.log | grep -c 'Submitted process > combine'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Submitted process > my_combine'` == 1 ]] || false
 cmp stdout .expected || false
 
 [[ -f data/alpha.bai ]] || false
@@ -54,7 +54,7 @@ rm -rf more/data
 $NXF_RUN -resume | tee stdout
 
 [[ `grep INFO .nextflow.log | grep -c 'Cached process > align'` == 3 ]] || false
-[[ `grep INFO .nextflow.log | grep -c 'Cached process > combine'` == 1 ]] || false
+[[ `grep INFO .nextflow.log | grep -c 'Cached process > my_combine'` == 1 ]] || false
 cmp stdout .expected || false
 [[ -f data/alpha.bai ]] || false
 [[ -f data/alpha.bam ]] || false

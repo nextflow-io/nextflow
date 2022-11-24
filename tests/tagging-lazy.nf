@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
 params.ext = 'fastq'
 
@@ -24,10 +23,13 @@ process foo {
   tag "${barcode}.${params.ext}"
 
   input:
-  each barcode from 'alpha', 'delta', 'gamma', 'omega'
+  each barcode
 
   """
   echo $barcode
   """
+}
 
+workflow {
+  channel.of('alpha', 'delta', 'gamma', 'omega') | foo
 }

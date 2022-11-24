@@ -15,15 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
 process dotModule {
     module 'x'
     module 'y'
-
     beforeScript 'module purge'
 
     '''
     echo $PATH
     '''
+}
+
+workflow {
+  dotModule()
 }

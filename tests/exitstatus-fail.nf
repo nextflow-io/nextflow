@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
 /*
  * This process terminates with an error since it returns a non-zero exit code
@@ -25,4 +24,8 @@ process foo {
     echo hello
     exit 1
     """
+}
+
+workflow {
+  foo()
 }

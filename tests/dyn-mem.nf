@@ -15,13 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
+workflow {
+  channel.fromPath(['.small.txt','.big.txt']) | foo
+}
 
 process foo {
   memory { x.size() < 10.B  ? 100.MB : 200.MB }
   
   input: 
-  file x from Channel.fromPath(['.small.txt','.big.txt'])
+  file x
   
   script:
   """

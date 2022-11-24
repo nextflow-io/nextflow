@@ -10,7 +10,6 @@ process sayHello {
   """
 }
 
-
 workflow {
-    Channel.from('Bojour', 'Ciao', 'Hello', 'Hola', 'Γεια σου') | sayHello
+  Channel.of('Bojour', 'Ciao', 'Hello', 'Hola', 'Γεια σου') | sayHello
 }

@@ -15,11 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
 process foo {
     input:
-    each x from 1,2,3
+    each x
 
     output:
     file result_data
@@ -27,4 +26,8 @@ process foo {
     """
     echo Hello $x > result_data
     """
+}
+
+workflow {
+  channel.of(1,2,3) | foo
 }

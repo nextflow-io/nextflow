@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
+
 
 /*
  * fake alignment step producing a BAM and BAI files
@@ -24,51 +24,28 @@ process algn {
   debug true
 
   input:
-  each barcode from 'alpha', 'gamma'
-  each seq_id from 'one', 'two', 'three'
+  each barcode
+  each seq_id
 
   output:
-  set barcode, seq_id, file('bam'), file('bai') into algn_files
+  tuple val(barcode), val(seq_id), file('bam'), file('bai')
 
   """
   echo BAM $seq_id - $barcode > bam
   echo BAI $seq_id - $barcode > bai
 
   """
-
 }
 
-/*
- * aggregation is made by using a 'reduce' operator
- * followed by 'flatMap'
- */
-
-aggregation = algn_files
-                .reduce([:]) { map, tuple ->    // 'map' is used to collect all values; 'tuple' is the record containing four items: barcode, seqid, bam file and bai file
-                    def barcode = tuple[0]      // the first item is the 'barcode'
-                    def group = map[barcode]    // get the aggregation for current 'barcode'
-                    if( !group ) group = [ barcode, [], [], [] ]    // if new, create a new entry
-                    group[1] << tuple[1]        // append 'seq_id' to the aggregation list
-                    group[2] << tuple[2]        // append 'bam' file to the aggregation list
-                    group[3] << tuple[3]        // append 'bai' file to the aggregation list
-                    map[barcode] = group        // set back into the map
-                    return map                  // return it so that it will be used in the next iteration
-                }
-                .flatMap { it.values() }        // tricky part: get the list of values of in the map, each value is the
-                                                // aggregation build above
-                                                // the 'flatMap' emits each of these aggregation list as a single item
-
-                .map { it.collect {  it instanceof Collection ? it.sort() : it }   }
 
 /*
  * Finally merge the BAMs and BAIs with the same 'barcode'
  */
-
 process merge {
   debug true
 
   input:
-  set barcode, seq_id, file(bam: 'bam?'), file(bai: 'bai?') from aggregation
+  tuple val(barcode), val(seq_id), file(bam: 'bam?'), file(bai: 'bai?')
 
   """
   echo barcode: $barcode
@@ -77,4 +54,35 @@ process merge {
   echo bai    : $bai
   """
 
+}
+
+workflow {
+  def ch1 = channel.of('alpha', 'gamma')
+  def ch2 = channel.of('one', 'two', 'three')
+
+  aggregation = algn(ch1, ch2)
+
+  /*
+   * aggregation is made by using a 'reduce' operator
+   * followed by 'flatMap'
+   */
+
+   aggregation = algn.out
+                     .reduce([:]) { map, tuple ->    // 'map' is used to collect all values; 'tuple' is the record containing four items: barcode, seqid, bam file and bai file
+                         def barcode = tuple[0]      // the first item is the 'barcode'
+                         def group = map[barcode]    // get the aggregation for current 'barcode'
+                         if( !group ) group = [ barcode, [], [], [] ]    // if new, create a new entry
+                         group[1] << tuple[1]        // append 'seq_id' to the aggregation list
+                         group[2] << tuple[2]        // append 'bam' file to the aggregation list
+                         group[3] << tuple[3]        // append 'bai' file to the aggregation list
+                         map[barcode] = group        // set back into the map
+                         return map                  // return it so that it will be used in the next iteration
+                     }
+                     .flatMap { it.values() }        // tricky part: get the list of values of in the map, each value is the
+                                                     // aggregation build above
+                                                     // the 'flatMap' emits each of these aggregation list as a single item
+
+                     .map { it.collect {  it instanceof Collection ? it.sort() : it }   }
+
+   merge(aggregation)
 }

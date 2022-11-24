@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
 params.range = 100
 
@@ -24,7 +23,7 @@ params.range = 100
  */
 process perlTask {
     output:
-    stdout randNums
+    stdout
 
 	shell:
     '''
@@ -40,7 +39,6 @@ process perlTask {
 	'''
 }
 
-
 /*
  * A Python script task which parses the output of the previous script
  */
@@ -48,7 +46,7 @@ process pyTask {
     debug true
 
     input:
-    stdin randNums
+    stdin
 
     '''
     #!/usr/bin/env python3
@@ -65,5 +63,8 @@ process pyTask {
 
     print("avg: %s - %s" % ( x/lines, y/lines ))
 	'''
+}
 
+workflow {
+  perlTask | pyTask
 }
