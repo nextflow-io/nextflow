@@ -23,6 +23,7 @@ import static nextflow.extension.Bolts.DATETIME_FORMAT
 @EqualsAndHashCode
 class NextflowMeta {
 
+    private static final String DSL1_EOL_MESSAGE = "Nextflow DSL1 is not supported anymore -- Please update your script to DSL2 or use Nextflow 22.10.x or early version"
     private static final Pattern DSL_DECLARATION = ~/(?m)^\s*(nextflow\.(preview|enable)\.dsl\s*=\s*(\d))\s*(;?\s*)?(;?\/{2}.*)?$/
 
     private static final Pattern DSL1_INPUT = ~/(?m)input:\s*(tuple|file|path|val|env|stdin)\b.*\s.*\bfrom\b.+$/
@@ -44,7 +45,9 @@ class NextflowMeta {
         boolean recursion
 
         void setDsl( float num ) {
-            if( num != 2 && num != 1 )
+            if( num == 1 )
+                throw new IllegalArgumentException(DSL1_EOL_MESSAGE)
+            if( num != 2 )
                 throw new IllegalArgumentException("Not a valid DSL version number: $num")
             if( num == 2 && !ignoreWarnDsl2 )
                 log.warn1 "DSL 2 PREVIEW MODE IS DEPRECATED - USE THE STABLE VERSION INSTEAD -- Read more at https://www.nextflow.io/docs/latest/dsl2.html#dsl2-migration-notes"
@@ -145,7 +148,9 @@ class NextflowMeta {
     }
 
     void enableDsl(String value) {
-        if( value !in ['1','2'] ) {
+        if( value == '1' )
+            throw new AbortOperationException(DSL1_EOL_MESSAGE)
+        if( value != '2' ) {
             throw new AbortOperationException("Invalid Nextflow DSL value: $value")
         }
         this.enable.dsl = value=='1' ? 1f : 2f
