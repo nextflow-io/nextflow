@@ -23,7 +23,7 @@ import static nextflow.extension.Bolts.DATETIME_FORMAT
 @EqualsAndHashCode
 class NextflowMeta {
 
-    private static final String DSL1_EOL_MESSAGE = "Nextflow DSL1 is not supported anymore -- Please update your script to DSL2 or use Nextflow 22.10.x or early version"
+    private static final String DSL1_EOL_MESSAGE = "Nextflow DSL1 is no longer supported — Please update your script to DSL2 or use Nextflow 22.10.x or an earlier version"
     private static final Pattern DSL_DECLARATION = ~/(?m)^\s*(nextflow\.(preview|enable)\.dsl\s*=\s*(\d))\s*(;?\s*)?(;?\/{2}.*)?$/
 
     private static final Pattern DSL1_INPUT = ~/(?m)input:\s*(tuple|file|path|val|env|stdin)\b.*\s.*\bfrom\b.+$/
