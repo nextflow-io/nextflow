@@ -57,7 +57,7 @@ class WaveClient {
 
     private static Logger log = LoggerFactory.getLogger(WaveClient)
 
-    private static final List<String> DEFAULT_CONDA_CHANNELS = ['defaults', 'conda-forge']
+    private static final List<String> DEFAULT_CONDA_CHANNELS = ['conda-forge','defaults']
 
     final private HttpClient httpClient
 
