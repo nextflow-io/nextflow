@@ -57,6 +57,8 @@ class WaveClient {
 
     private static Logger log = LoggerFactory.getLogger(WaveClient)
 
+    private static final List<String> DEFAULT_CONDA_CHANNELS = ['conda-forge','defaults']
+
     final private HttpClient httpClient
 
     final private WaveConfig config
@@ -79,12 +81,15 @@ class WaveClient {
 
     private CookieManager cookieManager
 
+    private List<String> condaChannels
+
     WaveClient(Session session) {
         this.session = session
         this.config = new WaveConfig(session.config.wave as Map ?: Collections.emptyMap(), SysEnv.get())
         this.fusion = new FusionConfig(session.config.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
         this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
         this.endpoint = config.endpoint()
+        this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
         log.debug "Wave server endpoint: ${endpoint}"
         this.packer = new Packer()
         // create cache
@@ -400,10 +405,11 @@ class WaveClient {
     }
 
     protected String condaRecipeToDockerFile(String recipe) {
+        def channelsOpts = condaChannels.collect(it -> "-c $it").join(' ')
         def result = """\
         FROM ${config.condaOpts().mambaImage}
         RUN \\
-           micromamba install -y -n base -c defaults -c conda-forge \\
+           micromamba install -y -n base $channelsOpts \\
            $recipe \\
            && micromamba clean -a -y
         """.stripIndent()

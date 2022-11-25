@@ -45,4 +45,23 @@ class CondaConfigTest extends Specification {
         true        | [enabled: true]   | [NXF_CONDA_ENABLED: true]
     }
 
+
+    @Unroll
+    def 'should check channels options'() {
+        given:
+        def conda = new CondaConfig(CONFIG, [:])
+        expect:
+        conda.getChannels() == EXPECTED
+
+        where:
+        EXPECTED                | CONFIG
+        []                      | [:]
+        ['bioconda']            | [channels:'bioconda']
+        ['bioconda']            | [channels:['bioconda']]
+        and:
+        ['this','that','other'] | [channels:'this,that,other']
+        ['this','that','other'] | [channels:'this, that ,other']
+        and:
+        ['this','that','other'] | [channels:['this','that','other']]
+    }
 }
