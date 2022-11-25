@@ -149,7 +149,7 @@ class TowerArchiver {
 
     protected void archiveFile(String name) {
         if( name )
-            archiveFile(Path.of(name).toAbsolutePath())
+            archiveFile(baseDir.resolve(name))
     }
 
     protected void archiveFile(Path source) {
