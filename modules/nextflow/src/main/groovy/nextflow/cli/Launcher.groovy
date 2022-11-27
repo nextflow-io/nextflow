@@ -252,6 +252,10 @@ class Launcher {
                 normalized << '-'
             }
 
+            else if( current == '-with-apptainer' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
             else if( current == '-with-charliecloud' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '-'
             }
@@ -518,7 +522,7 @@ class Launcher {
         }
 
         catch( ScriptCompilationException e ) {
-            log.error e.message
+            log.error(e.message, e)
             return(1)
         }
 

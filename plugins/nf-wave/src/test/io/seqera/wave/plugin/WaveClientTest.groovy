@@ -30,6 +30,7 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.conda.CondaConfig
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
@@ -158,11 +159,33 @@ class WaveClientTest extends Specification {
         def req = wave.makeRequest(WaveAssets.fromImage(IMAGE))
         then:
         req.containerImage == IMAGE
+        !req.containerPlatform
         !req.containerFile
         !req.condaFile
         !req.containerConfig.layers
         and:
         req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
+        req.timestamp instanceof String
+    }
+
+    def 'should create request object and platform' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        def IMAGE =  'foo:latest'
+        def PLATFORM = 'amd64'
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(WaveAssets.fromImage(IMAGE, PLATFORM))
+        then:
+        req.containerImage == IMAGE
+        req.containerPlatform == PLATFORM
+        and:
+        !req.containerFile
+        !req.condaFile
+        !req.containerConfig.layers
+        and:
+        req.fingerprint == 'd31044e6594126479585c0cdca15c15e'
         req.timestamp instanceof String
     }
 
@@ -209,7 +232,7 @@ class WaveClientTest extends Specification {
         def wave = new WaveClient(session)
 
         when:
-        def req = wave.makeRequest(new WaveAssets(null, null, null, DOCKERFILE, CONDAFILE))
+        def req = wave.makeRequest(new WaveAssets(null, null, null, null, DOCKERFILE, CONDAFILE))
         then:
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == DOCKERFILE
@@ -230,7 +253,7 @@ class WaveClientTest extends Specification {
         WaveClient wave = Spy(WaveClient, constructorArgs: [session])
 
         when:
-        def assets = new WaveAssets('my:image', MODULE_RES)
+        def assets = new WaveAssets('my:image', null, MODULE_RES)
         def req = wave.makeRequest(assets)
         then:
         1 * wave.makeLayer(MODULE_RES) >> MODULE_LAYER
@@ -252,7 +275,7 @@ class WaveClientTest extends Specification {
         WaveClient wave = Spy(WaveClient, constructorArgs: [session])
 
         when:
-        def assets = new WaveAssets('my:image', MODULE_RES, null, null, null, PROJECT_RES)
+        def assets = new WaveAssets('my:image', null, MODULE_RES, null, null, null, PROJECT_RES)
         def req = wave.makeRequest(assets)
         then:
         1 * wave.makeLayer(MODULE_RES) >> MODULE_LAYER
@@ -272,15 +295,34 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaRecipeToDockerFile(RECIPE) == '''\
-                FROM mambaorg/micromamba:0.27.0
+                FROM mambaorg/micromamba:1.0.0
                 RUN \\
-                   micromamba install -y -n base -c defaults -c conda-forge \\
+                   micromamba install -y -n base -c conda-forge -c defaults \\
                    bwa=0.7.15 salmon=1.1.1 \\
                    && micromamba clean -a -y
                 '''.stripIndent()
     }
 
     def 'should create dockerfile content with custom config' () {
+        given:
+        def session = Mock(Session) {
+            getConfig() >> [:]
+            getCondaConfig() >> new CondaConfig([channels:'foo,bar'], [:])
+        }
+        def RECIPE = 'bwa=0.7.15 salmon=1.1.1'
+        when:
+        def client = new WaveClient(session)
+        then:
+        client.condaRecipeToDockerFile(RECIPE) == '''\
+                FROM mambaorg/micromamba:1.0.0
+                RUN \\
+                   micromamba install -y -n base -c foo -c bar \\
+                   bwa=0.7.15 salmon=1.1.1 \\
+                   && micromamba clean -a -y
+                '''.stripIndent()
+    }
+
+    def 'should create dockerfile content with custom channels' () {
         given:
         def CONDA_OPTS = [mambaImage:'my-base:123', commands: ['USER my-user', 'RUN apt-get update -y && apt-get install -y procps']]
         def session = Mock(Session) { getConfig() >> [wave:[build:[conda:CONDA_OPTS]]]}
@@ -291,7 +333,7 @@ class WaveClientTest extends Specification {
         client.condaRecipeToDockerFile(RECIPE) == '''\
                 FROM my-base:123
                 RUN \\
-                   micromamba install -y -n base -c defaults -c conda-forge \\
+                   micromamba install -y -n base -c conda-forge -c defaults \\
                    bwa=0.7.15 salmon=1.1.1 \\
                    && micromamba clean -a -y
                 USER my-user
@@ -306,7 +348,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaFileToDockerFile()== '''\
-                FROM mambaorg/micromamba:0.27.0
+                FROM mambaorg/micromamba:1.0.0
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                     micromamba clean -a -y
@@ -326,6 +368,27 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, IMAGE)
         then:
         assets.containerImage == IMAGE
+        !assets.moduleResources
+        !assets.dockerFileContent
+        !assets.containerConfig
+        !assets.condaFile
+        !assets.projectResources
+        !assets.containerPlatform
+    }
+
+    def 'should create asset with image and platform' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [wave:[containerPlatform:'linux/amd64']]}
+        def task = Mock(TaskRun) { getConfig() >> [:] }
+        def IMAGE = 'foo:latest'
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, IMAGE)
+        then:
+        assets.containerImage == IMAGE
+        assets.containerPlatform == 'linux/amd64'
         !assets.moduleResources
         !assets.dockerFileContent
         !assets.containerConfig
@@ -419,9 +482,9 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:0.27.0
+                    FROM mambaorg/micromamba:1.0.0
                     RUN \\
-                       micromamba install -y -n base -c defaults -c conda-forge \\
+                       micromamba install -y -n base -c conda-forge -c defaults \\
                        salmon=1.2.3 \\
                        && micromamba clean -a -y
                     '''.stripIndent()
@@ -447,7 +510,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:0.27.0
+                    FROM mambaorg/micromamba:1.0.0
                     COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                     RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                         micromamba clean -a -y
@@ -581,7 +644,8 @@ class WaveClientTest extends Specification {
 
     def 'should send request with tower access token' () {
         given:
-        def sess = Mock(Session) {getConfig() >> [wave:[:], tower:[accessToken:'foo', workspaceId:123]] }
+        def config = [wave:[:], tower:[accessToken:'foo', workspaceId:123, endpoint: 'http://foo.com']]
+        def sess = Mock(Session) {getConfig() >> config }
         and:
         def wave = Spy(new WaveClient(sess))
         def assets = Mock(WaveAssets)
@@ -594,6 +658,7 @@ class WaveClientTest extends Specification {
             assert (it[0] == request)
             assert (it[0] as SubmitContainerTokenRequest).towerAccessToken == 'foo'
             assert (it[0] as SubmitContainerTokenRequest).towerWorkspaceId == 123
+            assert (it[0] as SubmitContainerTokenRequest).towerEndpoint == 'http://foo.com'
         }
 
     }

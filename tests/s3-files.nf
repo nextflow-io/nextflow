@@ -15,20 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
- /* 
-  * Run a process using a S3 file as input 
-  */
-
-
-s3file = file('s3://rnaseq-nf/data/ggal/transcript.fa')
-s3glob = Channel.fromFilePairs('s3://rnaseq-nf/data/ggal/*_{1,2}.fq')
 
 process foo {
   debug true
   input:
-  file(obj) from s3file
+  path(obj)
 
   """
   cat $obj | head
@@ -38,10 +30,17 @@ process foo {
 process bar {
   tag "$pair"
   input:
-  set pair, file(obj) from s3glob
+  tuple val(pair), path(obj)
 
   """
   cat $obj | head
   """
+}
 
+workflow {
+  def s3file = file('s3://rnaseq-nf/data/ggal/transcript.fa')
+  def s3glob = Channel.fromFilePairs('s3://rnaseq-nf/data/ggal/*_{1,2}.fq')
+
+  foo(s3file)
+  bar(s3glob)
 }

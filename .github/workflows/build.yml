@@ -29,7 +29,7 @@ jobs:
         run: env | sort
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 1
           submodules: true
@@ -55,7 +55,7 @@ jobs:
         run: make test
 
       - name: Publish tests report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: always()
         with:
           name: report-unit-tests-jdk-${{ matrix.java_version }}
@@ -73,7 +73,7 @@ jobs:
         test_mode: ["test_integration", "test_aws", "test_azure", "test_google"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 1
           submodules: true
@@ -104,7 +104,7 @@ jobs:
         run: tar -cvf integration-tests.tar tests/checks
 
       - name: Publish tests report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: always()
         with:
           name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}

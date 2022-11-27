@@ -15,9 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
-
-cheers = Channel.from 'Hello', 'Ciao', 'Hola'
 
 process storeCache  {
     storeDir 'cache'
@@ -26,10 +23,15 @@ process storeCache  {
     val cheers
 
     output:
-    file "${cheers}.txt" into salut
+    file "${cheers}.txt" 
 
     "printf $cheers > ${cheers}.txt"
 
 }
 
-salut.subscribe { println it }
+workflow {
+  Channel.of('Hello', 'Ciao', 'Hola') \
+   | storeCache \
+   | view
+}
+

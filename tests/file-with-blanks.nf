@@ -1,4 +1,4 @@
-#!/usr/bin/env nextflow 
+#!/usr/bin/env nextflow
 /*
  * Copyright 2020-2022, Seqera Labs
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
@@ -15,36 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
-params.in = "$baseDir/data/sample.fa"
-
-/*
- * Splits the input file in chunks containing a single sequences,
- * and send each of it over the 'seq' channel
- */
-seq = Channel.fromPath(params.in).splitFasta()
-
-/*
- * For each sequence that is sent over the 'seq' channel
- * the below task is executed
- */
-process ampaTask {
-
-    input:
-    file seq
-
-    output:
-    file result
-
-    // The BASH script to be executed - for each - sequence
-    """
-    AMPA.pl -in=${seq} -noplot -rf=result -df=data
-    """
-
+workflow {
+  foo | view{ it.text }
 }
 
-/*
- * print out each 'result' produced by the above step
- */
-result.subscribe { println it.text }
+process foo {
+    scratch true
+    debug true
+    output:
+    path "*/*.txt"
+    """
+    mkdir "a b"
+    echo "Hello world" > "a b/hello.txt"
+    """
+}

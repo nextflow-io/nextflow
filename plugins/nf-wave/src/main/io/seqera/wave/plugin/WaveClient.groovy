@@ -57,6 +57,8 @@ class WaveClient {
 
     private static Logger log = LoggerFactory.getLogger(WaveClient)
 
+    private static final List<String> DEFAULT_CONDA_CHANNELS = ['conda-forge','defaults']
+
     final private HttpClient httpClient
 
     final private WaveConfig config
@@ -79,12 +81,15 @@ class WaveClient {
 
     private CookieManager cookieManager
 
+    private List<String> condaChannels
+
     WaveClient(Session session) {
         this.session = session
         this.config = new WaveConfig(session.config.wave as Map ?: Collections.emptyMap(), SysEnv.get())
         this.fusion = new FusionConfig(session.config.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
         this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
         this.endpoint = config.endpoint()
+        this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
         log.debug "Wave server endpoint: ${endpoint}"
         this.packer = new Packer()
         // create cache
@@ -131,6 +136,7 @@ class WaveClient {
 
         return new SubmitContainerTokenRequest(
                 containerImage: assets.containerImage,
+                containerPlatform: assets.containerPlatform,
                 containerConfig: containerConfig,
                 containerFile: assets.dockerFileEncoded(),
                 condaFile: assets.condaFileEncoded(),
@@ -145,6 +151,7 @@ class WaveClient {
         final req = makeRequest(assets)
         req.towerAccessToken = tower.accessToken
         req.towerWorkspaceId = tower.workspaceId
+        req.towerEndpoint = tower.endpoint
         return sendRequest(req)
     }
 
@@ -154,7 +161,8 @@ class WaveClient {
                 containerImage: image,
                 containerConfig: containerConfig,
                 towerAccessToken: tower.accessToken,
-                towerWorkspaceId: tower.workspaceId )
+                towerWorkspaceId: tower.workspaceId,
+                towerEndpoint: tower.endpoint )
         return sendRequest(request)
     }
 
@@ -335,10 +343,16 @@ class WaveClient {
                     ? projectResources(session.binDir)
                     : null
 
+        /*
+         * the container platform to be used
+         */
+        final platform = config.containerPlatform()
+
         // read the container config and go ahead
         final containerConfig = this.resolveContainerConfig()
         return new WaveAssets(
                     containerImage,
+                    platform,
                     bundle,
                     containerConfig,
                     dockerScript,
@@ -391,10 +405,11 @@ class WaveClient {
     }
 
     protected String condaRecipeToDockerFile(String recipe) {
+        def channelsOpts = condaChannels.collect(it -> "-c $it").join(' ')
         def result = """\
         FROM ${config.condaOpts().mambaImage}
         RUN \\
-           micromamba install -y -n base -c defaults -c conda-forge \\
+           micromamba install -y -n base $channelsOpts \\
            $recipe \\
            && micromamba clean -a -y
         """.stripIndent()

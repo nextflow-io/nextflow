@@ -983,4 +983,24 @@ class FileHelperTest extends Specification {
         [:]                             | [:]                   | [max_error_retry: '5']
     }
 
+    def 'should check symlink status'() {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def dirReal = folder.resolve('x/y/z'); dirReal.mkdirs()
+        def link = Files.createSymbolicLink(folder.resolve('link'), folder.resolve('x'))
+
+        expect:
+        !FileHelper.isPathSymlink(Path.of('/opt'))
+        !FileHelper.isPathSymlink(Path.of('/unknown'))
+        and:
+        Files.exists(link)
+        Files.isSymbolicLink(link)
+        FileHelper.isPathSymlink(link)
+        and:
+        Files.exists(link.resolve('y/z'))
+        FileHelper.isPathSymlink(link.resolve('y/z'))
+
+        cleanup:
+        folder?.deleteDir()
+    }
 }

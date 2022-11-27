@@ -243,7 +243,7 @@ class CondaCacheTest extends Specification {
         result == PREFIX
     }
 
-def 'should create conda env with options - using mamba' () {
+    def 'should create conda env with options - using mamba' () {
         given:
         def ENV = 'bwa=1.1.1'
         def PREFIX = Paths.get('/foo/bar')
@@ -257,6 +257,23 @@ def 'should create conda env with options - using mamba' () {
         1 * cache.isTextFilePath(ENV)
         0 * cache.makeAbsolute(_)
         1 * cache.runCommand("mamba create --this --that --mkdir --yes --quiet --prefix $PREFIX $ENV") >> null
+        result == PREFIX
+    }
+
+    def 'should create conda env with channels' () {
+        given:
+        def ENV = 'bwa=1.1.1'
+        def PREFIX = Paths.get('/foo/bar')
+        and:
+        def cache = Spy(new CondaCache(new CondaConfig([channels:['bioconda','defaults']])))
+
+        when:
+        def result = cache.createLocalCondaEnv0(ENV, PREFIX)
+        then:
+        1 * cache.isYamlFilePath(ENV)
+        1 * cache.isTextFilePath(ENV)
+        0 * cache.makeAbsolute(_)
+        1 * cache.runCommand("conda create --mkdir --yes --quiet --prefix /foo/bar -c bioconda -c defaults bwa=1.1.1") >> null
         result == PREFIX
     }
 

@@ -1,7 +1,5 @@
-#!/usr/bin/env nextflow
 /*
  * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,47 +12,28 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
-nextflow.enable.dsl=1
 
-process foo {
-  output:
-  file 'x' into A,B,C
-  val 2 into baz
+package nextflow.container
 
-  """
-  echo Ciao > x
-  """
-}
+import groovy.transform.CompileStatic
 
-baz.view { "Hello $it" }
+/**
+ * Handle caching of remote Apptainer images
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@CompileStatic
+class ApptainerCache extends SingularityCache {
 
-process bar1 {
-  debug true
-  input:
-  file x from A
+    /** only for testing */
+    protected ApptainerCache() {}
 
-  """
-  printf "\$(cat $x) A"
-  """
-}
+    ApptainerCache(ContainerConfig config, Map<String,String> env=null) {
+        super(config, env)
+    }
 
-process bar2 {
-  debug true
-  input:
-  file x from B
-
-  """
-  printf "\$(cat $x) B"
-  """
-}
-
-process bar3 {
-  debug true
-  input:
-  file x from C
-
-  """
-  printf "\$(cat $x) C"
-  """
+    @Override
+    protected String getBinaryName() { 'apptainer' }
 }

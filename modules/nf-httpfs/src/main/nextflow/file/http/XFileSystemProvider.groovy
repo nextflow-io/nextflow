@@ -44,6 +44,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
+import nextflow.extension.FilesEx
 import sun.net.www.protocol.ftp.FtpURLConnection
 /**
  * Implements a read-only JSR-203 compliant file system provider for http/ftp protocols
@@ -206,7 +207,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     protected URLConnection toConnection(Path path) {
         final url = path.toUri().toURL()
         log.trace "File remote URL: $url"
-        toConnection0(url, 0)
+        return toConnection0(url, 0)
     }
 
     protected URLConnection toConnection0(URL url, int attempt) {
@@ -230,6 +231,11 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             log.debug "Got HTTP error=${conn.getResponseCode()} waiting for ${delay}ms (attempt=${attempt+1})"
             Thread.sleep(delay)
             return toConnection0(url, attempt+1)
+        }
+        else if( conn instanceof HttpURLConnection && conn.getResponseCode()==401 && attempt==0 ) {
+            if( XAuthRegistry.instance.refreshToken(conn) ) {
+                return toConnection0(url, attempt+1)
+            }
         }
         return conn
     }
@@ -454,7 +460,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             def p = (XPath) path
             def attrs = (A)readHttpAttributes(p)
             if (attrs == null) {
-                throw new IOException("Unable to access path: ${p.toString()}")
+                throw new IOException("Unable to access path: ${FilesEx.toUriString(p)}")
             }
             return attrs
         }
