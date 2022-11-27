@@ -936,10 +936,40 @@ deep            Similar to the previous, but the hash number is created on actua
 =============== ========================
 
 .. tip:: You should always specify the number of expected elements in each tuple using the ``size`` attribute
-  to allow the ``groupTuple`` operator to stream the collected values as soon as possible. However, there
-  are use cases in which each tuple has a different size depending on the grouping key. In this case use the
-  built-in function ``groupKey`` that allows you to create a special grouping key object such that it's possible
-  to associate the group size for a given key.
+   to allow the ``groupTuple`` operator to stream the collected values as soon as possible. However, there
+   are use cases in which each tuple has a different size depending on the grouping key. In this case use the
+   built-in function ``groupKey`` that allows you to create a special grouping key object such that it's possible
+   to associate the group size for a given key.
+  
+  
+   Examples::
+
+     Channel
+        .from([ 'A', ['foo', 'bar']], ['B', ['lorem', 'ipsum', 'dolor', 'sit']])
+        .map { key, words -> tuple( groupKey(key, words.size()), words ) }
+        .view()
+       
+   The size is dynamically associated with the key in the tuple.   
+    
+   Another example::
+
+     chr_frequency = [ "chr1": 2, "chr2": 3 ]
+
+     data_ch = Channel.of( [ 'region1', 'chr1', '/path/to/region1_chr1.vcf' ],
+        [ 'region2', 'chr1', '/path/to/region2_chr1.vcf' ],
+        [ 'region1', 'chr2', '/path/to/region1_chr2.vcf' ],
+        [ 'region2', 'chr2', '/path/to/region2_chr2.vcf' ],
+        [ 'region3', 'chr2', '/path/to/region3_chr2.vcf' ] )
+
+     data_ch
+       .map {  region, chr, vcf -> tuple( groupKey(chr, chr_frequency[chr]), vcf )  }
+       .groupTuple()
+       .view()
+
+   The result is::
+    
+    [chr1, [/path/to/region1_chr1.vcf, /path/to/region2_chr1.vcf]]
+    [chr2, [/path/to/region1_chr2.vcf, /path/to/region2_chr2.vcf, /path/to/region3_chr2.vcf]]
 
 
 .. _operator-ifempty:

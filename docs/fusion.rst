@@ -75,11 +75,11 @@ The following configuration should be added in your Nextflow configuration file:
 
     docker {
       enabled = true
-      envWhitelist = 'AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY'
     }
 
     fusion {
       enabled = true
+      exportAwsAccessKeys = true
     }
 
     wave {

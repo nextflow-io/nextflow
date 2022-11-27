@@ -208,6 +208,10 @@ class FilePorter {
          */
         boolean asBoolean() { foreignPaths.size()>0 }
 
+        @Override
+        String toString() {
+            return "FilePorter.Batch[stageDir=${stageDir.toUriString()}; foreignPaths=${foreignPaths*.toUriString()}]"
+        }
     }
 
     /**
