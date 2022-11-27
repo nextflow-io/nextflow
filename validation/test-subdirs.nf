@@ -1,15 +1,17 @@
-nextflow.enable.dsl=1
+workflow {
+  foo | bar
+}
 
 process foo {
     output:
-    path 'gsfolder/' into ch1
-    path 'gsfolder2' into ch2
-    path 'gsfolder3' into ch3
-    path 'gsfolder4' into ch4
-    path 'test5.txt' into ch5
-    path 'test6.txt' into ch6
-    path 'test7.txt' into ch7
-    path 'gsfolder5/sub' into ch8
+    path 'gsfolder/'
+    path 'gsfolder2'
+    path 'gsfolder3'
+    path 'gsfolder4'
+    path 'test5.txt'
+    path 'test6.txt'
+    path 'test7.txt'
+    path 'gsfolder5/sub'
 
     """
     mkdir -p gsfolder/sub
@@ -36,13 +38,14 @@ process foo {
 
 process bar {
     input:
-    path test_folder from ch1
-    path test_folder2 from ch2
-    path 'test-folder3' from ch3
-    path 'test-folder4/*' from ch4
-    path test5 from ch5
-    path 'this-is-test-6.txt' from ch6
-    path 'test7/foo/*' from ch7
+    path test_folder
+    path test_folder2
+    path 'test-folder3'
+    path 'test-folder4/*'
+    path test5
+    path 'this-is-test-6.txt'
+    path 'test7/foo/*'
+    path 'test8/*'
 
     """
     set -x

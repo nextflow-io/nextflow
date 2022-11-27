@@ -28,7 +28,6 @@ import nextflow.util.IniFile
 import nextflow.util.MemoryUnit
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.exception.ExceptionUtils
-
 /**
  * Hold global variables
  *
@@ -162,7 +161,7 @@ class Global {
     }
 
     static String getAwsRegion(Map env=null, Map config=null) {
-        if( env==null ) env = System.getenv()
+        if( env==null ) env = SysEnv.get()
         if( config==null ) config = this.config
 
         // check nxf config file
@@ -191,7 +190,7 @@ class Global {
     }
 
     static List<String> getAwsCredentials() {
-        getAwsCredentials(System.getenv(), config)
+        getAwsCredentials(SysEnv.get(), config)
     }
 
     static Map<String,?> getAwsClientConfig() {
@@ -200,6 +199,14 @@ class Global {
         }
 
         return null
+    }
+
+    static String getAwsS3Endpoint() {
+        getAwsS3Endpoint0(SysEnv.get(), config ?: Collections.emptyMap())
+    }
+
+    static protected String getAwsS3Endpoint0(Map<String,String> env, Map<String,Object> config) {
+        config.navigate('aws.client.endpoint', env.get('AWS_S3_ENDPOINT'))
     }
 
     /**
