@@ -20,7 +20,8 @@ package nextflow.conda
 import groovy.transform.CompileStatic
 
 /**
- *
+ * Model Conda configuration
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
@@ -41,5 +42,20 @@ class CondaConfig extends LinkedHashMap {
         if( enabled == null )
             enabled = env.get('NXF_CONDA_ENABLED')
         return enabled?.toString() == 'true'
+    }
+
+    List<String> getChannels() {
+        final value = get('channels')
+        if( !value ) {
+            return Collections.<String>emptyList()
+        }
+        if( value instanceof List ) {
+            return value
+        }
+        if( value instanceof CharSequence ) {
+            return value.tokenize(',').collect(it -> it.trim())
+        }
+
+        throw new IllegalArgumentException("Unexected conda.channels value: $value")
     }
 }

@@ -15,11 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
 process sayhello {
   debug true
   """
     echo 'Hello world!'
   """
+}
+
+workflow {
+  sayhello()
 }

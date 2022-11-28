@@ -15,18 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
-
-seqs = Channel.fromPath("$baseDir/data/p{1,2,3}.fa")
 
 process foo {
     debug true
 
     input:
-    file 'dir1/link_*.fasta' from seqs.toList()
+    file 'dir1/link_*.fasta'
 
     output:
-    file 'dir2/*' into result mode flatten
+    file 'dir2/*' 
 
     '''
     ls dir1 | sort
@@ -36,4 +33,10 @@ process foo {
     '''
 }
 
-result.view { it.name }
+workflow {
+  Channel.fromPath("$baseDir/data/p{1,2,3}.fa") \
+    | toList \
+    | foo \
+    | flatten \
+    | view { it.name }
+}
