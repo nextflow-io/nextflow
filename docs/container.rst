@@ -455,7 +455,7 @@ Multiple containers
 
 It is possible to specify a different Singularity image for each process definition in your pipeline script. For example,
 let's suppose you have two processes named ``foo`` and ``bar``. You can specify two different Singularity images
-specifing them in the ``nextflow.config`` file as shown below::
+specifying them in the ``nextflow.config`` file as shown below::
 
     process {
         withName:foo {
