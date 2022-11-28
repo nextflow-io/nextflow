@@ -510,7 +510,7 @@ Finally, we have a third project B with a workflow that includes again P1 and P2
         └-main.nf
 
 With the possibility to keep the template files inside the project L, A and B can use the modules defined in L without any changes.
-A future prject C would do the same, just cloning L (if not available on the system) and including its module script.
+A future project C would do the same, just cloning L (if not available on the system) and including its module script.
 
 Beside promoting sharing modules across pipelines, there are several advantages in keeping the module template under the script path:
 

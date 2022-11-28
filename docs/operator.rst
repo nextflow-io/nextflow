@@ -1535,7 +1535,7 @@ It prints the following output::
     result = 15
 
 .. tip::
-  A common use case for this operator is to use the first paramter as an `accumulator`
+  A common use case for this operator is to use the first parameter as an `accumulator`
   the second parameter as the `i-th` item to be processed.
 
 Optionally you can specify a `seed` value in order to initialise the accumulator parameter
@@ -1812,7 +1812,7 @@ the required fields, or just specify ``record: true`` as in the example shown be
         .view { record -> record.readHeader }
 
 Finally the ``splitFastq`` operator is able to split paired-end read pair FASTQ files. It must be applied to a channel
-which emits tuples containing at least two elements that are the files to be splitted. For example::
+which emits tuples containing at least two elements that are the files to be split. For example::
 
     Channel
         .fromFilePairs('/my/data/SRR*_{1,2}.fastq', flat: true)
@@ -1833,7 +1833,7 @@ Available parameters:
 Field       Description
 =========== ============================
 by          Defines the number of *reads* in each `chunk` (default: ``1``)
-pe          When ``true`` splits paired-end read files, therefore items emitted by the source channel must be tuples in which at least two elements are the read-pair files to be splitted.
+pe          When ``true`` splits paired-end read files, therefore items emitted by the source channel must be tuples in which at least two elements are the read-pair files to be split.
 limit       Limits the number of retrieved *reads* for each file to the specified value.
 record      Parse each entry in the FASTQ file as record objects (see following table for accepted values)
 charset     Parse the content by using the specified charset e.g. ``UTF-8``

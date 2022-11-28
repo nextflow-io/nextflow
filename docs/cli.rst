@@ -934,7 +934,7 @@ execution metadata.
 +---------------------------+------------+--------------------------------------------------------------------------------+
 | -fields, -f               |            | Comma separated list of fields to include in the printed log.                  |
 +---------------------------+------------+--------------------------------------------------------------------------------+
-| -filter, -F               |            | Filter log entires by a custom expression                                      |
+| -filter, -F               |            | Filter log entries by a custom expression                                      |
 |                           |            | e.g. ``process =~ /foo.*/ && status == 'COMPLETED'``                           |
 +---------------------------+------------+--------------------------------------------------------------------------------+
 | -help, -h                 |  false     | Print the command usage.                                                       |

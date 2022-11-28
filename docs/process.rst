@@ -749,7 +749,7 @@ each time a new value is received. For example::
 
   workflow {
     sequences = Channel.fromPath('*.fa')
-    methods = ['regular', 'expresso', 'psicoffee']
+    methods = ['regular', 'espresso', 'psicoffee']
 
     alignSequences(sequences, methods)
   }
@@ -774,14 +774,14 @@ Input repeaters can be applied to files as well. For example::
 
     workflow {
       sequences = Channel.fromPath('*.fa')
-      methods = ['regular', 'expresso']
+      methods = ['regular', 'espresso']
       libraries = [ file('PQ001.lib'), file('PQ002.lib'), file('PQ003.lib') ]
 
       alignSequences(sequences, methods, libraries)
     }
 
 In the above example, each sequence input file emitted by the ``sequences`` channel triggers six alignment tasks,
-three with the ``regular`` method against each library file, and three with the ``expresso`` method.
+three with the ``regular`` method against each library file, and three with the ``espresso`` method.
 
 .. note::
   When multiple repeaters are defined, the process is executed for each *combination* of them.
