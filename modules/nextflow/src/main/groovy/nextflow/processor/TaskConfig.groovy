@@ -26,13 +26,13 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import nextflow.Const
 import nextflow.ast.NextflowDSLImpl
+import nextflow.exception.AbortOperationException
 import nextflow.exception.FailedGuardException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.CpuResource
 import nextflow.executor.res.DiskResource
 import nextflow.executor.res.MemoryResource
-import nextflow.executor.res.TimeResource
 import nextflow.k8s.model.PodOptions
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
@@ -264,17 +264,24 @@ class TaskConfig extends LazyMap implements Cloneable {
         getDiskResource()?.getRequest()
     }
 
-    TimeResource getTimeResource() {
-        def value = get('time')
-        if( value instanceof Map )
-            return new TimeResource(value as Map)
-        if( value != null )
-            return new TimeResource(value)
-        return null
-    }
-
     Duration getTime() {
-        getTimeResource()?.getRequest()
+        def value = get('time')
+
+        if( !value )
+            return null
+
+        if( value instanceof Duration )
+            return (Duration)value
+
+        if( value instanceof Number )
+            return new Duration(value as long)
+
+        try {
+            new Duration(value.toString().trim())
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Not a valid `time` value in process definition: $value")
+        }
     }
 
     boolean hasCpus() {

@@ -1066,46 +1066,4 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
-    /**
-     * Allow user to specify `time` directive as a value with a list of params, eg:
-     *
-     *     time 2.h, limit: 4.h
-     *
-     * @param params
-     *      A map representing the time params
-     * @param value
-     *      The default time value
-     * @return
-     *      The {@link ProcessConfig} instance itself
-     */
-    ProcessConfig time( Map params, value )  {
-        if( value ) {
-            if( params.limit == null )
-                params.limit = value
-            else if( params.request == null )
-                params.request = value
-        }
-        time(params)
-        return this
-    }
-
-    /**
-     * Allow user to specify `time` directive as a value or a list of params, eg:
-     *
-     *     time 2.h
-     *     time request: 1.h, limit: 4.h
-     *
-     * @param value
-     *      The default time value or map of params
-     * @return
-     *      The {@link ProcessConfig} instance itself
-     */
-    ProcessConfig time( value ) {
-        if( value instanceof Map || value instanceof Closure )
-            configProperties.put('time', value)
-        else if( value != null )
-            configProperties.put('time', [limit: value])
-        return this
-    }
-
 }

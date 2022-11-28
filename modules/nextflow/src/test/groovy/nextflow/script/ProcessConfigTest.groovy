@@ -87,7 +87,7 @@ class ProcessConfigTest extends Specification {
         when:
         config.time '1h'
         then:
-        config.time == [limit: '1h']
+        config.time == '1h'
         config.createTaskConfig().time == new Duration('1h')
 
         // maxMemory property
