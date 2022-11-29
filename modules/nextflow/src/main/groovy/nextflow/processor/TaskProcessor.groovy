@@ -1397,8 +1397,8 @@ class TaskProcessor {
 
     protected void bindOutParam( OutParam param, List values ) {
         log.trace "<$name> Binding param $param with $values"
-        def x = values.size() == 1 ? values[0] : values
-        for( def it : param.getOutChannels() ) { it.bind(x) }
+        final x = values.size() == 1 ? values[0] : values
+        param.getOutChannel()?.bind(x)
     }
 
     protected void collectOutputs( TaskRun task ) {

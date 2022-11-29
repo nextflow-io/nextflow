@@ -253,10 +253,11 @@ class DAG {
 
         def result = []
         for(OutParam p :outputs) {
-            if( p instanceof DefaultOutParam ) break
-            for(Object it : p.outChannels) {
+            if( p instanceof DefaultOutParam )
+                break
+            final it = p.getOutChannel()
+            if( it!=null )
                 result << new ChannelHandler(channel: it, label: p instanceof TupleOutParam ? null : p.name)
-            }
         }
 
         return result
