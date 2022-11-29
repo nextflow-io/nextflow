@@ -33,8 +33,6 @@ import nextflow.script.TokenVar
 @InheritConstructors
 class TupleOutParam extends BaseOutParam implements OptionalParam {
 
-    enum CombineMode implements OutParam.Mode { combine }
-
     protected List<BaseOutParam> inner = new ArrayList<>(10)
 
     String getName() { toString() }
@@ -105,18 +103,4 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
         }
     }
 
-    TupleOutParam mode(def value ) {
-
-        def str = value instanceof String ? value : ( value instanceof TokenVar ? value.name : null )
-        if( str ) {
-            try {
-                this.mode = CombineMode.valueOf(str)
-            }
-            catch( Exception e ) {
-                super.mode(value)
-            }
-        }
-
-        return this
-    }
 }

@@ -82,7 +82,6 @@ import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
-import nextflow.script.params.BasicMode
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
@@ -101,7 +100,6 @@ import nextflow.script.params.ValueOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
-import nextflow.util.CollectionHelper
 import nextflow.util.LockManager
 import nextflow.util.LoggerHelper
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -1367,26 +1365,8 @@ class TaskProcessor {
                 continue
             }
 
-            if( param.mode == BasicMode.standard ) {
-                log.trace "Process $name > Binding out param: ${param} = ${list}"
-                bindOutParam(param, list)
-            }
-
-            else if( param.mode == BasicMode.flatten ) {
-                log.trace "Process $name > Flatting out param: ${param} = ${list}"
-                CollectionHelper.flatten( list ) {
-                    bindOutParam( param, it )
-                }
-            }
-
-            else if( param.mode == TupleOutParam.CombineMode.combine ) {
-                log.trace "Process $name > Combining out param: ${param} = ${list}"
-                final combs = (List<List>)list.combinations()
-                for( def it : combs ) { bindOutParam(param, it) }
-            }
-
-            else
-                throw new IllegalStateException("Unknown bind output parameter type: ${param}")
+            log.trace "Process $name > Binding out param: ${param} = ${list}"
+            bindOutParam(param, list)
         }
 
         // -- finally prints out the task output when 'debug' is true
