@@ -42,8 +42,6 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     protected List<DataflowWriteChannel> outChannels = new ArrayList<>(10)
 
-    protected OutParam.Mode mode = BasicMode.standard
-
     @PackageScope
     boolean singleton
 
@@ -131,7 +129,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
                 }
 
                 // instantiate the new channel
-                channel = CH.create( singleton && mode==BasicMode.standard )
+                channel = CH.create( singleton )
 
                 // bind it to the script on-fly
                 if( local != '-' && binding ) {
@@ -193,17 +191,6 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
             return nameObj.toString()
         throw new IllegalStateException("Missing 'name' property in output parameter")
     }
-
-
-    BaseOutParam mode( def mode ) {
-        final msg = "Process output `mode` is not supported anymore"
-        if( NF.isDsl2() )
-            throw new DeprecationException(msg)
-        this.mode = BasicMode.parseValue(mode)
-        return this
-    }
-
-    OutParam.Mode getMode() { mode }
 
     @Override
     BaseOutParam setOptions(Map<String,?> opts) {
