@@ -15,17 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
+input = Channel.from('alpha','beta','delta')
 
 process align {
     publishDir 'data', mode: 'copy'
 
     input:
-    val(x)
+    val(x) from input
 
     output:
-    path("*.bam")
-    path("${x}.bai")
+    file("*.bam") into bam
+    file("${x}.bai") into bai
 
     """
     echo ${x} > ${x}.bam
@@ -33,22 +35,24 @@ process align {
     """
 }
 
-process my_combine {
+process combine {
     publishDir 'data'
     publishDir 'more/data', mode: 'copy'
 
     input:
-    path(bamfile)
-    path(baifile)
+    file(bamfile) from bam.toSortedList { it.name }
+    file(baifile) from bai.toSortedList { it.name }
 
     output:
-    path 'result.txt'
+    file 'result.txt' into result
 
     """
     cat $bamfile > result.txt
     cat $baifile >> result.txt
     """
 }
+
+result.subscribe { println it.text }
 
 process foo {
   publishDir 'data', mode: 'link'
@@ -61,16 +65,4 @@ process foo {
   touch xxx/B
   touch xxx/C
   '''
-}
-
-workflow {
-  def input = Channel.of('alpha','beta','delta')
-  align(input)
-
-  def bam = align.out[0].toSortedList { it.name }
-  def bai = align.out[1].toSortedList { it.name }
-  my_combine( bam, bai )
-  my_combine.out.view{ it.text }
-
-  foo()
 }

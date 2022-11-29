@@ -15,21 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 items = [0,1,2,3,4]
 decode = ['zero','one','two','three','fourth']
-
-workflow {
-  channel.fromList(items) | foo
-  channel.fromList(items) | bar
-}
 
 process foo {
     debug true
     tag "${decode[x]}"
 
     input:
-    val x
+    val x from items
 
     when:
     x >= 3
@@ -40,12 +36,13 @@ process foo {
     """
 }
 
+
 process bar {
     debug true
     tag "${decode[x]}"
 
     input:
-    val x
+    val x from items
 
     when:
     x < 3

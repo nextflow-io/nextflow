@@ -15,10 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 process foo {
   output:
-  file x
+  file x into foo_ch
 
   '''
   echo -n Hello > x
@@ -27,17 +28,12 @@ process foo {
 
 process bar {
   input:
-  file x
-  val y
+  file x from foo_ch
+  val y from (1,2,3)
 
   """
   cat $x
   echo $y
   """
 
-}
-
-workflow {
-  foo()
-  bar(foo.out, channel.of(1,2,3))
 }

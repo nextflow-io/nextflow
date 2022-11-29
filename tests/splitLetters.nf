@@ -15,36 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 params.str = 'Hello world!'
 
 process splitLetters {
 
     output:
-    file 'chunk_*'
+    file 'chunk_*' into letters mode flatten
 
     """
     printf '${params.str}' | split -b 6 - chunk_
     """
 }
 
+
 process massage {
 
     input:
-    file x
+    file x from letters
 
     output:
-    stdout
+    stdout result
 
     """
     cat $x | tr '[a-z]' '[A-Z]'
     """
 }
 
-workflow {
-  splitLetters \
-  | flatten \
-  | massage \
-  | view { it.trim() }
+result.subscribe {
+    println it.trim()
 }
-

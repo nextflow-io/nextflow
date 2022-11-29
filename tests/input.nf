@@ -15,7 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
+x = 1
+y = ['a','b']
 
 process foo {
     debug true
@@ -25,11 +28,9 @@ process foo {
     val y
 
     output:
-    val y 
+    val y into result
 
     "echo $x - $y"
 }
 
-workflow {
-  foo(1, channel.of('a','b')) | view { "foo out: $it" }
-}
+result.view { "foo out: $it" }

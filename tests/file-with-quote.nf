@@ -15,17 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 process foo {
   input:
-  path 'a b.txt'
+  file 'a b.txt' from file("$baseDir/data/data'3.txt")
   output:
-  path 'x z.txt'
+  file 'x z.txt' into result
   '''
   cat 'a b.txt' > 'x z.txt'
   '''
 }
 
-workflow {
-  foo("$baseDir/data/data'3.txt") | view { it.text }
-}
+result.view { it.text }

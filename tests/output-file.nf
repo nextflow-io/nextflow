@@ -15,18 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
  process foo {
    input:
-   file x
+   file x from 'dummy'
 
    output:
-   file x
+   file x into result
 
    'echo foo'
  }
 
-
-workflow {
-  foo('dummy') | view { it.text }
-}
+ result.view { it.text }

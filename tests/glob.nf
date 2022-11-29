@@ -15,12 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 process recurseDir {
 
     output:
-    file 'folder/**.fa'
-    file 'folder/**/*.txt' 
+    file 'folder/**.fa' into result1
+    file 'folder/**/*.txt' into result2
 
     """
     mkdir -p folder/x
@@ -31,10 +32,9 @@ process recurseDir {
     touch folder/y/file4.fa
     touch folder/y/file5.txt
     """
+
 }
 
-workflow {
-  recurseDir()
-  recurseDir.out[0] | flatten | view { "result1: " + it.name }
-  recurseDir.out[1] | flatten | view { "result2: " + it.name }
-}
+
+result1.flatten().subscribe { println "result1: " + it.name }
+result2.flatten().subscribe { println "result2: " + it.name }

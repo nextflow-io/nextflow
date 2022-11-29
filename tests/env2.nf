@@ -15,18 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
+
+str = Channel.from('hello', 'hola', 'bonjour', 'ciao')
 
 process printEnv {
     debug true
 
     input:
-    env HELLO
+    env HELLO from str
 
     '''
     echo $HELLO world!
     '''
-}
-
-workflow {
-    Channel.of('hello', 'hola', 'bonjour', 'ciao') | printEnv
 }

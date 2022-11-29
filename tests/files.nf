@@ -15,16 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 params.in = "$baseDir/data/sample.fa"
 SPLIT = (System.properties['os.name'] == 'Mac OS X' ? 'gcsplit' : 'csplit')
 
 process split {
     input:
-    path 'query.fa'
+    file 'query.fa' from file(params.in)
 
     output:
-    path 'seq_*'
+    file 'seq_*' into splits
 
     """
     $SPLIT query.fa '%^>%' '/^>/' '{*}' -f seq_
@@ -36,10 +37,10 @@ process printTwo {
     debug true
 
     input:
-    path 'chunk'
+    file 'chunk' from splits
 
     output:
-    file 'chunk1:chunk3'
+    file 'chunk1:chunk3' into two_chunks mode flatten
 
     """
     cat chunk* | rev
@@ -51,16 +52,12 @@ process printLast {
     debug true
 
     input:
-    file 'chunk'
+    file 'chunk' from two_chunks
 
     output:
-    file 'chunk'
+    file 'chunk' into result
 
     """
     cat chunk
     """
-}
-
-workflow {
-  split(params.in) | printTwo | flatten | printLast
 }

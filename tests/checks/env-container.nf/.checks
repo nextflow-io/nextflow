@@ -12,6 +12,7 @@ chmod +x bin/hello.sh
 # create the nextflow config file 
 #
 cat << EOF > nextflow.config
+nextflow.enable.dsl=1
 env.FOO = 'HOLA'
 process.container = 'quay.io/nextflow/bash'
 EOF
@@ -23,15 +24,11 @@ cat << EOF > foo.nf
 process foo {
   echo true
   input: 
-  env BAR
+  env BAR from Channel.value('Hello World!')
   '''
   env | sort 
   hello.sh
   '''
-}
-
-workflow {
-  channel.value('Hello World!') | foo
 }
 EOF
 

@@ -1,0 +1,21 @@
+set -e
+
+#
+# run normal mode
+#
+$NXF_RUN | tee .stdout
+
+[[ `grep -c 'Submitted process > blastThemAll' .nextflow.log` == 3 ]] || false
+[[ `grep -c 'p1.fa p2.fa' .stdout` == 1 ]] || false
+[[ `grep -c 'p3.fa p4.fa' .stdout` == 1 ]] || false
+[[ `grep -c 'p5.fa' .stdout` == 1 ]] || false
+
+#
+# run resume mode
+#
+$NXF_RUN -resume | tee .stdout
+
+[[ `grep -c 'Cached process > blastThemAll' .nextflow.log` == 3 ]] || false
+[[ `grep -c 'p1.fa p2.fa' .stdout` == 1 ]] || false
+[[ `grep -c 'p3.fa p4.fa' .stdout` == 1 ]] || false
+[[ `grep -c 'p5.fa' .stdout` == 1 ]] || false

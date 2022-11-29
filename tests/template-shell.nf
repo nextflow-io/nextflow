@@ -15,20 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 params.data = 'zzz'
 
-workflow {
-  channel.of('PF00389', 'PF03061', 'PF02826') | foo | view { it.text }
-}
-
 process foo {
   input:
-    val family
+    val family from 'PF00389', 'PF03061', 'PF02826'
   output:
-    file 'file.out'
+    file 'file.out' into results
 
   shell:
   template 'shell-script.txt'
 }
 
+results.view { it.text }

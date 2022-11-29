@@ -15,20 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 params.prefix = 'my'
 
 data = 'Hello\n'
-list = ['alpha', 'delta', 'gamma', 'omega']
 
 process foo {
 
   input:
-  each x
-  file "${params.prefix}_${x}.txt"
+  each x from 'alpha', 'delta', 'gamma', 'omega'
+  file "${params.prefix}_${x}.txt" from data
 
   output:
-  file "${params.prefix}_${x}.txt"
+  file "${params.prefix}_${x}.txt" into result
 
   """
   echo World >>  ${params.prefix}_${x}.txt
@@ -36,6 +36,7 @@ process foo {
 
 }
 
-workflow {
-  foo(list, data) | subscribe { println "~ Saving ${it.name}"; it.copyTo('.') }
+result.subscribe {
+  println "~ Saving ${it.name}"
+  it.copyTo('.')
 }

@@ -15,27 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
-seqs = channel.fromList(file("$baseDir/data/seqs/*.fastq"))
+/*
+ * @author Simon Ye
+ */
 
-workflow {
-  seqs | proc1
-  seqs | proc2
-  seqs | proc3
-  seqs | proc4
-  seqs | proc5
-  seqs | proc6
-  seqs | proc7
-}
+seqs = file("$baseDir/data/seqs/*.fastq")
 
 process proc1 {
   storeDir 'results'
 
   input:
-  file fastq
+  file fastq from seqs
 
   output:
-  tuple val(baseName), file(outName) 
+  set val(baseName), file(outName) into proc1
 
   script:
   baseName = fastq.baseName
@@ -49,10 +44,10 @@ process proc2 {
   storeDir 'results'
 
   input:
-  file fastq
+  file fastq from seqs
 
   output:
-  tuple val(baseName), file(outName)
+  set val(baseName), file(outName) into proc2
 
   script:
   baseName = fastq.baseName
@@ -66,10 +61,10 @@ process proc3 {
   storeDir 'results'
 
   input:
-  file fastq
+  file fastq from seqs
 
   output:
-  tuple val(baseName), file(outName)
+  set val(baseName), file(outName) into proc3
 
   script:
   baseName = fastq.baseName
@@ -83,10 +78,10 @@ process proc4 {
   storeDir 'results'
 
   input:
-  file fastq
+  file fastq from seqs
 
   output:
-  tuple val(baseName), file(outName)
+  set val(baseName), file(outName) into proc4
 
   script:
   baseName = fastq.baseName
@@ -101,10 +96,10 @@ process proc5 {
   storeDir 'results'
 
   input:
-  file fastq
+  file fastq from seqs
 
   output:
-  tuple val(baseName), file(outName)
+  set val(baseName), file(outName) into proc5
 
   script:
   baseName = fastq.baseName
@@ -118,10 +113,10 @@ process proc6 {
   storeDir 'results'
 
   input:
-  file fastq
+  file fastq from seqs
 
   output:
-  tuple val(baseName), file(outName)
+  set val(baseName), file(outName) into proc6
 
   script:
   baseName = fastq.baseName
@@ -135,10 +130,10 @@ process proc7 {
   storeDir 'results'
 
   input:
-  file fastq
+  file fastq from seqs
 
   output:
-  tuple val(baseName), file(outName)
+  set val(baseName), file(outName) into proc7
 
   script:
   baseName = fastq.baseName

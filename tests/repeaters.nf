@@ -15,14 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
+list1 = [1,2]
+list2 = ['Hola', 'Ciao']
+list3 = ['alpha','beta','delta']
 
 process hola {
     debug true
     input:
-    val x
-    each y
-    each z
+    val x from list1
+    each y from list2
+    each z from list3
 
     """
     echo 'x: $x; y: $y; z: $z'
@@ -34,20 +38,9 @@ process foo {
     debug true
 
     input:
-    each v
+    each v from Channel.from([["a","b"],["c","d"]])
 
     """
     echo foo $v
     """
-}
-
-workflow {
-  def list1 = channel.of(1,2)
-  def list2 = channel.of('Hola', 'Ciao')
-  def list3 = channel.of('alpha','beta','delta')
-  def list4 = channel.of(["a","b"],["c","d"])
-
-  hola(list1, list2, list3)
-
-  foo(list4)
 }

@@ -15,12 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 process foo {
   debug true
   errorStrategy 'finish'
-  input:  each x
-  output: stdout
+  input:  each x from 1,2,3
+  output: stdout into results
 
   script:
   if( x != 3 )
@@ -35,7 +36,7 @@ process foo {
 }
 
 process bar {
-  input:  file 'x'
+  input:  file 'x' from results
 
   script:
   '''
@@ -47,8 +48,4 @@ process bar {
 workflow.onError {
   println "success: $workflow.success"
   println "exitStatus: $workflow.exitStatus"
-}
-
-workflow {
-  foo([1,2,3]) | bar
 }

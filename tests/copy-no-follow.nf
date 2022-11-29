@@ -15,19 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 process test {
 	publishDir "outputDir", mode: 'copyNoFollow'
 
 	output:
-	file '*' 
+	file '*' into testOutput
 
 	"""
 	echo "TEST" > testFile.txt
 	ln -s testFile.txt testFileLink.txt
 	"""
-}
-
-workflow {
-    test()
 }

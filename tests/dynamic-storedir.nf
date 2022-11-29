@@ -15,18 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 params.prefix = 'my'
 
+data = 'Hello\n'
+
 process foo {
+
   storeDir "cache/$x"
 
   input:
-  each x
-  file 'result.txt'
+  each x from 'alpha', 'delta', 'gamma', 'omega'
+  file 'result.txt' from data
 
   output:
-  tuple val(x), file('result.txt')
+  set x, file('result.txt') into result
 
   """
   echo World >> result.txt
@@ -34,12 +38,7 @@ process foo {
 
 }
 
-workflow {
-  def data = 'Hello\n'
-  def list = ['alpha', 'delta', 'gamma', 'omega']
-  foo(list, data) | subscribe { code, file ->
-                      println "~ Result ${file}"
-                      file.copyTo("my_${code}.txt")
-                    }
-
+result.subscribe { code, file ->
+  println "~ Result ${file}"
+  file.copyTo("my_${code}.txt")
 }

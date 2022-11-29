@@ -15,14 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 process nativeCode {
 
     input:
-    val x
+    val x from 'world'
 
     output:
-    val y
+    val y into stream
 
     exec:
     y = "Hello $x"
@@ -31,7 +32,5 @@ process nativeCode {
 
 }
 
-workflow {
-  nativeCode('world') | view
-}
 
+stream.subscribe { println it }

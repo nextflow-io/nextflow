@@ -22,19 +22,17 @@
   *
   * See file `$PWD/checks/workflow-oncomplete.nf/.config` for details
   */
+nextflow.enable.dsl=1
 
 params.command = 'echo'
+cheers = Channel.from 'Bojour', 'Ciao', 'Hello', 'Hola', 'Γεια σου'
 
 process sayHello {
   debug true
   input:
-  val x
+  val x from cheers
   
   """
   ${params.command} '$x world!'
   """
-}
-
-workflow {
-   Channel.of('Bojour', 'Ciao', 'Hello', 'Hola', 'Γεια σου') | sayHello
 }

@@ -15,13 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 process task1 {
     maxForks 4
     errorStrategy 'ignore'
 
     input:
-    val x
+    val x from (1,2,3)
 
     script:
     "echo $x; exit 1"
@@ -31,13 +32,9 @@ process task2 {
     maxForks 4
 
     input:
-    val x
+    val x from([4,5,6])
 
     script:
     "echo $x"
- }
 
-workflow {
-  channel.of(1,2,3) | task1
-  channel.of(4,5,6) | task2
-}
+ }

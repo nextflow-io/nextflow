@@ -1,0 +1,33 @@
+set -e
+
+#
+# run normal mode
+#
+echo ''
+$NXF_RUN | tee stdout
+
+[[ `< .nextflow.log grep -c 'Submitted process > foo'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Submitted process > bar1'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Submitted process > bar2'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Submitted process > bar3'` == 1 ]] || false
+
+[[ `< stdout grep 'Ciao A'` ]] 	|| false
+[[ `< stdout grep 'Ciao B'` ]] 	|| false
+[[ `< stdout grep 'Ciao C'` ]] 	|| false
+[[ `< stdout grep 'Hello 2'` ]] || false
+
+#
+# run resume mode
+#
+echo ''
+$NXF_RUN -resume | tee stdout
+
+[[ `< .nextflow.log grep -c 'Cached process > foo'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Cached process > bar1'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Cached process > bar2'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Cached process > bar3'` == 1 ]] || false
+
+[[ `< stdout grep 'Ciao A'` ]] 	|| false
+[[ `< stdout grep 'Ciao A'` ]] 	|| false
+[[ `< stdout grep 'Ciao C'` ]] 	|| false
+[[ `< stdout grep 'Hello 2'` ]] || false

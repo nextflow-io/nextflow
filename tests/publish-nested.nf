@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
 
 params.x = 'ciao'
 
@@ -22,15 +23,11 @@ process foo {
   publishDir "data", mode: 'copy', overwrite: true
 
   output:
-    path("a")
+    file("a")
 
   script:
   """
   mkdir -p a/b/c
   echo -n $params.x > a/b/c/file.txt
   """
-}
-
-workflow {
-  foo()
 }

@@ -15,12 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+nextflow.enable.dsl=1
+
+x = Channel.from( ['a', 'file1'], ['b','file2'] )
 
 process touch {
+
   input:
-    tuple val(id), val(fileName)
+    set ( id, fileName ) from x
   output:
-    tuple val(id), path('file*')
+    set ( id, 'file*' ) into z
+
 
   /
   echo Creating $id
@@ -30,21 +35,16 @@ process touch {
 
 process makeFiles {
   input:
-    tuple val(id), path('file_x')
+    set( id, 'file_x' ) from z
 
   output:
-    tuple val(id), path('*')
+    set( id, '*') into q mode flatten
 
   /
    cp file_x copy_$id
    touch beta_$id
   /
+
 }
 
-
-workflow {
-  def x = Channel.from( ['a', 'file1'], ['b','file2'] )
-  touch(x)
-  makeFiles(touch.out)
-  makeFiles.out.view()
-}
+q.subscribe { println it }
