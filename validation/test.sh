@@ -38,17 +38,6 @@ if [[ $TEST_MODE == 'test_integration' ]]; then
     )
 
     #
-    # AMPA-NF
-    #
-    git clone https://github.com/cbcrg/ampa-nf
-    docker pull cbcrg/ampa-nf
-    (
-      cd ampa-nf;
-      $NXF_CMD run . -with-docker
-      $NXF_CMD run . -with-docker -resume
-    )
-
-    #
     # RNASEQ-NF
     #
     echo nextflow-io/rnaseq-nf

@@ -936,10 +936,40 @@ deep            Similar to the previous, but the hash number is created on actua
 =============== ========================
 
 .. tip:: You should always specify the number of expected elements in each tuple using the ``size`` attribute
-  to allow the ``groupTuple`` operator to stream the collected values as soon as possible. However, there
-  are use cases in which each tuple has a different size depending on the grouping key. In this case use the
-  built-in function ``groupKey`` that allows you to create a special grouping key object such that it's possible
-  to associate the group size for a given key.
+   to allow the ``groupTuple`` operator to stream the collected values as soon as possible. However, there
+   are use cases in which each tuple has a different size depending on the grouping key. In this case use the
+   built-in function ``groupKey`` that allows you to create a special grouping key object such that it's possible
+   to associate the group size for a given key.
+  
+  
+   Examples::
+
+     Channel
+        .from([ 'A', ['foo', 'bar']], ['B', ['lorem', 'ipsum', 'dolor', 'sit']])
+        .map { key, words -> tuple( groupKey(key, words.size()), words ) }
+        .view()
+       
+   The size is dynamically associated with the key in the tuple.   
+    
+   Another example::
+
+     chr_frequency = [ "chr1": 2, "chr2": 3 ]
+
+     data_ch = Channel.of( [ 'region1', 'chr1', '/path/to/region1_chr1.vcf' ],
+        [ 'region2', 'chr1', '/path/to/region2_chr1.vcf' ],
+        [ 'region1', 'chr2', '/path/to/region1_chr2.vcf' ],
+        [ 'region2', 'chr2', '/path/to/region2_chr2.vcf' ],
+        [ 'region3', 'chr2', '/path/to/region3_chr2.vcf' ] )
+
+     data_ch
+       .map {  region, chr, vcf -> tuple( groupKey(chr, chr_frequency[chr]), vcf )  }
+       .groupTuple()
+       .view()
+
+   The result is::
+    
+    [chr1, [/path/to/region1_chr1.vcf, /path/to/region2_chr1.vcf]]
+    [chr2, [/path/to/region1_chr2.vcf, /path/to/region2_chr2.vcf, /path/to/region3_chr2.vcf]]
 
 
 .. _operator-ifempty:
@@ -1505,7 +1535,7 @@ It prints the following output::
     result = 15
 
 .. tip::
-  A common use case for this operator is to use the first paramter as an `accumulator`
+  A common use case for this operator is to use the first parameter as an `accumulator`
   the second parameter as the `i-th` item to be processed.
 
 Optionally you can specify a `seed` value in order to initialise the accumulator parameter
@@ -1782,7 +1812,7 @@ the required fields, or just specify ``record: true`` as in the example shown be
         .view { record -> record.readHeader }
 
 Finally the ``splitFastq`` operator is able to split paired-end read pair FASTQ files. It must be applied to a channel
-which emits tuples containing at least two elements that are the files to be splitted. For example::
+which emits tuples containing at least two elements that are the files to be split. For example::
 
     Channel
         .fromFilePairs('/my/data/SRR*_{1,2}.fastq', flat: true)
@@ -1803,7 +1833,7 @@ Available parameters:
 Field       Description
 =========== ============================
 by          Defines the number of *reads* in each `chunk` (default: ``1``)
-pe          When ``true`` splits paired-end read files, therefore items emitted by the source channel must be tuples in which at least two elements are the read-pair files to be splitted.
+pe          When ``true`` splits paired-end read files, therefore items emitted by the source channel must be tuples in which at least two elements are the read-pair files to be split.
 limit       Limits the number of retrieved *reads* for each file to the specified value.
 record      Parse each entry in the FASTQ file as record objects (see following table for accepted values)
 charset     Parse the content by using the specified charset e.g. ``UTF-8``

@@ -749,7 +749,7 @@ each time a new value is received. For example::
 
   workflow {
     sequences = Channel.fromPath('*.fa')
-    methods = ['regular', 'expresso', 'psicoffee']
+    methods = ['regular', 'espresso', 'psicoffee']
 
     alignSequences(sequences, methods)
   }
@@ -774,14 +774,14 @@ Input repeaters can be applied to files as well. For example::
 
     workflow {
       sequences = Channel.fromPath('*.fa')
-      methods = ['regular', 'expresso']
+      methods = ['regular', 'espresso']
       libraries = [ file('PQ001.lib'), file('PQ002.lib'), file('PQ003.lib') ]
 
       alignSequences(sequences, methods, libraries)
     }
 
 In the above example, each sequence input file emitted by the ``sequences`` channel triggers six alignment tasks,
-three with the ``regular`` method against each library file, and three with the ``expresso`` method.
+three with the ``regular`` method against each library file, and three with the ``espresso`` method.
 
 .. note::
   When multiple repeaters are defined, the process is executed for each *combination* of them.
@@ -1904,7 +1904,8 @@ The ``pod`` directive allows the definition of the following options:
 ``env: <E>, config: <C/K>``                       Defines an environment variable with name ``E`` and whose value is given by the entry associated to the key with name ``K`` in the `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name ``C``.
 ``env: <E>, secret: <S/K>``                       Defines an environment variable with name ``E`` and whose value is given by the entry associated to the key with name ``K`` in the `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name ``S``.
 ``config: <C/K>, mountPath: </absolute/path>``    Mounts a `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name ``C`` with key ``K``to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the ``ConfigMap`` entries are exposed in that path.
-``csi: <V>, mountPath: </absolute/path>``         Mounts a `CSI ephemeral volume <https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes>`_ with config ``V``to the path ``/absolute/path``.
+``csi: <V>, mountPath: </absolute/path>``         Mounts a `CSI ephemeral volume <https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes>`_ with config ``V``to the path ``/absolute/path`` (requires ``22.11.0-edge`` or later).
+``emptyDir: <V>, mountPath: </absolute/path>``    Mounts an `emptyDir <https://kubernetes.io/docs/concepts/storage/volumes/#emptydir>`_ with configuration ``V`` to the path ``/absolute/path`` (requires ``22.11.0-edge`` or later).
 ``secret: <S/K>, mountPath: </absolute/path>``    Mounts a `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name ``S`` with key ``K``to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the ``Secret`` entries are exposed in that path.
 ``volumeClaim: <V>, mountPath: </absolute/path>`` Mounts a `Persistent volume claim <https://kubernetes.io/docs/concepts/storage/persistent-volumes/>`_ with name ``V`` to the specified path location. Use the optional ``subPath`` parameter to mount a directory inside the referenced volume instead of its root. The volume may be mounted with `readOnly: true`, but is read/write by default.
 ``imagePullPolicy: <V>``                          Specifies the strategy to be used to pull the container image e.g. ``imagePullPolicy: 'Always'``.

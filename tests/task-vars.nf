@@ -15,7 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
+workflow {
+  channel.of(1,2,3) | printVars
+}
 
 process printVars {
 
@@ -26,7 +28,7 @@ process printVars {
     memory '1GB'
 
     input:
-    each x from 1,2,3
+    each x
 
     """
     echo indx: ${task.index}
