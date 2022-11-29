@@ -1,5 +1,17 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.11.1-edhe - 29 Nov 2022
+- Fix TowerArchiver resolve envar paths relative to baseDir (#3438) [53e6348c]
+- Fix tower plugin min nextflow requirement [103dbf74]
+- Fix typos in the documentation [ci skip] (#3441) [ae95d90d]
+- Add support for Java 19 [811e7ca8]
+- Add support for custom conda channels (#3435) [ci fast] [0884e80e]
+- Add time directive to AWS Batch, clean language (#3436) [ci skip] [1ed2640a]
+- Update err message [ci fast] [ab5bd81b]
+- Fix Flux executor config (#3432) [ci fast] [68b45c92]
+- Bump nf-wave@0.6.1 [fe669152]
+- Bump nf-tower@1.5.7 [2dbf9906]
+
 22.11.0-edge - 23 Nov 2022
 - Add support for Apptainer container engine (#3345) [29f98975]
 - Add Flux executor to nextflow (#3412) [cc9fc3f0] [3711cef0]
