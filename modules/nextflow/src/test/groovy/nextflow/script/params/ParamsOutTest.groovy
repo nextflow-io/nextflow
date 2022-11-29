@@ -130,9 +130,7 @@ class ParamsOutTest extends Specification {
             process foo {
               output:
               val one into a
-              val two into p, q
-              file 'three' into b
-              file 'four'  into x,y,z
+              file 'two' into b
               return ''
             }
             '''
@@ -142,31 +140,17 @@ class ParamsOutTest extends Specification {
         when:
         def process = parseAndReturnProcess(text, binding)
         def out0 = (ValueOutParam)process.config.getOutputs().get(0)
-        def out1 = (ValueOutParam)process.config.getOutputs().get(1)
-        def out2 = (FileOutParam)process.config.getOutputs().get(2)
-        def out3 = (FileOutParam)process.config.getOutputs().get(3)
+        def out1 = (FileOutParam)process.config.getOutputs().get(1)
 
         then:
-        process.config.getOutputs().size() == 4
+        process.config.getOutputs().size() == 2
 
         out0.name == 'one'
-        out0.getOutChannels().size()==1
-        out0.getOutChannels().get(0) instanceof DataflowQueue
+        out0.getOutChannel() instanceof DataflowQueue
 
-        out1.name == 'two'
-        out1.getOutChannels().size()==2
-        out1.getOutChannels().get(0) instanceof DataflowQueue
-        out1.getOutChannels().get(1) instanceof DataflowQueue
+        out1.name == null
+        out1.getOutChannel() instanceof DataflowQueue
 
-        out2.name == null
-        out2.getOutChannels().size()==1
-        out2.getOutChannels().get(0) instanceof DataflowQueue
-
-        out3.name == null
-        out3.getOutChannels().size()==3
-        out3.getOutChannels().get(0) instanceof DataflowQueue
-        out3.getOutChannels().get(1) instanceof DataflowQueue
-        out3.getOutChannels().get(2) instanceof DataflowQueue
     }
 
     def testFileOutParams() {
@@ -366,13 +350,13 @@ class ParamsOutTest extends Specification {
         then:
         out0.name == 'x'
         out0.getFilePatterns(binding,null) == ['hola']
-        out0.getOutChannels().get(0) instanceof DataflowQueue
-        out0.getOutChannels().get(0) == binding.x
+        out0.getOutChannel() instanceof DataflowQueue
+        out0.getOutChannel() == binding.x
 
         out1.name == null
         out1.getFilePatterns(binding,null) == ['hola_2']
-        out1.getOutChannels().get(0) instanceof DataflowQueue
-        out1.getOutChannels().get(0) == binding.q
+        out1.getOutChannel() instanceof DataflowQueue
+        out1.getOutChannel() == binding.q
 
         out2.inner[0] instanceof FileOutParam
         (out2.inner[0] as FileOutParam).name == 'z'
@@ -380,16 +364,16 @@ class ParamsOutTest extends Specification {
 
         out3.name == 'u'
         out3.getFilePatterns(binding,null) == ['u']
-        out3.getOutChannels().get(0) instanceof DataflowQueue
-        out3.getOutChannels().get(0) == binding.u
+        out3.getOutChannel() instanceof DataflowQueue
+        out3.getOutChannel() == binding.u
 
         out4.name == null
         out4.getFilePatterns(binding,null) == ['file_v']
-        out4.getOutChannels().size()==0
+        out4.getOutChannel() == null
 
         out5.name == null
         out5.getFilePatterns(binding,null) == ['w']
-        out4.getOutChannels().size()==0
+        out4.getOutChannel() == null
     }
 
 
@@ -523,17 +507,17 @@ class ParamsOutTest extends Specification {
         then:
         out0.name == null
         out0.getFilePatterns(binding,null) == ['x']
-        out0.getOutChannels().size()==0
+        !out0.getOutChannel()
 
         out1.name == 'y'
         out1.getFilePatterns(binding,null) == ['y']
-        out1.getOutChannels().get(0) instanceof DataflowQueue
-        out1.getOutChannels().get(0) == binding.y
+        out1.getOutChannel() instanceof DataflowQueue
+        out1.getOutChannel() == binding.y
 
         out2.name == null
         out2.getFilePatterns(binding,null) == ['z']
-        out2.getOutChannels().get(0) instanceof DataflowQueue
-        out2.getOutChannels().get(0) == binding.channel_z
+        out2.getOutChannel() instanceof DataflowQueue
+        out2.getOutChannel() == binding.channel_z
     }
 
 
@@ -753,7 +737,7 @@ class ParamsOutTest extends Specification {
         process.config.getOutputs().size() == 1
 
         // first set
-        out0.getOutChannels().size()==0
+        out0.getOutChannel() == null
 
         out0.inner[0] instanceof ValueOutParam
         out0.inner[0].name == 'X'
@@ -776,7 +760,6 @@ class ParamsOutTest extends Specification {
               output:
               stdout into p
               stdout into (q)
-              stdout into (x,y,z)
 
               return ''
             }
@@ -788,16 +771,12 @@ class ParamsOutTest extends Specification {
         when:
         def out0 = (StdOutParam)process.config.getOutputs().get(0)
         def out1 = (StdOutParam)process.config.getOutputs().get(1)
-        def out2 = (StdOutParam)process.config.getOutputs().get(2)
 
         then:
-        process.config.getOutputs().size() == 3
+        process.config.getOutputs().size() == 2
 
-        out0.getOutChannels()[0].is binding.p
-        out1.getOutChannels()[0].is binding.q
-        out2.getOutChannels()[0].is binding.x
-        out2.getOutChannels()[1].is binding.y
-        out2.getOutChannels()[2].is binding.z
+        out0.getOutChannel().is binding.p
+        out1.getOutChannel().is binding.q
 
     }
 
@@ -948,20 +927,17 @@ class ParamsOutTest extends Specification {
 
         out0.getName() == 'x'
         out0.getFilePattern() == null
-        out0.getOutChannels().size()==1
-        out0.getOutChannels().get(0) instanceof DataflowQueue
+        out0.getOutChannel() instanceof DataflowQueue
         out0.isPathQualifier()
 
         out1.getName() == null
         out1.getFilePattern() == 'hello.*'
-        out1.getOutChannels().size()==1
-        out1.getOutChannels().get(0) instanceof DataflowQueue
+        out1.getOutChannel() instanceof DataflowQueue
         out1.isPathQualifier()
 
         out2.getName() == null
         out2.getFilePattern() == 'hello.txt'
-        out2.getOutChannels().size()==1
-        out2.getOutChannels().get(0) instanceof DataflowQueue
+        out2.getOutChannel() instanceof DataflowQueue
         out2.isPathQualifier()
         
     }
