@@ -1,12 +1,15 @@
 nf-tower changelog
 ===================
-1.5.6 - 13 Nov
+1.5.7 - 29 Nov 2022
+- Fix tower plugin min nextflow requirement [103dbf74]
+
+1.5.6 - 13 Nov 2022
 - Fix refresh token for tower served resources [9dec2b66] #3366
 
-1.5.5 - 3 Oct
+1.5.5 - 3 Oct 2022
 - Fix hanging test [44c04874] <Paolo Di Tommaso>
 
-1.5.2 - 1 Sep
+1.5.2 - 1 Sep 2022
 - Update copyright info [bc16aceb]
 - Fix typos in log messages [76a87c72]
 
