@@ -1661,6 +1661,38 @@ This can be defined in the ``nextflow.config`` file as shown below::
     process.ext.version = '2.5.3'
 
 
+.. _process-fair:
+
+fair
+----
+
+When using the ``fair`` directive the sequence of the outputs of a process executions is guaranteed
+to match the sequence of the input values irrespective. For example::
+
+    process foo {
+      fair true
+      input:
+        val x
+      output:
+        tuple val(task.index), val(x)
+
+      script:
+        """
+        sleep \$((RANDOM % 3))
+        """
+    }
+
+    workflow {
+       channel.of('A','B','C','D') | foo | view
+    }
+
+The above example produces the following output::
+
+    [1, A]
+    [2, B]
+    [3, C]
+    [4, D]
+
 .. _process-label:
 
 label

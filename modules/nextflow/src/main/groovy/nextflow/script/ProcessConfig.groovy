@@ -61,6 +61,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'errorStrategy',
             'executor',
             'ext',
+            'fair',
             'machineType',
             'queue',
             'label',
@@ -736,6 +737,19 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
     List<String> getLabels() {
         (List<String>) configProperties.get('label') ?: Collections.<String>emptyList()
+    }
+
+    boolean getFair() {
+        final value = configProperties.get('fair')
+        if( value == null )
+            return false
+        if( value instanceof Boolean )
+            return value
+
+        if( value instanceof Closure )
+            throw new IllegalArgumentException("Process directive `fair` cannot be declared in a dynamic manner with a closure")
+        else
+            throw new IllegalArgumentException("Unexpected value for directive `fair` -- offending value: $value")
     }
 
     ProcessConfig secret(String name) {

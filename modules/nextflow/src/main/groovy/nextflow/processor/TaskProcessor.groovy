@@ -241,6 +241,12 @@ class TaskProcessor {
 
     private static LockManager lockManager = new LockManager()
 
+    private List<Map<Short,List>> fairBuffers = new ArrayList<>()
+
+    private int currentEmission
+
+    private Boolean isFair0
+
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskTemplateVarsXform) )
@@ -286,6 +292,7 @@ class TaskProcessor {
         this.name = name
         this.maxForks = config.maxForks ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
+        this.isFair0 = config.getFair()
     }
 
     /**
@@ -1354,19 +1361,12 @@ class TaskProcessor {
             }
         }
 
-        // -- bind out the collected values
-        for( OutParam param : config.getOutputs() ) {
-            def list = tuples[param.index]
-            if( list == null )
-                throw new IllegalStateException()
-
-            if( list instanceof MissingParam ) {
-                log.debug "Process $name > Skipping output binding because one or more optional files are missing: $list.missing"
-                continue
-            }
-
-            log.trace "Process $name > Binding out param: ${param} = ${list}"
-            bindOutParam(param, list)
+        // bind the output
+        if( isFair0 ) {
+            fairBindOutputs0(tuples, task)
+        }
+        else {
+            bindOutputs0(tuples)
         }
 
         // -- finally prints out the task output when 'debug' is true
@@ -1375,10 +1375,52 @@ class TaskProcessor {
         }
     }
 
+    protected void fairBindOutputs0(Map<Short,List> emissions, TaskRun task) {
+        synchronized (isFair0) {
+            // decrement -1 because tasks are 1-based
+            final index = task.index-1
+            // store the task emission values in a buffer
+            fairBuffers[index-currentEmission] = emissions
+            // check if the current task index matches the expected next emission index
+            if( currentEmission == index ) {
+                while( emissions!=null ) {
+                    // bind the emission values
+                    bindOutputs0(emissions)
+                    // remove the head and try with the following
+                    fairBuffers.remove(0)
+                    // increase the index of the next emission
+                    currentEmission++
+                    // take the next emissions 
+                    emissions = fairBuffers[0]
+                }
+            }
+        }
+    }
+
+    protected void bindOutputs0(Map<Short,List> tuples) {
+        // -- bind out the collected values
+        for( OutParam param : config.getOutputs() ) {
+            final outValue = tuples[param.index]
+            if( outValue == null )
+                throw new IllegalStateException()
+
+            if( outValue instanceof MissingParam ) {
+                log.debug "Process $name > Skipping output binding because one or more optional files are missing: $outValue.missing"
+                continue
+            }
+
+            log.trace "Process $name > Binding out param: ${param} = ${outValue}"
+            bindOutParam(param, outValue)
+        }
+    }
+
     protected void bindOutParam( OutParam param, List values ) {
         log.trace "<$name> Binding param $param with $values"
         final x = values.size() == 1 ? values[0] : values
-        param.getOutChannel()?.bind(x)
+        final ch = param.getOutChannel()
+        if( ch != null ) {
+            ch.bind(x)
+        }
     }
 
     protected void collectOutputs( TaskRun task ) {

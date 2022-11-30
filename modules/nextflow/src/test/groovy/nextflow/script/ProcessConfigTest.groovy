@@ -106,6 +106,24 @@ class ProcessConfigTest extends Specification {
 
     }
 
+    @Unroll
+    def 'should set fair directive' () {
+        given:
+        def script = Mock(BaseScript)
+        def config = new ProcessConfig(script)
+
+        when:
+        config.fair = CONFIG
+        then:
+        config.getFair() == EXPECTED
+
+        where:
+        CONFIG      | EXPECTED
+        null        | false
+        false       | false
+        true        | true
+    }
+
     def 'should parse properties'() {
 
         when:
