@@ -17,6 +17,9 @@
 
 package nextflow.k8s.client
 
+import nextflow.exception.K8sOutOfCpuException
+import nextflow.exception.K8sOutOfMemoryException
+
 import javax.net.ssl.HttpsURLConnection
 
 import nextflow.exception.NodeTerminationException
@@ -671,6 +674,90 @@ class K8sClientTest extends Specification {
         1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
         def e = thrown(PodUnschedulableException)
         e.message == "K8s pod image cannot be pulled -- rpc error: code = Unknown desc = Error response from daemon: pull access denied for nextflow/foo, repository does not exist or may require 'docker login'"
+    }
+
+    def 'client should throw an exception when k8s is out of cpu' () {
+        given:
+        def JSON = '''
+             {
+                "kind": "Pod",
+                "apiVersion": "v1",
+                "metadata": {
+                    "name": "nf-3b344812fe0aeb9554424bcf6caa7ffb",
+                    "namespace": "default",
+                    "uid": "0dd3c071-82a3-4b20-bdd4-0d34ff3d90bd",
+                    "resourceVersion": "55320",
+                    "creationTimestamp": "2022-09-23T13:43:48Z",
+                    "labels": {
+                        "app": "nextflow",
+                        "processName": "combineFiles",
+                        "runName": "insane-kare",
+                        "sessionId": "uuid-85951b91-b5bc-4566-8938-fef4256c21c8",
+                        "taskName": "combineFiles_1"
+                    },
+                },
+                "spec": {
+                },
+                "status": {
+                    "phase": "Failed",
+                    "message": "Pod Node didn't have enough resource: cpu, requested: 4000, used: 2100, capacity: 6000",
+                    "reason": "OutOfcpu",
+                    "startTime": "2022-09-23T13:43:48Z"
+                }
+            }
+        '''
+
+        def client = Spy(K8sClient)
+        final POD_NAME = 'nf-3b344812fe0aeb9554424bcf6caa7ffb'
+
+        when:
+        client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+        def e = thrown(K8sOutOfCpuException)
+        e.message == "K8s pod 'nf-3b344812fe0aeb9554424bcf6caa7ffb' execution failed - reason: OutOfcpu - message: Pod Node didn't have enough resource: cpu, requested: 4000, used: 2100, capacity: 6000"
+    }
+
+    def 'client should throw an exception when k8s is out of memory' () {
+        given:
+        def JSON = '''
+             {
+                "kind": "Pod",
+                "apiVersion": "v1",
+                "metadata": {
+                    "name": "nf-3b344812fe0aeb9554424bcf6caa7ffb",
+                    "namespace": "default",
+                    "uid": "0dd3c071-82a3-4b20-bdd4-0d34ff3d90bd",
+                    "resourceVersion": "55320",
+                    "creationTimestamp": "2022-09-23T13:43:48Z",
+                    "labels": {
+                        "app": "nextflow",
+                        "processName": "combineFiles",
+                        "runName": "insane-kare",
+                        "sessionId": "uuid-85951b91-b5bc-4566-8938-fef4256c21c8",
+                        "taskName": "combineFiles_2"
+                    },
+                },
+                "spec": {
+                },
+                "status": {
+                    "phase": "Failed",
+                    "message": "Pod Node didn't have enough resource: memory, requested: 16106127360, used: 16158556160, capacity: 16778358784",
+                    "reason": "OutOfmemory",
+                    "startTime": "2022-09-23T13:42:59Z"
+                }
+            }
+        '''
+
+        def client = Spy(K8sClient)
+        final POD_NAME = 'nf-3b344812fe0aeb9554424bcf6caa7ffb'
+
+        when:
+        client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+        def e = thrown(K8sOutOfMemoryException)
+        e.message == "K8s pod 'nf-3b344812fe0aeb9554424bcf6caa7ffb' execution failed - reason: OutOfmemory - message: Pod Node didn't have enough resource: memory, requested: 16106127360, used: 16158556160, capacity: 16778358784"
     }
 
     def 'client should throw an exception when container status returns ImagePullBackOff' () {
