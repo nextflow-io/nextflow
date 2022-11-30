@@ -871,6 +871,12 @@ class TaskProcessorTest extends Specification {
         and:
         def emission1 = new HashMap()
         def task1 = Mock(TaskRun) { getIndex()>>1 }
+        and:
+        def emission5 = new HashMap()
+        def task5 = Mock(TaskRun) { getIndex()>>5 }
+        and:
+        def emission4 = new HashMap()
+        def task4 = Mock(TaskRun) { getIndex()>>4 }
 
         when:
         processor.fairBindOutputs0(emission3, task3)
@@ -885,6 +891,12 @@ class TaskProcessorTest extends Specification {
         0 * processor.bindOutputs0(_)
 
         when:
+        processor.fairBindOutputs0(emission5, task5)
+        then:
+        processor.@fairBuffers[4] == emission5
+        0 * processor.bindOutputs0(_)
+
+        when:
         processor.fairBindOutputs0(emission1, task1)
         then:
         1 * processor.bindOutputs0(emission1)
@@ -892,6 +904,17 @@ class TaskProcessorTest extends Specification {
         1 * processor.bindOutputs0(emission2)
         then:
         1 * processor.bindOutputs0(emission3)
+        and:
+        processor.@fairBuffers.size() == 2 
+        processor.@fairBuffers[0] == null
+        processor.@fairBuffers[1] == emission5
+
+        when:
+        processor.fairBindOutputs0(emission4, task4)
+        then:
+        1 * processor.bindOutputs0(emission4)
+        then:
+        1 * processor.bindOutputs0(emission5)
         then:
         processor.@fairBuffers.size()==0
     }
