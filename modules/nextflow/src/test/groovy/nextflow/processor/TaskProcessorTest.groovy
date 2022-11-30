@@ -857,4 +857,42 @@ class TaskProcessorTest extends Specification {
         ]
     }
 
+    def 'should bind fair outputs' () {
+        given:
+        def processor = Spy(TaskProcessor)
+        processor.@config = Mock(ProcessConfig)
+        processor.@isFair0 = true
+        and:
+        def emission3 = new HashMap()
+        def task3 = Mock(TaskRun) { getIndex()>>3 }
+        and:
+        def emission2 = new HashMap()
+        def task2 = Mock(TaskRun) { getIndex()>>2 }
+        and:
+        def emission1 = new HashMap()
+        def task1 = Mock(TaskRun) { getIndex()>>1 }
+
+        when:
+        processor.fairBindOutputs0(emission3, task3)
+        then:
+        processor.@fairBuffers[2] == emission3
+        0 * processor.bindOutputs0(_)
+
+        when:
+        processor.fairBindOutputs0(emission2, task2)
+        then:
+        processor.@fairBuffers[1] == emission2
+        0 * processor.bindOutputs0(_)
+
+        when:
+        processor.fairBindOutputs0(emission1, task1)
+        then:
+        1 * processor.bindOutputs0(emission1)
+        then:
+        1 * processor.bindOutputs0(emission2)
+        then:
+        1 * processor.bindOutputs0(emission3)
+        then:
+        processor.@fairBuffers.size()==0
+    }
 }
