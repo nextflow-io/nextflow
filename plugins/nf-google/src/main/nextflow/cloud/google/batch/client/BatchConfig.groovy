@@ -42,6 +42,7 @@ class BatchConfig {
     private String network
     private String subnetwork
     private String serviceAccountEmail
+    private List<String> allowedLocations
 
     GoogleOpts getGoogleOpts() { return googleOpts }
     GoogleCredentials getCredentials() { return credentials }
@@ -53,6 +54,7 @@ class BatchConfig {
     String getNetwork() { network }
     String getSubnetwork() { subnetwork }
     String getServiceAccountEmail() { serviceAccountEmail }
+    List<String> getAllowedLocations() { allowedLocations }
 
     static BatchConfig create(Session session) {
         final result = new BatchConfig()
@@ -66,6 +68,7 @@ class BatchConfig {
         result.network = session.config.navigate('google.batch.network')
         result.subnetwork = session.config.navigate('google.batch.subnetwork')
         result.serviceAccountEmail = session.config.navigate('google.batch.serviceAccountEmail')
+        result.allowedLocations = (session.config.navigate('google.batch.allowedLocations') as String)?.split(",")?.toList() ?: Collections.<String>emptyList()
         return result
     }
 

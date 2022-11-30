@@ -232,6 +232,13 @@ class GoogleBatchTaskHandler extends TaskHandler {
             )
 
         allocationPolicy.putAllLabels(task.config.getResourceLabels())
+        // location policy
+        if( executor.config.allowedLocations ) {
+            final locationPolicy = AllocationPolicy.LocationPolicy.newBuilder()
+                .addAllAllowedLocations(executor.config.allowedLocations)
+
+            allocationPolicy.setLocation(locationPolicy)
+        }
 
         // create the job
         return Job.newBuilder()
