@@ -249,14 +249,12 @@ class WaveClient {
                 .build()
 
         final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
-        if( resp.statusCode()==200 ) {
-            log.debug "Wave container config response: ${resp.body()}"
+        final code = resp.statusCode()
+        if( code>=200 && code<400 ) {
+            log.debug "Wave container config response: [$code] ${resp.body()}"
             return jsonToContainerConfig(resp.body())
         }
-        else {
-            log.warn "Wave container config error response: [${resp.statusCode()}] ${resp.body()}"
-            return null
-        }
+        throw new BadResponseException("Unexpected response for containerContainerConfigUrl \'$configUrl\': [${resp.statusCode()}] ${resp.body()}")
     }
 
     protected void checkConflicts(Map<String,String> attrs, String name) {
