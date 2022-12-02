@@ -591,7 +591,7 @@ temp                Mounts a path of your choice as the ``/tmp`` directory in th
 remove              Clean-up the container after the execution (default: ``true``).
 runOptions          This attribute can be used to provide any extra command line options supported by the ``podman run`` command.
 registry            The registry from where container images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
-engineOptions       This attribute can be used to provide any option supported by the Docker engine i.e. ``podman [OPTIONS]``.
+engineOptions       This attribute can be used to provide any option supported by the Podman engine i.e. ``podman [OPTIONS]``.
 mountFlags          Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`
 ================== ================
 
@@ -750,6 +750,10 @@ The following settings are available:
 Name                Description
 ================== ================
 enabled             Turn this flag to ``true`` to enable Sarus execution (default: ``false``).
+envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+tty                 Allocates a pseudo-tty (default: ``false``).
+remove              Clean-up the container after the execution (default: ``true``).
+runOptions          This attribute can be used to provide any extra command line options supported by the ``sarus run`` command. For details see: https://sarus.readthedocs.io/en/stable/user/user_guide.html .
 ================== ================
 
 Read :ref:`container-sarus` page to learn more about how to use Sarus containers with Nextflow.
