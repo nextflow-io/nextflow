@@ -369,6 +369,7 @@ class SessionTest extends Specification {
         'podman'       | [enabled: true, x:'alpha', y: 'beta']
         'podman'       | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
         'udocker'      | [enabled: true, x:'alpha', y: 'beta']
+        'sarus'        | [enabled: true, x:'delta', y: 'gamma']
         'shifter'      | [enabled: true, x:'delta', y: 'gamma']
         'singularity'  | [enabled: true, x:'delta', y: 'gamma']
         'charliecloud' | [enabled: true, x:'delta', y: 'gamma']
