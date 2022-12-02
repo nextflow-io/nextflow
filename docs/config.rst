@@ -752,7 +752,6 @@ Name                Description
 enabled             Turn this flag to ``true`` to enable Sarus execution (default: ``false``).
 envWhitelist        Comma separated list of environment variable names to be included in the container environment.
 tty                 Allocates a pseudo-tty (default: ``false``).
-remove              Clean-up the container after the execution (default: ``true``).
 runOptions          This attribute can be used to provide any extra command line options supported by the ``sarus run`` command. For details see: https://sarus.readthedocs.io/en/stable/user/user_guide.html .
 ================== ================
 
