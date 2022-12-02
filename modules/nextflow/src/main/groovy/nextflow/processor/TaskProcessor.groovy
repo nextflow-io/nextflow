@@ -524,7 +524,7 @@ class TaskProcessor {
         def invoke = new InvokeTaskAdapter(this, opInputs.size())
         session.allOperators << (operator = new DataflowOperator(group, params, invoke))
 
-        // notify the creation of a new vertex the execution DAG
+        // notify the creation of a new process in the DAG
         NodeMarker.addProcessNode(this, config.getInputs(), config.getOutputs())
 
         // fix issue #41
@@ -756,8 +756,11 @@ class TaskProcessor {
 
                 log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
                 def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), resumeDir, hash, entry)
-                if( cached )
+                if( cached ) {
+                    // add cached task to the task graph
+                    NodeMarker.addTaskNode(task, hash.toString())
                     break
+                }
             }
             catch (Throwable t) {
                 log.warn1("[${safeTaskName(task)}] Unable to resume cached task -- See log file for details", causedBy: t)
@@ -779,6 +782,9 @@ class TaskProcessor {
             finally {
                 lock.release()
             }
+
+            // add submitted task to the task graph
+            NodeMarker.addTaskNode(task, hash.toString())
 
             // submit task for execution
             submitTask( task, hash, workDir )

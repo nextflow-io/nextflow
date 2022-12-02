@@ -24,6 +24,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.dag.CytoscapeHtmlRenderer
 import nextflow.dag.DAG
+import nextflow.dag.TaskGraph
 import nextflow.dag.DagRenderer
 import nextflow.dag.DotRenderer
 import nextflow.dag.GexfRenderer
@@ -46,7 +47,11 @@ class GraphObserver implements TraceObserver {
 
     private Path file
 
-    private DAG dag
+    private String graphType
+
+    private DAG processGraph
+
+    private TaskGraph taskGraph
 
     private String name
 
@@ -67,7 +72,8 @@ class GraphObserver implements TraceObserver {
 
     @Override
     void onFlowCreate(Session session) {
-        this.dag = session.dag
+        this.processGraph = session.dag
+        this.taskGraph = session.taskGraph
         // check file existance
         final attrs = FileHelper.readAttributes(file)
         if( attrs ) {
@@ -80,14 +86,22 @@ class GraphObserver implements TraceObserver {
 
     @Override
     void onFlowComplete() {
-        // -- normalise the DAG
-        dag.normalize()
-        // -- render it to a file
-        createRender().renderDocument(dag,file)
+        if( graphType == 'process' ) {
+            // -- normalise the DAG
+            processGraph.normalize()
+            // -- render it to a file
+            createRenderer().renderProcessGraph(processGraph,file)
+        }
+        else if( graphType == 'task' ) {
+            createRenderer().renderTaskGraph(taskGraph,file)
+        }
+        else {
+            log.warn("Invalid DAG type '${graphType}'")
+        }
     }
 
     @PackageScope
-    DagRenderer createRender() {
+    DagRenderer createRenderer() {
         if( format == 'dot' )
             new DotRenderer(name)
 
@@ -102,28 +116,6 @@ class GraphObserver implements TraceObserver {
 
         else
             new GraphvizRenderer(name, format)
-    }
-
-
-    @Override
-    void onProcessCreate(TaskProcessor process) {
-
-    }
-
-
-    @Override
-    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
-
-    }
-
-    @Override
-    void onProcessStart(TaskHandler handler, TraceRecord trace) {
-
-    }
-
-    @Override
-    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-
     }
 
     @Override

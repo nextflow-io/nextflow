@@ -22,6 +22,7 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Global
 import nextflow.Session
 import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
 import nextflow.script.params.InputsList
 import nextflow.script.params.OutputsList
 /**
@@ -41,7 +42,7 @@ class NodeMarker {
     static private Session getSession() { Global.session as Session }
 
     /**
-     *  Creates a new vertex in the DAG representing a computing `process`
+     * Creates a new vertex in the DAG representing a computing `process`
      *
      * @param label The label associated to the process
      * @param inputs The list of inputs entering in the process
@@ -86,6 +87,17 @@ class NodeMarker {
     static void addDataflowBroadcastPair(readChannel, broadcastChannel)  {
         if( session && session.dag && !session.aborted )
             session.dag.addDataflowBroadcastPair(readChannel, broadcastChannel)
+    }
+
+    /**
+     * Creates a new node in the DAG representing a task
+     *
+     * @param task
+     * @param hash
+     */
+    static void addTaskNode( TaskRun task, String hash ) {
+        if( session?.taskGraph && !session.aborted )
+            session.taskGraph.addTaskNode( task, hash )
     }
 
 }

@@ -41,7 +41,7 @@ import nextflow.script.params.OutputsList
 import nextflow.script.params.TupleInParam
 import nextflow.script.params.TupleOutParam
 /**
- * Model a direct acyclic graph of the pipeline execution.
+ * Model the process graph of a pipeline execution.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

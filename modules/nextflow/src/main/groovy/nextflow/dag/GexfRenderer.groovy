@@ -41,7 +41,7 @@ class GexfRenderer implements DagRenderer {
     }
 
     @Override
-    void renderDocument(DAG dag, Path file) {
+    void renderProcessGraph(DAG dag, Path file) {
         final Charset charset = Charset.defaultCharset()
         Writer bw = Files.newBufferedWriter(file, charset) 
         final XMLOutputFactory xof = XMLOutputFactory.newFactory()

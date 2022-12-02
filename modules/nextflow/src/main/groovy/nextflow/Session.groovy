@@ -40,6 +40,7 @@ import nextflow.conda.CondaConfig
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.dag.DAG
+import nextflow.dag.TaskGraph
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortSignalException
 import nextflow.exception.IllegalConfigException
@@ -193,6 +194,8 @@ class Session implements ISession {
 
     private DAG dag
 
+    private TaskGraph taskGraph
+
     private CacheDB cache
 
     private Barrier processesBarrier = new Barrier()
@@ -345,6 +348,7 @@ class Session implements ISession {
 
         // -- DAG object
         this.dag = new DAG()
+        this.taskGraph = new TaskGraph()
 
         // -- init work dir
         this.workDir = ((config.workDir ?: 'work') as Path).complete()
@@ -799,6 +803,8 @@ class Session implements ISession {
     }
 
     DAG getDag() { this.dag }
+
+    TaskGraph getTaskGraph() { this.taskGraph }
 
     ExecutorService getExecService() { execService }
 
