@@ -63,7 +63,7 @@ class BatchLogging {
     @PackageScope List<String> fetchLogs(String uid) {
         try(Logging logging = opts.getService()) {
             // use logging here
-            final filter = "resource.type=generic_task AND logName=projects/${projectId}/logs/batch_task_logs AND labels.job_uid=$uid"
+            final filter = "resource.type=generic_task AND logName=\"projects/${projectId}/logs/batch_task_logs\" AND labels.job_uid=$uid"
             final entries = logging.listLogEntries(
                     Logging.EntryListOption.filter(filter),
                     Logging.EntryListOption.pageSize(1000) )
