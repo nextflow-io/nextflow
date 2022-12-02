@@ -63,6 +63,20 @@ scripts with multiple commands spanning multiple lines. For example::
       """
     }
 
+.. tip::
+  By default, the script block is executed with the `Bash options <https://tldp.org/LDP/abs/html/options.html>`_ ``set -ue``.
+  The user can add custom options directly to the process definition as shown below::
+
+    process doMoreThings {
+      shell '/bin/bash', '-euo', 'pipefail'
+      
+      """
+      blastp -db $db -query query.fa -outfmt 6 > blast_result
+      cat blast_result | head -n 10 | cut -f 2 > top_hits
+      blastdbcmd -db $db -entry_batch top_hits > sequences
+      """
+    }
+
 As explained in the script tutorial section, strings can be defined using single-quotes
 or double-quotes, and multi-line strings are defined by three single-quote or three double-quote characters.
 
