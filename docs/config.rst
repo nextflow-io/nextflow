@@ -736,6 +736,25 @@ overwrite           When ``true`` overwrites any existing report file with the s
 ================== ================
 
 
+.. _config-sarus:
+
+Scope `sarus`
+-------------------
+
+The ``sarus`` configuration scope controls how `Sarus <https://sarus.readthedocs.io>`_ containers are executed
+by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             Turn this flag to ``true`` to enable Sarus execution (default: ``false``).
+================== ================
+
+Read :ref:`container-sarus` page to learn more about how to use Sarus containers with Nextflow.
+
+
 .. _config-shifter:
 
 Scope `shifter`
