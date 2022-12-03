@@ -32,7 +32,6 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
-import nextflow.cloud.google.batch.logging.BatchLogging
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
