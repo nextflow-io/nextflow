@@ -48,11 +48,21 @@ class BatchLogging {
     }
 
     String stdout(String jobId) {
-        return fetchLogs(jobId)[0]
+        return safeLogs(jobId,0)
     }
 
     String stderr(String jobId) {
-        return fetchLogs(jobId)[1]
+        return safeLogs(jobId,1)
+    }
+
+    protected String safeLogs(String jobId, int index) {
+        try {
+            return fetchLogs(jobId)[index]
+        }
+        catch (Exception e) {
+            log.warn("Cannot read logs for Batch job '$jobId' - cause: ${e.message}", e)
+            return null
+        }
     }
 
     @Memoized(maxCacheSize = 1000)
@@ -70,8 +80,6 @@ class BatchLogging {
             for (LogEntry logEntry : page.iterator()) {
                 parseOutput(logEntry, stdout, stderr)
             }
-        } catch (Exception e) {
-            log.debug "[GOOGLE BATCH] Cannot read logs for job: `$uid` | ${e.message}"
         }
         return [ stdout.toString(), stderr.toString() ]
     }
