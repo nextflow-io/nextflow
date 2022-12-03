@@ -27,8 +27,6 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 
 interface OutParam extends Cloneable {
 
-    interface Mode {  }
-
     /**
      * @return The parameter name getter
      */
@@ -50,11 +48,7 @@ interface OutParam extends Cloneable {
      */
     DataflowWriteChannel getOutChannel()
 
-    @Deprecated List<DataflowWriteChannel> getOutChannels()
-
     short getIndex()
-
-    @Deprecated Mode getMode()
 
     String getChannelEmitName()
 
