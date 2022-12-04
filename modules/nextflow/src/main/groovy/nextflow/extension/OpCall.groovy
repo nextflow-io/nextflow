@@ -24,7 +24,7 @@ import org.codehaus.groovy.runtime.InvokerHelper
 @CompileStatic
 class OpCall implements Callable {
 
-    final static private List<String> SPECIAL_NAMES = ["choice","merge","separate"]
+    final static private List<String> SPECIAL_NAMES = ["merge"]
 
     final static private String SET_OP_hack = 'set'
 
@@ -144,14 +144,11 @@ class OpCall implements Callable {
     }
 
     private Object[] read1(Object[] args) {
-        if( methodName != 'separate' && methodName != 'choice' ) {
-            Object[] params = new Object[args.length]
-            for( int i=0; i<args.length; i++ )
-                params[i] = read0(args[i])
+        Object[] params = new Object[args.length]
+        for( int i=0; i<args.length; i++ )
+            params[i] = read0(args[i])
 
-            return params
-        }
-        return args
+        return params
     }
 
 
@@ -284,9 +281,9 @@ class OpCall implements Callable {
         if (checkOpenArrayDataflowMethod(SPECIAL_NAMES, methodName, args)) {
             // make it possible to invoke some dataflow operator specifying an open array and ending with a closure argument
             // For example:
-            //  DataflowReadChannel# separate(final List<DataflowWriteChannel<?>> outputs, final Closure<List<Object>> code)
+            //  OperatorImpl#DataflowWriteChannel merge(final DataflowReadChannel source, final DataflowReadChannel... others)
             // can be invoked as:
-            //  queue.separate( x, y, z ) { ... }
+            //  queue.merge( x, y, z ) { ... }
 
             Object[] params = new Object[3]
             params[0] = channel

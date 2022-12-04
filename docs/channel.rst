@@ -88,19 +88,6 @@ Channels may be created explicitly using the following channel factory methods.
   methods can be specified either as ``channel.of()`` or ``Channel.of()``, and so on.
 
 
-.. _channel-create:
-
-create
-------
-
-.. warning::
-    The ``create`` method is no longer available in DSL2 syntax.
-
-Creates a new channel, as shown below::
-
-    channelObj = Channel.create()
-
-
 .. _channel-empty:
 
 empty
@@ -475,36 +462,6 @@ See also: `fromPath`_ factory method.
 
 Channel methods
 ===============
-
-.. _channel-bind1:
-
-bind
-----
-
-.. warning::
-    The ``bind`` method is no longer available in DSL2 syntax.
-
-Channel objects provide a `bind( )` method which is the basic operation to send a message over the channel.
-For example::
-
-    myChannel = Channel.create()
-    myChannel.bind( 'Hello world' )
-
-
-.. _channel-bind2:
-
-operator <<
------------
-
-.. warning::
-    The ``<<`` operator is no longer available in DSL2 syntax.
-
-The operator ``<<`` is just a syntax sugar for the ``bind`` method. Thus, the following example produces
-an identical result as the previous one::
-
-    myChannel = Channel.create()
-    myChannel << 'Hello world'
-
 
 .. _channel-subscribe:
 
