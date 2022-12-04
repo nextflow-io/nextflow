@@ -1511,10 +1511,9 @@ reduce
 ------
 
 The ``reduce`` operator applies a function of your choosing to every item emitted by a channel.
-Each time this function is invoked it takes two parameters: firstly the `i-th` emitted item
-and secondly the result of the previous invocation of the function itself. The result is
-passed on to the next function call, along with the `i+1 th` item, until all the items are
-processed.
+Each time this function is invoked it takes two parameters: firstly the accumulated value and
+secondly the `i-th` emitted item. The result is passed as the accumulated value to the next
+function call, along with the `i+1 th` item, until all the items are processed.
 
 Finally, the ``reduce`` operator emits the result of the last invocation of your function
 as the sole output.
@@ -1534,14 +1533,9 @@ It prints the following output::
     a: 10 b: 5
     result = 15
 
-.. tip::
-  A common use case for this operator is to use the first parameter as an `accumulator`
-  the second parameter as the `i-th` item to be processed.
+Optionally you can specify an initial value for the accumulator as shown below::
 
-Optionally you can specify a `seed` value in order to initialise the accumulator parameter
-as shown below::
-
-    myChannel.reduce( seedValue ) {  a, b -> ... }
+    myChannel.reduce( initialValue ) {  a, b -> ... }
 
 
 .. _operator-separate:
