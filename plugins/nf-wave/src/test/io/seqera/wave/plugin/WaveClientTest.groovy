@@ -30,6 +30,7 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.conda.CondaConfig
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
@@ -294,15 +295,34 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaRecipeToDockerFile(RECIPE) == '''\
-                FROM mambaorg/micromamba:0.27.0
+                FROM mambaorg/micromamba:1.0.0
                 RUN \\
-                   micromamba install -y -n base -c defaults -c conda-forge \\
+                   micromamba install -y -n base -c conda-forge -c defaults \\
                    bwa=0.7.15 salmon=1.1.1 \\
                    && micromamba clean -a -y
                 '''.stripIndent()
     }
 
     def 'should create dockerfile content with custom config' () {
+        given:
+        def session = Mock(Session) {
+            getConfig() >> [:]
+            getCondaConfig() >> new CondaConfig([channels:'foo,bar'], [:])
+        }
+        def RECIPE = 'bwa=0.7.15 salmon=1.1.1'
+        when:
+        def client = new WaveClient(session)
+        then:
+        client.condaRecipeToDockerFile(RECIPE) == '''\
+                FROM mambaorg/micromamba:1.0.0
+                RUN \\
+                   micromamba install -y -n base -c foo -c bar \\
+                   bwa=0.7.15 salmon=1.1.1 \\
+                   && micromamba clean -a -y
+                '''.stripIndent()
+    }
+
+    def 'should create dockerfile content with custom channels' () {
         given:
         def CONDA_OPTS = [mambaImage:'my-base:123', commands: ['USER my-user', 'RUN apt-get update -y && apt-get install -y procps']]
         def session = Mock(Session) { getConfig() >> [wave:[build:[conda:CONDA_OPTS]]]}
@@ -313,7 +333,7 @@ class WaveClientTest extends Specification {
         client.condaRecipeToDockerFile(RECIPE) == '''\
                 FROM my-base:123
                 RUN \\
-                   micromamba install -y -n base -c defaults -c conda-forge \\
+                   micromamba install -y -n base -c conda-forge -c defaults \\
                    bwa=0.7.15 salmon=1.1.1 \\
                    && micromamba clean -a -y
                 USER my-user
@@ -328,7 +348,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaFileToDockerFile()== '''\
-                FROM mambaorg/micromamba:0.27.0
+                FROM mambaorg/micromamba:1.0.0
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                     micromamba clean -a -y
@@ -462,9 +482,9 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:0.27.0
+                    FROM mambaorg/micromamba:1.0.0
                     RUN \\
-                       micromamba install -y -n base -c defaults -c conda-forge \\
+                       micromamba install -y -n base -c conda-forge -c defaults \\
                        salmon=1.2.3 \\
                        && micromamba clean -a -y
                     '''.stripIndent()
@@ -490,7 +510,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:0.27.0
+                    FROM mambaorg/micromamba:1.0.0
                     COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                     RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                         micromamba clean -a -y

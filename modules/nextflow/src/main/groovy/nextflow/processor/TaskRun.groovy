@@ -63,7 +63,7 @@ class TaskRun implements Cloneable {
     /**
      * Task index within its execution group
      */
-    def index
+    Integer index
 
     /**
      * Task name

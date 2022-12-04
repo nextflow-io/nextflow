@@ -45,7 +45,6 @@ class ParamsOutTest extends Specification {
     }
 
 
-
     // ==============================================================
     //                  test *output* parameters
     // ==============================================================
@@ -130,9 +129,7 @@ class ParamsOutTest extends Specification {
             process foo {
               output:
               val one into a
-              val two into p, q
-              file 'three' into b
-              file 'four'  into x,y,z
+              file 'two' into b
               return ''
             }
             '''
@@ -142,31 +139,17 @@ class ParamsOutTest extends Specification {
         when:
         def process = parseAndReturnProcess(text, binding)
         def out0 = (ValueOutParam)process.config.getOutputs().get(0)
-        def out1 = (ValueOutParam)process.config.getOutputs().get(1)
-        def out2 = (FileOutParam)process.config.getOutputs().get(2)
-        def out3 = (FileOutParam)process.config.getOutputs().get(3)
+        def out1 = (FileOutParam)process.config.getOutputs().get(1)
 
         then:
-        process.config.getOutputs().size() == 4
+        process.config.getOutputs().size() == 2
 
         out0.name == 'one'
-        out0.getOutChannels().size()==1
-        out0.getOutChannels().get(0) instanceof DataflowQueue
+        out0.getOutChannel() instanceof DataflowQueue
 
-        out1.name == 'two'
-        out1.getOutChannels().size()==2
-        out1.getOutChannels().get(0) instanceof DataflowQueue
-        out1.getOutChannels().get(1) instanceof DataflowQueue
+        out1.name == null
+        out1.getOutChannel() instanceof DataflowQueue
 
-        out2.name == null
-        out2.getOutChannels().size()==1
-        out2.getOutChannels().get(0) instanceof DataflowQueue
-
-        out3.name == null
-        out3.getOutChannels().size()==3
-        out3.getOutChannels().get(0) instanceof DataflowQueue
-        out3.getOutChannels().get(1) instanceof DataflowQueue
-        out3.getOutChannels().get(2) instanceof DataflowQueue
     }
 
     def testFileOutParams() {
@@ -176,8 +159,8 @@ class ParamsOutTest extends Specification {
             process hola {
               output:
               file x
-              file 'y' mode flatten
-              file p into q mode standard
+              file 'y'
+              file p into q
 
               return ''
             }
@@ -201,18 +184,15 @@ class ParamsOutTest extends Specification {
         out1.name == 'x'
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.'x'
-        out1.mode == BasicMode.standard
 
         out2.class == FileOutParam
         out2.name == null
         out2.outChannel == null
-        out2.mode == BasicMode.flatten
 
         out3.class == FileOutParam
         out3.name == 'p'
         out3.outChannel instanceof DataflowQueue
         out3.outChannel == binding.q
-        out3.mode == BasicMode.standard
         !binding.containsKey('p')
     }
 
@@ -366,13 +346,13 @@ class ParamsOutTest extends Specification {
         then:
         out0.name == 'x'
         out0.getFilePatterns(binding,null) == ['hola']
-        out0.getOutChannels().get(0) instanceof DataflowQueue
-        out0.getOutChannels().get(0) == binding.x
+        out0.getOutChannel() instanceof DataflowQueue
+        out0.getOutChannel() == binding.x
 
         out1.name == null
         out1.getFilePatterns(binding,null) == ['hola_2']
-        out1.getOutChannels().get(0) instanceof DataflowQueue
-        out1.getOutChannels().get(0) == binding.q
+        out1.getOutChannel() instanceof DataflowQueue
+        out1.getOutChannel() == binding.q
 
         out2.inner[0] instanceof FileOutParam
         (out2.inner[0] as FileOutParam).name == 'z'
@@ -380,16 +360,16 @@ class ParamsOutTest extends Specification {
 
         out3.name == 'u'
         out3.getFilePatterns(binding,null) == ['u']
-        out3.getOutChannels().get(0) instanceof DataflowQueue
-        out3.getOutChannels().get(0) == binding.u
+        out3.getOutChannel() instanceof DataflowQueue
+        out3.getOutChannel() == binding.u
 
         out4.name == null
         out4.getFilePatterns(binding,null) == ['file_v']
-        out4.getOutChannels().size()==0
+        out4.getOutChannel() == null
 
         out5.name == null
         out5.getFilePatterns(binding,null) == ['w']
-        out4.getOutChannels().size()==0
+        out4.getOutChannel() == null
     }
 
 
@@ -523,17 +503,17 @@ class ParamsOutTest extends Specification {
         then:
         out0.name == null
         out0.getFilePatterns(binding,null) == ['x']
-        out0.getOutChannels().size()==0
+        !out0.getOutChannel()
 
         out1.name == 'y'
         out1.getFilePatterns(binding,null) == ['y']
-        out1.getOutChannels().get(0) instanceof DataflowQueue
-        out1.getOutChannels().get(0) == binding.y
+        out1.getOutChannel() instanceof DataflowQueue
+        out1.getOutChannel() == binding.y
 
         out2.name == null
         out2.getFilePatterns(binding,null) == ['z']
-        out2.getOutChannels().get(0) instanceof DataflowQueue
-        out2.getOutChannels().get(0) == binding.channel_z
+        out2.getOutChannel() instanceof DataflowQueue
+        out2.getOutChannel() == binding.channel_z
     }
 
 
@@ -544,8 +524,8 @@ class ParamsOutTest extends Specification {
             process hola {
               output:
                 set(x) into p
-                set(y, '-', '*.fa') into q mode flatten
-                set(stdout, z) into t mode combine
+                set(y, '-', '*.fa') into q
+                set(stdout, z) into t
 
               return ''
             }
@@ -568,7 +548,6 @@ class ParamsOutTest extends Specification {
         out1.inner[0] instanceof ValueOutParam
         out1.inner[0].name == 'x'
         out1.inner[0].index == 0
-        out1.mode == BasicMode.standard
 
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.q
@@ -583,7 +562,6 @@ class ParamsOutTest extends Specification {
         out2.inner[2].filePattern == '*.fa'
         out2.inner[2].index == 1
         out2.inner.size() ==3
-        out2.mode == BasicMode.flatten
 
         out3.outChannel instanceof DataflowQueue
         out3.outChannel == binding.t
@@ -594,7 +572,6 @@ class ParamsOutTest extends Specification {
         out3.inner[1] instanceof ValueOutParam
         out3.inner[1].name == 'z'
         out3.inner[1].index == 2
-        out3.mode == TupleOutParam.CombineMode.combine
 
     }
 
@@ -605,8 +582,8 @@ class ParamsOutTest extends Specification {
             process hola {
               output:
                 tuple val(x) into p
-                tuple val(y), stdout, file('*.fa') into q mode flatten
-                tuple stdout, val(z) into t mode combine
+                tuple val(y), stdout, file('*.fa') into q
+                tuple stdout, val(z) into t
 
               return ''
             }
@@ -629,7 +606,6 @@ class ParamsOutTest extends Specification {
         out0.inner[0] instanceof ValueOutParam
         out0.inner[0].name == 'x'
         out0.inner[0].index == 0
-        out0.mode == BasicMode.standard
 
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.q
@@ -644,7 +620,6 @@ class ParamsOutTest extends Specification {
         out1.inner[2].filePattern == '*.fa'
         out1.inner[2].index == 1
         out1.inner.size() ==3
-        out1.mode == BasicMode.flatten
 
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.t
@@ -655,7 +630,6 @@ class ParamsOutTest extends Specification {
         out2.inner[1] instanceof ValueOutParam
         out2.inner[1].name == 'z'
         out2.inner[1].index == 2
-        out2.mode == TupleOutParam.CombineMode.combine
 
     }
 
@@ -753,7 +727,7 @@ class ParamsOutTest extends Specification {
         process.config.getOutputs().size() == 1
 
         // first set
-        out0.getOutChannels().size()==0
+        out0.getOutChannel() == null
 
         out0.inner[0] instanceof ValueOutParam
         out0.inner[0].name == 'X'
@@ -776,7 +750,6 @@ class ParamsOutTest extends Specification {
               output:
               stdout into p
               stdout into (q)
-              stdout into (x,y,z)
 
               return ''
             }
@@ -788,16 +761,12 @@ class ParamsOutTest extends Specification {
         when:
         def out0 = (StdOutParam)process.config.getOutputs().get(0)
         def out1 = (StdOutParam)process.config.getOutputs().get(1)
-        def out2 = (StdOutParam)process.config.getOutputs().get(2)
 
         then:
-        process.config.getOutputs().size() == 3
+        process.config.getOutputs().size() == 2
 
-        out0.getOutChannels()[0].is binding.p
-        out1.getOutChannels()[0].is binding.q
-        out2.getOutChannels()[0].is binding.x
-        out2.getOutChannels()[1].is binding.y
-        out2.getOutChannels()[2].is binding.z
+        out0.getOutChannel().is binding.p
+        out1.getOutChannel().is binding.q
 
     }
 
@@ -823,48 +792,6 @@ class ParamsOutTest extends Specification {
 
     }
 
-
-    def testModeParam() {
-
-        setup:
-        def p = new TupleOutParam(new Binding(), [])
-        when:
-        p.mode(value)
-        then:
-        p.getMode() == expected
-
-        where:
-        value                   | expected
-        'combine'               | TupleOutParam.CombineMode.combine
-        new TokenVar('combine') | TupleOutParam.CombineMode.combine
-        'flatten'               | BasicMode.flatten
-        new TokenVar('flatten') | BasicMode.flatten
-
-    }
-
-    def testWrongMode() {
-
-        when:
-        def p = new TupleOutParam(new Binding(), [])
-        p.mode('unknown')
-        then:
-        thrown(IllegalArgumentException)
-
-    }
-
-    def testDefaultMode() {
-
-        setup:
-        def bind = new Binding()
-        def list = []
-
-        expect:
-        new StdOutParam(bind, list).mode == BasicMode.standard
-        new ValueOutParam(bind, list).mode == BasicMode.standard
-        new FileOutParam(bind, list).mode == BasicMode.standard
-        new TupleOutParam(bind, list).mode == BasicMode.standard
-
-    }
 
     def 'should fetch output value' () {
 
@@ -948,20 +875,17 @@ class ParamsOutTest extends Specification {
 
         out0.getName() == 'x'
         out0.getFilePattern() == null
-        out0.getOutChannels().size()==1
-        out0.getOutChannels().get(0) instanceof DataflowQueue
+        out0.getOutChannel() instanceof DataflowQueue
         out0.isPathQualifier()
 
         out1.getName() == null
         out1.getFilePattern() == 'hello.*'
-        out1.getOutChannels().size()==1
-        out1.getOutChannels().get(0) instanceof DataflowQueue
+        out1.getOutChannel() instanceof DataflowQueue
         out1.isPathQualifier()
 
         out2.getName() == null
         out2.getFilePattern() == 'hello.txt'
-        out2.getOutChannels().size()==1
-        out2.getOutChannels().get(0) instanceof DataflowQueue
+        out2.getOutChannel() instanceof DataflowQueue
         out2.isPathQualifier()
         
     }
