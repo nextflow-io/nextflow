@@ -39,14 +39,14 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.4.1'
 
     api ('javax.xml.bind:jaxb-api:2.3.1')
-    api ('com.amazonaws:aws-java-sdk-s3:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-ec2:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-batch:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-iam:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-ecs:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-logs:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-codecommit:1.12.129')
-    api ('com.amazonaws:aws-java-sdk-sts:1.12.129')
+    api ('com.amazonaws:aws-java-sdk-s3:1.12.351')
+    api ('com.amazonaws:aws-java-sdk-ec2:1.12.351')
+    api ('com.amazonaws:aws-java-sdk-batch:1.12.351')
+    api ('com.amazonaws:aws-java-sdk-iam:1.12.351')
+    api ('com.amazonaws:aws-java-sdk-ecs:1.12.351')
+    api ('com.amazonaws:aws-java-sdk-logs:1.12.351')
+    api ('com.amazonaws:aws-java-sdk-codecommit:1.12.351')
+    api ('com.amazonaws:aws-java-sdk-sts:1.12.351')
         
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
