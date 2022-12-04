@@ -44,4 +44,4 @@ $NXF_CMD run nextflow-io/rnaseq-nf \
 ## run with fargate + wave
 $NXF_CMD run nextflow-io/rnaseq-nf \
     -profile batch \
-    -c awsbatch.config
+    -c awsfargate.config
