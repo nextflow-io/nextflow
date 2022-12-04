@@ -38,3 +38,5 @@ temp
 plugins-prod
 sandbox
 wave-tests
+modules/*/bin
+plugins/*/bin

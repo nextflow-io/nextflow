@@ -62,6 +62,8 @@ abstract class FileCollector implements Closeable {
 
     boolean resumable
 
+    Path cacheBase
+
     private Path tempDir
 
     private boolean created
@@ -237,20 +239,28 @@ abstract class FileCollector implements Closeable {
 
         // verify if a cached list exists
         final hash = makeHash()?.toString()
-        Path temp = hash ? FileHelper.getLocalTempPath().resolve("${hash}.collect-file") : null
+
+        Path cache = hash ? (cacheBase ?: FileHelper.localTempPath)
+            .resolve(hash.substring(0,2))
+            .resolve(hash.substring(2))
+            .resolve("collectFile.cache") : null
 
         // try to retrieve cached files
         List<Path> items = null
-        if( resumable && temp ) {
-            items = retrieveCachedFiles(temp)
+        if( resumable && cache ) {
+            items = retrieveCachedFiles(cache)
         }
 
         // get the list of files to generated
         if( items == null ) {
             items = saveTo0(target)
             // save the list of collected files
-            if( cacheable && temp ) {
-                cacheCollectedFile(items, temp)
+            if( cacheable && cache ) {
+                if( FilesEx.mkdirs(cache.parent) ) {
+                    cacheCollectedFile(items, cache)
+                } else {
+                    throw new IOException("Unable to create temporary directory: $cache -- Make sure a file with the same name doesn't already exist and you have write permissions")
+                }
             }
         }
 
