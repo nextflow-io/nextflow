@@ -92,6 +92,18 @@ class AwsOptions implements CloudTransferOptions {
     String shareIdentifier
 
     /**
+     * The container execution role
+     */
+    String executionRole
+
+    /**
+     * The path for the `s5cmd` tool as an alternative to `aws s3` CLI to upload/download files
+     */
+    List<String> s5cmdPath
+
+    boolean fargateMode
+
+    /**
      * @return A list of volume mounts using the docker cli convention ie. `/some/path` or `/some/path:/container/path` or `/some/path:/container/path:ro`
      */
     List<String> getVolumes() { volumes != null ? Collections.unmodifiableList(volumes) : Collections.<String>emptyList() }
@@ -121,6 +133,9 @@ class AwsOptions implements CloudTransferOptions {
         fetchInstanceType = session.config.navigate('aws.batch.fetchInstanceType')
         retryMode = session.config.navigate('aws.batch.retryMode', 'standard')
         shareIdentifier = session.config.navigate('aws.batch.shareIdentifier')
+        executionRole = session.config.navigate('aws.batch.executionRole')
+        fargateMode = isFargateMode0(session.config)
+        s5cmdPath = getS5cmdPath0(session.config)
         if( retryMode == 'built-in' )
             retryMode = null // this force falling back on NF built-in retry mode instead of delegating to AWS CLI tool
         if( retryMode && retryMode !in VALID_RETRY_MODES )
@@ -129,12 +144,17 @@ class AwsOptions implements CloudTransferOptions {
             fetchInstanceType = session.config.navigate('tower.enabled',false)
     }
 
+
     protected int defaultMaxTransferAttempts() {
         return env.AWS_MAX_ATTEMPTS ? env.AWS_MAX_ATTEMPTS as int : DEFAULT_AWS_MAX_ATTEMPTS
     }
 
     protected String getCliPath0(Session session) {
         def result = session.config.navigate('aws.batch.cliPath')
+        if( result instanceof List )
+            return null
+        if( result && result.toString().tokenize('/')[-1] == 's5cmd' )
+            return null
         if( result )
             return result
 
@@ -143,6 +163,22 @@ class AwsOptions implements CloudTransferOptions {
             log.warn "Config setting `executor.awscli` has been deprecated -- Use instead `aws.batch.cliPath`"
         }
         return result
+    }
+
+    protected List<String> getS5cmdPath0(Map<String,Object> config) {
+        final result = isFargateMode0(config) ? ['s5cmd'] : null
+        final value = config.navigate('aws.batch.cliPath')
+        if( !value )
+            return result
+        if( value instanceof List<String> && Path.of(value[0]).name=='s5cmd' )
+            return value
+        if( value instanceof String && Path.of(value).name=='s5cmd' )
+            return List.of(value.toString())
+        return result
+    }
+
+    private boolean isFargateMode0(Map<String,Object> config) {
+        'fargate'.equalsIgnoreCase(config.navigate('aws.batch.platformType') as String)
     }
 
     void setStorageClass(String value) {

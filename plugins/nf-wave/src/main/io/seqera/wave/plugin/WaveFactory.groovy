@@ -17,6 +17,7 @@
 
 package io.seqera.wave.plugin
 
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
@@ -43,6 +44,15 @@ class WaveFactory implements TraceObserverFactory {
             wave.bundleProjectResources = true
             session.disableRemoteBinDir = true
         }
+        if( wave?.enabled && isAwsBatchFargateMode(config) ) {
+            log.debug "Detected AWS Batch Fargate mode -- Enabling bundle project resources -- Disabling upload of remote bin directory"
+            wave.bundleProjectResources = true
+            session.disableRemoteBinDir = true
+        }
         return Collections.emptyList()
+    }
+
+    protected boolean isAwsBatchFargateMode(Map config) {
+        'fargate'.equalsIgnoreCase(config.navigate('aws.batch.platformType') as String)
     }
 }

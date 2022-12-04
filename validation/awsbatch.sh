@@ -40,3 +40,8 @@ $NXF_CMD run nextflow-io/rnaseq-nf \
     -profile batch \
     -with-report \
     -with-trace
+
+## run with fargate + wave
+$NXF_CMD run nextflow-io/rnaseq-nf \
+    -profile batch \
+    -c awsbatch.config

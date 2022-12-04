@@ -35,6 +35,7 @@ import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
+import nextflow.Session
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
@@ -48,7 +49,10 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -580,6 +584,36 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     }
 
+    def 'should create a fargate job definition' () {
+        given:
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { getConfig() >> Mock(TaskConfig)  }
+            fusionEnabled() >> false
+        }
+        handler.@executor = Mock(AwsBatchExecutor)
+        and:
+        def session =  Mock(Session) {
+            getConfig() >> [aws:[batch:[platformType:'fargate', jobRole: 'the-job-role', executionRole: 'the-exec-role']]]
+        }
+        def opts = new AwsOptions(session)
+
+        when:
+        def result = handler.makeJobDefRequest(IMAGE)
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> opts
+        and:
+        result.jobDefinitionName == JOB_NAME
+        result.type == 'container'
+        result.getPlatformCapabilities() == ['FARGATE']
+        result.containerProperties.getJobRoleArn() == 'the-job-role'
+        result.containerProperties.getExecutionRoleArn() == 'the-exec-role'
+        result.containerProperties.getResourceRequirements().find { it.type=='VCPU'}.getValue() == '1'
+        result.containerProperties.getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '2048'
+    }
+
     def 'should create a job definition request object for fusion' () {
         given:
         def IMAGE = 'foo/bar:1.0'
@@ -865,6 +899,36 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     }
 
+    def 'should render submit command with s5cmd' () {
+        given:
+        def handler = Spy(AwsBatchTaskHandler) {
+            fusionEnabled() >> false
+        }
+
+        when:
+        def result =  handler.getSubmitCommand()
+        then:
+        handler.getAwsOptions() >> Mock(AwsOptions)  { getS5cmdPath() >> ['s5cmd'] }
+        handler.getLogFile() >> Paths.get('/work/log')
+        handler.getWrapperFile() >> Paths.get('/work/run')
+        then:
+        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; s5cmd cp .command.log s3://work/log||true; exit $ret; }" EXIT; s5cmd cat s3://work/run | bash 2>&1 | tee .command.log'
+
+        when:
+        result =  handler.getSubmitCommand()
+        then:
+        handler.getAwsOptions() >> Mock(AwsOptions)  {
+            getS5cmdPath() >> ['s5cmd', '--debug']
+            getStorageEncryption() >> 'aws:kms'
+            getStorageKmsKeyId() >> 'kms-key-123'
+        }
+        handler.getLogFile() >> Paths.get('/work/log')
+        handler.getWrapperFile() >> Paths.get('/work/run')
+        then:
+        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; s5cmd --debug cp --sse aws:kms --sse-kms-key-id kms-key-123 .command.log s3://work/log||true; exit $ret; }" EXIT; s5cmd --debug cat s3://work/run | bash 2>&1 | tee .command.log'
+
+    }
+
     def 'should create an aws submit request with labels'() {
 
         given:
@@ -899,6 +963,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.getTags() == [a:'b']
         req.getPropagateTags() == true
     }
+
     def 'get fusion submit command' () {
         given:
         def handler = Spy(AwsBatchTaskHandler) {
@@ -915,4 +980,47 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; cp .command.log /fusion/s3/my-bucket/work/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/s3/my-bucket/work/dir/.command.run 2>&1 | tee .command.log'
     }
 
+    @Unroll
+    def 'should normalise fargate mem' () {
+        given:
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { lazyName() >> 'foo' }
+        }
+        expect:
+        handler.normaliseFargateMem(CPUS, MemoryUnit.of( MEM * 1024L*1024L )) == EXPECTED
+
+        where:
+        CPUS    | MEM       | EXPECTED
+        1       | 100       | 2048
+        1       | 1000      | 2048
+        1       | 2000      | 2048
+        1       | 3000      | 3072
+        1       | 7000      | 7168
+        1       | 8000      | 8192
+        1       | 10000     | 8192
+        and:
+        2       | 1000      | 4096
+        2       | 6000      | 6144
+        2       | 16000     | 16384
+        2       | 20000     | 16384
+        and:
+        4       | 1000      | 8192
+        4       | 8000      | 8192
+        4       | 16000     | 16384
+        4       | 30000     | 30720
+        4       | 40000     | 30720
+        and:
+        8       | 1000      | 16384
+        8       | 10000     | 16384
+        8       | 20000     | 20480
+        8       | 30000     | 32768
+        8       | 100000    | 61440
+        and:
+        16      | 1000      | 32768
+        16      | 30000     | 32768
+        16      | 40000     | 40960
+        16      | 60000     | 65536
+        16      | 100000    | 106496
+        16      | 200000    | 122880
+    }
 }
