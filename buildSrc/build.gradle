@@ -11,7 +11,7 @@ version = "1.0.1"
 group = "io.nextflow"
 
 dependencies {
-    implementation ('com.amazonaws:aws-java-sdk-s3:1.11.542')
+    implementation ('com.amazonaws:aws-java-sdk-s3:1.12.129')
     implementation 'com.google.code.gson:gson:2.9.0'
 }
 

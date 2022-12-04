@@ -17,10 +17,12 @@
 
 package nextflow.cloud.aws
 
+import com.amazonaws.AmazonClientException
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.BasicSessionCredentials
+import com.amazonaws.regions.InstanceMetadataRegionProvider
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.RegionUtils
 import com.amazonaws.services.batch.AWSBatchClient
@@ -29,6 +31,8 @@ import com.amazonaws.services.ecs.AmazonECS
 import com.amazonaws.services.ecs.AmazonECSClientBuilder
 import com.amazonaws.services.logs.AWSLogs
 import com.amazonaws.services.logs.AWSLogsAsyncClientBuilder
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
+import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -134,35 +138,15 @@ class AmazonClientFactory {
      *      The IAM role name associated to this instance or {@code null} if no role is defined or
      *      it's not a EC2 instance
      */
-    protected String fetchIamRole() {
+    private String fetchIamRole() {
         try {
-            def role = getUrl('http://169.254.169.254/latest/meta-data/iam/security-credentials/').readLines()
-            if( role.size() != 1 )
-                throw new IllegalArgumentException("Not a valid EC2 IAM role")
-            return role.get(0)
+            def stsClient = AWSSecurityTokenServiceClientBuilder.defaultClient();
+            return stsClient.getCallerIdentity(new GetCallerIdentityRequest()).getArn()
         }
-        catch( IOException e ) {
+        catch( AmazonClientException e ) {
             log.trace "Unable to fetch IAM credentials -- Cause: ${e.message}"
             return null
         }
-    }
-
-    /**
-     * Fetch a remote URL resource text content
-     *
-     * @param path
-     *      A valid http/https resource URL
-     * @param timeout
-     *      Max connection timeout in millis
-     * @return
-     *      The resource URL content
-     */
-    protected String getUrl(String path, int timeout=150) {
-        final url = new URL(path)
-        final con = url.openConnection()
-        con.setConnectTimeout(timeout)
-        con.setReadTimeout(timeout)
-        return con.getInputStream().text.trim()
     }
 
     /**
@@ -173,12 +157,11 @@ class AmazonClientFactory {
      *      The AWS region of the current EC2 instance eg. {@code eu-west-1} or
      *      {@code null} if it's not an EC2 instance.
      */
-    protected String fetchRegion() {
+    private String fetchRegion() {
         try {
-            def zone = getUrl('http://169.254.169.254/latest/meta-data/placement/availability-zone')
-            zone ? zone.substring(0,zone.length()-1) : null
+            return new InstanceMetadataRegionProvider().getRegion()
         }
-        catch (IOException e) {
+        catch (AmazonClientException e) {
             log.debug "Cannot fetch AWS region", e
             return null
         }
