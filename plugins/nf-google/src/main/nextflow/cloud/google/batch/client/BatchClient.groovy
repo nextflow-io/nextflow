@@ -37,12 +37,12 @@ import groovy.util.logging.Slf4j
 class BatchClient {
 
     protected String projectId
-    protected String location
+    protected String region
     protected BatchServiceClient batchServiceClient
 
     BatchClient(BatchConfig config) {
         this.projectId = config.googleOpts.projectId
-        this.location = config.googleOpts.location
+        this.region = config.googleOpts.region
         this.batchServiceClient = createBatchService(config)
     }
 
@@ -74,25 +74,25 @@ class BatchClient {
     }
 
     Job submitJob(String jobId, Job job) {
-        final parent = LocationName.of(projectId, location)
+        final parent = LocationName.of(projectId, region)
 
         return batchServiceClient.createJob(parent, job, jobId)
     }
 
     Job describeJob(String jobId) {
-        final name = JobName.of(projectId, location, jobId)
+        final name = JobName.of(projectId, region, jobId)
 
         return batchServiceClient.getJob(name)
     }
 
     Iterable<?> listTasks(String jobId) {
-        final parent = TaskGroupName.of(projectId, location, jobId, 'group0')
+        final parent = TaskGroupName.of(projectId, region, jobId, 'group0')
 
         return batchServiceClient.listTasks(parent).iterateAll()
     }
 
     void deleteJob(String jobId) {
-        final name = JobName.of(projectId, location, jobId).toString()
+        final name = JobName.of(projectId, region, jobId).toString()
 
         batchServiceClient.deleteJobAsync(name)
     }

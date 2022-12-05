@@ -89,7 +89,7 @@ Create or edit the file ``nextflow.config`` in your project root directory. The 
 * Google Cloud Batch as Nextflow executor i.e. ``process.executor = 'google-batch'``.
 * The Docker container image to be used to run pipeline tasks e.g. ``process.container = 'biocontainers/salmon:0.8.2--1'``.
 * The Google Cloud `project` ID to run in e.g. ``google.project = 'rare-lattice-222412'``.
-* The Google location e.g. ``google.location = 'us-central1'``.
+* The Google region e.g. ``google.region = 'us-central1'``.
 
 Example::
 
@@ -100,15 +100,15 @@ Example::
 
     google {
         project = 'your-project-id'
-        location = 'us-central1'
+        region = 'us-central1'
     }
 
 .. note::
   Make sure to specify the project ID, not the project name.
 
 .. note::
-  Make sure to specify a location where Google Batch is available. Refer to the
-  `Google Batch documentation <https://cloud.google.com/batch/docs/get-started#locations>`_
+  Make sure to specify a region where Google Batch is available. Refer to the
+  `Google Batch documentation <https://cloud.google.com/batch/docs/locations#regions>`_
   for region availability.
 
 .. Note::
@@ -121,7 +121,8 @@ The following configuration options are available:
 Name                                           Description
 ============================================== =================
 google.project                                 The Google Project Id to use for the pipeline execution.
-google.location                                The Google *location* where the job executions are deployed (default: ``us-central1``).
+google.region                                  The Google *region* where the job executions are deployed. See In the Google docs the `list of available <https://cloud.google.com/batch/docs/locations#regions>`_ regions (default: ``us-central1``, requires version ``22.12.0-edge`` or later).
+google.location                                Same as ``region`` (DEPRECATED).
 google.enableRequesterPaysBuckets              When ``true`` uses the configured Google project id as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See `Requester Pays on Google Cloud Storage documentation  <https://cloud.google.com/storage/docs/requester-pays>`_ (default: ``false``).
 google.batch.allowedLocations                  Define the set of allowed locations for VMs to be provisioned. See `Google documentation <https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy>`_ for details (default: no restriction. Requires version ``22.12.0-edge`` or later).
 google.batch.bootDiskSize                      Set the size of the virtual machine boot disk, e.g ``50.GB`` (default: none).

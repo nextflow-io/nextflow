@@ -35,18 +35,22 @@ import nextflow.exception.AbortOperationException
 @CompileStatic
 class GoogleOpts {
 
-    static final public String DEFAULT_LOCATION = 'us-central1'
+    /**
+     * Default Google Batch backend region
+     * See https://cloud.google.com/batch/docs/locations#regions
+     */
+    static final public String DEFAULT_REGION = 'us-central1'
 
     static Map<String,String> env = System.getenv()
 
     private String projectId
-    private String location
+    private String region
     private File credsFile
     private boolean enableRequesterPaysBuckets
 
     String getProjectId() { projectId }
     File getCredsFile() { credsFile }
-    String getLocation() { location ?: DEFAULT_LOCATION }
+    String getRegion() { region ?: DEFAULT_REGION }
     boolean getEnableRequesterPaysBuckets() { enableRequesterPaysBuckets }
 
     @Memoized
@@ -63,7 +67,11 @@ class GoogleOpts {
     protected static GoogleOpts fromSession0(Map config) {
         final result = new GoogleOpts()
         result.projectId = config.navigate("google.project") as String
-        result.location = config.navigate("google.location") as String
+        result.region = config.navigate("google.region") as String
+        if( !result.region && config.navigate("google.location") ) {
+            log.warn "Configuration setting 'google.location' is deprecated -- Use 'google.region' instead"
+            result.region = config.navigate("google.location")
+        }
         result.enableRequesterPaysBuckets = config.navigate('google.enableRequesterPaysBuckets') as boolean
 
         if( result.enableRequesterPaysBuckets && !result.projectId )
