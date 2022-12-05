@@ -328,8 +328,11 @@ from `Docker Hub <https://hub.docker.com/>`_ and then submit jobs which run enti
 Prerequisites
 -------------
 
-You need Sarus installed in your execution environment, i.e: your personal computer or a distributed cluster, depending
+You need Sarus installed in your execution environment,
+i.e: your personal computer or a distributed cluster, depending
 on where you want to run your pipeline.
+
+.. note:: This feature requires Sarus version 1.5.1 (or later) and Nextflow 23.04.0 (or later).
 
 Images
 ------
