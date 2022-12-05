@@ -93,6 +93,34 @@ class GlobalTest extends Specification {
 
     }
 
+    def testAwsCredentialsWithFileAndProfileInTheConfig() {
+
+        given:
+        def file = Files.createTempFile('test','test')
+        file.text = '''
+            [default]
+            aws_access_key_id = aaa
+            aws_secret_access_key = bbbb
+            
+            [foo]
+            aws_access_key_id = xxx
+            aws_secret_access_key = yyy
+
+            [bar]
+            aws_access_key_id = xxx
+            aws_secret_access_key = yyy
+            aws_session_token = zzz
+            '''
+
+        Global.getAwsCredentials0([:], [aws:[profile:'foo']], [file]) == ['xxx','yyy']
+        Global.getAwsCredentials0([AWS_DEFAULT_PROFILE: 'bar'], [aws:[profile:'foo']], [file]) == ['xxx','yyy','zzz']
+        Global.getAwsCredentials0([:], [:], [file]) == ['aaa','bbbb']
+
+        cleanup:
+        file?.delete()
+
+    }
+
     def 'should normalize aws config' () {
 
         given:
