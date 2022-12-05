@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2022, Pawsey Supercomputing Research Centre
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +19,7 @@ import spock.lang.Specification
 import java.nio.file.Paths
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Marco De La Pierre <marco.delapierre@gmail.com>
  */
 class SarusrBuilderTest extends Specification {
 
