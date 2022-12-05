@@ -68,7 +68,7 @@ Here is an a demo workflow ``demo.nf`` of a job we want to run!
     }
 
 We will be using these files to run our test workflow. Next, assuming you don't have one handy,
-let's set up an envrionment with Flux.
+let's set up an environment with Flux.
 
 Container Environment
 ---------------------

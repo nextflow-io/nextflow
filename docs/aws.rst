@@ -405,7 +405,7 @@ of a specific job e.g. to define custom mount paths or other Batch Job special s
 
 To do that first create a *Job Definition* in the AWS Console (or with other means). Note the name of the *Job Definition*
 you created. You can then associate a process execution with this *Job definition* by using the :ref:`process-container`
-directive and specifing, in place of the container image name, the Job definition name prefixed by the
+directive and specifying, in place of the container image name, the Job definition name prefixed by the
 ``job-definition://`` string, as shown below::
 
   process.container = 'job-definition://your-job-definition-name'

@@ -34,8 +34,8 @@ class TupleOutParamTest extends Specification {
             process hola {
               output:
                 tuple(x) into p
-                tuple(y, '-', '*.fa') into q mode flatten
-                tuple(stdout, z) into t mode combine
+                tuple(y, '-', '*.fa') into q
+                tuple(stdout, z) into t
 
               return ''
             }
@@ -58,7 +58,6 @@ class TupleOutParamTest extends Specification {
         out0.inner[0] instanceof ValueOutParam
         out0.inner[0].name == 'x'
         out0.inner[0].index == 0
-        out0.mode == BasicMode.standard
 
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.q
@@ -73,7 +72,6 @@ class TupleOutParamTest extends Specification {
         out1.inner[2].filePattern == '*.fa'
         out1.inner[2].index == 1
         out1.inner.size() ==3
-        out1.mode == BasicMode.flatten
 
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.t
@@ -84,7 +82,6 @@ class TupleOutParamTest extends Specification {
         out2.inner[1] instanceof ValueOutParam
         out2.inner[1].name == 'z'
         out2.inner[1].index == 2
-        out2.mode == TupleOutParam.CombineMode.combine
 
     }
 
@@ -95,8 +92,8 @@ class TupleOutParamTest extends Specification {
             process hola {
               output:
                 tuple val(x) into p
-                tuple val(y), stdout, file('*.fa') into q mode flatten
-                tuple stdout, val(z) into t mode combine
+                tuple val(y), stdout, file('*.fa') into q 
+                tuple stdout, val(z) into t
 
               return ''
             }
@@ -119,7 +116,6 @@ class TupleOutParamTest extends Specification {
         out0.inner[0] instanceof ValueOutParam
         out0.inner[0].name == 'x'
         out0.inner[0].index == 0
-        out0.mode == BasicMode.standard
 
         out1.outChannel instanceof DataflowQueue
         out1.outChannel == binding.q
@@ -134,7 +130,6 @@ class TupleOutParamTest extends Specification {
         out1.inner[2].filePattern == '*.fa'
         out1.inner[2].index == 1
         out1.inner.size() ==3
-        out1.mode == BasicMode.flatten
 
         out2.outChannel instanceof DataflowQueue
         out2.outChannel == binding.t
@@ -145,7 +140,6 @@ class TupleOutParamTest extends Specification {
         out2.inner[1] instanceof ValueOutParam
         out2.inner[1].name == 'z'
         out2.inner[1].index == 2
-        out2.mode == TupleOutParam.CombineMode.combine
 
     }
 
