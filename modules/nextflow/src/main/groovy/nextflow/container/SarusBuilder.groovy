@@ -93,3 +93,4 @@ class SarusBuilder extends ContainerBuilder<SarusBuilder> {
     protected String composeVolumePath( String path, boolean readOnly = false ) {
         return "--mount=type=bind,source=${escape(path)},destination=${escape(path)}"
     }
+}
