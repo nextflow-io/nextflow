@@ -280,6 +280,8 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         result.'nextflow.io/taskName' = task.getName()
         result.'nextflow.io/processName' = task.getProcessor().getName()
         result.'nextflow.io/sessionId' = "uuid-${executor.getSession().uniqueId}" as String
+        if( task.config.queue )
+            result.'nextflow.io/queue' = task.config.queue
         return result
     }
 
