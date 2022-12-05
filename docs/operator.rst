@@ -497,6 +497,44 @@ a literal value, a Java class, or a `boolean predicate` that needs to be satisfi
     // -> 4
 
 
+.. _operator-cross:
+
+cross
+-----
+
+The ``cross`` operator allows you to combine the items of two channels in such a way that
+the items of the source channel are emitted along with the items emitted by the target channel
+for which they have a matching key.
+
+The key is defined, by default, as the first entry in an array, a list or map object,
+or the value itself for any other data type. For example::
+
+    source = Channel.of( [1, 'alpha'], [2, 'beta'] )
+    target = Channel.of( [1, 'x'], [1, 'y'], [1, 'z'], [2,'p'], [2,'q'], [2,'t'] )
+
+    source.cross(target).view()
+
+It will output::
+
+    [ [1, alpha], [1, x] ]
+    [ [1, alpha], [1, y] ]
+    [ [1, alpha], [1, z] ]
+    [ [2, beta],  [2, p] ]
+    [ [2, beta],  [2, q] ]
+    [ [2, beta],  [2, t] ]
+
+The above example shows how the items emitted by the source channels are associated to the ones
+emitted by the target channel (on the right) having the same key.
+
+There are two important caveats when using the ``cross`` operator:
+
+    #. The operator is not `commutative`, i.e. the result of ``a.cross(b)`` is different from ``b.cross(a)``
+    #. The source channel should emits items for which there's no key repetition i.e. the emitted
+       items have an unique key identifier.
+
+Optionally, a mapping function can be specified in order to provide a custom rule to associate an item to a key.
+
+
 distinct
 --------
 
