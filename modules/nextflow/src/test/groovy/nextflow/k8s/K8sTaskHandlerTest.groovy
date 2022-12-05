@@ -806,11 +806,13 @@ class K8sTaskHandlerTest extends Specification {
 
         labels.app == 'nextflow'
         labels.foo == 'bar'
-        labels.x == 'hello_world'    
-        labels.processName == 'hello-proc'
-        labels.taskName ==  'hello-world-1'
-        labels.sessionId instanceof String 
-        labels.sessionId == "uuid-${uuid.toString()}".toString()
+        labels.x == 'hello_world'
+        and:
+        labels.'nextflow.io/app' == 'nextflow'
+        labels.'nextflow.io/processName' == 'hello-proc'
+        labels.'nextflow.io/taskName' ==  'hello-world-1'
+        labels.'nextflow.io/sessionId' instanceof String
+        labels.'nextflow.io/sessionId' == "uuid-${uuid.toString()}".toString()
     }
 
     def 'should delete pod if complete' () {
