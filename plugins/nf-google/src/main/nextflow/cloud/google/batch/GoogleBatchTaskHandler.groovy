@@ -174,6 +174,12 @@ class GoogleBatchTaskHandler extends TaskHandler {
         final instancePolicyOrTemplate = AllocationPolicy.InstancePolicyOrTemplate.newBuilder()
         final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
+        if( executor.config.getAllowedLocations() )
+            allocationPolicy.setLocation(
+                AllocationPolicy.LocationPolicy.newBuilder()
+                    .addAllAllowedLocations( executor.config.getAllowedLocations() )
+            )
+
         if( task.config.getAccelerator() ) {
             final accelerator = AllocationPolicy.Accelerator.newBuilder()
                 .setCount( task.config.getAccelerator().getRequest() )
