@@ -38,12 +38,12 @@ class SarusBuilder extends ContainerBuilder<SarusBuilder> {
     SarusBuilder build(StringBuilder result) {
         assert image
 
-        appendEnv(result)
-
         result << 'sarus '
 
         if( verbose )
             result << '--verbose '
+
+        result << 'run '
 
         if( tty )
             result << '-t '
@@ -57,6 +57,9 @@ class SarusBuilder extends ContainerBuilder<SarusBuilder> {
 
         if( runOptions )
             result << runOptions.join(' ') << ' '
+
+        // finally the container name
+        result << image
 
         runCommand = result.toString()
         return this

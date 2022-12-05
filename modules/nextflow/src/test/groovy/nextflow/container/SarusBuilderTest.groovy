@@ -17,6 +17,7 @@
 
 package nextflow.container
 import spock.lang.Specification
+import java.nio.file.Paths
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -29,7 +30,7 @@ class SarusrBuilderTest extends Specification {
         def builder = new SarusBuilder('x')
 
         expect:
-        builder.makeEnv('X=1').toString() == '-e X=1'
+        builder.makeEnv('X=1').toString() == '-e "X=1"'
         builder.makeEnv([VAR_X:1, VAR_Y: 2]).toString() == '-e "VAR_X=1" -e "VAR_Y=2"'
     }
 
@@ -38,50 +39,50 @@ class SarusrBuilderTest extends Specification {
         expect:
         new SarusBuilder('busybox')
                 .build()
-                .@runCommand == 'sarus run --mount=type=bind,source=$PWD,destination=$PWD -w "$PWD" busybox'
+                .@runCommand == 'sarus run --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" busybox'
 
         new SarusBuilder('busybox')
                 .params(verbose: true)
                 .build()
-                .@runCommand == 'sarus --verbose run --mount=type=bind,source=$PWD,destination=$PWD -w "$PWD" busybox'
+                .@runCommand == 'sarus --verbose run --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" busybox'
 
         new SarusBuilder('fedora')
                 .addEnv([VAR_X:1, VAR_Y:2])
                 .addEnv("VAR_Z=3")
                 .build()
-                .@runCommand == 'sarus run --mount=type=bind,source=$PWD,destination=$PWD -w "$PWD" -e VAR_X="1" -e VAR_Y="2" -e VAR_Z=3 sarus run fedora'
+                .@runCommand == 'sarus run -e "VAR_X=1" -e "VAR_Y=2" -e "VAR_Z=3" --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" fedora'
 
         new SarusBuilder('busybox')
                 .params(runOptions: '-x --zeta')
                 .build()
-                .runCommand == 'sarus run --mount=type=bind,source=$PWD,destination=$PWD -w "$PWD" -x --zeta busybox'
+                .@runCommand == 'sarus run --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" -x --zeta busybox'
 
-        new DockerBuilder('fedora')
+        new SarusBuilder('fedora')
                 .addEnv([VAR_X:1, VAR_Y:2])
                 .addMount(Paths.get('/home/db'))
                 .addMount(Paths.get('/home/db'))  // <-- add twice the same to prove that the final string won't contain duplicates
                 .build()
-                .runCommand == 'sarus run --mount=type=bind,source=$PWD,destination=$PWD -w "$PWD" -e VAR_X="1" -e VAR_Y="2" --mount=type=bind,source=/home/db,destination=/home/db sarus run fedora'
+                .@runCommand == 'sarus run -e "VAR_X=1" -e "VAR_Y=2" --mount=type=bind,source=/home/db,destination=/home/db --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" fedora'
 
     }
 
     def 'should get run command line' () {
 
         when:
-        def cli = new sarusBuilder('ubuntu:14').build().getRunCommand()
+        def cli = new SarusBuilder('ubuntu:14').build().getRunCommand()
         then:
         cli ==  '''\
         sarus pull ubuntu:14
-        sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" ubuntu:14
+        sarus run --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" ubuntu:14
         '''
         .stripIndent().trim()
 
         when:
-        cli = new SarysBuilder('ubuntu:14').build().getRunCommand('bwa --this --that file.fasta')
+        cli = new SarusBuilder('ubuntu:14').build().getRunCommand('bwa --this --that file.fasta')
         then:
         cli ==  '''\
         sarus pull ubuntu:14
-        sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" ubuntu:14 bwa --this --that file.fasta
+        sarus run --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" ubuntu:14 bwa --this --that file.fasta
         '''
         .stripIndent().trim()
 
@@ -90,7 +91,7 @@ class SarusrBuilderTest extends Specification {
         then:
         cli ==  '''\
         sarus pull ubuntu:14
-        sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" ubuntu:14 /bin/bash -c "bwa --this --that file.fasta"
+        sarus run --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" ubuntu:14 /bin/bash -c "bwa --this --that file.fasta"
         '''
         .stripIndent().trim()
 
