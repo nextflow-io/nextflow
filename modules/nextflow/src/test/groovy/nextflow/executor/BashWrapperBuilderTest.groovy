@@ -815,7 +815,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == '''\
-        sarus pull busybox
+        sarus pull busybox 1>&2
         sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" busybox /bin/bash -ue /work/dir/.command.sh
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""
@@ -832,7 +832,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == '''\
-        sarus pull busybox
+        sarus pull busybox 1>&2
         sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" busybox /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""
@@ -857,7 +857,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == '''\
-        sarus pull busybox
+        sarus pull busybox 1>&2
         sarus run --mount=type=bind,source=/folder\\ with\\ blanks,destination=/folder\\ with\\ blanks --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" busybox /bin/bash -ue /work/dir/.command.sh
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""
@@ -874,7 +874,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == '''\
-        sarus pull busybox
+        sarus pull busybox 1>&2
         sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" --mount=type=bind,source=/foo,destination=/bar busybox /bin/bash -ue /work/dir/.command.sh
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""

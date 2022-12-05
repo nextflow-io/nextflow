@@ -86,7 +86,7 @@ class SarusBuilder extends ContainerBuilder<SarusBuilder> {
     String getRunCommand() {
         def run = super.getRunCommand()
         def result = """\
-        sarus pull $image
+        sarus pull $image 1>&2
         """.stripIndent()
         result += run
         return result

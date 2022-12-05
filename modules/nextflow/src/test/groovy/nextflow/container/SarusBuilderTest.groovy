@@ -72,7 +72,7 @@ class SarusrBuilderTest extends Specification {
         def cli = new SarusBuilder('ubuntu:14').build().getRunCommand()
         then:
         cli ==  '''\
-        sarus pull ubuntu:14
+        sarus pull ubuntu:14 1>&2
         sarus run --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" ubuntu:14
         '''
         .stripIndent().trim()
@@ -81,7 +81,7 @@ class SarusrBuilderTest extends Specification {
         cli = new SarusBuilder('ubuntu:14').build().getRunCommand('bwa --this --that file.fasta')
         then:
         cli ==  '''\
-        sarus pull ubuntu:14
+        sarus pull ubuntu:14 1>&2
         sarus run --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" ubuntu:14 bwa --this --that file.fasta
         '''
         .stripIndent().trim()
@@ -90,7 +90,7 @@ class SarusrBuilderTest extends Specification {
         cli = new SarusBuilder('ubuntu:14').params(entry:'/bin/bash').build().getRunCommand('bwa --this --that file.fasta')
         then:
         cli ==  '''\
-        sarus pull ubuntu:14
+        sarus pull ubuntu:14 1>&2
         sarus run --mount=type=bind,source="$PWD",destination="$PWD" -w "$PWD" ubuntu:14 /bin/bash -c "bwa --this --that file.fasta"
         '''
         .stripIndent().trim()
