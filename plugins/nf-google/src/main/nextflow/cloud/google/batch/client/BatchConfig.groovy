@@ -60,7 +60,7 @@ class BatchConfig {
         final result = new BatchConfig()
         result.googleOpts = GoogleOpts.create(session)
         result.credentials = result.googleOpts.credentials
-        result.allowedLocations = session.config.navigate('google.batch.allowedLocations',[]) as List<String>
+        result.allowedLocations = session.config.navigate('google.batch.allowedLocations', List.of()) as List<String>
         result.bootDiskSize = session.config.navigate('google.batch.bootDiskSize') as MemoryUnit
         result.cpuPlatform = session.config.navigate('google.batch.cpuPlatform')
         result.spot = session.config.navigate('google.batch.spot',false)
