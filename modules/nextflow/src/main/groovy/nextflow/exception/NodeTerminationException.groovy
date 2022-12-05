@@ -28,5 +28,5 @@ import groovy.transform.InheritConstructors
  */
 @InheritConstructors
 @CompileStatic
-class NodeTerminationException extends Exception {
+class NodeTerminationException extends Exception implements ProcessRetryableException {
 }
