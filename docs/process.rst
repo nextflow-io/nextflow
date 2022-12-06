@@ -1023,6 +1023,33 @@ Name                Description
 ``includeInputs``   When ``true`` any input files matching an output file glob pattern are included.
 ================== =====================
 
+The parenthesis are optional for input and output qualifiers, but when you want to set an additional option and there
+is more than one input or output qualifier, you must use parenthesis so that Nextflow knows what qualifier you're
+referring to.
+
+One example with a single output qualifier::
+
+    process foo {
+      output:
+      path 'result.txt', hidden: true
+
+      '''
+      echo 'another new line' >> result.txt
+      '''
+    }
+
+Another example with multiple output qualifiers::
+
+    process foo {
+      output:
+      tuple path('last_result.txt'), path('result.txt', hidden: true)
+
+      '''
+      echo 'another new line' >> result.txt
+      echo 'another new line' > last_result.txt
+      '''
+    }
+
 
 Multiple output files
 ---------------------
