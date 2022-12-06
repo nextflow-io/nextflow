@@ -450,8 +450,8 @@ object (as right operand). For example::
 
 A second version of the ``combine`` operator allows you to combine items that share a common
 matching key. The index of the key element is specified by using the ``by`` parameter (the index is zero-based,
-multiple indexes can be specified with lists and integers).
-For example:
+multiple indexes can be specified with a list of integer numbers).
+For example::
 
     left = Channel.of(['A', 1], ['B', 2], ['A', 3])
     right = Channel.of(['B', 'x'], ['B', 'y'], ['A', 'z'], ['A', 'w'])
