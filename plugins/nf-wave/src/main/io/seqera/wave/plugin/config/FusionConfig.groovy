@@ -27,7 +27,8 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class FusionConfig {
 
-    final static public String DEFAULT_FUSION_URL = 'https://fusionfs.seqera.io/releases/v0.5.json'
+    final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v0.6.0-amd64.json'
+    final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v0.6.0-arm64.json'
 
     final private enabled
     final private String containerConfigUrl
@@ -40,7 +41,7 @@ class FusionConfig {
 
     FusionConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
-        this.containerConfigUrl = opts.containerConfigUrl?.toString() ?: env.get('FUSION_CONTAINER_CONFIG_URL') ?: DEFAULT_FUSION_URL
+        this.containerConfigUrl = opts.containerConfigUrl?.toString() ?: env.get('FUSION_CONTAINER_CONFIG_URL')
         if( containerConfigUrl && (!containerConfigUrl.startsWith('http://') && !containerConfigUrl.startsWith('https://')))
             throw new IllegalArgumentException("Fusion container config URL should start with 'http:' or 'https:' protocol prefix - offending value: $containerConfigUrl")
     }
