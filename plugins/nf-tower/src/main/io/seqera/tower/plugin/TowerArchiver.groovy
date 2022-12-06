@@ -17,6 +17,8 @@
 
 package io.seqera.tower.plugin
 
+import nextflow.exception.AbortOperationException
+
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Path
 import java.time.temporal.ChronoUnit
@@ -130,26 +132,41 @@ class TowerArchiver {
     }
 
     void archiveLogs() {
-        archiveFile(env.get('NXF_OUT_FILE'))
-        archiveFile(env.get('NXF_LOG_FILE'))
-        archiveFile(env.get('NXF_TML_FILE'))
-        archiveFile(env.get('TOWER_CONFIG_FILE'))
-        archiveFile(env.get('TOWER_REPORTS_FILE'))
+        // Nextflow log file are expected to be found at the working directory
+        // when running from Tower launcher the cache command, if needed, has
+        // copied them before starting the archive process
+
+        final work = env.get('NXF_WORK') ?: env.get('NXF_TEST_WORK')
+        if( !work ) {
+            log.error("Missing target work dir - Tower archive cannot be performed")
+            return
+        }
+        if( !work.startsWith('/') ) {
+            log.error("Invalid NXF_WORK work directory - it must start with a slash character - offending value: '${work}'")
+            return
+        }
+
+        final base = Path.of(work)
+        archiveFile(base, env.get('NXF_OUT_FILE'))
+        archiveFile(base, env.get('NXF_LOG_FILE'))
+        archiveFile(base, env.get('NXF_TML_FILE'))
+        archiveFile(base, env.get('TOWER_CONFIG_FILE'))
+        archiveFile(base, env.get('TOWER_REPORTS_FILE'))
     }
 
     void archiveTaskLogs(String workDir) {
         final base = Path.of(workDir)
-        archiveFile(base.resolve('.command.out'))
-        archiveFile(base.resolve('.command.err'))
-        archiveFile(base.resolve('.command.log'))
-        archiveFile(base.resolve('.command.run'))
-        archiveFile(base.resolve('.command.sh'))
-        archiveFile(base.resolve('.exitcode'))
+        archiveFile(base, '.command.out')
+        archiveFile(base, '.command.err')
+        archiveFile(base, '.command.log')
+        archiveFile(base, '.command.run')
+        archiveFile(base, '.command.sh')
+        archiveFile(base, '.exitcode')
     }
 
-    protected void archiveFile(String name) {
+    protected void archiveFile(Path base, String name) {
         if( name )
-            archiveFile(Path.of(name).toAbsolutePath())
+            archiveFile(base.resolve(name))
     }
 
     protected void archiveFile(Path source) {
