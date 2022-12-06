@@ -173,8 +173,8 @@ Multiple containers
 -------------------
 
 It is possible to specify a different Docker image for each process definition in your pipeline script. However, this
-can't be done with `-with-docker`, since it doesn't support process selectors in the `nextflow.config` file, and doesn't
-check for the `container` process directive in the pipeline script file. Let's suppose you have two processes named ``foo``
+can't be done with ``-with-docker`` command line option, since it doesn't support process selectors in the ``nextflow.config`` file, and doesn't
+check for the ``container`` process directive in the pipeline script file. Let's suppose you have two processes named ``foo``
 and ``bar``. You can specify two different Docker images for them in the Nextflow script as shown below::
 
     process foo {
