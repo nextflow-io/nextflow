@@ -478,8 +478,8 @@ concat
 
 The ``concat`` operator allows you to `concatenate` the items emitted by two or more channels to a new channel. The items emitted by the resulting channel are in the same order as specified in the operator arguments.
 
-Given ``n`` number of channels, the concatenation channel emits the items proceeding from the ``(i+1)`` th channel 
-only after `all` the items proceeding from the ``i`` th channel were emitted.
+Given `n` number of channels, the concatenation channel emits the items proceeding from the `i+1 th` channel 
+only after `all` the items proceeding from the `i th` channel were emitted.
 
 For example::
 
