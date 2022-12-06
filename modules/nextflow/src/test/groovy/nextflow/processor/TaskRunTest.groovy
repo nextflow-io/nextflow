@@ -332,6 +332,7 @@ class TaskRunTest extends Specification {
         'docker'    | 'busybox'                 | [enabled: true, x:'alpha', y: 'beta']
         'docker'    | 'd.reg/busybox'           | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
         'udocker'   | 'busybox:latest'          | [enabled: true, x:'alpha', y: 'beta']
+        'sarus'     | 'busybox'                 | [enabled: true, x:'delta', y: 'gamma']
         'shifter'   | 'docker:busybox:latest'   | [enabled: true, x:'delta', y: 'gamma']
     }
 

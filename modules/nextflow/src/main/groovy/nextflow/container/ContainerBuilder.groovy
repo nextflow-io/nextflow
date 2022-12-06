@@ -43,6 +43,8 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
             return new ApptainerBuilder(containerImage)
         if( engine == 'udocker' )
             return new UdockerBuilder(containerImage)
+        if( engine == 'sarus' )
+            return new SarusBuilder(containerImage)
         if( engine == 'shifter' )
             return new ShifterBuilder(containerImage)
         if( engine == 'charliecloud' )

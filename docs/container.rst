@@ -320,6 +320,65 @@ Advanced settings
 Podman advanced configuration settings are described in :ref:`config-podman` section in the Nextflow configuration page.
 
 
+.. _container-sarus:
+
+Sarus
+=======
+
+`Sarus <https://sarus.readthedocs.io>`_ is an alternative container runtime to
+Docker. Sarus works by converting Docker images to a common format that can then be
+distributed and launched on HPC systems. The user interface to Sarus enables a user to select an image
+from `Docker Hub <https://hub.docker.com/>`_ and then submit jobs which run entirely within the container.
+
+Prerequisites
+-------------
+
+You need Sarus installed in your execution environment,
+i.e: your personal computer or a distributed cluster, depending
+on where you want to run your pipeline.
+
+.. note:: This feature requires Sarus version 1.5.1 (or later) and Nextflow 22.12.0-edge (or later).
+
+Images
+------
+
+Sarus converts a docker image to squashfs layers which are distributed and launched in the cluster. For more information on
+how to build Sarus images see the `official documentation <https://sarus.readthedocs.io/en/stable/user/user_guide.html#develop-the-docker-image>`_.
+
+How it works
+------------
+
+The integration for Sarus, at this time, requires you to set up the following parameters in your config file::
+
+  process.container = "dockerhub_user/image_name:image_tag"
+  sarus.enabled = true
+
+and it will always try to search the Docker Hub registry for the images.
+
+.. note:: if you do not specify an image tag, the ``latest`` tag will be fetched by default.
+
+Multiple containers
+-------------------
+
+It is possible to specify a different Sarus image for each process definition in your pipeline script. For example,
+let's suppose you have two processes named ``foo`` and ``bar``. You can specify two different Sarus images
+specifying them in the ``nextflow.config`` file as shown below::
+
+    process {
+        withName:foo {
+            container = 'image_name_1'
+        }
+        withName:bar {
+            container = 'image_name_2'
+        }
+    }
+    sarus {
+        enabled = true
+    }
+
+Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
+
+
 .. _container-shifter:
 
 Shifter
@@ -333,8 +392,8 @@ from `Docker Hub <https://hub.docker.com/>`_ and then submit jobs which run enti
 Prerequisites
 -------------
 
-You need Shifter and Shifter image gateway installed in your execution environment, i.e: your personal computed or the
-entry node of a distributed cluster. In the case of the distributed cluster case, you should have Shifter installed on
+You need Shifter and Shifter image gateway installed in your execution environment, i.e: your personal computer or the
+entry node of a distributed cluster. In the case of the distributed cluster, you should have Shifter installed on
 all of the compute nodes and the ``shifterimg`` command should also be available and Shifter properly setup to access the
 Image gateway, for more information see the `official documentation <https://github.com/NERSC/shifter/tree/master/doc>`_.
 
