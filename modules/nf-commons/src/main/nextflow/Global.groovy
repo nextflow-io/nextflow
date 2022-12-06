@@ -123,7 +123,7 @@ class Global {
 
         for( Path it : files ) {
             final conf = new IniFile(it)
-            final profile = getAwsProfile0(env)
+            final profile = getAwsProfile0(env, config)
             final section = conf.section(profile)
             if( (a=section.aws_access_key_id) && (b=section.aws_secret_access_key) ) {
                 final token = section.aws_session_token
@@ -141,7 +141,11 @@ class Global {
         return null
     }
 
-    static protected String getAwsProfile0(Map env) {
+    static protected String getAwsProfile0(Map env, Map<String,Object> config) {
+
+        final profile = config?.navigate('aws.profile')
+        if( profile )
+            return profile
 
         if( env?.containsKey('AWS_PROFILE'))
             return env.get('AWS_PROFILE')
