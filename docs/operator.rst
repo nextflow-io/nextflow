@@ -406,9 +406,9 @@ object (as right operand). For example::
     [2, ciao]
     [3, ciao]
 
-A second version of the ``combine`` operator allows you to combine between them those items that share a common
+A second version of the ``combine`` operator allows you to combine items that share a common
 matching key. The index of the key element is specified by using the ``by`` parameter (the index is zero-based,
-multiple indexes can be specified with list a integers).
+multiple indexes can be specified with a list of integer numbers).
 For example::
 
     left = Channel.of(['A', 1], ['B', 2], ['A', 3])
@@ -434,11 +434,10 @@ See also `join`_.
 concat
 ------
 
-The ``concat`` operator allows you to `concatenate` the items emitted by two or more channels to a new channel, in such
-a way that the items emitted by the resulting channel are in same order as they were when specified as operator arguments.
+The ``concat`` operator allows you to `concatenate` the items emitted by two or more channels to a new channel. The items emitted by the resulting channel are in the same order as specified in the operator arguments.
 
-In other words it guarantees that given any `n` channels, the concatenation channel emits the items proceeding from the channel `i+1 th`
-only after `all` the items proceeding from the channel `i th` were emitted.
+Given `n` number of channels, the concatenation channel emits the items proceeding from the `i+1 th` channel 
+only after `all` the items proceeding from the `i th` channel were emitted.
 
 For example::
 
@@ -474,7 +473,7 @@ items emitted by the source channel. For example::
         .view()
     // -> 4
 
-An optional parameter can be provided in order to select which items are to be counted.
+An optional parameter can be provided to select which items are to be counted.
 The selection criteria can be specified either as a :ref:`regular expression <script-regexp>`,
 a literal value, a Java class, or a `boolean predicate` that needs to be satisfied. For example::
 
