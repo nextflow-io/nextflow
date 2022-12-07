@@ -64,7 +64,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         then:
         def taskGroup = req.getTaskGroups(0)
         def runnable = taskGroup.getTaskSpec().getRunnables(0)
-        def instancePolicy = req.getAllocationPolicy().getInstances(0).getPolicy()
+        def allocationPolicy = req.getAllocationPolicy()
+        def instancePolicy = allocationPolicy.getInstances(0).getPolicy()
         and:
         taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == 0
         taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == 2_000
@@ -81,7 +82,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         instancePolicy.getMinCpuPlatform() == ''
         instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
         and:
-        req.getAllocationPolicy().getNetwork().getNetworkInterfacesCount() == 0
+        allocationPolicy.getLocation().getAllowedLocationsCount() == 0
+        allocationPolicy.getNetwork().getNetworkInterfacesCount() == 0
         and:
         req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
     }
@@ -103,6 +105,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         def exec = Mock(GoogleBatchExecutor) {
             getConfig() >> Mock(BatchConfig) {
+                getAllowedLocations() >> ['zones/us-central1-a', 'zones/us-central1-c']
                 getBootDiskSize() >> BOOT_DISK
                 getCpuPlatform() >> CPU_PLATFORM
                 getSpot() >> true
@@ -157,6 +160,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
             '/var/lib/nvidia/bin:/usr/local/nvidia/bin'
         ]
         and:
+        allocationPolicy.getLocation().getAllowedLocationsCount() == 2
+        allocationPolicy.getLocation().getAllowedLocations(0) == 'zones/us-central1-a'
+        allocationPolicy.getLocation().getAllowedLocations(1) == 'zones/us-central1-c'
         allocationPolicy.getInstances(0).getInstallGpuDrivers() == true
         allocationPolicy.getLabelsMap() == [foo: 'bar']
         allocationPolicy.getServiceAccount().getEmail() == 'foo@bar.baz'

@@ -63,6 +63,20 @@ scripts with multiple commands spanning multiple lines. For example::
       """
     }
 
+.. tip::
+  By default, the script block is executed with the `Bash options <https://tldp.org/LDP/abs/html/options.html>`_ ``set -ue``.
+  The user can add custom options directly to the process definition as shown below::
+
+    process doMoreThings {
+      shell '/bin/bash', '-euo', 'pipefail'
+      
+      """
+      blastp -db $db -query query.fa -outfmt 6 > blast_result
+      cat blast_result | head -n 10 | cut -f 2 > top_hits
+      blastdbcmd -db $db -entry_batch top_hits > sequences
+      """
+    }
+
 As explained in the script tutorial section, strings can be defined using single-quotes
 or double-quotes, and multi-line strings are defined by three single-quote or three double-quote characters.
 
@@ -749,7 +763,7 @@ each time a new value is received. For example::
 
   workflow {
     sequences = Channel.fromPath('*.fa')
-    methods = ['regular', 'expresso', 'psicoffee']
+    methods = ['regular', 'espresso', 'psicoffee']
 
     alignSequences(sequences, methods)
   }
@@ -774,14 +788,14 @@ Input repeaters can be applied to files as well. For example::
 
     workflow {
       sequences = Channel.fromPath('*.fa')
-      methods = ['regular', 'expresso']
+      methods = ['regular', 'espresso']
       libraries = [ file('PQ001.lib'), file('PQ002.lib'), file('PQ003.lib') ]
 
       alignSequences(sequences, methods, libraries)
     }
 
 In the above example, each sequence input file emitted by the ``sequences`` channel triggers six alignment tasks,
-three with the ``regular`` method against each library file, and three with the ``expresso`` method.
+three with the ``regular`` method against each library file, and three with the ``espresso`` method.
 
 .. note::
   When multiple repeaters are defined, the process is executed for each *combination* of them.
@@ -1008,6 +1022,33 @@ Name                Description
 ``maxDepth``        Maximum number of directory levels to visit (default: no limit)
 ``includeInputs``   When ``true`` any input files matching an output file glob pattern are included.
 ================== =====================
+
+The parenthesis are optional for input and output qualifiers, but when you want to set an additional option and there
+is more than one input or output qualifier, you must use parenthesis so that Nextflow knows what qualifier you're
+referring to.
+
+One example with a single output qualifier::
+
+    process foo {
+      output:
+      path 'result.txt', hidden: true
+
+      '''
+      echo 'another new line' >> result.txt
+      '''
+    }
+
+Another example with multiple output qualifiers::
+
+    process foo {
+      output:
+      tuple path('last_result.txt'), path('result.txt', hidden: true)
+
+      '''
+      echo 'another new line' >> result.txt
+      echo 'another new line' > last_result.txt
+      '''
+    }
 
 
 Multiple output files
@@ -1660,6 +1701,38 @@ This can be defined in the ``nextflow.config`` file as shown below::
 
     process.ext.version = '2.5.3'
 
+
+.. _process-fair:
+
+fair
+----
+
+When using the ``fair`` directive the sequence of the outputs of a process executions is guaranteed
+to match the sequence of the input values irrespective. For example::
+
+    process foo {
+      fair true
+      input:
+        val x
+      output:
+        tuple val(task.index), val(x)
+
+      script:
+        """
+        sleep \$((RANDOM % 3))
+        """
+    }
+
+    workflow {
+       channel.of('A','B','C','D') | foo | view
+    }
+
+The above example produces the following output::
+
+    [1, A]
+    [2, B]
+    [3, C]
+    [4, D]
 
 .. _process-label:
 

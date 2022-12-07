@@ -224,10 +224,18 @@ class WaveClient {
         return new Gson().fromJson(json, type)
     }
 
+    protected URL defaultFusionUrl() {
+        final isArm = config.containerPlatform()?.tokenize('/')?.contains('arm64')
+        return isArm
+                ? new URL(FusionConfig.DEFAULT_FUSION_ARM64_URL)
+                : new URL(FusionConfig.DEFAULT_FUSION_AMD64_URL)
+    }
+
     ContainerConfig resolveContainerConfig() {
         final urls = new ArrayList<URL>(config.containerConfigUrl())
-        if( fusion.enabled() && fusion.containerConfigUrl() ) {
-            urls.add( fusion.containerConfigUrl() )
+        if( fusion.enabled() ) {
+            final fusionUrl = fusion.containerConfigUrl() ?: defaultFusionUrl()
+            urls.add(fusionUrl)
         }
         if( !urls )
             return null
@@ -249,14 +257,12 @@ class WaveClient {
                 .build()
 
         final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
-        if( resp.statusCode()==200 ) {
-            log.debug "Wave container config response: ${resp.body()}"
+        final code = resp.statusCode()
+        if( code>=200 && code<400 ) {
+            log.debug "Wave container config response: [$code] ${resp.body()}"
             return jsonToContainerConfig(resp.body())
         }
-        else {
-            log.warn "Wave container config error response: [${resp.statusCode()}] ${resp.body()}"
-            return null
-        }
+        throw new BadResponseException("Unexpected response for containerContainerConfigUrl \'$configUrl\': [${resp.statusCode()}] ${resp.body()}")
     }
 
     protected void checkConflicts(Map<String,String> attrs, String name) {

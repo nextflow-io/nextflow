@@ -41,6 +41,8 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -715,4 +717,22 @@ class WaveClientTest extends Specification {
                                                     | CONFIG_RESP.get('combined')
     }
 
+    @Unroll
+    def 'should get fusion default url' () {
+        given:
+        def config = CONFIG
+        def sess = Mock(Session) {getConfig() >> config }
+        and:
+        def wave = Spy(new WaveClient(sess))
+
+        expect:
+        wave.defaultFusionUrl().toURI().toString() == EXPECTED
+        
+        where:
+        CONFIG                                      | EXPECTED
+        [:]                                         | 'https://fusionfs.seqera.io/releases/v0.6.0-amd64.json'
+        [wave:[containerPlatform: 'arm64']]         | 'https://fusionfs.seqera.io/releases/v0.6.0-arm64.json'
+        [wave:[containerPlatform: 'linux/arm64']]   | 'https://fusionfs.seqera.io/releases/v0.6.0-arm64.json'
+        [wave:[containerPlatform: 'linux/arm64/v8']]    | 'https://fusionfs.seqera.io/releases/v0.6.0-arm64.json'
+    }
 }

@@ -200,7 +200,7 @@ native_id               Task ID given by the underlying execution system e.g. PO
 process                 Nextflow process name.
 tag                     User provided identifier associated this task.
 name                    Task name.
-status                  Task status.
+status                  Task status. Possible values are: ``NEW``, ``SUBMITTED``, ``RUNNING``, ``COMPLETED``, ``FAILED`` and ``ABORTED``.
 exit                    POSIX process exit status.
 module                  Environment module used to run the task.
 container               Docker image name used to execute the task.

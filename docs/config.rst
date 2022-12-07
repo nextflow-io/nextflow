@@ -167,7 +167,7 @@ Name                        Description
 cliPath                     The path where the AWS command line tool is installed in the host AMI.
 jobRole                     The AWS Job Role ARN that needs to be used to execute the Batch Job.
 logsGroup                   The name of the logs group used by Batch Jobs (default: ``/aws/batch``, requires ``22.09.0-edge`` or later).
-volumes                     One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. ``/host/path:/mount/path[:ro|rw]``. Multiple mounts can be specifid separating them with a comma or using a list object.
+volumes                     One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. ``/host/path:/mount/path[:ro|rw]``. Multiple mounts can be specified separating them with a comma or using a list object.
 delayBetweenAttempts        Delay between download attempts from S3 (default `10 sec`).
 maxParallelTransfers        Max parallel upload/download transfer operations *per job* (default: ``4``).
 maxTransferAttempts         Max number of downloads attempts from S3 (default: `1`).
@@ -591,7 +591,7 @@ temp                Mounts a path of your choice as the ``/tmp`` directory in th
 remove              Clean-up the container after the execution (default: ``true``).
 runOptions          This attribute can be used to provide any extra command line options supported by the ``podman run`` command.
 registry            The registry from where container images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
-engineOptions       This attribute can be used to provide any option supported by the Docker engine i.e. ``podman [OPTIONS]``.
+engineOptions       This attribute can be used to provide any option supported by the Podman engine i.e. ``podman [OPTIONS]``.
 mountFlags          Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`
 ================== ================
 
@@ -734,6 +734,28 @@ enabled             If ``true`` it create the workflow execution report.
 file                The path of the created execution report file (default: ``report-<timestamp>.html``).
 overwrite           When ``true`` overwrites any existing report file with the same name.
 ================== ================
+
+
+.. _config-sarus:
+
+Scope `sarus`
+-------------------
+
+The ``sarus`` configuration scope controls how `Sarus <https://sarus.readthedocs.io>`_ containers are executed
+by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             Turn this flag to ``true`` to enable Sarus execution (default: ``false``).
+envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+tty                 Allocates a pseudo-tty (default: ``false``).
+runOptions          This attribute can be used to provide any extra command line options supported by the ``sarus run`` command. For details see: https://sarus.readthedocs.io/en/stable/user/user_guide.html .
+================== ================
+
+Read :ref:`container-sarus` page to learn more about how to use Sarus containers with Nextflow.
 
 
 .. _config-shifter:

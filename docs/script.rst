@@ -221,7 +221,7 @@ Name            Description
 ``launchDir``   The directory where the workflow is run (requires version ``20.04.0`` or later).
 ``moduleDir``   The directory where a module script is located for DSL2 modules or the same as ``projectDir`` for a non-module script (requires version ``20.04.0`` or later).
 ``nextflow``    Dictionary like object representing nextflow runtime information (see :ref:`metadata-nextflow`).
-``params``      Dictionary like object holding workflow parameters specifing in the config file or as command line options.
+``params``      Dictionary like object holding workflow parameters specifying in the config file or as command line options.
 ``projectDir``  The directory where the main script is located (requires version ``20.04.0`` or later).
 ``workDir``     The directory where tasks temporary files are created.
 ``workflow``    Dictionary like object representing workflow runtime information (see :ref:`metadata-workflow`).
