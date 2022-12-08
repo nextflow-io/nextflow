@@ -17,6 +17,8 @@ import java.nio.file.attribute.BasicFileAttributes
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.Tag
 import groovy.util.logging.Slf4j
+import nextflow.Global
+import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.file.CopyMoveHelper
 import nextflow.file.FileHelper
@@ -49,6 +51,10 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def secretKey = System.getenv('AWS_S3FS_SECRET_KEY')
         def fs = (S3FileSystem)FileSystems.newFileSystem(URI.create("s3:///"), [access_key: accessKey, secret_key: secretKey])
         s3Client0 = fs.client.getClient()
+    }
+
+    def setup() {
+        Global.session = Mock(Session) { getConfig() >> [:] }
     }
 
     def 'should create a blob' () {
@@ -1332,7 +1338,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         TraceHelper.newFileWriter(path, false, 'Test')
         then:
         def e = thrown(AbortOperationException)
-        e.message == "Test file already exists: ${path.toUriString()}"
+        e.message == "Test file already exists: ${path.toUriString()} -- enable the 'test.overwrite' option in your config file to overwrite existing files"
 
         cleanup:
         deleteBucket(bucket1)
