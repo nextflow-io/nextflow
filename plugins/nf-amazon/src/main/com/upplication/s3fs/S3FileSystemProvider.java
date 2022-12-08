@@ -406,11 +406,12 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	private S3OutputStream createUploaderOutputStream( S3Path fileToUpload ) {
 		AmazonS3Client s3 = fileToUpload.getFileSystem().getClient();
 
+		final String storageClass = fileToUpload.getStorageClass()!=null ? fileToUpload.getStorageClass() : props.getProperty("upload_storage_class");
 		final S3MultipartOptions opts = props != null ? new S3MultipartOptions(props) : new S3MultipartOptions();
 		final S3ObjectId objectId = fileToUpload.toS3ObjectId();
 		S3OutputStream stream = new S3OutputStream(s3.getClient(), objectId, opts)
 				.setCannedAcl(s3.getCannedAcl())
-				.setStorageClass(props.getProperty("upload_storage_class"))
+				.setStorageClass(storageClass)
 				.setStorageEncryption(props.getProperty("storage_encryption"))
 				.setKmsKeyId(props.getProperty("storage_kms_key_id"))
 				.setContentType(fileToUpload.getContentType())
@@ -615,15 +616,16 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		final long length = sourceObjMetadata.getContentLength();
 		final List<Tag> tags = ((S3Path) target).getTagsList();
 		final String contentType = ((S3Path) target).getContentType();
+		final String storageClass = ((S3Path) target).getStorageClass();
 
 		if( length <= maxSize ) {
 			CopyObjectRequest copyObjRequest = new CopyObjectRequest(s3Source.getBucket(), s3Source.getKey(),s3Target.getBucket(), s3Target.getKey());
-			log.trace("Copy file via copy object - source: source={}, target={}, tags={}", s3Source, s3Target, tags);
-			client.copyObject(copyObjRequest, tags, contentType);
+			log.trace("Copy file via copy object - source: source={}, target={}, tags={}, storageClass={}", s3Source, s3Target, tags, storageClass);
+			client.copyObject(copyObjRequest, tags, contentType, storageClass);
 		}
 		else {
-			log.trace("Copy file via multipart upload - source: source={}, target={}, tags={}", s3Source, s3Target, tags);
-			client.multipartCopyObject(s3Source, s3Target, length, opts, tags, contentType);
+			log.trace("Copy file via multipart upload - source: source={}, target={}, tags={}, storageClass={}", s3Source, s3Target, tags, storageClass);
+			client.multipartCopyObject(s3Source, s3Target, length, opts, tags, contentType, storageClass);
 		}
 	}
 

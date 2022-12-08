@@ -102,6 +102,12 @@ class PublishDir {
      */
     private contentType
 
+    /**
+     * The storage class to be used for the target file.
+     * Currently only supported by AWS S3.
+     */
+    private String storageClass
+
     private PathMatcher matcher
 
     private FileSystem sourceFileSystem
@@ -196,6 +202,9 @@ class PublishDir {
             result.contentType = params.contentType
         else if( params.contentType )
             result.contentType = params.contentType as String
+
+        if( params.storageClass )
+            result.storageClass = params.storageClass as String
 
         return result
     }
@@ -311,6 +320,10 @@ class PublishDir {
                     ? Files.probeContentType(source)
                     : this.contentType.toString()
             destination.setContentType(type)
+        }
+        // storage class
+        if( storageClass && destination instanceof TagAwareFile ) {
+            destination.setStorageClass(storageClass)
         }
 
         if( inProcess ) {

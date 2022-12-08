@@ -88,6 +88,7 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.SSEAlgorithm;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
+import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.Tag;
 import com.amazonaws.services.s3.transfer.Download;
 import com.amazonaws.services.s3.transfer.MultipleFileUpload;
@@ -173,7 +174,7 @@ public class AmazonS3Client {
 		return client.putObject(req);
 	}
 
-	private PutObjectRequest preparePutObjectRequest(PutObjectRequest req, ObjectMetadata metadata, List<Tag> tags, String contentType) {
+	private PutObjectRequest preparePutObjectRequest(PutObjectRequest req, ObjectMetadata metadata, List<Tag> tags, String contentType, String storageClass) {
 		req.withMetadata(metadata);
 		if( cannedAcl != null ) {
 			req.withCannedAcl(cannedAcl);
@@ -189,6 +190,9 @@ public class AmazonS3Client {
 		}
 		if( contentType!=null ) {
 			metadata.setContentType(contentType);
+		}
+		if( storageClass!=null ) {
+			req.setStorageClass(storageClass);
 		}
 		return req;
 	}
@@ -228,7 +232,7 @@ public class AmazonS3Client {
 	/**
 	 * @see com.amazonaws.services.s3.AmazonS3Client#copyObject(CopyObjectRequest)
 	 */
-	public void copyObject(CopyObjectRequest req, List<Tag> tags, String contentType) {
+	public void copyObject(CopyObjectRequest req, List<Tag> tags, String contentType, String storageClass) {
 		if( tags !=null && tags.size()>0 ) {
 			req.setNewObjectTagging(new ObjectTagging(tags));
 		}
@@ -247,6 +251,9 @@ public class AmazonS3Client {
 		if( contentType!=null ) {
 			meta.setContentType(contentType);
 			req.setNewObjectMetadata(meta);
+		}
+		if( storageClass!=null ) {
+			req.setStorageClass(storageClass);
 		}
 		if( log.isTraceEnabled() ) {
 			log.trace("S3 CopyObject request {}", req);
@@ -362,7 +369,7 @@ public class AmazonS3Client {
     }
 
 
-	public void multipartCopyObject(S3Path s3Source, S3Path s3Target, Long objectSize, S3MultipartOptions opts, List<Tag> tags, String contentType ) {
+	public void multipartCopyObject(S3Path s3Source, S3Path s3Target, Long objectSize, S3MultipartOptions opts, List<Tag> tags, String contentType, String storageClass ) {
 
 		final String sourceBucketName = s3Source.getBucket();
 		final String sourceObjectKey = s3Source.getKey();
@@ -392,6 +399,11 @@ public class AmazonS3Client {
 			meta.setContentType(contentType);
 			initiateRequest.withObjectMetadata(meta);
 		}
+
+		if( storageClass!=null ) {
+			initiateRequest.setStorageClass(StorageClass.fromValue(storageClass));
+		}
+
 		InitiateMultipartUploadResult initResult = client.initiateMultipartUpload(initiateRequest);
 
 
@@ -585,7 +597,7 @@ public class AmazonS3Client {
 	public void uploadFile(File source, S3Path target) {
 		PutObjectRequest req = new PutObjectRequest(target.getBucket(), target.getKey(), source);
 		ObjectMetadata metadata = new ObjectMetadata();
-		preparePutObjectRequest(req, metadata, target.getTagsList(), target.getContentType());
+		preparePutObjectRequest(req, metadata, target.getTagsList(), target.getContentType(), target.getStorageClass());
 		// initiate transfer
 		Upload upload = transferManager() .upload(req);
 		// await for completion
