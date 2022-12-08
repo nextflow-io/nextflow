@@ -22,11 +22,11 @@ package nextflow.util
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-final class DebugUtil {
+final class DebugUtils {
 
     private static final String SEPARATOR = "\n";
 
-    private DebugUtil() {
+    private DebugUtils() {
     }
 
     static String formatStackTrace(StackTraceElement[] stackTrace) {
