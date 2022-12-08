@@ -105,6 +105,8 @@ import nextflow.util.ThreadPoolManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.upplication.s3fs.util.S3UploadHelper.*;
+
 /**
  * Client Amazon S3
  * @see com.amazonaws.services.s3.AmazonS3Client
@@ -359,10 +361,12 @@ public class AmazonS3Client {
         return client.listNextBatchOfObjects(objectListing);
     }
 
+
 	public void multipartCopyObject(S3Path s3Source, S3Path s3Target, Long objectSize, S3MultipartOptions opts, List<Tag> tags, String contentType ) {
 
 		final String sourceBucketName = s3Source.getBucket();
 		final String sourceObjectKey = s3Source.getKey();
+		final String sourceS3Path = "s3://"+sourceBucketName+'/'+sourceObjectKey;
 		final String targetBucketName = s3Target.getBucket();
 		final String targetObjectKey = s3Target.getKey();
 	  	final ObjectMetadata meta = new ObjectMetadata();
@@ -394,15 +398,25 @@ public class AmazonS3Client {
 		// Step 3: Save upload Id.
 		String uploadId = initResult.getUploadId();
 
-		final int partSize = opts.getChunkSize(objectSize);
+		// Multipart upload and copy allows max 10_000 parts
+		// each part can be up to 5 GB
+		// Max file size is 5 TB
+		// See https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html
+		final int defChunkSize = opts.getChunkSize();
+		final long partSize = computePartSize(objectSize, defChunkSize);
 		ExecutorService executor = S3OutputStream.getOrCreateExecutor(opts.getMaxThreads());
 		List<Callable<CopyPartResult>> copyPartRequests = new ArrayList<>();
+		checkPartSize(partSize);
 
 		// Step 4. create copy part requests
 		long bytePosition = 0;
 		for (int i = 1; bytePosition < objectSize; i++)
 		{
-			long lastPosition = bytePosition + partSize -1 >= objectSize ? objectSize - 1 : bytePosition + partSize - 1;
+			checkPartIndex(i, sourceS3Path, objectSize, partSize);
+
+			long lastPosition = bytePosition + partSize -1;
+			if( lastPosition >= objectSize )
+				lastPosition = objectSize - 1;
 
 			CopyPartRequest copyRequest = new CopyPartRequest()
 					.withDestinationBucketName(targetBucketName)
