@@ -1,5 +1,10 @@
 nf-wave changelog
 ==================
+0.6.2 - 8 Dec 2022
+- Add support for Fusion ARM64 client [d073c538]
+- Improve Wave config error reporting [ae502668]
+- Bump fusion version URLs 0.6 [b119a47e]
+
 0.6.1 - 29 Nov 2022
 - Add support for custom conda channels (#3435) [0884e80e]
 
