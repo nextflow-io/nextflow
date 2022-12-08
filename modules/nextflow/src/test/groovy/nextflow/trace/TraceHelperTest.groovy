@@ -56,7 +56,7 @@ class TraceHelperTest extends Specification {
         TraceHelper.newFileWriter(path, false, 'Test')
         then:
         def e = thrown(AbortOperationException)
-        e.message == "Test file already exists: $path -- enable the relevant `overwrite` option in your config file to overwrite existing files"
+        e.message == "Test file already exists: $path -- enable the 'test.overwrite' option in your config file to overwrite existing files"
 
         cleanup:
         folder?.deleteDir()
