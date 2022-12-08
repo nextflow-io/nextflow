@@ -799,6 +799,7 @@ noHttps             Turn this flag to ``true`` to pull the Singularity image wit
 autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
 cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
 pullTimeout         The amount of time the Singularity pull can last, exceeding which the process is terminated (default: ``20 min``).
+registry            The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
 ================== ================
 
 Read :ref:`container-singularity` page to learn more about how to use Singularity containers with Nextflow.
