@@ -1,0 +1,6 @@
+set -e
+
+$NXF_RUN -process.scratch true -process.stageOutMode move | tee .stdout
+sort .stdout > .stdoutSorted
+
+diff -u .stdoutSorted .expected || false
