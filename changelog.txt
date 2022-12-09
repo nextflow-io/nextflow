@@ -1,5 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.10.4 - 9 Dec 2022
+- Fix math overflow when copying large AWS S3 files [07f7cb72]
+- Bump nf-amazon@1.11.2 [d96ca4c3]
+
 22.11.1-edge - 29 Nov 2022
 - Fix TowerArchiver resolve envar paths relative to baseDir (#3438) [53e6348c]
 - Fix tower plugin min nextflow requirement [103dbf74]
