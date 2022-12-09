@@ -1,5 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.10.4 - 9 Dec 2022
+- Fix math overflow when copying large AWS S3 files [07f7cb72]
+- Bump nf-amazon@1.11.2 [d96ca4c3]
+
 22.10.3 - 21 Nov 2022
 - Prevent infinite loop while fetching git tags/branches [73a59d33]
 - Bump nf-amazon@1.11.1 [f9b54ce3]
