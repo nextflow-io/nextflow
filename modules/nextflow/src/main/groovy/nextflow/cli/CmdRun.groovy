@@ -30,14 +30,16 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.GParsConfig
+import nextflow.App
 import nextflow.Const
 import nextflow.NF
 import nextflow.NextflowMeta
+import nextflow.Session
 import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
-import nextflow.plugin.Plugins
+import nextflow.plugin.PluginService
 import nextflow.scm.AssetManager
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptRunner
@@ -277,6 +279,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Override
     void run() {
+        final pluginService = App.get(PluginService)
         final scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
         final pipeline = stdin ? '-' : ( args ? args[0] : null )
         if( !pipeline )
@@ -300,7 +303,7 @@ class CmdRun extends CmdBase implements HubOptions {
         checkRunName()
 
         log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
-        Plugins.init()
+        pluginService.init()
 
         // -- specify the arguments
         final scriptFile = getScriptFile(pipeline)
@@ -320,16 +323,18 @@ class CmdRun extends CmdBase implements HubOptions {
 
         // -- load plugins
         final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
-        Plugins.load(cfg)
+        pluginService.load(cfg)
 
         // -- load secret provider
-        if( SecretsLoader.isEnabled() ) {
-            final provider = SecretsLoader.instance.load()
+        final secretsLoader = App.get(SecretsLoader)
+        if( secretsLoader.isEnabled() ) {
+            final provider = secretsLoader.load()
             config.withSecretProvider(provider)
         }
 
         // -- create a new runner instance
-        final runner = new ScriptRunner(config)
+        final session = new Session(config)
+        final runner = new ScriptRunner(session)
         runner.setScript(scriptFile)
         runner.setPreview(this.preview)
         runner.session.profile = profile

@@ -24,6 +24,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import jakarta.inject.Singleton
 import nextflow.Global
 import nextflow.Session
 import nextflow.exception.AbortOperationException
@@ -35,6 +36,7 @@ import nextflow.util.HistoryFile
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@Singleton
 @CompileStatic
 class ScriptRunner {
 
@@ -70,7 +72,7 @@ class ScriptRunner {
         this( [:] )
     }
 
-    ScriptRunner( Map config ) {
+    @Deprecated ScriptRunner( Map config ) {
         this.session = new Session(config)
     }
 

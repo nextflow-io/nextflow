@@ -25,6 +25,7 @@ import java.nio.file.Paths
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.App
 import nextflow.Const
 import nextflow.NF
 import nextflow.cli.CliOptions
@@ -335,7 +336,7 @@ class ConfigBuilder {
         binding.put('baseDir', base)
         binding.put('projectDir', base)
         binding.put('launchDir', Paths.get('.').toRealPath())
-        if( SecretsLoader.isEnabled() )
+        if( App.get(SecretsLoader).isEnabled() )
             binding.put('secrets', new SecretsContext())
         return binding
     }

@@ -21,6 +21,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.App
 import org.pf4j.PluginManager
 /**
  * Plugin manager specialized for Nextflow build environment
@@ -29,11 +30,12 @@ import org.pf4j.PluginManager
  */
 @Slf4j
 @CompileStatic
+@Deprecated
 class Plugins {
 
     public static final String DEFAULT_PLUGINS_REPO = 'https://raw.githubusercontent.com/nextflow-io/plugins/main/plugins.json'
 
-    private final static PluginsFacade INSTANCE = new PluginsFacade()
+    private final static PluginService INSTANCE = App.context().getBean(PluginService)
 
     static PluginManager getManager() { INSTANCE.manager }
 

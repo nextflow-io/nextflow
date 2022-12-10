@@ -23,6 +23,7 @@ import java.nio.file.Paths
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import io.micronaut.context.annotation.Context
 import nextflow.SysEnv
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
@@ -37,8 +38,9 @@ import org.pf4j.PluginStateListener
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@Context
 @CompileStatic
-class PluginsFacade implements PluginStateListener {
+class PluginsFacade implements PluginStateListener, PluginService {
 
     private static final String DEV_MODE = 'dev'
     private static final String PROD_MODE = 'prod'
@@ -183,6 +185,7 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
+    @Override
     PluginManager getManager() { manager }
 
     void init(boolean embedded=false) {
@@ -203,7 +206,8 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
-    void init(Path root, String mode, CustomPluginManager pluginManager) {
+    @Override
+    synchronized void init(Path root, String mode, CustomPluginManager pluginManager) {
         if( manager )
             throw new IllegalArgumentException("Plugin system already setup")
         this.root = root
@@ -221,17 +225,20 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
+    @Override
     synchronized void setup(Map config = Collections.emptyMap()) {
         init()
         load(config)
     }
 
+    @Override
     void load(Map config) {
         if( !manager )
             throw new IllegalArgumentException("Plugin system has not been initialized")
         start(pluginsRequirement(config))
     }
 
+    @Override
     synchronized void stop() {
         if( manager ) {
             manager.stopPlugins()
@@ -247,7 +254,8 @@ class PluginsFacade implements PluginStateListener {
      * @return
      *      The list of extensions matching the requested interface.
      */
-    def <T> List<T> getExtensions(Class<T> type) {
+    @Override
+    <T> List<T> getExtensions(Class<T> type) {
         if( manager ) {
             return manager.getExtensions(type)
         }
@@ -268,7 +276,8 @@ class PluginsFacade implements PluginStateListener {
      * @return
      *      The list of extensions matching the requested interface.
      */
-    def <T> List<T> getExtensions(Class<T> type, String pluginId) {
+    @Override
+    <T> List<T> getExtensions(Class<T> type, String pluginId) {
         if( manager ) {
             return manager.getExtensions(type, pluginId)
         }
@@ -288,7 +297,8 @@ class PluginsFacade implements PluginStateListener {
      *      The list of extensions matching the requested interface.
      *      The extension with higher priority appears first (lower index)
      */
-    def <T> List<T> getPriorityExtensions(Class<T> type,String group=null) {
+    @Override
+    <T> List<T> getPriorityExtensions(Class<T> type,String group=null) {
         def result = getExtensions(type)
         if( group )
             result = result.findAll(it -> group0(it)==group )
@@ -334,6 +344,7 @@ class PluginsFacade implements PluginStateListener {
         }
     }
 
+    @Override
     boolean isStarted(String pluginId) {
         manager.getPlugin(pluginId)?.pluginState == PluginState.STARTED
     }
@@ -419,10 +430,12 @@ class PluginsFacade implements PluginStateListener {
         return result
     }
 
+    @Override
     synchronized void pullPlugins(List<String> ids) {
         updater.pullPlugins(ids)
     }
 
+    @Override
     boolean startIfMissing(String pluginId) {
         if( env.NXF_PLUGINS_DEFAULT == 'false' )
             return false

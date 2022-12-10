@@ -30,6 +30,8 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import io.micronaut.context.ApplicationContext
+import nextflow.App
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
 import nextflow.exception.ConfigParseException
@@ -49,7 +51,7 @@ import org.eclipse.jgit.api.errors.GitAPIException
  */
 @Slf4j
 @CompileStatic
-class Launcher {
+class Launcher implements Closeable {
 
     /**
      * Create the application command line parser
@@ -75,6 +77,8 @@ class Launcher {
 
     private String colsString
 
+    private ApplicationContext context
+
     /**
      * Create a launcher object and parse the command line parameters
      *
@@ -84,7 +88,14 @@ class Launcher {
         init()
     }
 
+    @Override
+    void close() throws IOException {
+        context?.close()
+    }
+
     protected void init() {
+        context = App.context()
+
         allCommands = (List<CmdBase>)[
                 new CmdClean(),
                 new CmdClone(),
@@ -106,7 +117,7 @@ class Launcher {
                 new CmdPlugin()
         ]
 
-        if(SecretsLoader.isEnabled())
+        if(App.get(SecretsLoader).isEnabled())
             allCommands.add(new CmdSecret())
 
         // legacy command
@@ -650,10 +661,11 @@ class Launcher {
      * @param args The program options as specified by the user on the CLI
      */
     static void main(String... args)  {
-
-        final status = new Launcher() .command(args) .run()
-        if( status )
-            System.exit(status)
+        try (Launcher launcher = new Launcher()) {
+            final status =  launcher.command(args).run()
+            if( status )
+                System.exit(status)
+        }
     }
 
 

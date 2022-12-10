@@ -172,6 +172,8 @@ class LoggerHelper {
             debugConf << S3_UPLOADER_CLASS
         if( !containsClassName(debugConf,traceConf, 'io.seqera') )
             debugConf << 'io.seqera'
+        if( !containsClassName(debugConf,traceConf, 'io.micronaut') )
+            debugConf << 'io.micronaut'
 
         for( def it : debugConf ) {
             packages[it] = Level.DEBUG
