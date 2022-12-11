@@ -40,7 +40,7 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     private String load(String name, Map<String,String> binding=[:]) {
-        def template = new File("src/test/groovy/nextflow/executor/$name").text
+        def template = new File("src/test/resources/nextflow/executor/$name").text
         return binding ? new MustacheTemplateEngine().render(template, binding) : template
     }
 
