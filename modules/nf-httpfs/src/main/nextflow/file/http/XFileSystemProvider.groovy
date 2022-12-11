@@ -59,8 +59,6 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     private Map<URI, FileSystem> fileSystemMap = new LinkedHashMap<>(20)
 
-    static final public Set<String> ALL_SCHEMES = ['ftp','http','https'] as Set
-
     static final public String  DEFAULT_RETRY_CODES = '404,410'
 
     static final public int MAX_REDIRECT_HOPS = 5

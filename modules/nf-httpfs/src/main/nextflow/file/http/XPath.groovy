@@ -36,6 +36,8 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class XPath implements Path {
 
+    static final public Set<String> ALL_SCHEMES = ['ftp','http','https'] as Set
+
     private static final String[] EMPTY = []
 
     private XFileSystem fs
@@ -295,7 +297,7 @@ class XPath implements Path {
 
         def uri = new URI(null,null,str,null,null)
 
-        if( uri.scheme && !XFileSystemProvider.ALL_SCHEMES.contains(uri.scheme))
+        if( uri.scheme && !ALL_SCHEMES.contains(uri.scheme))
             throw new ProviderMismatchException()
 
         uri.authority ? (XPath)Paths.get(uri) : new XPath(null, str)
