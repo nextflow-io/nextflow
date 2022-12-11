@@ -68,6 +68,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.AccessControlList;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
@@ -85,6 +86,7 @@ import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.RestoreObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.SSEAlgorithm;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
@@ -132,7 +134,11 @@ public class AmazonS3Client {
 
 	private Integer uploadMaxThreads = 10;
 
-	public AmazonS3Client(AmazonS3 client){
+	private boolean glacierAutoRetrieval;
+
+	private int glacierExpirationDays = 7;
+
+	public AmazonS3Client(AmazonS3 client) {
 		this.client = client;
 	}
 
@@ -141,9 +147,10 @@ public class AmazonS3Client {
 				.standard()
 				.withCredentials(new AWSStaticCredentialsProvider(creds))
 				.withClientConfiguration(config)
-				.withRegion( region )
+				.withRegion(region)
 				.build();
 	}
+
 	/**
 	 * @see com.amazonaws.services.s3.AmazonS3Client#listBuckets()
 	 */
@@ -330,6 +337,33 @@ public class AmazonS3Client {
 
 	public CannedAccessControlList getCannedAcl() {
 		return cannedAcl;
+	}
+
+	public void setGlacierAutoRetrieval(boolean value) {
+		this.glacierAutoRetrieval = value;
+		log.debug("Setting S3 glacierAutoRetrieval={}", glacierAutoRetrieval);
+	}
+
+	public void setGlacierAutoRetrieval(String value) {
+		if( value==null )
+			return;
+	  	setGlacierAutoRetrieval(Boolean.parseBoolean(value));
+	}
+
+	public void setGlacierExpirationDays(int days) {
+		this.glacierExpirationDays = days;
+		log.debug("Setting S3 glacierExpirationDays={}", glacierExpirationDays);
+	}
+
+	public void setGlacierExpirationDays(String days) {
+		if( days==null )
+			return;
+		try {
+			setGlacierExpirationDays(Integer.parseInt(days));
+		}
+		catch( NumberFormatException e ) {
+			log.warn("Not a valid AWS S3 glacierExpirationDays: `{}` -- Using default", days);
+		}
 	}
 
 	public AmazonS3 getClient() {
@@ -533,6 +567,60 @@ public class AmazonS3Client {
 		}
 		catch (InterruptedException e) {
 			log.debug("S3 download file: s3://{}/{} interrupted",source.getBucket(), source.getKey());
+			Thread.currentThread().interrupt();
+		}
+		catch (AmazonS3Exception e) {
+			handleAmazonException(source, target, e);
+		}
+	}
+
+	private void handleAmazonException(S3Path source, File target, AmazonS3Exception e) {
+		// the following message is returned when accessing a Glacier stored file
+		// "The operation is not valid for the object's storage class"
+		final boolean isGlacierError = e.getMessage().contains("storage class")
+				&& e.getErrorCode().equals("InvalidObjectState");
+
+		if( isGlacierError && glacierAutoRetrieval ) {
+			log.info("S3 download s3://{}/{} failed due to invalid storage class -- Retrieving from Glacier", source.getBucket(), source.getKey());
+			restoreFromGlacier(source.getBucket(), source.getKey());
+			downloadFile(source, target);
+		}
+		else {
+			throw e;
+		}
+	}
+
+	protected void restoreFromGlacier(String bucketName, String key) {
+		final int sleepMillis = 30_000;
+		final long _5_mins = 5 * 60 * 1_000;
+
+		try {
+			client.restoreObjectV2(new RestoreObjectRequest(bucketName, key, glacierExpirationDays));
+		}
+		catch (AmazonS3Exception e) {
+			if( e.getMessage().contains("RestoreAlreadyInProgress") ) {
+				log.debug("S3 Glacier restore already initiated for object s3://{}/{}", bucketName, key);
+			}
+			else {
+				throw e;
+			}
+		}
+
+		try {
+			boolean ongoingRestore = true;
+			long begin = System.currentTimeMillis();
+			while( ongoingRestore ) {
+				final long now = System.currentTimeMillis();
+				if( now-begin>_5_mins ) {
+					log.info("S3 Glacier restore ongoing for object s3://{}/{}", bucketName, key);
+					begin = now;
+				}
+				Thread.sleep(sleepMillis);
+				ongoingRestore = client.getObjectMetadata(bucketName, key).getOngoingRestore();
+			}
+		}
+		catch (InterruptedException e) {
+			log.debug("S3 Glacier restore s3://{}/{} interrupted", bucketName, key);
 			Thread.currentThread().interrupt();
 		}
 	}

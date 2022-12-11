@@ -949,6 +949,8 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		client.setKmsKeyId(props.getProperty("storage_kms_key_id"));
 		client.setUploadChunkSize(props.getProperty("upload_chunk_size"));
 		client.setUploadMaxThreads(props.getProperty("upload_max_threads"));
+		client.setGlacierAutoRetrieval(props.getProperty("glacier_auto_retrieval"));
+		client.setGlacierExpirationDays(props.getProperty("glacier_expiration_days"));
 
 		if (uri.getHost() != null) {
 			client.setEndpoint(uri.getHost());
