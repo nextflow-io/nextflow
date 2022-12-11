@@ -88,9 +88,9 @@ class PbsProExecutor extends PbsExecutor {
         if( queue ) {
             cmd += queue
         } else {
-            cmd += '$( qstat -B | egrep -v \'(^Server|^---)\' | awk -v ORS=\' \' \'{print \"@\"\$1}\' )'
+            cmd += '$( qstat -B | grep -E -v \'(^Server|^---)\' | awk -v ORS=\' \' \'{print \"@\"\$1}\' )'
         }
-        return ['bash','-c', "set -o pipefail; $cmd | { egrep '(Job Id:|job_state =)' || true; }".toString()]
+        return ['bash','-c', "set -o pipefail; $cmd | { grep -E '(Job Id:|job_state =)' || true; }".toString()]
     }
 
     // see https://www.pbsworks.com/pdfs/PBSRefGuide18.2.pdf

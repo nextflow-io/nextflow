@@ -33,7 +33,7 @@ rm my_*
 echo ''
 $NXF_RUN | tee stdout
 
-[[ `grep 'INFO' .nextflow.log | egrep -c '\[skipping\] Stored process > foo'` == 4 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -E -c '\[skipping\] Stored process > foo'` == 4 ]] || false
 
 grep "Result $PWD/cache/omega/result.txt" stdout
 grep "Result $PWD/cache/delta/result.txt" stdout
@@ -58,7 +58,7 @@ rm my_*
 echo ''
 $NXF_RUN -resume | tee stdout
 
-[[ `grep 'INFO' .nextflow.log | egrep -c '\[skipping\] Stored process > foo'` == 4 ]] || false
+[[ `grep 'INFO' .nextflow.log | grep -E -c '\[skipping\] Stored process > foo'` == 4 ]] || false
 
 grep "Result $PWD/cache/omega/result.txt" stdout
 grep "Result $PWD/cache/delta/result.txt" stdout
