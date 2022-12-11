@@ -57,7 +57,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder {
         this.remoteBinDir = toContainerMount(remoteBinDir)
 
         // map bean work and target dirs to container mount
-        // this needed to create the command launcher using container local file paths
+        // this is needed to create the command launcher using container local file paths
         bean.workDir = toContainerMount(bean.workDir)
         bean.targetDir = toContainerMount(bean.targetDir)
 
