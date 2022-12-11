@@ -15,6 +15,7 @@ import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 
 import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.s3.model.AmazonS3Exception
 import com.amazonaws.services.s3.model.Tag
 import groovy.util.logging.Slf4j
 import nextflow.Global
@@ -30,7 +31,6 @@ import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Timeout
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -1396,5 +1396,49 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         cleanup:
         deleteBucket(bucket1)
     }
-    
+
+    @Ignore // takes too long to test via CI server
+    def 'should restore from glacier' () {
+        given:
+        def TEXT = randomText(10_000)
+        def folder = Files.createTempDirectory('test')
+        def sourceFile = Files.write(folder.resolve('foo.data'), TEXT.bytes)
+        def downloadFile = folder.resolve('copy.data')
+        and:
+        def bucket1 = createBucket()
+
+        // upload a file to a remote bucket
+        when:
+        def target = s3path("s3://$bucket1/foo.data")
+        and:
+        target.setStorageClass('GLACIER')
+        def client = target.getFileSystem().getClient()
+        and:
+        FileHelper.copyPath(sourceFile, target)
+        // the file exist
+        then:
+        Files.exists(target)
+        and:
+        client
+                .getObjectMetadata(target.getBucket(), target.getKey())
+                .getStorageClass() == 'GLACIER'
+
+        when:
+        FileHelper.copyPath(target, downloadFile)
+        then:
+        thrown(AmazonS3Exception)
+
+        when:
+        client.setGlacierAutoRetrieval(true)
+        and:
+        FileHelper.copyPath(target, downloadFile)
+        then:
+        Files.exists(downloadFile)
+
+        cleanup:
+        client?.setGlacierAutoRetrieval(false)
+        folder?.delete()
+        deleteBucket(bucket1)
+    }
+
 }
