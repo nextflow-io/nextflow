@@ -69,7 +69,7 @@ class ServiceDiscover<S> {
 
         if (n != 0) {
             if ((ln.indexOf(' ') >= 0) || (ln.indexOf('\t') >= 0))
-                fail(service, u, lc, "Illegal configuration-file syntax")
+                fail(service, u, lc, "Illegal configuration file syntax")
 
             int cp = ln.codePointAt(0)
             if (!Character.isJavaIdentifierStart(cp))

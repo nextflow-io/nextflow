@@ -58,19 +58,19 @@ import org.eclipse.jgit.transport.URIish
  * Provides a jgit {@link CredentialsProvider} implementation that can provide the
  * appropriate credentials to connect to an AWS CodeCommit repository.
  *
- * From the command line, you can configure git to use AWS code commit with a credential
- * helper. However, jgit does not support credential helper commands, but it does provide
+ * From the command line, you can configure git to use AWS CodeCommit with a credential
+ * helper. Although jgit does not support credential helper commands, it provides
  * a CredentialsProvider abstract class we can extend. Connecting to an AWS CodeCommit
  * (codecommit) repository requires an AWS access key and secret key. These are used to
  * calculate a signature for the git request. The AWS access key is used as the codecommit
  * username, and the calculated signature is used as the password. The process for
- * calculating this signature is documented very well at
+ * calculating this signature is documented at
  * https://docs.aws.amazon.com/general/latest/gr/signature-version-4.html.
  *
  * @author Don Laidlaw
  *
- * This class mostly a direct port of the AwsCodeCommitCredentialProvider class provided by the
- * spring framework in org.springframwork.cloud.config.server.support with some minor
+ * This class is mostly a direct port of the AwsCodeCommitCredentialProvider class provided by the
+ * spring framework in org.springframwork.cloud.config.server.support, with some minor
  * modifications and simplifications that leverage the Groovy language.
  *
  * @author W. Lee Pang <wleepang@gmail.com>
@@ -148,15 +148,15 @@ final class AwsCodeCommitCredentialProvider extends CredentialsProvider {
     private static byte[] canonicalRequestDigest(URIish uri) {
         def canonicalRequest = ""
 
-        // this could be done faster with a templated multi-line GString but is broken out here
+        // this could be done faster with a templated multi-line GString, but is broken out here
         // to maintain documentation of each part
         canonicalRequest += "GIT\n"  						// codecommit uses GIT as the request method
         canonicalRequest += "${uri.getPath()}\n"  			// URI request path
         canonicalRequest += "\n"  							// Query string, always empty for codecommit
 
-        // Next are canonical headers, codecommit only requires the host header
+        // Next are canonical headers — codecommit only requires the host header
         canonicalRequest += "host:${uri.getHost()}\n\n"  	// canonical headers are alays terminated with \n
-        canonicalRequest += "host\n"  						// The list of canonical headers, only one for, only one for codecommit
+        canonicalRequest += "host\n"  						// The list of canonical headers, only one for codecommit
 
         MessageDigest digest = MessageDigest.getInstance(SHA_256);
 
@@ -204,7 +204,7 @@ final class AwsCodeCommitCredentialProvider extends CredentialsProvider {
     /**
      * Get the AWSCredentials. If an AWSCredentialProvider was specified, use that,
      * otherwise, create a new AWSCredentialsProvider. If the username and password are
-     * provided, then use those directly as AWSCredentials. Otherwise us the
+     * provided, use those directly as AWSCredentials. Otherwise, use the
      * {@link DefaultAWSCredentialsProviderChain} as is standard with AWS applications.
      * @return the AWS credentials.
      */
@@ -315,8 +315,8 @@ final class AwsCodeCommitCredentialProvider extends CredentialsProvider {
     void reset(URIish uri) {
         // Should throw out cached info.
         // Note that even though the credentials (password) we calculate here is
-        // valid for 15 minutes, we do not cache it. Instead we just re-calculate
-        // it each time we need it. However, the AWSCredentialProvider will cache
+        // valid for 15 minutes, we do not cache it. Instead, we re-calculate
+        // it each time it is needed. However, the AWSCredentialProvider will cache
         // its AWSCredentials object.
     }
 

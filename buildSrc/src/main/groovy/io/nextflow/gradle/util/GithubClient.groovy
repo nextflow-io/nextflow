@@ -81,7 +81,7 @@ class GithubClient {
     }
 
     /**
-     *  2. Create the blobs with the files content
+     *  2. Create the blobs with the file content
      *
      * @param file content
      * @return The SHA id of the uploaded content
@@ -93,7 +93,7 @@ class GithubClient {
     }
 
     /**
-     * 3. Create a tree which defines the file structure
+     * 3. Create a tree that defines the file structure
      *
      * @param fileName The name of the file changed
      * @param blobId The id of the changed content

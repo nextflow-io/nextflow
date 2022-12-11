@@ -101,10 +101,10 @@ class TowerArchiver {
         if( paths.size()!=2 )
             throw new IllegalArgumentException("Invalid NXF_ARCHIVE_DIR format - expected exactly two paths separated by a comma - offending value: ${System.getenv('NXF_ARCHIVE_DIR')}")
         if( !paths[0].startsWith('/') )
-            throw new IllegalArgumentException("Invalid NXF_ARCHIVE_DIR base path - it must start with a slash character - offending value: '${paths[0]}'")
+            throw new IllegalArgumentException("Invalid NXF_ARCHIVE_DIR base path — must start with a slash character - offending value: '${paths[0]}'")
         final scheme = FileHelper.getUrlProtocol(paths[1])
         if ( !scheme && !paths[1].startsWith('/') )
-            throw new IllegalArgumentException("Invalid NXF_ARCHIVE_DIR target path - it must be a remote path - offending value: '${paths[1]}'")
+            throw new IllegalArgumentException("Invalid NXF_ARCHIVE_DIR target path - must be a remote path - offending value: '${paths[1]}'")
 
         return paths
     }
@@ -200,7 +200,7 @@ class TowerArchiver {
                     log.trace("Archived file: '$source to: '$target'")
                 }
                 catch (FileAlreadyExistsException e) {
-                    log.debug "Skipping archive of file: $source; target alredy exists: $target"
+                    log.debug "Skipping archive of file: $source -- target already exists: $target"
                 }
                 catch (Exception e) {
                     log.warn("Unable to archive file: $source -- cause: ${e.message ?: e}", e)
@@ -238,7 +238,7 @@ class TowerArchiver {
             @Override
             boolean test(Throwable failure) {
                 final reason = failure.message ?: failure.toString()
-                log.trace "Testing file archiver failing reason for retry: '$reason'"
+                log.trace "Testing file archiver failure -- reason for retry: '$reason'"
                 return retryPattern()
                         .matcher(reason)
                         .find()

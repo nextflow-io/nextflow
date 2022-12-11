@@ -273,7 +273,7 @@ class XPath implements Path {
     }
 
     /**
-     * @return The unique hash code for this pah
+     * @return The unique hash code for this path
      */
     @Override
     int hashCode() {
@@ -284,11 +284,11 @@ class XPath implements Path {
      * Path factory method.
      *
      * @param str
-     *      A fully qualified URI path string e.g. {@code http://www.host.name/data.file.txt}
+     *      A fully qualified URI path string, e.g. {@code http://www.host.name/data.file.txt}
      * @return
      *      The corresponding {@link XPath} object
      * @throws
-     *      ProviderMismatchException When the URI scheme does not match any supported protocol i.e. {@code ftp},
+     *      ProviderMismatchException When the URI scheme does not match any supported protocol, i.e. {@code ftp},
      *      {@code http}, {@code https}
      */
     static XPath get(String str) {
