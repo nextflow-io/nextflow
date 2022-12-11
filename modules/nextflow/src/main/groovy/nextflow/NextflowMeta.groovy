@@ -174,7 +174,7 @@ class NextflowMeta {
             return ver
         }
         else if( mode == 'preview' )
-            throw new IllegalArgumentException("Preview nextflow mode ('preview') is no longer supported — use `nextflow.enable.dsl=2` instead")
+            throw new IllegalArgumentException("Preview nextflow mode ('preview') is no longer supported —- use `nextflow.enable.dsl=2` instead")
         else
             throw new IllegalArgumentException("Unknown nextflow mode=${matcher.group(1)}")
     }
