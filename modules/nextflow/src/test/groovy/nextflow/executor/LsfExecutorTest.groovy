@@ -666,7 +666,7 @@ class LsfExecutorTest extends Specification {
     def 'should parse complex config file' () {
         given:
         def executor = Spy(LsfExecutor)
-        def file = new File('src/test/groovy/nextflow/executor/lsf.conf')
+        def file = new File('src/test/resources/nextflow/executor/lsf.conf')
         assert file.exists(), 'Cannot find LSF config test file'
 
         when:
