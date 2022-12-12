@@ -53,7 +53,7 @@ class TaskGraph {
         )
     }
 
-    protected String getPredecessorHash(Path path) {
+    static public String getPredecessorHash(Path path) {
         final pattern = Pattern.compile('.*/([a-z0-9]{2}/[a-z0-9]{30})')
         final matcher = pattern.matcher(path.toString())
 

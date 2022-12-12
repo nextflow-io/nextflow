@@ -22,6 +22,8 @@ import static nextflow.processor.TaskStatus.*
 import java.nio.file.NoSuchFileException
 
 import groovy.util.logging.Slf4j
+import nextflow.dag.TaskGraph
+import nextflow.script.params.FileOutParam
 import nextflow.trace.TraceRecord
 /**
  * Actions to handle the underlying job running the user task.
@@ -182,6 +184,14 @@ abstract class TaskHandler {
         record.env = task.getEnvironmentStr()
         record.executorName = task.processor.executor.getName()
 
+        record.inputs = task.getInputFilesMap().collect { entry ->
+            [
+                name: entry.key,
+                path: entry.value,
+                predecessor: TaskGraph.getPredecessorHash(entry.value)
+            ]
+        }
+
         if( isCompleted() ) {
             record.error_action = task.errorAction?.toString()
 
@@ -208,6 +218,14 @@ abstract class TaskHandler {
             }
             catch( IOException e ) {
                 log.debug "[WARN] Cannot read trace file: $file -- Cause: ${e.message}"
+            }
+
+            record.outputs = task.getOutputsByType(FileOutParam).values().flatten().collect { path ->
+                [
+                    name: path.name,
+                    path: path,
+                    size: path.toFile().size()
+                ]
             }
         }
 
