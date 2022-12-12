@@ -24,19 +24,19 @@ import java.nio.file.Path
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Mike Smoot <mes@aescon.com>
  */
-trait DagRenderer {
+interface DagRenderer {
 
     /**
      * Render a process DAG.
      */
-    void renderProcessGraph(DAG dag, Path file) {
+    default void renderProcessGraph(DAG dag, Path file) {
         throw new UnsupportedOperationException("Process graph rendering is not supported for this file format")
     }
 
     /**
      * Render a task DAG.
      */
-    void renderTaskGraph(TaskGraph dag, Path file) {
+    default void renderTaskGraph(TaskGraph dag, Path file) {
         throw new UnsupportedOperationException("Task graph rendering is not supported for this file format")
     }
 }
