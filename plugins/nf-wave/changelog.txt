@@ -1,5 +1,13 @@
 nf-wave changelog
 ==================
+0.6.3 - 13 Dic 2022
+- Fix Wave layer invalid checksum due to not closed stream [e188bbf9]
+- Fix Fusion test [2245a1c7]
+- Add support for Fusion ARM64 client [ci fast] [d073c538]
+- Improve Wave config error reporting [ci fast] [ae502668]
+- Bump fusion version URLs 0.6 [a160a8b1]
+- Bump nf-wave@0.6.3 [0cb6ca6a]
+
 0.6.2 - 8 Dec 2022
 - Add support for Fusion ARM64 client [d073c538]
 - Improve Wave config error reporting [ae502668]

@@ -1,5 +1,13 @@
 nf-amazon changelog
 ===================
+1.13.0 - 13 Dic 2022
+- Add support for AWS Glacier restore [b6110766]
+- Add support for S3 storageClass to publishDir [066f9203]
+- Fix math overflow when copying large AWS S3 files [f32ea0ba]
+- Bump AWS sdk version 1.12.351 [4dd82b66]
+- Rewrite fetchIamRole and fetchRegion to use AWS SDK (#3425) [ci skip] [e350f319]
+- Bump nf-amazon@1.13.0 [ccaab713]
+
 1.12.0 - 21 Nov 2022
 - Improve S3 thread pool config [41021cbc]
 
