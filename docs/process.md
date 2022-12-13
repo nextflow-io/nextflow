@@ -782,7 +782,7 @@ process alignSequences {
 
 workflow {
   sequences = Channel.fromPath('*.fa')
-  methods = ['regular', 'expresso', 'psicoffee']
+  methods = ['regular', 'espresso', 'psicoffee']
 
   alignSequences(sequences, methods)
 }
@@ -809,7 +809,7 @@ process alignSequences {
 
 workflow {
   sequences = Channel.fromPath('*.fa')
-  methods = ['regular', 'expresso']
+  methods = ['regular', 'espresso']
   libraries = [ file('PQ001.lib'), file('PQ002.lib'), file('PQ003.lib') ]
 
   alignSequences(sequences, methods, libraries)
@@ -817,7 +817,7 @@ workflow {
 ```
 
 In the above example, each sequence input file emitted by the `sequences` channel triggers six alignment tasks,
-three with the `regular` method against each library file, and three with the `expresso` method.
+three with the `regular` method against each library file, and three with the `espresso` method.
 
 :::{note}
 When multiple repeaters are defined, the process is executed for each *combination* of them.
@@ -1233,6 +1233,38 @@ Each task produces a new tuple containing the value for `species` and the file `
 A `tuple` definition may contain any of the following qualifiers, as previously described:
 `val`, `path`, `env` and `stdout`. Files specified with the `path` qualifier are treated
 exactly the same as standalone `path` inputs.
+
+:::{note}
+While parentheses for input and output qualifiers are generally optional, they are required when specifying
+elements in an input/output tuple.
+
+Here's an example with a single path output (parentheses optional):
+
+```groovy
+process foo {
+    output:
+    path 'result.txt', hidden: true
+
+    '''
+    echo 'another new line' >> result.txt
+    '''
+}
+```
+
+And here's an example with a tuple output (parentheses required):
+
+```groovy
+process foo {
+    output:
+    tuple path('last_result.txt'), path('result.txt', hidden: true)
+
+    '''
+    echo 'another new line' >> result.txt
+    echo 'another new line' > last_result.txt
+    '''
+}
+```
+:::
 
 ### Optional outputs
 
@@ -1712,6 +1744,42 @@ This can be defined in the `nextflow.config` file as shown below:
 process.ext.version = '2.5.3'
 ```
 
+(process-fair)=
+
+### fair
+
+The `fair` directive, when enabled, guarantees that process outputs will be emitted
+in the order in which they were received. For example:
+
+```groovy
+process foo {
+    fair true
+
+    input:
+    val x
+    output:
+    tuple val(task.index), val(x)
+
+    script:
+    """
+    sleep \$((RANDOM % 3))
+    """
+}
+
+workflow {
+    channel.of('A','B','C','D') | foo | view
+}
+```
+
+The above example produces the following output:
+
+```
+[1, A]
+[2, B]
+[3, C]
+[4, D]
+```
+
 (process-label)=
 
 ### label
@@ -1956,27 +2024,29 @@ The above snippet defines an environment variable named `FOO` which value is `ba
 
 The `pod` directive allows the definition of the following options:
 
-| Name                                            | Description                                                                                                                                                                                                                                                                                                                                    |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `label: <K>, value: <V>`                        | Defines a pod label with key `K` and value `V`.                                                                                                                                                                                                                                                                                                |
-| `annotation: <K>, value: <V>`                   | Defines a pod annotation with key `K` and value `V`.                                                                                                                                                                                                                                                                                           |
-| `env: <E>, value: <V>`                          | Defines an environment variable with name `E` and whose value is given by the `V` string.                                                                                                                                                                                                                                                      |
-| `env: <E>, fieldPath: <V>`                      | Defines an environment variable with name `E` and whose value is given by the `V` `field path <https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/>`_.                                                                                                                                       |
-| `env: <E>, config: <C/K>`                       | Defines an environment variable with name `E` and whose value is given by the entry associated to the key with name `K` in the `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name `C`.                                                                                                 |
-| `env: <E>, secret: <S/K>`                       | Defines an environment variable with name `E` and whose value is given by the entry associated to the key with name `K` in the `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name `S`.                                                                                                                            |
-| `config: <C/K>, mountPath: </absolute/path>`    | Mounts a `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name `C` with key `K` to the path `/absolute/path`. When the key component is omitted the path is interpreted as a directory and all the `ConfigMap` entries are exposed in that path.                                          |
-| `secret: <S/K>, mountPath: </absolute/path>`    | Mounts a `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name `S` with key `K` to the path `/absolute/path`. When the key component is omitted the path is interpreted as a directory and all the `Secret` entries are exposed in that path.                                                                        |
-| `volumeClaim: <V>, mountPath: </absolute/path>` | Mounts a `Persistent volume claim <https://kubernetes.io/docs/concepts/storage/persistent-volumes/>`_ with name `V` to the specified path location. Use the optional `subPath` parameter to mount a directory inside the referenced volume instead of its root. The volume may be mounted with `readOnly: true`, but is read/write by default. |
-| `imagePullPolicy: <V>`                          | Specifies the strategy to be used to pull the container image e.g. `imagePullPolicy: 'Always'`.                                                                                                                                                                                                                                                |
-| `imagePullSecret: <V>`                          | Specifies the secret name to access a private container image registry. See `Kubernetes documentation <https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod>`_ for details.                                                                                                                             |
-| `runAsUser: <UID>`                              | Specifies the user ID to be used to run the container. Shortcut for the `securityContext` option.                                                                                                                                                                                                                                              |
-| `securityContext: <V>`                          | Specifies the pod security context. See `Kubernetes security context <https://kubernetes.io/docs/tasks/configure-pod-container/security-context/>`_ for details.                                                                                                                                                                               |
-| `nodeSelector: <V>`                             | Specifies which node the process will run on. See `Kubernetes nodeSelector <https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector>`_ for details.                                                                                                                                                              |
-| `affinity: <V>`                                 | Specifies affinity for which nodes the process should run on. See `Kubernetes affinity <https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity>`_ for details.                                                                                                                                    |
-| `automountServiceAccountToken: <V>`             | Specifies whether to `automount service account token <https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/>`_ into process pods. If `V` is true, service account token is automounted into task pods (default).                                                                                                |
-| `priorityClassName: <V>`                        | Specifies the `priority class name <https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/>`_ for pods.                                                                                                                                                                                                              |
-| `toleration: <V>`                               | Specifies a toleration for a node taint. See `Taints and Tolerations <https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/>`_ for details.                                                                                                                                                                            |
-| `privileged: <B>`                               | Whether the process task should run as a *privileged* container (default: `false`)                                                                                                                                                                                                                                                             |
+| Name                                            | Description                                                                                                                                                                                                                                                                                                                                  |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `label: <K>, value: <V>`                        | Defines a pod label with key `K` and value `V`.                                                                                                                                                                                                                                                                                              |
+| `annotation: <K>, value: <V>`                   | Defines a pod annotation with key `K` and value `V`.                                                                                                                                                                                                                                                                                         |
+| `env: <E>, value: <V>`                          | Defines an environment variable with name `E` and whose value is given by the `V` string.                                                                                                                                                                                                                                                    |
+| `env: <E>, fieldPath: <V>`                      | Defines an environment variable with name `E` and whose value is given by the `V` [field path](https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/).                                                                                                                                       |
+| `env: <E>, config: <C/K>`                       | Defines an environment variable with name `E` and whose value is given by the entry associated to the key with name `K` in the [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) with name `C`.                                                                                                 |
+| `env: <E>, secret: <S/K>`                       | Defines an environment variable with name `E` and whose value is given by the entry associated to the key with name `K` in the [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) with name `S`.                                                                                                                            |
+| `config: <C/K>, mountPath: </absolute/path>`    | Mounts a [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) with name `C` with key `K` to the path `/absolute/path`. When the key component is omitted the path is interpreted as a directory and all the `ConfigMap` entries are exposed in that path.                                          |
+| `csi: <V>, mountPath: </absolute/path>`         | Mounts a [CSI ephemeral volume](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes) with config `V`to the path `/absolute/path` (requires `22.11.0-edge` or later).                                                                                                                                        |
+| `emptyDir: <V>, mountPath: </absolute/path>`    | Mounts an [emptyDir](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) with configuration `V` to the path `/absolute/path` (requires `22.11.0-edge` or later).                                                                                                                                                                  |
+| `secret: <S/K>, mountPath: </absolute/path>`    | Mounts a [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) with name `S` with key `K` to the path `/absolute/path`. When the key component is omitted the path is interpreted as a directory and all the `Secret` entries are exposed in that path.                                                                        |
+| `volumeClaim: <V>, mountPath: </absolute/path>` | Mounts a [Persistent volume claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) with name `V` to the specified path location. Use the optional `subPath` parameter to mount a directory inside the referenced volume instead of its root. The volume may be mounted with `readOnly: true`, but is read/write by default. |
+| `imagePullPolicy: <V>`                          | Specifies the strategy to be used to pull the container image e.g. `imagePullPolicy: 'Always'`.                                                                                                                                                                                                                                              |
+| `imagePullSecret: <V>`                          | Specifies the secret name to access a private container image registry. See [Kubernetes documentation](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod) for details.                                                                                                                             |
+| `runAsUser: <UID>`                              | Specifies the user ID to be used to run the container. Shortcut for the `securityContext` option.                                                                                                                                                                                                                                            |
+| `securityContext: <V>`                          | Specifies the pod security context. See [Kubernetes security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for details.                                                                                                                                                                               |
+| `nodeSelector: <V>`                             | Specifies which node the process will run on. See [Kubernetes nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector) for details.                                                                                                                                                              |
+| `affinity: <V>`                                 | Specifies affinity for which nodes the process should run on. See [Kubernetes affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) for details.                                                                                                                                    |
+| `automountServiceAccountToken: <V>`             | Specifies whether to [automount service account token](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) into process pods. If `V` is true, service account token is automounted into task pods (default).                                                                                                |
+| `priorityClassName: <V>`                        | Specifies the [priority class name](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) for pods.                                                                                                                                                                                                              |
+| `toleration: <V>`                               | Specifies a toleration for a node taint. See [Taints and Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) for details.                                                                                                                                                                            |
+| `privileged: <B>`                               | Whether the process task should run as a *privileged* container (default: `false`)                                                                                                                                                                                                                                                           |
 
 When defined in the Nextflow configuration file, a pod setting can be defined using the canonical
 associative array syntax. For example:
@@ -2033,25 +2103,26 @@ the file produced into the process working directory. This behavior can be modif
 
 Table of optional parameters that can be used with the `publishDir` directive:
 
-| Name        | Description                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| mode        | The file publishing method. See the following table for possible values.                                                                                                                                                                                                                                                                                                                                                                                |
-| overwrite   | When `true` any existing file in the specified folder will be overridden (default: `true` during normal pipeline execution and `false` when pipeline execution is `resumed`).                                                                                                                                                                                                                                                                           |
-| pattern     | Specifies a [glob][glob] file pattern that selects which files to publish from the overall set of output files.                                                                                                                                                                                                                                                                                                                                               |
-| path        | Specifies the directory where files need to be published. **Note**: the syntax `publishDir '/some/dir'` is a shortcut for `publishDir path: '/some/dir'`.                                                                                                                                                                                                                                                                                               |
-| saveAs      | A closure which, given the name of the file being published, returns the actual file name or a full path where the file is required to be stored. This can be used to rename or change the destination directory of the published files dynamically by using a custom strategy. Return the value `null` from the closure to *not* publish a file. This is useful when the process has multiple output files, but you want to publish only some of them. |
-| enabled     | Enable or disable the publish rule depending on the boolean value specified (default: `true`).                                                                                                                                                                                                                                                                                                                                                          |
-| failOnError | When `true` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: `false`)                                                                                                                                                                                                                                                                                                            |
-| contentType | Allow specifying the media content type of the published file a.k.a. `MIME type <https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types>`_. If the boolean value ``true`` is specified the content type is inferred from the file extension (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Default: ``false``, requires `22.10.0`` or later).                                                                  |
-| tags        | Allow the association of arbitrary tags with the published file e.g. ``tags: [FOO: 'Hello world']`` (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Requires version ``21.12.0-edge`` or later).                                                                                                                                                                                                                                      |
+| Name         | Description                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| mode         | The file publishing method. See the following table for possible values.                                                                                                                                                                                                                                                                                                                                                                                |
+| overwrite    | When `true` any existing file in the specified folder will be overridden (default: `true` during normal pipeline execution and `false` when pipeline execution is `resumed`).                                                                                                                                                                                                                                                                           |
+| pattern      | Specifies a [glob][glob] file pattern that selects which files to publish from the overall set of output files.                                                                                                                                                                                                                                                                                                                                         |
+| path         | Specifies the directory where files need to be published. **Note**: the syntax `publishDir '/some/dir'` is a shortcut for `publishDir path: '/some/dir'`.                                                                                                                                                                                                                                                                                               |
+| saveAs       | A closure which, given the name of the file being published, returns the actual file name or a full path where the file is required to be stored. This can be used to rename or change the destination directory of the published files dynamically by using a custom strategy. Return the value `null` from the closure to *not* publish a file. This is useful when the process has multiple output files, but you want to publish only some of them. |
+| enabled      | Enable or disable the publish rule depending on the boolean value specified (default: `true`).                                                                                                                                                                                                                                                                                                                                                          |
+| failOnError  | When `true` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: `false`)                                                                                                                                                                                                                                                                                                            |
+| contentType  | Allow specifying the media content type of the published file a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types). If set to `true`, the content type is inferred from the file extension (EXPERIMENTAL. Currently only supported for S3. Default: `false`, requires version `22.10.0` or later).                                                                                                           |
+| storageClass | Allow specifying the storage class to be used for the published file (EXPERIMENTAL. Currently only supported for S3. Requires version `22.12.0-edge` or later).                                                                                                                                                                                                                                                                                         |
+| tags         | Allow the association of arbitrary tags with the published file e.g. `tags: [FOO: 'Hello world']` (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Requires version `21.12.0-edge` or later).                                                                                                                                                                                                                                         |
 
 Table of publish modes:
 
 | Mode         | Description                                                                                                                                                                                              |
 | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| symlink      | Creates an absolute symbolic link in the published directory for each process output file (default).                                                                                                   |
-| rellink      | Creates a relative symbolic link in the published directory for each process output file.                                                                                                              |
-| link         | Creates a hard link in the published directory for each process output file.                                                                                                                           |
+| symlink      | Creates an absolute symbolic link in the published directory for each process output file (default).                                                                                                     |
+| rellink      | Creates a relative symbolic link in the published directory for each process output file.                                                                                                                |
+| link         | Creates a hard link in the published directory for each process output file.                                                                                                                             |
 | copy         | Copies the output files into the published directory.                                                                                                                                                    |
 | copyNoFollow | Copies the output files into the published directory without following symlinks ie. copies the links themselves.                                                                                         |
 | move         | Moves the output files into the published directory. **Note**: this is only supposed to be used for a *terminating* process i.e. a process whose output is not consumed by any other downstream process. |
@@ -2201,6 +2272,25 @@ Summary of allowed values:
 | \$YOUR_VAR | Creates a scratch folder in the directory defined by the `$YOUR_VAR` environment variable; fallback to `mktemp /tmp` if that variable do not exists. |
 | /my/tmp    | Creates a scratch folder in the specified directory.                                                                                                 |
 | ram-disk   | Creates a scratch folder in the RAM disk `/dev/shm/` (experimental).                                                                                 |
+
+(process-directive-shell)=
+
+### shell
+
+The `shell` directive allows you to define a custom shell command for process scripts. By default, script blocks
+are executed with `/bin/bash -ue`.
+
+```groovy
+process doMoreThings {
+    shell '/bin/bash', '-euo', 'pipefail'
+    
+    """
+    blastp -db $db -query query.fa -outfmt 6 > blast_result
+    cat blast_result | head -n 10 | cut -f 2 > top_hits
+    blastdbcmd -db $db -entry_batch top_hits > sequences
+    """
+}
+```
 
 (process-storedir)=
 

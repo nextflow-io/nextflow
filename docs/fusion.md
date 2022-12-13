@@ -70,16 +70,16 @@ The following configuration should be added in your Nextflow configuration file:
 
 ```groovy
 docker {
-  enabled = true
-  envWhitelist = 'AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY'
+    enabled = true
 }
 
 fusion {
-  enabled = true
+    enabled = true
+    exportAwsAccessKeys = true
 }
 
 wave {
-  enabled = true
+    enabled = true
 }
 ```
 
@@ -105,20 +105,20 @@ The configuration for this deployment scenario looks like the following:
 
 ```groovy
 fusion {
-  enabled = true
+    enabled = true
 }
 
 wave {
-  enabled = true
+    enabled = true
 }
 
 process {
-  executor = 'awsbatch'
-  queue = '<YOUR BATCH QUEUE>'
+    executor = 'awsbatch'
+    queue = '<YOUR BATCH QUEUE>'
 }
 
 aws {
-  region = '<YOUR AWS REGION>'
+    region = '<YOUR AWS REGION>'
 }
 ```
 
@@ -139,21 +139,21 @@ The configuration for this deployment scenario looks like the following:
 
 ```groovy
 wave {
-  enabled = true
+    enabled = true
 }
 
 fusion {
-  enabled = true
+    enabled = true
 }
 
 process {
-  executor = 'k8s'
+    executor = 'k8s'
 }
 
 k8s {
-  context = '<YOUR K8S CONFIGURATION CONTEXT>'
-  namespace = '<YOUR K8S NAMESPACE>'
-  serviceAccount = '<YOUR K8S SERVICE ACCOUNT>'
+    context = '<YOUR K8S CONFIGURATION CONTEXT>'
+    namespace = '<YOUR K8S NAMESPACE>'
+    serviceAccount = '<YOUR K8S SERVICE ACCOUNT>'
 }
 ```
 

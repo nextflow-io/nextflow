@@ -27,6 +27,7 @@ fusion
 aws
 amazons3
 azure
+flux
 google
 ignite
 kubernetes

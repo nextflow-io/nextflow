@@ -28,7 +28,6 @@ import nextflow.util.IniFile
 import nextflow.util.MemoryUnit
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.exception.ExceptionUtils
-
 /**
  * Hold global variables
  *
@@ -124,7 +123,7 @@ class Global {
 
         for( Path it : files ) {
             final conf = new IniFile(it)
-            final profile = getAwsProfile0(env)
+            final profile = getAwsProfile0(env, config)
             final section = conf.section(profile)
             if( (a=section.aws_access_key_id) && (b=section.aws_secret_access_key) ) {
                 final token = section.aws_session_token
@@ -142,7 +141,11 @@ class Global {
         return null
     }
 
-    static protected String getAwsProfile0(Map env) {
+    static protected String getAwsProfile0(Map env, Map<String,Object> config) {
+
+        final profile = config?.navigate('aws.profile')
+        if( profile )
+            return profile
 
         if( env?.containsKey('AWS_PROFILE'))
             return env.get('AWS_PROFILE')
@@ -162,9 +165,16 @@ class Global {
     }
 
     static String getAwsRegion(Map env=null, Map config=null) {
-        if( env==null ) env = System.getenv()
+        if( env==null ) env = SysEnv.get()
         if( config==null ) config = this.config
 
+        def home = Paths.get(System.properties.get('user.home') as String)
+        def file = home.resolve('.aws/config')
+
+        return getAwsRegion0(env, config, file)
+    }
+
+    static protected String getAwsRegion0(Map env, Map config, Path awsFile) {
         // check nxf config file
         if( config && config.aws instanceof Map ) {
             def region = ((Map)config.aws).region
@@ -176,14 +186,13 @@ class Global {
             return env.AWS_DEFAULT_REGION.toString()
         }
 
-        def home = Paths.get(System.properties.get('user.home') as String)
-        def file = home.resolve('.aws/config')
-        if( !file.exists() ) {
+        if( !awsFile.exists() ) {
             return null
         }
 
-        def ini = new IniFile(file)
-        return ini.section('default').region
+        def profile = getAwsProfile0(env, config)
+        def ini = new IniFile(awsFile)
+        return ini.section(profile).region
     }
 
     static List<String> getAwsCredentials(Map env) {
@@ -191,7 +200,7 @@ class Global {
     }
 
     static List<String> getAwsCredentials() {
-        getAwsCredentials(System.getenv(), config)
+        getAwsCredentials(SysEnv.get(), config)
     }
 
     static Map<String,?> getAwsClientConfig() {
@@ -200,6 +209,14 @@ class Global {
         }
 
         return null
+    }
+
+    static String getAwsS3Endpoint() {
+        getAwsS3Endpoint0(SysEnv.get(), config ?: Collections.emptyMap())
+    }
+
+    static protected String getAwsS3Endpoint0(Map<String,String> env, Map<String,Object> config) {
+        config.navigate('aws.client.endpoint', env.get('AWS_S3_ENDPOINT'))
     }
 
     /**

@@ -132,7 +132,7 @@ class OarExecutor extends AbstractGridExecutor {
         // see page 21 http://oar.imag.fr/docs/2.5/OAR-Documentation.pdf
         String cmd = 'oarstat -f'
         if( queue ) cmd += ' ' + queue
-        return ['sh','-c', "$cmd | egrep '(Job_Id:|state =)' ".toString()]
+        return ['sh','-c', "$cmd | grep -E '(Job_Id:|state =)' ".toString()]
     }
 
     /*

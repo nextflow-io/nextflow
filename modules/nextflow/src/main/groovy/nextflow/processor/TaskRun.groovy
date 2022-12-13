@@ -63,7 +63,7 @@ class TaskRun implements Cloneable {
     /**
      * Task index within its execution group
      */
-    def index
+    Integer index
 
     /**
      * Task name
@@ -345,7 +345,11 @@ class TaskRun implements Cloneable {
     }
 
     String lazyName() {
-        return name ?: processor.getName()
+        if( name )
+            return name
+        // fallback on the current task index, however do not set the 'name' attribute
+        // so it has a chance to recover the 'sampleId' at next invocation
+        return processor.singleton ? processor.name : "$processor.name ($index)"
     }
 
     String getName() {
@@ -362,10 +366,11 @@ class TaskRun implements Cloneable {
             catch( IllegalStateException e ) {
                 log.debug "Cannot access `tag` property for task: $baseName ($index)"
             }
+            catch( Exception e ) {
+                log.debug "Unable to evaluate `tag` property for task: $baseName ($index)", e
+            }
 
-        // fallback on the current task index, however do not set the 'name' attribute
-        // so it has a chance to recover the 'sampleId' at next invocation
-        return processor.singleton ? baseName : "$baseName ($index)"
+        return lazyName()
     }
 
     String getScript() {

@@ -476,7 +476,7 @@ Print the resolved pipeline configuration.
 **Usage**
 
 ```
-$ nextflow config [options]
+$ nextflow config [options] [project name or path]
 ```
 
 **Description**
@@ -858,7 +858,7 @@ execution metadata.
 | -before                  |         | Show log entries for runs executed *before* the specified one.                               |
 | -but                     |         | Show log entries for runs executed *but* the specified one.                                  |
 | -fields, -f              |         | Comma separated list of fields to include in the printed log.                                |
-| -filter, -F              |         | Filter log entires by a custom expression e.g. `process =~ /foo.*/ && status == 'COMPLETED'` |
+| -filter, -F              |         | Filter log entries by a custom expression e.g. `process =~ /foo.*/ && status == 'COMPLETED'` |
 | -help, -h                | false   | Print the command usage.                                                                     |
 | -list-fields, -l         | false   | Show all available fields.                                                                   |
 | -quiet                   | false   | Show only run names.                                                                         |

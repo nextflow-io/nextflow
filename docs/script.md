@@ -231,7 +231,7 @@ The following variables are implicitly defined in the script global execution sc
 | `launchDir`  | The directory where the workflow is run (requires version `20.04.0` or later).                                                                             |
 | `moduleDir`  | The directory where a module script is located for DSL2 modules or the same as `projectDir` for a non-module script (requires version `20.04.0` or later). |
 | `nextflow`   | Dictionary like object representing nextflow runtime information (see {ref}`metadata-nextflow`).                                                           |
-| `params`     | Dictionary like object holding workflow parameters specifing in the config file or as command line options.                                                |
+| `params`     | Dictionary like object holding workflow parameters specifying in the config file or as command line options.                                                |
 | `projectDir` | The directory where the main script is located (requires version `20.04.0` or later).                                                                      |
 | `workDir`    | The directory where tasks temporary files are created.                                                                                                     |
 | `workflow`   | Dictionary like object representing workflow runtime information (see {ref}`metadata-workflow`).                                                           |
@@ -250,14 +250,16 @@ The following variables are implicitly defined in the Nextflow configuration fil
 
 The following variables are implicitly defined in the `task` object of each process:
 
-| Name      | Description                                                                                                           |
-| --------- | --------------------------------------------------------------------------------------------------------------------- |
-| `attempt` | The current task attempt                                                                                              |
-| `hash`    | The task unique hash Id                                                                                               |
-| `index`   | The task index (corresponds to `task_id` in the execution trace)                                                      |
-| `name`    | The current task name                                                                                                 |
-| `process` | The current process name                                                                                              |
-| `workDir` | The task unique directory. NOTE: This is only available for processes that run native code via the `exec:` statement. |
+| Name      | Description                                                      |
+| --------- | ---------------------------------------------------------------- |
+| `attempt` | The current task attempt                                         |
+| `hash`    | * The task unique hash ID                                        |
+| `index`   | The task index (corresponds to `task_id` in the execution trace) |
+| `name`    | * The current task name                                          |
+| `process` | The current process name                                         |
+| `workDir` | * The task unique directory                                      |
+
+Variables marked with (*) are only available in an `exec:` block.
 
 The `task` object also contains the values of all process directives for the given task,
 which allows you to access these settings at runtime. For examples:
@@ -919,7 +921,7 @@ The following methods can be used on a file variable created by using the `file`
 For example, the following line prints a file name and size:
 
 ```groovy
-println "File ${myFile.getName() size: ${myFile.size()}"
+println "File ${myFile.getName()} size: ${myFile.size()}"
 ```
 
 :::{tip}

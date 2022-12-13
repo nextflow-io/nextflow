@@ -200,44 +200,6 @@ the source channel into subsets:
 
 See also: [collate](#collate) operator.
 
-(operator-choice)=
-
-## choice
-
-:::{warning}
-This operator is deprecated. Use [branch](#branch) instead.
-:::
-
-The `choice` operator allows you to forward the items emitted by a source channel to two
-(or more) output channels, choosing one out of them at a time.
-
-The destination channel is selected by using a {ref}`closure <script-closure>` that must return the `index` number of the channel
-where the item has to be sent. The first channel is identified by the index `0`, the second as `1` and so on.
-
-The following example sends all string items beginning with `Hello` into `queue1`,
-the others into `queue2`
-
-```groovy
-source = Channel.from 'Hello world', 'Hola', 'Hello John'
-queue1 = Channel.create()
-queue2 = Channel.create()
-
-source.choice( queue1, queue2 ) { a -> a =~ /^Hello.*/ ? 0 : 1 }
-
-queue1.view()
-```
-
-See also [branch](#branch) operator.
-
-(operator-close)=
-
-## close
-
-The `close` operator sends a termination signal over the channel, causing downstream processes or operators to stop.
-In a common usage scenario channels are closed automatically by Nextflow, so you won't need to use this operator explicitly.
-
-See also: {ref}`channel-empty` factory method.
-
 ## collate
 
 The `collate` operator transforms a channel in such a way that the emitted values are grouped in tuples containing `n` items. For example:
@@ -476,10 +438,9 @@ numbers
 [3, ciao]
 ```
 
-A second version of the `combine` operator allows you to combine between them those items that share a common
-matching key. The index of the key element is specified by using the `by` parameter (the index is zero-based,
-multiple indexes can be specified with list a integers).
-For example:
+A second version of the `combine` operator allows you to combine items that share a common
+matching key. The index of the key element is specified by using the `by` parameter (zero-based index,
+multiple indices can be specified as a list of integers). For example:
 
 ```groovy
 left = Channel.of(['A', 1], ['B', 2], ['A', 3])
@@ -499,17 +460,17 @@ left
 [B, 2, y]
 ```
 
-See also [join](#join), [cross](#cross), [spread](#spread) and [phase](#phase).
+See also [join](#join) and [cross](#cross).
 
 (operator-concat)=
 
 ## concat
 
-The `concat` operator allows you to *concatenate* the items emitted by two or more channels to a new channel, in such
-a way that the items emitted by the resulting channel are in same order as they were when specified as operator arguments.
+The `concat` operator allows you to *concatenate* the items emitted by two or more channels to a new channel.
+The items emitted by the resulting channel are in the same order as specified in the operator arguments.
 
-In other words it guarantees that given any `n` channels, the concatenation channel emits the items proceeding from the channel `i+1 th`
-only after `all` the items proceeding from the channel `i th` were emitted.
+In other words, given *N* channels, the items from the *i+1 th* channel are emitted only after all
+of the items from the *i th* channel have been emitted.
 
 For example:
 
@@ -547,7 +508,7 @@ Channel
 // -> 4
 ```
 
-An optional parameter can be provided in order to select which items are to be counted.
+An optional parameter can be provided to select which items are to be counted.
 The selection criteria can be specified either as a {ref}`regular expression <script-regexp>`,
 a literal value, a Java class, or a boolean predicate that needs to be satisfied. For example:
 
@@ -569,39 +530,6 @@ Channel
     .count { it <= 'c' }
     .view()
 // -> 4
-```
-
-(operator-countby)=
-
-## countBy
-
-The `countBy` operator creates a channel which emits an associative array (i.e. `Map` object)
-that counts the occurrences of the emitted items in the source channel having the same key.
-For example:
-
-```groovy
-Channel
-    .of( 'x', 'y', 'x', 'x', 'z', 'y' )
-    .countBy()
-    .view()
-```
-
-```
-[x:3, y:2, z:1]
-```
-
-An optional grouping criteria can be specified by using a {ref}`closure <script-closure>`
-that associates each item with the grouping key. For example:
-
-```groovy
-Channel
-    .of( 'hola', 'hello', 'ciao', 'bonjour', 'halo' )
-    .countBy { it[0] }
-    .view()
-```
-
-```
-[h:3, c:1, b:1]
 ```
 
 (operator-cross)=
@@ -640,8 +568,7 @@ There are two important caveats when using the `cross` operator:
 2. The source channel should emits items for which there's no key repetition i.e. the emitted
    items have an unique key identifier.
 
-Optionally, a mapping function can be specified in order to provide a custom rule to associate an item to a key,
-in a similar manner as shown for the [phase](#phase) operator.
+Optionally, a mapping function can be specified in order to provide a custom rule to associate an item to a key.
 
 ## distinct
 
@@ -987,6 +914,44 @@ built-in function `groupKey` that allows you to create a special grouping key ob
 to associate the group size for a given key.
 :::
 
+:::{tip}
+You should always specify the number of expected elements in each tuple with the `size` attribute,
+so that the `groupTuple` operator can stream each collected value as soon as possible. In cases where
+the size of each tuple may vary depending on the grouping key, you can use the built-in `groupKey` function,
+which allows you to create a special grouping key object with an associated size.
+
+Here are some examples:
+
+```groovy
+Channel
+    .from([ 'A', ['foo', 'bar']], ['B', ['lorem', 'ipsum', 'dolor', 'sit']])
+    .map { key, words -> tuple( groupKey(key, words.size()), words ) }
+    .view()
+```
+
+```groovy
+chr_frequency = [ "chr1": 2, "chr2": 3 ]
+
+data_ch = Channel.of(
+    [ 'region1', 'chr1', '/path/to/region1_chr1.vcf' ],
+    [ 'region2', 'chr1', '/path/to/region2_chr1.vcf' ],
+    [ 'region1', 'chr2', '/path/to/region1_chr2.vcf' ],
+    [ 'region2', 'chr2', '/path/to/region2_chr2.vcf' ],
+    [ 'region3', 'chr2', '/path/to/region3_chr2.vcf' ] )
+
+data_ch
+    .map {  region, chr, vcf -> tuple( groupKey(chr, chr_frequency[chr]), vcf )  }
+    .groupTuple()
+    .view()
+```
+
+The last example will output:
+```
+[chr1, [/path/to/region1_chr1.vcf, /path/to/region2_chr1.vcf]]
+[chr2, [/path/to/region1_chr2.vcf, /path/to/region2_chr2.vcf, /path/to/region3_chr2.vcf]]
+```
+:::
+
 (operator-ifempty)=
 
 ## ifEmpty
@@ -1020,58 +985,6 @@ The `ifEmpty` value parameter can be defined with a {ref}`closure <script-closur
 will be emitted when the empty condition is satisfied.
 
 See also: {ref}`channel-empty` method.
-
-(operator-into)=
-
-## into
-
-:::{warning}
-The `into` operator is no longer available in DSL2 syntax.
-:::
-
-The `into` operator connects a source channel to two or more target channels in such a way the values emitted by
-the source channel are copied to the target channels. For example:
-
-```groovy
-Channel
-    .of( 'a', 'b', 'c' )
-    .into{ foo; bar }
-
-foo.view{ "Foo emit: " + it }
-bar.view{ "Bar emit: " + it }
-```
-
-```
-Foo emit: a
-Foo emit: b
-Foo emit: c
-Bar emit: a
-Bar emit: b
-Bar emit: c
-```
-
-:::{note}
-Note the use in this example of curly brackets and the `;` as channel names separator. This is needed
-because the actual parameter of `into` is a {ref}`closure <script-closure>` which defines the target channels
-to which the source channel is connected.
-:::
-
-A second version of the `into` operator takes an integer `n` as an argument and returns
-a list of `n` channels, each of which emits a copy of the items that were emitted by the
-source channel. For example:
-
-```groovy
-(foo, bar) = Channel.from( 'a','b','c').into(2)
-foo.view{ "Foo emit: " + it }
-bar.view{ "Bar emit: " + it }
-```
-
-:::{note}
-The above example takes advantage of the {ref}`multiple assignment <script-multiple-assignment>` syntax
-in order to assign two variables at once using the list of channels returned by the `into` operator.
-:::
-
-See also [tap](#tap) and [separate](#separate) operators.
 
 (operator-join)=
 
@@ -1408,133 +1321,7 @@ you should not expect to be able to merge channels correctly without a matching 
 due to the parallel and asynchronous nature of Nextflow pipelines.
 :::
 
-(operator-phase)=
-
-## phase
-
-:::{warning}
-This operator is deprecated. Use the [join](#join) operator instead.
-:::
-
-The `phase` operator creates a channel that synchronizes the values emitted by two other channels,
-in such a way that it emits pairs of items that have a matching key.
-
-The key is defined, by default, as the first entry in an array, a list or map object,
-or the value itself for any other data type.
-
-For example:
-
-```groovy
-ch1 = Channel.from( 1,2,3 )
-ch2 = Channel.from( 1,0,0,2,7,8,9,3 )
-ch1 .phase(ch2) .view()
-```
-
-```
-[1,1]
-[2,2]
-[3,3]
-```
-
-Optionally, a mapping function can be specified in order to provide a custom rule to associate an item to a key,
-as shown in the following example:
-
-```groovy
-ch1 = Channel.from( [sequence: 'aaaaaa', id: 1], [sequence: 'bbbbbb', id: 2] )
-ch2 = Channel.from( [val: 'zzzz', id: 3], [val: 'xxxxx', id: 1], [val: 'yyyyy', id: 2])
-ch1 .phase(ch2) { it -> it.id } .view()
-```
-
-```
-[[sequence:aaaaaa, id:1], [val:xxxxx, id:1]]
-[[sequence:bbbbbb, id:2], [val:yyyyy, id:2]]
-```
-
-Finally, the `phase` operator can emit all the pairs that are incomplete, i.e. the items for which a matching element
-is missing, by specifying the optional parameter `remainder` as shown below:
-
-```groovy
-ch1 = Channel.from( 1,0,0,2,5,3 )
-ch2 = Channel.from( 1,2,3,4 )
-ch1 .phase(ch2, remainder: true) .view()
-```
-
-```
-[1, 1]
-[2, 2]
-[3, 3]
-[0, null]
-[0, null]
-[5, null]
-[null, 4]
-```
-
-See also [join](#join) operator.
-
-(operator-print)=
-
-## print
-
-:::{warning}
-The `print` operator is no longer available in DSL2 syntax. Use [view](#view) instead.
-:::
-
-The `print` operator prints the items emitted by a channel to the standard output.
-An optional {ref}`closure <script-closure>` parameter can be specified to customise how items are printed.
-For example:
-
-```groovy
-Channel
-    .from('foo', 'bar', 'baz', 'qux')
-    .print { it.toUpperCase() + ' ' }
-```
-
-```
-FOO BAR BAZ QUX
-```
-
-See also: [println](#println) and [view](#view).
-
-(operator-println)=
-
-## println
-
-:::{warning}
-The `println` operator is no longer available in DSL2 syntax. Use [view](#view) instead.
-:::
-
-The `println` operator prints the items emitted by a channel to the console standard output appending
-a *new line* character to each of them. For example:
-
-```groovy
-Channel
-    .from('foo', 'bar', 'baz', 'qux')
-    .println()
-```
-
-```
-foo
-bar
-baz
-qux
-```
-
-An optional closure parameter can be specified to customise how items are printed. For example:
-
-```groovy
-Channel
-    .of('foo', 'bar', 'baz', 'qux')
-    .view { "~ $it" }
-```
-
-```
-~ foo
-~ bar
-~ baz
-~ qux
-```
-
-See also: [print](#print) and [view](#view).
+(operator-randomsample)=
 
 ## randomSample
 
@@ -1568,10 +1355,9 @@ sequence will be returned.
 ## reduce
 
 The `reduce` operator applies a function of your choosing to every item emitted by a channel.
-Each time this function is invoked it takes two parameters: firstly the `i-th` emitted item
-and secondly the result of the previous invocation of the function itself. The result is
-passed on to the next function call, along with the `i+1 th` item, until all the items are
-processed.
+Each time this function is invoked it takes two parameters: the accumulated value and the *i-th*
+emitted item. The result is passed as the accumulated value to the next function call, along with
+the *i+1 th* item, until all the items are processed.
 
 Finally, the `reduce` operator emits the result of the last invocation of your function
 as the sole output.
@@ -1598,112 +1384,10 @@ A common use case for this operator is to use the first paramter as an accumulat
 the second parameter as the `i-th` item to be processed.
 :::
 
-Optionally you can specify a `seed` value in order to initialise the accumulator parameter
-as shown below:
-
+Optionally you can specify an initial value for the accumulator as shown below:
 ```groovy
-myChannel.reduce( seedValue ) {  a, b -> ... }
+myChannel.reduce( initialValue ) {  a, b -> ... }
 ```
-
-(operator-separate)=
-
-## separate
-
-:::{warning}
-This operator is deprecated. Use [multiMap](#multimap) instead.
-:::
-
-The `separate` operator lets you copy the items emitted by the source channel into multiple
-channels, which each of these can receive a separate version of the same item.
-
-The operator applies a mapping function of your choosing to every item emitted by the source channel.
-This function must return a list of as many values as there are output channels. Each entry in the result
-list will be assigned to the output channel with the corresponding position index. For example:
-
-```groovy
-queue1 = Channel.create()
-queue2 = Channel.create()
-
-Channel
-    .from ( 2,4,8 )
-    .separate( queue1, queue2 ) { a -> [a+1, a*a] }
-
-queue1.view { "Channel 1: $it" }
-queue2.view { "Channel 2: $it" }
-```
-
-```
-Channel 1: 3
-Channel 2: 4
-Channel 1: 5
-Channel 2: 16
-Channel 2: 64
-Channel 1: 9
-```
-
-When the mapping function is omitted, the source channel must emit tuples of values. In this case the operator `separate`
-splits the tuple in such a way that the value `i-th` in a tuple is assigned to the target channel with the corresponding position index.
-For example:
-
-```groovy
-alpha = Channel.create()
-delta = Channel.create()
-
-Channel
-    .from([1,2], ['a','b'], ['p','q'])
-    .separate( alpha, delta )
-
-alpha.view { "first : $it" }
-delta.view { "second: $it" }
-```
-
-```
-first : 1
-first : a
-first : p
-second: 2
-second: b
-second: q
-```
-
-A second version of the `separate` operator takes an integer `n` as an argument and returns a list of `n` channels,
-each of which gets a value from the corresponding element in the list returned by the closure as explained above.
-For example:
-
-```groovy
-source = Channel.from(1,2,3)
-(queue1, queue2, queue3) = source.separate(3) { a -> [a, a+1, a*a] }
-
-queue1.view { "Queue 1 > $it" }
-queue2.view { "Queue 2 > $it" }
-queue3.view { "Queue 3 > $it" }
-```
-
-The output will look like the following fragment:
-
-```
-Queue 1 > 1
-Queue 1 > 2
-Queue 1 > 3
-Queue 2 > 2
-Queue 2 > 3
-Queue 2 > 4
-Queue 3 > 1
-Queue 3 > 4
-Queue 3 > 9
-```
-
-:::{note}
-In the above example, since the `subscribe` operator is asynchronous,
-the output of `channel1`, `channel2`, and `channel3` may be printed in any order.
-:::
-
-:::{note}
-The above example takes advantage of the {ref}`multiple assignment <script-multiple-assignment>` syntax
-in order to assign two variables at once using the list of channels returned by the `separate` operator.
-:::
-
-See also: [multiMap](#multimap), [into](#into), [choice](#choice) and [map](#map) operators.
 
 (operator-set)=
 
@@ -1894,7 +1578,7 @@ Channel
 ```
 
 Finally the `splitFastq` operator is able to split paired-end read pair FASTQ files. It must be applied to a channel
-which emits tuples containing at least two elements that are the files to be splitted. For example:
+which emits tuples containing at least two elements that are the files to be split. For example:
 
 ```groovy
 Channel
@@ -1918,7 +1602,7 @@ Available parameters:
 | Field      | Description                                                                                                                                                                                                                                                                            |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | by         | Defines the number of *reads* in each `chunk` (default: `1`)                                                                                                                                                                                                                           |
-| pe         | When `true` splits paired-end read files, therefore items emitted by the source channel must be tuples in which at least two elements are the read-pair files to be splitted.                                                                                                          |
+| pe         | When `true` splits paired-end read files, therefore items emitted by the source channel must be tuples in which at least two elements are the read-pair files to be split.                                                                                                             |
 | limit      | Limits the number of retrieved *reads* for each file to the specified value.                                                                                                                                                                                                           |
 | record     | Parse each entry in the FASTQ file as record objects (see following table for accepted values)                                                                                                                                                                                         |
 | charset    | Parse the content by using the specified charset e.g. `UTF-8`                                                                                                                                                                                                                          |
@@ -2000,34 +1684,6 @@ Available parameters:
 You can also use `countLines` to count the number of lines in the text file(s).
 :::
 
-(operator-spread)=
-
-## spread
-
-:::{warning}
-This operator is deprecated. Use [combine](#combine) instead.
-:::
-
-The `spread` operator combines the items emitted by the source channel with all the values in an array
-or a `Collection` object specified as the operator argument. For example:
-
-```groovy
-Channel
-    .from(1,2,3)
-    .spread(['a','b'])
-    .subscribe onNext: { println it }, onComplete: { println 'Done' }
-```
-
-```
-[1, 'a']
-[1, 'b']
-[2, 'a']
-[2, 'b']
-[3, 'a']
-[3, 'b']
-Done
-```
-
 (operator-sum)=
 
 ## sum
@@ -2086,7 +1742,11 @@ See also [until](#until).
 
 ## tap
 
-The `tap` operator combines the functions of [into](#into) and [separate](#separate) operators in such a way that
+:::{warning}
+The `tap` operator can no longer be used because it relies on `Channel.create()`, which was deprecated in DSL2.
+:::
+
+The `tap` operator combines the functions of the `into` and `separate` operators in such a way that
 it connects two channels, copying the values from the source into the tapped channel. At the same
 time it splits the source channel into a newly created channel that is returned by the operator itself.
 
@@ -2140,8 +1800,6 @@ Channel
 log1.view { "Log 1: $it" }
 log2.view { "Log 2: $it" }
 ```
-
-See also [into](#into) and [separate](#separate) operators.
 
 ## toInteger
 
@@ -2340,8 +1998,4 @@ Square of: 2 is 4
 Square of: 3 is 9
 ```
 
-:::{note}
-Both the `view` and [print](#print) (or [println](#println)) operators consume the items emitted by the source channel to which they
-are applied. The main difference between them is that `view` returns a newly created channel that is
-identical to the source channel, while `print` does not. This allows the `view` operator to be chained like other operators.
-:::
+The `view` operator also emits every item that it receives, allowing it to be chained with other operators.

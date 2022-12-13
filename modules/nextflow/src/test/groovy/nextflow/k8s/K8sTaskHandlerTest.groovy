@@ -120,7 +120,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-foo',
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:1], limits:[cpu:1] ],
+                                     resources:[ requests: [cpu:1] ],
                                      env: [  [name:'NXF_OWNER', value:'501:502'] ]
                                     ]
                             ]
@@ -154,7 +154,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-abc',
                                      image:'user/alpine:1.0',
                                      command:['/bin/bash', '-ue', '/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits:[cpu:4, memory:'16384Mi'] ]
+                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits:[memory:'16384Mi'] ]
                                     ]
                             ]
                     ]
@@ -234,7 +234,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-foo',
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:1], limits:[cpu:1] ],
+                                     resources:[ requests: [cpu:1] ],
                                      env: [  [name:'NXF_OWNER', value:'501:502'] ]
                                     ]
                             ]
@@ -267,7 +267,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-abc',
                                      image:'user/alpine:1.0',
                                      command:['/bin/bash', '-ue', '/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits:[cpu:4, memory:'16384Mi'] ]
+                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits: [memory:'16384Mi'] ]
                                     ]
                             ]
                     ]
@@ -314,7 +314,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-123',
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','/some/work/dir/.command.run'],
-                                     resources:[requests:[cpu:1], limits:[cpu:1]]
+                                     resources:[requests:[cpu:1]]
                                     ]
                             ]
                     ]
@@ -806,11 +806,45 @@ class K8sTaskHandlerTest extends Specification {
 
         labels.app == 'nextflow'
         labels.foo == 'bar'
-        labels.x == 'hello_world'    
-        labels.processName == 'hello-proc'
-        labels.taskName ==  'hello-world-1'
-        labels.sessionId instanceof String 
-        labels.sessionId == "uuid-${uuid.toString()}".toString()
+        labels.x == 'hello_world'
+        and:
+        labels.'nextflow.io/app' == 'nextflow'
+        labels.'nextflow.io/processName' == 'hello-proc'
+        labels.'nextflow.io/taskName' ==  'hello-world-1'
+        labels.'nextflow.io/sessionId' instanceof String
+        labels.'nextflow.io/sessionId' == "uuid-${uuid.toString()}".toString()
+        and:
+        !labels.containsKey('nextflow.io/queue')
+    }
+
+    def 'should return process queue as a label'() {
+        given:
+        def uuid = UUID.randomUUID()
+        def task = Mock(TaskRun)
+        def exec = Mock(K8sExecutor)
+        def proc = Mock(TaskProcessor)
+        def sess = Mock(Session)
+        def handler = Spy(new K8sTaskHandler(executor: exec))
+
+        when:
+        def labels = handler.getLabels(task)
+        then:
+        handler.getRunName() >> 'pedantic-joe'
+        task.getName() >> 'hello-world-1'
+        task.getProcessor() >> proc
+        task.getConfig() >> new TaskConfig(queue: 'him-mem-queue')
+        proc.getName() >> 'hello-proc'
+        exec.getSession() >> sess
+        sess.getUniqueId() >> uuid
+        exec.getK8sConfig() >> [:]
+        and:
+        labels.'nextflow.io/queue' == 'him-mem-queue'
+        and:
+        labels.'nextflow.io/app' == 'nextflow'
+        labels.'nextflow.io/processName' == 'hello-proc'
+        labels.'nextflow.io/taskName' ==  'hello-world-1'
+        labels.'nextflow.io/sessionId' instanceof String
+        labels.'nextflow.io/sessionId' == "uuid-${uuid.toString()}".toString()
     }
 
     def 'should delete pod if complete' () {

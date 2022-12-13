@@ -543,7 +543,7 @@ Pipeline B
 ```
 
 With the possibility to keep the template files inside the project L, A and B can use the modules defined in L without any changes.
-A future prject C would do the same, just cloning L (if not available on the system) and including its module script.
+A future project C would do the same, just cloning L (if not available on the system) and including its module script.
 
 Beside promoting sharing modules across pipelines, there are several advantages in keeping the module template under the script path:
 
@@ -628,7 +628,7 @@ cheers
 ```
 
 The same is valid for the result (channel) of a process execution. Therefore a process output can be consumed by
-two or more processes without the need to fork it using the {ref}`operator-into` operator, making the
+two or more processes without the need to fork it using the `into` operator, making the
 writing of workflow scripts more fluent and readable.
 
 ## Pipes
@@ -806,28 +806,26 @@ workflow {
   }
   ```
 
-- Operator {ref}`channel-bind1` has been deprecated by DSL2 syntax
+- The `bind` channel method (and corresponding `<<` operator) has been deprecated in DSL2.
 
-- Operator {ref}`channel-bind2` has been deprecated by DSL2 syntax.
+- The `choice` operator has been deprecated in DSL2. Use {ref}`operator-branch` instead.
 
-- Operator {ref}`operator-choice` has been deprecated by DSL2 syntax. Use {ref}`operator-branch` instead.
+- The `close` operator has been deprecated in DSL2.
 
-- Operator {ref}`operator-close` has been deprecated by DSL2 syntax.
+- The `countBy` operator has been deprecated in DSL2.
 
-- Operator {ref}`channel-create` has been deprecated by DSL2 syntax.
+- The `create` channel factory has been deprecated in DSL2.
 
-- Operator `countBy` has been deprecated by DSL2 syntax.
+- The `fork` operator has been renamed to {ref}`operator-multimap`.
 
-- Operator {ref}`operator-into` has been deprecated by DSL2 syntax since it's not needed anymore.
+- The `groupBy` operator has been deprecated in DSL2. Replace it with {ref}`operator-grouptuple`
 
-- Operator `fork` has been renamed to {ref}`operator-multimap`.
+- The `into` operator has been deprecated in DSL2 since it's not needed anymore.
 
-- Operator `groupBy` has been deprecated by DSL2 syntax. Replace it with {ref}`operator-grouptuple`
+- The `print` and `println` operators have been deprecated in DSL2. Use {ref}`operator-view` instead.
 
-- Operator `print` and `println` have been deprecated by DSL2 syntax. Use {ref}`operator-view` instead.
+- The `route` operator has been deprecated in DSL2.
 
-- Operator {ref}`operator-separate` has been deprecated by DSL2 syntax.
+- The `separate` operator has been deprecated in DSL2.
 
-- Operator {ref}`operator-spread` has been deprecated with DSL2 syntax. Replace it with {ref}`operator-combine`.
-
-- Operator `route` has been deprecated by DSL2 syntax.
+- The `spread` operator has been deprecated in DSL2. Replace it with {ref}`operator-combine`.

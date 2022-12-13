@@ -223,11 +223,14 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         // add computing resources
         final cpus = taskCfg.getCpus()
         final mem = taskCfg.getMemory()
+        final disk = taskCfg.getDisk()
         final acc = taskCfg.getAccelerator()
         if( cpus )
             builder.withCpus(cpus)
         if( mem )
             builder.withMemory(mem)
+        if( disk )
+            builder.withDisk(disk)
         if( acc )
             builder.withAccelerator(acc)
 
@@ -272,11 +275,13 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         final resLabels = task.config.getResourceLabels()
         if( resLabels )
             resLabels.putAll(resLabels)
-        result.app = 'nextflow'
-        result.runName = getRunName()
-        result.taskName = task.getName()
-        result.processName = task.getProcessor().getName()
-        result.sessionId = "uuid-${executor.getSession().uniqueId}" as String
+        result.'nextflow.io/app' = 'nextflow'
+        result.'nextflow.io/runName' = getRunName()
+        result.'nextflow.io/taskName' = task.getName()
+        result.'nextflow.io/processName' = task.getProcessor().getName()
+        result.'nextflow.io/sessionId' = "uuid-${executor.getSession().uniqueId}" as String
+        if( task.config.queue )
+            result.'nextflow.io/queue' = task.config.queue
         return result
     }
 

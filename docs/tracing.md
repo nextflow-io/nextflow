@@ -144,7 +144,7 @@ and many other metrics. You can see an example below:
 
 :::{note}
 Nextflow collects these metrics through a background process for each job in the target environment.
-Make sure the following tools are available in the environment where tasks are executed: `awk`, `date`, `grep`, `egrep`, `ps`, `sed`, `tail`, `tee`.
+Make sure the following tools are available in the environment where tasks are executed: `awk`, `date`, `grep`, `ps`, `sed`, `tail`, `tee`.
 Moreover, some of these metrics are not reported when running on Mac OS X. See the note
 about that in the [Trace report](#trace-report) below.
 :::
@@ -206,7 +206,7 @@ The following table shows the fields that can be included in the execution repor
 | process      | Nextflow process name.                                                                                                                                                                                    |
 | tag          | User provided identifier associated this task.                                                                                                                                                            |
 | name         | Task name.                                                                                                                                                                                                |
-| status       | Task status.                                                                                                                                                                                              |
+| status       | Task status. Possible values are: `NEW`, `SUBMITTED`, `RUNNING`, `COMPLETED`, `FAILED`, and `ABORTED`.                                                                                                    |
 | exit         | POSIX process exit status.                                                                                                                                                                                |
 | module       | Environment module used to run the task.                                                                                                                                                                  |
 | container    | Docker image name used to execute the task.                                                                                                                                                               |

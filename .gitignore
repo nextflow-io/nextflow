@@ -6,6 +6,8 @@
 .cache/*
 .nextflow*
 .node-nextflow*
+.devcontainer
+.vscode/*
 **/build/**
 build/**
 modules/**/build/
@@ -31,7 +33,6 @@ docker-test
 docker/dist
 docker/nextflow
 temp
-gradle.properties
 .dockerignore
 .launch.classpath
 plugins-prod

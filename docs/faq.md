@@ -90,65 +90,8 @@ process clustalw2_align {
 In our example above would now have the folder `broccoli` in the results directory which would
 contain the file `broccoli.aln`.
 
-If the input file has multiple extensions (e.g. `brocolli.tar.gz`), you will want to use
+If the input file has multiple extensions (e.g. `broccoli.tar.gz`), you will want to use
 `file.simpleName` instead, to strip all of them.
-
-## How do I use the same channel multiple times?
-
-*Q: Can a channel be used in two input statements? For example, I want carrots.fa to be aligned by both ClustalW and T-Coffee.*
-
-A: A channel can be consumed only by one process or operator (except if channel only ever contains one item). You must
-duplicate a channel before calling it as an input in different processes.
-First we create the channel emitting the input files:
-
-```groovy
-vegetable_datasets = Channel.fromPath(params.input)
-```
-
-Next we can split it into two channels by using the {ref}`operator-into` operator:
-
-```groovy
-vegetable_datasets.into { datasets_clustalw; datasets_tcoffee }
-```
-
-Then we can define a process for aligning the datasets with *ClustalW*:
-
-```groovy
-process clustalw2_align {
-    input:
-    file vegetable_fasta from datasets_clustalw
-
-    output:
-    file "${vegetable_fasta.baseName}.aln" into clustalw_alns
-
-    script:
-    """
-    clustalw2 -INFILE=${vegetable_fasta}
-    """
-}
-```
-
-And a process for aligning the datasets with *T-Coffee*:
-
-```groovy
-process tcoffee_align {
-    input:
-    file vegetable_fasta from datasets_tcoffee
-
-    output:
-    file "${vegetable_fasta.baseName}.aln" into tcoffee_alns
-
-    script:
-    """
-    t_coffee ${vegetable_fasta}
-    """
-}
-```
-
-The upside of splitting the channels is that given our three unaligned
-fasta files (`broccoli.fa`, `onion.fa` and `carrots.fa`) six
-alignment processes (three x ClustalW) + (three x T-Coffee) will be
-executed as parallel processes.
 
 ## How do I invoke custom scripts and tools?
 

@@ -15,11 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
 process foo {
   output: 
-  file 'missing.txt' optional true into result
+  path 'missing.txt', optional: true
 
   '''
   echo miao
@@ -28,9 +27,13 @@ process foo {
 
 process bar {
   input: 
-  file x from result
+  file x
 
   '''
   echo bau
   '''
+}
+
+workflow {
+  foo | bar
 }

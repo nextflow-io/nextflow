@@ -57,6 +57,8 @@ class WaveClient {
 
     private static Logger log = LoggerFactory.getLogger(WaveClient)
 
+    private static final List<String> DEFAULT_CONDA_CHANNELS = ['conda-forge','defaults']
+
     final private HttpClient httpClient
 
     final private WaveConfig config
@@ -79,12 +81,15 @@ class WaveClient {
 
     private CookieManager cookieManager
 
+    private List<String> condaChannels
+
     WaveClient(Session session) {
         this.session = session
         this.config = new WaveConfig(session.config.wave as Map ?: Collections.emptyMap(), SysEnv.get())
         this.fusion = new FusionConfig(session.config.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
         this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
         this.endpoint = config.endpoint()
+        this.condaChannels = session.getCondaConfig()?.getChannels() ?: DEFAULT_CONDA_CHANNELS
         log.debug "Wave server endpoint: ${endpoint}"
         this.packer = new Packer()
         // create cache
@@ -131,6 +136,7 @@ class WaveClient {
 
         return new SubmitContainerTokenRequest(
                 containerImage: assets.containerImage,
+                containerPlatform: assets.containerPlatform,
                 containerConfig: containerConfig,
                 containerFile: assets.dockerFileEncoded(),
                 condaFile: assets.condaFileEncoded(),
@@ -218,10 +224,18 @@ class WaveClient {
         return new Gson().fromJson(json, type)
     }
 
+    protected URL defaultFusionUrl() {
+        final isArm = config.containerPlatform()?.tokenize('/')?.contains('arm64')
+        return isArm
+                ? new URL(FusionConfig.DEFAULT_FUSION_ARM64_URL)
+                : new URL(FusionConfig.DEFAULT_FUSION_AMD64_URL)
+    }
+
     ContainerConfig resolveContainerConfig() {
         final urls = new ArrayList<URL>(config.containerConfigUrl())
-        if( fusion.enabled() && fusion.containerConfigUrl() ) {
-            urls.add( fusion.containerConfigUrl() )
+        if( fusion.enabled() ) {
+            final fusionUrl = fusion.containerConfigUrl() ?: defaultFusionUrl()
+            urls.add(fusionUrl)
         }
         if( !urls )
             return null
@@ -243,14 +257,12 @@ class WaveClient {
                 .build()
 
         final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
-        if( resp.statusCode()==200 ) {
-            log.debug "Wave container config response: ${resp.body()}"
+        final code = resp.statusCode()
+        if( code>=200 && code<400 ) {
+            log.debug "Wave container config response: [$code] ${resp.body()}"
             return jsonToContainerConfig(resp.body())
         }
-        else {
-            log.warn "Wave container config error response: [${resp.statusCode()}] ${resp.body()}"
-            return null
-        }
+        throw new BadResponseException("Unexpected response for containerContainerConfigUrl \'$configUrl\': [${resp.statusCode()}] ${resp.body()}")
     }
 
     protected void checkConflicts(Map<String,String> attrs, String name) {
@@ -337,10 +349,16 @@ class WaveClient {
                     ? projectResources(session.binDir)
                     : null
 
+        /*
+         * the container platform to be used
+         */
+        final platform = config.containerPlatform()
+
         // read the container config and go ahead
         final containerConfig = this.resolveContainerConfig()
         return new WaveAssets(
                     containerImage,
+                    platform,
                     bundle,
                     containerConfig,
                     dockerScript,
@@ -393,10 +411,11 @@ class WaveClient {
     }
 
     protected String condaRecipeToDockerFile(String recipe) {
+        def channelsOpts = condaChannels.collect(it -> "-c $it").join(' ')
         def result = """\
         FROM ${config.condaOpts().mambaImage}
         RUN \\
-           micromamba install -y -n base -c defaults -c conda-forge \\
+           micromamba install -y -n base $channelsOpts \\
            $recipe \\
            && micromamba clean -a -y
         """.stripIndent()

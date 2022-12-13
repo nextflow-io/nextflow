@@ -107,10 +107,12 @@ class Packer {
     ContainerLayer layer(Map<String,Path> entries) {
         final tar = makeTar(entries, new ByteArrayOutputStream()).toByteArray()
         final tarDigest = DigestFunctions.digest(tar)
-        final gzip = makeGzip(new ByteArrayInputStream(tar), new ByteArrayOutputStream()).toByteArray()
-        final gzipSize = gzip.length
-        final gzipDigest = DigestFunctions.digest(gzip)
-        final data = 'data:' + gzip.encodeBase64()
+        final gzipStream = new ByteArrayOutputStream()
+        makeGzip(new ByteArrayInputStream(tar), gzipStream); gzipStream.close()
+        final gzipBytes = gzipStream.toByteArray()
+        final gzipSize = gzipBytes.length
+        final gzipDigest = DigestFunctions.digest(gzipBytes)
+        final data = 'data:' + gzipBytes.encodeBase64()
 
         return new ContainerLayer(
                 location: data,

@@ -150,7 +150,7 @@ class ContainerHandler {
      * @return Image name in Docker canonical format
      */
      @PackageScope
-     String normalizeDockerImageName( String imageName) {
+     String normalizeDockerImageName(String imageName) {
 
         if( !imageName )
             return null
@@ -168,7 +168,7 @@ class ContainerHandler {
         return reg + imageName
     }
 
-     static boolean isAbsoluteDockerName(String image) {
+    static boolean isAbsoluteDockerName(String image) {
         def p = image.indexOf('/')
         if( p==-1 )
             return false
@@ -233,7 +233,7 @@ class ContainerHandler {
 
         // in all other case it's supposed to be the name of an image in the docker hub
         // prefix it with the `docker://` pseudo protocol used by singularity to download it
-        return "docker://${img}"
+        return "docker://${normalizeDockerImageName(img)}"
     }
 
     /**
@@ -270,6 +270,6 @@ class ContainerHandler {
 
         // in all other case it's supposed to be the name of an image in the docker hub
         // prefix it with the `docker://` pseudo protocol used by apptainer to download it
-        return "docker://${img}"
+        return "docker://${normalizeDockerImageName(img)}"
     }
 }

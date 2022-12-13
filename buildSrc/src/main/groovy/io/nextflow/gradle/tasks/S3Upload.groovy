@@ -49,25 +49,25 @@ class S3Upload extends AbstractS3Task {
         final targetUrl = target.get()
         final urlTokens = BucketTokenizer.from(targetUrl)
         if( urlTokens.scheme != 's3' )
-            throw new GradleException("S3 upload failed -- Invalid target s3 path: $targetUrl")
+            throw new GradleException("S3 upload failed -- invalid target s3 path: $targetUrl")
         final bucket = urlTokens.bucket
         final targetKey = urlTokens.key
 
         if( !sourceFile.exists() )
-            throw new GradleException("S3 upload failed -- Source file does not exists: $sourceFile")
+            throw new GradleException("S3 upload failed -- source file does not exist: $sourceFile")
 
         if (s3Client.doesObjectExist(bucket, targetKey)) {
             if( skipExisting ) {
-                logger.quiet("s3://${bucket}/${targetKey} exists. Skipping it!")
+                logger.quiet("s3://${bucket}/${targetKey} already exists -- skipping")
             }
             else if (overwrite) {
                 copy(sourceFile, bucket, targetKey, true)
             }
             else if( isSameContent(sourceFile, bucket, targetKey) ) {
-                logger.quiet("s3://${bucket}/${targetKey} exists!")
+                logger.quiet("s3://${bucket}/${targetKey} already exists")
             }
             else {
-                throw new GradleException("s3://${bucket}/${targetKey} exists! -- Refuse to owerwrite it.")
+                throw new GradleException("s3://${bucket}/${targetKey} already exists -- overwrite refused")
             }
         }
         else {
@@ -88,14 +88,14 @@ class S3Upload extends AbstractS3Task {
 
     void copy(File sourceFile, String bucket, String targetKey, boolean exists) {
         if( dryRun ) {
-            logger.quiet("S3 Would upload ${sourceFile} → s3://${bucket}/${targetKey} ${exists ? '[would overwrite existing]' : ''}")
+            logger.quiet("S3 will upload ${sourceFile} → s3://${bucket}/${targetKey} ${exists ? '[would overwrite existing]' : ''}")
         }
         else {
             final req = new PutObjectRequest(bucket, targetKey, sourceFile)
             if( publicRead )
                 req.withCannedAcl(CannedAccessControlList.PublicRead)
 
-            logger.quiet("S3 Upload ${sourceFile} → s3://${bucket}/${targetKey} ${exists ? '[overwrite existing]': ''}")
+            logger.quiet("S3 upload ${sourceFile} → s3://${bucket}/${targetKey} ${exists ? '[overwrite existing]': ''}")
             s3Client.putObject(req)
         }
     }

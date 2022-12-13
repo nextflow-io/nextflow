@@ -79,27 +79,13 @@ As of version 20.07.0, `channel` has been introduced as an alias of `Channel`, t
 methods can be specified either as `channel.of()` or `Channel.of()`, and so on.
 :::
 
-(channel-create)=
-
-### create
-
-:::{warning}
-The `create` method is no longer available in DSL2 syntax.
-:::
-
-Creates a new channel, as shown below:
-
-```groovy
-channelObj = Channel.create()
-```
-
 (channel-empty)=
 
 ### empty
 
 The `empty` factory method, by definition, creates a channel that doesn't emit any value.
 
-See also: {ref}`operator-ifempty` and {ref}`operator-close` operators.
+See also: {ref}`operator-ifempty`.
 
 (channel-from)=
 
@@ -509,38 +495,6 @@ to close the channel when a certain condition is met (e.g. receiving a file name
 See also: [fromPath](#frompath) factory method.
 
 ## Channel methods
-
-(channel-bind1)=
-
-### bind
-
-:::{warning}
-The `bind` method is no longer available in DSL2 syntax.
-:::
-
-Channel objects provide a `bind( )` method which is the basic operation to send a message over the channel.
-For example:
-
-```groovy
-myChannel = Channel.create()
-myChannel.bind( 'Hello world' )
-```
-
-(channel-bind2)=
-
-### operator \<\<
-
-:::{warning}
-The `<<` operator is no longer available in DSL2 syntax.
-:::
-
-The operator `<<` is just a syntax sugar for the `bind` method. Thus, the following example produces
-an identical result as the previous one:
-
-```groovy
-myChannel = Channel.create()
-myChannel << 'Hello world'
-```
 
 (channel-subscribe)=
 
