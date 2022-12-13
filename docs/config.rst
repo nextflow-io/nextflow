@@ -1012,7 +1012,7 @@ NXF_DEBUG                       Defines scripts debugging level: ``1`` dump task
 NXF_DEFAULT_DSL                 Defines the DSL version that should be used in not specified otherwise in the script of config file (default: ``2``, requires version ``22.03.0-edge`` or later)
 NXF_DISABLE_JOBS_CANCELLATION   Disables the cancellation of child jobs on workflow execution termination (requires version ``21.12.0-edge`` or later).
 NXF_ENABLE_STRICT               Enable Nextflow *strict* execution mode (default: ``false``, requires version ``22.05.0-edge`` or later)
-NXF_ENABLE_SECRETS              Enable Nextflow secrets features (default: ``true``, requires version ``21.09.0-edge`` or later)
+NXF_ENABLE_SECRETS              Enable Nextflow secrets features (default: ``true``, requires version ``22.09.2-edge`` or later)
 NXF_EXECUTOR                    Defines the default process executor e.g. `sge`
 NXF_GRAB                        Provides extra runtime dependencies downloaded from a Maven repository service [DEPRECATED]
 NXF_HOME                        Nextflow home directory (default: ``$HOME/.nextflow``).
