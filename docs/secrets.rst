@@ -5,8 +5,10 @@ Secrets
 *******
 
 
-As of version ``21.09.0-edge``, Nextflow adds the built-in support for pipeline secrets to allow users to handle
-and manage sensitive information for pipeline execution in a safe manner.
+As of version ``22.09.2-edge``, Nextflow adds the built-in support for pipeline secrets by default to allow users to handle
+and manage sensitive information for pipeline execution in a safe manner. It's been provided as a preview feature since ``22.09.0-edge``, but to enable it before version ``22.09.2-edge`` it is required to set ``NXF_ENABLE_SECRETS`` to ``true`` such as in the example below::
+
+    NXF_ENABLE_SECRETS=true NXF_VER=22.09.0-edge nextflow secrets
 
 How it works
 ============
