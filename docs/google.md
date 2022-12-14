@@ -52,8 +52,10 @@ export GOOGLE_APPLICATION_CREDENTIALS="/path/your/file/creds.json"
 [Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the
 Google Cloud Platform infrastructure.
 
-Nextflow provides built-in support for Cloud Batch which allows the seamless deployment of a Nextflow pipeline
-in the cloud, offloading the process executions through the Google Cloud service.
+Nextflow provides built-in support for Google Cloud Batch, allowing the seamless deployment of Nextflow pipelines
+in the cloud, in which tasks are offloaded to the Cloud Batch service.
+
+Read the {ref}`Google Cloud Batch executor <google-batch-executor>` section to learn more about the `google-batch` executor in Nextflow.
 
 ### Requirements
 
@@ -123,19 +125,19 @@ each process using one or more {ref}`config-process-selectors`.
 
 The following configuration options are available:
 
-| Name                              | Description                                                                                                                                                                                                                                                                                                       |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| google.project                    | The Google Project Id to use for the pipeline execution.                                                                                                                                                                                                                                                          |
-| google.location                   | The Google *location* where the job executions are deployed (default: `us-central1`).                                                                                                                                                                                                                             |
-| google.enableRequesterPaysBuckets | When `true` uses the configured Google project id as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`).     |
-| google.batch.allowedLocations     | Define the set of allowed locations for VMs to be provisioned. See [Google documentation](https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy) for details (default: no restriction. Requires version `22.12.0-edge` or later).                                          |
-| google.batch.bootDiskSize         | Set the size of the virtual machine boot disk, e.g `50.GB` (default: none).                                                                                                                                                                                                                                       |
-| google.batch.cpuPlatform          | Set the minimum CPU Platform, e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).                                                                                          |
-| google.batch.spot                 | When `true` enables the usage of *spot* virtual machines or `false` otherwise (default: `false`).                                                                                                                                                                                                                 |
-| google.batch.usePrivateAddress    | When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`).       |
-| google.batch.network              | Set network name to attach the VM's network interface to. The value will be prefixed with global/networks/ unless it contains a /, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used.                                                  |
-| google.batch.serviceAccountEmail  | Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.                                                                                                                                             |
-| google.batch.subnetwork           | Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL. |
+| Name                                | Description                                                                                                                                                                                                                                                                                                       |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `google.project`                    | The Google Project Id to use for the pipeline execution.                                                                                                                                                                                                                                                          |
+| `google.location`                   | The Google *location* where the job executions are deployed (default: `us-central1`).                                                                                                                                                                                                                             |
+| `google.enableRequesterPaysBuckets` | When `true` uses the configured Google project id as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`).     |
+| `google.batch.allowedLocations`     | Define the set of allowed locations for VMs to be provisioned. See [Google documentation](https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy) for details (default: no restriction. Requires version `22.12.0-edge` or later).                                          |
+| `google.batch.bootDiskSize`         | Set the size of the virtual machine boot disk, e.g `50.GB` (default: none).                                                                                                                                                                                                                                       |
+| `google.batch.cpuPlatform`          | Set the minimum CPU Platform, e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).                                                                                          |
+| `google.batch.spot`                 | When `true` enables the usage of *spot* virtual machines or `false` otherwise (default: `false`).                                                                                                                                                                                                                 |
+| `google.batch.usePrivateAddress`    | When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`).       |
+| `google.batch.network`              | Set network name to attach the VM's network interface to. The value will be prefixed with global/networks/ unless it contains a /, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used.                                                  |
+| `google.batch.serviceAccountEmail`  | Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.                                                                                                                                             |
+| `google.batch.subnetwork`           | Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL. |
 
 ### Process definition
 
@@ -231,30 +233,27 @@ supported:
 
 ### Requirements
 
-The support for Google Cloud requires Nextflow version `20.01.0` or later. To install it define the following variables
-in your system environment:
+The support for Google Cloud requires Nextflow version `20.01.0-edge` or later.
+
+:::{note}
+In versions of Nextflow prior to `21.04.0`, the following variables must be defined in your system environment:
 
 ```bash
 export NXF_VER=20.01.0
 export NXF_MODE=google
 ```
-
-:::{note}
-As of version `21.04.0` or later the above variables are not required anymore and therefore should not be used.
 :::
 
 [Cloud Life Sciences](https://cloud.google.com/life-sciences/) is a managed computing service that allows the execution of
 containerized workloads in the Google Cloud Platform infrastructure.
 
-Nextflow provides built-in support for Cloud Life Sciences API which allows the seamless deployment of a Nextflow pipeline
-in the cloud, offloading the process executions through the Google Cloud service.
+Nextflow provides built-in support for Cloud Life Sciences, allowing the seamless deployment of Nextflow
+pipelines in the cloud, in which tasks are offloaded to the Cloud Life Sciences service.
 
-:::{note}
-This features requires Nextflow `20.01.0-edge` or later.
-:::
+Read the {ref}`Google Life Sciences executor <google-lifesciences-executor>` page to learn about the `google-lifesciences` executor in Nextflow.
 
 :::{warning}
-This API works well for coarse-grained workloads i.e. long running jobs. It's not suggested the use
+This API works well for coarse-grained workloads (i.e. long running jobs). It's not suggested the use
 this feature for pipelines spawning many short lived tasks.
 :::
 
@@ -266,18 +265,17 @@ Make sure to have defined in your environment the `GOOGLE_APPLICATION_CREDENTIAL
 See the section [Credentials](#credentials) for details.
 
 :::{tip}
-Make sure to have enabled Cloud Life Sciences API to use this feature. To learn how to enable it
+Make sure to enable the Cloud Life Sciences API beforehand. To learn how to enable it
 follow [this link](https://cloud.google.com/life-sciences/docs/quickstart).
 :::
 
 Create a `nextflow.config` file in the project root directory. The config must specify the following parameters:
 
-- Google Life Sciences as Nextflow executor i.e. `process.executor = 'google-lifesciences'`.
-- The Docker container image to be used to run pipeline tasks e.g. `process.container = 'biocontainers/salmon:0.8.2--1'`.
-- The Google Cloud `project` ID to run in e.g. `google.project = 'rare-lattice-222412'`.
-- The Google Cloud `region` or `zone`. This is where the Compute Engine VMs will be started.
-  You need to specify either one, **not** both. Multiple regions or zones can be specified by
-  separating them with a comma e.g. `google.zone = 'us-central1-f,us-central-1-b'`.
+- Google Life Sciences as Nextflow executor
+- The Docker container image(s) to run pipeline tasks
+- The Google Cloud `project` ID
+- The Google Cloud `region` or `zone` where the Compute Engine VMs will be started.
+  You need to specify one or the other, *not* both. Multiple regions or zones can be specified as a comma-separated list, e.g. `google.zone = 'us-central1-f,us-central-1-b'`.
 
 Example:
 
@@ -294,40 +292,39 @@ google {
 ```
 
 :::{warning}
-Make sure to specify in the above setting the project ID not the project name.
+Make sure to specify the project ID, not the project name.
 :::
 
-:::{Note}
-A container image must be specified to deploy the process execution. You can use a different Docker image for
-each process using one or more {ref}`config-process-selectors`.
+:::{note}
+You can use a different Docker image for each process using one or more {ref}`config-process-selectors`.
 :::
 
 The following configuration options are available:
 
-| Name                                    | Description                                                                                                                                                                                                                                                                                                                                                 |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| google.project                          | The Google Project Id to use for the pipeline execution.                                                                                                                                                                                                                                                                                                    |
-| google.region                           | The Google *region* where the computation is executed in Compute Engine VMs. Multiple regions can be provided separating them by a comma. Do not specify if a zone is provided. See  [available Compute Engine regions and zones](https://cloud.google.com/compute/docs/regions-zones/)                                                                     |
-| google.zone                             | The Google *zone* where the computation is executed in Compute Engine VMs. Multiple zones can be provided separating them by a comma. Do not specify if a region is provided. See  [available Compute Engine regions and zones](https://cloud.google.com/compute/docs/regions-zones/)                                                                       |
-| google.location                         | The Google *location* where the job executions are deployed to Cloud Life Sciences API. See  [available Cloud Life Sciences API locations](https://cloud.google.com/life-sciences/docs/concepts/locations) (default: the same as the region or the zone specified).                                                                                         |
-| google.enableRequesterPaysBuckets       | When `true` uses the configured Google project id as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`)                                                |
-| google.lifeSciences.bootDiskSize        | Set the size of the virtual machine boot disk e.g `50.GB` (default: none).                                                                                                                                                                                                                                                                                  |
-| google.lifeSciences.copyImage           | The container image run to copy input and output files. It must include the `gsutil` tool (default: `google/cloud-sdk:alpine`).                                                                                                                                                                                                                             |
-| google.lifeSciences.cpuPlatform         | Set the minimum CPU Platform e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).                                                                                                                                     |
-| google.lifeSciences.debug               | When `true` copies the `/google` debug directory in that task bucket directory (default: `false`)                                                                                                                                                                                                                                                           |
-| google.lifeSciences.preemptible         | When `true` enables the usage of *preemptible* virtual machines or `false` otherwise (default: `true`)                                                                                                                                                                                                                                                      |
-| google.lifeSciences.usePrivateAddress   | When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`). Requires version `20.03.0-edge` or later.       |
-| google.lifeSciences.network             | Set network name to attach the VM's network interface to. The value will be prefixed with global/networks/ unless it contains a /, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used. Requires version `21.03.0-edge` or later.                                                  |
-| google.lifeSciences.serviceAccountEmail | Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used. Requires version `20.05.0-edge` or later.                                                                                                                                             |
-| google.lifeSciences.subnetwork          | Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL. Requires version `21.03.0-edge` or later. |
-| google.lifeSciences.sshDaemon           | When `true` runs SSH daemon in the VM carrying out the job to which it's possible to connect for debugging purposes (default: `false`).                                                                                                                                                                                                                     |
-| google.lifeSciences.sshImage            | The container image used to run the SSH daemon (default: `gcr.io/cloud-genomics-pipelines/tools`).                                                                                                                                                                                                                                                          |
-| google.lifeSciences.keepAliveOnFailure  | When `true` and a task complete with an unexpected exit status the associated computing node is kept up for 1 hour. This options implies `sshDaemon=true` (default: `false`, requires Nextflow version `21.06.0-edge` or later).                                                                                                                            |
-| google.storage.delayBetweenAttempts     | Delay between download attempts from Google Storage (default `10 sec`, requires version `21.06.0-edge` or later).                                                                                                                                                                                                                                           |
-| google.storage.maxParallelTransfers     | Max parallel upload/download transfer operations *per job* (default: `4`, requires version `21.06.0-edge` or later).                                                                                                                                                                                                                                        |
-| google.storage.maxTransferAttempts      | Max number of downloads attempts from Google Storage (default: `1`, requires version `21.06.0-edge` or later).                                                                                                                                                                                                                                              |
-| google.storage.parallelThreadCount      | Defines the value for the option `GSUtil:parallel_thread_count` used by `gsutil` for transfer input and output data (default: `1`, requires version `21.06.0-edge` or later).                                                                                                                                                                               |
-| google.storage.downloadMaxComponents    | Defines the value for the option `GSUtil:sliced_object_download_max_components` used by `gsutil` for transfer input and output data (default: `8`, requires version `21.06.0-edge` or later).                                                                                                                                                               |
+| Name                                      | Description                                                                                                                                                                                                                                                                                                                                                 |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `google.project`                          | The Google Project Id to use for the pipeline execution.                                                                                                                                                                                                                                                                                                    |
+| `google.region`                           | The Google *region* where the computation is executed in Compute Engine VMs. Multiple regions can be provided separating them by a comma. Do not specify if a zone is provided. See  [available Compute Engine regions and zones](https://cloud.google.com/compute/docs/regions-zones/)                                                                     |
+| `google.zone`                             | The Google *zone* where the computation is executed in Compute Engine VMs. Multiple zones can be provided separating them by a comma. Do not specify if a region is provided. See  [available Compute Engine regions and zones](https://cloud.google.com/compute/docs/regions-zones/)                                                                       |
+| `google.location`                         | The Google *location* where the job executions are deployed to Cloud Life Sciences API. See  [available Cloud Life Sciences API locations](https://cloud.google.com/life-sciences/docs/concepts/locations) (default: the same as the region or the zone specified).                                                                                         |
+| `google.enableRequesterPaysBuckets`       | When `true` uses the configured Google project id as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`)                                                |
+| `google.lifeSciences.bootDiskSize`        | Set the size of the virtual machine boot disk e.g `50.GB` (default: none).                                                                                                                                                                                                                                                                                  |
+| `google.lifeSciences.copyImage`           | The container image run to copy input and output files. It must include the `gsutil` tool (default: `google/cloud-sdk:alpine`).                                                                                                                                                                                                                             |
+| `google.lifeSciences.cpuPlatform`         | Set the minimum CPU Platform e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).                                                                                                                                     |
+| `google.lifeSciences.debug`               | When `true` copies the `/google` debug directory in that task bucket directory (default: `false`)                                                                                                                                                                                                                                                           |
+| `google.lifeSciences.preemptible`         | When `true` enables the usage of *preemptible* virtual machines or `false` otherwise (default: `true`)                                                                                                                                                                                                                                                      |
+| `google.lifeSciences.usePrivateAddress`   | When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`). Requires version `20.03.0-edge` or later.       |
+| `google.lifeSciences.network`             | Set network name to attach the VM's network interface to. The value will be prefixed with global/networks/ unless it contains a /, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used. Requires version `21.03.0-edge` or later.                                                  |
+| `google.lifeSciences.serviceAccountEmail` | Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used. Requires version `20.05.0-edge` or later.                                                                                                                                             |
+| `google.lifeSciences.subnetwork`          | Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL. Requires version `21.03.0-edge` or later. |
+| `google.lifeSciences.sshDaemon`           | When `true` runs SSH daemon in the VM carrying out the job to which it's possible to connect for debugging purposes (default: `false`).                                                                                                                                                                                                                     |
+| `google.lifeSciences.sshImage`            | The container image used to run the SSH daemon (default: `gcr.io/cloud-genomics-pipelines/tools`).                                                                                                                                                                                                                                                          |
+| `google.lifeSciences.keepAliveOnFailure`  | When `true` and a task complete with an unexpected exit status the associated compute node is kept up for 1 hour. This options implies `sshDaemon=true` (default: `false`, requires Nextflow version `21.06.0-edge` or later).                                                                                                                              |
+| `google.storage.delayBetweenAttempts`     | Delay between download attempts from Google Storage (default `10 sec`, requires version `21.06.0-edge` or later).                                                                                                                                                                                                                                           |
+| `google.storage.maxParallelTransfers`     | Max parallel upload/download transfer operations *per job* (default: `4`, requires version `21.06.0-edge` or later).                                                                                                                                                                                                                                        |
+| `google.storage.maxTransferAttempts`      | Max number of downloads attempts from Google Storage (default: `1`, requires version `21.06.0-edge` or later).                                                                                                                                                                                                                                              |
+| `google.storage.parallelThreadCount`      | Defines the value for the option `GSUtil:parallel_thread_count` used by `gsutil` for transfer input and output data (default: `1`, requires version `21.06.0-edge` or later).                                                                                                                                                                               |
+| `google.storage.downloadMaxComponents`    | Defines the value for the option `GSUtil:sliced_object_download_max_components` used by `gsutil` for transfer input and output data (default: `8`, requires version `21.06.0-edge` or later).                                                                                                                                                               |
 
 ### Process definition
 
@@ -363,10 +360,6 @@ process predefined_resources_task {
 }
 ```
 
-:::{note}
-This feature requires Nextflow 19.07.0 or later.
-:::
-
 ### Pipeline execution
 
 The pipeline can be launched either in a local computer or a cloud instance. Pipeline input data can be stored either
@@ -380,8 +373,8 @@ nextflow run <script or project name> -work-dir gs://my-bucket/some/path
 ```
 
 :::{tip}
-Any input data **not** stored in a Google Storage bucket will automatically be transferred to the
-pipeline work bucket. Use this feature with caution being careful to avoid unnecessary data transfers.
+Any input data *not* stored in a Google Storage bucket will be automatically transferred to the
+pipeline work bucket. Use this feature with caution, being careful to avoid unnecessary data transfers.
 :::
 
 ### Preemptible instances
@@ -400,8 +393,8 @@ if the virtual machine was terminated preemptively:
 
 ```groovy
 process {
-  errorStrategy = { task.exitStatus==14 ? 'retry' : 'terminate' }
-  maxRetries = 5
+    errorStrategy = { task.exitStatus==14 ? 'retry' : 'terminate' }
+    maxRetries = 5
 }
 ```
 
@@ -410,17 +403,17 @@ Preemptible instances have a [runtime limit](https://cloud.google.com/compute/do
 :::
 
 :::{tip}
-For an exhaustive list of all possible error codes, please refer to the official Google LifeSciences [documentation](https://cloud.google.com/life-sciences/docs/troubleshooting#error_codes).
+For an exhaustive list of error codes, refer to the official Google Life Sciences [documentation](https://cloud.google.com/life-sciences/docs/troubleshooting#error_codes).
 :::
 
 ### Hybrid execution
 
-Nextflow allows the use of multiple executors in the same workflow application. This feature enables the deployment
-of hybrid workloads in which some jobs are executed in the local computer or local computing cluster and
-some other jobs are offloaded to Google Pipelines service.
+Nextflow allows the use of multiple executors in the same workflow. This feature enables the deployment
+of hybrid workloads, in which some jobs are executed in the local computer or local computing cluster, and
+some jobs are offloaded to Google Life Sciences.
 
-To enable this feature use one or more {ref}`config-process-selectors` in your Nextflow configuration file to apply
-the Google Pipelines *executor* only to a subset of processes in your workflow.
+To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration file to apply
+the Google Life Sciences executor to the subset of processes that you want to offload.
 For example:
 
 ```groovy
@@ -437,8 +430,8 @@ google {
 }
 ```
 
-Then deploy the workflow execution using the `-bucket-dir` to specify a Google Storage path
-for the jobs computed by the Google Pipeline service and, optionally, the `-work-dir` to
+Then launch the pipeline with the `-bucket-dir` option to specify a Google Storage path
+for the jobs computed with Google Life Sciences and, optionally, the `-work-dir` to
 specify the local storage for the jobs computed locally:
 
 ```bash
@@ -446,32 +439,35 @@ nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
 ```
 
 :::{warning}
-The Google Storage path needs to contain at least sub-directory. Don't use only the
-bucket name e.g. `gs://my-bucket`.
+The Google Storage path needs to contain at least one sub-directory (e.g. `gs://my-bucket/work` rather than
+`gs://my-bucket`).
 :::
 
-### Quotas
-
-Compute resources in Google Cloud are subject to [resource quotas](https://cloud.google.com/compute/quotas) which may affect your ability to run pipelines at scale. You can request quota increases, and your quotas may automatically increase over time as you use the platform. In particular, GPU quotas are initially set to 0, so you must explicitly request a quota increase in order to use GPUs. Initially you can request an increase to 1 GPU at a time, and after one billing cycle you may be able to increase it further.
-
 ### Limitations
+
+- Compute resources in Google Cloud are subject to [resource quotas](https://cloud.google.com/compute/quotas), which may affect your ability to run pipelines at scale. You can request quota increases, and your quotas may automatically increase over time as you use the platform. In particular, GPU quotas are initially set to 0, so you must explicitly request a quota increase in order to use GPUs. You can initially request an increase to 1 GPU at a time, and after one billing cycle you may be able to increase it further.
 
 - Currently it's not possible to specify a disk type different from the default one assigned
   by the service depending on the chosen instance type.
 
 ### Troubleshooting
 
-- Make sure to have enabled Compute Engine API, Life Sciences API and Cloud Storage Service in the
+- Make sure to enable the Compute Engine API, Life Sciences API and Cloud Storage API in the
   [APIs & Services Dashboard](https://console.cloud.google.com/apis/dashboard) page.
+
 - Make sure to have enough compute resources to run your pipeline in your project
   [Quotas](https://console.cloud.google.com/iam-admin/quotas) (i.e. Compute Engine CPUs,
   Compute Engine Persistent Disk, Compute Engine In-use IP addresses, etc).
-- Make sure your security credentials allows you to access any Google Storage bucket
+
+- Make sure your security credentials allow you to access any Google Storage bucket
   where input data and temporary files are stored.
-- Check the directory `google/` created in the task work directory (in the bucket storage) created
-  when on job failure and containing useful information of the job execution. The creation
-  can be enabled as default setting the option `google.lifeSciences.debug = true` in the
-  Nextflow config file
-- Enable the optional SSH daemon in the job VM using the option `google.lifeSciences.sshDaemon = true`
-- Make sure you are choosing a `location` where  [Cloud Life Sciences API is available](https://cloud.google.com/life-sciences/docs/concepts/locations),
-  and a `region` or `zone` where [Compute Engine is available](https://cloud.google.com/compute/docs/regions-zones/).
+
+- When a job fails, you can check the `google/` directory in the task work directory (in the bucket storage),
+  which contains useful information about the job execution.
+  To enable the creation of this directory, set `google.lifeSciences.debug = true` in the
+  Nextflow config.
+
+- You can enable the optional SSH daemon in the job VM by setting `google.lifeSciences.sshDaemon = true` in the Nextflow config.
+
+- Make sure you are choosing a `location` where the [Cloud Life Sciences API is available](https://cloud.google.com/life-sciences/docs/concepts/locations),
+  and a `region` or `zone` where the [Compute Engine API  is available](https://cloud.google.com/compute/docs/regions-zones/).

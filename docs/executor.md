@@ -22,7 +22,7 @@ which greatly simplifies pipeline deployment.
 The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline
 script or the `nextflow.config` file.
 
-To enable this executor, set the property `process.executor = 'awsbatch'` in the `nextflow.config` file.
+To enable this executor, set `process.executor = 'awsbatch'` in the `nextflow.config` file.
 
 The pipeline can be launched either in a local computer, or an EC2 instance. EC2 is suggested for heavy or long-running workloads. Additionally, an S3 bucket must be used as the pipeline work directory.
 
@@ -47,7 +47,7 @@ which greatly simplifies pipeline deployment.
 The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline
 script or the `nextflow.config` file.
 
-To enable this executor, set the property `process.executor = 'azurebatch'` in the `nextflow.config` file.
+To enable this executor, set `process.executor = 'azurebatch'` in the `nextflow.config` file.
 
 The pipeline can be launched either in a local computer, or a cloud virtual machine. The cloud VM is suggested for heavy or long-running workloads. Additionally, an Azure Blob storage container must be used as the pipeline work directory.
 
@@ -106,8 +106,7 @@ set `flux.terminalOutput = true` in your config file.
 ## GA4GH TES
 
 :::{warning}
-This is an experimental feature and it may change in future releases. It requires Nextflow
-version 0.31.0 or later.
+This is an experimental feature and it may change in future releases.
 :::
 
 The [Task Execution Schema](https://github.com/ga4gh/task-execution-schemas) (TES) project
@@ -115,7 +114,7 @@ by the [GA4GH](https://www.ga4gh.org) standardization initiative is an effort to
 standardized schema and API for describing batch execution tasks in a portable manner.
 
 Nextflow includes experimental support for the TES API by providing a `tes` executor, which allows
-the submission of workflow tasks to a remote execution back-end exposing a TES API endpoint.
+the submission of workflow tasks to a remote execution backend exposing a TES API endpoint.
 
 To use this feature, define the following variables in the workflow launching environment:
 
@@ -151,7 +150,7 @@ command line:
 :::
 
 :::{warning}
-Make sure the TES back-end can access the workflow work directory when
+Make sure the TES backend can access the Nextflow work directory when
 data is exchanged using a local or shared file system.
 :::
 
@@ -168,14 +167,14 @@ data is exchanged using a local or shared file system.
 [Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of
 containerized workloads in the Google Cloud Platform infrastructure.
 
-Nextflow provides built-in support for the Batch API, which allows the seamless deployment of a Nextflow pipeline
+Nextflow provides built-in support for the Cloud Batch API, which allows the seamless deployment of a Nextflow pipeline
 in the cloud, offloading the process executions as pipelines (requires Nextflow `22.07.1-edge` or later).
 
 The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline
 script or the `nextflow.config` file. Additionally, the pipeline work directory must be located in a Google Storage
 bucket.
 
-To enable this executor, set the property `process.executor = 'google-batch'` in the `nextflow.config` file.
+To enable this executor, set `process.executor = 'google-batch'` in the `nextflow.config` file.
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
@@ -205,7 +204,7 @@ The pipeline processes must specify the Docker image to use by defining the `con
 script or the `nextflow.config` file. Additionally, the pipeline work directory must be located in a Google Storage
 bucket.
 
-To enable this executor, set the property `process.executor = 'google-lifesciences'` in the `nextflow.config` file.
+To enable this executor, set `process.executor = 'google-lifesciences'` in the `nextflow.config` file.
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
@@ -223,7 +222,7 @@ See the {ref}`Google Life Sciences <google-lifesciences>` page for further confi
 ## HTCondor
 
 :::{warning}
-This is an incubating feature. It may change in future Nextflow releases.
+This feature is experimental, and it may change in future Nextflow releases.
 :::
 
 The `condor` executor allows you to run your pipeline script by using the [HTCondor](https://research.cs.wisc.edu/htcondor/) resource manager.
@@ -253,7 +252,7 @@ Resource requests and other job characteristics can be controlled via the follow
 ## HyperQueue
 
 :::{warning}
-This is an incubating feature. It may change in future Nextflow releases.
+This feature is experimental, and it may change in future Nextflow releases.
 :::
 
 The `hyperqueue` executor allows you to run your pipeline script by using the [HyperQueue](https://github.com/It4innovations/hyperqueue) job scheduler.
@@ -277,7 +276,7 @@ Resource requests and other job characteristics can be controlled via the follow
 ## Ignite
 
 :::{danger}
-This feature has been phased out and is no longer supported as of version 22.01.x.
+This feature is no longer maintained. In order to use it in Nextflow 22.01 or later, it must be loaded via the `nf-ignite` plugin.
 :::
 
 The `ignite` executor allows you to run a pipeline on an [Apache Ignite](https://ignite.apache.org/) cluster.
@@ -355,13 +354,13 @@ See also the [Platform LSF documentation](https://www.ibm.com/support/knowledgec
 
 ## Moab
 
+:::{warning}
+This feature is experimental, and it may change in future Nextflow releases.
+:::
+
 The `moab` executor allows you to run your pipeline script using the
 [Moab](https://en.wikipedia.org/wiki/Moab_Cluster_Suite) resource manager by
 [Adaptive Computing](http://www.adaptivecomputing.com/).
-
-:::{warning}
-This is an incubating feature. It may change in future Nextflow releases.
-:::
 
 Nextflow manages each process as a separate job that is submitted to the cluster using the `msub` command provided
 by the resource manager.

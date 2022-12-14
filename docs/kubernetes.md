@@ -23,7 +23,7 @@ When using the `k8s` executor Nextflow deploys the workflow execution as a Kuber
 the workflow execution and submits a separate pod execution for each job that need to be carried out by the workflow
 application.
 
-```{image} images/nextflow-k8s-min.png
+```{image} /images/nextflow-k8s-min.png
 ```
 
 ## Requirements
@@ -97,8 +97,8 @@ This command creates a pod, sets up the volume claim(s), configures the Nextflow
 login session.
 
 :::{warning}
-The pod is automatically destroyed once the shell session terminates. Do not use to start long running
-workflow executions in background.
+The pod is automatically destroyed once the shell session terminates. Do not use it to launch long-running
+workflows in the background.
 :::
 
 ### Launch with Fusion
@@ -155,13 +155,13 @@ claim in the `nextflow.config` file as shown below:
 
 ```groovy
 process {
-   executor = 'k8s'
+    executor = 'k8s'
 }
 
 k8s {
-   storageClaimName = 'vol-claim'
-   storageMountPath = '/mount/path'
-   storageSubPath = '/my-data'
+    storageClaimName = 'vol-claim'
+    storageMountPath = '/mount/path'
+    storageSubPath = '/my-data'
 }
 ```
 
@@ -176,7 +176,11 @@ Note also that the `run` command does not support the `-v` option.
 :::
 
 :::{tip}
-It is also possible to mount multiple volumes using the `pod` directive, setting such as `k8s.pod = [ [volumeClaim: "other-pvc", mountPath: "/other" ]]`
+It is also possible to mount multiple volumes using the `pod` directive, for example:
+
+```groovy
+k8s.pod = [ [volumeClaim: "other-pvc", mountPath: "/other" ]]
+```
 :::
 
 ## Pod settings
@@ -184,17 +188,12 @@ It is also possible to mount multiple volumes using the `pod` directive, setting
 The process {ref}`process-pod` directive allows the definition of pods specific settings, such as environment variables,
 secrets and config maps when using the {ref}`k8s-executor` executor. See the {ref}`process-pod` directive for more details.
 
-## Limitation
+## Limitations
 
-:::{note}
-The `kuberun` command does not allow the execution of local Nextflow scripts and it's has been designed to
-provide a shortcut to simple pipeline deployment into a Kubernetes cluster.
-
-For stable pipeline deployment, Nextflow needs to be executed as a pod as mentioned in the [Running in a pod](#running-in-a-pod) section.
-In alternative take in consideration a managed provisioning service such as [Nextflow Tower](https://tower.nf).
-:::
+The `kuberun` command does not allow the execution of local Nextflow scripts. It is only intended as
+a convenient way to test the deployment of pipelines to a Kubernetes cluster.
 
 ## Advanced configuration
 
-Read {ref}`Kubernetes configuration<config-k8s>` and {ref}`executor <k8s-executor>` sections to learn more
+Read the {ref}`Kubernetes configuration<config-k8s>` and {ref}`executor <k8s-executor>` sections to learn more
 about advanced configuration options.

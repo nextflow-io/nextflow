@@ -2,8 +2,8 @@
 
 # Apache Ignite
 
-:::{danger}
-This feature has been phased out and is no longer supported as of version 22.01.x.
+:::{warning}
+This feature is no longer maintained. In order to use it in Nextflow 22.01 or later, it must be loaded via the `nf-ignite` plugin.
 :::
 
 Nextflow can be deployed in a *cluster* mode by using [Apache Ignite](https://ignite.apache.org/), an in-memory data-grid
@@ -141,7 +141,7 @@ In this scenario a Nextflow workflow needs to be executed as an MPI job. Under t
 process in the first of the nodes, allocated by your job request, and an Ignite daemon in the remaining nodes.
 
 In practice you will need a launcher script to submit an MPI job request to your batch scheduler/resource manager.
-The batch scheduler must reserve the computing nodes in an exclusive manner to avoid having multiple Ignite daemons
+The batch scheduler must reserve the compute nodes in an exclusive manner to avoid having multiple Ignite daemons
 running on the same node. Nextflow must be launched using the `mpirun` utility, as if it were an MPI application,
 specifying the `--pernode` option.
 
@@ -206,7 +206,7 @@ srun nextflow run hello.nf -with-mpi
 ```
 
 As before, this allocates 5 processing nodes (`--ntasks=5`) and each node will be able to use up to 16 cpus
-(`--cpus-per-task=16`). When using SLURM it's not necessary to allocate computing nodes in an exclusive manner.
+(`--cpus-per-task=16`). When using SLURM it's not necessary to allocate compute nodes in an exclusive manner.
 It's even possible to launch more than one Nextflow daemon instance per node, though not suggested.
 
 To submit the pipeline execution create a file like the above, then use the following command:
