@@ -72,7 +72,7 @@ Download the package
 Nextflow does not require any installation procedure, just download the distribution package by copying and pasting
 this command in your terminal:
 
-```
+```bash
 curl -fsSL https://get.nextflow.io | bash
 ```
 
@@ -83,7 +83,7 @@ Download from Conda
 
 Nextflow can also be installed from Bioconda
 
-```
+```bash
 conda install -c bioconda nextflow 
 ```
 

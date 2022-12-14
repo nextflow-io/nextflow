@@ -123,13 +123,9 @@ The resulting strings are emitted on the `result` channel and the final output i
 
 Execute the script by entering the following command in your terminal:
 
-```bash
-nextflow run tutorial.nf
-```
+```console
+$ nextflow run tutorial.nf
 
-It will output something similar to the text shown below:
-
-```
 N E X T F L O W  ~  version 19.04.0
 executor >  local (3)
 [69/c8ea4a] process > splitLetters   [100%] 1 of 1 ✔

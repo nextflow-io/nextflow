@@ -19,6 +19,7 @@ pip install sphinx==5.3.0 myst-parser==0.18.1 sphinx-rtd-theme==1.1.1
 To edit and contribute to the documentation, you only need a text editor to change the appropriate `.md` files in this directory.
 
 Once you have made your changes, run the following command to build the HTML files:
+
 ```bash
 make clean html
 ```

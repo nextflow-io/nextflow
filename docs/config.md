@@ -28,7 +28,7 @@ If you want to ignore any default configuration files and use only the custom on
 
 A Nextflow configuration file is a simple text file containing a set of properties defined using the syntax:
 
-```
+```groovy
 name = value
 ```
 

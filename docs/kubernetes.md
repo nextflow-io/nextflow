@@ -54,7 +54,7 @@ by the environment variable `KUBECONFIG`.
 
 You can verify such configuration with the command below:
 
-```
+```console
 $ kubectl cluster-info
 Kubernetes master is running at https://your-host:6443
 KubeDNS is running at https://your-host:6443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
@@ -64,7 +64,7 @@ KubeDNS is running at https://your-host:6443/api/v1/namespaces/kube-system/servi
 
 To deploy and launch the workflow execution use the Nextflow command `kuberun` as shown below:
 
-```
+```bash
 nextflow kuberun <pipeline-name> -v vol-claim:/mount/path
 ```
 
@@ -89,7 +89,7 @@ is no longer maintained. For a better alternative, consider using [Launch with F
 
 For debugging purpose it's possible to execute a Nextflow pod and launch an interactive shell using the following command:
 
-```
+```bash
 nextflow kuberun login -v vol-claim:/mount/path
 ```
 
@@ -111,7 +111,7 @@ This also makes unnecessary the use of the special `kuberun` command for the pip
 
 For this deployment scenario the following configuration can be used:
 
-```
+```groovy
 wave {
     enabled = true
 }
@@ -143,7 +143,7 @@ permission to jobs launched by Nextflow. You can find more details how to config
 Then the pipeline execution can be launched using the usual run command and specifying a AWS S3 bucket work directory,
 for example:
 
-```
+```bash
 nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR-BUCKET>/scratch
 ```
 
@@ -153,7 +153,7 @@ Nextflow can be executed directly from a pod running in a Kubernetes cluster. In
 to use the plain Nextflow `run` command and specify the `k8s` executor and the required persistent volume
 claim in the `nextflow.config` file as shown below:
 
-```
+```groovy
 process {
    executor = 'k8s'
 }

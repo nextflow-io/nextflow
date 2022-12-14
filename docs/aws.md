@@ -335,7 +335,7 @@ rm Miniconda3-latest-Linux-x86_64.sh
 
 When complete, verify that the AWS CLI package works correctly:
 
-```
+```console
 $ ./miniconda/bin/aws --version
 aws-cli/1.19.79 Python/3.8.5 Linux/4.14.231-173.361.amzn2.x86_64 botocore/1.20.79
 ```

@@ -19,7 +19,7 @@ By contrast, the `log` option is useful after a pipeline has already run and is 
 
 By default, `log` prints the list of executed pipelines:
 
-```
+```console
 $ nextflow log
 TIMESTAMP            RUN NAME         SESSION ID                            COMMAND
 2016-08-01 11:44:51  grave_poincare   18cbe2d3-d1b7-4030-8df4-ae6c42abaa9c  nextflow run hello
@@ -29,7 +29,7 @@ TIMESTAMP            RUN NAME         SESSION ID                            COMM
 
 Specifying a run name or session id prints tasks executed by that pipeline run:
 
-```
+```console
 $ nextflow log goofy_kilby
 /Users/../work/0b/be0d1c4b6fd6c778d509caa3565b64
 /Users/../work/ec/3100e79e21c28a12ec2204304c1081
@@ -42,7 +42,7 @@ $ nextflow log goofy_kilby
 
 By default, only the task execution paths are printed. A custom list of fields to print can be provided via the `-f` (`-fields`) option. For example:
 
-```
+```console
 $ nextflow log goofy_kilby -f hash,name,exit,status
 0b/be0d1c  buildIndex (ggal_1_48850000_49020000.Ggal71.500bpflank)  0  COMPLETED
 ec/3100e7  mapping (ggal_gut)                                       0  COMPLETED
@@ -55,7 +55,7 @@ The fields accepted by the `-f` options are the ones in the {ref}`trace report<t
 
 The `script` field is useful for examining script commands run in each task:
 
-```
+```console
 $ nextflow log goofy_kilby -f name,status,script
 align_genome      COMPLETED
    bowtie --index /data/genome input.fastq > output
@@ -64,9 +64,9 @@ align_genome      COMPLETED
 
 ### Templates
 
-The `-t` option allows a template (string or file) to be specified. This makes it possible to create complex custom report in any text based format.  For example you could save this markdown snippet to a file:
+The `-t` option allows a template (string or file) to be specified. This makes it possible to create complex custom reports in any text-based format. For example, you could save this Markdown snippet to a file:
 
-```
+```md
 ## $name
 
 script:

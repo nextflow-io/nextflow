@@ -1332,7 +1332,7 @@ Some directives are generally available to all processes, while others depend on
 The `accelerator` directive allows you to specify the hardware accelerator requirement for the task execution
 e.g. *GPU* processor. For example:
 
-```
+```groovy
 process foo {
     accelerator 4, type: 'nvidia-tesla-k80'
 

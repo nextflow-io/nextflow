@@ -8,7 +8,7 @@ execution pipelines. The top-level interface consists of two aspects,
 
 Here's what you'll see at the top-level upon invoking the Nextflow CLI:
 
-```
+```console
 $ nextflow
 Usage: nextflow [options] COMMAND [arg...]
 ```
@@ -29,7 +29,7 @@ double dash notation, e.g. `--foo`, which is instead used for
 
 An overview of the top-level options:
 
-```
+```console
 $ nextflow
 Usage: nextflow [options] COMMAND [arg...]
 
@@ -64,7 +64,7 @@ Use the specified configuration file(s) overriding any defaults.
 
 **Usage**
 
-```
+```console
 $ nextflow -C my.config COMMAND [arg...]
 ```
 
@@ -87,7 +87,7 @@ Set JVM properties.
 
 **Usage**
 
-```
+```console
 $ nextflow -Dkey=value COMMAND [arg...]
 ```
 
@@ -102,7 +102,7 @@ For specifying other JVM level options, please refer to the {ref}`config-env-var
 
 Add JVM properties to the invoked pipeline.
 
-```
+```console
 $ nextflow -Dfile.encoding=UTF-8 run nextflow-io/hello
 ```
 
@@ -112,7 +112,7 @@ Execute `nextflow` in the background.
 
 **Usage**
 
-```
+```console
 $ nextflow -bg COMMAND [arg...]
 ```
 
@@ -126,7 +126,7 @@ behavior.
 
 Invoke any execution as a background job.
 
-```
+```console
 $ nextflow -bg run nextflow-io/hello
 ```
 
@@ -136,7 +136,7 @@ Add the specified file to configuration set.
 
 **Usage**
 
-```
+```console
 $ nextflow -c nxf.config COMMAND [arg...]
 ```
 
@@ -150,7 +150,7 @@ refer the `-C` option.
 
 Update **some** fields of the default config for any pipeline.
 
-```
+```console
 $ nextflow -c nxf.config run nextflow-io/hello
 ```
 
@@ -164,7 +164,7 @@ This feature is experimental.
 
 **Usage**
 
-```
+```console
 $ nextflow -dockerize COMMAND [arg...]
 ```
 
@@ -180,7 +180,7 @@ please to refer the `-with-docker` options the `run` command.
 
 Invoke `nextflow` as a docker container to execute a pipeline.
 
-```
+```console
 $ nextflow -dockerize run nextflow-io/hello
 ```
 
@@ -190,7 +190,7 @@ Print the help message.
 
 **Usage**
 
-```
+```console
 $ nextflow -h
 ```
 
@@ -205,7 +205,7 @@ Sets the path of the nextflow log file.
 
 **Usage**
 
-```
+```console
 $ nextflow -log custom.log COMMAND [arg...]
 ```
 
@@ -218,7 +218,7 @@ default `.nextflow.log` or to save logs files to another directory.
 
 Save all execution logs to the custom `/var/log/nextflow.log` file.
 
-```
+```console
 $ nextflow -log /var/log/nextflow.log run nextflow-io/hello
 ```
 
@@ -228,7 +228,7 @@ Disable the printing of information to the terminal.
 
 **Usage**
 
-```
+```console
 $ nextflow -q COMMAND [arg...]
 ```
 
@@ -242,7 +242,7 @@ statement within a pipeline.
 
 Invoke the pipeline execution without the banner and pipeline information.
 
-```
+```console
 $ nextflow -q run nextflow-io/hello
 ```
 
@@ -252,7 +252,7 @@ Send logs to [Syslog](https://en.wikipedia.org/wiki/Syslog) server endpoint.
 
 **Usage**
 
-```
+```console
 $ nextflow -syslog localhost:1234 COMMAND [arg...]
 ```
 
@@ -264,7 +264,7 @@ The `-syslog` option is used to send logs to a Syslog logging server at the spec
 
 Send the logs to a Syslog server at specific endpoint.
 
-```
+```console
 $ nextflow -syslog localhost:1234 run nextflow-io/hello
 ```
 
@@ -274,7 +274,7 @@ Print the Nextflow version information.
 
 **Usage**
 
-```
+```console
 $ nextflow -v
 ```
 
@@ -309,7 +309,7 @@ The `-version` option in addition prints out the citation reference and official
 
 An overview of the Nextflow top-level commands.
 
-```
+```console
 $ nextflow
 
 Usage: nextflow [options] COMMAND [arg...]
@@ -339,7 +339,7 @@ Clean up *cache* and *work* directories.
 
 **Usage**
 
-```
+```console
 $ nextflow clean [run_name|session_id] [options]
 ```
 
@@ -369,7 +369,7 @@ If no run name or session id is provided, it will clean the latest run.
 
 Dry run to remove work directories for the run name `boring_euler`:
 
-```
+```console
 $ nextflow clean boring_euler -n
 
 Would remove work/92/c1a9cd9a96e0531d81ca69f5dc3bb7
@@ -379,7 +379,7 @@ Would remove work/0e/2ebdba85f76f6068b21a1bcbf10cab
 
 Remove work directories for the run name `boring_euler`.
 
-```
+```console
 $ nextflow clean boring_euler -f
 
 Removed work/92/c1a9cd9a96e0531d81ca69f5dc3bb7
@@ -389,7 +389,7 @@ Removed work/0e/2ebdba85f76f6068b21a1bcbf10cab
 
 Remove the execution entries *except* for a specific execution.
 
-```
+```console
 $ nextflow clean -but tiny_leavitt -f
 
 Removed work/1f/f1ea9158fb23b53d5083953121d6b6
@@ -399,7 +399,7 @@ Removed work/a3/06521d75da296d4dd7f4f8caaddad8
 
 Dry run to remove the execution data *before* a specific execution.
 
-```
+```console
 $ nextflow clean -before tiny_leavitt -n
 
 Would remove work/5d/ad76f7b7ab3500cf616814ef644b61
@@ -410,7 +410,7 @@ Would remove work/54/39116773891c47a91e3c1733aad4de
 
 Dry run to remove the execution data *after* a specific execution.
 
-```
+```console
 $ nextflow clean -after focused_payne -n
 
 Would remove work/1f/f1ea9158fb23b53d5083953121d6b6
@@ -420,7 +420,7 @@ Would remove work/a3/06521d75da296d4dd7f4f8caaddad8
 
 Dry run to remove the temporary execution data for a specific execution, while keeping the log files.
 
-```
+```console
 $ nextflow clean -keep-logs tiny_leavitt -n
 
 Would remove temp files from work/1f/f1ea9158fb23b53d5083953121d6b6
@@ -434,7 +434,7 @@ Clone a remote project into a folder.
 
 **Usage**
 
-```
+```console
 $ nextflow clone [options] [project]
 ```
 
@@ -457,14 +457,14 @@ please refer to the `nextflow pull` command.
 
 Clone the latest revision of a pipeline.
 
-```
+```console
 $ nextflow clone nextflow-io/hello
 nextflow-io/hello cloned to: hello
 ```
 
 Clone a specific revision of a pipeline.
 
-```
+```console
 $ nextflow clone nextflow-io/hello -r v1.1
 nextflow-io/hello cloned to: hello
 ```
@@ -475,7 +475,7 @@ Print the resolved pipeline configuration.
 
 **Usage**
 
-```
+```console
 $ nextflow config [options] [project name or path]
 ```
 
@@ -500,7 +500,7 @@ run a pipeline. For in-depth information, please refer the {ref}`config-profiles
 
 Print out the inferred config using a the default group key-value notation.
 
-```
+```console
 $ nextflow config
 
 docker {
@@ -514,7 +514,7 @@ process {
 
 Print out the config using a flat notation.
 
-```
+```console
 $ nextflow config -flat
 
 docker.enabled = true
@@ -523,7 +523,7 @@ process.executor = 'local'
 
 Print out the config using the Java properties notation.
 
-```
+```console
 $ nextflow config -properties
 
 docker.enabled = true
@@ -532,7 +532,7 @@ process.executor = local
 
 Print out all profiles from the project's configuration.
 
-```
+```console
 $ nextflow config -show-profiles
 
 docker {
@@ -560,7 +560,7 @@ Launch the *Nextflow* interactive console.
 
 **Usage**
 
-```
+```console
 $ nextflow console
 ```
 
@@ -577,7 +577,7 @@ None available
 
 Launch the `console` GUI.
 
-```
+```console
 $ nextflow console
 ```
 
@@ -587,7 +587,7 @@ Delete the local copy of a project.
 
 **Usage**
 
-```
+```console
 $ nextflow drop [options] [project]
 ```
 
@@ -607,13 +607,13 @@ global cache. Please refer the `list` command for generating a list of downloade
 
 Drop the `nextflow-io/hello` project.
 
-```
+```console
 $ nextflow drop nextflow-io/hello
 ```
 
 Forcefully drop the `nextflow-io/hello` pipeline, ignoring any local changes.
 
-```
+```console
 $ nextflow drop nextflow-io/hello -f
 ```
 
@@ -623,7 +623,7 @@ Print the top-level help or specific help for a command.
 
 **Usage**
 
-```
+```console
 $ nextflow help [options] [command]
 ```
 
@@ -643,7 +643,7 @@ at the command line.
 
 Invoke the `help` option for the `drop` command.
 
-```
+```console
 $ nextflow help drop
 
 Delete the local copy of a project
@@ -663,7 +663,7 @@ Print project or system runtime information.
 
 **Usage**
 
-```
+```console
 $ nextflow info [options] [project]
 ```
 
@@ -689,7 +689,7 @@ If no run name or session id is provided, it will clean the latest run.
 
 Display Nextflow runtime and system info:
 
-```
+```console
 $ nextflow info
 
   Version: 20.07.1 build 5412
@@ -701,7 +701,7 @@ $ nextflow info
 
 Display information about a specific project:
 
-```
+```console
 $ nextflow info nextflow-io/hello
 
   project name: nextflow-io/hello
@@ -722,7 +722,7 @@ Deploy Nextflow into a Kubernetes cluster (experimental)
 
 **Usage**
 
-```
+```console
 $ nextflow kuberun [options] [project]
 ```
 
@@ -797,7 +797,7 @@ the {ref}`k8s-page` section.
 
 Execute a pipeline into a Kubernetes cluster.
 
-```
+```console
 $ nextflow kuberun nextflow-io/hello
 ```
 
@@ -807,7 +807,7 @@ List all downloaded projects.
 
 **Usage**
 
-```
+```console
 $ nextflow list [options]
 ```
 
@@ -825,7 +825,7 @@ The `list` commands prints a list of the projects which are already downloaded i
 
 List the downloaded pipelines.
 
-```
+```console
 $ nextflow list
 
 nextflow-io/hello
@@ -838,7 +838,7 @@ Print the execution history and log information.
 
 **Usage**
 
-```
+```console
 $ nextflow log [options] [run_name | session_id]
 ```
 
@@ -869,7 +869,7 @@ execution metadata.
 
 Listing the execution logs of previous invocations of all pipelines in a project.
 
-```
+```console
 $ nextflow log
 
 TIMESTAMP           DURATION        RUN NAME        STATUS  REVISION ID     SESSION ID                              COMMAND
@@ -880,7 +880,7 @@ TIMESTAMP           DURATION        RUN NAME        STATUS  REVISION ID     SESS
 
 Listing only the *run names* of the execution logs of all pipelines invocations in a project.
 
-```
+```console
 $ nextflow log -quiet
 
 focused_payne
@@ -890,7 +890,7 @@ boring_euler
 
 List the execution entries *only* a specific execution.
 
-```
+```console
 $ nextflow log tiny_leavitt
 
 work/1f/f1ea9158fb23b53d5083953121d6b6
@@ -900,7 +900,7 @@ work/a3/06521d75da296d4dd7f4f8caaddad8
 
 List the execution entries *after* a specific execution.
 
-```
+```console
 $ nextflow log -after tiny_leavitt
 
 work/92/c1a9cd9a96e0531d81ca69f5dc3bb7
@@ -910,7 +910,7 @@ work/0e/2ebdba85f76f6068b21a1bcbf10cab
 
 List the execution entries *before* a specific execution.
 
-```
+```console
 $ nextflow log -before tiny_leavitt
 
 work/5d/ad76f7b7ab3500cf616814ef644b61
@@ -921,7 +921,7 @@ work/54/39116773891c47a91e3c1733aad4de
 
 List the execution entries *except* for a specific execution.
 
-```
+```console
 $ nextflow log -but tiny_leavitt
 
  work/5d/ad76f7b7ab3500cf616814ef644b61
@@ -932,7 +932,7 @@ $ nextflow log -but tiny_leavitt
 
 Filter specific fields from the execution log of a process.
 
-```
+```console
 $ nextflow log tiny_leavitt -f 'process,exit,hash,duration'
 
 splitLetters        0       1f/f1ea91       112ms
@@ -942,7 +942,7 @@ convertToUpper      0       a3/06521d       139ms
 
 Filter fields from the execution log of a process based on a criteria.
 
-```
+```console
 $ nextflow log tiny_leavitt -F 'process =~ /splitLetters/'
 
 work/1f/f1ea9158fb23b53d5083953121d6b6
@@ -954,7 +954,7 @@ Download or update a project.
 
 **Usage**
 
-```
+```console
 $ nextflow pull [options] [project]
 ```
 
@@ -977,7 +977,7 @@ and modifies it accordingly. For downloading a pipeline into a local directory, 
 
 Download a new pipeline or pull the latest revision for a specific project.
 
-```
+```console
 $ nextflow pull nextflow-io/hello
 
 Checking nextflow-io/hello ...
@@ -986,7 +986,7 @@ done - revision: 96eb04d6a4 [master]
 
 Pull the latest revision for all downloaded projects.
 
-```
+```console
 $ nextflow pull -all
 
 Checking nextflow-io/hello ...
@@ -997,7 +997,7 @@ done - revision: 087659b18e [master]
 
 Download a specific revision of a new project or pull the latest revision for a specific project.
 
-```
+```console
 $ nextflow pull nextflow-io/hello -r v1.1
 
 Checking nextflow-io/hello ...
@@ -1010,7 +1010,7 @@ Execute a pipeline.
 
 **Usage**
 
-```
+```console
 $ nextflow run [options] [project]
 ```
 
@@ -1128,7 +1128,7 @@ Update the nextflow runtime to the latest available version.
 
 **Usage**
 
-```
+```console
 $ nextflow self-update
 ```
 
@@ -1140,7 +1140,7 @@ The `self-update` command directs the `nextflow` cli to update itself to the lat
 
 Update Nextflow.
 
-```
+```console
 $ nextflow self-update
 
       N E X T F L O W
@@ -1160,7 +1160,7 @@ View a projects script file(s).
 
 **Usage**
 
-```
+```console
 $ nextflow view [options] [project]
 ```
 
@@ -1181,7 +1181,7 @@ For downloading a pipeline into the global cache `~/.nextflow/assets`, please re
 
 Viewing the contents of a downloaded pipeline.
 
-```
+```console
 $ nextflow view nextflow-io/hello
 
 == content of file: .nextflow/assets/nextflow-io/hello/main.nf
@@ -1206,7 +1206,7 @@ workflow {
 
 Listing the folder structure of the downloaded pipeline.
 
-```
+```console
 $ nextflow view -l nextflow-io/hello
 
 == content of path: .nextflow/assets/nextflow-io/hello
@@ -1223,7 +1223,7 @@ main.nf
 
 Viewing the contents of a downloaded pipeline without omitting the header.
 
-```
+```console
 $ nextflow view -q nextflow-io/hello
 
 #!/usr/bin/env nextflow

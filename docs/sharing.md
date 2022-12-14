@@ -106,7 +106,8 @@ nextflow-io/examples
 
 By using the `info` command you can show information from a downloaded project. For example:
 
-```
+```console
+$ nextflow info hello
 project name: nextflow-io/hello
 repository  : http://github.com/nextflow-io/hello
 local path  : $HOME/.nextflow/assets/nextflow-io/hello
