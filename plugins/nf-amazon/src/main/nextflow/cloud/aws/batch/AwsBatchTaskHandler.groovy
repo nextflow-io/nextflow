@@ -248,8 +248,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final job = describeJob(jobId)
         final done = job?.status in ['SUCCEEDED', 'FAILED']
         if( done ) {
+            // take the exit code of the container, if 0 (successful) or missing
+            // take the exit code from the `.exitcode` file create by nextflow
+            // the rationale of this is that, in case of error, the exit code return
+            // by the batch API is more reliable.
+            task.exitStatus = job.container.exitCode ?: readExitFile()
             // finalize the task
-            task.exitStatus = readExitFile()
             task.stdout = outputFile
             if( job?.status == 'FAILED' ) {
                 task.error = new ProcessUnrecoverableException(errReason(job))
