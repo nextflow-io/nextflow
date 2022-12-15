@@ -19,9 +19,11 @@ package nextflow.cloud.aws
 
 import com.amazonaws.AmazonClientException
 import com.amazonaws.auth.AWSCredentials
+import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.BasicSessionCredentials
+import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider
 import com.amazonaws.regions.InstanceMetadataRegionProvider
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.RegionUtils
@@ -31,6 +33,8 @@ import com.amazonaws.services.ecs.AmazonECS
 import com.amazonaws.services.ecs.AmazonECSClientBuilder
 import com.amazonaws.services.logs.AWSLogs
 import com.amazonaws.services.logs.AWSLogsAsyncClientBuilder
+import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
 import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
 import groovy.transform.CompileStatic
@@ -64,7 +68,10 @@ class AmazonClientFactory {
     /**
      * The AWS session key credentials (optional)
      */
+    @Deprecated
     private String sessionToken
+
+    private String assumeRoleArn
 
     /**
      * The AWS region eg. {@code eu-west-1}. If it's not specified the current region is retrieved from
@@ -108,6 +115,7 @@ class AmazonClientFactory {
         if( config.accessKey && config.secretKey ) {
             this.accessKey = config.accessKey
             this.secretKey = config.secretKey
+            this.assumeRoleArn = config.assumeRoleArn
             if (config.sessionToken){
                 this.sessionToken = config.sessionToken
             }
@@ -255,6 +263,18 @@ class AmazonClientFactory {
         return clientBuilder.build()
     }
 
+    AmazonS3 getS3Client() {
+        final clientBuilder = AmazonS3ClientBuilder.standard()
+        if( region )
+            clientBuilder.withRegion(region)
+
+        final credentials = getCredentialsProvider0()
+        if( credentials )
+            clientBuilder.withCredentials(credentials)
+
+        return clientBuilder.build()
+    }
+
     protected AWSCredentials getCredentials0() {
         if( !accessKey || !secretKey ) {
             return null
@@ -266,11 +286,25 @@ class AmazonClientFactory {
             new BasicAWSCredentials(accessKey, secretKey)
     }
 
-    protected AWSStaticCredentialsProvider getCredentialsProvider0() {
+    protected AWSCredentialsProvider getCredentialsProvider0() {
         final creds = getCredentials0()
-        if( !creds ) return null
-        return new AWSStaticCredentialsProvider(creds)
+        if( !creds ) {
+            return assumeRoleArn ? stsProvider() : null
+        }
+        final staticProvider = new AWSStaticCredentialsProvider(creds)
+        return assumeRoleArn ? stsProvider(staticProvider) : staticProvider
     }
 
+    protected AWSCredentialsProvider stsProvider(AWSCredentialsProvider creds=null) {
+        final sts = AWSSecurityTokenServiceClientBuilder
+                .standard()
+                .withRegion(region)
+                .withCredentials(creds)
+                .build();
+
+        return new STSAssumeRoleSessionCredentialsProvider .Builder(assumeRoleArn, 'nextflow-session')
+                .withStsClient(sts)
+                .build();
+    }
 
 }
