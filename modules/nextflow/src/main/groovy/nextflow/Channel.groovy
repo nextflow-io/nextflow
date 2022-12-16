@@ -314,6 +314,7 @@ class Channel  {
                         ? new DirWatcher(syntax,folder,pattern,skipHidden,events,fs)
                         : new DirWatcherV2(syntax,folder,pattern,skipHidden,events,fs)
         watcher.onComplete { result.bind(STOP) }
+        Global.onCleanup(it -> watcher.terminate())
 
         if( NF.isDsl2() )  {
             session.addIgniter {
