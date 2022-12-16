@@ -10,7 +10,7 @@ package nextflow.executor
 import java.nio.file.Path
 
 import nextflow.cloud.aws.util.S3PathFactory
-import nextflow.executor.fusion.FusionScriptLauncher
+import nextflow.fusion.FusionScriptLauncher
 import spock.lang.Specification
 /**
  *
