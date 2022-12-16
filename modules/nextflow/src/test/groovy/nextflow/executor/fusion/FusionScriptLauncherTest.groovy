@@ -22,6 +22,7 @@ import java.nio.file.Path
 import nextflow.Global
 import nextflow.SysEnv
 import nextflow.file.http.XPath
+import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskBean
 import spock.lang.Specification
 /**
