@@ -15,7 +15,7 @@
  *
  */
 
-package io.seqera.wave.plugin.config
+package nextflow.fusion
 
 import groovy.transform.CompileStatic
 

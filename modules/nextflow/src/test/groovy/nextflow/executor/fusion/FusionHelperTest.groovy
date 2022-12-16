@@ -20,6 +20,7 @@ package nextflow.executor.fusion
 import java.nio.file.Path
 
 import nextflow.file.http.XPath
+import nextflow.fusion.FusionHelper
 import spock.lang.Specification
 
 /**

@@ -22,7 +22,7 @@ import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.exception.NodeTerminationException
-import nextflow.executor.fusion.FusionScriptLauncher
+import nextflow.fusion.FusionScriptLauncher
 import nextflow.file.http.XPath
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient

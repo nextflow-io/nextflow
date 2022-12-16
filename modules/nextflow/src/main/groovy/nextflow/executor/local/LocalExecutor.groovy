@@ -23,7 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.executor.Executor
 import nextflow.executor.SupportedScriptTypes
-import nextflow.executor.fusion.FusionHelper
+import nextflow.fusion.FusionHelper
 import nextflow.processor.LocalPollingMonitor
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor

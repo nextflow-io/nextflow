@@ -40,7 +40,7 @@ import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
-import nextflow.executor.fusion.FusionScriptLauncher
+import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.BatchContext
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor

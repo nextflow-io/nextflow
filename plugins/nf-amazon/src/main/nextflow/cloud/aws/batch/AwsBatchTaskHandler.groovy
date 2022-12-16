@@ -58,7 +58,7 @@ import nextflow.container.ContainerNameValidator
 import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
-import nextflow.executor.fusion.FusionAwareTask
+import nextflow.fusion.FusionAwareTask
 import nextflow.executor.res.AcceleratorResource
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler

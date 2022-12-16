@@ -15,9 +15,9 @@
  *
  */
 
-package nextflow.executor.fusion
+package nextflow.fusion
 
-import static nextflow.executor.fusion.FusionHelper.*
+import static FusionHelper.*
 
 import java.nio.file.Path
 

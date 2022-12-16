@@ -15,12 +15,11 @@
  *
  */
 
-package io.seqera.wave.plugin
+package nextflow.fusion
 
-import io.seqera.wave.plugin.config.FusionConfig
+
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>

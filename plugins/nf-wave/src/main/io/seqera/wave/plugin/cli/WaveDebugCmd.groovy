@@ -24,7 +24,7 @@ import nextflow.Session
 import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.exception.AbortOperationException
-import nextflow.executor.fusion.FusionHelper
+import nextflow.fusion.FusionHelper
 import nextflow.file.FileHelper
 import nextflow.trace.TraceRecord
 import nextflow.util.HistoryFile
