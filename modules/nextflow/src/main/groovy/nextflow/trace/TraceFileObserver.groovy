@@ -70,7 +70,7 @@ class TraceFileObserver implements TraceObserver {
     String separator = '\t'
 
     /**
-     * Overwrite existing trace file instead of rolling it
+     * Overwrite existing trace file (required in some cases, as rolling filename has been deprecated)
      */
     boolean overwrite
 

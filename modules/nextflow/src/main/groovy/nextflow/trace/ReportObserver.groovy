@@ -71,7 +71,7 @@ class ReportObserver implements TraceObserver {
     private ResourcesAggregator aggregator
 
     /**
-     * Overwrite existing trace file instead of rolling it
+     * Overwrite existing trace file (required in some cases, as rolling filename has been deprecated)
      */
     boolean overwrite
 
