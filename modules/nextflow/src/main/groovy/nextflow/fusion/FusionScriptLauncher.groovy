@@ -17,14 +17,13 @@
 
 package nextflow.fusion
 
-import static FusionHelper.*
+
+import static nextflow.fusion.FusionHelper.*
 
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import nextflow.Global
 import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
@@ -99,14 +98,9 @@ class FusionScriptLauncher extends BashWrapperBuilder {
             final result = new LinkedHashMap(10)
             result.NXF_FUSION_WORK = work
             result.NXF_FUSION_BUCKETS = buckets
-            final endpoint = Global.getAwsS3Endpoint()
-            final creds = exportAwsAccessKeys() ? Global.getAwsCredentials() : Collections.<String>emptyList()
-            if( creds ) {
-                result.AWS_ACCESS_KEY_ID = creds[0]
-                result.AWS_SECRET_ACCESS_KEY = creds[1]
-            }
-            if( endpoint )
-                result.AWS_S3_ENDPOINT = endpoint
+            // foreign env
+            final provider = new FusionEnvProvider()
+            result.putAll(provider.getEnvironment(scheme))
             env = result
         }
         return env
@@ -127,12 +121,4 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
     }
 
-    boolean exportAwsAccessKeys() {
-        exportAwsAccessKeys0()
-    }
-
-    @Memoized
-    protected boolean exportAwsAccessKeys0() {
-        return Global.config?.navigate('fusion.exportAwsAccessKeys', false)
-    }
 }
