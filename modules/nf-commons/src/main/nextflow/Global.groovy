@@ -199,6 +199,7 @@ class Global {
         getAwsCredentials(env, config)
     }
 
+    @Deprecated
     static List<String> getAwsCredentials() {
         getAwsCredentials(SysEnv.get(), config)
     }
@@ -211,6 +212,7 @@ class Global {
         return null
     }
 
+    @Deprecated
     static String getAwsS3Endpoint() {
         getAwsS3Endpoint0(SysEnv.get(), config ?: Collections.emptyMap())
     }
@@ -225,6 +227,7 @@ class Global {
      *
      * @return A map object containing the AWS client configuration properties
      */
+    @Deprecated
     static protected Map normalizeAwsClientConfig(Map<String,?> client) {
 
         normalizeMemUnit(client, 'uploadChunkSize');

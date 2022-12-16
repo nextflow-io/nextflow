@@ -40,7 +40,7 @@ import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import nextflow.Global
+import nextflow.cloud.aws.config.AwsConfig
 import nextflow.exception.AbortOperationException
 /**
  *
@@ -97,45 +97,24 @@ class AmazonClientFactory {
      * Initialise the Amazon cloud driver with default (empty) parameters
      */
     AmazonClientFactory() {
-        this(Collections.emptyMap())
+        this(new AwsConfig(Collections.emptyMap()))
     }
 
-    /**
-     * Initialise the Amazon cloud driver with the specified parameters
-     *
-     * @param config
-     *      A map holding the driver parameters:
-     *      - accessKey: the access key credentials
-     *      - secretKey: the secret key credentials
-     *      - region: the AWS region
-     */
-    AmazonClientFactory(Map config) {
-        // -- get the aws credentials
+    AmazonClientFactory(AwsConfig config) {
         List credentials
         if( config.accessKey && config.secretKey ) {
             this.accessKey = config.accessKey
             this.secretKey = config.secretKey
             this.assumeRoleArn = config.assumeRoleArn
-            if (config.sessionToken){
-                this.sessionToken = config.sessionToken
-            }
-        }
-        else if( (credentials= Global.getAwsCredentials()) ) {
-            this.accessKey = credentials[0]
-            this.secretKey = credentials[1]
-            if (credentials.size() == 3){
-                this.sessionToken = credentials[2]
-            }
         }
 
         if( !accessKey && !fetchIamRole() )
             throw new AbortOperationException("Missing AWS security credentials -- Provide access/security keys pair or define an IAM instance profile (suggested)")
 
         // -- get the aws default region
-        region = config.region ?: Global.getAwsRegion() ?: fetchRegion()
+        region = config.region ?: fetchRegion()
         if( !region )
             throw new AbortOperationException('Missing AWS region -- Make sure to define in your system environment the variable `AWS_DEFAULT_REGION`')
-
     }
 
     /**

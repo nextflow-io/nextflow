@@ -510,38 +510,17 @@ class FileHelper {
      * @return A map holding the current session
      */
     @Memoized
+    @Deprecated
     static protected Map envFor(String scheme) {
         envFor0(scheme, System.getenv())
     }
 
     @PackageScope
+    @Deprecated
     static Map envFor0(String scheme, Map env) {
         def result = new LinkedHashMap(10)
         if( scheme?.toLowerCase() == 's3' ) {
-
-            List credentials = Global.getAwsCredentials(env)
-            if( credentials ) {
-                // S3FS expect the access - secret keys pair in lower notation
-                result.access_key = credentials[0]
-                result.secret_key = credentials[1]
-                if (credentials.size() == 3) {
-                    result.session_token = credentials[2]
-                    log.debug "Using AWS temporary session token for S3FS."
-                }
-            }
-
-            // AWS region
-            final region = Global.getAwsRegion()
-            if( region ) result.region = region
-
-            // -- remaining client config options
-            def config = Global.getAwsClientConfig() ?: new HashMap<>(10)
-            config = checkDefaultErrorRetry(config, env)
-            if( config ) {
-                result.putAll(config)
-            }
-
-            log.debug "AWS S3 config details: ${dumpAwsConfig(result)}"
+            throw new UnsupportedOperationException()
         }
         else {
             if( !Global.session )
@@ -549,40 +528,6 @@ class FileHelper {
             result.session = Global.session
         }
         return result
-    }
-
-    @PackageScope
-    static Map checkDefaultErrorRetry(Map result, Map env) {
-        if( result == null )
-            result = new HashMap(10)
-
-        if( result.max_error_retry==null ) {
-            result.max_error_retry = env?.AWS_MAX_ATTEMPTS
-        }
-        // fallback to default
-        if( result.max_error_retry==null ) {
-            result.max_error_retry = '5'
-        }
-        // make sure that's a string value as it's expected by the client
-        else {
-            result.max_error_retry = result.max_error_retry.toString()
-        }
-
-        return result
-    }
-
-    static private String dumpAwsConfig( Map<String,String> config ) {
-        def result = new HashMap(config)
-        if( config.access_key && config.access_key.size()>6 )
-            result.access_key = "${config.access_key.substring(0,6)}.."
-
-        if( config.secret_key && config.secret_key.size()>6 )
-            result.secret_key = "${config.secret_key.substring(0,6)}.."
-
-        if( config.session_token && config.session_token.size()>6 )
-            result.session_token = "${config.session_token.substring(0,6)}.."
-
-        return result.toString()
     }
 
     /**

@@ -17,6 +17,7 @@
 
 package nextflow.cloud.aws
 
+import nextflow.cloud.aws.config.AwsConfig
 import spock.lang.Ignore
 import spock.lang.Specification
 
@@ -35,7 +36,7 @@ class AmazonClientFactoryTest extends Specification {
                 region: 'eu-west-1',
                 assumeRoleArn: '<SOME ROLE>'
         ]
-        def client = new AmazonClientFactory(opts)
+        def client = new AmazonClientFactory(new AwsConfig(opts))
         and:
         def s3 = client.getS3Client()
         def buckets = s3.listBuckets()

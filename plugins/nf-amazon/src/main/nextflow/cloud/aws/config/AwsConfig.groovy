@@ -21,8 +21,9 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Global
+import nextflow.Session
 import nextflow.SysEnv
 import nextflow.util.IniFile
 /**
@@ -48,6 +49,8 @@ class AwsConfig {
     
     private String assumeRoleArn
 
+    private AwsS3Legacy s3Legacy
+
     AwsConfig(Map config) {
         final creds = getAwsCredentials(SysEnv.get(), config)
         this.accessKey = creds?[0]
@@ -56,7 +59,8 @@ class AwsConfig {
         this.region = getAwsRegion(SysEnv.get(), config)
         this.assumeRoleArn = config.assumeRoleArn as String
         this.batchOpts = new AwsBatchConfig( (Map)config.batch ?: Collections.emptyMap() )
-        this.s3Opts = new AwsS3Config( (Map)config.s3 ?: Collections.emptyMap() )
+        this.s3Opts = new AwsS3Config((Map)config.client ?: Collections.emptyMap())
+        this.s3Legacy = new AwsS3Legacy((Map)config.client ?: Collections.emptyMap())
     }
 
     String getAccessKey() { accessKey }
@@ -81,8 +85,7 @@ class AwsConfig {
      * @return A pair where the first element is the access key and the second the secret key or
      *      {@code null} if the credentials are missing
      */
-    @PackageScope
-    static List<String> getAwsCredentials0(Map env, Map config, List<Path> files=List.of()) {
+    static protected List<String> getAwsCredentials0(Map env, Map config, List<Path> files=List.of()) {
 
         String a
         String b
@@ -138,7 +141,7 @@ class AwsConfig {
         return 'default'
     }
 
-    static List<String> getAwsCredentials(Map env, Map config) {
+    static protected List<String> getAwsCredentials(Map env, Map config) {
 
         final home = Paths.get(System.properties.get('user.home') as String)
         final files = [ home.resolve('.aws/credentials'), home.resolve('.aws/config') ]
@@ -146,7 +149,7 @@ class AwsConfig {
 
     }
 
-    static String getAwsRegion(Map env, Map config) {
+    static protected String getAwsRegion(Map env, Map config) {
 
         def home = Paths.get(System.properties.get('user.home') as String)
         def file = home.resolve('.aws/config')
@@ -175,4 +178,71 @@ class AwsConfig {
         return ini.section(profile).region
     }
 
+    Map getFileSystemEnv() {
+        final result = new LinkedHashMap(20)
+        if( accessKey && secretKey ) {
+            // S3FS expect the access - secret keys pair in lower notation
+            result.access_key = accessKey
+            result.secret_key = secretKey
+        }
+
+        // AWS region
+        if( this.region )
+            result.region = this.region
+
+        // -- remaining client config options
+        def config = s3Legacy.getAwsClientConfig()
+        config = checkDefaultErrorRetry(config, SysEnv.get())
+        if( config ) {
+            result.putAll(config)
+        }
+
+        log.debug "AWS S3 config details: ${dumpAwsConfig(result)}"
+        return result
+    }
+
+    static protected Map checkDefaultErrorRetry(Map result, Map env) {
+        if( result == null )
+            result = new HashMap(10)
+
+        if( result.max_error_retry==null ) {
+            result.max_error_retry = env?.AWS_MAX_ATTEMPTS
+        }
+        // fallback to default
+        if( result.max_error_retry==null ) {
+            result.max_error_retry = '5'
+        }
+        // make sure that's a string value as it's expected by the client
+        else {
+            result.max_error_retry = result.max_error_retry.toString()
+        }
+
+        return result
+    }
+
+    static private String dumpAwsConfig( Map<String,String> config ) {
+        def result = new HashMap(config)
+        if( config.access_key && config.access_key.size()>6 )
+            result.access_key = "${config.access_key.substring(0,6)}.."
+
+        if( config.secret_key && config.secret_key.size()>6 )
+            result.secret_key = "${config.secret_key.substring(0,6)}.."
+
+        if( config.session_token && config.session_token.size()>6 )
+            result.session_token = "${config.session_token.substring(0,6)}.."
+
+        return result.toString()
+    }
+
+    static AwsConfig getConfig(Session session) {
+        if( session==null || session.config==null ) {
+            log.warn("nextflow session or config object")
+            return new AwsConfig(Collections.emptyMap())
+        }
+        new AwsConfig( (Map)session.config.aws ?: Collections.emptyMap()  )
+    }
+
+    static AwsConfig getConfig() {
+        getConfig(Global.session as Session)
+    }
 }

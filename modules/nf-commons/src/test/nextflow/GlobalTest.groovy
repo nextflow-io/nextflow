@@ -94,53 +94,6 @@ class GlobalTest extends Specification {
 
     }
 
-    def testGetAwsRegion() {
-        expect:
-        Global.getAwsRegion([:], [:]) == null
-        and:
-        Global.getAwsRegion([:], [aws:[region:'eu-west-2']]) == 'eu-west-2'
-        and:
-        // config has priority 
-        Global.getAwsRegion([AWS_DEFAULT_REGION: 'us-central-1'], [aws:[region:'eu-west-2']]) == 'eu-west-2'
-        
-        and:
-        Global.getAwsRegion([AWS_DEFAULT_REGION: 'us-central-1'], [:]) == 'us-central-1'
-    }
-
-    def testGetAwsRegionFromAwsFile() {
-        given:
-        def file = Files.createTempFile('test','test')
-        file.text = '''
-            [default]
-            aws_access_key_id = aaa
-            aws_secret_access_key = bbbb
-            region = reg-something
-            
-            [foo]
-            aws_access_key_id = xxx
-            aws_secret_access_key = yyy
-            region = reg-foo
-
-            [bar]
-            aws_access_key_id = xxx
-            aws_secret_access_key = yyy
-            aws_session_token = zzz
-            '''
-       
-        expect:
-        Global.getAwsRegion0([AWS_DEFAULT_REGION: 'us-central-1'], [:], file) == 'us-central-1'
-
-        and:
-        Global.getAwsRegion0([:], [:], file) == 'reg-something'
-
-        and:
-        Global.getAwsRegion0([:], [aws:[profile: 'foo']], file) == 'reg-foo'
-
-        cleanup:
-        file?.delete()
-    }
-
-
     def testAwsCredentialsWithFileAndProfileInTheConfig() {
 
         given:

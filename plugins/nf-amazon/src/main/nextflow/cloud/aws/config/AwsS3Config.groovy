@@ -17,8 +17,9 @@
 
 package nextflow.cloud.aws.config
 
-import groovy.transform.CompileStatic
 
+import groovy.transform.CompileStatic
+import nextflow.SysEnv
 /**
  * Model AWS S3 config settings
  *
@@ -29,8 +30,41 @@ class AwsS3Config {
 
     private String endpoint
 
+    private String storageClass
+
+    private String storageEncryption
+
+    private String storageKmsKeyId
+
+    private Boolean debug
 
     AwsS3Config(Map opts) {
-
+        this.debug = opts.debug as Boolean
+        storageClass = opts.storageClass ?: opts.uploadStorageClass     // 'uploadStorageClass' is kept for legacy purposes
+        this.endpoint = opts.endpoint ?: SysEnv.get('AWS_S3_ENDPOINT')
+        this.storageKmsKeyId = opts.storageKmsKeyId
+        this.storageEncryption = opts.storageEncryption
     }
+
+    // ==== getters =====
+    String getEndpoint() {
+        return endpoint
+    }
+
+    String getStorageClass() {
+        return storageClass
+    }
+
+    String getStorageEncryption() {
+        return storageEncryption
+    }
+
+    String getStorageKmsKeyId() {
+        return storageKmsKeyId
+    }
+
+    Boolean getDebug() {
+        return debug
+    }
+
 }

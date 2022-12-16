@@ -195,4 +195,19 @@ class AwsConfigTest extends Specification {
         [AWS_DEFAULT_PROFILE: 'my-profile']                     | [:]                               | null              | null          | null              | 'my-profile'  | null
 
     }
+
+    @Unroll
+    def 'should add max error retry' () {
+
+        expect:
+        AwsConfig.checkDefaultErrorRetry(SOURCE, ENV) == EXPECTED
+
+        where:
+        SOURCE                          | ENV                   | EXPECTED
+        null                            | null                  | [max_error_retry: '5']
+        [foo: 1]                        | [:]                   | [max_error_retry: '5', foo: 1]
+        [foo: 1]                        | [AWS_MAX_ATTEMPTS:'3']| [max_error_retry: '3', foo: 1]
+        [max_error_retry: '2', foo: 1]  | [:]                   | [max_error_retry: '2', foo: 1]
+        [:]                             | [:]                   | [max_error_retry: '5']
+    }
 }

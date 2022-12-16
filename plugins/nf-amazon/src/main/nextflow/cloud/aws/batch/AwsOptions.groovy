@@ -25,6 +25,7 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.cloud.CloudTransferOptions
+import nextflow.cloud.aws.config.AwsBatchConfig
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
 
@@ -39,9 +40,9 @@ class AwsOptions implements CloudTransferOptions {
 
     public static final List<String> VALID_RETRY_MODES = ['legacy','standard','adaptive']
 
-    public static final int DEFAULT_AWS_MAX_ATTEMPTS = 5
+    @Deprecated public static final int DEFAULT_AWS_MAX_ATTEMPTS = AwsBatchConfig.DEFAULT_AWS_MAX_ATTEMPTS
 
-    public static final int DEFAULT_MAX_SPOT_ATTEMPTS = 5
+    @Deprecated public static final int DEFAULT_MAX_SPOT_ATTEMPTS = AwsBatchConfig.DEFAULT_MAX_SPOT_ATTEMPTS
 
     private Map<String,String> env = System.getenv()
 
