@@ -18,7 +18,7 @@
 package nextflow.cloud.aws.fusion
 
 import groovy.transform.CompileStatic
-import nextflow.Global
+import nextflow.cloud.aws.config.AwsConfig
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionEnv
 import org.pf4j.Extension
@@ -37,8 +37,9 @@ class AwsFusionEnv implements FusionEnv {
             return Collections.<String,String>emptyMap()
 
         final result = new HashMap<String,String>()
-        final endpoint = Global.getAwsS3Endpoint()
-        final creds = config.exportAwsAccessKeys() ? Global.getAwsCredentials() : Collections.<String>emptyList()
+        final awsConfig = AwsConfig.getConfig()
+        final endpoint = awsConfig.s3Config.endpoint
+        final creds = config.exportAwsAccessKeys() ? awsConfig.getCredentials() : Collections.<String>emptyList()
         if( creds ) {
             result.AWS_ACCESS_KEY_ID = creds[0]
             result.AWS_SECRET_ACCESS_KEY = creds[1]

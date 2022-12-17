@@ -23,7 +23,6 @@ import java.nio.file.Paths
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
-import nextflow.Session
 import nextflow.SysEnv
 import nextflow.util.IniFile
 /**
@@ -35,9 +34,9 @@ import nextflow.util.IniFile
 @CompileStatic
 class AwsConfig {
 
-    private AwsBatchConfig batchOpts
+    private AwsBatchConfig batchConfig
 
-    private AwsS3Config s3Opts
+    private AwsS3Config s3config
 
     private String region
 
@@ -58,8 +57,8 @@ class AwsConfig {
         this.profile = getAwsProfile0(SysEnv.get(), config)
         this.region = getAwsRegion(SysEnv.get(), config)
         this.assumeRoleArn = config.assumeRoleArn as String
-        this.batchOpts = new AwsBatchConfig( (Map)config.batch ?: Collections.emptyMap() )
-        this.s3Opts = new AwsS3Config((Map)config.client ?: Collections.emptyMap())
+        this.batchConfig = new AwsBatchConfig( (Map)config.batch ?: Collections.emptyMap() )
+        this.s3config = new AwsS3Config((Map)config.client ?: Collections.emptyMap())
         this.s3Legacy = new AwsS3Legacy((Map)config.client ?: Collections.emptyMap())
     }
 
@@ -67,11 +66,21 @@ class AwsConfig {
 
     String getSecretKey() { secretKey }
 
+    List<String> getCredentials() {
+        return accessKey && secretKey
+                ? List.of(accessKey, secretKey)
+                : Collections.<String>emptyList()
+    }
+
     String getProfile() { profile }
 
     String getRegion() { region }
 
     String getAssumeRoleArn() { assumeRoleArn }
+
+    AwsS3Config getS3Config() { s3config }
+
+    AwsBatchConfig getBatchConfig() { batchConfig }
 
     /**
      * Retrieve the AWS credentials from the given context. It look for AWS credential in the following order
@@ -234,15 +243,15 @@ class AwsConfig {
         return result.toString()
     }
 
-    static AwsConfig getConfig(Session session) {
-        if( session==null || session.config==null ) {
-            log.warn("nextflow session or config object")
+    static private AwsConfig getConfig0(Map config) {
+        if( config==null ) {
+            log.warn("Missing nextflow session config object")
             return new AwsConfig(Collections.emptyMap())
         }
-        new AwsConfig( (Map)session.config.aws ?: Collections.emptyMap()  )
+        new AwsConfig( (Map)config.aws ?: Collections.emptyMap()  )
     }
 
     static AwsConfig getConfig() {
-        getConfig(Global.session as Session)
+        getConfig0(Global.config)
     }
 }

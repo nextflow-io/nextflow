@@ -178,6 +178,7 @@ class AwsConfigTest extends Specification {
         config.profile == PROFILE
         config.region == REGION
         config.assumeRoleArn == ROLE
+        config.credentials == (ACCESS_KEY && SECRET_KEY ? [ACCESS_KEY, SECRET_KEY] : [])
 
         cleanup:
         SysEnv.pop()
