@@ -17,13 +17,13 @@
 
 package nextflow.cloud.aws.config
 
-import groovy.transform.CompileDynamic
+
 import groovy.transform.CompileStatic
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import org.apache.commons.lang.StringUtils
-
 /**
+ * Handle AWS S3 client legacy configuration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -36,11 +36,10 @@ class AwsS3Legacy {
         this.config = config
     }
 
-    @CompileDynamic
     Map<String,?> getAwsClientConfig() {
         return config != null
                 ? normalizeAwsClientConfig(config)
-                : new HashMap<>()
+                : new HashMap<String,?>()
     }
 
     static protected Map normalizeAwsClientConfig(Map<String,?> client) {
