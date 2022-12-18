@@ -25,14 +25,14 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.processor.TaskProcessor
-import spock.lang.Specification
 import spock.lang.Timeout
+import test.Dsl2Spec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Timeout(5)
-class ParamsInTest extends Specification {
+class ParamsInTest extends Dsl2Spec {
 
     // ==============================================================
     //                  test *input* parameters
@@ -47,11 +47,16 @@ class ParamsInTest extends Specification {
             process hola {
               input:
               val x
-              val x from y
-              val x from 'ciao'
-              val x from { [1,2] }
+              val x
+              val x
+              val x
 
               return ''
+            }
+            
+            workflow {
+              def z = channel.fromList([1,2])
+              hola(x, y, 'ciao', z)
             }
             '''
 
@@ -87,7 +92,6 @@ class ParamsInTest extends Specification {
 
     def testFromMultiple() {
 
-
         setup:
         def text = '''
             A = 3
@@ -95,11 +99,18 @@ class ParamsInTest extends Specification {
 
             process hola {
               input:
-              val x from 1,2
-              val y from ( {'a'}, {'b'} )
-              val z from ( A, B )
+              val x
+              val y
+              val z
 
               return ''
+            }
+            
+            workflow {
+              def x = channel.of(1,2)
+              def y = channel.of('a', 'b') 
+              def z = channel.of(A, B)
+              hola(x, y, z)
             }
             '''
 
@@ -127,27 +138,6 @@ class ParamsInTest extends Specification {
 
     }
 
-    def testFailFromMultipleChannels() {
-        setup:
-        def text = '''
-            A = Channel.create()
-            B = Channel.create()
-
-            process hola {
-              input:
-              val x from A, B
-
-              return ''
-            }
-            '''
-
-        when:
-        parseAndReturnProcess(text)
-        then:
-        thrown(IllegalArgumentException)
-
-    }
-
     def testInputFiles() {
         setup:
         def text = '''
@@ -156,12 +146,16 @@ class ParamsInTest extends Specification {
             process hola {
               input:
               file x
-              file f1 from x
-              file f2 name 'abc' from x
-              file f3:'*.fa' from x
-              file 'file.txt' from x
+              file f1
+              file f2 name 'abc'
+              file f3:'*.fa'
+              file 'file.txt'
 
               return ''
+            }
+            
+            workflow {
+              hola(x, x, x, x, x)
             }
             '''
 
@@ -211,11 +205,15 @@ class ParamsInTest extends Specification {
 
             process hola {
               input:
-              file "$x" from q
-              file "${y}.txt" from "str"
-              file f2 name "${z}.fa" from q
+              file "$x" 
+              file "${y}.txt"
+              file f2 name "${z}.fa"
 
               return ''
+            }
+            
+            workflow {
+              hola(q, "str", q)
             }
             '''
 
@@ -250,12 +248,16 @@ class ParamsInTest extends Specification {
 
             process hola {
               input:
-              file { "$x" } from q
-              file { "${y}.txt" } from "str"
-              file f2 name { "${z}.fa" } from q
-              file f3:{ "${z}.txt" } from q
+              file "$x" 
+              file "${y}.txt" 
+              file f2 name "${z}.fa" 
+              file f3:"${z}.txt" 
 
               return ''
+            }
+            
+            workflow {
+              hola(q, "str", q, q)
             }
             '''
 
@@ -295,10 +297,14 @@ class ParamsInTest extends Specification {
 
             process hola {
               input:
-              stdin x
-              stdin from y
+              stdin
+              stdin
 
               return ''
+            }
+            
+            workflow {
+              hola(x, y)
             }
             '''
 
@@ -323,14 +329,18 @@ class ParamsInTest extends Specification {
         setup:
         def text = '''
             x = 'aaa'
-            y = [1,2]
+            y = channel.of(1,2)
 
             process hola {
               input:
-              env VAR_X from x
-              env 'VAR_Y' from y
+              env VAR_X 
+              env 'VAR_Y'
 
               return ''
+            }
+            
+            workflow {
+              hola(x, y)
             }
             '''
 
@@ -362,13 +372,17 @@ class ParamsInTest extends Specification {
 
             process hola {
               input:
-              tuple p from x
-              tuple p, q from x
-              tuple v, 'file_name.fa' from 'str'
-              tuple p, 'file_name.txt', '-' from { 'ciao' }
-              tuple t, [file: 'file.fa'] from 0
+              tuple val(p) 
+              tuple val(p), val(q) 
+              tuple val(v), file('file_name.fa') 
+              tuple val(p), file('file_name.txt'), stdin
+              tuple val(t), path(file, name:'file.fa')
 
               return ''
+            }
+            
+            workflow {
+              hola(x, x, 'str', 'ciao', 0)
             }
             '''
 
@@ -443,7 +457,7 @@ class ParamsInTest extends Specification {
 
     }
 
-    def testSetFileWithGString() {
+    def testTupleFileWithGString() {
 
         setup:
         def text = '''
@@ -451,16 +465,20 @@ class ParamsInTest extends Specification {
 
             process hola {
               input:
-              tuple 'name_$x' from q
-              tuple "${x}_name.${str}" from q
+              tuple file('name_$x') 
+              tuple file("${x}_name.${str}" )
 
-              tuple file("hola_${x}") from q
-              tuple file( handle: "${x}.txt") from q
+              tuple file("hola_${x}") 
+              tuple file( handle: "${x}.txt")
 
-              tuple file( { "${x}_name.txt" } ) from q
-              tuple file( handle: { "name_${x}.txt" } ) from q
+              tuple file( { "${x}_name.txt" } )
+              tuple file( handle: { "name_${x}.txt" } ) 
 
               return ''
+            }
+            
+            workflow { 
+              hola(q,q, q,q, q,q)
             }
             '''
 
@@ -506,11 +524,15 @@ class ParamsInTest extends Specification {
         def text = '''
             process hola {
               input:
-              tuple( val(a), file(x), val(b) ) from 1
-              tuple( val(p), file('txt'), env('q') ) from 2
-              tuple( val(v), file(xx:'yy'), stdin, env(W) ) from 3
+              tuple( val(a), file(x), val(b) ) 
+              tuple( val(p), file('txt'), env('q') ) 
+              tuple( val(v), file(xx:'yy'), stdin, env(W) ) 
 
               return ''
+            }
+            
+            workflow {
+              hola(1, 2, 3)
             }
             '''
 
@@ -575,12 +597,16 @@ class ParamsInTest extends Specification {
             process hola {
               input:
               each x
-              each p from y
-              each z from q
-              each file(foo) from foo_ch
-              each file('bar') from bar_ch
+              each p
+              each z
+              each file(foo)
+              each file('bar')
 
               return ''
+            }
+            
+            workflow {
+              hola(x, y, q, foo_ch, bar_ch)
             }
             '''
         when:
@@ -641,28 +667,6 @@ class ParamsInTest extends Specification {
 
     }
 
-    def testMissingVariable () {
-
-        setup:
-        def text = '''
-
-            process hola {
-              input:
-                val x
-
-              return ''
-            }
-            '''
-        when:
-        def process = parseAndReturnProcess(text)
-        process.config.getInputs().get(0).inChannel
-
-        then:
-        thrown(MissingPropertyException)
-
-    }
-
-
     def 'should decode param inputs ' () {
 
         def param
@@ -691,83 +695,6 @@ class ParamsInTest extends Specification {
         param.decodeInputs( [[1,2,3],'b','c'] ) == [1,2,3]
     }
 
-    def testInvalidInputs() {
-
-        given:
-        TaskProcessor process
-        Exception e
-
-        when:
-        process = parseAndReturnProcess('''
-                        x = null
-                        process hola {
-                          input:
-                            val x
-            
-                          return ''
-                        }
-                        ''')
-        process.config.getInputs().get(0).inChannel
-        then:
-        e = thrown(IllegalArgumentException)
-        e.message == 'A process input channel evaluates to null -- Invalid declaration `val x`'
-
-        when:
-        process = parseAndReturnProcess('''
-                        x = null
-                        process hola {
-                          input:
-                            file foo from x
-            
-                          return ''
-                        }
-                        ''')
-        process.config.getInputs().get(0).inChannel
-        then:
-        e = thrown(IllegalArgumentException)
-        e.message == 'A process input channel evaluates to null -- Invalid declaration `file foo`'
-
-    }
-
-    def testInterpolateGlobalVars() {
-
-        given:
-        def TEXT = '''
-            foo = 1
-            bar = 2
-            baz = 3 
-            alpha = [beta: 'hello']
-            
-            process foo {
-              input:
-              val x from "$foo"
-              val y from "${alpha.beta}"
-              val x from Channel.value("$bar")
-              val z from Channel.from("$baz")
-              
-              script:
-              """
-              echo $x
-              """
-            }
-            '''
-        
-        when:
-        def process = parseAndReturnProcess(TEXT)
-        def in0 = (ValueInParam)process.config.getInputs().get(0)
-        def in1 = (ValueInParam)process.config.getInputs().get(1)
-        def in2 = (ValueInParam)process.config.getInputs().get(2)
-        def in3 = (ValueInParam)process.config.getInputs().get(3)
-        then:
-        in0.inChannel.val == "1"
-        in1.inChannel.val == "hello"
-        in2.inChannel.val == '2'
-        in3.inChannel.val == '3'
-
-
-    }
-
-
     /*
      * test path qualifier
      */
@@ -781,13 +708,17 @@ class ParamsInTest extends Specification {
             process hola {
               input:
               path x
-              path f1 from x
-              path '*.fa' from x
-              path 'file.txt' from x
+              path f1
+              path '*.fa' 
+              path 'file.txt'
               path f2, name: '*.fa'
               path f3, stageAs: '*.txt' 
 
               return ''
+            }
+            
+            workflow {
+              hola(x, x, x, x, x, x)
             }
             """
 
@@ -845,10 +776,14 @@ class ParamsInTest extends Specification {
 
             process hola {
               input:
-              path "$x" from q
-              path "${y}.txt" from "str"
+              path "$x" 
+              path "${y}.txt" 
 
               return ''
+            }
+            
+            workflow {
+              hola(q, 'str')
             }
             '''
 
@@ -879,10 +814,14 @@ class ParamsInTest extends Specification {
 
             process hola {
               input:
-              tuple path("hola_${x}") from q
-              tuple path({ "${x}_name.txt" }) from q
+              tuple path("hola_${x}")
+              tuple path({ "${x}_name.txt" })
 
               return ''
+            }
+            
+            workflow {
+              hola(q, q)
             }
             '''
 
@@ -911,11 +850,15 @@ class ParamsInTest extends Specification {
         def text = '''
             process hola {
               input:
-              tuple( val(a), path(x) ) from 1
-              tuple( val(p), path('txt') ) from 2
-              tuple( val(v), path(xx, stageAs: 'yy') ) from 3
+              tuple( val(a), path(x) ) 
+              tuple( val(p), path('txt') )
+              tuple( val(v), path(xx, stageAs: 'yy') )
 
               return ''
+            }
+            
+            workflow {
+                hola(1,2,3)
             }
             '''
 
@@ -965,22 +908,22 @@ class ParamsInTest extends Specification {
 
         setup:
         def text = '''
-            x = 'aaa'
-            y = [1,2]
 
             process hola {
               input:
-              each path(foo) from foo_ch
-              each path('bar') from bar_ch
+              each path(foo)
+              each path('bar') 
 
               return ''
+            }
+            
+            workflow {
+              hola('file-a.txt', 'file-x.fa')
             }
             '''
         when:
 
         def binding =  [:]
-        binding.foo_ch = 'file-a.txt'
-        binding.bar_ch = 'file-x.fa'
 
         def process = parseAndReturnProcess(text, binding)
         def in0 = (EachInParam)process.config.getInputs().get(0)
@@ -1019,10 +962,14 @@ class ParamsInTest extends Specification {
             
             process hola {
               input:
-              val x from ch
-              tuple x, file(x) from ch
+              val x 
+              tuple val(x), file(x)
 
               /command/
+            }
+            
+            workflow {
+              hola(ch, ch)
             }
             '''
         when:

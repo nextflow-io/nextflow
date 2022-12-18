@@ -176,7 +176,9 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
         // set input channels
         for( int i=0; i<params.size(); i++ ) {
-            (declaredInputs[i] as BaseInParam).setFrom(params[i])
+            final inParam = (declaredInputs[i] as BaseInParam)
+            inParam.setFrom(params[i])
+            inParam.init()
         }
 
         // set output channels

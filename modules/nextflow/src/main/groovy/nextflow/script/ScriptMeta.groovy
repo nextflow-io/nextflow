@@ -29,6 +29,8 @@ import nextflow.NF
 import nextflow.exception.DuplicateModuleFunctionException
 import nextflow.exception.MissingModuleComponentException
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.util.TestOnly
+
 /**
  * Holds a nextflow script meta-data such as the
  * defines processes and workflows, the included modules
@@ -48,6 +50,12 @@ class ScriptMeta {
     static private Map<BaseScript,ScriptMeta> REGISTRY = new HashMap<>(10)
 
     static private Set<String> resolvedProcessNames = new HashSet<>(20)
+
+    @TestOnly
+    static void reset() {
+        REGISTRY.clear()
+        resolvedProcessNames.clear()
+    }
 
     static ScriptMeta get(BaseScript script) {
         if( !script ) throw new IllegalStateException("Missing current script context")

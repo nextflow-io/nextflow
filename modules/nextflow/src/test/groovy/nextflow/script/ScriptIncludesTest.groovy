@@ -16,11 +16,10 @@
 
 package nextflow.script
 
-import nextflow.exception.MissingProcessException
-
 import java.nio.file.Files
 
 import nextflow.NextflowMeta
+import nextflow.exception.MissingProcessException
 import nextflow.exception.ScriptCompilationException
 import spock.lang.Timeout
 import test.Dsl2Spec
@@ -678,8 +677,9 @@ class ScriptIncludesTest extends Dsl2Spec {
         """
 
         when:
-        def runner = new TestScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = new MockScriptRunner()
+                .setScript(SCRIPT)
+                .execute()
         then:
         noExceptionThrown()
         result == 'Hello world!'

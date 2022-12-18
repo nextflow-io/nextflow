@@ -19,12 +19,12 @@ package nextflow.script.params
 
 import static test.TestParser.*
 
-import spock.lang.Specification
+import test.Dsl2Spec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class TupleInParamTest extends Specification {
+class TupleInParamTest extends Dsl2Spec {
 
     def 'should create input tuples'() {
         setup:
@@ -33,13 +33,17 @@ class TupleInParamTest extends Specification {
 
             process hola {
               input:
-              tuple val(p) from x
-              tuple val(p), val(q) from x
-              tuple val(v), path('file_name.fa') from 'str'
-              tuple val(p), path('file_name.txt'), '-' from { 'ciao' }
+              tuple val(p) 
+              tuple val(p), val(q) 
+              tuple val(v), path('file_name.fa') 
+              tuple val(p), path('file_name.txt'), '-' 
               tuple val(p), path(z, stageAs: 'file*')
               
               /foo/
+            }
+            
+            workflow {
+              hola(x, x, 'str', 'ciao', x)
             }
             '''
 
@@ -118,14 +122,16 @@ class TupleInParamTest extends Specification {
 
             process hola {
               input:
-              tuple( 'name_$x' ) from q
-              tuple( "${x}_name.${str}" ) from q
-
-              tuple( file("hola_${x}") ) from q
-
-              tuple file( { "${x}_name.txt" } ) from q
+              tuple( file('name_$x') ) 
+              tuple( file("${x}_name.${str}") )
+              tuple( file("hola_${x}") ) 
+              tuple file( { "${x}_name.txt" } ) 
 
               /foo/
+            }
+            
+            workflow {
+              hola(q, q, q, q)
             }
             '''
 

@@ -97,7 +97,7 @@ abstract class BaseParam implements Cloneable {
     /**
      * Initialize the parameter fields if needed
      */
-    final protected void init() {
+    final void init() {
         if( initialized ) return
         lazyInit()
 

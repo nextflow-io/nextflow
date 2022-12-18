@@ -17,16 +17,17 @@
 
 package test
 
+
 import groovy.transform.InheritConstructors
 import nextflow.Session
 import nextflow.executor.Executor
-import nextflow.script.ProcessConfig
-import nextflow.script.ProcessFactory
 import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
+import nextflow.script.BodyDef
+import nextflow.script.ProcessConfig
+import nextflow.script.ProcessFactory
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptParser
-import nextflow.script.BodyDef
 /**
  * An helper class to parse nextflow script snippets
  *
@@ -44,18 +45,15 @@ class TestParser {
         session = session1
     }
 
-
     TaskProcessor parseAndGetProcess( String scriptText, Map binding=null ) {
         if( binding != null ) {
             session.binding = new ScriptBinding(binding)
         }
 
         session.init(null,null)
-        
-        return new ScriptParser(session)
-                .runScript(scriptText)
-                .getScript()
-                .getTaskProcessor()
+        new ScriptParser(session) .runScript(scriptText)
+        session.fireDataflowNetwork(false)
+        return TaskProcessor.currentProcessor()
     }
 
 
@@ -63,13 +61,12 @@ class TestParser {
         new TestParser().parseAndGetProcess(scriptText, map)
     }
 
-
-    static class MockProcessFactory extends ProcessFactory {
+    static class TestProcessFactory extends ProcessFactory {
 
         BaseScript script
         Session session
 
-        MockProcessFactory(BaseScript script, Session session) {
+        TestProcessFactory(BaseScript script, Session session) {
             super(script,session)
             this.script = script
             this.session = session
@@ -77,23 +74,31 @@ class TestParser {
 
         @Override
         TaskProcessor newTaskProcessor(String name, Executor executor, ProcessConfig config, BodyDef taskBody ) {
-            new MockTaskProcessor(name, executor, session, script, config, taskBody)
+            new TestTaskProcessor(name, executor, session, script, config, taskBody)
         }
 
     }
 
     @InheritConstructors
-    static class MockTaskProcessor extends TaskProcessor {
+    static class TestTaskProcessor extends TaskProcessor {
         @Override
-        def run () { }
+        def run () {
+            // this is needed to mimic the out channels normalisation
+            // made by the real 'run' method - check the superclass
+            if ( config.getOutputs().size() == 0 ) {
+                config.fakeOutput()
+            }
+        }
     }
 
     @InheritConstructors
     static class TestSession extends Session {
 
+        TestProcessFactory processFactory
+
         @Override
         ProcessFactory newProcessFactory(BaseScript script) {
-            return new MockProcessFactory(script, this)
+            return processFactory = new TestProcessFactory(script, this)
         }
     }
 }
