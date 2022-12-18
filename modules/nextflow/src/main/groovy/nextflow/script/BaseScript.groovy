@@ -27,6 +27,8 @@ import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskProcessor
+import nextflow.util.TestOnly
+
 /**
  * Any user defined script will extends this class, it provides the base execution context
  *
@@ -38,8 +40,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
     private Session session
 
     private ProcessFactory processFactory
-
-    private TaskProcessor taskProcessor
 
     private ScriptMeta meta
 
@@ -75,8 +75,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
     /**
      * Access to the last *process* object -- only for testing purpose
      */
+    @TestOnly
     @PackageScope
-    TaskProcessor getTaskProcessor() { taskProcessor }
+    TaskProcessor getTaskProcessor() { TaskProcessor.currentProcessor() }
 
     /**
      * Enable disable task 'echo' configuration property
@@ -110,9 +111,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
             meta.addDefinition(process)
         }
         else {
-            // legacy process definition an execution
-            taskProcessor = processFactory.createProcessor(name, body)
-            taskProcessor.run()
+            throw new UnsupportedOperationException("DSL1 is not supported anymore")
         }
     }
 
