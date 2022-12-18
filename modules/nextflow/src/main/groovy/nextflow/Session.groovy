@@ -769,8 +769,7 @@ class Session implements ISession {
         }
     }
 
-    @PackageScope
-    void forceTermination() {
+    protected void forceTermination() {
         terminated = true
         processesBarrier.forceTermination()
         monitorsBarrier.forceTermination()

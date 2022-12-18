@@ -34,7 +34,7 @@ class EachInParamTest extends Specification {
     def testNormalize() {
 
         given:
-        def channel = Channel.from(1,2,3,5)
+        def channel = Channel.of(1,2,3,5)
         def value = Channel.value('a')
         def list = Channel.value([4,5,6])
         def each = new EachInParam(Mock(Binding), [])
