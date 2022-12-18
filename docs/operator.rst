@@ -1879,8 +1879,3 @@ It prints::
     Square of: 1 is 1
     Square of: 2 is 4
     Square of: 3 is 9
-
-.. note::
-    Both the ``view`` and `print`_ (or `println`_) operators consume the items emitted by the source channel to which they
-    are applied. The main difference between them is that ``view`` returns a newly created channel that is
-    identical to the source channel, while ``print`` does not. This allows the ``view`` operator to be chained like other operators.
