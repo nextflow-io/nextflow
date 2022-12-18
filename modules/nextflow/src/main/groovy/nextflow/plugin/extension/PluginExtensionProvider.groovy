@@ -35,6 +35,8 @@ import nextflow.plugin.Plugins
 import nextflow.script.ChannelOut
 import nextflow.script.FunctionDef
 import nextflow.script.ScriptMeta
+import nextflow.util.TestOnly
+
 /**
  * Manage channel extensions and dispatch method invocations
  * to target class implementing the extension logic
@@ -73,6 +75,7 @@ class PluginExtensionProvider implements ExtensionProvider {
         return instance = new PluginExtensionProvider().install()
     }
 
+    @TestOnly
     static void reset() {
         instance = null
     }

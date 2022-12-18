@@ -19,6 +19,7 @@ package nextflow.cloud.aws.fusion
 
 import groovy.transform.CompileStatic
 import nextflow.cloud.aws.config.AwsConfig
+import nextflow.Global
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionEnv
 import org.pf4j.Extension
