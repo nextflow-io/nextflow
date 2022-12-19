@@ -28,7 +28,7 @@ import nextflow.plugin.Plugins
 class FusionEnvProvider {
 
     Map<String,String> getEnvironment(String scheme) {
-        final config = new FusionConfig(Global.config.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
+        final config = new FusionConfig(Global.config?.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
         final list = Plugins.getExtensions(FusionEnv)
         final result = new HashMap<String,String>()
         for( FusionEnv it : list ) {
