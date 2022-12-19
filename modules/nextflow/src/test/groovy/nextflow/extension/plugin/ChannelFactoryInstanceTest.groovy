@@ -21,6 +21,8 @@ import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
+import nextflow.Global
+import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.extension.CH
 import nextflow.plugin.extension.PluginExtensionPoint
@@ -81,6 +83,8 @@ class ChannelFactoryInstanceTest extends Specification {
 
     def 'should invoke custom plugin factory' () {
         given:
+        Global.session = Mock(Session)
+        and:
         def ext1 = new Ext1(); def ext2 = new Ext2()
         new PluginExtensionProvider()
                 .install()
@@ -141,6 +145,9 @@ class ChannelFactoryInstanceTest extends Specification {
 
     def 'should invoke multiple extensions' () {
         given:
+        NextflowMeta.instance.enableDsl2()
+        Global.session = Mock(Session)
+        and:
         def ext1 = new Ext1(); def ext2 = new Ext2()
         new PluginExtensionProvider()
                 .install()
@@ -153,15 +160,18 @@ class ChannelFactoryInstanceTest extends Specification {
             
             process sayHello {
               input:
-                val x from ch1
-                val y from ch2
+                val x
+                val y
               output: 
-                val z into ch3 
+                val z
               exec:
                 z = "$x $y"
             }
             
-            ch3.toSortedList()
+            workflow {
+              main: sayHello(ch1, ch2)
+              emit: sayHello.out.toSortedList()
+            }
             '''
 
         when:
@@ -179,6 +189,7 @@ class ChannelFactoryInstanceTest extends Specification {
 
         cleanup:
         PluginExtensionProvider.reset()
+        NextflowMeta.instance.disableDsl2()
     }
 
     def 'should invoke operator extension' () {
