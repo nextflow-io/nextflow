@@ -187,6 +187,11 @@ class DockerBuilderTest extends Specification {
                 .build()
                 .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --privileged fedora'
 
+        new DockerBuilder('fedora')
+                .params(device: '/dev/fuse')
+                .params(capAdd: 'SYS_ADMIN')
+                .build()
+                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --device /dev/fuse --cap-add SYS_ADMIN fedora'
     }
 
     def 'test add mount'() {

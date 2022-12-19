@@ -40,6 +40,10 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
     private String mountFlags0
 
+    private String device
+
+    private String capAdd
+    
     PodmanBuilder( String name ) {
         this.image = name
     }
@@ -74,6 +78,12 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
         if( params.containsKey('privileged') )
             this.privileged = params.privileged?.toString() == 'true'
+
+        if( params.containsKey('device') )
+            this.device = params.device
+
+        if( params.containsKey('capAdd') )
+            this.capAdd = params.capAdd
 
         return this
     }
@@ -113,6 +123,12 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
 
         if( privileged )
             result << '--privileged '
+
+        if( device )
+            result << '--device ' << device << ' '
+
+        if( capAdd )
+            result << '--cap-add ' << capAdd << ' '
 
         if( cpus ) {
             result << "--cpu-shares ${cpus * 1024} "
