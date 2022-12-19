@@ -249,7 +249,8 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         if ( fusionEnabled() ) {
-            builder.withPrivileged(true)
+            builder.withDevices(['/dev/fuse'])
+                    .withCapabilities(add:['SYS_ADMIN','MKNOD','SYS_CHROOT','SETFCAP'])
 
             final env = fusionLauncher().fusionEnv()
             for( Map.Entry<String,String> it : env )
