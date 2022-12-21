@@ -215,26 +215,42 @@ class FilePorterTest extends Specification {
 
         given:
         def STAGE = Files.createTempDirectory('test')
-        def FTP_FILE1 = 'ftp://host.com/file1.txt' as Path
-        def FTP_FILE2 = 'ftp://host.com/file2.txt' as Path
+        def REMOTE_FILE1 = TestHelper.createInMemTempFile('file1.txt', 'foo')
+        def REMOTE_FILE2 = TestHelper.createInMemTempFile('file2.txt', 'bar')
 
         when:
-        def stage1 = FilePorter.getCachePathFor(FTP_FILE1, STAGE)
+        def stage1 = FilePorter.getCachePathFor(REMOTE_FILE1, STAGE)
         then:
         stage1.toString().startsWith( STAGE.toString() )
 
         when:
-        def stage2 = FilePorter.getCachePathFor(FTP_FILE2, STAGE)
+        def stage2 = FilePorter.getCachePathFor(REMOTE_FILE2, STAGE)
         then:
         stage2.toString().startsWith( STAGE.toString() )
         stage1 != stage2
 
+        // copy the remote files and repeat the test
+        // it should return the same paths
         when:
-        STAGE.resolve('foo.txt').text = 'ciao' // <-- add a file to alter the content of the dir
+        Files.copy(REMOTE_FILE1, stage1)
+        Files.copy(REMOTE_FILE2, stage2)
         and:
-        def newStage1 = FilePorter.getCachePathFor(FTP_FILE1, STAGE)
+        def newStage1 = FilePorter.getCachePathFor(REMOTE_FILE1, STAGE)
         then:
+        newStage1.toString().startsWith( STAGE.toString() )
         stage1 == newStage1
+        and:
+        stage1.exists()
+        newStage1.exists()
+
+        when:
+        stage1.text = 'some other content'  // <-- modify the source file
+        and:
+        newStage1 = FilePorter.getCachePathFor(REMOTE_FILE1, STAGE)
+        then:
+        stage1 != newStage1
+        stage1.exists()
+        !newStage1.exists()
 
         cleanup:
         STAGE?.deleteDir()
