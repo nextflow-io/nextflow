@@ -43,6 +43,7 @@ package com.upplication.s3fs;
 
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
+import java.util.Optional;
 
 import nextflow.file.CloudFileAttributes;
 import static java.lang.String.format;
@@ -112,8 +113,9 @@ public class S3FileAttributes implements BasicFileAttributes, CloudFileAttribute
 		return key;
 	}
 
-	public String getEtag() {
-		return etag;
+	@Override
+	public Optional<String> etag() {
+		return etag!=null ? Optional.of(etag) : Optional.<String>empty();
 	}
 
 	@Override

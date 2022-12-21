@@ -36,6 +36,7 @@ import java.util.EnumSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static nextflow.file.FileHelper.etag;
 
 /**
  * Helper class to handle copy/move files and directories
@@ -81,6 +82,9 @@ public class CopyMoveHelper {
     private static void copyFile(Path source, Path target, boolean foreign, CopyOption... options)
             throws IOException
     {
+
+        if( sameEtag(source,target) )
+            return;
 
         if( !foreign ) {
             source.getFileSystem().provider().copy(source, target, options);
@@ -185,4 +189,13 @@ public class CopyMoveHelper {
         FileHelper.deletePath(source);
     }
 
+    static boolean sameEtag(Path source, Path target) {
+        final String e1 = etag(source);
+        if( e1==null )
+            return false;
+        final String e2 = etag(target);
+        if( e2==null )
+            return false;
+        return e1.equals(e2);
+    }
 }

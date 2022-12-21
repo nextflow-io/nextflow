@@ -24,6 +24,6 @@ package nextflow.file
  */
 interface CloudFileAttributes {
 
-    String getEtag()
+    Optional<String> etag()
 
 }

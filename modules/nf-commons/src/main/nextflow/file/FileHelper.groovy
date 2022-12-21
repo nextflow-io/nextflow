@@ -1097,4 +1097,13 @@ class FileHelper {
         return m.matches() ? m.group(1) : null
     }
 
+    static String etag(Path path) {
+        if( path.fileSystem == FileSystems.default ) {
+            // etag is not implemented for default file system
+            return null
+        }
+
+        final attr = readAttributes(path) as CloudFileAttributes
+        return attr && attr.etag().isPresent() ? attr.etag().get() : null
+    }
 }

@@ -149,8 +149,9 @@ class AzFileAttributes implements BasicFileAttributes, CloudFileAttributes {
         return objectId
     }
 
-    String getEtag() {
-        return etag
+    @Override
+    Optional<String> etag() {
+        return etag ? Optional.of(etag) : Optional.<String>empty()
     }
 
     @Override
@@ -161,7 +162,7 @@ class AzFileAttributes implements BasicFileAttributes, CloudFileAttributes {
         if( lastModifiedTime() != other.lastModifiedTime() ) return false
         if( isRegularFile() != other.isRegularFile() ) return false
         if( size() != other.size() ) return false
-        if( getEtag() != other.getEtag() ) return false
+        if( etag() != other.etag() ) return false
         return true
     }
 
