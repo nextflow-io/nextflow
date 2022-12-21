@@ -566,7 +566,8 @@ Those scripts will be accessible as any other command in the tasks environment, 
 the Linux execute permissions.
 
 .. note::
-    This feature requires the use of a local or shared file system as the pipeline work directory.
+    This feature requires the use of a local or shared file system as the pipeline work directory or
+    :ref:`wave-page` when using cloud based executors.
 
 Channel forking
 ===============
