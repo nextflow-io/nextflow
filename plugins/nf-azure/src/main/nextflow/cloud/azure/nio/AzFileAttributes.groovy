@@ -26,6 +26,7 @@ import com.azure.storage.blob.models.BlobContainerItem
 import com.azure.storage.blob.models.BlobItem
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.file.CloudFileAttributes
 
 /**
  * Implements {@link BasicFileAttributes} for Azure blob path
@@ -34,7 +35,7 @@ import groovy.util.logging.Slf4j
  */
 @Slf4j
 @CompileStatic
-class AzFileAttributes implements BasicFileAttributes {
+class AzFileAttributes implements BasicFileAttributes, CloudFileAttributes {
 
     private FileTime updateTime
 
@@ -45,6 +46,8 @@ class AzFileAttributes implements BasicFileAttributes {
     private long size
 
     private String objectId
+
+    private String etag
 
     static AzFileAttributes root() {
         new AzFileAttributes(size: 0, objectId: '/', directory: true)
@@ -60,6 +63,7 @@ class AzFileAttributes implements BasicFileAttributes {
         updateTime = time(props.getLastModified())
         directory = client.blobName.endsWith('/')
         size = props.getBlobSize()
+        etag = props.getETag()
     }
 
     AzFileAttributes(String containerName, BlobItem item) {
@@ -69,6 +73,7 @@ class AzFileAttributes implements BasicFileAttributes {
             creationTime = time(item.properties.getCreationTime())
             updateTime = time(item.properties.getLastModified())
             size = item.properties.getContentLength()
+            etag = item.properties.getETag()
         }
     }
 
@@ -144,6 +149,10 @@ class AzFileAttributes implements BasicFileAttributes {
         return objectId
     }
 
+    String getEtag() {
+        return etag
+    }
+
     @Override
     boolean equals( Object obj ) {
         if( this.class != obj?.class ) return false
@@ -152,6 +161,7 @@ class AzFileAttributes implements BasicFileAttributes {
         if( lastModifiedTime() != other.lastModifiedTime() ) return false
         if( isRegularFile() != other.isRegularFile() ) return false
         if( size() != other.size() ) return false
+        if( getEtag() != other.getEtag() ) return false
         return true
     }
 
