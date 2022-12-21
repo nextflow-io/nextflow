@@ -180,8 +180,8 @@ The ``emit`` option can be used also to name the stdout::
         sayHello.out.verbiage.view()
     }
 
-.. warning:: Channel options in processes are always added with a comma before. The case for ``stdout`` is an
-    exception, as you must not add the comma right after ``stdout`` for adding the ``emit`` channel option.
+.. warning:: Channel options in processes are always added with a comma before to separate the directive value from the optional attribute. The case for ``stdout`` is an
+    exception, as you must not add the comma right after ``stdout`` for adding the ``emit`` channel option. It happens this way because ``stdout`` doesn't have a value, as it is usually the case.
 
 Workflow
 ========
