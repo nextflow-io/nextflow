@@ -769,6 +769,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		boolean directory = false;
 		boolean regularFile = false;
 		String key = objectSummary.getKey();
+		String etag = objectSummary.getETag();
 		// check if is a directory and exists the key of this directory at amazon s3
 		if (objectSummary.getKey().equals(s3Path.getKey() + "/") && objectSummary.getKey().endsWith("/")) {
 			directory = true;
@@ -786,7 +787,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			regularFile = true;
 		}
 
-		return new S3FileAttributes(key, lastModifiedTime, size, directory, regularFile);
+		return new S3FileAttributes(key, lastModifiedTime, size, directory, regularFile, etag);
 	}
 
 	@Override

@@ -44,9 +44,10 @@ package com.upplication.s3fs;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 
+import nextflow.file.CloudFileAttributes;
 import static java.lang.String.format;
 
-public class S3FileAttributes implements BasicFileAttributes {
+public class S3FileAttributes implements BasicFileAttributes, CloudFileAttributes {
 	
 	private final FileTime lastModifiedTime;
 	private final long size;
@@ -54,13 +55,16 @@ public class S3FileAttributes implements BasicFileAttributes {
 	private final boolean regularFile;
 	private final String key;
 
+	private final String etag;
+
 	public S3FileAttributes(String key, FileTime lastModifiedTime, long size,
-			boolean isDirectory, boolean isRegularFile) {
+			boolean isDirectory, boolean isRegularFile, String etag) {
 		this.key = key;
 		this.lastModifiedTime = lastModifiedTime;
 		this.size = size;
-		directory = isDirectory;
-		regularFile = isRegularFile;
+		this.directory = isDirectory;
+		this.regularFile = isRegularFile;
+		this.etag = etag;
 	}
 
 	@Override
@@ -106,6 +110,10 @@ public class S3FileAttributes implements BasicFileAttributes {
 	@Override
 	public Object fileKey() {
 		return key;
+	}
+
+	public String getEtag() {
+		return etag;
 	}
 
 	@Override
