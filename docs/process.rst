@@ -1023,6 +1023,33 @@ Name                Description
 ``includeInputs``   When ``true`` any input files matching an output file glob pattern are included.
 ================== =====================
 
+The parenthesis are optional for input and output qualifiers, but when you want to set an additional option and there
+is more than one input or output qualifier, you must use parenthesis so that Nextflow knows what qualifier you're
+referring to.
+
+One example with a single output qualifier::
+
+    process foo {
+      output:
+      path 'result.txt', hidden: true
+
+      '''
+      echo 'another new line' >> result.txt
+      '''
+    }
+
+Another example with multiple output qualifiers::
+
+    process foo {
+      output:
+      tuple path('last_result.txt'), path('result.txt', hidden: true)
+
+      '''
+      echo 'another new line' >> result.txt
+      echo 'another new line' > last_result.txt
+      '''
+    }
+
 
 Multiple output files
 ---------------------
@@ -2030,6 +2057,7 @@ saveAs          A closure which, given the name of the file being published, ret
 enabled         Enable or disable the publish rule depending on the boolean value specified (default: ``true``).
 failOnError     When ``true`` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: ``false``)
 contentType     Allow specifying the media content type of the published file a.k.a. `MIME type <https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types>`_. If the boolean value ``true`` is specified the content type is inferred from the file extension (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Default: ``false``, requires `22.10.0`` or later).
+storageClass    Allow specifying the *storage class* to be used for the published file (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Requires version ``22.12.0-edge`` or later).
 tags            Allow the association of arbitrary tags with the published file e.g. ``tags: [FOO: 'Hello world']`` (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Requires version ``21.12.0-edge`` or later).
 =============== =================
 

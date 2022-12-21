@@ -67,7 +67,7 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
                 ? Paths.get(name)
                 : Const.APP_HOME_DIR.resolve(name)
         final path = secretFile.parent
-        if( !path.exists() && !path.parent.mkdirs() )
+        if( path && !path.exists() && !path.mkdirs() )
             throw new IllegalStateException("Cannot create directory '${path}' -- make sure a file with the same name doesn't already exist and you have write permissions")
         return secretFile
     }
