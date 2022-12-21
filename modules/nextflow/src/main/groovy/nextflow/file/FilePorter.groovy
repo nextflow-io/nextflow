@@ -335,7 +335,7 @@ class FilePorter {
         final dirPath = stageDir.toUriString() // <-- use a string to avoid changes in the dir to alter the hashing
         int i=0
         while( true ) {
-            final  uniq = [sourcePath, dirPath, i++]
+            final uniq = List.of(sourcePath, dirPath, i++)
             final hash = CacheHelper.hasher(uniq).hash().toString()
             final targetPath = getCacheDir0(stageDir, hash).resolve(sourcePath.getName())
             final exist = targetPath.exists()
