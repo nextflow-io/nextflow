@@ -162,7 +162,7 @@ class ScriptRunnerTest extends Dsl2Spec {
 
         then:
         runner.result.val == 'echo 1'
-        runner.scriptObj.taskProcessor.name == 'simpleTask'
+        TaskProcessor.currentProcessor().name == 'simpleTask'
 
     }
 
