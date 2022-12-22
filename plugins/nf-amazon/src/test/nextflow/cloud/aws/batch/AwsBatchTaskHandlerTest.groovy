@@ -156,7 +156,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
-        _ * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', storageEncryption: 'AES256', debug: true, shareIdentifier: 'priority/high') }
+        _ * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', storageEncryption: 'AES256', debug: true, shareIdentifier: 'priority/high', schedulingPriority: 9999) }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> []
@@ -168,6 +168,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req2.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
         req2.getContainerOverrides().getCommand() ==['bash', '-c', 'something']
         req2.getShareIdentifier() == 'priority/high'
+        req2.getSchedulingPriorityOverride() == 9999
 
     }
 

@@ -662,8 +662,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             result.setPropagateTags(true)
         }
         // set the share identifier
-        if( this.getAwsOptions().shareIdentifier )
+        if( this.getAwsOptions().shareIdentifier ) {
             result.setShareIdentifier(this.getAwsOptions().shareIdentifier)
+            result.setSchedulingPriorityOverride(this.getAwsOptions().schedulingPriority)
+        }
 
         /*
          * retry on spot reclaim
