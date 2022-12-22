@@ -42,4 +42,20 @@ class S3PathTest extends Specification {
 
     }
 
+    def 'should check equals and hashcode' () {
+        given:
+        def path1 = FileHelper.asPath('s3://foo/some/foo.txt')
+        def path2 = FileHelper.asPath('s3://foo/some/foo.txt')
+        def path3 = FileHelper.asPath('s3://foo/some/bar.txt')
+        def path4 = FileHelper.asPath('s3://bar/some/foo.txt')
+
+        expect:
+        path1 == path2
+        path1 != path3
+        path3 != path4
+        and:
+        path1.hashCode() == path2.hashCode()
+        path1.hashCode() != path3.hashCode()
+        path3.hashCode() != path4.hashCode()
+    }
 }
