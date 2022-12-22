@@ -96,7 +96,7 @@ class FilePorter {
     }
 
     protected FileTransfer getOrSubmit(FileCopy copy) {
-        synchronized (stagingTransfers) {
+        synchronized (this) {
             FileTransfer transfer = stagingTransfers.get(copy)
             if( transfer == null ) {
                 transfer = createFileTransfer(copy.source, copy.target)
@@ -213,9 +213,9 @@ class FilePorter {
         Path addToForeign(Path path) {
             // copy the path with a thread pool
             synchronized (owner) {
-                final target = getCachePathFor(path, stageDir)
-                foreignPaths << new FileCopy(path, target)
-                return target
+                final copy = getCachePathFor(path, stageDir, owner.stagingTransfers)
+                foreignPaths << copy
+                return copy.target
             }
         }
 
@@ -331,16 +331,19 @@ class FilePorter {
         }
     }
 
-    static protected Path getCachePathFor(Path sourcePath, Path stageDir) {
+    static protected FileCopy getCachePathFor(Path sourcePath, Path stageDir, Map<FileCopy,FileTransfer> stagingTransfers) {
         final dirPath = stageDir.toUriString() // <-- use a string to avoid changes in the dir to alter the hashing
         int i=0
         while( true ) {
             final uniq = List.of(sourcePath, dirPath, i++)
             final hash = CacheHelper.hasher(uniq).hash().toString()
             final targetPath = getCacheDir0(stageDir, hash).resolve(sourcePath.getName())
+            final result = new FileCopy(sourcePath, targetPath)
+            if( stagingTransfers.containsKey(result) )
+                return result
             final exist = targetPath.exists()
             if( !exist || checkPathIntegrity(sourcePath, targetPath) )
-                return targetPath
+                return result
         }
     }
 
