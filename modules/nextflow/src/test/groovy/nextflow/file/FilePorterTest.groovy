@@ -214,43 +214,46 @@ class FilePorterTest extends Specification {
     def 'should return stage path' () {
 
         given:
+        def session = Mock(Session) { getConfig() >> [:] }
+        def porter = new FilePorter(session)
+        and:
         def STAGE = Files.createTempDirectory('test')
         def REMOTE_FILE1 = TestHelper.createInMemTempFile('file1.txt', 'foo')
         def REMOTE_FILE2 = TestHelper.createInMemTempFile('file2.txt', 'bar')
 
         when:
-        def stage1 = FilePorter.getCachePathFor(REMOTE_FILE1, STAGE)
+        def stage1 = porter.getCachePathFor(REMOTE_FILE1, STAGE)
         then:
-        stage1.toString().startsWith( STAGE.toString() )
+        stage1.target.toString().startsWith( STAGE.toString() )
 
         when:
-        def stage2 = FilePorter.getCachePathFor(REMOTE_FILE2, STAGE)
+        def stage2 = porter.getCachePathFor(REMOTE_FILE2, STAGE)
         then:
-        stage2.toString().startsWith( STAGE.toString() )
+        stage2.target.toString().startsWith( STAGE.toString() )
         stage1 != stage2
 
         // copy the remote files and repeat the test
         // it should return the same paths
         when:
-        Files.copy(REMOTE_FILE1, stage1)
-        Files.copy(REMOTE_FILE2, stage2)
+        Files.copy(REMOTE_FILE1, stage1.target)
+        Files.copy(REMOTE_FILE2, stage2.target)
         and:
-        def newStage1 = FilePorter.getCachePathFor(REMOTE_FILE1, STAGE)
+        def newStage1 = porter.getCachePathFor(REMOTE_FILE1, STAGE)
         then:
-        newStage1.toString().startsWith( STAGE.toString() )
+        newStage1.target.toString().startsWith( STAGE.toString() )
         stage1 == newStage1
         and:
-        stage1.exists()
-        newStage1.exists()
+        stage1.target.exists()
+        newStage1.target.exists()
 
         when:
-        stage1.text = 'some other content'  // <-- modify the source file
+        stage1.target.text = 'some other content'  // <-- modify the target file
         and:
-        newStage1 = FilePorter.getCachePathFor(REMOTE_FILE1, STAGE)
+        newStage1 = porter.getCachePathFor(REMOTE_FILE1, STAGE)
         then:
         stage1 != newStage1
-        stage1.exists()
-        !newStage1.exists()
+        stage1.target.exists()
+        !newStage1.target.exists()
 
         cleanup:
         STAGE?.deleteDir()

@@ -212,11 +212,9 @@ class FilePorter {
          */
         Path addToForeign(Path path) {
             // copy the path with a thread pool
-            synchronized (owner) {
-                final copy = getCachePathFor(path, stageDir, owner.stagingTransfers)
-                foreignPaths << copy
-                return copy.target
-            }
+            final copy = owner.getCachePathFor(path, stageDir)
+            foreignPaths << copy
+            return copy.target
         }
 
         /**
@@ -331,7 +329,7 @@ class FilePorter {
         }
     }
 
-    static protected FileCopy getCachePathFor(Path sourcePath, Path stageDir, Map<FileCopy,FileTransfer> stagingTransfers) {
+    synchronized protected FileCopy getCachePathFor(Path sourcePath, Path stageDir) {
         final dirPath = stageDir.toUriString() // <-- use a string to avoid changes in the dir to alter the hashing
         int i=0
         while( true ) {
