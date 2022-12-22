@@ -20,15 +20,11 @@ package nextflow.script
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Paths
 
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.exception.AbortOperationException
-import nextflow.processor.TaskProcessor
-import nextflow.util.TestOnly
-
 /**
  * Any user defined script will extends this class, it provides the base execution context
  *
@@ -64,31 +60,20 @@ abstract class BaseScript extends Script implements ExecutionContext {
     /**
      * Holds the configuration object which will used to execution the user tasks
      */
+    @Deprecated
     protected Map getConfig() {
         final msg = "The access of `config` object is deprecated"
-        if( NF.dsl2 )
-            throw new DeprecationException(msg)
-        log.warn(msg)
-        session.getConfig()
+        throw new DeprecationException(msg)
     }
-
-    /**
-     * Access to the last *process* object -- only for testing purpose
-     */
-    @TestOnly
-    @PackageScope
-    TaskProcessor getTaskProcessor() { TaskProcessor.currentProcessor() }
 
     /**
      * Enable disable task 'echo' configuration property
      * @param value
      */
+    @Deprecated
     protected void echo(boolean value = true) {
         final msg = "The use of `echo` method has been deprecated"
-        if( NF.dsl2 )
-            throw new DeprecationException(msg)
-        log.warn(msg)
-        session.getConfig().process.echo = value
+        throw new DeprecationException(msg)
     }
 
     private void setup() {
@@ -122,9 +107,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * @return The result of workflow execution
      */
     protected workflow(Closure<BodyDef> workflowBody) {
-        if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to allow the definition of workflow components")
-
         // launch the execution
         final workflow = new WorkflowDef(this, workflowBody)
         if( !binding.entryName )
@@ -133,9 +115,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     protected workflow(String name, Closure<BodyDef> workflowDef) {
-        if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to allow the definition of workflow components")
-
         final workflow = new WorkflowDef(this,workflowDef,name)
         if( binding.entryName==name )
             this.entryFlow = workflow
@@ -143,8 +122,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     protected IncludeDef include( IncludeDef include ) {
-        if(!NF.isDsl2())
-            throw new IllegalStateException("Module feature not enabled -- Set `nextflow.enable.dsl=2` to import module files")
         if(ExecutionStack.withinWorkflow())
             throw new IllegalStateException("Include statement is not allowed within a workflow definition")
         include .setSession(session)
@@ -152,20 +129,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     @Override
     Object invokeMethod(String name, Object args) {
-        if(NF.isDsl2())
-            binding.invokeMethod(name, args)
-        else
-            super.invokeMethod(name, args)
+        binding.invokeMethod(name, args)
     }
 
-    private runDsl1() {
-        session.notifyBeforeWorkflowExecution()
-        final ret = runScript()
-        session.notifyAfterWorkflowExecution()
-        return ret
-    }
-
-    private runDsl2() {
+    private run0() {
         final result = runScript()
         if( meta.isModule() ) {
             return result
@@ -213,7 +180,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         setup()
         ExecutionStack.push(this)
         try {
-            NF.dsl2 ? runDsl2() : runDsl1()
+            run0()
         }
         catch(InvocationTargetException e) {
             // provide the exception cause which is more informative than InvocationTargetException
