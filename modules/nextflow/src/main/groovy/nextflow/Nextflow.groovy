@@ -60,49 +60,6 @@ class Nextflow {
 
     private static final Random random = new Random()
 
-    /**
-     * Create a {@code DataflowVariable} binding it to the specified value
-     *
-     * @param obj
-     * @return
-     */
-    @Deprecated
-    static <T> DataflowVariable<T> variable( T obj = null ) {
-        if( NF.dsl2 ) throw new DeprecationException("Method `variable` is not available any more")
-        obj != null ? CH.value(obj) : CH.value()
-    }
-
-    /**
-     * Create a {@code DataflowQueue} populating with the specified values
-     * <p>
-     * This 'queue' data structure can be viewed as a point-to-point (1 to 1, many to 1) communication channel.
-     * It allows one or more producers send messages to one reader.
-     *
-     * @param values
-     * @return
-     */
-    @Deprecated
-    static DataflowQueue channel( Collection values = null ) {
-        if( NF.dsl2 ) throw new DeprecationException("Method `channel` is not available any more")
-        def result = CH.queue()
-        if( values != null )
-            CH.emitAndClose(result, values)
-        return result
-    }
-
-    /**
-     * Create a {@code DataflowQueue} populating with a single value
-     * <p>
-     * This 'queue' data structure can be viewed as a point-to-point (1 to 1, many to 1) communication channel.
-     * It allows one or more producers send messages to one reader.
-     *
-     * @param item
-     * @return
-     */
-    @Deprecated
-    static DataflowQueue channel( Object... items ) {
-        return channel(items as List)
-    }
 
     static private fileNamePattern( FilePatternSplitter splitter, Map opts, FileSystem fs ) {
 
