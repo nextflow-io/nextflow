@@ -165,6 +165,9 @@ class FilePorter {
         return result
     }
 
+    /**
+     * Model a file stage requirement
+     */
     @Canonical
     static class FileCopy {
         final Path source
