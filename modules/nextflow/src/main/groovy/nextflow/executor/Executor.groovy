@@ -117,7 +117,7 @@ abstract class Executor {
 
     @Memoized
     Path getStageDir() {
-        return getWorkDir().resolve('stage')
+        return getWorkDir().resolve("stage-${getSession().uniqueId}")
     }
 
     boolean isForeignFile(Path path) {
