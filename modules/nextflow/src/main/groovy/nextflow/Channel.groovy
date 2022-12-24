@@ -66,7 +66,7 @@ class Channel  {
 
     static public NullObject VOID = NullObject.getNullObject()
 
-    // only for testing purpose !
+    @TestOnly
     private static CompletableFuture fromPath0Future
 
     static private Session getSession() { Global.session as Session }
@@ -170,20 +170,6 @@ class Channel  {
         final result = from0(items as List)
         NodeMarker.addSourceNode('Channel.from', result)
         return result
-    }
-
-    /**
-     * Convert an object into a *channel* variable that emits that object
-     *
-     * @param obj
-     * @return
-     */
-    @Deprecated
-    static DataflowVariable just( obj = null ) {
-        if( NF.dsl2 )
-            throw new DeprecationException("The operator `just` is not available anymore -- Use `value` instead.")
-        log.warn "The operator `just` is deprecated -- Use `value` instead."
-        value(obj)
     }
 
     static DataflowVariable value( obj = null ) {
