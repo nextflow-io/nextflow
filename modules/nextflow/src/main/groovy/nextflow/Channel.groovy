@@ -40,7 +40,6 @@ import nextflow.dag.NodeMarker
 import nextflow.datasource.SraExplorer
 import nextflow.exception.AbortOperationException
 import nextflow.extension.CH
-import nextflow.plugin.extension.PluginExtensionProvider
 import nextflow.extension.GroupTupleOp
 import nextflow.extension.MapOp
 import nextflow.file.DirListener
@@ -49,8 +48,9 @@ import nextflow.file.DirWatcherV2
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.file.PathVisitor
-import nextflow.util.CheckHelper
+import nextflow.plugin.extension.PluginExtensionProvider
 import nextflow.util.Duration
+import nextflow.util.TestOnly
 import org.codehaus.groovy.runtime.InvokerHelper
 import org.codehaus.groovy.runtime.NullObject
 /**
@@ -82,6 +82,33 @@ class Channel  {
         PluginExtensionProvider.INSTANCE().invokeFactoryExtensionMethod(name, InvokerHelper.asArray(args))
     }
 
+    static Object[] array0(Object value) {
+        if( value instanceof Object[] )
+            return (Object[])value
+        if( value instanceof Collection )
+            return value.toArray()
+        else
+            return new Object[] {value}
+    }
+
+    static private checkNoChannels(String name, Object value) {
+        if( value==null )
+            return
+        Object[] items = array0(value)
+        if( items.size()==1 && CH.isChannel(items[0]))
+            throw new IllegalArgumentException("Argument of '$name' method cannot be a channel object — Likely you can replace the use of '$name' with the channel object itself")
+        for( int i=0; i<items.size(); i++ ) {
+            if( CH.isChannel(items[i]) )
+                throw new IllegalArgumentException("Argument ${nth(i+1)} of method '$name' cannot be a channel object")
+        }
+    }
+
+    static private String nth(int i) {
+        if( i==1 ) return '1-st'
+        if( i==2 ) return '2-nd'
+        return "$i-th"
+    }
+
     /**
      * Create an new channel
      *
@@ -106,6 +133,7 @@ class Channel  {
     }
 
     static DataflowWriteChannel of(Object ... items) {
+        checkNoChannels('channel.of', items)
         final result = CH.create()
         final values = new ArrayList()
         if( items == null ) {
@@ -167,12 +195,17 @@ class Channel  {
      */
     @Deprecated
     static DataflowWriteChannel from( Object... items ) {
+        checkNoChannels('channel.from', items)
+        for( Object it : items ) if(CH.isChannel(it))
+            throw new IllegalArgumentException("channel.from argument is already a channel object")
+
         final result = from0(items as List)
         NodeMarker.addSourceNode('Channel.from', result)
         return result
     }
 
     static DataflowVariable value( obj = null ) {
+        checkNoChannels('channel.value', obj)
         obj != null ? CH.value(obj) : CH.value()
     }
 
@@ -251,6 +284,7 @@ class Channel  {
      */
     static DataflowWriteChannel<Path> fromPath( Map opts = null, pattern ) {
         if( !pattern ) throw new AbortOperationException("Missing `fromPath` parameter")
+        checkNoChannels('channel.fromPath', pattern)
 
         // verify that the 'type' parameter has a valid value
         checkParams( 'path', opts, VALID_FROM_PATH_PARAMS )
@@ -402,6 +436,7 @@ class Channel  {
      *      A channel emitting the file pairs matching the specified pattern(s)
      */
     static DataflowWriteChannel fromFilePairs(Map options = null, pattern) {
+        checkNoChannels('channel.fromFilePairs', pattern)
         final allPatterns = pattern instanceof List ? pattern : [pattern]
         final allGrouping = new ArrayList(allPatterns.size())
         for( int i=0; i<allPatterns.size(); i++ ) {
@@ -434,6 +469,7 @@ class Channel  {
      *      A channel emitting the file pairs matching the specified pattern(s)
      */
     static DataflowWriteChannel fromFilePairs(Map options = null, pattern, Closure grouping) {
+        checkNoChannels('channel.fromFilePairs', pattern)
         final allPatterns = pattern instanceof List ? pattern : [pattern]
         final allGrouping = new ArrayList(allPatterns.size())
         for( int i=0; i<allPatterns.size(); i++ ) {
@@ -589,11 +625,13 @@ class Channel  {
     }
 
     static DataflowWriteChannel fromSRA(query) {
+        checkNoChannels('channel.fromSRA', query)
         fromSRA( Collections.emptyMap(), query )
     }
 
     static DataflowWriteChannel fromSRA(Map opts, query) {
-        CheckHelper.checkParams('fromSRA', opts, SraExplorer.PARAMS)
+        checkParams('fromSRA', opts, SraExplorer.PARAMS)
+        checkNoChannels('channel.fromSRA', query)
 
         def target = new DataflowQueue()
         def explorer = new SraExplorer(target, opts).setQuery(query)
