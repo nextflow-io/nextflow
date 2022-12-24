@@ -52,8 +52,7 @@ class FusionHelper {
                 .addMountWorkDir(false)
                 .addRunOptions('--rm')
                 .params(containerConfig)
-                .params(device: '/dev/fuse')
-                .params(capAdd: 'SYS_ADMIN')
+                .params(privileged: true)
 
         // add fusion env vars
         for(Map.Entry<String,String> it : launcher.fusionEnv()) {

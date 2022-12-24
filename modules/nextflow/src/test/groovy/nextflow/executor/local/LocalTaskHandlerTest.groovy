@@ -76,7 +76,7 @@ class LocalTaskHandlerTest extends Specification {
         then:
         handler.fusionEnabled() >> true
         and:
-        builder.command() == ['sh','-c','docker run -i -e "NXF_FUSION_WORK=/fusion/http/some/work/dir" -e "NXF_FUSION_BUCKETS=http://some" --rm --device /dev/fuse --cap-add SYS_ADMIN ubuntu:latest bash -o pipefail -c \'trap "{ ret=$?; cp .command.log /fusion/http/some/work/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/http/some/work/dir/.command.run 2>&1 | tee .command.log\'']
+        builder.command() == ['sh','-c','docker run -i -e "NXF_FUSION_WORK=/fusion/http/some/work/dir" -e "NXF_FUSION_BUCKETS=http://some" --rm --privileged ubuntu:latest bash -o pipefail -c \'trap "{ ret=$?; cp .command.log /fusion/http/some/work/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/http/some/work/dir/.command.run 2>&1 | tee .command.log\'']
         builder.directory() == null
         builder.redirectErrorStream()
         builder.redirectOutput().file()
