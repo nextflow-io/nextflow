@@ -769,8 +769,7 @@ class Session implements ISession {
         }
     }
 
-    @PackageScope
-    void forceTermination() {
+    protected void forceTermination() {
         terminated = true
         processesBarrier.forceTermination()
         monitorsBarrier.forceTermination()
@@ -1163,6 +1162,7 @@ class Session implements ISession {
         def engines = new LinkedList<Map>()
         getContainerConfig0('docker', engines)
         getContainerConfig0('podman', engines)
+        getContainerConfig0('sarus', engines)
         getContainerConfig0('shifter', engines)
         getContainerConfig0('udocker', engines)
         getContainerConfig0('singularity', engines)

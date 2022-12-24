@@ -109,7 +109,8 @@ to specify your bucket credentials. For example::
     aws {
         accessKey = '<YOUR S3 ACCESS KEY>'
         secretKey = '<YOUR S3 SECRET KEY>'
-        region = '<REGION IDENTIFIER>'
+        region = '<AWS REGION IDENTIFIER>'
+        profile = '<AWS CONFIG PROFILE>' // optional
     }
 
 Click the following link to learn more about `AWS Security Credentials <http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html>`_.
@@ -123,6 +124,8 @@ anonymous                   Allow the access of public S3 buckets without the ne
 s3Acl                       Allow the setting of a predefined bucket permissions also known as *canned ACL*. Permitted values are ``Private``, ``PublicRead``, ``PublicReadWrite``, ``AuthenticatedRead``, ``LogDeliveryWrite``, ``BucketOwnerRead``, ``BucketOwnerFullControl`` and ``AwsExecRead``. See `Amazon docs <https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl>`_ for details.
 connectionTimeout           The amount of time to wait (in milliseconds) when initially establishing a connection before giving up and timing out.
 endpoint                    The AWS S3 API entry point e.g. `s3-us-west-1.amazonaws.com`.
+glacierAutoRetrieval        Enable auto retrieval of S3 objects stored with Glacier class store (EXPERIMENTAL. default: ``false``, requires version ``22.12.0-edge`` or later).
+glacierExpirationDays       The time, in days, between when an object is restored to the bucket and when it expires (EXPERIMENTAL. default: ``7``, requires version ``22.12.0-edge`` or later).
 maxConnections              The maximum number of allowed open HTTP connections.
 maxErrorRetry               The maximum number of retry attempts for failed retryable requests.
 protocol                    The protocol (i.e. HTTP or HTTPS) to use when connecting to AWS.
@@ -167,13 +170,14 @@ Name                        Description
 cliPath                     The path where the AWS command line tool is installed in the host AMI.
 jobRole                     The AWS Job Role ARN that needs to be used to execute the Batch Job.
 logsGroup                   The name of the logs group used by Batch Jobs (default: ``/aws/batch``, requires ``22.09.0-edge`` or later).
-volumes                     One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. ``/host/path:/mount/path[:ro|rw]``. Multiple mounts can be specifid separating them with a comma or using a list object.
+volumes                     One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. ``/host/path:/mount/path[:ro|rw]``. Multiple mounts can be specified separating them with a comma or using a list object.
 delayBetweenAttempts        Delay between download attempts from S3 (default `10 sec`).
 maxParallelTransfers        Max parallel upload/download transfer operations *per job* (default: ``4``).
 maxTransferAttempts         Max number of downloads attempts from S3 (default: `1`).
 maxSpotAttempts             Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: ``5``, requires ``22.04.0`` or later)
-shareIdentifier             The share identifier for all tasks when using `fair-share scheduling for AWS Batch <https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/>`_ (requires ``22.09.0-edge`` or later)
 retryMode                   The retry mode configuration setting, to accommodate rate-limiting on `AWS services <https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html>`_ (default: ``standard``)
+schedulingPriority          The scheduling priority for all tasks when using `fair-share scheduling for AWS Batch <https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/>`_ (default: ``0``, requires ``23.01.0-edge`` or later)
+shareIdentifier             The share identifier for all tasks when using `fair-share scheduling for AWS Batch <https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/>`_ (requires ``22.09.0-edge`` or later)
 =========================== ================
 
 
@@ -422,7 +426,7 @@ securityContext     Defines the `security context <https://kubernetes.io/docs/ta
 storageClaimName    The name of the persistent volume claim where store workflow result data.
 storageMountPath    The path location used to mount the persistent volume claim (default: ``/workspace``).
 storageSubPath      The path in the persistent volume to be mounted (default: root).
-computeResourceType Define whether use Kubernetes ``Pod`` or ``Job`` resource type to carry out Nextflow tasks (default: ``Pod``).
+computeResourceType Define whether use Kubernetes ``Pod`` or ``Job`` resource type to carry out Nextflow tasks (default: ``Pod``, requires version ``22.05.0-edge`` or later).
 fetchNodeName       If you trace the hostname, activate this option (default: ``false``, requires version ``22.05.0-edge`` or later).
 volumeClaims        (deprecated)
 maxErrorRetry       Defines the Kubernetes API max request retries (default is set to 4)
@@ -591,7 +595,7 @@ temp                Mounts a path of your choice as the ``/tmp`` directory in th
 remove              Clean-up the container after the execution (default: ``true``).
 runOptions          This attribute can be used to provide any extra command line options supported by the ``podman run`` command.
 registry            The registry from where container images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
-engineOptions       This attribute can be used to provide any option supported by the Docker engine i.e. ``podman [OPTIONS]``.
+engineOptions       This attribute can be used to provide any option supported by the Podman engine i.e. ``podman [OPTIONS]``.
 mountFlags          Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`
 ================== ================
 
@@ -736,6 +740,28 @@ overwrite           When ``true`` overwrites any existing report file with the s
 ================== ================
 
 
+.. _config-sarus:
+
+Scope `sarus`
+-------------------
+
+The ``sarus`` configuration scope controls how `Sarus <https://sarus.readthedocs.io>`_ containers are executed
+by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             Turn this flag to ``true`` to enable Sarus execution (default: ``false``).
+envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+tty                 Allocates a pseudo-tty (default: ``false``).
+runOptions          This attribute can be used to provide any extra command line options supported by the ``sarus run`` command. For details see: https://sarus.readthedocs.io/en/stable/user/user_guide.html .
+================== ================
+
+Read :ref:`container-sarus` page to learn more about how to use Sarus containers with Nextflow.
+
+
 .. _config-shifter:
 
 Scope `shifter`
@@ -776,6 +802,7 @@ noHttps             Turn this flag to ``true`` to pull the Singularity image wit
 autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
 cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
 pullTimeout         The amount of time the Singularity pull can last, exceeding which the process is terminated (default: ``20 min``).
+registry            The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
 ================== ================
 
 Read :ref:`container-singularity` page to learn more about how to use Singularity containers with Nextflow.
@@ -986,7 +1013,7 @@ NXF_DEBUG                       Defines scripts debugging level: ``1`` dump task
 NXF_DEFAULT_DSL                 Defines the DSL version that should be used in not specified otherwise in the script of config file (default: ``2``, requires version ``22.03.0-edge`` or later)
 NXF_DISABLE_JOBS_CANCELLATION   Disables the cancellation of child jobs on workflow execution termination (requires version ``21.12.0-edge`` or later).
 NXF_ENABLE_STRICT               Enable Nextflow *strict* execution mode (default: ``false``, requires version ``22.05.0-edge`` or later)
-NXF_ENABLE_SECRETS              Enable Nextflow secrets features (default: ``true``, requires version ``21.09.0-edge`` or later)
+NXF_ENABLE_SECRETS              Enable Nextflow secrets features (default: ``true``, requires version ``22.09.2-edge`` or later)
 NXF_EXECUTOR                    Defines the default process executor e.g. `sge`
 NXF_GRAB                        Provides extra runtime dependencies downloaded from a Maven repository service [DEPRECATED]
 NXF_HOME                        Nextflow home directory (default: ``$HOME/.nextflow``).

@@ -60,7 +60,7 @@ import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
-import nextflow.exception.NodeTerminationException
+import nextflow.exception.ProcessRetryableException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessUnrecoverableException
@@ -82,7 +82,6 @@ import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.bundle.ResourcesBundle
-import nextflow.script.params.BasicMode
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
@@ -101,9 +100,9 @@ import nextflow.script.params.ValueOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
-import nextflow.util.CollectionHelper
 import nextflow.util.LockManager
 import nextflow.util.LoggerHelper
+import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 /**
@@ -134,6 +133,10 @@ class TaskProcessor {
         final value = System.getenv("NXF_ENABLE_CACHE_INVALIDATION_ON_TASK_DIRECTIVE_CHANGE")
         return value==null || value =='true'
     }
+
+    @TestOnly private static volatile TaskProcessor currentProcessor0
+
+    @TestOnly static TaskProcessor currentProcessor() { currentProcessor0 }
 
     /**
      * Keeps track of the task instance executed by the current thread
@@ -243,11 +246,24 @@ class TaskProcessor {
 
     private static LockManager lockManager = new LockManager()
 
+    private List<Map<Short,List>> fairBuffers = new ArrayList<>()
+
+    private int currentEmission
+
+    private Boolean isFair0
+
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskTemplateVarsXform) )
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskCmdXform) )
         return config
+    }
+
+    @TestOnly
+    static void reset() {
+        processCount=0
+        errorShown.set(false)
+        currentProcessor0 = null
     }
 
     /*
@@ -259,6 +275,7 @@ class TaskProcessor {
     {
         id = ++processCount
         grengine = session && session.classLoader ? new Grengine(session.classLoader, compilerConfig()) : new Grengine(compilerConfig())
+        currentProcessor0 = this
     }
 
     /* for testing purpose - do not remove */
@@ -288,6 +305,7 @@ class TaskProcessor {
         this.name = name
         this.maxForks = config.maxForks ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
+        this.isFair0 = config.getFair()
     }
 
     /**
@@ -943,6 +961,7 @@ class TaskProcessor {
     final protected boolean handleException( Throwable error, TaskRun task = null ) {
         log.trace "Handling error: $error -- task: $task"
         def fault = resumeOrDie(task, error)
+        log.trace "Task fault (2): $fault"
 
         if (fault instanceof TaskFault) {
             session.fault(fault)
@@ -963,7 +982,7 @@ class TaskProcessor {
      */
     @PackageScope
     final synchronized resumeOrDie( TaskRun task, Throwable error ) {
-        log.debug "Handling unexpected condition for\n  task: name=${safeTaskName(task)}; work-dir=${task.workDirStr}\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
+        log.debug "Handling unexpected condition for\n  task: name=${safeTaskName(task)}; work-dir=${task?.workDirStr}\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         ErrorStrategy errorStrategy = TERMINATE
         final message = []
@@ -972,8 +991,8 @@ class TaskProcessor {
             if( error instanceof Error ) throw error
 
             // -- retry without increasing the error counts
-            if( task && (error.cause instanceof NodeTerminationException || error.cause instanceof CloudSpotTerminationException) ) {
-                if( error.cause instanceof NodeTerminationException )
+            if( task && (error.cause instanceof ProcessRetryableException || error.cause instanceof CloudSpotTerminationException) ) {
+                if( error.cause instanceof ProcessRetryableException )
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
                 else
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
@@ -1025,6 +1044,7 @@ class TaskProcessor {
 
             // -- make sure the error is showed only the very first time across all processes
             if( errorShown.getAndSet(true) || session.aborted ) {
+                log.trace "Task errorShown=${errorShown.get()}; aborted=${session.aborted}"
                 return errorStrategy
             }
 
@@ -1356,37 +1376,12 @@ class TaskProcessor {
             }
         }
 
-        // -- bind out the collected values
-        for( OutParam param : config.getOutputs() ) {
-            def list = tuples[param.index]
-            if( list == null )
-                throw new IllegalStateException()
-
-            if( list instanceof MissingParam ) {
-                log.debug "Process $name > Skipping output binding because one or more optional files are missing: $list.missing"
-                continue
-            }
-
-            if( param.mode == BasicMode.standard ) {
-                log.trace "Process $name > Binding out param: ${param} = ${list}"
-                bindOutParam(param, list)
-            }
-
-            else if( param.mode == BasicMode.flatten ) {
-                log.trace "Process $name > Flatting out param: ${param} = ${list}"
-                CollectionHelper.flatten( list ) {
-                    bindOutParam( param, it )
-                }
-            }
-
-            else if( param.mode == TupleOutParam.CombineMode.combine ) {
-                log.trace "Process $name > Combining out param: ${param} = ${list}"
-                final combs = (List<List>)list.combinations()
-                for( def it : combs ) { bindOutParam(param, it) }
-            }
-
-            else
-                throw new IllegalStateException("Unknown bind output parameter type: ${param}")
+        // bind the output
+        if( isFair0 ) {
+            fairBindOutputs0(tuples, task)
+        }
+        else {
+            bindOutputs0(tuples)
         }
 
         // -- finally prints out the task output when 'debug' is true
@@ -1395,10 +1390,52 @@ class TaskProcessor {
         }
     }
 
+    protected void fairBindOutputs0(Map<Short,List> emissions, TaskRun task) {
+        synchronized (isFair0) {
+            // decrement -1 because tasks are 1-based
+            final index = task.index-1
+            // store the task emission values in a buffer
+            fairBuffers[index-currentEmission] = emissions
+            // check if the current task index matches the expected next emission index
+            if( currentEmission == index ) {
+                while( emissions!=null ) {
+                    // bind the emission values
+                    bindOutputs0(emissions)
+                    // remove the head and try with the following
+                    fairBuffers.remove(0)
+                    // increase the index of the next emission
+                    currentEmission++
+                    // take the next emissions 
+                    emissions = fairBuffers[0]
+                }
+            }
+        }
+    }
+
+    protected void bindOutputs0(Map<Short,List> tuples) {
+        // -- bind out the collected values
+        for( OutParam param : config.getOutputs() ) {
+            final outValue = tuples[param.index]
+            if( outValue == null )
+                throw new IllegalStateException()
+
+            if( outValue instanceof MissingParam ) {
+                log.debug "Process $name > Skipping output binding because one or more optional files are missing: $outValue.missing"
+                continue
+            }
+
+            log.trace "Process $name > Binding out param: ${param} = ${outValue}"
+            bindOutParam(param, outValue)
+        }
+    }
+
     protected void bindOutParam( OutParam param, List values ) {
         log.trace "<$name> Binding param $param with $values"
-        def x = values.size() == 1 ? values[0] : values
-        for( def it : param.getOutChannels() ) { it.bind(x) }
+        final x = values.size() == 1 ? values[0] : values
+        final ch = param.getOutChannel()
+        if( ch != null ) {
+            ch.bind(x)
+        }
     }
 
     protected void collectOutputs( TaskRun task ) {
@@ -2189,6 +2226,7 @@ class TaskProcessor {
         }
         catch ( Throwable error ) {
             fault = resumeOrDie(task, error)
+            log.trace "Task fault (3): $fault"
         }
 
         // -- finalize the task

@@ -131,6 +131,11 @@ class PodmanBuilderTest extends Specification {
                 .build()
                 .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --privileged fedora'
 
+        new PodmanBuilder('fedora')
+                .params(device: '/dev/fuse')
+                .params(capAdd: 'SYS_ADMIN')
+                .build()
+                .runCommand == 'podman run -i -v "$PWD":"$PWD" -w "$PWD" --device /dev/fuse --cap-add SYS_ADMIN fedora'
     }
 
     def 'test add mount'() {

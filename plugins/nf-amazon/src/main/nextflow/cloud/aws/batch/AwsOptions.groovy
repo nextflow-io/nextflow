@@ -92,6 +92,11 @@ class AwsOptions implements CloudTransferOptions {
     String shareIdentifier
 
     /**
+     * The scheduling priority for all tasks when using fair-share scheduling (0 to 9999)
+     */
+    Integer schedulingPriority
+
+    /**
      * @return A list of volume mounts using the docker cli convention ie. `/some/path` or `/some/path:/container/path` or `/some/path:/container/path:ro`
      */
     List<String> getVolumes() { volumes != null ? Collections.unmodifiableList(volumes) : Collections.<String>emptyList() }
@@ -121,6 +126,7 @@ class AwsOptions implements CloudTransferOptions {
         fetchInstanceType = session.config.navigate('aws.batch.fetchInstanceType')
         retryMode = session.config.navigate('aws.batch.retryMode', 'standard')
         shareIdentifier = session.config.navigate('aws.batch.shareIdentifier')
+        schedulingPriority = session.config.navigate('aws.batch.schedulingPriority', 0) as Integer
         if( retryMode == 'built-in' )
             retryMode = null // this force falling back on NF built-in retry mode instead of delegating to AWS CLI tool
         if( retryMode && retryMode !in VALID_RETRY_MODES )

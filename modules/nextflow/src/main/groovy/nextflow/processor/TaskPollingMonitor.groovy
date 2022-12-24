@@ -581,6 +581,7 @@ class TaskPollingMonitor implements TaskMonitor {
                 handler.decProcessForks()
             }
             fault = handler.task.processor.resumeOrDie(handler?.task, error)
+            log.trace "Task fault (1): $fault"
         }
         finally {
             // abort the session if a task task was returned

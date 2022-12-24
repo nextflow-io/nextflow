@@ -63,6 +63,20 @@ scripts with multiple commands spanning multiple lines. For example::
       """
     }
 
+.. tip::
+  By default, the script block is executed with the `Bash options <https://tldp.org/LDP/abs/html/options.html>`_ ``set -ue``.
+  The user can add custom options directly to the process definition as shown below::
+
+    process doMoreThings {
+      shell '/bin/bash', '-euo', 'pipefail'
+      
+      """
+      blastp -db $db -query query.fa -outfmt 6 > blast_result
+      cat blast_result | head -n 10 | cut -f 2 > top_hits
+      blastdbcmd -db $db -entry_batch top_hits > sequences
+      """
+    }
+
 As explained in the script tutorial section, strings can be defined using single-quotes
 or double-quotes, and multi-line strings are defined by three single-quote or three double-quote characters.
 
@@ -749,7 +763,7 @@ each time a new value is received. For example::
 
   workflow {
     sequences = Channel.fromPath('*.fa')
-    methods = ['regular', 'expresso', 'psicoffee']
+    methods = ['regular', 'espresso', 'psicoffee']
 
     alignSequences(sequences, methods)
   }
@@ -774,14 +788,14 @@ Input repeaters can be applied to files as well. For example::
 
     workflow {
       sequences = Channel.fromPath('*.fa')
-      methods = ['regular', 'expresso']
+      methods = ['regular', 'espresso']
       libraries = [ file('PQ001.lib'), file('PQ002.lib'), file('PQ003.lib') ]
 
       alignSequences(sequences, methods, libraries)
     }
 
 In the above example, each sequence input file emitted by the ``sequences`` channel triggers six alignment tasks,
-three with the ``regular`` method against each library file, and three with the ``expresso`` method.
+three with the ``regular`` method against each library file, and three with the ``espresso`` method.
 
 .. note::
   When multiple repeaters are defined, the process is executed for each *combination* of them.
@@ -1008,6 +1022,33 @@ Name                Description
 ``maxDepth``        Maximum number of directory levels to visit (default: no limit)
 ``includeInputs``   When ``true`` any input files matching an output file glob pattern are included.
 ================== =====================
+
+The parenthesis are optional for input and output qualifiers, but when you want to set an additional option and there
+is more than one input or output qualifier, you must use parenthesis so that Nextflow knows what qualifier you're
+referring to.
+
+One example with a single output qualifier::
+
+    process foo {
+      output:
+      path 'result.txt', hidden: true
+
+      '''
+      echo 'another new line' >> result.txt
+      '''
+    }
+
+Another example with multiple output qualifiers::
+
+    process foo {
+      output:
+      tuple path('last_result.txt'), path('result.txt', hidden: true)
+
+      '''
+      echo 'another new line' >> result.txt
+      echo 'another new line' > last_result.txt
+      '''
+    }
 
 
 Multiple output files
@@ -1661,6 +1702,38 @@ This can be defined in the ``nextflow.config`` file as shown below::
     process.ext.version = '2.5.3'
 
 
+.. _process-fair:
+
+fair
+----
+
+When using the ``fair`` directive the sequence of the outputs of a process executions is guaranteed
+to match the sequence of the input values irrespective. For example::
+
+    process foo {
+      fair true
+      input:
+        val x
+      output:
+        tuple val(task.index), val(x)
+
+      script:
+        """
+        sleep \$((RANDOM % 3))
+        """
+    }
+
+    workflow {
+       channel.of('A','B','C','D') | foo | view
+    }
+
+The above example produces the following output::
+
+    [1, A]
+    [2, B]
+    [3, C]
+    [4, D]
+
 .. _process-label:
 
 label
@@ -1904,7 +1977,8 @@ The ``pod`` directive allows the definition of the following options:
 ``env: <E>, config: <C/K>``                       Defines an environment variable with name ``E`` and whose value is given by the entry associated to the key with name ``K`` in the `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name ``C``.
 ``env: <E>, secret: <S/K>``                       Defines an environment variable with name ``E`` and whose value is given by the entry associated to the key with name ``K`` in the `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name ``S``.
 ``config: <C/K>, mountPath: </absolute/path>``    Mounts a `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name ``C`` with key ``K``to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the ``ConfigMap`` entries are exposed in that path.
-``csi: <V>, mountPath: </absolute/path>``         Mounts a `CSI ephemeral volume <https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes>`_ with config ``V``to the path ``/absolute/path``.
+``csi: <V>, mountPath: </absolute/path>``         Mounts a `CSI ephemeral volume <https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes>`_ with config ``V``to the path ``/absolute/path`` (requires ``22.11.0-edge`` or later).
+``emptyDir: <V>, mountPath: </absolute/path>``    Mounts an `emptyDir <https://kubernetes.io/docs/concepts/storage/volumes/#emptydir>`_ with configuration ``V`` to the path ``/absolute/path`` (requires ``22.11.0-edge`` or later).
 ``secret: <S/K>, mountPath: </absolute/path>``    Mounts a `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name ``S`` with key ``K``to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the ``Secret`` entries are exposed in that path.
 ``volumeClaim: <V>, mountPath: </absolute/path>`` Mounts a `Persistent volume claim <https://kubernetes.io/docs/concepts/storage/persistent-volumes/>`_ with name ``V`` to the specified path location. Use the optional ``subPath`` parameter to mount a directory inside the referenced volume instead of its root. The volume may be mounted with `readOnly: true`, but is read/write by default.
 ``imagePullPolicy: <V>``                          Specifies the strategy to be used to pull the container image e.g. ``imagePullPolicy: 'Always'``.
@@ -1983,6 +2057,7 @@ saveAs          A closure which, given the name of the file being published, ret
 enabled         Enable or disable the publish rule depending on the boolean value specified (default: ``true``).
 failOnError     When ``true`` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: ``false``)
 contentType     Allow specifying the media content type of the published file a.k.a. `MIME type <https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types>`_. If the boolean value ``true`` is specified the content type is inferred from the file extension (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Default: ``false``, requires `22.10.0`` or later).
+storageClass    Allow specifying the *storage class* to be used for the published file (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Requires version ``22.12.0-edge`` or later).
 tags            Allow the association of arbitrary tags with the published file e.g. ``tags: [FOO: 'Hello world']`` (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Requires version ``21.12.0-edge`` or later).
 =============== =================
 

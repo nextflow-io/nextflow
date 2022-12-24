@@ -1,5 +1,13 @@
 nf-google changelog
 ===================
+1.5.0 - 13 Dic 2022
+- Add allowedLocations option to google batch (#3453) [c619eb81]
+- Add warning on Google Logs failure [bdbcdde9]
+- Fix Quote the logName in the Cloud Logging filter (#3464) [b3975063]
+- Fix a few issues in BatchLogging.groovy (#3443) [e2bbcf15]
+- Fix Error & info messages, code comments language fixes (#3475) [29ae36ca]
+- Bump nf-google@1.5.0 [c07dcec2]
+
 1.4.5 - 13 Nov 2022
 - Fix support for serviceAccountEmail and GPU accelerator [7f7007a8] #7f7007a8
 - Bump Google Batch sdk 0.5.0

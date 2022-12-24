@@ -26,8 +26,8 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessException
 import nextflow.executor.BashWrapperBuilder
-import nextflow.executor.fusion.FusionAwareTask
-import nextflow.executor.fusion.FusionHelper
+import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus

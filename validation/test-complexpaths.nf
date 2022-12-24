@@ -1,15 +1,17 @@
-nextflow.enable.dsl=1
+workflow {
+    foo | mix | collect | bar
+}
 
 process foo {
   publishDir 'foo'
   container 'debian:latest'
   output:
-  file '*.fa' into ch1
-  file 'hello.txt'  into ch2 
-  file '*.{zip,html}' into ch3  
-  file '01_A(R{1,2}).fastq' into ch4 
-  file 'sample_(1 2).vcf' into ch5
-  file '.alpha' into ch6
+  file '*.fa'
+  file 'hello.txt'
+  file '*.{zip,html}'
+  file '01_A(R{1,2}).fastq'
+  file 'sample_(1 2).vcf'
+  file '.alpha'
 
   script:
   $/
@@ -31,7 +33,7 @@ process bar {
   debug true
   container 'debian:latest'
   input: 
-  file '*' from ch1.mix(ch2,ch3,ch4,ch5,ch6).collect()
+  file '*'
 
   script:
   $/

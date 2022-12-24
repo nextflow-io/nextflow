@@ -66,6 +66,8 @@ class CondaCache {
 
     private Path configCacheDir0
 
+    private List<String> channels = Collections.emptyList()
+
     @PackageScope String getCreateOptions() { createOptions }
 
     @PackageScope Duration getCreateTimeout() { createTimeout }
@@ -73,6 +75,8 @@ class CondaCache {
     @PackageScope Map<String,String> getEnv() { System.getenv() }
 
     @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
+
+    @PackageScope List<String> getChannels() { channels }
 
     @PackageScope String getBinaryName() {
         if (useMamba)
@@ -111,7 +115,9 @@ class CondaCache {
 
         if( config.useMicromamba )
             useMicromamba = config.useMicromamba as boolean
-        
+
+        if( config.getChannels() )
+            channels = config.getChannels()
     }
 
     /**
@@ -278,7 +284,8 @@ class CondaCache {
         }
 
         else {
-            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
+            final channelsOpt = channels.collect(it -> "-c $it ").join('')
+            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} ${channelsOpt}$condaEnv"
         }
 
         try {
