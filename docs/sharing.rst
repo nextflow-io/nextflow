@@ -336,6 +336,42 @@ using the configuration snippet shown below::
 .. tip::
   The Personal access token can be generated in the repository `Clone Repository` dialog.
 
+AWS CodeCommit credentials
+---------------------------
+
+As of version ``22.06.0-edge``, Nextflow supports `AWS CodeCommit <https://aws.amazon.com/codecommit/>`_ as a
+Git provider to access and to share pipelines code.
+
+To access your project hosted on AWS CodeCommit with Nextflow provide the repository credentials using the
+configuration snippet shown below::
+
+    providers {
+
+        my_aws_repo {
+            platform = 'codecommit'
+            user = '<AWS ACCESS KEY>'
+            password = '<AWS SECRET KEY>'
+        }
+
+    }
+
+In the above snippet replace ``<AWS ACCESS KEY>`` and ``<AWS SECRET KEY>`` with your AWS credentials, and
+``my_aws_repo`` with a name of your choice.
+
+.. tip::
+  The ``user`` and ``password`` are optional settings, if omitted the
+  `AWS default credentials provider chain <https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html>`_ is used.
+
+Then the pipeline can be accessed with Nextflow as shown below::
+
+    nextflow run https://git-codecommit.eu-west-1.amazonaws.com/v1/repos/my-repo
+
+
+In the above example replace ``my-repo`` with your own repository. Note also that AWS CodeCommit has different
+URLs depending the region in which you are working.
+
+.. note::
+    The support for protocols other than HTTPS is not available at this time.
 
 Private server configuration
 ============================

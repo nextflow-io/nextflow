@@ -15,12 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
 process foo {
   output:
-  val( task.exitStatus ) into ch1
-  set val( record.foo ), val( record.bar ) into ch2
+  val( task.exitStatus )
+  tuple val( record.foo ), val( record.bar )
 
   script:
   record = [foo:'aaa', bar: 'bbb']
@@ -29,5 +28,8 @@ process foo {
   """
 }
 
-ch1.view { "exit_status=$it" }
-ch2.view { "record=${it[0]}_${it[1]}" }
+workflow {
+   foo()
+   foo.out[0].view { "exit_status=$it" }
+   foo.out[1].view { "record=${it[0]}_${it[1]}" }
+}

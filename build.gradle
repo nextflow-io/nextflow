@@ -129,11 +129,6 @@ allprojects {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
 
-    /** Increase test execution heap size to avoid out of memory errors */
-    tasks.withType(Test) {
-        maxHeapSize = "4G"
-    }
-
     // patched as described here
     // http://forums.gradle.org/gradle/topics/gradle_task_groovydoc_failing_with_noclassdeffounderror
     tasks.withType(Groovydoc) {

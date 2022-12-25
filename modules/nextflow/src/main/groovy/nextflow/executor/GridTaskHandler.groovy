@@ -341,7 +341,7 @@ class GridTaskHandler extends TaskHandler {
              *
              */
             if( !exitTimestampMillis2 ) {
-                log.debug "File is returning an empty content $this -- Try to wait a while and .. pray."
+                log.debug "File is returning empty content: $this -- Try to wait a while... and pray."
                 exitTimestampMillis2 = System.currentTimeMillis()
             }
 

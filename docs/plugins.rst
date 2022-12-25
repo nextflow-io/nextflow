@@ -41,7 +41,7 @@ Alternatively, plugins can be required using the ``-plugins`` command line optio
     nextflow run <PIPELINE NAME> -plugins nf-hello@0.1.0
 
 Multiple plugins can be specified by separating them with a comma.
-When specifiying plugins via the command line, any plugin declarations in the Nextflow config file are ignored.
+When specifying plugins via the command line, any plugin declarations in the Nextflow config file are ignored.
 
 
 Index
@@ -58,24 +58,46 @@ the implementation of a Nextflow plugin.
 Import operators from plugin
 ============================
 
-New DSL2 allows to explicitly declare the extension methods imported by a Nextflow plugin and allows in this way
-to precisely control which extensions are going to be used in the workflow script.
+As of version `22.04.x`, Nextflow allows the inclusion of extension operators from Nextflow plugins.
 
-In previous versions, Nexflow allowed to invoke ``public`` methods of the ``ChannelExtensionPoint`` implementation in the
-plugin:
+For example::
 
-    def sql = "select * from FOO"
-    channel.sql.fromQuery(sql, db: "test", emitColumns:true)
-
-Now you can specify witch method(s) to use and, if desired, assign to them an alias:
-
-    include { fromQuery as selectFromTable; sqlInsert } from 'plugin/nf-sqldb'
+    include { sqlInsert; fromQuery as selectFromTable } from 'plugin/nf-sqldb'
 
     def sql = "select * from FOO"
     channel
         .selectFromTable(sql, db: "test", emitColumns:true)
         .sqlInsert(into:"BAR", columns:'id', db:"test")
 
-Keyword `plugin` aware to the interpreter to import functions from a plugin instead a module
+The above snippet includes the operators ``sqlInsert` and ``fromQuery`` from the
+`nf-sqldb <https://github.com/nextflow-io/nf-sqldb>`_ plugin. The latter will be accessible using
+the ``selectFromTable`` alias in the script.
 
+.. note::
+    The prefix ``plugin/`` must precede the plugin name in the include ``from`` statement.
+
+
+Import custom functions from plugin
+===================================
+
+In the same way, as of version `22.09.x`, a plugin can export custom functions.
+
+For example, a plugin can export a util function to reverse a String::
+
+     @nextflow.plugin.extension.Function
+     String reverseString( String origin ){
+          origin.reverse()
+     }
+
+And this function can be used by the pipeline::
+
+    include { reverseString } from 'plugin/my-plugin'
+
+    channel.of( reverseString('hi') )
+
+The above snippet includes a function from the plugin and allows the channel to call it directly.
+
+In the same way as operators, functions can be aliased::
+
+    include { reverseString as anotherReverseMethod } from 'plugin/my-plugin'
 

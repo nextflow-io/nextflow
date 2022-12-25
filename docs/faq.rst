@@ -94,7 +94,7 @@ and ``datasetFile``):
 In our example above would now have the folder ``broccoli`` in the results directory which would
 contain the file ``broccoli.aln``.
 
-If the input file has multiple extensions (e.g. ``brocolli.tar.gz``), you will want to use
+If the input file has multiple extensions (e.g. ``broccoli.tar.gz``), you will want to use
 ``file.simpleName`` instead, to strip all of them.
 
 
@@ -125,7 +125,7 @@ Then we can define a process for aligning the datasets with *ClustalW*:
     process clustalw2_align {
         input:
         file vegetable_fasta from datasets_clustalw
-        
+
         output:
         file "${vegetable_fasta.baseName}.aln" into clustalw_alns
 
@@ -142,7 +142,7 @@ And a process for aligning the datasets with *T-Coffee*:
     process tcoffee_align {
         input:
         file vegetable_fasta from datasets_tcoffee
-        
+
         output:
         file "${vegetable_fasta.baseName}.aln" into tcoffee_alns
 
@@ -181,7 +181,7 @@ alignments are in the channel ``clustalw_alns``:
     process phylip_reformat {
         input:
         file clustalw_alignment from clustalw_alns
-        
+
         output:
         file "${clustalw_alignment.baseName}.phy" to clustalw_phylips
 
@@ -271,7 +271,7 @@ How do I use a specific version of Nextflow?
 
 *Q: I need to specify a version of Nextflow to use, or I need to pull a snapshot release.*
 
-A: Sometimes it is necessary to use a different version of Nextflow for a specific feature or testing purposes. Nextflow is able to automatically pull versions when the ``NXF_VER`` environment variable is defined on the commandline. 
+A: Sometimes it is necessary to use a different version of Nextflow for a specific feature or testing purposes. Nextflow is able to automatically pull versions when the ``NXF_VER`` environment variable is defined on the commandline.
 
 ::
 

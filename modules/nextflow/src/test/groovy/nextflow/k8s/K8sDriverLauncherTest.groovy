@@ -228,7 +228,7 @@ class K8sDriverLauncherTest extends Specification {
         spec == [
             apiVersion: 'batch/v1', 
             kind: 'Job', 
-            metadata: [name: 'foo-boo', namespace: 'foo'], 
+            metadata: [name: 'foo-boo', namespace: 'foo', labels: [app: 'nextflow', runName: 'foo-boo']],
             spec: [
                backoffLimit: 0,
                template: [
@@ -281,7 +281,7 @@ class K8sDriverLauncherTest extends Specification {
         driver.@runName = 'foo-boo'
         driver.@k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
         driver.@k8sConfig = k8s
-        driver.@podImage = 'foo/bar'
+        driver.@headImage = 'foo/bar'
 
         when:
         def spec = driver.makeLauncherSpec()
@@ -340,7 +340,7 @@ class K8sDriverLauncherTest extends Specification {
         driver.@runName = 'foo-boo'
         driver.@k8sClient = new K8sClient(new ClientConfig(namespace: 'foo', serviceAccount: 'bar'))
         driver.@k8sConfig = k8s
-        driver.@podImage = 'foo/bar'
+        driver.@headImage = 'foo/bar'
         driver.@headCpus = 2
         driver.@headMemory = '200Mi'
 
@@ -368,7 +368,7 @@ class K8sDriverLauncherTest extends Specification {
                         ],
                         resources: [
                             requests: [cpu: 2, memory: '200Mi'],
-                            limits: [cpu: 2, memory: '200Mi']
+                            limits: [memory: '200Mi']
                         ],
                         volumeMounts: [
                             [name:'vol-1', mountPath:'/mnt/path/data'],

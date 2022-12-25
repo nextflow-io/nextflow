@@ -284,7 +284,7 @@ class ConfigBuilder {
             env.putAll(System.getenv())
         }
         if( vars ) {
-            log.debug "Adding following variables to session environment: $vars"
+            log.debug "Adding the following variables to session environment: $vars"
             env.putAll(vars)
         }
 
@@ -343,7 +343,10 @@ class ConfigBuilder {
     protected ConfigObject buildConfig0( Map env, List configEntries )  {
         assert env != null
 
-        final slurper = new ConfigParser().setRenderClosureAsString(showClosures)
+        final ignoreIncludes = options ? options.ignoreConfigIncludes : false
+        final slurper = new ConfigParser()
+                .setRenderClosureAsString(showClosures)
+                .setIgnoreIncludes(ignoreIncludes)
         ConfigObject result = new ConfigObject()
 
         if( cmdRun && (cmdRun.hasParams()) )
@@ -512,8 +515,9 @@ class ConfigBuilder {
     private String normalizeResumeId( String uniqueId ) {
         if( !uniqueId )
             return null
-
         if( uniqueId == 'last' || uniqueId == 'true' ) {
+            if( HistoryFile.disabled() )
+                throw new AbortOperationException("The resume session id should be specified via `-resume` option when history file tracking is disabled")
             uniqueId = HistoryFile.DEFAULT.getLast()?.sessionId
 
             if( !uniqueId ) {
@@ -560,9 +564,17 @@ class ConfigBuilder {
             config.process[name] = parseValue(value)
         }
 
+        if( cmdRun.withoutConda && config.conda instanceof Map ) {
+            // disable docker execution
+            log.debug "Disabling execution with Conda as requested by command-line option `-without-conda`"
+            config.conda.enabled = false
+        }
+
         // -- apply the conda environment
         if( cmdRun.withConda ) {
-            config.process.conda = cmdRun.withConda
+            if( cmdRun.withConda != '-' )
+                config.process.conda = cmdRun.withConda
+            config.conda.enabled = true
         }
 
         // -- sets the resume option
@@ -662,7 +674,21 @@ class ConfigBuilder {
             if( !(config.tower instanceof Map) )
                 config.tower = [:]
             config.tower.enabled = true
-            config.tower.endpoint = cmdRun.withTower
+            if( cmdRun.withTower != '-' )
+                config.tower.endpoint = cmdRun.withTower
+            else if( !config.tower.endpoint )
+                config.tower.endpoint = 'https://api.tower.nf'
+        }
+
+        // -- set wave options
+        if( cmdRun.withWave ) {
+            if( !(config.wave instanceof Map) )
+                config.wave = [:]
+            config.wave.enabled = true
+            if( cmdRun.withWave != '-' )
+                config.wave.endpoint = cmdRun.withWave
+            else if( !config.wave.endpoint )
+                config.wave.endpoint = 'https://wave.seqera.io'
         }
 
         // -- nextflow setting
@@ -681,7 +707,7 @@ class ConfigBuilder {
 
         if( cmdRun.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution
-            log.debug "Disabling execution in Docker contained as requested by cli option `-without-docker`"
+            log.debug "Disabling execution in Docker container as requested by command-line option `-without-docker`"
             config.docker.enabled = false
         }
 
@@ -703,7 +729,7 @@ class ConfigBuilder {
     }
 
     private void configContainer(ConfigObject config, String engine, def cli) {
-        log.debug "Enabling execution in ${engine.capitalize()} container as requested by cli option `-with-$engine ${cmdRun.withDocker}`"
+        log.debug "Enabling execution in ${engine.capitalize()} container as requested by command-line option `-with-$engine ${cmdRun.withDocker}`"
 
         if( !config.containsKey(engine) )
             config.put(engine, [:])
@@ -722,7 +748,7 @@ class ConfigBuilder {
         }
 
         if( !hasContainerDirective(config.process) )
-            throw new AbortOperationException("You have requested to run with ${engine.capitalize()} but no image were specified")
+            throw new AbortOperationException("You have requested to run with ${engine.capitalize()} but no image was specified")
 
     }
 

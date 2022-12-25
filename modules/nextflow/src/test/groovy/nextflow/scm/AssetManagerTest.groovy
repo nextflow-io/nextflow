@@ -21,10 +21,13 @@ import spock.lang.IgnoreIf
 
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.Config
 import org.junit.Rule
 import spock.lang.Requires
 import spock.lang.Specification
 import test.TemporaryPath
+import java.nio.file.Path
+import java.nio.file.Paths
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -67,6 +70,18 @@ class AssetManagerTest extends Specification {
 
     def setup() {
         AssetManager.root = tempDir.root.toFile()
+    }
+
+    // Helper method to grab the default brasnch if set in ~/.gitconfig
+    String getLocalDefaultBranch() {
+        def defaultBranch = 'master'
+        def gitconfig = Paths.get(System.getProperty('user.home'),'.gitconfig');
+        if(gitconfig.exists()) {
+            def config = new Config()
+            config.fromText(gitconfig.text)
+            defaultBranch = config.getString('init', null, 'defaultBranch') ?: 'master'
+        }
+        return defaultBranch
     }
 
     def testList() {
@@ -462,7 +477,7 @@ class AssetManagerTest extends Specification {
         then:
         script.localPath == dir
         script.commitId == commit.name()
-        script.revision == 'master'
+        script.revision == getLocalDefaultBranch()
         script.parent == dir
         script.text == "println 'Hello world'"
         script.repository == 'https://github.com/nextflow-io/nextflow'
@@ -479,7 +494,7 @@ class AssetManagerTest extends Specification {
         then:
         script.localPath == dir
         script.commitId == commit.name()
-        script.revision == 'master'
+        script.revision == getLocalDefaultBranch()
         script.parent == dir
         script.text == "this is foo content"
         script.repository == 'https://github.com/nextflow-io/nextflow'
@@ -531,25 +546,6 @@ class AssetManagerTest extends Specification {
 
     }
 
-    def 'should resolve project name' () {
-        given:
-        def manager = new AssetManager()
-
-        expect:
-        manager.resolveProjectName0(PATH,SERVER) == EXPECTED
-
-        where:
-        PATH          | SERVER                  | EXPECTED
-        'a/b/c'       | null                    | 'a/b/c'
-        'a/b/c'       | 'http://dot.com'        | 'a/b/c'
-        'a/b/c'       | 'http://dot.com/'       | 'a/b/c'
-        'a/b/c'       | 'http://dot.com/a'      | 'b/c'
-        'a/b/c'       | 'http://dot.com/a/'     | 'b/c'
-        and:
-        'paolo0758/nf-azure-repo'                    | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
-        'paolo0758/nf-azure-repo/_git/nf-azure-repo' | 'https://dev.azure.com' | 'paolo0758/nf-azure-repo'
-    }
-
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should download branch specified'() {
 
@@ -584,4 +580,5 @@ class AssetManagerTest extends Specification {
         manager.getMainScriptName() == 'workflow.nf'
 
     }
+
 }

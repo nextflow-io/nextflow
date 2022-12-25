@@ -221,7 +221,7 @@ Name            Description
 ``launchDir``   The directory where the workflow is run (requires version ``20.04.0`` or later).
 ``moduleDir``   The directory where a module script is located for DSL2 modules or the same as ``projectDir`` for a non-module script (requires version ``20.04.0`` or later).
 ``nextflow``    Dictionary like object representing nextflow runtime information (see :ref:`metadata-nextflow`).
-``params``      Dictionary like object holding workflow parameters specifing in the config file or as command line options.
+``params``      Dictionary like object holding workflow parameters specifying in the config file or as command line options.
 ``projectDir``  The directory where the main script is located (requires version ``20.04.0`` or later).
 ``workDir``     The directory where tasks temporary files are created.
 ``workflow``    Dictionary like object representing workflow runtime information (see :ref:`metadata-workflow`).
@@ -251,11 +251,11 @@ The following variables are implicitly defined in the ``task`` object of each pr
 Name            Description
 =============== ========================
 ``attempt``     The current task attempt
-``hash``        The task unique hash Id
+``hash``        The task unique hash Id. NOTE: This is only available for processes that run native code via ``exec:``.
 ``index``       The task index (corresponds to ``task_id`` in the execution trace)
-``name``        The current task name
+``name``        The current task name. NOTE: This is only available for processes that run native code via ``exec:``.
 ``process``     The current process name
-``workDir``     The task unique directory. NOTE: This is only available for processes that run native code via the ``exec:`` statement. 
+``workDir``     The task unique directory. NOTE: This is only available for processes that run native code via ``exec:``.
 =============== ========================
 
 The ``task`` object also contains the values of all process directives for the given task,
@@ -456,6 +456,9 @@ Remove the first number with its trailing whitespace from a string::
 Files and I/O
 ==============
 
+Opening files
+-------------
+
 To access and work with files, use the ``file`` method, which returns a file system object
 given a file path string::
 
@@ -490,6 +493,10 @@ maxDepth        Maximum number of directory levels to visit (default: `no limit`
 followLinks     When ``true`` follows symbolic links during directory tree traversal, otherwise treats them as files (default: ``true``)
 checkIfExists   When ``true`` throws an exception of the specified path do not exist in the file system (default: ``false``)
 =============== ===================
+
+.. note::
+  Nextflow also provides a ``files()`` method, which is identical to ``file()`` except that it always
+  returns a list, whereas ``file()`` only returns a list if it matches multiple files.
 
 .. tip::
   If you are a Java geek, you might be interested to know that the ``file`` method returns a
@@ -856,7 +863,7 @@ lastModified        Returns the file last modified timestamp i.e. a long as Linu
 
 For example, the following line prints a file name and size::
 
-  println "File ${myFile.getName() size: ${myFile.size()}"
+  println "File ${myFile.getName()} size: ${myFile.size()}"
 
 .. tip::
     The invocation of any method name starting with the ``get`` prefix can be shortcut by

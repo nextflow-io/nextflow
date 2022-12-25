@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.transform.ToString
@@ -39,6 +40,8 @@ import nextflow.exception.ProcessStageException
 import nextflow.extension.FilesEx
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
+import nextflow.util.ThreadPoolManager
+
 /**
  * Move foreign (ie. remote) files to the staging work area
  *
@@ -55,9 +58,9 @@ class FilePorter {
 
     static final private Duration POLL_TIMEOUT = Duration.of('2sec')
 
-    final Map<Path,FileTransfer> stagingTransfers = new HashMap<>()
+    final Map<FileCopy,FileTransfer> stagingTransfers = new HashMap<>()
 
-    @Lazy private ExecutorService threadPool = session.getFileTransferThreadPool()
+    private ExecutorService threadPool
 
     private Duration pollTimeout
 
@@ -69,34 +72,36 @@ class FilePorter {
         this.session = session
         maxRetries = session.config.navigate('filePorter.maxRetries') as Integer ?: MAX_RETRIES
         pollTimeout = session.config.navigate('filePorter.pollTimeout') as Duration ?: POLL_TIMEOUT
+        threadPool = new ThreadPoolManager('FileTransfer')
+                .withConfig(session.config)
+                .createAndRegisterShutdownCallback(session)
     }
 
-    Batch newBatch(Path stageDir) { new Batch(stageDir) }
+    Batch newBatch(Path stageDir) { new Batch(this, stageDir) }
 
     void transfer(Batch batch) {
         if( batch.size() ) {
             log.trace "Stage foreign files: $batch"
-            submitStagingActions(batch.foreignPaths, batch.stageDir)
+            submitStagingActions(batch.foreignPaths)
             log.trace "Stage foreign files completed: $batch"
         }
     }
 
-    protected FileTransfer createFileTransfer(Path source, Path stageDir) {
-        final stagePath = getCachePathFor(source,stageDir)
-        return new FileTransfer(source, stagePath, maxRetries)
+    protected FileTransfer createFileTransfer(Path source, Path target) {
+        return new FileTransfer(source, target, maxRetries)
     }
 
     protected Future submitForExecution(FileTransfer transfer) {
         threadPool.submit(transfer)
     }
 
-    protected FileTransfer getOrSubmit(Path source, Path stageDir) {
-        synchronized (stagingTransfers) {
-            FileTransfer transfer = stagingTransfers.get(source)
+    protected FileTransfer getOrSubmit(FileCopy copy) {
+        synchronized (this) {
+            FileTransfer transfer = stagingTransfers.get(copy)
             if( transfer == null ) {
-                transfer = createFileTransfer(source, stageDir)
+                transfer = createFileTransfer(copy.source, copy.target)
                 transfer.result = submitForExecution(transfer)
-                stagingTransfers.put(source, transfer)
+                stagingTransfers.put(copy, transfer)
             }
             // increment the ref count
             transfer.refCount.incrementAndGet()
@@ -112,14 +117,23 @@ class FilePorter {
         }
     }
 
-    protected List<FileTransfer> submitStagingActions(List<Path> paths, Path stageDir) {
+    /**
+     * Stages i.e. copies the file from the remote source to a local staging path
+     * using a thread pool
+     * @param copies
+     *      A map where each key-value pair represent a file to be copied.
+     *      The key element is the file source path. The value element represent the target path
+     * @return
+     *      A list of {@link FileTransfer} operations
+     */
+    protected List<FileTransfer> submitStagingActions(List<FileCopy> copies) {
 
-        final result = new ArrayList<FileTransfer>(paths.size())
-        for ( def file : paths ) {
+        final result = new ArrayList<FileTransfer>(copies.size())
+        for ( FileCopy it : copies ) {
             // here's the magic: use a Map to check if a future for the staging action already exist
             // - if exists take it to wait to the submit action termination
             // - otherwise create a new future submitting the action operation
-            result << getOrSubmit(file,stageDir)
+            result << getOrSubmit(it)
         }
 
         // wait for staging actions completion
@@ -152,15 +166,26 @@ class FilePorter {
     }
 
     /**
+     * Model a file stage requirement
+     */
+    @Canonical
+    static class FileCopy {
+        final Path source
+        final Path target
+    }
+
+    /**
      * Models a batch (collection) of foreign files that need to be transferred to
      * the process staging are co-located with the work directory
      */
     static class Batch  {
 
+        final private FilePorter owner
+
         /**
          * Holds the list of foreign files to be transferred
          */
-        private List<Path> foreignPaths = new ArrayList<>()
+        private List<FileCopy> foreignPaths = new ArrayList<>(100)
 
         /**
          * The *local* directory where against where files need to be staged.
@@ -173,7 +198,8 @@ class FilePorter {
          */
         private String stageScheme
 
-        Batch(Path stageDir) {
+        Batch(FilePorter owner, Path stageDir) {
+            this.owner = owner
             this.stageDir = stageDir
             this.stageScheme = stageDir.scheme
         }
@@ -189,8 +215,9 @@ class FilePorter {
          */
         Path addToForeign(Path path) {
             // copy the path with a thread pool
-            foreignPaths << path
-            return getCachePathFor(path, stageDir)
+            final copy = owner.getCachePathFor(path, stageDir)
+            foreignPaths << copy
+            return copy.target
         }
 
         /**
@@ -203,6 +230,10 @@ class FilePorter {
          */
         boolean asBoolean() { foreignPaths.size()>0 }
 
+        @Override
+        String toString() {
+            return "FilePorter.Batch[stageDir=${stageDir.toUriString()}; foreignPaths=${foreignPaths}]"
+        }
     }
 
     /**
@@ -284,7 +315,7 @@ class FilePorter {
         }
 
         private Path stageForeignFile0(Path source, Path target) {
-            if( target.exists() && checkPathIntegrity(source,target) ) {
+            if( target.exists() ) {
                 log.debug "Local cache found for foreign file ${source.toUriString()} at ${target.toUriString()}"
                 return target
             }
@@ -294,63 +325,6 @@ class FilePorter {
             return FileHelper.copyPath(source, target)
         }
 
-        private boolean checkPathIntegrity(Path source, Path target) {
-            boolean same
-            try {
-                // the file must have the same size. this is needed
-                // to prevent re-using broken files left by a previous interrupted download
-                final attrs = Files.readAttributes(source, BasicFileAttributes)
-                same = attrs.isDirectory()
-                    ? checkDirIntegrity0(source, target)
-                    : attrs.size() == Files.size(target)
-            }
-            catch (Exception e) {
-                log.debug "Unable to determine stage file integrity: source=$source; target=$target", e
-                same = false
-            }
-            finally {
-                // if the files sizes don't match, delete it
-                if( !same ) {
-                    log.debug "Invalid cached stage path - deleting: $target"
-                    safeDelete(target)
-                }
-                return same
-            }
-        }
-
-        private boolean checkDirIntegrity0(Path sourceDir, Path targetDir) {
-
-            // traverse the sourceDir directory and for each file check exists
-            // a corresponding file in the target directory having the same size
-            boolean same = true
-            Files.walkFileTree(sourceDir, new SimpleFileVisitor<Path>() {
-                FileVisitResult visitFile(Path sourceFile, BasicFileAttributes attrs) {
-                    final rel = sourceDir.relativize(sourceFile).toString()
-
-                    if( attrs.size() != Files.size(targetDir.resolve(rel)) ) {
-                        same = false
-                        return FileVisitResult.TERMINATE
-                    }
-                    else {
-                        same = true
-                        return FileVisitResult.CONTINUE
-                    }
-                }} )
-            return same
-        }
-        
-        private void safeDelete(Path target) {
-            try {
-                if( Files.isDirectory(target) )
-                    FilesEx.deleteDir(target)
-                else
-                    Files.delete(target)
-            }
-            catch (Exception e) {
-                log.warn "Unable to delete staged file: $target", e
-            }
-        }
-
         synchronized String getMessageAndClear() {
             def result = message
             message = null
@@ -358,12 +332,20 @@ class FilePorter {
         }
     }
 
-
-    static protected Path getCachePathFor(Path filePath, Path stageDir) {
+    synchronized protected FileCopy getCachePathFor(Path sourcePath, Path stageDir) {
         final dirPath = stageDir.toUriString() // <-- use a string to avoid changes in the dir to alter the hashing
-        final hash = CacheHelper.hasher([filePath, dirPath]).hash().toString()
-        final result = getCacheDir0(stageDir, hash).resolve(filePath.getName())
-        return result
+        int i=0
+        while( true ) {
+            final uniq = List.of(sourcePath, dirPath, i++)
+            final hash = CacheHelper.hasher(uniq).hash().toString()
+            final targetPath = getCacheDir0(stageDir, hash).resolve(sourcePath.getName())
+            final result = new FileCopy(sourcePath, targetPath)
+            if( stagingTransfers.containsKey(result) )
+                return result
+            final exist = targetPath.exists()
+            if( !exist || checkPathIntegrity(sourcePath, targetPath) )
+                return result
+        }
     }
 
     static private Path getCacheDir0(Path workDir, String hash) {
@@ -371,10 +353,49 @@ class FilePorter {
         def result = workDir.resolve( "$bucket/${hash.substring(2)}")
 
         if( !FilesEx.mkdirs(result) ) {
-            throw new IOException("Unable to create cache directory: $result -- Verify file system access permissions or if a file having the same name exists")
+            throw new IOException("Unable to create cache directory: $result -- Make sure a file with the same name doesn't exist and you have write permissions")
         }
         return result.toAbsolutePath()
     }
 
+    static private boolean checkPathIntegrity(Path source, Path target) {
+        try {
+            // the file must have the same size. this is needed
+            // to prevent re-using broken files left by a previous interrupted download
+            final attrs = Files.readAttributes(source, BasicFileAttributes)
+            final same = attrs.isDirectory()
+                    ? checkDirIntegrity0(source, target)
+                    : attrs.size() == Files.size(target)
+            return same
+        }
+        catch (NoSuchFileException e) {
+            log.warn "Path integrity check failed because the following file has been deleted: $e.message -- make sure to not run more than one nextflow instance using the same work directory"
+            return false
+        }
+        catch (Exception e) {
+            log.debug "Unable to determine stage file integrity: source=$source; target=$target", e
+            return false
+        }
+    }
 
+    static private boolean checkDirIntegrity0(Path sourceDir, Path targetDir) {
+
+        // traverse the sourceDir directory and for each file check exists
+        // a corresponding file in the target directory having the same size
+        boolean same = true
+        Files.walkFileTree(sourceDir, new SimpleFileVisitor<Path>() {
+            FileVisitResult visitFile(Path sourceFile, BasicFileAttributes attrs) {
+                final rel = sourceDir.relativize(sourceFile).toString()
+
+                if( attrs.size() != Files.size(targetDir.resolve(rel)) ) {
+                    same = false
+                    return FileVisitResult.TERMINATE
+                }
+                else {
+                    same = true
+                    return FileVisitResult.CONTINUE
+                }
+            }} )
+        return same
+    }
 }

@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 package nextflow.cloud.azure.batch
+
 import com.azure.storage.blob.BlobServiceClient
+import com.azure.storage.blob.models.UserDelegationKey
 import com.azure.storage.common.sas.AccountSasPermission
 import com.azure.storage.common.sas.AccountSasResourceType
 import com.azure.storage.common.sas.AccountSasService
@@ -56,14 +58,6 @@ class AzHelper {
         return !sas ? url : "${url}?${sas}"
     }
 
-    static String generateContainerSas(Path path, Duration duration) {
-        generateSas(az0(path).containerClient(), duration)
-    }
-
-    static String generateAccountSas(Path path, Duration duration) {
-        generateAccountSas(az0(path).getFileSystem().getBlobServiceClient(), duration)
-    }
-
     static BlobContainerSasPermission CONTAINER_PERMS = new BlobContainerSasPermission()
             .setAddPermission(true)
             .setCreatePermission(true)
@@ -103,16 +97,55 @@ class AzHelper {
             .setObject(true)
             .setService(true)
 
-    static String generateSas(BlobContainerClient client, Duration duration) {
-        final now = OffsetDateTime .now()
+
+    static String generateContainerSasWithActiveDirectory(Path path, Duration duration) {
+        final key = generateUserDelegationKey(az0(path), duration)
+
+        return generateContainerUserDelegationSas(az0(path).containerClient(), duration, key)
+    }
+
+    static String generateAccountSasWithAccountKey(Path path, Duration duration) {
+        generateAccountSas(az0(path).getFileSystem().getBlobServiceClient(), duration)
+    }
+
+    static UserDelegationKey generateUserDelegationKey(Path path, Duration duration) {
+
+        final client = az0(path).getFileSystem().getBlobServiceClient()
+
+        final startTime = OffsetDateTime.now()
+        final indicatedExpiryTime = startTime.plusHours(duration.toHours())
+
+        // The maximum lifetime for user delegation key (and therefore delegation SAS) is 7 days
+        // Reference https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-user-delegation-sas-create-cli
+        final maxExpiryTime = startTime.plusDays(7)
+
+        final expiryTime = (indicatedExpiryTime.toEpochSecond() <= maxExpiryTime.toEpochSecond()) ? indicatedExpiryTime : maxExpiryTime
+
+        final delegationKey = client.getUserDelegationKey(startTime, expiryTime)
+
+        return delegationKey
+    }
+
+    static String generateContainerUserDelegationSas(BlobContainerClient client, Duration duration, UserDelegationKey key) {
+       
+        final startTime = OffsetDateTime.now()
+        final indicatedExpiryTime = startTime.plusHours(duration.toHours())
+
+        // The maximum lifetime for user delegation key (and therefore delegation SAS) is 7 days
+        // Reference https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-user-delegation-sas-create-cli
+        final maxExpiryTime = startTime.plusDays(7)
+
+        final expiryTime = (indicatedExpiryTime.toEpochSecond() <= maxExpiryTime.toEpochSecond()) ? indicatedExpiryTime : maxExpiryTime
 
         final signature = new BlobServiceSasSignatureValues()
                 .setPermissions(BLOB_PERMS)
                 .setPermissions(CONTAINER_PERMS)
-                .setStartTime(now)
-                .setExpiryTime( now.plusSeconds(duration.toSeconds()) )
+                .setStartTime(startTime)
+                .setExpiryTime(expiryTime)
 
-        return client .generateSas(signature)
+        final generatedSas = client.generateUserDelegationSas(signature, key)
+
+        return generatedSas
     }
 
     static String generateAccountSas(BlobServiceClient client, Duration duration) {

@@ -31,7 +31,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.StopSplitIterationException
 import nextflow.extension.CH
 import nextflow.extension.GroupKey
-import nextflow.extension.OperatorEx
+import nextflow.extension.OperatorImpl
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.mail.Mailer
@@ -60,49 +60,6 @@ class Nextflow {
 
     private static final Random random = new Random()
 
-    /**
-     * Create a {@code DataflowVariable} binding it to the specified value
-     *
-     * @param obj
-     * @return
-     */
-    @Deprecated
-    static <T> DataflowVariable<T> variable( T obj = null ) {
-        if( NF.dsl2 ) throw new DeprecationException("Method `variable` is not available any more")
-        obj != null ? CH.value(obj) : CH.value()
-    }
-
-    /**
-     * Create a {@code DataflowQueue} populating with the specified values
-     * <p>
-     * This 'queue' data structure can be viewed as a point-to-point (1 to 1, many to 1) communication channel.
-     * It allows one or more producers send messages to one reader.
-     *
-     * @param values
-     * @return
-     */
-    @Deprecated
-    static DataflowQueue channel( Collection values = null ) {
-        if( NF.dsl2 ) throw new DeprecationException("Method `channel` is not available any more")
-        def result = CH.queue()
-        if( values != null )
-            CH.emitAndClose(result, values)
-        return result
-    }
-
-    /**
-     * Create a {@code DataflowQueue} populating with a single value
-     * <p>
-     * This 'queue' data structure can be viewed as a point-to-point (1 to 1, many to 1) communication channel.
-     * It allows one or more producers send messages to one reader.
-     *
-     * @param item
-     * @return
-     */
-    @Deprecated
-    static DataflowQueue channel( Object... items ) {
-        return channel(items as List)
-    }
 
     static private fileNamePattern( FilePatternSplitter splitter, Map opts, FileSystem fs ) {
 
@@ -232,7 +189,7 @@ class Nextflow {
      */
     static void exit(int exitCode, String message = null) {
         if( session.aborted ) {
-            log.debug "Ignore exit because execution is already aborted -- message=$message"
+            log.debug "Ignoring exit because execution is already aborted -- message=$message"
             return
         }
         
@@ -282,7 +239,7 @@ class Nextflow {
 
         def file = FileHelper.getWorkFolder(session.workDir, hash)
         if( !file.exists() && !file.mkdirs() ) {
-            throw new IOException("Unable to create folder: $file -- Check file system permission" )
+            throw new IOException("Unable to create directory: $file -- Check file system permissions" )
         }
 
         return file
@@ -332,7 +289,7 @@ class Nextflow {
             path = path.resolve(name)
 
         if( !path.exists() && create && !path.mkdirs() )
-            throw new IOException("Unable to create folder: $path -- Check file system permission" )
+            throw new IOException("Unable to create directory: $path -- Check file system permissions" )
 
         return path
     }
@@ -412,13 +369,13 @@ class Nextflow {
     }
 
     /**
-     * Marker method to create a closure to be passed to {@link OperatorEx#branch(DataflowReadChannel, groovy.lang.Closure)}
+     * Marker method to create a closure to be passed to {@link OperatorImpl#branch(DataflowReadChannel, groovy.lang.Closure)}
      * operator.
      *
      * Despite apparently is doing nothing, this method is needed as marker to apply the {@link OpXform} AST
      * transformation required to interpret the closure content as required for the branch evaluation.
      *
-     * @see OperatorEx#branch(DataflowReadChannel, Closure)
+     * @see OperatorImpl#branch(DataflowReadChannel, Closure)
      * @see OpXformImpl
      *
      * @param closure
@@ -427,13 +384,13 @@ class Nextflow {
     static Closure<TokenBranchDef> branchCriteria(Closure<TokenBranchDef> closure) { closure }
 
     /**
-     * Marker method to create a closure to be passed to {@link OperatorEx#fork(DataflowReadChannel, Closure)}
+     * Marker method to create a closure to be passed to {@link OperatorImpl#fork(DataflowReadChannel, Closure)}
      * operator.
      *
      * Despite apparently is doing nothing, this method is needed as marker to apply the {@link OpXform} AST
      * transformation required to interpret the closure content as required for the branch evaluation.
      *
-     * @see OperatorEx#multiMap(groovyx.gpars.dataflow.DataflowReadChannel, groovy.lang.Closure) (DataflowReadChannel, Closure)
+     * @see OperatorImpl#multiMap(groovyx.gpars.dataflow.DataflowReadChannel, groovy.lang.Closure) (DataflowReadChannel, Closure)
      * @see OpXformImpl
      *
      * @param closure

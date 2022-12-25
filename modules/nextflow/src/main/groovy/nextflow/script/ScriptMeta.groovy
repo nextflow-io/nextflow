@@ -22,11 +22,15 @@ import java.lang.reflect.Modifier
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
-import nextflow.exception.DuplicateModuleIncludeException
+import nextflow.exception.DuplicateModuleFunctionException
 import nextflow.exception.MissingModuleComponentException
+import nextflow.script.bundle.ResourcesBundle
+import nextflow.util.TestOnly
+
 /**
  * Holds a nextflow script meta-data such as the
  * defines processes and workflows, the included modules
@@ -46,6 +50,12 @@ class ScriptMeta {
     static private Map<BaseScript,ScriptMeta> REGISTRY = new HashMap<>(10)
 
     static private Set<String> resolvedProcessNames = new HashSet<>(20)
+
+    @TestOnly
+    static void reset() {
+        REGISTRY.clear()
+        resolvedProcessNames.clear()
+    }
 
     static ScriptMeta get(BaseScript script) {
         if( !script ) throw new IllegalStateException("Missing current script context")
@@ -93,6 +103,8 @@ class ScriptMeta {
     /** Whenever it's a module script or the main script */
     private boolean module
 
+    private Map<String,Integer> functionsCount = new HashMap<>()
+
     Path getScriptPath() { scriptPath }
 
     Path getModuleDir () { scriptPath?.parent }
@@ -119,6 +131,41 @@ class ScriptMeta {
     @PackageScope
     void setModule(boolean val) {
         this.module = val
+    }
+
+    private void incFunctionCount(String name) {
+        final count = functionsCount.getOrDefault(name, 0)
+        functionsCount.put(name, count+1)
+    }
+
+    void validate() {
+        // check for duplicate function names
+        for( final name : functionsCount.keySet() ) {
+            if( functionsCount.get(name)<2 )
+                continue
+            final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function with multiple signatures or arguments with a default value"
+            if( NF.isStrictMode() )
+                throw new DuplicateModuleFunctionException(msg)
+            log.warn(msg)
+        }
+    }
+
+    void checkComponentName(ComponentDef component, String name) {
+        if( component !instanceof ProcessDef && component !instanceof FunctionDef ) {
+            return
+        }
+        if (functionsCount.get(component.name)) {
+            final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
+            if (NF.isStrictMode())
+                throw new DuplicateModuleFunctionException(msg)
+            log.warn(msg)
+        }
+        if (imports.get(component.name)) {
+            final msg = "A process with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
+            if (NF.isStrictMode())
+                throw new DuplicateModuleFunctionException(msg)
+            log.warn(msg)
+        }
     }
 
     /*
@@ -148,15 +195,17 @@ class ScriptMeta {
     }
 
     static List<FunctionDef> definedFunctions0(BaseScript script) {
-        def allMethods = script.class.getDeclaredMethods()
-        def result = new ArrayList(allMethods.length)
+        final allMethods = script.class.getDeclaredMethods()
+        final result = new ArrayList<FunctionDef>(allMethods.length)
         for( Method method : allMethods ) {
             if( !Modifier.isPublic(method.getModifiers()) ) continue
             if( Modifier.isStatic(method.getModifiers())) continue
             if( method.name.startsWith('super$')) continue
             if( method.name in INVALID_FUNCTION_NAMES ) continue
 
-            result.add(new FunctionDef(script, method))
+            // If method is already into the list, maybe with other signature, it's not necessary to include it again
+            if( result.find{it.name == method.name}) continue
+            result.add(new FunctionDef(script, method.name))
         }
         return result
     }
@@ -165,7 +214,11 @@ class ScriptMeta {
         final name = component.name
         if( !module && NF.hasOperator(name) )
             log.warn "${component.type.capitalize()} with name '$name' overrides a built-in operator with the same name"
+        checkComponentName(component, name)
         definitions.put(component.name, component)
+        if( component instanceof FunctionDef ){
+            incFunctionCount(name)
+        }
         return this
     }
 
@@ -273,18 +326,23 @@ class ScriptMeta {
         assert component
 
         final name = alias ?: component.name
-        final existing = getComponent(name)
-        if (existing) {
-            def msg = "A ${existing.type} with name '$name' is already defined in the current context"
-            throw new DuplicateModuleIncludeException(msg)
-        }
-
+        checkComponentName(component, name)
         if( name != component.name ) {
             imports.put(name, component.cloneWithName(name))
         }
         else {
             imports.put(name, component)
         }
+    }
+
+    @Memoized
+    ResourcesBundle getModuleBundle() {
+        if( !scriptPath )
+            throw new IllegalStateException("Module scriptPath has not been defined yet")
+        if( scriptPath.getName()!='main.nf' )
+            return null
+        final bundlePath = scriptPath.resolveSibling('resources')
+        return ResourcesBundle.scan(bundlePath)
     }
 
 }

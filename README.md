@@ -1,12 +1,11 @@
 ![Nextflow logo](https://github.com/nextflow-io/trademark/blob/master/nextflow2014_no-bg.png)
 
 *"Dataflow variables are spectacularly expressive in concurrent programming"*
-<br>[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.145.7873)
+<br>[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](https://dl.acm.org/doi/abs/10.1145/72551.72552)
 
 
 ![Nextflow CI](https://github.com/nextflow-io/nextflow/workflows/Nextflow%20CI/badge.svg)
 [![Nextflow version](https://img.shields.io/github/release/nextflow-io/nextflow.svg?colorB=26af64&style=popout)](https://github.com/nextflow-io/nextflow/releases/latest)
-[![Chat on Gitter](https://img.shields.io/gitter/room/nextflow-io/nextflow.svg?colorB=26af64&style=popout)](https://gitter.im/nextflow-io/nextflow)
 [![Nextflow Twitter](https://img.shields.io/twitter/url/https/nextflowio.svg?colorB=26af64&&label=%40nextflow&style=popout)](https://twitter.com/nextflowio)
 [![Nextflow Publication](https://img.shields.io/badge/Published-Nature%20Biotechnology-26af64.svg?colorB=26af64&style=popout)](https://www.nature.com/articles/nbt.3820)
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?colorB=26af64&style=popout)](http://bioconda.github.io/recipes/nextflow/README.html)
@@ -17,7 +16,7 @@ Quick overview
 Nextflow is a bioinformatics workflow manager that enables the development of portable and reproducible workflows.
 It supports deploying workflows on a variety of execution platforms including local, HPC schedulers, AWS Batch,
 Google Cloud Life Sciences, and Kubernetes. Additionally, it provides support for manage your workflow dependencies
-through built-in support for Conda, Docker, Singularity, and Modules.
+through built-in support for Conda, Docker, Podmand, Singularity, and Modules.
 
 ## Contents
 - [Rationale](#rationale)
@@ -25,7 +24,7 @@ through built-in support for Conda, Docker, Singularity, and Modules.
 - [Documentation](#documentation)
 - [Tool Management](#tool-management)
   - [Conda environments](#conda-environments)
-  - [Docker and Singularity](#containers)
+  - [Docker, Podman and Singularity](#containers)
   - [Environment Modules](#environment-modules)
 - [HPC Schedulers](#hpc-schedulers)
   - [SGE](#hpc-schedulers)
@@ -33,12 +32,13 @@ through built-in support for Conda, Docker, Singularity, and Modules.
   - [LSF](#hpc-schedulers)
   - [SLURM](#hpc-schedulers)
   - [PBS/Torque](#hpc-schedulers)
+  - [HyperQueue (experimental)](#hpc-schedulers)
   - [HTCondor (experimental)](#hpc-schedulers)
+  - [Moab](#hpc-schedulers)
 - [Cloud Support](#cloud-support)
   - [AWS Batch](#cloud-support)
-  - [AWS EC2](#cloud-support)
-  - [Google Cloud](#cloud-support)
-  - [Google Genomics Pipelines](#cloud-support)
+  - [Google Cloud Batch](#cloud-support)
+  - [Google Life Sciences](#cloud-support)
   - [Kubernetes](#cloud-support)
 - [Community](#community)
 - [Build from source](#build-from-source)
@@ -105,8 +105,10 @@ Currently the following clusters are supported:
   + [LSF](https://www.nextflow.io/docs/latest/executor.html#lsf)
   + [SLURM](https://www.nextflow.io/docs/latest/executor.html#slurm)
   + [PBS/Torque](https://www.nextflow.io/docs/latest/executor.html#pbs-torque)
+  + [Flux](https://www.nextflow.io/docs/latest/executor.html#flux)
+  + [HyperQueue (beta)](https://www.nextflow.io/docs/latest/executor.html#hyperqueue)
   + [HTCondor (beta)](https://www.nextflow.io/docs/latest/executor.html#htcondor)
-  + [Moab (beta)](https://www.nextflow.io/docs/latest/executor.html#moab)
+  + [Moab](https://www.nextflow.io/docs/latest/executor.html#moab)
 
 For example to submit the execution to a SGE cluster create a file named `nextflow.config`, in the directory
 where the pipeline is going to be launched, with the following content:
@@ -132,6 +134,7 @@ Additionally, *Nextflow* can run workflows on either on-prem or managed cloud Ku
 Currently supported cloud platforms:
   + [AWS Batch](https://www.nextflow.io/docs/latest/awscloud.html#aws-batch)
   + [Azure Batch](https://azure.microsoft.com/en-us/services/batch/)
+  + [Google Cloud Batch](https://cloud.google.com/batch)
   + [Google Cloud Life Sciences](https://cloud.google.com/life-sciences)
   + [Kubernetes](https://www.nextflow.io/docs/latest/kubernetes.html)
 
@@ -171,8 +174,8 @@ Environment Modules
 Community
 =========
 
-You can post questions, or report problems by using the Nextflow [discussion forum](https://groups.google.com/forum/#!forum/nextflow)
-or the [Nextflow channel on Gitter](https://gitter.im/nextflow-io/nextflow).
+You can post questions, or report problems by using the Nextflow [discussions](https://github.com/nextflow-io/nextflow/discussions)
+or the Nextflow [Slack community chat](https://www.nextflow.io/slack-invite.html).
 
 *Nextflow* also hosts a yearly workshop showcasing researcher's workflows and advancements in the langauge. Talks from the past workshops are available on the [Nextflow YouTube Channel](https://www.youtube.com/channel/UCB-5LCKLdTKVn2F4V4KlPbQ)
 

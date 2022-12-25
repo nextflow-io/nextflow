@@ -66,6 +66,8 @@ class CondaCache {
 
     private Path configCacheDir0
 
+    private List<String> channels = Collections.emptyList()
+
     @PackageScope String getCreateOptions() { createOptions }
 
     @PackageScope Duration getCreateTimeout() { createTimeout }
@@ -73,6 +75,8 @@ class CondaCache {
     @PackageScope Map<String,String> getEnv() { System.getenv() }
 
     @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
+
+    @PackageScope List<String> getChannels() { channels }
 
     @PackageScope String getBinaryName() {
         if (useMamba)
@@ -82,7 +86,7 @@ class CondaCache {
         return "conda"
     }
 
-    /** Only for debugging purpose - do not use */
+    /** Only for testing purpose - do not use */
     @PackageScope
     CondaCache() {}
 
@@ -113,6 +117,8 @@ class CondaCache {
         if( config.useMicromamba() )
             useMicromamba = config.useMicromamba()
 
+        if( config.getChannels() )
+            channels = config.getChannels()
     }
 
     /**
@@ -141,7 +147,7 @@ class CondaCache {
         }
 
         if( !cacheDir.exists() && !cacheDir.mkdirs() ) {
-            throw new IOException("Failed to create Conda cache directory: $cacheDir -- Make sure a file with the same does not exist and you have write permission")
+            throw new IOException("Failed to create Conda cache directory: $cacheDir -- Make sure a file with the same name does not exist and you have write permission")
         }
 
         return cacheDir
@@ -208,7 +214,7 @@ class CondaCache {
         else if( condaEnv.contains('/') ) {
             final prefix = condaEnv as Path
             if( !prefix.isDirectory() )
-                throw new IllegalArgumentException("Conda prefix path does not exist or it's not a directory: $prefix")
+                throw new IllegalArgumentException("Conda prefix path does not exist or is not a directory: $prefix")
             if( prefix.fileSystem != FileSystems.default )
                 throw new IllegalArgumentException("Conda prefix path must be a POSIX file path: $prefix")
 
@@ -279,7 +285,8 @@ class CondaCache {
         }
 
         else {
-            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
+            final channelsOpt = channels.collect(it -> "-c $it ").join('')
+            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} ${channelsOpt}$condaEnv"
         }
 
         try {

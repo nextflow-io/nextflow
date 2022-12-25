@@ -36,13 +36,20 @@ dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:1.7.10'
     compileOnly 'org.pf4j:pf4j:3.4.1'
-    api('com.azure:azure-storage-blob:12.9.0') {
+
+    api('com.azure:azure-storage-blob:12.19.0') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
-    api('com.microsoft.azure:azure-batch:9.0.0') {
+    api('com.microsoft.azure:azure-batch:10.0.0') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
         exclude group: 'com.google.guava', module: 'guava'
     }
+    api('com.azure:azure-identity:1.5.5') {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+        exclude group: 'com.nimbusds', module: 'oauth2-oidc-sdk'
+    }
+
+    compileOnly(group: 'com.nimbusds', name: 'oauth2-oidc-sdk', version: '9.43')
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')

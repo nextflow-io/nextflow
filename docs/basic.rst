@@ -65,15 +65,14 @@ A Nextflow script looks like this::
     }
 
 The above example defines two processes. Their execution order is not determined by the fact that the ``blastSearch``
-process comes before ``extractTopHits`` in the script (it could also be written the other way around).
+process comes before ``extractTopHits`` in the script (it could also be written the other way around). Instead, the
+pipe operator (``|``) in the workflow between ``blastSearch`` and ``extractTopHits`` forwards the outputs from one
+process to the inputs of the following one.
 
-Instead, because the first process defines the channel ``top_hits_ch`` in its output declarations, and the
-process ``extractTopHits`` defines the channel in its input declaration, a communication link is established.
-
-This linking via the channels means that ``extractTopHits`` is waiting for the output of `blastSearch`, and then
-runs `reactively` when the channel has contents.
-
-.. TODO describe that both processes are launched at the same time
+When the workflow is started, it will create two processes and one channel (``query_ch``)
+and it will link all of them. Both processes will be started at the same time and they will listen to their
+respective input channels. Whenever ``blastSearch`` emits a value, ``extractTopHits``
+will receive it (i.e. ``extractTopHits`` consumes the channel in a `reactive` way).
 
 Read the :ref:`Channel <channel-page>` and :ref:`Process <process-page>` sections to learn more about these features.
 
@@ -97,6 +96,7 @@ The following batch schedulers are supported:
 * `Univa grid engine <http://www.univa.com/>`_
 * `Platform LSF <http://www.ibm.com/systems/technicalcomputing/platformcomputing/products/lsf/>`_
 * `Linux SLURM <https://computing.llnl.gov/linux/slurm/>`_
+* `Flux Framework <https://flux-framework.org/>`_
 * `PBS Works <http://www.pbsworks.com/gridengine/>`_
 * `Torque <http://www.adaptivecomputing.com/products/open-source/torque/>`_
 * `HTCondor <https://research.cs.wisc.edu/htcondor/>`_
@@ -134,15 +134,15 @@ Read the :ref:`script-page` section to learn about the Nextflow scripting langua
 Configuration options
 ---------------------
 
-Pipeline configuration properties are defined in a file named ``nextflow.config`` in the pipeline execution directory. 
+Pipeline configuration properties are defined in a file named ``nextflow.config`` in the pipeline execution directory.
 
-This file can be used to define which executor to use, the process's environment variables, pipeline parameters etc. 
+This file can be used to define which executor to use, the process's environment variables, pipeline parameters etc.
 
 A basic configuration file might look like this::
 
-	process { 
+	process {
 	  executor='sge'
-	  queue = 'cn-el6' 
+	  queue = 'cn-el6'
 	}
 
 

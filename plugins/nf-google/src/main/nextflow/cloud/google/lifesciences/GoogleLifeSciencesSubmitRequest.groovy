@@ -74,5 +74,7 @@ class GoogleLifeSciencesSubmitRequest {
 
     boolean keepAliveOnFailure
 
+    Map<String, String> resourceLabels = [:]
+    
     String timeout
 }

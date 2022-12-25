@@ -41,7 +41,7 @@ class OutputsList implements List<OutParam>, Cloneable {
 
     List<DataflowWriteChannel> getChannels() {
         final List<DataflowWriteChannel> result = new ArrayList<>(target.size())
-        for(OutParam param : target) { result.addAll(param.getOutChannels()) }
+        for(OutParam param : target) { result.add(param.getOutChannel()) }
         return result
     }
 

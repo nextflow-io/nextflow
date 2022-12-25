@@ -109,7 +109,8 @@ to specify your bucket credentials. For example::
     aws {
         accessKey = '<YOUR S3 ACCESS KEY>'
         secretKey = '<YOUR S3 SECRET KEY>'
-        region = '<REGION IDENTIFIER>'
+        region = '<AWS REGION IDENTIFIER>'
+        profile = '<AWS CONFIG PROFILE>' // optional
     }
 
 Click the following link to learn more about `AWS Security Credentials <http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html>`_.
@@ -123,6 +124,8 @@ anonymous                   Allow the access of public S3 buckets without the ne
 s3Acl                       Allow the setting of a predefined bucket permissions also known as *canned ACL*. Permitted values are ``Private``, ``PublicRead``, ``PublicReadWrite``, ``AuthenticatedRead``, ``LogDeliveryWrite``, ``BucketOwnerRead``, ``BucketOwnerFullControl`` and ``AwsExecRead``. See `Amazon docs <https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl>`_ for details.
 connectionTimeout           The amount of time to wait (in milliseconds) when initially establishing a connection before giving up and timing out.
 endpoint                    The AWS S3 API entry point e.g. `s3-us-west-1.amazonaws.com`.
+glacierAutoRetrieval        Enable auto retrieval of S3 objects stored with Glacier class store (EXPERIMENTAL. default: ``false``, requires version ``22.12.0-edge`` or later).
+glacierExpirationDays       The time, in days, between when an object is restored to the bucket and when it expires (EXPERIMENTAL. default: ``7``, requires version ``22.12.0-edge`` or later).
 maxConnections              The maximum number of allowed open HTTP connections.
 maxErrorRetry               The maximum number of retry attempts for failed retryable requests.
 protocol                    The protocol (i.e. HTTP or HTTPS) to use when connecting to AWS.
@@ -130,6 +133,7 @@ proxyHost                   The proxy host to connect through.
 proxyPort                   The port on the proxy host to connect through.
 proxyUsername               The user name to use when connecting through a proxy.
 proxyPassword               The password to use when connecting through a proxy.
+s3PathStyleAccess           Enable the use of path-based access model that is used to specify the address of an object in S3-compatible storage systems.
 signerOverride              The name of the signature algorithm to use for signing requests made by the client.
 socketSendBufferSizeHint    The Size hint (in bytes) for the low level TCP send buffer.
 socketRecvBufferSizeHint    The Size hint (in bytes) for the low level TCP receive buffer.
@@ -138,7 +142,7 @@ storageEncryption           The S3 server side encryption to be used when saving
 storageKmsKeyId             The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket (requires version ``22.05.0-edge`` or later).
 userAgent                   The HTTP user agent header passed with all HTTP requests.
 uploadMaxThreads            The maximum number of threads used for multipart upload.
-uploadChunkSize             The size of a single part in a multipart upload (default: `20 MB`).
+uploadChunkSize             The size of a single part in a multipart upload (default: `100 MB`).
 uploadStorageClass          The S3 storage class applied to stored objects, one of [`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`] (default: `STANDARD`).
 uploadMaxAttempts           The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
 uploadRetrySleep            The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
@@ -165,11 +169,15 @@ Name                        Description
 =========================== ================
 cliPath                     The path where the AWS command line tool is installed in the host AMI.
 jobRole                     The AWS Job Role ARN that needs to be used to execute the Batch Job.
-volumes                     One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. ``/host/path:/mount/path[:ro|rw]``. Multiple mounts can be specifid separating them with a comma or using a list object.
+logsGroup                   The name of the logs group used by Batch Jobs (default: ``/aws/batch``, requires ``22.09.0-edge`` or later).
+volumes                     One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. ``/host/path:/mount/path[:ro|rw]``. Multiple mounts can be specified separating them with a comma or using a list object.
 delayBetweenAttempts        Delay between download attempts from S3 (default `10 sec`).
 maxParallelTransfers        Max parallel upload/download transfer operations *per job* (default: ``4``).
 maxTransferAttempts         Max number of downloads attempts from S3 (default: `1`).
 maxSpotAttempts             Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: ``5``, requires ``22.04.0`` or later)
+retryMode                   The retry mode configuration setting, to accommodate rate-limiting on `AWS services <https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html>`_ (default: ``standard``)
+schedulingPriority          The scheduling priority for all tasks when using `fair-share scheduling for AWS Batch <https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/>`_ (default: ``0``, requires ``23.01.0-edge`` or later)
+shareIdentifier             The share identifier for all tasks when using `fair-share scheduling for AWS Batch <https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/>`_ (requires ``22.09.0-edge`` or later)
 =========================== ================
 
 
@@ -240,15 +248,16 @@ useMicromamba       uses the ``micromamba`` binary instead of ``conda`` to creat
 Scope `dag`
 -------------
 
-The ``dag`` scope allows you to control the layout of the execution graph file generated by Nextflow.
+The ``dag`` scope allows you to control the layout of the execution graph diagram generated by Nextflow.
 
 The following settings are available:
 
 ================== ================
 Name                Description
 ================== ================
-enabled             When ``true`` turns on the generation of the execution graph report file (default: ``false``).
-file                Graph file name (default: ``dag.dot``).
+enabled             When ``true`` turns on the generation of the DAG file (default: ``false``).
+file                Graph file name (default: ``dag-<timestamp>.dot``).
+overwrite           When ``true`` overwrites any existing DAG file with the same name.
 ================== ================
 
 The above options can be used by prefixing them with the ``dag`` scope or surrounding them by curly
@@ -324,6 +333,10 @@ Simply prefix your variable names with the ``env`` scope or surround them by cur
   you want these variables to be evaluated during task execution, escape them with ``\$``. This difference is important
   for variables like ``$PATH``, which may be different in the workflow environment versus the task environment.
 
+.. warning::
+  The ``env`` scope provides environment variables to *tasks*, not Nextflow itself. Nextflow environment variables
+  such as ``NXF_VER`` should be set in the environment in which Nextflow is launched.
+
 
 .. _config-executor:
 
@@ -335,23 +348,24 @@ The ``executor`` configuration scope allows you to set the optional executor set
 ===================== =====================
 Name                  Description
 ===================== =====================
-name                  The name of the executor to be used e.g. ``local``, ``sge``, etc.
+name                  The name of the executor to be used (default: ``local``).
 queueSize             The number of tasks the executor will handle in a parallel manner (default: ``100``).
-pollInterval          Determines how often a poll occurs to check for a process termination.
-dumpInterval          Determines how often the executor status is written in the application log file (default: ``5min``).
-queueStatInterval     Determines how often the queue status is fetched from the cluster system. This setting is used only by grid executors (default: ``1min``).
-exitReadTimeout       Determines how long the executor waits before to an error status when a process is terminated but the ``.exitcode`` file does not exist or is empty. This setting is used only by grid executors (default: ``270 sec``).
-killBatchSize         Determines the number of jobs that can be `killed` in a single command execution (default: ``100``).
-submitRateLimit       Determines the max rate of job submission per time unit, for example ``'10sec'`` eg. max 10 jobs per second or ``'50/2min'`` i.e. 50 job submissions every 2 minutes (default: `unlimited`).
+submitRateLimit       Determines the max rate of job submission per time unit, for example ``'10sec'`` (10 jobs per second) or ``'50/2min'`` (50 jobs every 2 minutes) (default: unlimited).
+pollInterval          Determines how often to check for process termination. Default varies for each executor.
+dumpInterval          Determines how often to log the executor status (default: ``5min``).
+queueStatInterval     Determines how often to fetch the queue status from the scheduler (default: ``1min``). Used only by grid executors.
+exitReadTimeout       Determines how long to wait before returning an error status when a process is terminated but the ``.exitcode`` file does not exist or is empty (default: ``270 sec``). Used only by grid executors.
+killBatchSize         Determines the number of jobs that can be killed in a single command execution (default: ``100``).
 perJobMemLimit        Specifies Platform LSF *per-job* memory limit mode. See :ref:`lsf-executor`.
-jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }`` Note: when using this option you need to make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
-cpus                  The maximum number of CPUs made available by the underlying system (only used by the ``local`` executor).
-memory                The maximum amount of memory made available by the underlying system (only used by the ``local`` executor).
-retry.delay           Delay when re-retying failed submit operations (default: ``500ms``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later).
-retry.maxDelay        Max delay when re-retying failed submit operations (default: ``30s``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later).
-retry.jitter          Jitter value when re-retying failed submit operations (default: ``0.25``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later)
-retry.maxAttempts     Max attempts when re-retying failed submit operations (default: ``3``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later)
-retry.reason          Regex pattern that when verified cause a failed submit operation to be re-tried (default: ``Socket timed out``, only used by grid based executors e.g. ``slurm``, requires version ``22.03.0-edge`` or later)
+perTaskReserve        Specifies Platform LSF *per-task* memory reserve mode. See :ref:`lsf-executor`.
+jobName               Determines the name of jobs submitted to the underlying cluster executor e.g. ``executor.jobName = { "$task.name - $task.hash" }``. Make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
+cpus                  The maximum number of CPUs made available by the underlying system. Used only by the ``local`` executor.
+memory                The maximum amount of memory made available by the underlying system. Used only by the ``local`` executor.
+retry.delay           Delay when retrying failed job submissions (default: ``500ms``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
+retry.maxDelay        Max delay when retrying failed job submissions (default: ``30s``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
+retry.jitter          Jitter value when retrying failed job submissions (default: ``0.25``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
+retry.maxAttempts     Max attempts when retrying failed job submissions (default: ``3``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
+retry.reason          Regex pattern that when verified cause a failed submit operation to be re-tried (default: ``Socket timed out``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
 ===================== =====================
 
 The executor settings can be defined as shown below::
@@ -395,9 +409,9 @@ workflow applications in a Kubernetes cluster.
 
 The following settings are available:
 
-================== ================
+=================== ================
 Name                Description
-================== ================
+=================== ================
 autoMountHostPaths  Automatically mounts host paths in the job pods. Only for development purpose when using a single node cluster (default: ``false``).
 context             Defines the Kubernetes `configuration context name <https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/>`_ to use.
 namespace           Defines the Kubernetes namespace to use (default: ``default``).
@@ -412,10 +426,13 @@ securityContext     Defines the `security context <https://kubernetes.io/docs/ta
 storageClaimName    The name of the persistent volume claim where store workflow result data.
 storageMountPath    The path location used to mount the persistent volume claim (default: ``/workspace``).
 storageSubPath      The path in the persistent volume to be mounted (default: root).
-computeResourceType Define whether use Kubernetes ``Pod`` or ``Job`` resource type to carry out Nextflow tasks (default: ``Pod``).
+computeResourceType Define whether use Kubernetes ``Pod`` or ``Job`` resource type to carry out Nextflow tasks (default: ``Pod``, requires version ``22.05.0-edge`` or later).
 fetchNodeName       If you trace the hostname, activate this option (default: ``false``, requires version ``22.05.0-edge`` or later).
 volumeClaims        (deprecated)
-================== ================
+maxErrorRetry       Defines the Kubernetes API max request retries (default is set to 4)
+httpReadTimeout     Defines the Kubernetes client request HTTP connection read timeout e.g. ``'60s'`` (requires version ``22.10.0`` or later).
+httpConnectTimeout  Defines the Kubernetes client request HTTP connection timeout e.g. ``'60s'`` (requires version ``22.10.0`` or later).
+=================== ================
 
 See the :ref:`k8s-page` documentation for more details.
 
@@ -456,6 +473,15 @@ For example, the following snippet shows how to configure Nextflow to send email
         smtp.auth = true
         smtp.starttls.enable = true
         smtp.starttls.required = true
+    }
+
+.. note::
+  Some versions of Java (e.g. Java 11 Corretto) do not default to TLS v1.2, and as a result may have
+  issues with 3rd party integrations that enforce TLS v1.2 (e.g. Azure Active Directory OIDC). This problem can be
+  addressed by setting the following config option::
+
+    mail {
+        smtp.ssl.protocols = 'TLSv1.2'
     }
 
 
@@ -569,7 +595,7 @@ temp                Mounts a path of your choice as the ``/tmp`` directory in th
 remove              Clean-up the container after the execution (default: ``true``).
 runOptions          This attribute can be used to provide any extra command line options supported by the ``podman run`` command.
 registry            The registry from where container images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
-engineOptions       This attribute can be used to provide any option supported by the Docker engine i.e. ``podman [OPTIONS]``.
+engineOptions       This attribute can be used to provide any option supported by the Podman engine i.e. ``podman [OPTIONS]``.
 mountFlags          Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`
 ================== ================
 
@@ -657,7 +683,7 @@ to all processes matching the specified pattern condition. For example::
         }
     }
 
-The above configuration snippet sets 2 cpus and 4 GB of memory to the processes annotated with with a label ``foo``
+The above configuration snippet sets 2 cpus and 4 GB of memory to the processes annotated with a label ``foo``
 and ``bar``.
 
 A process selector can be negated prefixing it with the special character ``!``. For example::
@@ -709,9 +735,31 @@ The ``report`` scope allows you to define configuration setting of the workflow 
 Name                Description
 ================== ================
 enabled             If ``true`` it create the workflow execution report.
-file                The path of the created execution report file (default: ``report.html``).
-overwrite           When ``true`` overwrites existing report file instead of rolling it.
+file                The path of the created execution report file (default: ``report-<timestamp>.html``).
+overwrite           When ``true`` overwrites any existing report file with the same name.
 ================== ================
+
+
+.. _config-sarus:
+
+Scope `sarus`
+-------------------
+
+The ``sarus`` configuration scope controls how `Sarus <https://sarus.readthedocs.io>`_ containers are executed
+by Nextflow.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+enabled             Turn this flag to ``true`` to enable Sarus execution (default: ``false``).
+envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+tty                 Allocates a pseudo-tty (default: ``false``).
+runOptions          This attribute can be used to provide any extra command line options supported by the ``sarus run`` command. For details see: https://sarus.readthedocs.io/en/stable/user/user_guide.html .
+================== ================
+
+Read :ref:`container-sarus` page to learn more about how to use Sarus containers with Nextflow.
 
 
 .. _config-shifter:
@@ -754,6 +802,7 @@ noHttps             Turn this flag to ``true`` to pull the Singularity image wit
 autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Singularity installation (default: ``false``).
 cacheDir            The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
 pullTimeout         The amount of time the Singularity pull can last, exceeding which the process is terminated (default: ``20 min``).
+registry            The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
 ================== ================
 
 Read :ref:`container-singularity` page to learn more about how to use Singularity containers with Nextflow.
@@ -772,8 +821,8 @@ The following settings are available:
 Name                Description
 ================== ================
 enabled             When ``true`` turns on the generation of the timeline report file (default: ``false``).
-file                Timeline file name (default: ``timeline.html``).
-overwrite           When ``true`` overwrites an existing timeline file instead of rolling it.
+file                Timeline file name (default: ``timeline-<timestamp>.html``).
+overwrite           When ``true`` overwrites any existing timeline file with the same name.
 ================== ================
 
 
@@ -807,8 +856,8 @@ brackets, as shown below::
 .. tip::
   Your ``accessToken`` can be obtained from your Tower instance in the `Tokens page <https://tower.nf/tokens>`.
 
-.. tip:: 
-  The Tower workspace ID can also be specified using the environment variable ``TOWER_WORKSPACE_ID`` (config file has priority over the environment variable). 
+.. tip::
+  The Tower workspace ID can also be specified using the environment variable ``TOWER_WORKSPACE_ID`` (config file has priority over the environment variable).
 
 
 .. _config-trace:
@@ -825,10 +874,10 @@ Name                Description
 ================== ================
 enabled             When ``true`` turns on the generation of the execution trace report file (default: ``false``).
 fields              Comma separated list of fields to be included in the report. The available fields are listed at :ref:`this page <trace-fields>`
-file                Trace file name (default: ``trace.txt``).
+file                Trace file name (default: ``trace-<timestamp>.txt``).
 sep                 Character used to separate values in each row (default: ``\t``).
 raw                 When ``true`` turns on raw number report generation i.e. date and time are reported as milliseconds and memory as number of bytes
-overwrite           When ``true`` overwrites an existing trace file instead of rolling it.
+overwrite           When ``true`` overwrites any existing trace file with the same name.
 ================== ================
 
 The above options can be used by prefixing them with the ``trace`` scope or surrounding them by curly
@@ -875,8 +924,8 @@ Name                Description
 cleanup             If ``true``, on a successful completion of a run all files in *work* directory are automatically deleted.
 ================== ================
 
-.. warning:: 
-    The use of the ``cleanup`` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. 
+.. warning::
+    The use of the ``cleanup`` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run.
     Also, be aware that deleting all scratch files can take a lot of time, especially when using a shared file system or remote cloud storage.
 
 
@@ -959,10 +1008,12 @@ NXF_CHARLIECLOUD_CACHEDIR       Directory where remote Charliecloud images are s
 NXF_CLASSPATH                   Allows the extension of the Java runtime classpath with extra JAR files or class folders.
 NXF_CLOUD_DRIVER                Defines the default cloud driver to be used if not specified in the config file or as command line option, either ``aws`` or ``google``.
 NXF_CONDA_CACHEDIR              Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all compute nodes.
+NXF_CONDA_ENABLED               Enable the use of Conda recipes defined by using the :ref:process-conda directive. (default: ``false``, requires version ``22.08.0-edge`` or later).
 NXF_DEBUG                       Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
-NXF_DEFAULT_DSL                 Defines the DSL version version that should be used in not specified otherwise in the script of config file (default: ``2``, requires version ``22.03.0-edge`` or later)
+NXF_DEFAULT_DSL                 Defines the DSL version that should be used in not specified otherwise in the script of config file (default: ``2``, requires version ``22.03.0-edge`` or later)
 NXF_DISABLE_JOBS_CANCELLATION   Disables the cancellation of child jobs on workflow execution termination (requires version ``21.12.0-edge`` or later).
 NXF_ENABLE_STRICT               Enable Nextflow *strict* execution mode (default: ``false``, requires version ``22.05.0-edge`` or later)
+NXF_ENABLE_SECRETS              Enable Nextflow secrets features (default: ``true``, requires version ``22.09.2-edge`` or later)
 NXF_EXECUTOR                    Defines the default process executor e.g. `sge`
 NXF_GRAB                        Provides extra runtime dependencies downloaded from a Maven repository service [DEPRECATED]
 NXF_HOME                        Nextflow home directory (default: ``$HOME/.nextflow``).

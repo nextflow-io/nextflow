@@ -253,10 +253,11 @@ class DAG {
 
         def result = []
         for(OutParam p :outputs) {
-            if( p instanceof DefaultOutParam ) break
-            for(Object it : p.outChannels) {
+            if( p instanceof DefaultOutParam )
+                break
+            final it = p.getOutChannel()
+            if( it!=null )
                 result << new ChannelHandler(channel: it, label: p instanceof TupleOutParam ? null : p.name)
-            }
         }
 
         return result
@@ -398,7 +399,7 @@ class DAG {
         TaskProcessor process
 
         /**
-         * Create an DGA vertex instance
+         * Create a DAG vertex instance
          *
          * @param type A {@link Type} value
          * @param label A descriptive string to label this vertex

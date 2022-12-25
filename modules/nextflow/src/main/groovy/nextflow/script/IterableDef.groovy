@@ -115,7 +115,7 @@ trait IterableDef {
             return 
         }
         if( !CH.isValue(input) )
-            throw new IllegalArgumentException("Recurse operation only allow value inputs -- Check ${index+1}-th argument")
+            throw new IllegalArgumentException("Recurse operation only allows value inputs -- Check ${index+1}-th argument")
         if( input==null )
             throw new IllegalArgumentException("Recurse operation does not allow null input values -- Check ${index+1}-th argument")
     }

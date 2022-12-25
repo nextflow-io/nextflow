@@ -21,7 +21,8 @@ suited for use in HPC environments. Its main advantage is that it can be used wi
 making use of user namespaces in the Linux kernel. Charliecloud is able to pull from Docker registries.
 
 .. note::
-    This feature requires Nextflow version ``21.03.0-edge`` or later and Charliecloud ``v0.22`` or later.
+    This feature requires at least Nextflow version ``21.03.0-edge`` and a Charliecloud version between ``v0.22`` and ``v0.27``.
+    As of Nextflow version ``22.09.0-edge``, Charliecloud ``v0.28`` or later is required.
 
 .. warning::
     This feature is experimental. Using it in a production environment is not recommended.
@@ -29,7 +30,7 @@ making use of user namespaces in the Linux kernel. Charliecloud is able to pull 
 Prerequisites
 -------------
 
-You will need Charliecloud version ``0.22`` or later installed on your execution environment e.g. your computer or a
+You will need Charliecloud installed in your execution environment e.g. on your computer or a
 distributed cluster, depending on where you want to run your pipeline.
 
 How it works
@@ -84,7 +85,7 @@ to the Charliecloud container format::
 
     process.container = 'https://quay.io/biocontainers/multiqc:1.3--py35_2'
     charliecloud.enabled = true
- 
+
 Whereas this would pull from Docker Hub::
 
     process.container = 'nextflow/examples:latest'
@@ -111,7 +112,7 @@ in the ``nextflow.config`` file as shown below::
 
 Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
 
-Advanced settings 
+Advanced settings
 -----------------
 
 Charliecloud advanced configuration settings are described in :ref:`config-charliecloud` section in the Nextflow
@@ -171,9 +172,10 @@ your pipeline execution.
 Multiple containers
 -------------------
 
-It is possible to specify a different Docker image for each process definition in your pipeline script. Let's
-suppose you have two processes named ``foo`` and ``bar``. You can specify two different Docker images for them
-in the Nextflow script as shown below::
+It is possible to specify a different Docker image for each process definition in your pipeline script. However, this
+can't be done with ``-with-docker`` command line option, since it doesn't support process selectors in the ``nextflow.config`` file, and doesn't
+check for the ``container`` process directive in the pipeline script file. Let's suppose you have two processes named ``foo``
+and ``bar``. You can specify two different Docker images for them in the Nextflow script as shown below::
 
     process foo {
       container 'image_name_1'
@@ -208,6 +210,10 @@ Alternatively, the same containers definitions can be provided by using the ``ne
 
 
 Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
+
+After running your pipeline, you can easily check what container image each process used with the following command::
+
+    nextflow log last -f name,container
 
 Advanced settings
 -----------------
@@ -308,10 +314,69 @@ Alternatively, the same containers definitions can be provided by using the ``ne
 
 Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
 
-Advanced settings 
+Advanced settings
 -----------------
 
 Podman advanced configuration settings are described in :ref:`config-podman` section in the Nextflow configuration page.
+
+
+.. _container-sarus:
+
+Sarus
+=======
+
+`Sarus <https://sarus.readthedocs.io>`_ is an alternative container runtime to
+Docker. Sarus works by converting Docker images to a common format that can then be
+distributed and launched on HPC systems. The user interface to Sarus enables a user to select an image
+from `Docker Hub <https://hub.docker.com/>`_ and then submit jobs which run entirely within the container.
+
+Prerequisites
+-------------
+
+You need Sarus installed in your execution environment,
+i.e: your personal computer or a distributed cluster, depending
+on where you want to run your pipeline.
+
+.. note:: This feature requires Sarus version 1.5.1 (or later) and Nextflow 22.12.0-edge (or later).
+
+Images
+------
+
+Sarus converts a docker image to squashfs layers which are distributed and launched in the cluster. For more information on
+how to build Sarus images see the `official documentation <https://sarus.readthedocs.io/en/stable/user/user_guide.html#develop-the-docker-image>`_.
+
+How it works
+------------
+
+The integration for Sarus, at this time, requires you to set up the following parameters in your config file::
+
+  process.container = "dockerhub_user/image_name:image_tag"
+  sarus.enabled = true
+
+and it will always try to search the Docker Hub registry for the images.
+
+.. note:: if you do not specify an image tag, the ``latest`` tag will be fetched by default.
+
+Multiple containers
+-------------------
+
+It is possible to specify a different Sarus image for each process definition in your pipeline script. For example,
+let's suppose you have two processes named ``foo`` and ``bar``. You can specify two different Sarus images
+specifying them in the ``nextflow.config`` file as shown below::
+
+    process {
+        withName:foo {
+            container = 'image_name_1'
+        }
+        withName:bar {
+            container = 'image_name_2'
+        }
+    }
+    sarus {
+        enabled = true
+    }
+
+Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
 
 
 .. _container-shifter:
@@ -327,8 +392,8 @@ from `Docker Hub <https://hub.docker.com/>`_ and then submit jobs which run enti
 Prerequisites
 -------------
 
-You need Shifter and Shifter image gateway installed in your execution environment, i.e: your personal computed or the
-entry node of a distributed cluster. In the case of the distributed cluster case, you should have Shifter installed on
+You need Shifter and Shifter image gateway installed in your execution environment, i.e: your personal computer or the
+entry node of a distributed cluster. In the case of the distributed cluster, you should have Shifter installed on
 all of the compute nodes and the ``shifterimg`` command should also be available and Shifter properly setup to access the
 Image gateway, for more information see the `official documentation <https://github.com/NERSC/shifter/tree/master/doc>`_.
 
@@ -454,7 +519,7 @@ Multiple containers
 
 It is possible to specify a different Singularity image for each process definition in your pipeline script. For example,
 let's suppose you have two processes named ``foo`` and ``bar``. You can specify two different Singularity images
-specifing them in the ``nextflow.config`` file as shown below::
+specifying them in the ``nextflow.config`` file as shown below::
 
     process {
         withName:foo {
@@ -526,7 +591,7 @@ latter overrides the former).
 .. warning::
     When using a compute cluster, the Singularity cache directory must reside in a shared filesystem accessible to all compute nodes.
 
-.. danger:: 
+.. danger::
     When pulling Docker images, Singularity may be unable to determine the container size if the image was
     stored using an old Docker format, resulting in a pipeline execution error. See the Singularity documentation for details.
 

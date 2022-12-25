@@ -584,27 +584,37 @@ class LsfExecutorTest extends Specification {
     def 'should apply per task reserve' () {
 
         given:
+        def session = Mock(Session)
         def executor = Spy(LsfExecutor)
-        executor.session = Mock(Session)
+        executor.session = session
 
         when:
         executor.register()
         then:
         1 * executor.parseLsfConfig() >> [:]
+        1 * session.getExecConfigProp(_,'perTaskReserve',_) >> false
         !executor.perTaskReserve
 
         when:
         executor.register()
         then:
-        1 * executor.parseLsfConfig() >> ['RESOURCE_RESERVE_PER_TASK': 'n']
+        1 * executor.parseLsfConfig() >> [RESOURCE_RESERVE_PER_TASK:'y']
+        1 * session.getExecConfigProp(_,'perTaskReserve',_) >> false
         !executor.perTaskReserve
 
         when:
         executor.register()
         then:
-        1 * executor.parseLsfConfig() >> ['RESOURCE_RESERVE_PER_TASK': 'y']
+        1 * executor.parseLsfConfig() >> [:]
+        1 * session.getExecConfigProp(_,'perTaskReserve',_) >> true
         executor.perTaskReserve
 
+        when:
+        executor.register()
+        then:
+        1 * executor.parseLsfConfig() >> [RESOURCE_RESERVE_PER_TASK:'y']
+        1 * session.getExecConfigProp(_,'perTaskReserve',_) >> { execName,name,defValue -> defValue }
+        executor.perTaskReserve
     }
 
     def 'should apply lsf per job limit' () {
@@ -623,6 +633,13 @@ class LsfExecutorTest extends Specification {
         when:
         executor.register()
         then:
+        1 * executor.parseLsfConfig() >> [LSB_JOB_MEMLIMIT:'y']
+        1 * session.getExecConfigProp(_,'perJobMemLimit',_) >> false
+        !executor.perJobMemLimit
+
+        when:
+        executor.register()
+        then:
         1 * executor.parseLsfConfig() >> [:]
         1 * session.getExecConfigProp(_,'perJobMemLimit',_) >> true
         executor.perJobMemLimit
@@ -631,7 +648,7 @@ class LsfExecutorTest extends Specification {
         executor.register()
         then:
         1 * executor.parseLsfConfig() >> [LSB_JOB_MEMLIMIT:'y']
-        0 * session.getExecConfigProp(_,'perJobMemLimit',_) >> null
+        1 * session.getExecConfigProp(_,'perJobMemLimit',_) >> { execName,name,defValue -> defValue }
         executor.perJobMemLimit
     }
 
@@ -665,7 +682,7 @@ class LsfExecutorTest extends Specification {
     def 'should parse complex config file' () {
         given:
         def executor = Spy(LsfExecutor)
-        def file = new File('src/test/groovy/nextflow/executor/lsf.conf')
+        def file = new File('src/test/resources/nextflow/executor/lsf.conf')
         assert file.exists(), 'Cannot find LSF config test file'
 
         when:

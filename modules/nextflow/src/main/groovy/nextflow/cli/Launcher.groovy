@@ -90,11 +90,9 @@ class Launcher {
                 new CmdClone(),
                 new CmdConsole(),
                 new CmdFs(),
-                new CmdHistory(),
                 new CmdInfo(),
                 new CmdList(),
                 new CmdLog(),
-                new CmdLs(),
                 new CmdPull(),
                 new CmdRun(),
                 new CmdKubeRun(),
@@ -104,7 +102,8 @@ class Launcher {
                 new CmdView(),
                 new CmdHelp(),
                 new CmdSelfUpdate(),
-                new CmdPlugins()
+                new CmdPlugins(),
+                new CmdPlugin()
         ]
 
         if(SecretsLoader.isEnabled())
@@ -181,7 +180,7 @@ class Launcher {
             colsString.toShort()
         }
         catch( Exception e ) {
-            log.debug "Oops .. not a valid \$COLUMNS value: $colsString"
+            log.debug "Oops.. not a valid \$COLUMNS value: $colsString"
             return 0
         }
     }
@@ -200,7 +199,7 @@ class Launcher {
     @PackageScope
     List<String> normalizeArgs( String ... args ) {
 
-        def normalized = [] as List<String>
+        List<String> normalized = []
         int i=0
         while( true ) {
             if( i==args.size() ) { break }
@@ -253,7 +252,15 @@ class Launcher {
                 normalized << '-'
             }
 
+            else if( current == '-with-apptainer' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
             else if( current == '-with-charliecloud' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
+            else if( current == '-with-conda' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '-'
             }
 
@@ -262,6 +269,10 @@ class Launcher {
             }
 
             else if( current == '-with-tower' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << '-'
+            }
+
+            else if( current == '-with-wave' && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << '-'
             }
 
@@ -511,7 +522,7 @@ class Launcher {
         }
 
         catch( ScriptCompilationException e ) {
-            log.error e.message
+            log.error(e.message, e)
             return(1)
         }
 
@@ -636,8 +647,7 @@ class Launcher {
      */
     static void main(String... args)  {
 
-        final launcher = new Launcher()
-        final status = launcher .command(args) .run()
+        final status = new Launcher() .command(args) .run()
         if( status )
             System.exit(status)
     }

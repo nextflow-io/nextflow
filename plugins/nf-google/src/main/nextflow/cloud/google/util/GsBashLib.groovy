@@ -84,7 +84,7 @@ class GsBashLib extends BashFunLib<GsBashLib> {
             local target=$2
             gsutil ${gs_opts[@]} cp -R "$name" "$target/$name"
         }
-        '''.stripIndent()
+        '''.stripIndent(true)
     }
 
     @Override

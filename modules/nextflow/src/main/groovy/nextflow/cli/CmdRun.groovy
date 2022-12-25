@@ -77,7 +77,7 @@ class CmdRun extends CmdBase implements HubOptions {
         }
     }
 
-    static final public NAME = 'run'
+    static final public String NAME = 'run'
 
     private Map<String,String> sysEnv = System.getenv()
 
@@ -157,6 +157,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = ['-with-tower'], description = 'Monitor workflow execution with Seqera Tower service')
     String withTower
 
+    @Parameter(names = ['-with-wave'], hidden = true)
+    String withWave
+
     @Parameter(names = ['-with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
     String withWebLog
 
@@ -174,6 +177,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Parameter(names = '-with-singularity', description = 'Enable process execution in a Singularity container')
     def withSingularity
+
+    @Parameter(names = '-with-apptainer', description = 'Enable process execution in a Apptainer container')
+    def withApptainer
 
     @Parameter(names = '-with-podman', description = 'Enable process execution in a Podman container')
     def withPodman
@@ -219,6 +225,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-with-conda'], description = 'Use the specified Conda environment package or file (must end with .yml|.yaml suffix)')
     String withConda
 
+    @Parameter(names=['-without-conda'], description = 'Disable the use of Conda environments')
+    Boolean withoutConda
+
     @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
     boolean offline = System.getenv('NXF_OFFLINE')=='true'
 
@@ -236,6 +245,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Parameter(names=['-stub-run','-stub'], description = 'Execute the workflow replacing process scripts with command stubs')
     boolean stubRun
+
+    @Parameter(names=['-preview'], description = "Run the workflow script skipping the execution of all processes")
+    boolean preview
 
     @Parameter(names=['-plugins'], description = 'Specify the plugins to be applied for this run e.g. nf-amazon,nf-tower')
     String plugins
@@ -273,6 +285,9 @@ class CmdRun extends CmdBase implements HubOptions {
         if( withDocker && withoutDocker )
             throw new AbortOperationException("Command line options `-with-docker` and `-without-docker` cannot be specified at the same time")
 
+        if( withConda && withoutConda )
+            throw new AbortOperationException("Command line options `-with-conda` and `-without-conda` cannot be specified at the same time")
+
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
 
@@ -282,6 +297,7 @@ class CmdRun extends CmdBase implements HubOptions {
         checkRunName()
 
         log.info "N E X T F L O W  ~  version ${Const.APP_VER}"
+        Plugins.init()
 
         // -- specify the arguments
         final scriptFile = getScriptFile(pipeline)
@@ -296,9 +312,12 @@ class CmdRun extends CmdBase implements HubOptions {
         // check DSL syntax in the config
         launchInfo(config, scriptFile)
 
+        // check if NXF_ variables are set in nextflow.config
+        checkConfigEnv(config)
+
         // -- load plugins
         final cfg = plugins ? [plugins: plugins.tokenize(',')] : config
-        Plugins.setup( cfg )
+        Plugins.load(cfg)
 
         // -- load secret provider
         if( SecretsLoader.isEnabled() ) {
@@ -309,6 +328,7 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- create a new runner instance
         final runner = new ScriptRunner(config)
         runner.setScript(scriptFile)
+        runner.setPreview(this.preview)
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
         runner.session.ansiLog = launcher.options.ansiLog
@@ -337,6 +357,17 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.execute(scriptArgs, this.entryName)
     }
 
+    protected checkConfigEnv(ConfigMap config) {
+        // Warn about setting NXF_ environment variables within env config scope
+        final env = config.env as Map<String, String>
+        for( String name : env.keySet() ) {
+            if( name.startsWith('NXF_') && name!='NXF_DEBUG' ) {
+                final msg = "Nextflow variables must be defined in the launching environment - The following variable set in the config file is going to be ignored: '$name'"
+                log.warn(msg)
+            }
+        }
+    }
+
     protected void launchInfo(ConfigMap config, ScriptFile scriptFile) {
         // -- determine strict mode
         final defStrict = sysEnv.get('NXF_ENABLE_STRICT') ?: false
@@ -350,11 +381,12 @@ class CmdRun extends CmdBase implements HubOptions {
         NextflowMeta.instance.enableDsl(dsl)
         // -- show launch info
         final ver = NF.dsl2 ? DSL2 : DSL1
+        final repo = scriptFile.repository ?: scriptFile.source
+        final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$repo`"
         if( scriptFile.repository )
-            log.info "Launching `$scriptFile.repository` [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
+            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.revisionInfo}"
         else
-            log.info "Launching `$scriptFile.source` [$runName] DSL${ver} - revision: ${scriptFile.getScriptId()?.substring(0,10)}"
-
+            log.info "${head} [$runName] DSL${ver} - revision: ${scriptFile.getScriptId()?.substring(0,10)}"
     }
 
     static String detectDslMode(ConfigMap config, String scriptText, Map sysEnv) {
@@ -369,11 +401,11 @@ class CmdRun extends CmdBase implements HubOptions {
             return scriptDsl
         }
         else if( dsl ) {
-            log.debug("Applied DSL=$scriptDsl from config declaration")
+            log.debug("Applied DSL=$dsl from config declaration")
             return dsl
         }
         // -- if still unknown try probing for DSL1
-        if( NextflowMeta.probeDls1(scriptText) ) {
+        if( NextflowMeta.probeDsl1(scriptText) ) {
             log.debug "Applied DSL=1 by probing script field"
             return DSL1
         }
@@ -396,16 +428,14 @@ class CmdRun extends CmdBase implements HubOptions {
             throw new AbortOperationException("Not a valid run name: `$runName` -- It must match the pattern $RUN_NAME_PATTERN")
 
         if( !runName ) {
+            if( HistoryFile.disabled() )
+                throw new AbortOperationException("Missing workflow run name")
             // -- make sure the generated name does not exist already
             runName = HistoryFile.DEFAULT.generateNextName()
         }
 
-        else if( HistoryFile.DEFAULT.checkExistsByName(runName) && !ignoreHistory() )
+        else if( !HistoryFile.disabled() && HistoryFile.DEFAULT.checkExistsByName(runName) )
             throw new AbortOperationException("Run name `$runName` has been already used -- Specify a different one")
-    }
-
-    private static boolean ignoreHistory() {
-        System.getenv('NXF_IGNORE_RESUME_HISTORY')=='true'
     }
 
     static protected boolean matchRunName(String name) {
@@ -451,7 +481,7 @@ class CmdRun extends CmdBase implements HubOptions {
                 throw new AbortOperationException("Cannot access `stdin` stream")
 
             if( revision )
-                throw new AbortOperationException("Revision option cannot be used running a local script")
+                throw new AbortOperationException("Revision option cannot be used when running a script from stdin")
 
             return new ScriptFile(file)
         }
@@ -466,7 +496,7 @@ class CmdRun extends CmdBase implements HubOptions {
 
         if( script.exists() ) {
             if( revision )
-                throw new AbortOperationException("Revision option cannot be used running a script")
+                throw new AbortOperationException("Revision option cannot be used when running a local script")
             return new ScriptFile(script)
         }
 

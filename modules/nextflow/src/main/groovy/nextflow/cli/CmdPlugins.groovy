@@ -1,6 +1,5 @@
 /*
  * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,35 +17,27 @@
 
 package nextflow.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import nextflow.exception.AbortOperationException
-import nextflow.plugin.Plugins
+import groovy.util.logging.Slf4j
 
 /**
- * Basic manager command
- * 
+ * Deprecate - see {@link CmdPlugin} instead
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
+@Deprecated
 @CompileStatic
-@Parameters()
-class CmdPlugins extends CmdBase {
+class CmdPlugins extends CmdPlugin {
 
     @Override
     String getName() {
         return 'plugins'
     }
 
-    @Parameter(hidden = true)
-    List<String> args
-
     @Override
     void run() {
-        if( !args || args[0]!= 'install' || args.size()!=2 )
-            throw new AbortOperationException("Missing plugins command - usage: nextflow plugins install <pluginId,..>")
-
-        Plugins.setup()
-        Plugins.pull(args[1].tokenize(','))
+        log.info "Command 'plugins' has been deprecated - Use 'plugin' instead"
+        super.run()
     }
 }

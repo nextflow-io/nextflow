@@ -24,6 +24,8 @@ import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.exception.NodeTerminationException
+import nextflow.fusion.FusionScriptLauncher
+import nextflow.file.http.XPath
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
@@ -67,7 +69,9 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> true
+        _ * handler.fusionEnabled() >> false
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> false
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
@@ -98,13 +102,14 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> false
+        _ * handler.fusionEnabled() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-foo'
         1 * handler.getLabels(task) >> [sessionId:'xxx']
         1 * handler.getAnnotations() >>  [evict: 'false']
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getContainerMounts() >> []
-        1 * builder.fixOwnership() >> true
+        1 * handler.fixOwnership() >> true
         1 * handler.getOwner() >> '501:502'
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
@@ -121,7 +126,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-foo',
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:1], limits:[cpu:1] ],
+                                     resources:[ requests: [cpu:1] ],
                                      env: [  [name:'NXF_OWNER', value:'501:502'] ]
                                     ]
                             ]
@@ -132,7 +137,9 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> false
+        _ * handler.fusionEnabled() >> false
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-abc'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
@@ -153,7 +160,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-abc',
                                      image:'user/alpine:1.0',
                                      command:['/bin/bash', '-ue', '/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits:[cpu:4, memory:'16384Mi'] ]
+                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits:[memory:'16384Mi'] ]
                                     ]
                             ]
                     ]
@@ -174,7 +181,9 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> false
+        _ * handler.fusionEnabled() >> false
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [foo: 'bar', hello: 'world']
@@ -207,13 +216,14 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> false
+        _ * handler.fusionEnabled() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-foo'
         1 * handler.getLabels(task) >> [sessionId:'xxx']
         1 * handler.getAnnotations() >>  [evict: 'false']
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getContainerMounts() >> []
-        1 * builder.fixOwnership() >> true
+        1 * handler.fixOwnership() >> true
         1 * handler.getOwner() >> '501:502'
         1 * task.getContainer() >> 'debian:latest'
         1 * task.getWorkDir() >> WORK_DIR
@@ -230,18 +240,19 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-foo',
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:1], limits:[cpu:1] ],
+                                     resources:[ requests: [cpu:1] ],
                                      env: [  [name:'NXF_OWNER', value:'501:502'] ]
                                     ]
                             ]
                     ]
         ]
 
-
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> false
+        _ * handler.fusionEnabled() >> false
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-abc'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
@@ -262,7 +273,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-abc',
                                      image:'user/alpine:1.0',
                                      command:['/bin/bash', '-ue', '/some/work/dir/.command.run'],
-                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits:[cpu:4, memory:'16384Mi'] ]
+                                     resources:[ requests: [cpu:4, memory:'16384Mi'], limits: [memory:'16384Mi'] ]
                                     ]
                             ]
                     ]
@@ -284,7 +295,9 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> false
+        _ * handler.fusionEnabled() >> false
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getPodOptions() >> new PodOptions()
         1 * handler.getLabels(task) >> [:]
@@ -307,7 +320,7 @@ class K8sTaskHandlerTest extends Specification {
                                     [name:'nf-123',
                                      image:'debian:latest',
                                      command:['/bin/bash', '-ue','/some/work/dir/.command.run'],
-                                     resources:[requests:[cpu:1], limits:[cpu:1]]
+                                     resources:[requests:[cpu:1]]
                                     ]
                             ]
                     ]
@@ -333,7 +346,9 @@ class K8sTaskHandlerTest extends Specification {
         result = handler.newSubmitRequest(task)
         then:
         1 * client.getConfig() >> new ClientConfig()
-        1 * handler.preserveContainerEntrypoint() >> false
+        _ * handler.fusionEnabled() >> false
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
@@ -392,7 +407,9 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> false
+        _ * handler.fusionEnabled() >> false
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getContainerMounts() >> []
         1 * handler.getLabels(task) >> [:]
@@ -434,7 +451,9 @@ class K8sTaskHandlerTest extends Specification {
         when:
         result = handler.newSubmitRequest(task)
         then:
-        1 * handler.preserveContainerEntrypoint() >> false
+        _ * handler.fusionEnabled() >> false
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getContainerMounts() >> ['/tmp', '/data']
         1 * handler.getLabels(task) >> [:]
@@ -516,7 +535,6 @@ class K8sTaskHandlerTest extends Specification {
         def builder = Mock(K8sWrapperBuilder)
         def config = Mock(TaskConfig)
         def executor = Mock(K8sExecutor)
-        def k8sConfig = Mock(K8sConfig)
         def handler = Spy(new K8sTaskHandler(builder: builder, client: client, executor: executor))
         def podOptions = Mock(PodOptions)
         and:
@@ -527,8 +545,10 @@ class K8sTaskHandlerTest extends Specification {
         result = handler.newSubmitRequest(task)
         then:
         1 * client.getConfig() >> new ClientConfig()
+        _ * handler.fusionEnabled() >> false
+        1 * handler.fixOwnership() >> false
         1 * handler.useJobResource() >> true
-        1 * handler.preserveContainerEntrypoint() >> false
+        1 * handler.entrypointOverride() >> true
         1 * handler.getSyntheticPodName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
@@ -759,7 +779,7 @@ class K8sTaskHandlerTest extends Specification {
         then:
         1 * k8sConfig.getAutoMountHostPaths() >> true
         1 * wrapper.getInputFiles() >> ['foo': Paths.get('/base_path/foo.txt'), 'bar': Paths.get('/base_path/bar.txt')]
-        1 * wrapper.getBinDir() >> Paths.get('/user/bin')
+        1 * wrapper.getBinDirs() >> [ Paths.get('/user/bin') ]
         1 * wrapper.getWorkDir() >> Paths.get('/work/dir')
         mounts == ['/base_path', '/user/bin', '/work/dir']
 
@@ -779,7 +799,8 @@ class K8sTaskHandlerTest extends Specification {
         then:
         handler.getRunName() >> 'pedantic-joe'
         task.getName() >> 'hello-world-1'
-        task.getProcessor() >> proc 
+        task.getProcessor() >> proc
+        task.getConfig() >> Mock(TaskConfig)
         proc.getName() >> 'hello-proc'
         exec.getSession() >> sess
         sess.getUniqueId() >> uuid
@@ -791,11 +812,45 @@ class K8sTaskHandlerTest extends Specification {
 
         labels.app == 'nextflow'
         labels.foo == 'bar'
-        labels.x == 'hello_world'    
-        labels.processName == 'hello-proc'
-        labels.taskName ==  'hello-world-1'
-        labels.sessionId instanceof String 
-        labels.sessionId == "uuid-${uuid.toString()}".toString()
+        labels.x == 'hello_world'
+        and:
+        labels.'nextflow.io/app' == 'nextflow'
+        labels.'nextflow.io/processName' == 'hello-proc'
+        labels.'nextflow.io/taskName' ==  'hello-world-1'
+        labels.'nextflow.io/sessionId' instanceof String
+        labels.'nextflow.io/sessionId' == "uuid-${uuid.toString()}".toString()
+        and:
+        !labels.containsKey('nextflow.io/queue')
+    }
+
+    def 'should return process queue as a label'() {
+        given:
+        def uuid = UUID.randomUUID()
+        def task = Mock(TaskRun)
+        def exec = Mock(K8sExecutor)
+        def proc = Mock(TaskProcessor)
+        def sess = Mock(Session)
+        def handler = Spy(new K8sTaskHandler(executor: exec))
+
+        when:
+        def labels = handler.getLabels(task)
+        then:
+        handler.getRunName() >> 'pedantic-joe'
+        task.getName() >> 'hello-world-1'
+        task.getProcessor() >> proc
+        task.getConfig() >> new TaskConfig(queue: 'him-mem-queue')
+        proc.getName() >> 'hello-proc'
+        exec.getSession() >> sess
+        sess.getUniqueId() >> uuid
+        exec.getK8sConfig() >> [:]
+        and:
+        labels.'nextflow.io/queue' == 'him-mem-queue'
+        and:
+        labels.'nextflow.io/app' == 'nextflow'
+        labels.'nextflow.io/processName' == 'hello-proc'
+        labels.'nextflow.io/taskName' ==  'hello-world-1'
+        labels.'nextflow.io/sessionId' instanceof String
+        labels.'nextflow.io/sessionId' == "uuid-${uuid.toString()}".toString()
     }
 
     def 'should delete pod if complete' () {
@@ -964,5 +1019,72 @@ class K8sTaskHandlerTest extends Specification {
         handler.completeTimeMillis == 20
     }
 
+    def 'should create a fusion pod' () {
+        given:
+        def WORK_DIR = XPath.get('http://some/work/dir')
+        def config = Mock(TaskConfig)
+        def task = Mock(TaskRun)
+        def client = Mock(K8sClient)
+        def builder = Mock(K8sWrapperBuilder)
+        def handler = Spy(new K8sTaskHandler(builder:builder, client: client))
+        Map result
 
+        when:
+        result = handler.newSubmitRequest(task)
+        then:
+        handler.getTask() >> task
+        handler.fusionEnabled() >> true
+        handler.fusionLauncher() >> Mock(FusionScriptLauncher) {
+            fusionEnv() >> [NXF_FUSION_BUCKETS: 'this,that']
+        }
+        and:
+        task.getContainer() >> 'debian:latest'
+        task.getWorkDir() >> WORK_DIR
+        task.getConfig() >> config
+        and:
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> false
+        1 * handler.getPodOptions() >> new PodOptions()
+        1 * handler.getSyntheticPodName(task) >> 'nf-123'
+        1 * handler.getLabels(task) >> [:]
+        1 * handler.getAnnotations() >> [:]
+        1 * handler.getContainerMounts() >> []
+        and:
+        1 * config.getCpus() >> 0
+        1 * config.getMemory() >> null
+        1 * client.getConfig() >> new ClientConfig()
+        result == [ apiVersion: 'v1',
+                    kind: 'Pod',
+                    metadata: [
+                            name:'nf-123',
+                            namespace:'default'
+                    ],
+                    spec: [
+                            restartPolicy:'Never',
+                            containers:[
+                                    [name:'nf-123',
+                                     image:'debian:latest',
+                                     args:['bash', '-o', 'pipefail', '-c', 'trap "{ ret=$?; cp .command.log null||true; exit $ret; }" EXIT; bash null 2>&1 | tee .command.log'],
+                                     securityContext:[privileged:true],
+                                     env:[[name:'NXF_FUSION_BUCKETS', value:'this,that']]]
+                            ]
+                    ]
+        ]
+     }
+
+    def 'get fusion submit command' () {
+        given:
+        def handler = Spy(K8sTaskHandler) {
+            fusionEnabled() >> true
+            fusionLauncher() >> new FusionScriptLauncher(scheme: 'http')
+            getTask() >> Mock(TaskRun) {
+                getWorkDir() >> XPath.get('http://foo/work/dir')
+            }
+        }
+
+        when:
+        def result =  handler.getSubmitCommand(Mock(TaskRun))
+        then:
+        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; cp .command.log /fusion/http/foo/work/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/http/foo/work/dir/.command.run 2>&1 | tee .command.log'
+    }
 }
