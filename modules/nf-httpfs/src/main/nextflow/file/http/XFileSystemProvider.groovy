@@ -432,7 +432,7 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     protected XFileAttributes readHttpAttributes(Map<String,List<String>> header) {
         def lastMod = header.get("Last-Modified")?.get(0)
-        long contentLen = header.get("Content-Length")?.get(0)?.toLong() ?: -1
+        long contentLen = header.get("Content-Length")?.get(0)?.toLong() ?: -1L
         def dateFormat = new SimpleDateFormat('E, dd MMM yyyy HH:mm:ss Z', Locale.ENGLISH) // <-- make sure date parse is not language dependent (for the week day)
         def modTime = lastMod ? FileTime.from(dateFormat.parse(lastMod).time, TimeUnit.MILLISECONDS) : (FileTime)null
         new XFileAttributes(modTime, contentLen)

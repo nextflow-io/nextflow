@@ -359,7 +359,7 @@ class TaskRun implements Cloneable {
 
         // fallback on the current task index, however do not set the 'name' attribute
         // so it has a chance to recover the 'sampleId' at next invocation
-        return processor.singleton ? baseName : "$baseName ($index)"
+        return processor.@singleton ? baseName : "$baseName ($index)"
     }
 
     String getScript() {
@@ -715,7 +715,7 @@ class TaskRun implements Cloneable {
             // keep track of template file
             this.template = template
             // parse the template
-            final engine = new TaskTemplateEngine(processor.grengine)
+            final engine = new TaskTemplateEngine(processor.@grengine)
             if( shell ) {
                 engine.setPlaceholder(placeholderChar())
             }
@@ -738,7 +738,7 @@ class TaskRun implements Cloneable {
 
     final protected String renderScript( script ) {
 
-        final engine = new TaskTemplateEngine(processor.grengine)
+        final engine = new TaskTemplateEngine(processor.@grengine)
                 .setPlaceholder(placeholderChar())
                 .setEnableShortNotation(false)
                 .eval(script.toString(), context)

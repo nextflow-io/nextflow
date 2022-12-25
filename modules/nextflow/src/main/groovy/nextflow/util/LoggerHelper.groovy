@@ -667,10 +667,10 @@ class LoggerHelper {
     static private char OPEN_CH = '[' as char
     static private char CLOSE_CH = ']' as char
     static private char SLASH_CH = '/' as char
-    static private int ZERO_CH = '0' as char
-    static private int NINE_CH = '9' as char
-    static private int ALPHA_CH = 'a' as char
-    static private int EFFE_CH = 'f' as char
+    static private char ZERO_CH = '0' as char
+    static private char NINE_CH = '9' as char
+    static private char ALPHA_CH = 'a' as char
+    static private char EFFE_CH = 'f' as char
 
     static boolean isHashLogPrefix(String str) {
         if( str?.length()<10 )

@@ -96,10 +96,8 @@ class K8sTaskHandler extends TaskHandler {
     }
 
     /** only for testing -- do not use */
-    protected K8sTaskHandler(Map<String, Object> map=[:] ) {
-        if( map['builder'] ) this.builder= map['builder'] as K8sWrapperBuilder
-        if( map['client'] )this.client = map['client']  as K8sClient
-        if( map['task'] )this.task = map['task'] as TaskRun
+    protected K8sTaskHandler() {
+
     }
 
     /**
