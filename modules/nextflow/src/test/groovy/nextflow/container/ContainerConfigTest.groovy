@@ -62,4 +62,23 @@ class ContainerConfigTest extends Specification {
 
     }
 
+    def 'should get fusion options' () {
+        when:
+        def cfg = new ContainerConfig(OPTS)
+
+        then:
+        cfg.fusionOptions() == EXPECTED
+        
+        where:
+        OPTS                                            | EXPECTED
+        [:]                                             | null
+        [engine:'docker']                               | '--rm --privileged'
+        [engine:'podman']                               | '--rm --privileged'
+        and:
+        [engine:'docker', fusionOptions:'--cap-add foo']| '--cap-add foo'
+        [engine:'podman', fusionOptions:'--cap-add bar']| '--cap-add bar'
+        and:
+        [engine:'sarus', fusionOptions:'--other']       | '--other'
+    }
+
 }

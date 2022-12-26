@@ -65,8 +65,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     @Override
     SingularityBuilder addRunOptions(String str) {
-        runOptions.add(str)
-        return this
+        super.addRunOptions(str)
     }
 
     @Override

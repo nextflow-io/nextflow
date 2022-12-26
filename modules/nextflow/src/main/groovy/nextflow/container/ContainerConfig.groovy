@@ -18,12 +18,14 @@
 package nextflow.container
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 /**
  * Models container engine configuration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class ContainerConfig extends LinkedHashMap {
 
@@ -75,5 +77,21 @@ class ContainerConfig extends LinkedHashMap {
         if( result != null )
             return Boolean.parseBoolean(result.toString())
         return false
+    }
+
+    String fusionOptions() {
+        final result = get('fusionOptions')
+        return result!=null ? result : defaultFusionOptions()
+    }
+
+    protected String defaultFusionOptions() {
+        final eng = getEngine()
+        if( !eng )
+            return null
+        if( eng=='docker' || eng=='podman' )
+            return '--rm --privileged'
+        // default to null
+        log.warn "Fusion file system is not supported by '$eng' container engine"
+        return null
     }
 }
