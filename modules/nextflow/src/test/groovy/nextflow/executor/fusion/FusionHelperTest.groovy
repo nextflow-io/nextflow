@@ -19,8 +19,10 @@ package nextflow.executor.fusion
 
 import java.nio.file.Path
 
+import nextflow.container.ContainerConfig
 import nextflow.file.http.XPath
 import nextflow.fusion.FusionHelper
+import nextflow.fusion.FusionScriptLauncher
 import spock.lang.Specification
 
 /**
@@ -53,6 +55,29 @@ class FusionHelperTest extends Specification {
         result == Path.of('/fusion/http/bar/z.txt')
         and:
         buckets == [ 'foo', 'bar' ] as Set
+
+    }
+
+    def 'should return fusion container command' () {
+        given:
+        def launcher = Mock(FusionScriptLauncher) {
+            getEnvironment() >> ENV
+        }
+
+        when:
+        def result = FusionHelper.runWithContainer(launcher, new ContainerConfig(CONFIG), NAME, CMD)
+        then:
+        1 * launcher.fusionEnv() >> ENV
+        and:
+        result == EXPECTED
+
+        where:
+        CONFIG                  | ENV               | NAME          | CMD                   | EXPECTED
+        [engine:'docker']       | [:]               | 'image:1'     | ['echo', 'hello']     | ["sh", "-c", "docker run -i --rm --privileged image:1 echo 'hello'"]
+        [engine:'docker']       | [FOO:'one']       | 'image:2'     | ['echo', 'hello']     | ["sh", "-c", "docker run -i -e \"FOO=one\" --rm --privileged image:2 echo 'hello'"]
+        and:
+        [engine:'singularity']  | [:]               | 'image:1'     | ['echo', 'hello']     | ["sh", "-c", "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} singularity exec --rm image:1 echo 'hello'"]
+        [engine:'singularity']  | [FOO:'one']       | 'image:1'     | ['echo', 'hello']     | ["sh", "-c", "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=one singularity exec --rm image:1 echo 'hello'"]
 
     }
 
