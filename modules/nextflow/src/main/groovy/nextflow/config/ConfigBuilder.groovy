@@ -691,6 +691,13 @@ class ConfigBuilder {
                 config.wave.endpoint = 'https://wave.seqera.io'
         }
 
+        // -- set fusion options
+        if( cmdRun.withFusion ) {
+            if( !(config.fusion instanceof Map) )
+                config.fusion = [:]
+            config.fusion.enabled = cmdRun.withFusion == 'true'
+        }
+
         // -- nextflow setting
         if( cmdRun.dsl1 || cmdRun.dsl2 ) {
             if( config.nextflow !instanceof Map )
