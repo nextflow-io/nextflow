@@ -160,6 +160,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = ['-with-wave'], hidden = true)
     String withWave
 
+    @Parameter(names = ['-with-fusion'], hidden = true)
+    String withFusion
+
     @Parameter(names = ['-with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
     String withWebLog
 

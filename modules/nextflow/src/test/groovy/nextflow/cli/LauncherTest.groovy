@@ -240,6 +240,10 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-with-notification') == ['run', '-with-notification','true']
         launcher.normalizeArgs('run','-with-notification', '-x') == ['run', '-with-notification','true', '-x']
 
+        launcher.normalizeArgs('run','-with-fusion', 'false') == ['run', '-with-fusion','false']
+        launcher.normalizeArgs('run','-with-fusion') == ['run', '-with-fusion','true']
+        launcher.normalizeArgs('run','-with-fusion', '-x') == ['run', '-with-fusion','true', '-x']
+
         launcher.normalizeArgs('run','-N', 'paolo@yo.com') == ['run', '-N','paolo@yo.com']
         launcher.normalizeArgs('run','-N') == ['run', '-N','true']
         launcher.normalizeArgs('run','-N', '-x') == ['run', '-N','true', '-x']
