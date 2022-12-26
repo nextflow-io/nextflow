@@ -59,6 +59,11 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     }
 
     @Override
+    String containerConfigEngine() {
+        return 'docker'
+    }
+
+    @Override
     final Path getWorkDir() {
         return session.bucketDir ?: session.workDir
     }

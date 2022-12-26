@@ -624,27 +624,39 @@ class TaskRun implements Cloneable {
      * @return The {@link ContainerConfig} object associated to this task
      */
     ContainerConfig getContainerConfig() {
-        processor.getSession().getContainerConfig()
+        // get the container engine expected to be used by this executor
+        final sess = this.getProcessor().getSession()
+        final exe = this.getProcessor().getExecutor()
+        final eng = exe.containerConfigEngine()
+        // when 'eng' is null the setting for the current engine marked as 'enabled' will be used
+        final result
+                = sess.getContainerConfig(eng)
+                ?: new ContainerConfig(engine:'docker')
+        // if a configuration is found is expected to enabled by default
+        if( exe.isContainerNative() ) {
+            result.setEnabled(true)
+        }
+        return result
     }
 
     /**
      * @return {@true} when the process must run within a container and the docker engine is enabled
      */
     boolean isDockerEnabled() {
-        def config = getContainerConfig()
+        final config = getContainerConfig()
         return config && config.engine == 'docker' && config.enabled
     }
 
     boolean isContainerNative() {
-        processor.executor?.isContainerNative() ?: false
+        return processor.executor?.isContainerNative() ?: false
     }
 
     boolean isContainerEnabled() {
-        (getContainerConfig().enabled || isContainerNative()) && getContainer()!=null
+        return getContainerConfig().isEnabled() && getContainer()!=null
     }
 
     boolean isSecretNative() {
-        processor.executor?.isSecretNative() ?: false
+        return processor.executor?.isSecretNative() ?: false
     }
 
     boolean isSuccess( status = exitStatus ) {
