@@ -107,10 +107,7 @@ class BashWrapperBuilder {
     }
 
     /** only for testing -- do not use */
-    protected BashWrapperBuilder(Map<String,Object>prp=[:]) {
-        this.bean = prp.bean as TaskBean
-        this.copyStrategy = prp.copyStrategy as ScriptFileCopyStrategy
-    }
+    protected BashWrapperBuilder() { }
 
     /**
      * @return The bash script fragment to change to the 'scratch' directory if it has been specified in the task configuration
@@ -544,15 +541,15 @@ class BashWrapperBuilder {
         builder.params(containerConfig)
 
         // extra rule for the 'auto' temp dir temp dir
-        def temp = containerConfig['temp']?.toString()
+        def temp = containerConfig.temp?.toString()
         if( temp == 'auto' || temp == 'true' ) {
             builder.setTemp( changeDir ? '$NXF_SCRATCH' : '$(nxf_mktemp)' )
         }
 
         if( containerConfig.containsKey('kill') )
-            builder.params(kill: containerConfig['kill'])
+            builder.params(kill: containerConfig.kill)
 
-        if( containerConfig['writableInputMounts']==false )
+        if( containerConfig.writableInputMounts==false )
             builder.params(readOnlyInputs: true)
 
         if( this.containerConfig.entrypointOverride() )

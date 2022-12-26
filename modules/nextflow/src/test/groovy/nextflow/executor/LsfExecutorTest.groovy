@@ -63,7 +63,7 @@ class LsfExecutorTest extends Specification {
     def testMemDirectiveMemUnit2() {
         given:
         def WORK_DIR = Paths.get('/work/dir')
-        def executor = Spy(LsfExecutor, constructorArgs:[[memUnit:'GB', usageUnit:'GB']]) as LsfExecutor
+        def executor = Spy(new LsfExecutor(memUnit:'GB', usageUnit:'GB'))
         def task = Mock(TaskRun)
         task.workDir >> WORK_DIR
 
@@ -84,7 +84,7 @@ class LsfExecutorTest extends Specification {
     def testReserveMemPerTask() {
         given:
         def WORK_DIR = Paths.get('/work/dir')
-        def executor = Spy(LsfExecutor, constructorArgs: [usageUnit:'KB', perJobMemLimit:true])
+        def executor = Spy(new LsfExecutor(usageUnit:'KB', perJobMemLimit:true))
         def task = Mock(TaskRun)
         task.workDir >> WORK_DIR
 
@@ -107,7 +107,7 @@ class LsfExecutorTest extends Specification {
     def testReserveMemPerTask2() {
         given:
         def WORK_DIR = Paths.get('/work/dir')
-        def executor = Spy(LsfExecutor, constructorArgs: [perTaskReserve:true, perJobMemLimit: true, usageUnit:'KB'])
+        def executor = Spy(new LsfExecutor(perTaskReserve:true, perJobMemLimit: true, usageUnit:'KB'))
         def task = Mock(TaskRun)
         task.workDir >> WORK_DIR
 
@@ -397,7 +397,7 @@ class LsfExecutorTest extends Specification {
 
         given:
         // LSF executor
-        def executor = Spy(LsfExecutor, constructorArgs: [[memUnit: 'MB', usageUnit: 'MB']])
+        def executor = Spy(new LsfExecutor(memUnit: 'MB', usageUnit: 'MB'))
         executor.session = new Session()
         executor.@memUnit = 'MB'
         executor.@usageUnit = 'MB'

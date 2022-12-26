@@ -289,8 +289,8 @@ class K8sClient {
         String podName
 
         // find latest created pod
-        if (podList['kind'] == "PodList") {
-            final pods = podList['items']
+        if (podList.kind == "PodList") {
+            final pods = podList.items
             String latestPod = "0000-00-00T00:00:00Z"
 
             for (item in pods) {
@@ -331,7 +331,7 @@ class K8sClient {
             return podStatus(name)
         }
         catch (K8sResponseException err) {
-            if( err.response['code'] == 404 && isKindPods(err.response)  ) {
+            if( err.response.code == 404 && isKindPods(err.response)  ) {
                 // this may happen when K8s node is shutdown and the pod is evicted
                 // therefore process exception is thrown so that the failure
                 // can be managed by the nextflow as re-triable execution
@@ -342,8 +342,8 @@ class K8sClient {
     }
 
     protected boolean isKindPods(K8sResponseJson resp) {
-        if( resp['details'] instanceof Map ) {
-            final details = (Map) resp['details']
+        if( resp.details instanceof Map ) {
+            final details = (Map) resp.details
             return details.kind == 'pods'
         }
         return false
@@ -352,7 +352,7 @@ class K8sClient {
     String getNodeOfPod(String podName){
         assert podName
         final K8sResponseJson resp = podStatus0(podName)
-        (resp?['spec'] as Map)?.nodeName as String
+        (resp?.spec as Map)?.nodeName as String
     }
 
     /**
@@ -400,7 +400,7 @@ class K8sClient {
 
     protected Map jobStateFallback0(String jobName) {
         final K8sResponseJson jobResp = jobStatus(jobName)
-        final jobStatus = jobResp['status'] as Map
+        final jobStatus = jobResp.status as Map
         if( jobStatus?.succeeded == 1 && jobStatus.conditions instanceof List ) {
             final allConditions = jobStatus.conditions as List<Map>
             final cond = allConditions.find { cond -> cond.type == 'Complete' }
@@ -462,7 +462,7 @@ class K8sClient {
         assert podName
 
         final K8sResponseJson resp = podStatus0(podName)
-        final status = resp['status'] as Map
+        final status = resp.status as Map
         final containerStatuses = status?.containerStatuses as List<Map>
 
         if( containerStatuses?.size()>0 ) {
@@ -533,7 +533,7 @@ class K8sClient {
             final cause = new K8sResponseException(resp)
             throw new PodUnschedulableException(message, cause)
         }
-        final status = resp['status'] as Map
+        final status = resp.status as Map
         if( status?.phase == 'Failed' ) {
             def message = "K8s pod in Failed state"
             final cause = new K8sResponseException(resp)

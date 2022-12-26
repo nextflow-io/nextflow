@@ -52,14 +52,6 @@ class LsfExecutor extends AbstractGridExecutor {
 
     private String usageUnit = 'MB'
 
-    /** only for testing purpose -- do not use */
-    LsfExecutor(Map<String, Object>map=[:]){
-        if( map.memUnit ) this.memUnit = map.memUnit as String
-        if( map.usageUnit) this.usageUnit = map.usageUnit as String
-        if( map.perJobMemLimit) this.perJobMemLimit = map.perJobMemLimit as boolean
-        if( map.perTaskReserve) this.perTaskReserve = map.perTaskReserve as boolean
-    }
-
     protected boolean getPerJobMemLimit() { perJobMemLimit }
     protected boolean getPerTaskReserve() { perTaskReserve }
     protected String getMemUnit() { memUnit }

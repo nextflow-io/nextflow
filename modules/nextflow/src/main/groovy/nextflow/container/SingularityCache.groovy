@@ -138,10 +138,10 @@ class SingularityCache {
     @PackageScope
     Path getCacheDir() {
 
-        if( config['pullTimeout'] )
-            pullTimeout = config['pullTimeout'] as Duration
+        if( config.pullTimeout )
+            pullTimeout = config.pullTimeout as Duration
 
-        def str = config['cacheDir'] as String
+        def str = config.cacheDir as String
         if( str )
             return checkDir(str)
 
@@ -266,7 +266,7 @@ class SingularityCache {
 
         // Construct a temporary name for the image file
         final tmpFile = getTempImagePath(targetPath)
-        final noHttpsOption = (config['noHttps'])? '--nohttps' : ''
+        final noHttpsOption = (config.noHttps)? '--nohttps' : ''
 
         String cmd = "${binaryName} pull ${noHttpsOption} --name ${Escape.path(tmpFile.name)} $imageUrl > /dev/null"
         try {

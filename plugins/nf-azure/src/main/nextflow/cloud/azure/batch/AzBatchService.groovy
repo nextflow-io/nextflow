@@ -564,7 +564,7 @@ class AzBatchService implements Closeable {
         String poolId = null
         if( !config.batch().autoPoolMode ) {
             // the process queue is used as poolId
-            poolId = (task.config as Map).queue as String
+            poolId = task.config.queue as String
             if( !poolId ) {
                 throw new IllegalArgumentException("No Azure Batch pool was specified for task '${task.name}' - Either specify the pool name using the 'queue' directive or enable the 'autoPoolMode' option")
             }
