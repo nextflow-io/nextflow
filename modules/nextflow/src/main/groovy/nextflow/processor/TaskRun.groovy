@@ -140,6 +140,15 @@ class TaskRun implements Cloneable {
     def stderr
 
     /**
+     * Task log file path. If not specified defaults to "$workDir/.command.log"
+     */
+    Path logFile
+
+    Path getLogFile() {
+        logFile!=null ? logFile : workDir.resolve(CMD_LOG)
+    }
+
+    /**
      * @return The task produced stdout result as string
      */
     String getStdout() {
@@ -235,7 +244,7 @@ class TaskRun implements Cloneable {
         if( !workDir )
             return Collections.<String>emptyList()
         try {
-            return dumpObject(workDir.resolve(CMD_LOG),n)
+            return dumpObject(getLogFile(),n)
         }
         catch( Exception e ) {
             log.debug "Unable to dump error of process '$name' -- Cause: ${e}"

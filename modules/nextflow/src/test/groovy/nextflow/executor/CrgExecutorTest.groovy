@@ -490,6 +490,7 @@ class CrgExecutorTest extends Specification {
             #$ -j y
             #$ -terse
             #$ -notify
+            NXF_CHDIR=/some/dir
             '''
             .stripIndent().leftTrim()
 
@@ -527,7 +528,8 @@ class CrgExecutorTest extends Specification {
             #$ -notify
             #$ -binding env linear:1
             #$ -soft -l docker_images=*;foo;*
-
+            NXF_CHDIR=/some/dir
+            
             cpuset=${cpuset:=''}
             [[ $SGE_BINDING ]] && cpuset="--cpuset-cpus $(echo $SGE_BINDING | sed 's/ /,/g')"
             '''
@@ -565,7 +567,8 @@ class CrgExecutorTest extends Specification {
             #$ -notify
             #$ -binding env linear:1
             #$ -soft -l docker_images=*;foo;*
-
+            NXF_CHDIR=/some/dir
+            
             cpuset=${cpuset:=''}
             [[ $SGE_BINDING ]] && cpuset="--cpuset $(echo $SGE_BINDING | sed 's/ /,/g')"
             '''

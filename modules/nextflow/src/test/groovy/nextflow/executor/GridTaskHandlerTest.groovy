@@ -17,12 +17,18 @@
 
 package nextflow.executor
 
+import java.nio.file.Path
 import java.nio.file.Paths
 
+import nextflow.container.ContainerConfig
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessNonZeroExitStatusException
+import nextflow.file.FileHelper
+import nextflow.processor.TaskBean
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
+import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -59,6 +65,7 @@ class GridTaskHandlerTest extends Specification {
         exec.createBashWrapperBuilder(task) >> Mock(BashWrapperBuilder)
         exec.pipeLauncherScript() >> false
         and:
+        handler.fusionEnabled() >> false
         handler.createProcessBuilder() >> GroovyMock(ProcessBuilder)
         and:
         thrown(ProcessFailedException)
@@ -66,5 +73,59 @@ class GridTaskHandlerTest extends Specification {
         task.stdout ==  "The limit is invalid"
         task.exitStatus == 10
 
+    }
+
+    def 'should get submit directives' () {
+        given:
+        def WORK_DIR = Path.of('/some/dir')
+        def logFile = TestHelper.createInMemTempFile('log')
+        and:
+        def task = Mock(TaskRun) {
+            getWorkDir() >> WORK_DIR
+            getLogFile() >> logFile
+        }
+        def exec = Mock(AbstractGridExecutor)
+        def handler = Spy(new GridTaskHandler(task, exec))
+
+        when:
+        def result = handler.submitDirective(task)
+        
+        then:
+        1 * exec.getHeaders(task) >> "#FOO this\n#BAR that\n#OUT file=${WORK_DIR}/.command.log\n"
+        and:
+        result == """\
+            #FOO this
+            #BAR that
+            #OUT file=$logFile
+            """.stripIndent()
+    }
+
+    def 'should get stdin fusion script' () {
+        given:
+        def WORK_DIR = FileHelper.asPath('http://foo.com/some/dir')
+        def logFile = TestHelper.createInMemTempFile('log')
+        and:
+        def task = Mock(TaskRun) {
+            getWorkDir() >> WORK_DIR
+            getLogFile() >> logFile
+            getContainer() >> 'ubuntu:latest'
+            getProcessor() >> Mock(TaskProcessor)
+            getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'docker' }
+            toTaskBean() >> Mock(TaskBean) { getWorkDir()>>WORK_DIR; getInputFiles()>>[:] }
+        }
+        def exec = Mock(AbstractGridExecutor)
+        def handler = Spy(new GridTaskHandler(task, exec))
+
+        when:
+        def result = handler.fusionStdinWrapper()
+        then:
+        handler.fusionEnabled() >> true
+        exec.getHeaders(task) >> '#$ directive=one\n'
+        and:
+        result == '''\
+                #!/bin/bash
+                #$ directive=one
+                docker run -i -e "NXF_FUSION_WORK=/fusion/http/foo.com/some/dir" -e "NXF_FUSION_BUCKETS=http://foo.com" --rm --privileged ubuntu:latest bash -o pipefail -c 'trap "{ ret=$?; cp .command.log /fusion/http/foo.com/some/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/http/foo.com/some/dir/.command.run 2>&1 | tee .command.log'
+                '''.stripIndent(true)
     }
 }

@@ -17,6 +17,8 @@
 
 package nextflow.executor
 
+import java.nio.file.Path
+
 import nextflow.Session
 import nextflow.processor.TaskRun
 import spock.lang.Specification
@@ -111,5 +113,21 @@ class AbstractGridExecutorTest extends Specification {
         expect:
         exec.sanitizeJobName('foo') == 'foo'
         exec.sanitizeJobName(LONG) == LONG.substring(0,256)
+    }
+
+    def 'should add change dir variable' () {
+        given:
+        def work = Path.of('/some/dir')
+        def exec = Spy(AbstractGridExecutor)
+        def task = Mock(TaskRun) { getWorkDir() >> work}
+        when:
+        def result = exec.getHeaderScript(task)
+        then:
+        1 * exec.getHeaders(task) >> '#$ one\n#$ two\n'
+        result == '''\
+                #$ one
+                #$ two
+                NXF_CHDIR=/some/dir
+                '''.stripIndent()
     }
 }

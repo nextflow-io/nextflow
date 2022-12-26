@@ -19,6 +19,7 @@ package nextflow.executor
 
 import static nextflow.processor.TaskStatus.*
 
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 import java.time.temporal.ChronoUnit
@@ -32,10 +33,12 @@ import dev.failsafe.event.ExecutionAttemptedEvent
 import dev.failsafe.function.CheckedSupplier
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
+import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.file.FileHelper
+import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
@@ -46,7 +49,7 @@ import nextflow.util.Throttle
  * Handles a job execution in the underlying grid platform
  */
 @Slf4j
-class GridTaskHandler extends TaskHandler {
+class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
     /** The target executor platform */
     final AbstractGridExecutor executor
@@ -100,16 +103,17 @@ class GridTaskHandler extends TaskHandler {
     protected ProcessBuilder createProcessBuilder() {
 
         // -- log the qsub command
-        def cli = executor.getSubmitCommandLine(task, wrapperFile)
+        final cli = executor.getSubmitCommandLine(task, wrapperFile)
         log.trace "start process ${task.name} > cli: ${cli}"
 
         /*
          * launch 'sub' script wrapper
          */
         ProcessBuilder builder = new ProcessBuilder()
-                .command( cli as String[] )
-                .redirectErrorStream(true)
-                .directory(task.workDir.toFile())
+            .command( cli as String[] )
+            .redirectErrorStream(true)
+        if( !fusionEnabled() )
+            builder .directory(task.workDir.toFile())
 
         return builder
     }
@@ -199,7 +203,37 @@ class GridTaskHandler extends TaskHandler {
             process.destroy()
         }
     }
-    
+
+    protected BashWrapperBuilder createScriptLauncher(TaskRun task) {
+        return fusionEnabled()
+            ? fusionLauncher()
+            : executor.createBashWrapperBuilder(task)
+    }
+
+    protected String stdinLauncherScript() {
+        return fusionEnabled() ? fusionStdinWrapper() : wrapperFile.text
+    }
+
+    protected String fusionStdinWrapper() {
+        final submit = fusionSubmitCli()
+        final launcher = fusionLauncher()
+        final config = task.getContainerConfig()
+        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), submit)
+        log.debug "Launch cmd line: $cmd"
+        // since fusion uses a remote work directory
+        // assign a local file path for the grid submit output log
+        task.logFile = Files.createTempFile('nf-task','.log')
+        return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
+    }
+
+    protected String submitDirective(TaskRun task) {
+        final remoteLog = task.workDir.resolve(TaskRun.CMD_LOG).toString()
+        final result = executor
+                .getHeaders(task)
+                .replaceAll(remoteLog, task.logFile.toString())
+        return result
+    }
+
     /*
      * {@inheritDocs}
      */
@@ -208,11 +242,11 @@ class GridTaskHandler extends TaskHandler {
         ProcessBuilder builder = null
         try {
             // -- create the wrapper script
-            executor.createBashWrapperBuilder(task).build()
+            createScriptLauncher(task).build()
             // -- start the execution and notify the event to the monitor
             builder = createProcessBuilder()
             // -- forward the job launcher script to the command stdin if required
-            final stdinScript = executor.pipeLauncherScript() ? wrapperFile.text : null
+            final stdinScript = executor.pipeLauncherScript() ? stdinLauncherScript() : null
             // -- execute with a re-triable strategy
             final result = safeExecute( () -> processStart(builder, stdinScript) )
             // -- save the JobId in the
@@ -461,7 +495,7 @@ class GridTaskHandler extends TaskHandler {
      * @return An {@link nextflow.trace.TraceRecord} instance holding task runtime information
      */
     @Override
-    public TraceRecord getTraceRecord() {
+    TraceRecord getTraceRecord() {
         def trace = super.getTraceRecord()
         trace.put('native_id', jobId)
         return trace
