@@ -144,6 +144,15 @@ class TaskContext implements Map<String,Object>, Cloneable {
         throw new MissingPropertyException("Unknown variable '$property' -- Make sure it is not misspelled or defined later in the script", property as String, null)
     }
 
+    /**
+     * Invokes custom methods in the task execution context
+     *
+     * @see nextflow.script.BaseScript#invokeMethod(java.lang.String, java.lang.Object)
+     *
+     * @param name the name of the method to call
+     * @param args the arguments to use for the method call
+     * @return The result of the custom method execution
+     */
     @Override
     Object invokeMethod(String name, Object args) {
         if( name == 'template' )
