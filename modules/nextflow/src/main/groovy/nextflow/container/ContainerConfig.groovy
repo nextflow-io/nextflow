@@ -45,6 +45,11 @@ class ContainerConfig extends LinkedHashMap {
         get('enabled')?.toString() == 'true'
     }
 
+    ContainerConfig setEnabled(boolean value) {
+        put('enabled', value)
+        return this
+    }
+
     String getEngine() {
         get('engine')
     }

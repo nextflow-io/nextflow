@@ -146,7 +146,7 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     protected ProcessBuilder fusionProcessBuilder() {
         final submit = fusionSubmitCli()
         final launcher = fusionLauncher()
-        final config = session.containerConfig
+        final config = task.getContainerConfig()
         final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), submit)
         log.debug "Launch cmd line: ${cmd.join(' ')}"
 

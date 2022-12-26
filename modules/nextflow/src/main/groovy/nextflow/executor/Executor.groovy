@@ -164,6 +164,20 @@ abstract class Executor {
     }
 
     /**
+     * Determines which container engine settings in the nextflow config file
+     * will be used by this executor e.g. {@code 'docker'}, {@code 'singularity'}, etc.
+     *
+     * When {@code null} is returned the setting for the current engine marked as 'enabled' will be used.
+     *
+     * @return
+     *      {@code docker} when {#link #isContainerNative} is {@code true} and {@code null} otherwise
+     *
+     */
+    String containerConfigEngine() {
+        return null
+    }
+
+    /**
      * @return {@code true} whenever the secrets handling is managed by the executing platform itself
      */
     boolean isSecretNative() {

@@ -93,6 +93,11 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         return true
     }
 
+    @Override
+    String containerConfigEngine() {
+        return 'docker'
+    }
+
     /**
      * @return {@code true} whenever the secrets handling is managed by the executing platform itself
      */
