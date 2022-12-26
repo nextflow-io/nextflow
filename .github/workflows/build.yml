@@ -71,7 +71,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java_version: [11, 18]
+        java_version: [11, 19]
         test_mode: ["test_integration", "test_aws", "test_azure", "test_google"]
     steps:
       - name: Checkout
