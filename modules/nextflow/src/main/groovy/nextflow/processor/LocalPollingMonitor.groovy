@@ -147,7 +147,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      *      The amount of memory (bytes) requested to execute the specified task
      */
     private static long mem(TaskHandler handler) {
-        handler.task.getConfig()?.getMemory()?.toBytes() ?: 1
+        handler.task.getConfig()?.getMemory()?.toBytes() ?: 1L
     }
 
     /**
