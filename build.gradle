@@ -67,7 +67,6 @@ allprojects {
 
     compileJava {
         options.release.set(11)
-        options.compilerArgs.add('-Xmx4G')
     }
 
     tasks.withType(GroovyCompile) {
