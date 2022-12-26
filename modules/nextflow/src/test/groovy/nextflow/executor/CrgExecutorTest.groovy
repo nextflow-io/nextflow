@@ -159,6 +159,7 @@ class CrgExecutorTest extends Specification {
 
         when:
         task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> executor
         task.processor.getSession() >> new Session(docker: [enabled: true])
         def config = task.config = new TaskConfig()
         config.container = 'busybox'
@@ -234,6 +235,7 @@ class CrgExecutorTest extends Specification {
         and:
         def task = new TaskRun()
         task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> executor
         task.processor.getSession() >> sess
         task.processor.getName() >> 'task_x'
         task.workDir = Paths.get('/abc')
@@ -276,6 +278,7 @@ class CrgExecutorTest extends Specification {
 
         when:
         task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> executor
         task.processor.getSession() >> new Session(docker: [enabled: true])
         task.config = new TaskConfig(
                 queue: 'short',
@@ -315,6 +318,7 @@ class CrgExecutorTest extends Specification {
 
         when:
         task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> executor
         task.processor.getSession() >> new Session(docker: [enabled: true])
         task.config = new TaskConfig(
                 memory: '3 g',
@@ -494,21 +498,22 @@ class CrgExecutorTest extends Specification {
     def 'should add cpuset option to docker command /2' () {
         given:
         def sess = Mock(Session) {
-            getContainerConfig() >> new ContainerConfig([enabled: true, engine:'docker'])
+            getContainerConfig(null) >> new ContainerConfig(enabled: true, engine:'docker')
         }
         and:
+        def executor = new CrgExecutor(session: sess)
         // task
         def task = new TaskRun()
         task.workDir = Paths.get('/some/dir')
         task.script = 'echo hello'
         task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> executor
         task.processor.getSession() >> sess
         task.processor.getProcessEnvironment() >> [:]
         task.processor.getConfig() >> [:]
         task.processor.getExecutor() >> Mock(Executor)
         task.name = 'the-name'
         task.config = new TaskConfig(container: 'foo')
-        def executor = new CrgExecutor(session: sess)
 
         when:
         def builder = executor.createBashWrapperBuilder(task)
@@ -532,9 +537,10 @@ class CrgExecutorTest extends Specification {
     def 'should add cpuset option to docker command /3' () {
         given:
         def sess = Mock(Session) {
-            getContainerConfig() >> new ContainerConfig([enabled: true, engine:'docker', legacy:true])
+            getContainerConfig(null) >> new ContainerConfig(enabled: true, engine:'docker', legacy:true)
         }
         and:
+        def executor = new CrgExecutor(session: sess)
         // task
         def task = new TaskRun()
         task.workDir = Paths.get('/some/dir')
@@ -543,10 +549,9 @@ class CrgExecutorTest extends Specification {
         task.processor.getSession() >> sess
         task.processor.getProcessEnvironment() >> [:]
         task.processor.getConfig() >> [:]
-        task.processor.getExecutor() >> Mock(Executor)
+        task.processor.getExecutor() >> executor
         task.name = 'the-name'
         task.config = new TaskConfig(container: 'foo')
-        def executor = new CrgExecutor(session: sess)
 
         when:
         def builder = executor.createBashWrapperBuilder(task)

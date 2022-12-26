@@ -58,6 +58,11 @@ class GoogleLifeSciencesExecutor extends Executor implements ExtensionPoint {
     }
 
     @Override
+    String containerConfigEngine() {
+        return 'docker'
+    }
+
+    @Override
     final Path getWorkDir() {
         session.bucketDir ?: session.workDir
     }

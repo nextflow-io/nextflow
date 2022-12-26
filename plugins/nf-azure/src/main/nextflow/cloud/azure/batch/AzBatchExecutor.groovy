@@ -59,6 +59,11 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
     }
 
     @Override
+    String containerConfigEngine() {
+        return 'docker'
+    }
+
+    @Override
     Path getWorkDir() {
         session.bucketDir ?: session.workDir
     }

@@ -19,7 +19,6 @@ package nextflow.executor.local
 
 import java.nio.file.Path
 
-import nextflow.Session
 import nextflow.container.ContainerConfig
 import nextflow.file.http.XPath
 import nextflow.processor.TaskBean
@@ -56,18 +55,16 @@ class LocalTaskHandlerTest extends Specification {
         given:
         def WORK_DIR = XPath.get('http://some/work/dir')
         and:
-        def session = Mock(Session) {
-            getContainerConfig() >> new ContainerConfig([engine:'docker',enabled:true])
-        }
         def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
         and:
         def task = Mock(TaskRun) {
             getContainer() >> 'ubuntu:latest'
             getWorkDir() >> WORK_DIR
             getConfig() >> Mock(TaskConfig)
+            getContainerConfig() >> new ContainerConfig([engine:'docker',enabled:true])
             toTaskBean() >> bean
         }
-        def executor = Mock(LocalExecutor) { getSession() >> session }
+        def executor = Mock(LocalExecutor) 
         and:
         def handler = Spy(new LocalTaskHandler(task, executor))
 

@@ -303,6 +303,7 @@ class TaskRunTest extends Specification {
         when:
         task.config = [container:'foo/bar']
         task.processor.getSession() >> sess
+        task.processor.getExecutor() >> Mock(Executor) { containerConfigEngine()>>null }
         then:
         task.getContainer() == expected
 
@@ -320,7 +321,8 @@ class TaskRunTest extends Specification {
         task.processor = Mock(TaskProcessor)
         task.config = new TaskConfig( [container: 'busybox'] )
         task.processor.getSession() >> new Session([(engine): config])
-
+        task.processor.getExecutor() >> Mock(Executor) { containerConfigEngine()>>null }
+        
         expect:
         task.container == contnr
         task.containerConfig == config as ContainerConfig
@@ -586,17 +588,17 @@ class TaskRunTest extends Specification {
         task.processor = Mock(TaskProcessor)
 
         when:
-        def result = task.isContainerNative()
+        def isNative = task.isContainerNative()
         then:
         1 * task.processor.getExecutor() >> executor
-        result == false
+        !isNative
 
         when:
-        result = task.isContainerNative()
+        isNative = task.isContainerNative()
         then:
         1 * task.processor.getExecutor() >> executor
         1 * executor.isContainerNative() >> true
-        result == true
+        isNative
     }
 
     def 'should check container enabled flag' () {
@@ -608,7 +610,7 @@ class TaskRunTest extends Specification {
         def enabled = task.isContainerEnabled()
         then:
         1 * task.getContainerConfig() >> new ContainerConfig([enabled: false])
-        1 * task.isContainerNative() >> false
+        0 * task.getContainer() >> null
         !enabled
 
         when:
@@ -617,7 +619,6 @@ class TaskRunTest extends Specification {
         // NO container image is specified => NOT enable even if `enabled` flag is set to true
         _ * task.getContainer() >> null
         _ * task.getContainerConfig() >> new ContainerConfig([enabled: true])
-        _ * task.isContainerNative() >> false
         !enabled
 
         when:
@@ -626,17 +627,7 @@ class TaskRunTest extends Specification {
         // container is specified, not enabled
         _ * task.getContainer() >> 'foo/bar'
         _ * task.getContainerConfig() >> new ContainerConfig([:])
-        _ * task.isContainerNative() >> false
         !enabled
-
-        when:
-        enabled = task.isContainerEnabled()
-        then:
-        // container is specified AND native executor (eg kubernetes) => enabled
-        _ * task.getContainer() >> 'foo/bar'
-        _ * task.getContainerConfig() >> new ContainerConfig([:])
-        _ * task.isContainerNative() >> true
-        enabled
 
         when:
         enabled = task.isContainerEnabled()
@@ -644,7 +635,6 @@ class TaskRunTest extends Specification {
         // container is specified AND enabled => enabled
         _ * task.getContainer() >> 'foo/bar'
         _ * task.getContainerConfig() >> new ContainerConfig([enabled: true])
-        _ * task.isContainerNative() >> false
         enabled
 
     }
@@ -840,5 +830,48 @@ class TaskRunTest extends Specification {
         then:
         task.script == 'echo Hello world'
         task.source == 'command source'
+    }
+
+    def 'should get container config' () {
+        given:
+        def session = Mock(Session)
+        def executor = Mock(Executor) { getSession()>>session }
+        def processor = Mock(TaskProcessor) { getExecutor()>>executor; getSession()>>session }
+        def task = Spy(TaskRun) { getProcessor()>>processor }
+
+        when:
+        def config = task.getContainerConfig()
+        then:
+        1 * executor.containerConfigEngine() >> null
+        1 * executor.isContainerNative() >> false
+        and:
+        session.getContainerConfig(null) >> null
+        and:
+        config == new ContainerConfig(engine:'docker')
+
+
+        when:
+        config = task.getContainerConfig()
+        then:
+        1 * executor.containerConfigEngine() >> null
+        1 * executor.isContainerNative() >> false
+        and:
+        session.getContainerConfig(null) >> new ContainerConfig(engine:'podman', registry:'xyz')
+        and:
+        config == new ContainerConfig(engine:'podman', registry:'xyz')
+
+
+        when:
+        config = task.getContainerConfig()
+        then:
+        // a container native is returned
+        1 * executor.containerConfigEngine() >> 'foo'
+        1 * executor.isContainerNative() >> true
+        and:
+        // the engine 'foo' is passed as argument
+        session.getContainerConfig('foo') >> new ContainerConfig(engine:'foo')
+        and:
+        // the engine is enabled by default
+        config == new ContainerConfig(engine:'foo', enabled: true)   // <-- 'foo' engine is enabled
     }
 }
