@@ -127,6 +127,16 @@ abstract class BaseScript extends Script implements ExecutionContext {
         include .setSession(session)
     }
 
+    /**
+     * Invokes custom methods in the task execution context
+     *
+     * @see nextflow.processor.TaskContext#invokeMethod(java.lang.String, java.lang.Object)
+     * @see WorkflowBinding#invokeMethod(java.lang.String, java.lang.Object)
+     *
+     * @param name the name of the method to call
+     * @param args the arguments to use for the method call
+     * @return The result of the custom method execution
+     */
     @Override
     Object invokeMethod(String name, Object args) {
         binding.invokeMethod(name, args)

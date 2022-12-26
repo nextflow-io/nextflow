@@ -84,6 +84,15 @@ class WorkflowBinding extends Binding  {
         meta.getComponent(name)
     }
 
+    /**
+     * Invokes custom methods in the task execution context
+     *
+     * @see  BaseScript#invokeMethod(java.lang.String, java.lang.Object)
+     *
+     * @param name the name of the method to call
+     * @param args the arguments to use for the method call
+     * @return The result of the method invocation
+     */
     @Override
     Object invokeMethod(String name, Object args) {
         if( meta ) {
