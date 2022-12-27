@@ -26,6 +26,7 @@ import groovy.util.logging.Slf4j
 import nextflow.util.Duration
 import nextflow.util.IniFile
 import nextflow.util.MemoryUnit
+import nextflow.util.TestOnly
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.exception.ExceptionUtils
 /**
@@ -123,7 +124,7 @@ class Global {
 
         for( Path it : files ) {
             final conf = new IniFile(it)
-            final profile = getAwsProfile0(env)
+            final profile = getAwsProfile0(env, config)
             final section = conf.section(profile)
             if( (a=section.aws_access_key_id) && (b=section.aws_secret_access_key) ) {
                 final token = section.aws_session_token
@@ -141,7 +142,11 @@ class Global {
         return null
     }
 
-    static protected String getAwsProfile0(Map env) {
+    static protected String getAwsProfile0(Map env, Map<String,Object> config) {
+
+        final profile = config?.navigate('aws.profile')
+        if( profile )
+            return profile
 
         if( env?.containsKey('AWS_PROFILE'))
             return env.get('AWS_PROFILE')
@@ -164,6 +169,13 @@ class Global {
         if( env==null ) env = SysEnv.get()
         if( config==null ) config = this.config
 
+        def home = Paths.get(System.properties.get('user.home') as String)
+        def file = home.resolve('.aws/config')
+
+        return getAwsRegion0(env, config, file)
+    }
+
+    static protected String getAwsRegion0(Map env, Map config, Path awsFile) {
         // check nxf config file
         if( config && config.aws instanceof Map ) {
             def region = ((Map)config.aws).region
@@ -175,14 +187,13 @@ class Global {
             return env.AWS_DEFAULT_REGION.toString()
         }
 
-        def home = Paths.get(System.properties.get('user.home') as String)
-        def file = home.resolve('.aws/config')
-        if( !file.exists() ) {
+        if( !awsFile.exists() ) {
             return null
         }
 
-        def ini = new IniFile(file)
-        return ini.section('default').region
+        def profile = getAwsProfile0(env, config)
+        def ini = new IniFile(awsFile)
+        return ini.section(profile).region
     }
 
     static List<String> getAwsCredentials(Map env) {
@@ -273,4 +284,10 @@ class Global {
         }
     }
 
+    @TestOnly
+    static void reset() {
+        session = null
+        config = null
+        hooks.clear()
+    }
 }

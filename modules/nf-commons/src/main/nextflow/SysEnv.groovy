@@ -38,6 +38,10 @@ class SysEnv {
 
     private static final List<Map<String,String>> history = new ArrayList<Map<String,String>>()
 
+    static boolean containsKey(String key) {
+        return holder.containsKey(key)
+    }
+    
     static Map<String,String> get()  {
         return holder
     }

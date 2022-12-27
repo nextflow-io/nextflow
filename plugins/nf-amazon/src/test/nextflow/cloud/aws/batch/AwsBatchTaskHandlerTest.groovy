@@ -41,7 +41,7 @@ import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
-import nextflow.executor.fusion.FusionScriptLauncher
+import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.BatchContext
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -160,7 +160,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
-        _ * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', storageEncryption: 'AES256', debug: true, shareIdentifier: 'priority/high') }
+        _ * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', storageEncryption: 'AES256', debug: true, shareIdentifier: 'priority/high', schedulingPriority: 9999) }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> []
@@ -172,6 +172,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         req2.getContainerOverrides().getResourceRequirements().find { it.type=='MEMORY'}.getValue() == '8192'
         req2.getContainerOverrides().getCommand() ==['bash', '-c', 'something']
         req2.getShareIdentifier() == 'priority/high'
+        req2.getSchedulingPriorityOverride() == 9999
 
     }
 

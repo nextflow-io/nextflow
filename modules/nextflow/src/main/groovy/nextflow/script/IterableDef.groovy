@@ -122,7 +122,7 @@ trait IterableDef {
 
     private List checkRecurseArgs(List items) {
         for( int i=0; i<items.size(); i++ ) {
-            checkRecurseArg0(items[i], i)
+            checkRecurseArg0(items.get(i), i)
         }
         return items
     }

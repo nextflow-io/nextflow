@@ -68,6 +68,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.AccessControlList;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.Bucket;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
@@ -85,9 +86,11 @@ import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.RestoreObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.SSEAlgorithm;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
+import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.Tag;
 import com.amazonaws.services.s3.transfer.Download;
 import com.amazonaws.services.s3.transfer.MultipleFileUpload;
@@ -104,6 +107,8 @@ import nextflow.util.ThreadPoolHelper;
 import nextflow.util.ThreadPoolManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.upplication.s3fs.util.S3UploadHelper.*;
 
 /**
  * Client Amazon S3
@@ -129,7 +134,11 @@ public class AmazonS3Client {
 
 	private Integer uploadMaxThreads = 10;
 
-	public AmazonS3Client(AmazonS3 client){
+	private boolean glacierAutoRetrieval;
+
+	private int glacierExpirationDays = 7;
+
+	public AmazonS3Client(AmazonS3 client) {
 		this.client = client;
 	}
 
@@ -138,9 +147,10 @@ public class AmazonS3Client {
 				.standard()
 				.withCredentials(new AWSStaticCredentialsProvider(creds))
 				.withClientConfiguration(config)
-				.withRegion( region )
+				.withRegion(region)
 				.build();
 	}
+
 	/**
 	 * @see com.amazonaws.services.s3.AmazonS3Client#listBuckets()
 	 */
@@ -171,7 +181,7 @@ public class AmazonS3Client {
 		return client.putObject(req);
 	}
 
-	private PutObjectRequest preparePutObjectRequest(PutObjectRequest req, ObjectMetadata metadata, List<Tag> tags, String contentType) {
+	private PutObjectRequest preparePutObjectRequest(PutObjectRequest req, ObjectMetadata metadata, List<Tag> tags, String contentType, String storageClass) {
 		req.withMetadata(metadata);
 		if( cannedAcl != null ) {
 			req.withCannedAcl(cannedAcl);
@@ -187,6 +197,9 @@ public class AmazonS3Client {
 		}
 		if( contentType!=null ) {
 			metadata.setContentType(contentType);
+		}
+		if( storageClass!=null ) {
+			req.setStorageClass(storageClass);
 		}
 		return req;
 	}
@@ -226,7 +239,7 @@ public class AmazonS3Client {
 	/**
 	 * @see com.amazonaws.services.s3.AmazonS3Client#copyObject(CopyObjectRequest)
 	 */
-	public void copyObject(CopyObjectRequest req, List<Tag> tags, String contentType) {
+	public void copyObject(CopyObjectRequest req, List<Tag> tags, String contentType, String storageClass) {
 		if( tags !=null && tags.size()>0 ) {
 			req.setNewObjectTagging(new ObjectTagging(tags));
 		}
@@ -245,6 +258,9 @@ public class AmazonS3Client {
 		if( contentType!=null ) {
 			meta.setContentType(contentType);
 			req.setNewObjectMetadata(meta);
+		}
+		if( storageClass!=null ) {
+			req.setStorageClass(storageClass);
 		}
 		if( log.isTraceEnabled() ) {
 			log.trace("S3 CopyObject request {}", req);
@@ -323,6 +339,33 @@ public class AmazonS3Client {
 		return cannedAcl;
 	}
 
+	public void setGlacierAutoRetrieval(boolean value) {
+		this.glacierAutoRetrieval = value;
+		log.debug("Setting S3 glacierAutoRetrieval={}", glacierAutoRetrieval);
+	}
+
+	public void setGlacierAutoRetrieval(String value) {
+		if( value==null )
+			return;
+	  	setGlacierAutoRetrieval(Boolean.parseBoolean(value));
+	}
+
+	public void setGlacierExpirationDays(int days) {
+		this.glacierExpirationDays = days;
+		log.debug("Setting S3 glacierExpirationDays={}", glacierExpirationDays);
+	}
+
+	public void setGlacierExpirationDays(String days) {
+		if( days==null )
+			return;
+		try {
+			setGlacierExpirationDays(Integer.parseInt(days));
+		}
+		catch( NumberFormatException e ) {
+			log.warn("Not a valid AWS S3 glacierExpirationDays: `{}` -- Using default", days);
+		}
+	}
+
 	public AmazonS3 getClient() {
 		return client;
 	}
@@ -359,10 +402,12 @@ public class AmazonS3Client {
         return client.listNextBatchOfObjects(objectListing);
     }
 
-	public void multipartCopyObject(S3Path s3Source, S3Path s3Target, Long objectSize, S3MultipartOptions opts, List<Tag> tags, String contentType ) {
+
+	public void multipartCopyObject(S3Path s3Source, S3Path s3Target, Long objectSize, S3MultipartOptions opts, List<Tag> tags, String contentType, String storageClass ) {
 
 		final String sourceBucketName = s3Source.getBucket();
 		final String sourceObjectKey = s3Source.getKey();
+		final String sourceS3Path = "s3://"+sourceBucketName+'/'+sourceObjectKey;
 		final String targetBucketName = s3Target.getBucket();
 		final String targetObjectKey = s3Target.getKey();
 	  	final ObjectMetadata meta = new ObjectMetadata();
@@ -388,21 +433,36 @@ public class AmazonS3Client {
 			meta.setContentType(contentType);
 			initiateRequest.withObjectMetadata(meta);
 		}
+
+		if( storageClass!=null ) {
+			initiateRequest.setStorageClass(StorageClass.fromValue(storageClass));
+		}
+
 		InitiateMultipartUploadResult initResult = client.initiateMultipartUpload(initiateRequest);
 
 
 		// Step 3: Save upload Id.
 		String uploadId = initResult.getUploadId();
 
-		final int partSize = opts.getChunkSize(objectSize);
+		// Multipart upload and copy allows max 10_000 parts
+		// each part can be up to 5 GB
+		// Max file size is 5 TB
+		// See https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html
+		final int defChunkSize = opts.getChunkSize();
+		final long partSize = computePartSize(objectSize, defChunkSize);
 		ExecutorService executor = S3OutputStream.getOrCreateExecutor(opts.getMaxThreads());
 		List<Callable<CopyPartResult>> copyPartRequests = new ArrayList<>();
+		checkPartSize(partSize);
 
 		// Step 4. create copy part requests
 		long bytePosition = 0;
 		for (int i = 1; bytePosition < objectSize; i++)
 		{
-			long lastPosition = bytePosition + partSize -1 >= objectSize ? objectSize - 1 : bytePosition + partSize - 1;
+			checkPartIndex(i, sourceS3Path, objectSize, partSize);
+
+			long lastPosition = bytePosition + partSize -1;
+			if( lastPosition >= objectSize )
+				lastPosition = objectSize - 1;
 
 			CopyPartRequest copyRequest = new CopyPartRequest()
 					.withDestinationBucketName(targetBucketName)
@@ -509,6 +569,60 @@ public class AmazonS3Client {
 			log.debug("S3 download file: s3://{}/{} interrupted",source.getBucket(), source.getKey());
 			Thread.currentThread().interrupt();
 		}
+		catch (AmazonS3Exception e) {
+			handleAmazonException(source, target, e);
+		}
+	}
+
+	private void handleAmazonException(S3Path source, File target, AmazonS3Exception e) {
+		// the following message is returned when accessing a Glacier stored file
+		// "The operation is not valid for the object's storage class"
+		final boolean isGlacierError = e.getMessage().contains("storage class")
+				&& e.getErrorCode().equals("InvalidObjectState");
+
+		if( isGlacierError && glacierAutoRetrieval ) {
+			log.info("S3 download s3://{}/{} failed due to invalid storage class -- Retrieving from Glacier", source.getBucket(), source.getKey());
+			restoreFromGlacier(source.getBucket(), source.getKey());
+			downloadFile(source, target);
+		}
+		else {
+			throw e;
+		}
+	}
+
+	protected void restoreFromGlacier(String bucketName, String key) {
+		final int sleepMillis = 30_000;
+		final long _5_mins = 5 * 60 * 1_000;
+
+		try {
+			client.restoreObjectV2(new RestoreObjectRequest(bucketName, key, glacierExpirationDays));
+		}
+		catch (AmazonS3Exception e) {
+			if( e.getMessage().contains("RestoreAlreadyInProgress") ) {
+				log.debug("S3 Glacier restore already initiated for object s3://{}/{}", bucketName, key);
+			}
+			else {
+				throw e;
+			}
+		}
+
+		try {
+			boolean ongoingRestore = true;
+			long begin = System.currentTimeMillis();
+			while( ongoingRestore ) {
+				final long now = System.currentTimeMillis();
+				if( now-begin>_5_mins ) {
+					log.info("S3 Glacier restore ongoing for object s3://{}/{}", bucketName, key);
+					begin = now;
+				}
+				Thread.sleep(sleepMillis);
+				ongoingRestore = client.getObjectMetadata(bucketName, key).getOngoingRestore();
+			}
+		}
+		catch (InterruptedException e) {
+			log.debug("S3 Glacier restore s3://{}/{} interrupted", bucketName, key);
+			Thread.currentThread().interrupt();
+		}
 	}
 
 	public void downloadDirectory(S3Path source, File targetFile) throws IOException {
@@ -571,7 +685,7 @@ public class AmazonS3Client {
 	public void uploadFile(File source, S3Path target) {
 		PutObjectRequest req = new PutObjectRequest(target.getBucket(), target.getKey(), source);
 		ObjectMetadata metadata = new ObjectMetadata();
-		preparePutObjectRequest(req, metadata, target.getTagsList(), target.getContentType());
+		preparePutObjectRequest(req, metadata, target.getTagsList(), target.getContentType(), target.getStorageClass());
 		// initiate transfer
 		Upload upload = transferManager() .upload(req);
 		// await for completion

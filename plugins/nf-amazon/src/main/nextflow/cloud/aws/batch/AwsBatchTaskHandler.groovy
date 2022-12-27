@@ -61,7 +61,7 @@ import nextflow.container.ContainerNameValidator
 import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
-import nextflow.executor.fusion.FusionAwareTask
+import nextflow.fusion.FusionAwareTask
 import nextflow.executor.res.AcceleratorResource
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
@@ -255,8 +255,12 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final job = describeJob(jobId)
         final done = job?.status in ['SUCCEEDED', 'FAILED']
         if( done ) {
+            // take the exit code of the container, if 0 (successful) or missing
+            // take the exit code from the `.exitcode` file create by nextflow
+            // the rationale of this is that, in case of error, the exit code return
+            // by the batch API is more reliable.
+            task.exitStatus = job.container.exitCode ?: readExitFile()
             // finalize the task
-            task.exitStatus = readExitFile()
             task.stdout = outputFile
             if( job?.status == 'FAILED' || task.exitStatus==Integer.MAX_VALUE ) {
                 task.error = new ProcessUnrecoverableException(errReason(job))
@@ -689,8 +693,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             result.setPropagateTags(true)
         }
         // set the share identifier
-        if( opts.shareIdentifier )
+        if( opts.shareIdentifier ) {
             result.setShareIdentifier(opts.shareIdentifier)
+            result.setSchedulingPriorityOverride(opts.schedulingPriority)
+        }
 
         /*
          * retry on spot reclaim

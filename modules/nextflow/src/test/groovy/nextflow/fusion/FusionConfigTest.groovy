@@ -15,12 +15,11 @@
  *
  */
 
-package io.seqera.wave.plugin
+package nextflow.fusion
 
-import io.seqera.wave.plugin.config.FusionConfig
+
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -46,16 +45,27 @@ class FusionConfigTest extends Specification {
         when:
         def opts = new FusionConfig(OPTS, ENV)
         then:
-        opts.containerConfigUrl() == new URL(EXPECTED)
+        opts.containerConfigUrl() == (EXPECTED ? new URL(EXPECTED) : null)
 
         where:
         OPTS                                    | ENV           | EXPECTED
-        [:]                                     | [:]           | FusionConfig.DEFAULT_FUSION_URL
+        [:]                                     | [:]           | null
         [containerConfigUrl:'http://foo.com']   | [:]           | 'http://foo.com'
         [:]                                     | [FUSION_CONTAINER_CONFIG_URL:'http://bar.com']           | 'http://bar.com'
         [containerConfigUrl:'http://foo.com']   | [FUSION_CONTAINER_CONFIG_URL:'http://bar.com']           | 'http://foo.com'
 
     }
 
+    @Unroll
+    def 'should get export aws key' () {
+        expect:
+        new FusionConfig(OPTS).exportAwsAccessKeys() == EXPECTED
+
+        where:
+        OPTS                            | EXPECTED
+        [:]                             | false
+        [exportAwsAccessKeys: false]    | false
+        [exportAwsAccessKeys: true]     | true
+    }
 
 }

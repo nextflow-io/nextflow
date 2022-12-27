@@ -91,6 +91,11 @@ class AwsOptions implements CloudTransferOptions {
      */
     String shareIdentifier
 
+    /*
+     * The scheduling priority for all tasks when using fair-share scheduling (0 to 9999)
+     */
+    Integer schedulingPriority
+
     /**
      * The container execution role
      */
@@ -133,6 +138,7 @@ class AwsOptions implements CloudTransferOptions {
         fetchInstanceType = session.config.navigate('aws.batch.fetchInstanceType')
         retryMode = session.config.navigate('aws.batch.retryMode', 'standard')
         shareIdentifier = session.config.navigate('aws.batch.shareIdentifier')
+        schedulingPriority = session.config.navigate('aws.batch.schedulingPriority', 0) as Integer
         executionRole = session.config.navigate('aws.batch.executionRole')
         fargateMode = isFargateMode0(session.config)
         s5cmdPath = getS5cmdPath0(session.config)

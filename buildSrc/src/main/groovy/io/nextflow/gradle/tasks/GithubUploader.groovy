@@ -84,19 +84,19 @@ class GithubUploader extends DefaultTask {
             return
 
         if( !sourceFile.exists() )
-            throw new GradleException("Github upload failed -- Source file does not exists: $sourceFile")
+            throw new GradleException("Github upload failed -- source file does not exist: $sourceFile")
 
         final fileName = sourceFile.name
         final asset = client.getReleaseAsset(release.get(), fileName)
         if ( asset ) {
             if( skipExisting && isSame(sourceFile, asset) ) {
-                logger.quiet("${owner}/${repo.get()}/${fileName} exists! -- Skipping it.")
+                logger.quiet("${owner}/${repo.get()}/${fileName} already exists -- skipping")
             }
             else if (overwrite) {
                 updateRelease(sourceFile)
             }
             else {
-                throw new GradleException("${owner}/${repo.get()}/${fileName} exists! -- Refuse to owerwrite it.")
+                throw new GradleException("${owner}/${repo.get()}/${fileName} already exists -- overwrite refused")
             }
         }
         else {
@@ -106,7 +106,7 @@ class GithubUploader extends DefaultTask {
 
     private void updateRelease(File sourceFile) {
         if( dryRun ) {
-            logger.quiet("Would update ${sourceFile} → github.com://$owner/${repo.get()}")
+            logger.quiet("Will update ${sourceFile} → github.com://$owner/${repo.get()}")
         }
         else {
             logger.quiet("Updating ${sourceFile} → github.com://$owner/${repo.get()}")
@@ -117,7 +117,7 @@ class GithubUploader extends DefaultTask {
 
     private void uploadRelease(File sourceFile) {
         if( dryRun ) {
-            logger.quiet("Would upload ${sourceFile} → github.com://$owner/${repo.get()}")
+            logger.quiet("Will upload ${sourceFile} → github.com://$owner/${repo.get()}")
         }
         else {
             logger.quiet("Uploading ${sourceFile} → github.com://$owner/${repo.get()}")
@@ -155,15 +155,15 @@ class GithubUploader extends DefaultTask {
         def j1 = gson.fromJson(sourceFile.text, Map)
         def j2 = gson.fromJson( new InputStreamReader(asset), Map)
         if( j1.version != j2.version ) {
-            logger.quiet("Plugin metafile $sourceFile not matching versions: local=$j1.version; remote: $j2.version")
+            logger.quiet("Plugin metafile $sourceFile does not match versions: local=$j1.version; remote: $j2.version")
             return false
         }
         if( j1.url != j2.url ) {
-            logger.quiet("Plugin metafile $sourceFile not matching urls: local=$j1.url; remote: $j2.url")
+            logger.quiet("Plugin metafile $sourceFile does not match urls: local=$j1.url; remote: $j2.url")
             return false
         }
         if( j1.sha512sum != j2.sha512sum ) {
-            logger.quiet("Plugin metafile $sourceFile not matching sha512sum: local=$j1.sha512sum; remote: $j2.sha512sum")
+            logger.quiet("Plugin metafile $sourceFile does not match sha512sum: local=$j1.sha512sum; remote: $j2.sha512sum")
             return false
         }
         return true
