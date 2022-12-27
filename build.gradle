@@ -100,8 +100,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:1.11'
-        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.13"
-        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.13"
+        groovyDoc "org.codehaus.groovy:groovy-groovydoc:3.0.14"
+        groovyDoc "org.codehaus.groovy:groovy-ant:3.0.14"
     }
 
     test {
@@ -247,7 +247,7 @@ task exportClasspath {
         def home = System.getProperty('user.home')
         def all = getRuntimeConfigs()
         def libs = all.collect { File file ->  /*println file.canonicalPath.replace(home, '$HOME');*/ file.canonicalPath;  }
-        ['nextflow','nf-commons','nf-httfs'].each {libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath }
+        ['nextflow','nf-commons','nf-httpfs'].each {libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath }
         file('.launch.classpath').text = libs.unique().join(':')
     }
 }

@@ -30,7 +30,7 @@ import nextflow.processor.TaskRun
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-final class DefaultContainerResolver implements ContainerResolver {
+class DefaultContainerResolver implements ContainerResolver {
 
     @Override
     ContainerInfo resolveImage(TaskRun task, String imageName) {
@@ -40,7 +40,7 @@ final class DefaultContainerResolver implements ContainerResolver {
         }
 
         final cfg = task.getContainerConfig()
-        final handler = new ContainerHandler(cfg, task.processor.executor)
+        final handler = new ContainerHandler(cfg)
         final ret = handler.normalizeImageName(imageName)
         return new ContainerInfo(imageName, ret, ret)
     }
