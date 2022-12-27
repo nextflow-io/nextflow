@@ -18,7 +18,7 @@
 package nextflow.cli
 import java.nio.file.Path
 
-import ch.grengine.Grengine
+import ch.artecat.grengine.Grengine
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import com.google.common.hash.HashCode

@@ -20,7 +20,7 @@ package nextflow.processor
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import ch.grengine.Grengine
+import ch.artecat.grengine.Grengine
 import nextflow.Session
 import nextflow.ast.TaskCmdXform
 import nextflow.container.ContainerConfig

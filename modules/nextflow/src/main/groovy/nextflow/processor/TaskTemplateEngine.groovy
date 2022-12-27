@@ -32,7 +32,8 @@
  */
 
 package nextflow.processor
-import ch.grengine.Grengine
+
+import ch.artecat.grengine.Grengine
 import groovy.text.Template
 import groovy.text.TemplateEngine
 import groovy.transform.CompileStatic
