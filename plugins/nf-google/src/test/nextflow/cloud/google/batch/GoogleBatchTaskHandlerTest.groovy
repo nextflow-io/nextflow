@@ -59,7 +59,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             }
         }
         and:
-        def launcher = Mock(GoogleContainerSpec)
+        def launcher = Mock(GoogleBatchLauncherSpec)
         launcher.runCommand() >> 'bash .command.run'
         launcher.getContainerMounts() >> ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
         launcher.getVolumes() >> [GCS_VOL]
@@ -145,7 +145,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             }
         }
         and:
-        def launcher = Mock(GoogleContainerSpec)
+        def launcher = Mock(GoogleBatchLauncherSpec)
         launcher.runCommand() >> 'bash .command.run'
         launcher.getContainerMounts() >> ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
         launcher.getVolumes() >> []

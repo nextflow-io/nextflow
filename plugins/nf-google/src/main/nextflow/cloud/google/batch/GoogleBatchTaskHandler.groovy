@@ -72,7 +72,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
 
     private volatile long timestamp
 
-    private GoogleContainerSpec containerSpec
+    private GoogleBatchLauncherSpec containerSpec
 
     GoogleBatchTaskHandler(TaskRun task, GoogleBatchExecutor executor) {
         super(task)
@@ -107,7 +107,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
         /*
          * create submit request
          */
-        final req = newSubmitRequest(task, launcher as GoogleContainerSpec)
+        final req = newSubmitRequest(task, launcher as GoogleBatchLauncherSpec)
         log.trace "[GOOGLE BATCH] new job request > $req"
         final resp = client.submitJob(jobId, req)
         this.uid = resp.getUid()
@@ -115,7 +115,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
         log.debug "[GOOGLE BATCH] submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
     }
 
-    protected Job newSubmitRequest(TaskRun task, GoogleContainerSpec launcher) {
+    protected Job newSubmitRequest(TaskRun task, GoogleBatchLauncherSpec launcher) {
         // resource requirements
         final taskSpec = TaskSpec.newBuilder()
         final computeResource = ComputeResource.newBuilder()

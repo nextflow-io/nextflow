@@ -38,7 +38,7 @@ import nextflow.util.PathTrie
  */
 @Slf4j
 @CompileStatic
-class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleContainerSpec {
+class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatchLauncherSpec {
 
     private static final String MOUNT_ROOT = '/mnt/disks'
 
