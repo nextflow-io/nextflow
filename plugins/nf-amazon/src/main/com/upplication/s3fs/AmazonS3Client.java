@@ -102,6 +102,7 @@ import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.services.s3.transfer.UploadContext;
 import com.upplication.s3fs.util.S3MultipartOptions;
+import nextflow.cloud.aws.util.AwsHelper;
 import nextflow.util.Duration;
 import nextflow.util.ThreadPoolHelper;
 import nextflow.util.ThreadPoolManager;
@@ -291,7 +292,7 @@ public class AmazonS3Client {
 	public void setCannedAcl(String acl) {
 		if( acl==null )
 			return;
-		this.cannedAcl = CannedAccessControlList.valueOf(acl);
+		this.cannedAcl = AwsHelper.parseS3Acl(acl);
 		log.debug("Setting S3 canned ACL={} [{}]", this.cannedAcl, acl);
 	}
 
