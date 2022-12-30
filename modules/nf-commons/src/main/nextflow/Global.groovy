@@ -98,6 +98,7 @@ class Global {
 
         String a
         String b
+        String c
 
         if( config && config.aws instanceof Map ) {
             a = ((Map)config.aws).accessKey
@@ -112,13 +113,14 @@ class Global {
 
         // as define by amazon doc
         // http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
-        if( env && (a=env.AWS_ACCESS_KEY_ID) && (b=env.AWS_SECRET_ACCESS_KEY) )  {
-            log.debug "Using AWS credentials defined by environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY"
-            return [a, b]
-        }
+        // supports AWS_ACCESS_KEY, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SECRET_KEY, and AWS_SESSION_TOKEN
+        if( env && (a=(env.AWS_ACCESS_KEY_ID ?: env.AWS_ACCESS_KEY)) && (b=(env.AWS_SECRET_ACCESS_KEY ?: env.AWS_SECRET_KEY)) )  {
+            if ( env && (c=env.AWS_SESSION_TOKEN) ) {
+                log.debug "Using AWS credentials defined by environment variables AWS_ACCESS_KEY(_ID)?, AWS_SECRET(_ACCESS)?_KEY and AWS_SESSION_TOKEN"
+                return [a, b, c]
+            }
 
-        if( env && (a=env.AWS_ACCESS_KEY) && (b=env.AWS_SECRET_KEY) ) {
-            log.debug "Using AWS credentials defined by environment variables AWS_ACCESS_KEY and AWS_SECRET_KEY"
+            log.debug "Using AWS credentials defined by environment variables AWS_ACCESS_KEY(_ID)? and AWS_SECRET(_ACCESS)?_KEY"
             return [a, b]
         }
 
