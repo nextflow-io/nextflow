@@ -17,6 +17,7 @@
 
 package nextflow.scm
 
+import nextflow.SysEnv
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
@@ -84,6 +85,41 @@ class GithubRepositoryProviderTest extends Specification {
                 .setRevision('the-commit-id')
                 .getContentUrl('main.nf') == 'https://github.com/repos/pditommaso/hello/contents/main.nf?ref=the-commit-id'
 
+    }
+
+    def 'should user github token as creds' () {
+        given:
+        SysEnv.push(['GITHUB_TOKEN': '1234567890'])
+        and:
+        def provider = Spy(new GithubRepositoryProvider('foo/bar'))
+
+        expect:
+        provider.getUser() == '1234567890'
+        provider.getPassword() == 'x-oauth-basic'
+        
+        when:
+        SysEnv.get().remove('GITHUB_TOKEN')
+        then:
+        provider.getUser() >> null
+        provider.getPassword() >> null
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should user from config' () {
+        given:
+        SysEnv.push(['GITHUB_TOKEN': '1234567890'])
+        and:
+        def config = new ProviderConfig('github', [user: 'this', password: 'that'])
+        def provider = Spy(new GithubRepositoryProvider('foo/bar', config))
+
+        expect:
+        provider.getUser() == 'this'
+        provider.getPassword() == 'that'
+
+        cleanup:
+        SysEnv.pop()
     }
 }
 

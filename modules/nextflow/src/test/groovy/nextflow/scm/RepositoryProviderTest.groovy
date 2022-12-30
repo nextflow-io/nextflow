@@ -67,4 +67,23 @@ class RepositoryProviderTest extends Specification {
         1 * config.setPassword('secret1')
 
     }
+
+    def 'should hide creds' () {
+        given:
+        def provider = Spy(RepositoryProvider)
+
+        when:
+        def result = provider.getAuthObfuscated()
+        then:
+        result == '-:-'
+
+        when:
+        result = provider.getAuthObfuscated()
+        then:
+        provider.getUser() >> 'foo123'
+        provider.getPassword() >> 'bar456'
+        and:
+        result == 'foo****:bar****'
+
+    }
 }

@@ -235,7 +235,7 @@ class PluginUpdater extends UpdateManager {
     }
 
     /**
-     * Race condition safe plugin download. Multiple instaces are synchronised
+     * Race condition safe plugin download. Multiple instances are synchronised
      * using a file system lock created in the tmp directory
      *
      * @param id The plugin Id

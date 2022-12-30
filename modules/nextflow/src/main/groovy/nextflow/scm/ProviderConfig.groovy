@@ -176,6 +176,7 @@ class ProviderConfig {
         return result ? result.toString() : null
     }
 
+    @Deprecated
     @PackageScope
     String getAuthObfuscated() {
         "${user ?: '-'}:${password? '*' * password.size() : '-'}"
