@@ -142,7 +142,7 @@ The ``k8s.serviceAccount`` represents the Kubernetes service account that should
 permission to jobs launched by Nextflow. You can find more details how to configure it as the `following link <https://github.com/seqeralabs/wave-showcase/tree/master/example8>`_.
 
 Then the pipeline execution can be launched using the usual run command and specifying a AWS S3 bucket work directory,
-for example:
+for example::
 
     nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR-BUCKET>/scratch
 
