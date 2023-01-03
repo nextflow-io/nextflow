@@ -288,6 +288,10 @@ class Launcher {
                 normalized << 'true'
             }
 
+            else if( current == '-with-fusion' && (i==args.size() || args[i].startsWith('-'))) {
+                normalized << 'true'
+            }
+
             else if( (current == '-K' || current == '-with-k8s') && (i==args.size() || args[i].startsWith('-'))) {
                 normalized << 'true'
             }

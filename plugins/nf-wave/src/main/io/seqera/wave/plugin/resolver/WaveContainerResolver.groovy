@@ -63,9 +63,7 @@ class WaveContainerResolver implements ContainerResolver {
             return waveContainer(task, null)
         }
 
-        final engine = task.processor.executor.isContainerNative()
-                ? 'docker'  // <-- container native executor such as AWS Batch are implicitly docker based
-                : task.getContainerConfig().getEngine()
+        final engine= task.getContainerConfig().getEngine()
         if( engine in DOCKER_LIKE ) {
             final image = defaultResolver.resolveImage(task, imageName)
             return waveContainer(task, image.target)

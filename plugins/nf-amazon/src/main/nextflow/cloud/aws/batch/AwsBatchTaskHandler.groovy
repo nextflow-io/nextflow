@@ -58,7 +58,7 @@ import nextflow.container.ContainerNameValidator
 import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
-import nextflow.executor.fusion.FusionAwareTask
+import nextflow.fusion.FusionAwareTask
 import nextflow.executor.res.AcceleratorResource
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
@@ -662,8 +662,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             result.setPropagateTags(true)
         }
         // set the share identifier
-        if( this.getAwsOptions().shareIdentifier )
+        if( this.getAwsOptions().shareIdentifier ) {
             result.setShareIdentifier(this.getAwsOptions().shareIdentifier)
+            result.setSchedulingPriorityOverride(this.getAwsOptions().schedulingPriority)
+        }
 
         /*
          * retry on spot reclaim

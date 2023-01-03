@@ -1662,6 +1662,32 @@ class ConfigBuilderTest extends Specification {
         config.notification.to == 'yo@nextflow.com'
     }
 
+    def 'should configure fusion' () {
+
+        given:
+        Map config
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        then:
+        !config.fusion
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: true)).build()
+        then:
+        config.fusion.enabled == true
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: false)).build()
+        then:
+        config.fusion == [enabled: false]
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: true)).build()
+        then:
+        config.fusion == [enabled: true]
+    }
+
     def 'should configure stub run mode' () {
         given:
         Map config
