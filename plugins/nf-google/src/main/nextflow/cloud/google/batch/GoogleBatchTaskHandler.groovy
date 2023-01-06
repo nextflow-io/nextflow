@@ -72,8 +72,6 @@ class GoogleBatchTaskHandler extends TaskHandler {
 
     private volatile long timestamp
 
-    private GoogleBatchLauncherSpec containerSpec
-
     GoogleBatchTaskHandler(TaskRun task, GoogleBatchExecutor executor) {
         super(task)
         this.client = executor.getClient()
@@ -85,7 +83,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
     }
 
-    protected BashWrapperBuilder createTaskWrapper(TaskRun task) {
+    protected BashWrapperBuilder createTaskWrapper() {
         final taskBean = task.toTaskBean()
         final result = new GoogleBatchScriptLauncher(taskBean, executor.remoteBinDir)
         return result
@@ -101,7 +99,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
         /*
          * create the task runner script
          */
-        final launcher = createTaskWrapper(task)
+        final launcher = createTaskWrapper()
         launcher.build()
 
         /*
