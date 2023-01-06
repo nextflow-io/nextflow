@@ -17,6 +17,8 @@
 
 package nextflow.cloud.google.batch
 
+import com.google.cloud.batch.v1.GCS
+import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.executor.Executor
@@ -38,6 +40,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
     def 'should create submit request with minimal spec' () {
         given:
+        def GCS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('foo').build() ).build()
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'debian:latest'
         def exec = Mock(GoogleBatchExecutor) {
@@ -55,12 +58,17 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getResourceLabels() >> [:]
             }
         }
-
+        and:
+        def launcher = Mock(GoogleBatchLauncherSpec)
+        launcher.runCommand() >> 'bash .command.run'
+        launcher.getContainerMounts() >> ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        launcher.getVolumes() >> [GCS_VOL]
+        
         and:
         def handler = new GoogleBatchTaskHandler(task, exec)
 
         when:
-        def req = handler.newSubmitRequest(task)
+        def req = handler.newSubmitRequest(task, launcher)
         then:
         def taskGroup = req.getTaskGroups(0)
         def runnable = taskGroup.getTaskSpec().getRunnables(0)
@@ -72,7 +80,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == 0
         taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == 0
         and:
-        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/disks/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/disks/foo/scratch/.command.run 2>&1 | tee .command.log'
+        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
         runnable.getContainer().getOptions() == ''
         runnable.getContainer().getVolumesList() == ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
@@ -86,6 +94,9 @@ class GoogleBatchTaskHandlerTest extends Specification {
         allocationPolicy.getNetwork().getNetworkInterfacesCount() == 0
         and:
         req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
+        and:
+        taskGroup.getTaskSpec().getVolumesList().size()==1
+        taskGroup.getTaskSpec().getVolumes(0) == GCS_VOL
     }
 
     def 'should create submit request with maximal spec' () {
@@ -133,12 +144,17 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getResourceLabels() >> [foo: 'bar']
             }
         }
+        and:
+        def launcher = Mock(GoogleBatchLauncherSpec)
+        launcher.runCommand() >> 'bash .command.run'
+        launcher.getContainerMounts() >> ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        launcher.getVolumes() >> []
 
         and:
         def handler = new GoogleBatchTaskHandler(task, exec)
 
         when:
-        def req = handler.newSubmitRequest(task)
+        def req = handler.newSubmitRequest(task, launcher)
         then:
         def taskGroup = req.getTaskGroups(0)
         def runnable = taskGroup.getTaskSpec().getRunnables(0)
@@ -151,7 +167,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == MEM.toMega()
         taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == TIMEOUT.seconds
         and:
-        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c trap "{ cp .command.log /mnt/disks/foo/scratch/.command.log; }" ERR; /bin/bash /mnt/disks/foo/scratch/.command.run 2>&1 | tee .command.log'
+        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
         runnable.getContainer().getOptions() == '--this --that --privileged'
         runnable.getContainer().getVolumesList() == [

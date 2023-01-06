@@ -31,7 +31,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
-import nextflow.processor.TaskBean
+import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -46,8 +46,6 @@ import nextflow.trace.TraceRecord
 class GoogleBatchTaskHandler extends TaskHandler {
 
     private GoogleBatchExecutor executor
-
-    private TaskBean taskBean
 
     private Path exitFile
 
@@ -74,21 +72,21 @@ class GoogleBatchTaskHandler extends TaskHandler {
 
     private volatile long timestamp
 
-    private GoogleBatchScriptLauncher launcher
-
     GoogleBatchTaskHandler(TaskRun task, GoogleBatchExecutor executor) {
         super(task)
         this.client = executor.getClient()
         this.jobId = "nf-${task.hashLog.replace('/','')}-${System.currentTimeMillis()}"
         this.executor = executor
-        this.taskBean = task.toTaskBean()
-        this.launcher = new GoogleBatchScriptLauncher(taskBean, executor.remoteBinDir)
         // those files are access via NF runtime, keep based on CloudStoragePath
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
     }
 
+    protected BashWrapperBuilder createTaskWrapper() {
+        final taskBean = task.toTaskBean()
+        return new GoogleBatchScriptLauncher(taskBean, executor.remoteBinDir)
+    }
 
     /*
      * Only for testing -- do not use
@@ -100,12 +98,13 @@ class GoogleBatchTaskHandler extends TaskHandler {
         /*
          * create the task runner script
          */
+        final launcher = createTaskWrapper()
         launcher.build()
 
         /*
          * create submit request
          */
-        final req = newSubmitRequest(task)
+        final req = newSubmitRequest(task, launcher as GoogleBatchLauncherSpec)
         log.trace "[GOOGLE BATCH] new job request > $req"
         final resp = client.submitJob(jobId, req)
         this.uid = resp.getUid()
@@ -113,7 +112,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
         log.debug "[GOOGLE BATCH] submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
     }
 
-    protected Job newSubmitRequest(TaskRun task) {
+    protected Job newSubmitRequest(TaskRun task, GoogleBatchLauncherSpec launcher) {
         // resource requirements
         final taskSpec = TaskSpec.newBuilder()
         final computeResource = ComputeResource.newBuilder()
@@ -134,10 +133,10 @@ class GoogleBatchTaskHandler extends TaskHandler {
             computeResource.setBootDiskMib( disk.getMega() )
 
         // container
-        final cmd = "trap \"{ cp ${TaskRun.CMD_LOG} ${launcher.workDirMount}/${TaskRun.CMD_LOG}; }\" ERR; /bin/bash ${launcher.workDirMount}/${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}"
+        final cmd = launcher.runCommand()
         final container = Runnable.Container.newBuilder()
             .setImageUri( task.container )
-            .addAllCommands( ['/bin/bash','-o','pipefail','-c', cmd.toString()] )
+            .addAllCommands( ['/bin/bash','-o','pipefail','-c', cmd] )
             .addAllVolumes( launcher.getContainerMounts() )
 
         final accel = task.config.getAccelerator()
