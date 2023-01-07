@@ -134,20 +134,29 @@ To use a language other than Bash, simply start your process script with the cor
 `shebang <http://en.wikipedia.org/wiki/Shebang_(Unix)>`_. For example::
 
     process perlStuff {
+        input:
+        val(x)
+        
         """
         #!/usr/bin/perl
 
-        print 'Hi there!' . '\n';
+        print 'value: ${x}';
         """
     }
 
     process pythonStuff {
+        input:
+        path(x)
+        
+        output:
+        path "table.txt"
+    
         """
         #!/usr/bin/python
-
-        x = 'Hello'
-        y = 'world!'
-        print "%s - %s" % (x,y)
+        
+        with open('${x}') as inF, open('table.txt', 'w') as outF:
+            for line in inF:
+                outF.write(line)
         """
     }
 
