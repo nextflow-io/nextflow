@@ -27,8 +27,12 @@ import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider
 import com.amazonaws.regions.InstanceMetadataRegionProvider
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.RegionUtils
+import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.AWSBatchClient
+import com.amazonaws.services.batch.AWSBatchClientBuilder
+import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.AmazonEC2Client
+import com.amazonaws.services.ec2.AmazonEC2ClientBuilder
 import com.amazonaws.services.ecs.AmazonECS
 import com.amazonaws.services.ecs.AmazonECSClientBuilder
 import com.amazonaws.services.logs.AWSLogs
@@ -174,24 +178,18 @@ class AmazonClientFactory {
      * @return
      *      An {@link AmazonEC2Client} instance
      */
-    synchronized AmazonEC2Client getEc2Client() {
+    synchronized AmazonEC2 getEc2Client() {
 
-        if( ec2Client )
-            return ec2Client
-
-        def result = (accessKey && secretKey && sessionToken
-                ? new AmazonEC2Client(new BasicSessionCredentials(accessKey, secretKey, sessionToken))
-                : (accessKey && secretKey
-                ? new AmazonEC2Client(new BasicAWSCredentials(accessKey, secretKey))
-                : new AmazonEC2Client()))
-
+        final clientBuilder = AmazonEC2ClientBuilder .standard()
         if( region )
-            result.setRegion(getRegionObj(region))
+            clientBuilder.withRegion(region)
 
-        return result
+        final credentials = getCredentialsProvider0()
+        if( credentials )
+            clientBuilder.withCredentials(credentials)
+
+        return clientBuilder.build()
     }
-
-
 
     /**
      * Gets or lazily creates an {@link AWSBatchClient} instance given the current
@@ -201,17 +199,16 @@ class AmazonClientFactory {
      *      An {@link AWSBatchClient} instance
      */
     @Memoized
-    AWSBatchClient getBatchClient() {
-        def result = (accessKey && secretKey && sessionToken
-                ? new AWSBatchClient(new BasicSessionCredentials(accessKey, secretKey, sessionToken))
-                : (accessKey && secretKey
-                ? new AWSBatchClient(new BasicAWSCredentials(accessKey, secretKey))
-                : new AWSBatchClient()))
-
+    AWSBatch getBatchClient() {
+        final clientBuilder = AWSBatchClientBuilder .standard()
         if( region )
-            result.setRegion(getRegionObj(region))
+            clientBuilder.withRegion(region)
 
-        return result
+        final credentials = getCredentialsProvider0()
+        if( credentials )
+            clientBuilder.withCredentials(credentials)
+
+        return clientBuilder.build()
     }
 
     @Memoized
