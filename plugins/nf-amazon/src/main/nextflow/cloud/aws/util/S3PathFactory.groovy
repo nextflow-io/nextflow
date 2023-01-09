@@ -3,9 +3,10 @@ package nextflow.cloud.aws.util
 import java.nio.file.Path
 
 import com.upplication.s3fs.S3Path
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.cloud.aws.batch.AwsBatchFileCopyStrategy
-import nextflow.cloud.aws.config.AwsConfig
 import nextflow.file.FileHelper
 import nextflow.file.FileSystemPathFactory
 /**
@@ -14,6 +15,7 @@ import nextflow.file.FileSystemPathFactory
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class S3PathFactory extends FileSystemPathFactory {
 
     @Override
@@ -23,10 +25,14 @@ class S3PathFactory extends FileSystemPathFactory {
             final path = "s3:///${str.substring(5)}"
             // note: this URI constructor parse the path parameter and extract the `scheme` and `authority` components
             final uri = new URI(null,null, path,null,null)
-            final env = AwsConfig.getConfig().getFileSystemEnv()
-            return FileHelper.getOrCreateFileSystemFor(uri,env).provider().getPath(uri)
+            return FileHelper.getOrCreateFileSystemFor(uri,config()).provider().getPath(uri)
         }
         return null
+    }
+
+    private Map config() {
+        final result = Global.config?.get('aws') as Map
+        return result != null ? result : Collections.emptyMap()
     }
 
     @Override

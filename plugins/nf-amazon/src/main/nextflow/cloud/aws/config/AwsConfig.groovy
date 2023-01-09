@@ -82,6 +82,10 @@ class AwsConfig {
 
     AwsBatchConfig getBatchConfig() { batchConfig }
 
+    Map<String,?> getS3LegacyClientConfig() {
+        return s3Legacy.getAwsClientConfig()
+    }
+
     /**
      * Retrieve the AWS credentials from the given context. It look for AWS credential in the following order
      * 1) Nextflow config {@code aws.accessKey} and {@code aws.secretKey} pair
@@ -251,7 +255,7 @@ class AwsConfig {
         new AwsConfig( (Map)config.aws ?: Collections.emptyMap()  )
     }
 
-    static AwsConfig getConfig() {
+    static AwsConfig config() {
         getConfig0(Global.config)
     }
 }

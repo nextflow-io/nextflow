@@ -27,6 +27,7 @@ import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider
 import com.amazonaws.regions.InstanceMetadataRegionProvider
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.RegionUtils
+import com.amazonaws.regions.Regions
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.AWSBatchClient
 import com.amazonaws.services.batch.AWSBatchClientBuilder
@@ -104,9 +105,7 @@ class AmazonClientFactory {
             throw new AbortOperationException("Missing AWS security credentials -- Provide access/security keys pair or define an IAM instance profile (suggested)")
 
         // -- get the aws default region
-        region = config.region ?: fetchRegion()
-        if( !region )
-            throw new AbortOperationException('Missing AWS region -- Make sure to define in your system environment the variable `AWS_DEFAULT_REGION`')
+        region = config.region ?: fetchRegion() ?: Regions.DEFAULT_REGION.getName()
     }
 
     /**

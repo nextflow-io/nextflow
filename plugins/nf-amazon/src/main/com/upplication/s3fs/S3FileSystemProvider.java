@@ -86,10 +86,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
-import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AnonymousAWSCredentials;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
@@ -108,6 +105,8 @@ import com.google.common.collect.Sets;
 import com.upplication.s3fs.util.IOUtils;
 import com.upplication.s3fs.util.S3MultipartOptions;
 import com.upplication.s3fs.util.S3ObjectSummaryLookup;
+import nextflow.cloud.aws.AmazonClientFactory;
+import nextflow.cloud.aws.config.AwsConfig;
 import nextflow.extension.FilesEx;
 import nextflow.file.CopyOptions;
 import nextflow.file.FileHelper;
@@ -168,31 +167,13 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		Preconditions.checkNotNull(uri, "uri is null");
 		Preconditions.checkArgument(uri.getScheme().equals("s3"), "uri scheme must be 's3': '%s'", uri);
 
+		final AwsConfig awsConfig = new AwsConfig(env);
 		// first try to load amazon props
 		props = loadAmazonProperties();
-		Object accessKey = props.getProperty(ACCESS_KEY);
-		Object secretKey = props.getProperty(SECRET_KEY);
-		Object sessionToken = props.getProperty(SESSION_TOKEN);
-		// but can overload by envs vars
-		if (env.get(ACCESS_KEY) != null){
-			accessKey = env.get(ACCESS_KEY);
-		}
-		if (env.get(SECRET_KEY) != null){
-			secretKey = env.get(SECRET_KEY);
-		}
-		if (env.get(SESSION_TOKEN) != null){
-			sessionToken = env.get(SESSION_TOKEN);
-		}
-
-		// allows the env variables to override the ones in the property file
-		props.putAll(env);
-
-		Preconditions.checkArgument((accessKey == null && secretKey == null)
-				|| (accessKey != null && secretKey != null),
-				"%s and %s (and optionally %s) should be provided or should be omitted",
-				ACCESS_KEY, SECRET_KEY, SESSION_TOKEN);
-
-		S3FileSystem result = createFileSystem(uri, accessKey, secretKey, sessionToken);
+		// glob properties for legacy compatibility
+		props.putAll(awsConfig.getS3LegacyClientConfig());
+		// 
+		S3FileSystem result = createFileSystem(uri, awsConfig);
 
 		// if this instance already has a S3FileSystem, throw exception
 		// otherwise set
@@ -272,7 +253,9 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 		InputStream result;
 		try {
-			result = s3Path.getFileSystem().getClient()
+			result = s3Path
+					.getFileSystem()
+					.getClient()
 					.getObject(s3Path.getBucket(), s3Path.getKey())
 					.getObjectContent();
 
@@ -882,55 +865,23 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	}
 
 	// ~~
-	/**
-	 * Create the fileSystem
-	 * @param uri URI
-	 * @param accessKey Object maybe null for anonymous authentication
-	 * @param secretKey Object maybe null for anonymous authentication
-	 * @return S3FileSystem never null
-	 */
 
-	protected S3FileSystem createFileSystem(URI uri, Object accessKey, Object secretKey) {
-		return createFileSystem0(uri, accessKey, secretKey, null);
+	protected S3FileSystem createFileSystem(URI uri, AwsConfig config) {
+		return createFileSystem0(uri, config);
 	}
 
-	/**
-	 * Create the fileSystem
-	 * @param uri URI
-	 * @param accessKey Object maybe null for anonymous authentication
-	 * @param secretKey Object maybe null for anonymous authentication
-	 * @param sessionToken Object maybe null for anonymous authentication
-	 * @return S3FileSystem never null
-	 */
-	protected S3FileSystem createFileSystem(URI uri, Object accessKey, Object secretKey, Object sessionToken) {
-		return createFileSystem0(uri, accessKey, secretKey, sessionToken);
-	}
-
-	protected S3FileSystem createFileSystem0(URI uri, Object accessKey, Object secretKey, Object sessionToken) {
+	protected S3FileSystem createFileSystem0(URI uri, AwsConfig awsConfig) {
 		AmazonS3Client client;
-		ClientConfiguration config = createClientConfig(props);
+		ClientConfiguration clientConfig = createClientConfig(props);
 
 		final boolean anonymous = "true".equals(props.getProperty("anonymous"));
 		if( anonymous ) {
 			log.debug("Creating AWS S3 client with anonymous credentials");
-			client = new AmazonS3Client(new com.amazonaws.services.s3.AmazonS3Client(new AnonymousAWSCredentials(), config));
-		}
-		else if (accessKey == null && secretKey == null) {
-			client = new AmazonS3Client(new com.amazonaws.services.s3.AmazonS3Client(config));
+			client = new AmazonS3Client(new com.amazonaws.services.s3.AmazonS3Client(new AnonymousAWSCredentials(), clientConfig));
 		}
 		else {
-			AWSCredentials credentials = (sessionToken == null
-						? new BasicAWSCredentials(accessKey.toString(), secretKey.toString())
-						: new BasicSessionCredentials(accessKey.toString(), secretKey.toString(), sessionToken.toString()) );
-
-			if( System.getenv("NXF_AWS_REGION")!=null ) {
-				log.debug("Creating AWS S3 client with region: " + System.getenv("NXF_AWS_REGION") );
-				client = new AmazonS3Client( config, credentials, System.getenv("NXF_AWS_REGION") );
-			}
-			else {
-				client = new AmazonS3Client(new com.amazonaws.services.s3.AmazonS3Client(credentials,config));
-			}
-
+			final AmazonClientFactory factory = new AmazonClientFactory(awsConfig);
+			client = new AmazonS3Client(factory.getS3Client(clientConfig));
 		}
 
 		// note: path style access is going to be deprecated
