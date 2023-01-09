@@ -105,7 +105,6 @@ class AmazonClientFactory {
     }
 
     AmazonClientFactory(AwsConfig config) {
-        List credentials
         if( config.accessKey && config.secretKey ) {
             this.accessKey = config.accessKey
             this.secretKey = config.secretKey

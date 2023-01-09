@@ -41,7 +41,6 @@ class AwsBatchConfigTest extends Specification {
         !batch.volumes
         !batch.jobRole
         !batch.logsGroup
-        !batch.fetchInstanceType
         !batch.shareIdentifier
         batch.schedulingPriority == 0
     }
@@ -49,7 +48,7 @@ class AwsBatchConfigTest extends Specification {
     def 'should create config with options' () {
         given:
         def OPTS = [
-                cliPath: '/some/path/aws',
+                cliPath: '/some/bin/aws',
                 maxParallelTransfers:1,
                 maxTransferAttempts:2,
                 delayBetweenAttempts: '3s',
@@ -57,7 +56,6 @@ class AwsBatchConfigTest extends Specification {
                 volumes: '/some/path:/mnt/path,/other/path',
                 jobRole: 'xyz',
                 logsGroup: 'group-name-123',
-                fetchInstanceType: true,
                 retryMode: 'legacy',
                 shareIdentifier: 'id-x1',
                 schedulingPriority: 100,
@@ -66,7 +64,7 @@ class AwsBatchConfigTest extends Specification {
         when:
         def batch = new AwsBatchConfig(OPTS)
         then:
-        batch.cliPath == '/some/path/aws'
+        batch.cliPath == '/some/bin/aws'
         batch.maxParallelTransfers == 1
         batch.maxTransferAttempts == 2
         batch.delayBetweenAttempts == Duration.of('3sec')
@@ -74,7 +72,6 @@ class AwsBatchConfigTest extends Specification {
         batch.volumes == ['/some/path:/mnt/path', '/other/path']
         batch.jobRole == 'xyz'
         batch.logsGroup == 'group-name-123'
-        batch.fetchInstanceType == true
         batch.retryMode == 'legacy'
         batch.shareIdentifier == 'id-x1'
         batch.schedulingPriority == 100

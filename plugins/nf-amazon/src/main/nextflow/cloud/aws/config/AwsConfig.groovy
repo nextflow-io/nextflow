@@ -57,7 +57,7 @@ class AwsConfig {
         this.profile = getAwsProfile0(SysEnv.get(), config)
         this.region = getAwsRegion(SysEnv.get(), config)
         this.assumeRoleArn = config.assumeRoleArn as String
-        this.batchConfig = new AwsBatchConfig( (Map)config.batch ?: Collections.emptyMap() )
+        this.batchConfig = new AwsBatchConfig((Map)config.batch ?: Collections.emptyMap())
         this.s3config = new AwsS3Config((Map)config.client ?: Collections.emptyMap())
         this.s3Legacy = new AwsS3Legacy((Map)config.client ?: Collections.emptyMap())
     }

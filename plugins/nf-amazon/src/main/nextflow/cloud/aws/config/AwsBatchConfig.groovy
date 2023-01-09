@@ -24,6 +24,7 @@ import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.cloud.CloudTransferOptions
 import nextflow.cloud.aws.batch.AwsOptions
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
 
 /**
@@ -52,8 +53,6 @@ class AwsBatchConfig implements CloudTransferOptions {
     private Integer maxSpotAttempts
 
     private Boolean debug
-
-    private Boolean fetchInstanceType
 
     /**
      * The job role ARN that should be used
@@ -86,7 +85,7 @@ class AwsBatchConfig implements CloudTransferOptions {
     protected AwsBatchConfig() {}
 
     AwsBatchConfig(Map opts) {
-        cliPath = opts.cliPath
+        cliPath = parseCliPath(opts.cliPath as String)
         maxParallelTransfers = opts.maxParallelTransfers as Integer ?: MAX_TRANSFER
         maxTransferAttempts = opts.maxTransferAttempts as Integer ?: defaultMaxTransferAttempts()
         delayBetweenAttempts = opts.delayBetweenAttempts as Duration ?: DEFAULT_DELAY_BETWEEN_ATTEMPTS
@@ -94,7 +93,6 @@ class AwsBatchConfig implements CloudTransferOptions {
         volumes = makeVols(opts.volumes)
         jobRole = opts.jobRole
         logsGroup = opts.logsGroup
-        fetchInstanceType = opts.fetchInstanceType
         retryMode = opts.retryMode ?: 'standard'
         shareIdentifier = opts.shareIdentifier
         schedulingPriority = opts.schedulingPriority as Integer ?: 0
@@ -135,10 +133,6 @@ class AwsBatchConfig implements CloudTransferOptions {
         return debug
     }
 
-    Boolean getFetchInstanceType() {
-        return fetchInstanceType
-    }
-
     String getJobRole() {
         return jobRole
     }
@@ -162,6 +156,16 @@ class AwsBatchConfig implements CloudTransferOptions {
     protected int defaultMaxTransferAttempts() {
         final env = SysEnv.get()
         return env.AWS_MAX_ATTEMPTS ? env.AWS_MAX_ATTEMPTS as int : DEFAULT_AWS_MAX_ATTEMPTS
+    }
+
+    private String parseCliPath(String value) {
+        if( !value )
+            return null
+        if( !value.startsWith('/') )
+            throw new ProcessUnrecoverableException("Not a valid aws-cli tools path: $value -- it must be an absolute path")
+        if( !value.endsWith('/bin/aws'))
+            throw new ProcessUnrecoverableException("Not a valid aws-cli tools path: $value -- it must end with the `/bin/aws` suffix")
+        return value
     }
 
     protected List<String> makeVols(obj) {

@@ -17,6 +17,7 @@
 
 package nextflow.cloud.aws.config
 
+import com.amazonaws.services.s3.model.CannedAccessControlList
 import nextflow.SysEnv
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -35,36 +36,39 @@ class AwsS3ConfigTest extends Specification {
         !client.storageKmsKeyId
         !client.storageEncryption
         !client.debug
+        !client.s3Acl
     }
 
     def 'should set config' () {
         given:
         def OPTS = [
                 debug:true,
-                storageClass: 'FOO',
+                storageClass: 'STANDARD',
                 storageKmsKeyId: 'key-1',
-                storageEncryption: 'enc-2'
+                storageEncryption: 'AES256',
+                s3Acl: 'public-read',
         ]
 
         when:
         def client = new AwsS3Config(OPTS)
         then:
         client.debug
-        client.storageClass == 'FOO'
+        client.storageClass == 'STANDARD'
         client.storageKmsKeyId == 'key-1'
-        client.storageEncryption == 'enc-2'
+        client.storageEncryption == 'AES256'
+        client.s3Acl == CannedAccessControlList.PublicRead
     }
 
     def 'should use legacy upload storage class' () {
         given:
         def OPTS = [
-                uploadStorageClass: 'BAR',
+                uploadStorageClass: 'STANDARD_IA',
         ]
 
         when:
         def client = new AwsS3Config(OPTS)
         then:
-        client.storageClass == 'BAR'
+        client.storageClass == 'STANDARD_IA'
     }
 
     @Unroll

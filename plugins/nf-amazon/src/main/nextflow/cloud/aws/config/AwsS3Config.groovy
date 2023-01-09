@@ -17,14 +17,18 @@
 
 package nextflow.cloud.aws.config
 
+import static nextflow.cloud.aws.util.AwsHelper.parseS3Acl
 
+import com.amazonaws.services.s3.model.CannedAccessControlList
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 /**
  * Model AWS S3 config settings
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class AwsS3Config {
 
@@ -38,12 +42,35 @@ class AwsS3Config {
 
     private Boolean debug
 
+    private CannedAccessControlList s3Acl
+
     AwsS3Config(Map opts) {
         this.debug = opts.debug as Boolean
-        storageClass = opts.storageClass ?: opts.uploadStorageClass     // 'uploadStorageClass' is kept for legacy purposes
         this.endpoint = opts.endpoint ?: SysEnv.get('AWS_S3_ENDPOINT')
+        this.storageClass = parseStorageClass((opts.storageClass ?: opts.uploadStorageClass) as String)     // 'uploadStorageClass' is kept for legacy purposes
+        this.storageEncryption = parseStorageEncryption(opts.storageEncryption as String)
         this.storageKmsKeyId = opts.storageKmsKeyId
-        this.storageEncryption = opts.storageEncryption
+        this.s3Acl = parseS3Acl(opts.s3Acl as String)
+    }
+
+    private String parseStorageClass(String value) {
+        if( value in [null, 'STANDARD', 'STANDARD_IA', 'ONEZONE_IA', 'INTELLIGENT_TIERING', 'REDUCED_REDUNDANCY' ]) {
+            if (value == 'REDUCED_REDUNDANCY') {
+                log.warn "AWS S3 Storage Class `REDUCED_REDUNDANCY` is deprecated (and more expensive than `STANDARD`). For cost savings, look to `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`."
+            }
+            return value
+        } else {
+            log.warn "Unsupported AWS storage-class: $value"
+            return null
+        }
+    }
+
+    private String parseStorageEncryption(String value) {
+        if( value in [null,'AES256','aws:kms'] )
+            return value
+        //
+        log.warn "Unsupported AWS storage-encryption: $value"
+        return null
     }
 
     // ==== getters =====
@@ -67,4 +94,7 @@ class AwsS3Config {
         return debug
     }
 
+    CannedAccessControlList getS3Acl() {
+        return s3Acl
+    }
 }
