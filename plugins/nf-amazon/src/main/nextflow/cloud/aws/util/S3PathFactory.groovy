@@ -29,7 +29,6 @@ class S3PathFactory extends FileSystemPathFactory {
         return null
     }
 
-
     @Override
     protected String toUriString(Path path) {
         return path instanceof S3Path ? "s3:/$path".toString() : null
