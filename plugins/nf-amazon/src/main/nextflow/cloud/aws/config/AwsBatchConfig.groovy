@@ -75,6 +75,11 @@ class AwsBatchConfig implements CloudTransferOptions {
      */
     private String shareIdentifier
 
+    /**
+     * The scheduling priority for all tasks when using fair-share scheduling (0 to 9999)
+     */
+    private Integer schedulingPriority
+
     /*
      * only for testing
      */
@@ -92,6 +97,7 @@ class AwsBatchConfig implements CloudTransferOptions {
         fetchInstanceType = opts.fetchInstanceType
         retryMode = opts.retryMode ?: 'standard'
         shareIdentifier = opts.shareIdentifier
+        schedulingPriority = opts.schedulingPriority as Integer ?: 0
         if( retryMode == 'built-in' )
             retryMode = null // this force falling back on NF built-in retry mode instead of delegating to AWS CLI tool
         if( retryMode && retryMode !in AwsOptions.VALID_RETRY_MODES )
@@ -147,6 +153,10 @@ class AwsBatchConfig implements CloudTransferOptions {
 
     String getShareIdentifier() {
         return shareIdentifier
+    }
+
+    Integer getSchedulingPriority() {
+        return schedulingPriority
     }
 
     protected int defaultMaxTransferAttempts() {

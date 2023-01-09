@@ -43,6 +43,7 @@ class AwsBatchConfigTest extends Specification {
         !batch.logsGroup
         !batch.fetchInstanceType
         !batch.shareIdentifier
+        batch.schedulingPriority == 0
     }
 
     def 'should create config with options' () {
@@ -58,7 +59,8 @@ class AwsBatchConfigTest extends Specification {
                 logsGroup: 'group-name-123',
                 fetchInstanceType: true,
                 retryMode: 'legacy',
-                shareIdentifier: 'id-x1'
+                shareIdentifier: 'id-x1',
+                schedulingPriority: 100,
         ]
 
         when:
@@ -75,7 +77,7 @@ class AwsBatchConfigTest extends Specification {
         batch.fetchInstanceType == true
         batch.retryMode == 'legacy'
         batch.shareIdentifier == 'id-x1'
-
+        batch.schedulingPriority == 100
     }
 
     def 'should parse volumes list' () {
