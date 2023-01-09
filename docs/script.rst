@@ -507,14 +507,17 @@ checkIfExists   When ``true`` throws an exception of the specified path do not e
  When a file reference is created using a URL path and it's converted to a string the protocol schema is not included in the resulting string.
 
 You can check this behavior with the code below::
+
   def ref = file('s3://some-bucket/foo.txt')
   assert ref.toString() == '/some-bucket/foo.txt'
   assert "$ref" == '/some-bucket/foo.txt'
 
-To have the file including the schema, `toUriString()` should be used instead::
+To have the file including the schema, ``toUriString()`` should be used instead::
+
   assert ref.toUriString() == 's3://some-bucket/foo.txt'
 
-Also, instead of composing paths through string interpolation, the `.resolve` method should be used instead::
+Also, instead of composing paths through string interpolation, the ``.resolve`/` method should be used instead::
+
   def dir = file('s3://bucket/some/data/path')
   def sample = "$dir/sample.bam" // <-- don't do this
   def sample1 = dir.resolve('sample.bam')
