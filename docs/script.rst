@@ -518,7 +518,7 @@ Also, instead of composing paths through string interpolation, the `.resolve` me
   def dir = file('s3://bucket/some/data/path')
   def sample = "$dir/sample.bam" // <-- don't do this
   def sample1 = dir.resolve('sample.bam')
-  def sample2 = dir / 'sample.bam') // <-- the operator `/` can be used to compose paths
+  def sample2 = dir / 'sample.bam' // <-- the operator `/` can be used to compose paths
 
 See also: :ref:`Channel.fromPath <channel-path>`.
 
