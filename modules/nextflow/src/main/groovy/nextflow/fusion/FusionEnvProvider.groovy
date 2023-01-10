@@ -15,50 +15,16 @@
  *
  */
 
-<<<<<<< HEAD:modules/nextflow/src/main/groovy/nextflow/k8s/model/PodMountEmptyDir.groovy
-package nextflow.k8s.model
-
-import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
-import groovy.transform.ToString
-=======
 package nextflow.fusion
->>>>>>> master:modules/nextflow/src/main/groovy/nextflow/fusion/FusionEnvProvider.groovy
 
 import nextflow.Global
 import nextflow.SysEnv
 import nextflow.plugin.Plugins
 /**
-<<<<<<< HEAD:modules/nextflow/src/main/groovy/nextflow/k8s/model/PodMountEmptyDir.groovy
- * Model a K8s pod emptyDir mount
-=======
  * Provider strategy for {@link FusionEnv}
->>>>>>> master:modules/nextflow/src/main/groovy/nextflow/fusion/FusionEnvProvider.groovy
  *
- * See also https://kubernetes.io/docs/concepts/storage/volumes/#emptydir
- *
- * @author Ben Sherman <bentshermann@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-<<<<<<< HEAD:modules/nextflow/src/main/groovy/nextflow/k8s/model/PodMountEmptyDir.groovy
-@CompileStatic
-@ToString(includeNames = true)
-@EqualsAndHashCode
-class PodMountEmptyDir {
-
-    String mountPath
-
-    Map emptyDir
-
-    PodMountEmptyDir( Map emptyDir, String mountPath ) {
-        assert mountPath
-
-        this.emptyDir = emptyDir
-        this.mountPath = mountPath
-    }
-
-    PodMountEmptyDir( Map entry ) {
-        this(entry.emptyDir as Map, entry.mountPath as String)
-=======
 class FusionEnvProvider {
 
     Map<String,String> getEnvironment(String scheme) {
@@ -70,7 +36,5 @@ class FusionEnvProvider {
             if( env ) result.putAll(env)
         }
         return result
->>>>>>> master:modules/nextflow/src/main/groovy/nextflow/fusion/FusionEnvProvider.groovy
     }
-
 }

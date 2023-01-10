@@ -23,9 +23,7 @@ import static nextflow.fusion.FusionHelper.*
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import nextflow.Global
 import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
@@ -123,12 +121,4 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
     }
 
-    boolean exportAwsAccessKeys() {
-        exportAwsAccessKeys0()
-    }
-
-    @Memoized
-    protected boolean exportAwsAccessKeys0() {
-        return Global.config?.navigate('fusion.exportAwsAccessKeys', false)
-    }
 }
