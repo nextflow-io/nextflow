@@ -14,8 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package nextflow
+
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
@@ -31,9 +31,9 @@ class Const {
 
     static final public String ISO_8601_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss'Z'"
 
-    static final public transient BOOL_YES = ['true','yes','on']
+    static final public List<String> BOOL_YES = ['true','yes','on']
 
-    static final public transient BOOL_NO = ['false','no','off']
+    static final public List<String> BOOL_NO = ['false','no','off']
 
     /**
      * The application main package name
@@ -53,7 +53,7 @@ class Const {
     /**
      * The application version
      */
-    static public final String APP_VER = "22.12.0-edge"
+    static public final String APP_VER = '22.12.0-edge'
 
     /**
      * The app build time as linux/unix timestamp
@@ -69,25 +69,20 @@ class Const {
      * The app build time string relative to UTC timezone
      */
     static public final String APP_TIMESTAMP_UTC = {
-
         def tz = TimeZone.getTimeZone('UTC')
         def fmt = new SimpleDateFormat(DATETIME_FORMAT)
         fmt.setTimeZone(tz)
         fmt.format(new Date(APP_TIMESTAMP)) + ' ' + tz.getDisplayName( true, TimeZone.SHORT )
-
     } ()
-
 
     /**
      * The app build time string relative to local timezone
      */
     static public final String APP_TIMESTAMP_LOCAL = {
-
         def tz = TimeZone.getDefault()
         def fmt = new SimpleDateFormat(DATETIME_FORMAT)
         fmt.setTimeZone(tz)
         fmt.format(new Date(APP_TIMESTAMP)) + ' ' + tz.getDisplayName( true, TimeZone.SHORT )
-
     } ()
 
     static String deltaLocal() {
@@ -102,10 +97,9 @@ class Const {
         return "($result)"
     }
 
-
     private static Path getHomeDir(String appname) {
         def home = System.getenv('NXF_HOME')
-        def result = home ? Paths.get(home) : Paths.get(System.getProperty("user.home")).resolve(".$appname")
+        def result = home ? Paths.get(home) : Paths.get(System.getProperty('user.home')).resolve(".$appname")
 
         if( !result.exists() && !result.mkdir() ) {
             throw new IllegalStateException("Cannot create path '${result}' -- check file system access permission")

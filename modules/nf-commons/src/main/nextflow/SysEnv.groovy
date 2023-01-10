@@ -14,7 +14,6 @@
  * limitations under the License.
  *
  */
-
 package nextflow
 
 import groovy.transform.CompileStatic
@@ -22,26 +21,30 @@ import groovy.transform.CompileStatic
 /**
  * Helper class that holds a reference system environment and
  * allow to swap to a different one for testing purposes
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
 class SysEnv {
 
     static final class Holder implements Map<String,String> {
+
         @Delegate Map<String,String> target
+
         Holder(Map<String,String> target) { this.target = target }
-        void setTarget(Map<String,String> target) { this.target=target }
+
+        void setTarget(Map<String,String> target) { this.target = target }
+
     }
 
-    private static Holder holder = new Holder(System.getenv())
+    private static final Holder holder = new Holder(System.getenv())
 
-    private static final List<Map<String,String>> history = new ArrayList<Map<String,String>>()
+    private static final List<Map<String,String>> history = []
 
     static boolean containsKey(String key) {
         return holder.containsKey(key)
     }
-    
+
     static Map<String,String> get()  {
         return holder
     }

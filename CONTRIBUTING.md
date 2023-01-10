@@ -42,6 +42,7 @@ A good bug report should include a minimal executable test case able to replicat
 
 Follow the instructions in the bug [report template](https://github.com/nextflow-io/nextflow/blob/master/.github/issue_template.md) that is shown when filling the bug report out.
 
+
 ## Contributing Bug Fixes
 
 Contributing bug fixes is the best way to gain experience and credibility within the community
@@ -54,6 +55,7 @@ label.
 If you have doubts on how to fix an issue, ask for help from senior contributors commenting
 in the issue page.
 
+
 ## Contributing New Features
 
 Before contributing a new feature, submit a new feature proposal in the
@@ -61,6 +63,7 @@ Before contributing a new feature, submit a new feature proposal in the
 with the community.
 
 This is important to identify possible overlaps with other planned features and avoid misunderstandings and conflicts.
+
 
 ## Contributing Code Changes
 
@@ -103,3 +106,5 @@ Nextflow does not impose a strict code formatting style, however the following s
     * *all other static imports*
 
 New files must include the appropriate license header boilerplate and the author name(s) and contact email(s) ([see for example](https://github.com/nextflow-io/nextflow/blob/e8945e8b6fc355d3f2eec793d8f288515db2f409/modules/nextflow/src/main/groovy/nextflow/Const.groovy#L1-L15)).
+
+You can use the [CodeNarc plugin](https://codenarc.org/codenarc-other-tools-frameworks.html) with your IDE of choice to check your code against some linting rules (defined in `.groovylint.json`).

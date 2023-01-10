@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package nextflow
 
 import java.nio.file.Path
@@ -29,6 +28,7 @@ import nextflow.util.MemoryUnit
 import nextflow.util.TestOnly
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.exception.ExceptionUtils
+
 /**
  * Hold global variables
  *
@@ -87,7 +87,6 @@ class Global {
      * 2) System env {@code AWS_ACCESS_KEY} and {@code AWS_SECRET_KEY} pair
      * 3) System env {@code AWS_ACCESS_KEY_ID} and {@code AWS_SECRET_ACCESS_KEY} pair
      *
-     *
      * @param env The system environment map
      * @param config The nextflow config object map
      * @return A pair where the first element is the access key and the second the secret key or
@@ -95,7 +94,6 @@ class Global {
      */
     @PackageScope
     static List<String> getAwsCredentials0( Map env, Map config, List<Path> files = []) {
-
         String a
         String b
 
@@ -104,21 +102,20 @@ class Global {
             b = ((Map)config.aws).secretKey
 
             if( a && b ) {
-                log.debug "Using AWS credentials defined in nextflow config file"
+                log.debug 'Using AWS credentials defined in nextflow config file'
                 return [a, b]
             }
-
         }
 
         // as define by amazon doc
         // http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
-        if( env && (a=env.AWS_ACCESS_KEY_ID) && (b=env.AWS_SECRET_ACCESS_KEY) )  {
-            log.debug "Using AWS credentials defined by environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY"
+        if( env && (a = env.AWS_ACCESS_KEY_ID) && (b = env.AWS_SECRET_ACCESS_KEY) )  {
+            log.debug 'Using AWS credentials defined by environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY'
             return [a, b]
         }
 
-        if( env && (a=env.AWS_ACCESS_KEY) && (b=env.AWS_SECRET_KEY) ) {
-            log.debug "Using AWS credentials defined by environment variables AWS_ACCESS_KEY and AWS_SECRET_KEY"
+        if( env && (a = env.AWS_ACCESS_KEY) && (b = env.AWS_SECRET_KEY) ) {
+            log.debug 'Using AWS credentials defined by environment variables AWS_ACCESS_KEY and AWS_SECRET_KEY'
             return [a, b]
         }
 
@@ -126,7 +123,7 @@ class Global {
             final conf = new IniFile(it)
             final profile = getAwsProfile0(env, config)
             final section = conf.section(profile)
-            if( (a=section.aws_access_key_id) && (b=section.aws_secret_access_key) ) {
+            if( (a = section.aws_access_key_id) && (b = section.aws_secret_access_key) ) {
                 final token = section.aws_session_token
                 if( token ) {
                     log.debug "Using AWS temporary session credentials defined in `$profile` section in file: ${conf.file}"
@@ -143,7 +140,6 @@ class Global {
     }
 
     static protected String getAwsProfile0(Map env, Map<String,Object> config) {
-
         final profile = config?.navigate('aws.profile')
         if( profile )
             return profile
@@ -158,7 +154,6 @@ class Global {
     }
 
     static List<String> getAwsCredentials(Map env, Map config) {
-
         def home = Paths.get(System.properties.get('user.home') as String)
         def files = [ home.resolve('.aws/credentials'), home.resolve('.aws/config') ]
         getAwsCredentials0(env, config, files)
@@ -166,8 +161,8 @@ class Global {
     }
 
     static String getAwsRegion(Map env=null, Map config=null) {
-        if( env==null ) env = SysEnv.get()
-        if( config==null ) config = this.config
+        if( env == null ) env = SysEnv.get()
+        if( config == null ) config = this.config
 
         def home = Paths.get(System.properties.get('user.home') as String)
         def file = home.resolve('.aws/config')
@@ -227,7 +222,6 @@ class Global {
      * @return A map object containing the AWS client configuration properties
      */
     static protected Map normalizeAwsClientConfig(Map<String,?> client) {
-
         normalizeMemUnit(client, 'uploadChunkSize');
         normalizeDuration(client, 'uploadRetrySleep');
 
@@ -264,7 +258,7 @@ class Global {
      * @param callback A closure to be executed on application shutdown
      */
     static void onCleanup(Consumer<ISession> callback) {
-        if( callback==null ) {
+        if( callback == null ) {
             log.warn "Cleanup consumer cannot be null\n${ExceptionUtils.getStackTrace(new Exception())}"
             return 
         }
@@ -279,7 +273,7 @@ class Global {
                 c.accept(session)
             }
             catch( Exception e ) {
-                log.debug("Error during on cleanup", e )
+                log.debug('Error during on cleanup', e )
             }
         }
     }
@@ -290,4 +284,5 @@ class Global {
         config = null
         hooks.clear()
     }
+
 }

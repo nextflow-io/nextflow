@@ -1,0 +1,65 @@
+{
+    "extends": "recommended",
+    "rules": {
+        "CatchException": {
+            "enabled": false
+        },
+        "DuplicateStringLiteral": {
+            "enabled": false
+        },
+        "IfStatementBraces": {
+            "enabled": false
+        },
+        "ImplicitReturnStatement": {
+            "enabled": false
+        },
+        "Instanceof": {
+            "enabled": false
+        },
+        "JavadocMissingParamDescription": {
+            "enabled": false
+        },
+        "LineLength": {
+            "enabled": false
+        },
+        "MisorderedStaticImports": {
+            "enabled": false
+        },
+        "NoDef": {
+            "enabled": false
+        },
+        "ParameterReassignment": {
+            "enabled": false
+        },
+        "ReturnsNullInsteadOfEmptyCollection": {
+            "enabled": false
+        },
+        "SpaceAfterCatch": {
+            "enabled": false
+        },
+        "SpaceAfterFor": {
+            "enabled": false
+        },
+        "SpaceAfterIf": {
+            "enabled": false
+        },
+        "SpaceInsideParentheses": {
+            "enabled": false
+        },
+        "SynchronizedMethod": {
+            "enabled": false
+        },
+        "UnnecessaryElseStatement": {
+            "enabled": false
+        },
+        "UnnecessaryGetter": {
+            "enabled": false
+        },
+        "UnnecessarySetter": {
+            "enabled": false
+        },
+        "VariableTypeRequired": {
+            "enabled": false
+        }
+    }
+}
