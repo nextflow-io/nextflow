@@ -19,7 +19,7 @@ Since each configuration file can contain conflicting settings, the sources are 
 7. Values defined within the pipeline script itself (e.g. ``main.nf``)
 
 When more than one of these options for specifying configurations are used, they are merged, so that the settings in the
-first override the same settings that appearing in the second, and so on.
+first override the same settings appearing in the second, and so on.
 
 .. tip::
   If you want to ignore any default configuration files and use only a custom one, use ``-C <config file>``.
@@ -33,14 +33,14 @@ A Nextflow configuration file is a simple text file containing a set of properti
   name = value
 
 Please note, string values need to be wrapped in quotation characters while numbers and boolean values (``true``, ``false``) do not.
-Also note that values are typed. THis means that, for example, ``1`` is different from ``'1'`` — the first is interpreted
+Also note that values are typed. This means that, for example, ``1`` is different from ``'1'`` — the first is interpreted
 as the number one, while the latter is interpreted as a string value.
 
 
 Config variables
 ----------------
 
-Configuration properties can be used as variables in the configuration file, by using the usual
+Configuration properties can be used as variables in the configuration file by using the
 ``$propertyName`` or ``${expression}`` syntax.
 
 For example::
@@ -958,7 +958,7 @@ to the same profile using a common prefix. For example::
     }
 
 This configuration defines three different profiles: ``standard``, ``cluster``, and ``cloud``, that each set different process
-configuration strategies depending on the target runtime platform. The ``standard`` profile is used by default when no profile is specified by the user. 
+configuration strategies depending on the target runtime platform. The ``standard`` profile is used by default when no profile is specified. 
 
 In order to add attributes from a named config scope (``aws``, ``docker``, ``conda``, etc.) to a configuration profile, the named scope must be nested inside the profile, not at the profile name level. For example::
 
