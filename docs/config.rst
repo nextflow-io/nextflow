@@ -283,18 +283,24 @@ The following settings are available:
 ================== ================
 Name                Description
 ================== ================
-enabled             Turn this flag to ``true`` to enable Docker execution (default: ``false``).
+enabled             If true, enables Docker execution (default: ``false``).
+engineOptions       This attribute can be used to provide any option supported by the Docker engine i.e. ``docker [OPTIONS]``.
 envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+fixOwnership        If true, fixes ownership of files created by the docker container (default: ``false``).
 legacy              Uses command line options removed since version 1.10.x (default: ``false``).
+mountFlags          Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`
+registry            The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix, i.e. ``http://``.
+remove              Cleans up the container after execution (default: ``true``). For details see: https://docs.docker.com/engine/reference/run/#clean-up---rm .
+runOptions          This attribute can be used to provide any extra command line options supported by the ``docker run`` command. For details see: https://docs.docker.com/engine/reference/run/ .
 sudo                Executes Docker run command as ``sudo`` (default: ``false``).
 tty                 Allocates a pseudo-tty (default: ``false``).
 temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created.
-remove              Clean-up the container after the execution (default: ``true``). For details see: https://docs.docker.com/engine/reference/run/#clean-up---rm .
-runOptions          This attribute can be used to provide any extra command line options supported by the ``docker run`` command. For details see: https://docs.docker.com/engine/reference/run/ .
-registry            The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
-fixOwnership        Fixes ownership of files created by the docker container.
-engineOptions       This attribute can be used to provide any option supported by the Docker engine i.e. ``docker [OPTIONS]``.
-mountFlags          Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`
+userEmulation       If true, runs all containers as the same user executing the ``nextflow run`` command, and mounts the user home folder in each container (default: ``false``). 
+
+
+
+
+
 ================== ================
 
 The above options can be used by prefixing them with the ``docker`` scope or surrounding them by curly
