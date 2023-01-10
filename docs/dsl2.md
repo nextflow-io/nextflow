@@ -556,7 +556,7 @@ The binary scripts must be placed in the module directory names `<module-dir>/re
 Those scripts will be accessible as any other command in the tasks environment, provided they have been granted the Linux execute permissions.
 
 :::{note}
-This feature requires the use of a local or shared file system as the pipeline work directory.
+This feature requires the use of a local or shared file system as the pipeline work directory or {ref}`wave-page` when using cloud based executors.
 :::
 
 ## Channel forking

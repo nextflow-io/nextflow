@@ -87,12 +87,14 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
     String getImage() { image }
 
     V addRunOptions(String str) {
-        runOptions.add(str)
+        if( str )
+            runOptions.add(str)
         return (V)this
     }
 
     V addEngineOptions(String str) {
-        engineOptions.add(str)
+        if( str )
+            engineOptions.add(str)
         return (V)this
     }
 

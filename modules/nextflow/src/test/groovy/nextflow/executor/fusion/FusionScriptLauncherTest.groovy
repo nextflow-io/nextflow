@@ -20,8 +20,9 @@ package nextflow.executor.fusion
 import java.nio.file.Path
 
 import nextflow.Global
-import nextflow.SysEnv
+import nextflow.Session
 import nextflow.file.http.XPath
+import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskBean
 import spock.lang.Specification
 /**
@@ -32,6 +33,8 @@ class FusionScriptLauncherTest extends Specification {
 
     def 'should get container mount' () {
         given:
+        Global.session = Mock(Session) { getConfig() >> [:] }
+        and:
         def fusion = new FusionScriptLauncher(scheme: 'http')
 
         when:
@@ -56,6 +59,8 @@ class FusionScriptLauncherTest extends Specification {
 
     def 'should get fusion env' () {
         given:
+        Global.config = [:]
+        and:
         def fusion = new FusionScriptLauncher(
                 scheme: 'http',
                 buckets: ['foo'] as Set,

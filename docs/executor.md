@@ -6,7 +6,7 @@ In the Nextflow framework architecture, the *executor* is the component that det
 
 The executor provides an abstraction between the pipeline processes and the underlying execution system. This allows you to write the pipeline functional logic independently from the actual processing platform.
 
-In other words you can write your pipeline script once and launch it on your computer, a cluster resource manager, or the cloud, by simply changing the executor definition in the Nextflow configuration file.
+In other words, you can write your pipeline script once and have it running on your computer, a cluster resource manager, or the cloud — simply change the executor definition in the Nextflow configuration file.
 
 (awsbatch-executor)=
 

@@ -827,10 +827,6 @@ Sorting options:
 | `custom` | A custom sorting criteria used to order the tuples element holding list of values. It can be specified by using either a {ref}`Closure <script-closure>` or a [Comparator](http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html) object. |
 
 :::{tip}
-You should always specify the number of expected elements in each tuple using the `size` attribute to allow the `groupTuple` operator to stream the collected values as soon as possible. However, there are use cases in which each tuple has a different size depending on the grouping key. In this case use the built-in function `groupKey` that allows you to create a special grouping key object such that it's possible to associate the group size for a given key.
-:::
-
-:::{tip}
 You should always specify the number of expected elements in each tuple with the `size` attribute, so that the `groupTuple` operator can stream each collected value as soon as possible. In cases where the size of each tuple may vary depending on the grouping key, you can use the built-in `groupKey` function, which allows you to create a special grouping key object with an associated size.
 
 Here are some examples:

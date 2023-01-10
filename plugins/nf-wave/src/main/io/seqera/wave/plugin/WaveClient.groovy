@@ -34,7 +34,7 @@ import com.google.gson.reflect.TypeToken
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
-import io.seqera.wave.plugin.config.FusionConfig
+import nextflow.fusion.FusionConfig
 import io.seqera.wave.plugin.config.TowerConfig
 import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.exception.BadResponseException
@@ -102,7 +102,7 @@ class WaveClient {
         // create http client
         this.httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                .followRedirects(HttpClient.Redirect.NEVER)
                 .cookieHandler(cookieManager)
                 .connectTimeout(Duration.ofSeconds(10))
                 .build()

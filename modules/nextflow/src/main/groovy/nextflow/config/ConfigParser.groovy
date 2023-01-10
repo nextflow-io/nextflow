@@ -19,7 +19,7 @@ package nextflow.config
 
 import java.nio.file.Path
 
-import ch.grengine.Grengine
+import ch.artecat.grengine.Grengine
 import com.google.common.hash.Hashing
 import groovy.transform.PackageScope
 import nextflow.ast.NextflowXform
