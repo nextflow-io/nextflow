@@ -10,23 +10,26 @@ The built-in function `sendMail` allows you to send a mail message from a workfl
 
 ### Basic mail
 
-The mail attributes are specified as named parameters or providing an equivalent associative array as argument.
-For example:
+The mail attributes are specified as named parameters or providing an equivalent associative array as argument. For example:
 
 ```groovy
-sendMail( to: 'you@gmail.com',
-          subject: 'Catch up',
-          body: 'Hi, how are you!',
-          attach: '/some/path/attachment/file.txt' )
+sendMail(
+    to: 'you@gmail.com',
+    subject: 'Catch up',
+    body: 'Hi, how are you!',
+    attach: '/some/path/attachment/file.txt'
+)
 ```
 
-therefore this is equivalent to write:
+which is equivalent to:
 
 ```groovy
-mail = [ to: 'you@gmail.com',
-         subject: 'Catch up',
-         body: 'Hi, how are you!',
-         attach: '/some/path/attachment/file.txt' ]
+mail = [
+    to: 'you@gmail.com',
+    subject: 'Catch up',
+    body: 'Hi, how are you!',
+    attach: '/some/path/attachment/file.txt'
+]
 
 sendMail(mail)
 ```
@@ -52,7 +55,7 @@ The following parameters can be specified:
 
 ### Advanced mail
 
-An second version of the `sendMail` allows a more idiomatic syntax:
+Another version of `sendMail` allows a more idiomatic syntax:
 
 ```groovy
 sendMail {
@@ -73,21 +76,18 @@ sendMail {
 The same attributes listed in the table in the previous section are allowed.
 
 :::{tip}
-A string expression at the end is implicitly interpreted as the mail body content, therefore
-the `body` parameter can be omitted as shown above.
+A string expression at the end is implicitly interpreted as the mail body content, therefore the `body` parameter can be omitted as shown above.
 :::
 
 :::{tip}
-To send an email that includes text and HTML content, use both the `text` and `body` attributes.
-The first is used for the plain text content, while the second is used for the rich HTML content.
+To send an email that includes text and HTML content, use both the `text` and `body` attributes. The first is used for the plain text content, while the second is used for the rich HTML content.
 :::
 
 (mail-attachments)=
 
 ### Mail attachments
 
-When using the curly brackets syntax, the `attach` parameter can be repeated two or more times to include
-multiple attachments in the mail message.
+When using the curly brackets syntax, the `attach` parameter can be repeated two or more times to include multiple attachments in the mail message.
 
 Moreover for each attachment it's possible to specify one or more of the following optional attributes:
 
@@ -116,11 +116,9 @@ sendMail {
 
 ### Mail configuration
 
-If no mail server configuration is provided, Nextflow tries to send the email by using the external mail command
-eventually provided by the underlying system (eg. `sendmail` or `mail`).
+If no mail server configuration is provided, Nextflow tries to send the email by using the external mail command eventually provided by the underlying system (eg. `sendmail` or `mail`).
 
-If your system does not provide access to none of the above you can configure a SMTP server in the `nextflow.config` file.
-For example:
+If your system does not provide access to none of the above you can configure a SMTP server in the `nextflow.config` file. For example:
 
 ```groovy
 mail {
@@ -134,8 +132,7 @@ See the {ref}`mail scope <config-mail>` section to learn more the mail server co
 
 ## Mail notification
 
-You can use the `sendMail` function with a {ref}`workflow completion handler <metadata-completion-handler>`
-to notify the completion of a workflow completion. For example:
+You can use the `sendMail` function with a {ref}`workflow completion handler <metadata-completion-handler>` to notify the completion of a workflow completion. For example:
 
 ```groovy
 workflow.onComplete {
@@ -155,14 +152,11 @@ workflow.onComplete {
 }
 ```
 
-This is useful to send a custom notification message. Note however that Nextflow includes a built-in notification mechanism
-which is the most convenient way to notify the completion of a workflow execution in most cases. Read the following
-section to learn about it.
+This is useful to send a custom notification message. Note however that Nextflow includes a built-in notification mechanism which is the most convenient way to notify the completion of a workflow execution in most cases. Read the following section to learn about it.
 
 ## Workflow notification
 
-Nextflow includes a built-in workflow notification features that automatically sends a notification message
-when a workflow execution terminates.
+Nextflow includes a built-in workflow notification features that automatically sends a notification message when a workflow execution terminates.
 
 To enable simply specify the `-N` option when launching the pipeline execution. For example:
 
@@ -176,13 +170,9 @@ It will send a notification mail when the execution completes similar to the one
 ```
 
 :::{warning}
-By default the notification message is sent with the `sendmail` system tool, which is assumed to be
-available in the environment where Nextflow is running. Make sure it's properly installed and configured.
-Alternatively, you can provide the SMTP server configuration settings to use the Nextflow
-built-in mail support, which doesn't require any external system tool.
+By default the notification message is sent with the `sendmail` system tool, which is assumed to be available in the environment where Nextflow is running. Make sure it's properly installed and configured. Alternatively, you can provide the SMTP server configuration settings to use the Nextflow built-in mail support, which doesn't require any external system tool.
 :::
 
 See the [Mail configuration](#mail-configuration) section to learn about the available mail delivery options and configuration settings.
 
-Read {ref}`Notification scope <config-notification>` section to learn more about the workflow notification
-configuration details.
+Read {ref}`Notification scope <config-notification>` section to learn more about the workflow notification configuration details.

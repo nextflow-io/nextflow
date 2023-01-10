@@ -4,10 +4,7 @@
 
 ## Configuration file
 
-When a pipeline script is launched, Nextflow looks for configuration files in multiple locations.
-Since each configuration file can contain conflicting settings, the sources are ranked to decide which
-settings to are applied. All possible configuration sources are reported below, listed in order
-of priority:
+When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file can contain conflicting settings, the sources are ranked to decide which settings to are applied. All possible configuration sources are reported below, listed in order of priority:
 
 1. Parameters specified on the command line (`--something value`)
 2. Parameters provided using the `-params-file` option
@@ -17,8 +14,7 @@ of priority:
 6. The config file `$HOME/.nextflow/config`
 7. Values defined within the pipeline script itself (e.g. `main.nf`)
 
-When more than one of these ways of specifying configurations are used, they are merged, so that the settings in the
-first override the same ones that may appear in the second one, and so on.
+When more than one of these ways of specifying configurations are used, they are merged, so that the settings in the first override the same ones that may appear in the second one, and so on.
 
 :::{tip}
 If you want to ignore any default configuration files and use only the custom one, use `-C <config file>`.
@@ -32,41 +28,33 @@ A Nextflow configuration file is a simple text file containing a set of properti
 name = value
 ```
 
-Please note, string values need to be wrapped in quotation characters while numbers and boolean values (`true`, `false`) do not.
-Also note that values are typed, meaning for example that, `1` is different from `'1'`, since the first is interpreted
-as the number one, while the latter is interpreted as a string value.
+Please note, string values need to be wrapped in quotation characters while numbers and boolean values (`true`, `false`) do not. Also note that values are typed, meaning for example that, `1` is different from `'1'`, since the first is interpreted as the number one, while the latter is interpreted as a string value.
 
 ### Config variables
 
-Configuration properties can be used as variables in the configuration file itself, by using the usual
-`$propertyName` or `${expression}` syntax.
+Configuration properties can be used as variables in the configuration file itself, by using the usual `$propertyName` or `${expression}` syntax.
 
 For example:
 
-```
+```groovy
 propertyOne = 'world'
 anotherProp = "Hello $propertyOne"
 customPath = "$PATH:/my/app/folder"
 ```
 
-Please note, the usual rules for {ref}`string-interpolation` are applied, thus a string containing a variable
-reference must be wrapped in double-quote chars instead of single-quote chars.
+Please note, the usual rules for {ref}`string-interpolation` are applied, thus a string containing a variable reference must be wrapped in double-quote chars instead of single-quote chars.
 
-The same mechanism allows you to access environment variables defined in the hosting system. Any variable whose name is
-not defined in the Nextflow configuration file(s) is supposed to be a reference to an environment variable with that name.
-So, in the above example the property `customPath` is defined as the current system `PATH` to which
-the string `/my/app/folder` is appended.
+The same mechanism allows you to access environment variables defined in the hosting system. Any variable whose name is not defined in the Nextflow configuration file(s) is supposed to be a reference to an environment variable with that name. So, in the above example the property `customPath` is defined as the current system `PATH` to which the string `/my/app/folder` is appended.
 
 ### Config comments
 
-Configuration files use the same conventions for comments used by the Groovy or Java programming languages. Thus, use `//` to comment
-a single line or `/*` .. `*/` to comment a block on multiple lines.
+Configuration files use the same conventions for comments used by the Groovy or Java programming languages. Thus, use `//` to comment a single line or `/*` .. `*/` to comment a block on multiple lines.
 
 ### Config include
 
 A configuration file can include one or more configuration files using the keyword `includeConfig`. For example:
 
-```
+```groovy
 process.executor = 'sge'
 process.queue = 'long'
 process.memory = '10G'
@@ -78,13 +66,11 @@ When a relative path is used, it is resolved against the actual location of the 
 
 ## Config scopes
 
-Configuration settings can be organized in different scopes by dot prefixing the property names with a scope
-identifier or grouping the properties in the same scope using the curly brackets notation. This is shown in the
-following example:
+Configuration settings can be organized in different scopes by dot prefixing the property names with a scope identifier or grouping the properties in the same scope using the curly brackets notation. This is shown in the following example:
 
-```
-alpha.x  = 1
-alpha.y  = 'string value..'
+```groovy
+alpha.x = 1
+alpha.y = 'string value..'
 
 beta {
      p = 2
@@ -96,10 +82,9 @@ beta {
 
 ### Scope `aws`
 
-The `aws` scope allows you to configure the access to Amazon S3 storage. Use the attributes `accessKey` and `secretKey`
-to specify your bucket credentials. For example:
+The `aws` scope allows you to configure the access to Amazon S3 storage. Use the attributes `accessKey` and `secretKey` to specify your bucket credentials. For example:
 
-```
+```groovy
 aws {
     accessKey = '<YOUR S3 ACCESS KEY>'
     secretKey = '<YOUR S3 SECRET KEY>'
@@ -143,7 +128,7 @@ Advanced client configuration options can be set by using the `client` attribute
 
 For example:
 
-```
+```groovy
 aws {
     client {
         maxConnections = 20
@@ -188,10 +173,9 @@ The following settings are available:
 | cacheDir     | The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.                 |
 | pullTimeout  | The amount of time the Charliecloud pull can last, exceeding which the process is terminated (default: `20 min`).                                                     |
 
-The above options can be used by prefixing them with the `charliecloud` scope or surrounding them by curly
-brackets, as shown below:
+The above options can be used by prefixing them with the `charliecloud` scope or surrounding them by curly brackets, as shown below:
 
-```
+```groovy
 process.container = 'nextflow/examples'
 
 charliecloud {
@@ -213,8 +197,7 @@ The `cloud` configuration scope is no longer used. See the platform-specific clo
 
 ### Scope `conda`
 
-The `conda` scope allows for the definition of the configuration settings that control the creation of a Conda environment
-by the Conda package manager.
+The `conda` scope allows for the definition of the configuration settings that control the creation of a Conda environment by the Conda package manager.
 
 The following settings are available:
 
@@ -240,10 +223,9 @@ The following settings are available:
 | file      | Graph file name (default: `dag-<timestamp>.dot`).                                          |
 | overwrite | When `true` overwrites any existing DAG file with the same name.                           |
 
-The above options can be used by prefixing them with the `dag` scope or surrounding them by curly
-brackets. For example:
+The above options can be used by prefixing them with the `dag` scope or surrounding them by curly brackets. For example:
 
-```
+```groovy
 dag {
     enabled = true
     file = 'pipeline_dag.html'
@@ -275,10 +257,9 @@ The following settings are available:
 | engineOptions | This attribute can be used to provide any option supported by the Docker engine i.e. `docker [OPTIONS]`.                                                                       |
 | mountFlags    | Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`                                                                                                        |
 
-The above options can be used by prefixing them with the `docker` scope or surrounding them by curly
-brackets, as shown below:
+The above options can be used by prefixing them with the `docker` scope or surrounding them by curly brackets, as shown below:
 
-```
+```groovy
 process.container = 'nextflow/examples'
 
 docker {
@@ -293,12 +274,11 @@ Read {ref}`container-docker` page to learn more about how to use Docker containe
 
 ### Scope `env`
 
-The `env` scope allows the definition one or more variable that will be exported in the environment where the
-workflow tasks will be executed.
+The `env` scope allows the definition one or more variable that will be exported in the environment where the workflow tasks will be executed.
 
 Simply prefix your variable names with the `env` scope or surround them by curly brackets, as shown below:
 
-```
+```groovy
 env.ALPHA = 'some value'
 env.BETA = "$HOME/some/path"
 
@@ -309,14 +289,11 @@ env {
 ```
 
 :::{note}
-In the above example, variables like `$HOME` and `$PATH` are evaluated when the workflow is launched. If
-you want these variables to be evaluated during task execution, escape them with `\$`. This difference is important
-for variables like `$PATH`, which may be different in the workflow environment versus the task environment.
+In the above example, variables like `$HOME` and `$PATH` are evaluated when the workflow is launched. If you want these variables to be evaluated during task execution, escape them with `\$`. This difference is important for variables like `$PATH`, which may be different in the workflow environment versus the task environment.
 :::
 
 :::{warning}
-The `env` scope provides environment variables to *tasks*, not Nextflow itself. Nextflow environment variables
-such as `NXF_VER` should be set in the environment in which Nextflow is launched.
+The `env` scope provides environment variables to *tasks*, not Nextflow itself. Nextflow environment variables such as `NXF_VER` should be set in the environment in which Nextflow is launched.
 :::
 
 (config-executor)=
@@ -348,7 +325,7 @@ The `executor` configuration scope allows you to set the optional executor setti
 
 The executor settings can be defined as shown below:
 
-```
+```groovy
 executor {
     name = 'sge'
     queueSize = 200
@@ -356,10 +333,9 @@ executor {
 }
 ```
 
-When using two (or more) different executors in your pipeline, you can specify their settings separately by prefixing
-the executor name with the symbol `$` and using it as special scope identifier. For example:
+When using two (or more) different executors in your pipeline, you can specify their settings separately by prefixing the executor name with the symbol `$` and using it as special scope identifier. For example:
 
-```
+```groovy
 executor {
   $sge {
       queueSize = 100
@@ -375,7 +351,7 @@ executor {
 
 The above configuration example can be rewritten using the dot notation as shown below:
 
-```
+```groovy
 executor.$sge.queueSize = 100
 executor.$sge.pollInterval = '30sec'
 executor.$local.cpus = 8
@@ -386,8 +362,7 @@ executor.$local.memory = '32 GB'
 
 ### Scope `k8s`
 
-The `k8s` scope allows the definition of the configuration settings that control the deployment and execution of
-workflow applications in a Kubernetes cluster.
+The `k8s` scope allows the definition of the configuration settings that control the deployment and execution of workflow applications in a Kubernetes cluster.
 
 The following settings are available:
 
@@ -427,7 +402,7 @@ The `mail` scope allows you to define the mail server configuration settings nee
 | from            | Default email sender address.                                                               |
 | smtp.host       | Host name of the mail server.                                                               |
 | smtp.port       | Port number of the mail server.                                                             |
-| smtp.user       | User name to connect to  the mail server.                                                   |
+| smtp.user       | User name to connect to the mail server.                                                    |
 | smtp.password   | User password to connect to the mail server.                                                |
 | smtp.proxy.host | Host name of an HTTP web proxy server that will be used for connections to the mail server. |
 | smtp.proxy.port | Port number for the HTTP web proxy server.                                                  |
@@ -435,15 +410,12 @@ The `mail` scope allows you to define the mail server configuration settings nee
 | debug           | When `true` enables Java Mail logging for debugging purpose.                                |
 
 :::{note}
-Nextflow relies on the [Java Mail API](https://javaee.github.io/javamail/) to send email messages.
-Advanced mail configuration can be provided by using any SMTP configuration property supported by the Java Mail API.
-See the [table of available properties at this link](https://javaee.github.io/javamail/docs/api/com/sun/mail/smtp/package-summary.html#properties).
+Nextflow relies on the [Java Mail API](https://javaee.github.io/javamail/) to send email messages. Advanced mail configuration can be provided by using any SMTP configuration property supported by the Java Mail API. See the [table of available properties at this link](https://javaee.github.io/javamail/docs/api/com/sun/mail/smtp/package-summary.html#properties).
 :::
 
-For example, the following snippet shows how to configure Nextflow to send emails through the
-[AWS Simple Email Service](https://aws.amazon.com/ses/):
+For example, the following snippet shows how to configure Nextflow to send emails through the [AWS Simple Email Service](https://aws.amazon.com/ses/):
 
-```
+```groovy
 mail {
     smtp.host = 'email-smtp.us-east-1.amazonaws.com'
     smtp.port = 587
@@ -456,11 +428,9 @@ mail {
 ```
 
 :::{note}
-Some versions of Java (e.g. Java 11 Corretto) do not default to TLS v1.2, and as a result may have
-issues with 3rd party integrations that enforce TLS v1.2 (e.g. Azure Active Directory OIDC). This problem can be
-addressed by setting the following config option:
+Some versions of Java (e.g. Java 11 Corretto) do not default to TLS v1.2, and as a result may have issues with 3rd party integrations that enforce TLS v1.2 (e.g. Azure Active Directory OIDC). This problem can be addressed by setting the following config option:
 
-```
+```groovy
 mail {
     smtp.ssl.protocols = 'TLSv1.2'
 }
@@ -488,10 +458,9 @@ The following settings are available:
 | nextflowVersion   | Minimum required Nextflow version.                                              |
 | version           | Project version number.                                                         |
 
-The above options can be used by prefixing them with the `manifest` scope or surrounding them by curly
-brackets. For example:
+The above options can be used by prefixing them with the `manifest` scope or surrounding them by curly brackets. For example:
 
-```
+```groovy
 manifest {
     homePage = 'http://foo.com'
     description = 'Pipeline does this and that'
@@ -500,29 +469,25 @@ manifest {
 }
 ```
 
-To learn how to publish your pipeline on GitHub, BitBucket or GitLab code repositories read {ref}`sharing-page`
-documentation page.
+To learn how to publish your pipeline on GitHub, BitBucket or GitLab code repositories read {ref}`sharing-page` documentation page.
 
 #### Nextflow version
 
-The `nextflowVersion` setting allows you to specify a minimum required version to run the pipeline.
-This may be useful to ensure that a specific version is used:
+The `nextflowVersion` setting allows you to specify a minimum required version to run the pipeline. This may be useful to ensure that a specific version is used:
 
-```
+```groovy
 nextflowVersion = '1.2.3'        // exact match
 nextflowVersion = '1.2+'         // 1.2 or later (excluding 2 and later)
 nextflowVersion = '>=1.2'        // 1.2 or later
 nextflowVersion = '>=1.2, <=1.5' // any version in the 1.2 .. 1.5 range
-nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version
-                                    does not match required version.
+nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version does not match required version.
 ```
 
 (config-notification)=
 
 ### Scope `notification`
 
-The `notification` scope allows you to define the automatic sending of a notification email message
-when the workflow execution terminates.
+The `notification` scope allows you to define the automatic sending of a notification email message when the workflow execution terminates.
 
 | Name     | Description                                                                                                     |
 | -------- | --------------------------------------------------------------------------------------------------------------- |
@@ -534,17 +499,15 @@ when the workflow execution terminates.
 
 The notification message is sent my using the STMP server defined in the configuration {ref}`mail scope<config-mail>`.
 
-If no mail configuration is provided, it tries to send the notification message by using the external mail command
-eventually provided by the underlying system (eg. `sendmail` or `mail`).
+If no mail configuration is provided, it tries to send the notification message by using the external mail command eventually provided by the underlying system (eg. `sendmail` or `mail`).
 
 (config-params)=
 
 ### Scope `params`
 
-The `params` scope allows you to define parameters that will be accessible in the pipeline script. Simply prefix the
-parameter names with the `params` scope or surround them by curly brackets, as shown below:
+The `params` scope allows you to define parameters that will be accessible in the pipeline script. Simply prefix the parameter names with the `params` scope or surround them by curly brackets, as shown below:
 
-```
+```groovy
 params.custom_param = 123
 params.another_param = 'string value .. '
 
@@ -573,10 +536,9 @@ The following settings are available:
 | engineOptions | This attribute can be used to provide any option supported by the Podman engine i.e. `podman [OPTIONS]`.                                                                    |
 | mountFlags    | Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`                                                                                                     |
 
-The above options can be used by prefixing them with the `podman` scope or surrounding them by curly
-brackets, as shown below:
+The above options can be used by prefixing them with the `podman` scope or surrounding them by curly brackets, as shown below:
 
-```
+```groovy
 process.container = 'nextflow/examples'
 
 podman {
@@ -593,10 +555,9 @@ Read {ref}`container-podman` page to learn more about how to use Podman containe
 
 The `process` configuration scope allows you to provide the default configuration for the processes in your pipeline.
 
-You can specify here any property described in the {ref}`process directive<process-directives>` and the executor sections.
-For examples:
+You can specify here any property described in the {ref}`process directive<process-directives>` and the executor sections. For examples:
 
-```
+```groovy
 process {
     executor = 'sge'
     queue = 'long'
@@ -604,17 +565,15 @@ process {
 }
 ```
 
-By using this configuration all processes in your pipeline will be executed through the SGE cluster, with the specified
-settings.
+By using this configuration all processes in your pipeline will be executed through the SGE cluster, with the specified settings.
 
 (config-process-selectors)=
 
 #### Process selectors
 
-The `withLabel` selectors allow the configuration of all processes annotated with a {ref}`process-label` directive as
-shown below:
+The `withLabel` selectors allow the configuration of all processes annotated with a {ref}`process-label` directive as shown below:
 
-```
+```groovy
 process {
     withLabel: big_mem {
         cpus = 16
@@ -624,13 +583,11 @@ process {
 }
 ```
 
-The above configuration example assigns 16 cpus, 64 Gb of memory and the `long` queue to all processes annotated
-with the `big_mem` label.
+The above configuration example assigns 16 cpus, 64 Gb of memory and the `long` queue to all processes annotated with the `big_mem` label.
 
-In the same manner, the `withName` selector allows the configuration of a specific process in your pipeline by its name.
-For example:
+In the same manner, the `withName` selector allows the configuration of a specific process in your pipeline by its name. For example:
 
-```
+```groovy
 process {
     withName: hello {
         cpus = 4
@@ -641,19 +598,16 @@ process {
 ```
 
 :::{tip}
-Label and process names do not need to be enclosed with quotes, provided the name
-does not include special characters (`-`, `!`, etc) and is not a keyword or a built-in type identifier.
-When in doubt, you can enclose the label name or process name with single or double quotes.
+Label and process names do not need to be enclosed with quotes, provided the name does not include special characters (`-`, `!`, etc) and is not a keyword or a built-in type identifier. When in doubt, you can enclose the label name or process name with single or double quotes.
 :::
 
 (config-selector-expressions)=
 
 #### Selector expressions
 
-Both label and process name selectors allow the use of a regular expression in order to apply the same configuration
-to all processes matching the specified pattern condition. For example:
+Both label and process name selectors allow the use of a regular expression in order to apply the same configuration to all processes matching the specified pattern condition. For example:
 
-```
+```groovy
 process {
     withLabel: 'foo|bar' {
         cpus = 2
@@ -662,12 +616,11 @@ process {
 }
 ```
 
-The above configuration snippet sets 2 cpus and 4 GB of memory to the processes annotated with a label `foo`
-and `bar`.
+The above configuration snippet sets 2 cpus and 4 GB of memory to the processes annotated with a label `foo` and `bar`.
 
 A process selector can be negated prefixing it with the special character `!`. For example:
 
-```
+```groovy
 process {
     withLabel: 'foo' { cpus = 2 }
     withLabel: '!foo' { cpus = 4 }
@@ -675,9 +628,7 @@ process {
 }
 ```
 
-The above configuration snippet sets 2 cpus for the processes annotated with the `foo` label and 4 cpus to all processes
-*not* annotated with that label. Finally it sets the use of `long` queue to all process whose name does *not* start
-with `align`.
+The above configuration snippet sets 2 cpus for the processes annotated with the `foo` label and 4 cpus to all processes *not* annotated with that label. Finally it sets the use of `long` queue to all process whose name does *not* start with `align`.
 
 (config-selector-priority)=
 
@@ -692,7 +643,7 @@ When mixing generic process configuration and selectors the following priority r
 
 For example:
 
-```
+```groovy
 process {
     cpus = 4
     withLabel: foo { cpus = 8 }
@@ -700,9 +651,7 @@ process {
 }
 ```
 
-Using the above configuration snippet, all workflow processes use 4 cpus if not otherwise specified in the workflow
-script. Moreover processes annotated with the `foo` label use 8 cpus. Finally the process named `bar`
-uses 32 cpus.
+Using the above configuration snippet, all workflow processes use 4 cpus if not otherwise specified in the workflow script. Moreover processes annotated with the `foo` label use 8 cpus. Finally the process named `bar` uses 32 cpus.
 
 (config-report)=
 
@@ -720,8 +669,7 @@ The `report` scope allows you to define configuration setting of the workflow {r
 
 ### Scope `sarus`
 
-The ``sarus`` configuration scope controls how [Sarus](https://sarus.readthedocs.io) containers are executed
-by Nextflow.
+The ``sarus`` configuration scope controls how [Sarus](https://sarus.readthedocs.io) containers are executed by Nextflow.
 
 The following settings are available:
 
@@ -738,8 +686,7 @@ Read {ref}`container-sarus` page to learn more about how to use Sarus containers
 
 ### Scope `shifter`
 
-The `shifter` configuration scope controls how [Shifter](https://docs.nersc.gov/programming/shifter/overview/) containers are executed
-by Nextflow.
+The `shifter` configuration scope controls how [Shifter](https://docs.nersc.gov/programming/shifter/overview/) containers are executed by Nextflow.
 
 The following settings are available:
 
@@ -753,8 +700,7 @@ Read {ref}`container-shifter` page to learn more about how to use Shifter contai
 
 ### Scope `singularity`
 
-The `singularity` configuration scope controls how [Singularity](https://sylabs.io/singularity/) containers are executed
-by Nextflow.
+The `singularity` configuration scope controls how [Singularity](https://sylabs.io/singularity/) containers are executed by Nextflow.
 
 The following settings are available:
 
@@ -804,7 +750,7 @@ The following settings are available:
 The above options can be used by prefixing them with the `tower` scope or surrounding them by curly
 brackets, as shown below:
 
-```
+```groovy
 tower {
   enabled = true
   accessToken = '<YOUR TOKEN>'
@@ -837,10 +783,9 @@ The following settings are available:
 | raw       | When `true` turns on raw number report generation i.e. date and time are reported as milliseconds and memory as number of bytes |
 | overwrite | When `true` overwrites any existing trace file with the same name.                                                              |
 
-The above options can be used by prefixing them with the `trace` scope or surrounding them by curly
-brackets. For example:
+The above options can be used by prefixing them with the `trace` scope or surrounding them by curly brackets. For example:
 
-```
+```groovy
 trace {
     enabled = true
     file = 'pipeline_trace.txt'
@@ -876,21 +821,18 @@ These are defined alongside other scopes, but the option is assigned as typicall
 | cleanup | If `true`, on a successful completion of a run all files in *work* directory are automatically deleted. |
 
 :::{warning}
-The use of the `cleanup` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run.
-Also, be aware that deleting all scratch files can take a lot of time, especially when using a shared file system or remote cloud storage.
+The use of the `cleanup` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. Also, be aware that deleting all scratch files can take a lot of time, especially when using a shared file system or remote cloud storage.
 :::
 
 (config-profiles)=
 
 ## Config profiles
 
-Configuration files can contain the definition of one or more *profiles*. A profile is a set of configuration attributes
-that can be activated/chosen when launching a pipeline execution by using the `-profile` command line option.
+Configuration files can contain the definition of one or more *profiles*. A profile is a set of configuration attributes that can be activated/chosen when launching a pipeline execution by using the `-profile` command line option.
 
-Configuration profiles are defined by using the special scope `profiles` which group the attributes that belong
-to the same profile using a common prefix. For example:
+Configuration profiles are defined by using the special scope `profiles` which group the attributes that belong to the same profile using a common prefix. For example:
 
-```
+```groovy
 profiles {
 
     standard {
@@ -912,24 +854,20 @@ profiles {
 }
 ```
 
-This configuration defines three different profiles: `standard`, `cluster` and `cloud` that set different process
-configuration strategies depending on the target runtime platform. By convention the `standard` profile is implicitly used
-when no other profile is specified by the user.
+This configuration defines three different profiles: `standard`, `cluster` and `cloud` that set different process configuration strategies depending on the target runtime platform. By convention the `standard` profile is implicitly used when no other profile is specified by the user.
 
 :::{tip}
-Multiple configuration profiles can be specified by separating the profile names
-with a comma, for example:
+Multiple configuration profiles can be specified by separating the profile names with a comma, for example:
 
-```
+```bash
 nextflow run <your script> -profile standard,cloud
 ```
 :::
 
 :::{danger}
-When using the `profiles` feature in your config file, do NOT set attributes in the same scope both
-inside and outside a `profiles` context. For example:
+When using the `profiles` feature in your config file, do NOT set attributes in the same scope both inside and outside a `profiles` context. For example:
 
-```
+```groovy
 process.cpus = 1
 
 profiles {
@@ -943,16 +881,14 @@ profiles {
 }
 ```
 
-In the above example, the `process.cpus` attribute is not correctly applied because the `process` scope is also
-used in the `foo` and `bar` profiles.
+In the above example, the `process.cpus` attribute is not correctly applied because the `process` scope is also used in the `foo` and `bar` profiles.
 :::
 
 (config-env-vars)=
 
 ## Environment variables
 
-The following environment variables control the configuration of the Nextflow runtime and
-the underlying Java virtual machine.
+The following environment variables control the configuration of the Nextflow runtime and the underlying Java virtual machine.
 
 | Name                          | Description                                                                                                                                                                                                            |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

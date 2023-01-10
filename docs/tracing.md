@@ -13,8 +13,7 @@ nextflow log <run name> [options]
 ```
 
 :::{note}
-Both the {ref}`execution report <execution-report>` and the {ref}`trace report <trace-report>` must be specified when the pipeline is first called.
-By contrast, the `log` option is useful after a pipeline has already run and is available for every executed pipeline.
+Both the {ref}`execution report <execution-report>` and the {ref}`trace report <trace-report>` must be specified when the pipeline is first called. By contrast, the `log` option is useful after a pipeline has already run and is available for every executed pipeline.
 :::
 
 By default, `log` prints the list of executed pipelines:
@@ -100,12 +99,9 @@ The `log` command replaces the deprecated `history` command.
 
 ## Execution report
 
-Nextflow can create an HTML execution report: a single document which includes many useful metrics
-about a workflow execution. The report is organised in the three main sections: `Summary`, `Resources` and `Tasks`
-(see below for details).
+Nextflow can create an HTML execution report: a single document which includes many useful metrics about a workflow execution. The report is organised in the three main sections: `Summary`, `Resources` and `Tasks` (see below for details).
 
-To enable the creation of this report add the `-with-report` command line option when launching the pipeline
-execution. For example:
+To enable the creation of this report add the `-with-report` command line option when launching the pipeline execution. For example:
 
 ```bash
 nextflow run <pipeline name> -with-report [file name]
@@ -115,19 +111,16 @@ The report file name can be specified as an optional parameter following the rep
 
 ### Summary
 
-The `Summary` section reports the execution status, the launch command, overall execution time and some
-other workflow metadata. You can see an example below:
+The `Summary` section reports the execution status, the launch command, overall execution time and some other workflow metadata. You can see an example below:
 
 ```{image} images/report-summary-min.png
 ```
 
 ### Resource Usage
 
-The `Resources` section plots the distribution of resource usage for each workflow process
-using the interactive [plotly.js](https://plot.ly/javascript/) plotting library.
+The `Resources` section plots the distribution of resource usage for each workflow process using the interactive [plotly.js](https://plot.ly/javascript/) plotting library.
 
-Plots are shown for CPU, memory, job duration and disk I/O. They have two (or three) tabs with the raw values and a percentage representation showing what proportion of the requested resources
-were used. These plots are very helpful to check that task resources are used efficiently.
+Plots are shown for CPU, memory, job duration and disk I/O. They have two (or three) tabs with the raw values and a percentage representation showing what proportion of the requested resources were used. These plots are very helpful to check that task resources are used efficiently.
 
 ```{image} images/report-resource-cpu.png
 ```
@@ -136,22 +129,17 @@ Learn more about how resource usage is computed in the {ref}`Metrics documentati
 
 ### Tasks
 
-The `Tasks` section lists all executed tasks, reporting for each of them the status, the actual command script,
-and many other metrics. You can see an example below:
+The `Tasks` section lists all executed tasks, reporting for each of them the status, the actual command script, and many other metrics. You can see an example below:
 
 ```{image} images/report-tasks-min.png
 ```
 
 :::{note}
-Nextflow collects these metrics through a background process for each job in the target environment.
-Make sure the following tools are available in the environment where tasks are executed: `awk`, `date`, `grep`, `ps`, `sed`, `tail`, `tee`.
-Moreover, some of these metrics are not reported when running on Mac OS X. See the note
-about that in the [Trace report](#trace-report) below.
+Nextflow collects these metrics through a background process for each job in the target environment. Make sure the following tools are available in the environment where tasks are executed: `awk`, `date`, `grep`, `ps`, `sed`, `tail`, `tee`. Moreover, some of these metrics are not reported when running on Mac OS X. See the note about that in the [Trace report](#trace-report) below.
 :::
 
 :::{warning}
-A common problem when using a third party container image is that it does not include one or more of the
-above utilities, resulting in an empty execution report.
+A common problem when using a third party container image is that it does not include one or more of the above utilities, resulting in an empty execution report.
 :::
 
 Please read {ref}`Report scope <config-report>` section to learn more about the execution report configuration details.
@@ -160,11 +148,9 @@ Please read {ref}`Report scope <config-report>` section to learn more about the 
 
 ## Trace report
 
-Nextflow creates an execution tracing file that contains some useful information about each process executed in your pipeline
-script, including: submission time, start time, completion time, cpu and memory used.
+Nextflow creates an execution tracing file that contains some useful information about each process executed in your pipeline script, including: submission time, start time, completion time, cpu and memory used.
 
-In order to create the execution trace file add the `-with-trace` command line option when launching the pipeline execution.
-For example:
+In order to create the execution trace file add the `-with-trace` command line option when launching the pipeline execution. For example:
 
 ```bash
 nextflow run <pipeline name> -with-trace
@@ -243,9 +229,7 @@ The following table shows the fields that can be included in the execution repor
 | hostname     | The host on which the task was executed. Supported only for the Kubernetes executor yet. Activate with `k8s.fetchNodeName = true` in the Nextflow config file. (requires version `22.05.0-edge` or later) |
 
 :::{note}
-These metrics provide an estimation of the resources used by running tasks. They are not an alternative
-to low-level performance analysis tools, and they may not be completely accurate, especially for very short-lived tasks
-(running for less than a few seconds).
+These metrics provide an estimation of the resources used by running tasks. They are not an alternative to low-level performance analysis tools, and they may not be completely accurate, especially for very short-lived tasks (running for less than a few seconds).
 :::
 
 Trace report layout and other configuration settings can be specified by using the `nextflow.config` configuration file.
@@ -256,23 +240,18 @@ Please read {ref}`Trace scope <config-trace>` section to learn more about it.
 
 ## Timeline report
 
-Nextflow can render an HTML timeline for all processes executed in your pipeline. An example of the timeline
-report is shown below:
+Nextflow can render an HTML timeline for all processes executed in your pipeline. An example of the timeline report is shown below:
 
 ```{image} images/timeline-min.png
 ```
 
-Each bar represents a process run in the pipeline execution. The bar length represents the task duration time (wall-time).
-The colored area in each bar represents the real execution time. The grey area to the *left* of the colored area represents
-the task scheduling wait time. The grey area to the *right* of the colored area represents the task termination time
-(clean-up and file un-staging). The numbers on the x-axis represent the time in absolute units eg. minutes, hours, etc.
+Each bar represents a process run in the pipeline execution. The bar length represents the task duration time (wall-time). The colored area in each bar represents the real execution time. The grey area to the *left* of the colored area represents the task scheduling wait time. The grey area to the *right* of the colored area represents the task termination time (clean-up and file un-staging). The numbers on the x-axis represent the time in absolute units eg. minutes, hours, etc.
 
 Each bar displays two numbers: the task duration time and the virtual memory size peak.
 
 As each process can spawn many tasks, colors are used to identify those tasks belonging to the same process.
 
-To enable the creation of the timeline report add the `-with-timeline` command line option when launching the pipeline
-execution. For example:
+To enable the creation of the timeline report add the `-with-timeline` command line option when launching the pipeline execution. For example:
 
 ```bash
 nextflow run <pipeline name> -with-timeline [file name]
@@ -284,15 +263,11 @@ The report file name can be specified as an optional parameter following the tim
 
 ## DAG visualisation
 
-A Nextflow pipeline is implicitly modelled by a direct acyclic graph (DAG). The vertices in the graph represent
-the pipeline's processes and operators, while the edges represent the data connections (i.e. channels) between them.
+A Nextflow pipeline is implicitly modelled by a direct acyclic graph (DAG). The vertices in the graph represent the pipeline's processes and operators, while the edges represent the data connections (i.e. channels) between them.
 
-The pipeline execution DAG can be outputted by adding the `-with-dag` option to the run command line.
-It creates a file named `dag.dot` containing a textual representation of the pipeline execution graph
-in the [DOT format](http://www.graphviz.org/content/dot-language).
+The pipeline execution DAG can be outputted by adding the `-with-dag` option to the run command line. It creates a file named `dag.dot` containing a textual representation of the pipeline execution graph in the [DOT format](http://www.graphviz.org/content/dot-language).
 
-The execution DAG can be rendered in a different format by specifying an output file name which has an extension
-corresponding to the required format. For example:
+The execution DAG can be rendered in a different format by specifying an output file name which has an extension corresponding to the required format. For example:
 
 ```bash
 nextflow run <script-name> -with-dag flowchart.png
@@ -319,10 +294,7 @@ The DAG produced by Nextflow for the [Unistrap](https://github.com/cbcrg/unistra
 ```{image} images/dag.png
 ```
 
-Beginning in version 22.04, Nextflow can render the DAG as a [Mermaid](https://mermaid-js.github.io/) diagram.
-Mermaid diagrams are particularly useful because they can be embedded in [GitHub Flavored Markdown](https://github.blog/2022-02-14-include-diagrams-markdown-files-mermaid/)
-without having to render them yourself. You can customize the diagram with CSS, and you can even add links!
-Visit the [Mermaid documentation](https://mermaid-js.github.io/mermaid/#/flowchart?id=styling-and-classes) for details.
+Beginning in version 22.04, Nextflow can render the DAG as a [Mermaid](https://mermaid-js.github.io/) diagram. Mermaid diagrams are particularly useful because they can be embedded in [GitHub Flavored Markdown](https://github.blog/2022-02-14-include-diagrams-markdown-files-mermaid/) without having to render them yourself. You can customize the diagram with CSS, and you can even add links! Visit the [Mermaid documentation](https://mermaid-js.github.io/mermaid/#/flowchart?id=styling-and-classes) for details.
 
 Here is the Mermaid diagram produced by Nextflow for the above example:
 
@@ -370,15 +342,13 @@ And the final image produced with the [Mermaid Live Editor](https://mermaid-js.g
 
 ## Weblog via HTTP
 
-Nextflow can send detailed workflow execution metadata and runtime statistics to a HTTP endpoint.
-To enable this feature, use the `-with-weblog` as shown below:
+Nextflow can send detailed workflow execution metadata and runtime statistics to a HTTP endpoint. To enable this feature, use the `-with-weblog` as shown below:
 
 ```bash
 nextflow run <pipeline name> -with-weblog [url]
 ```
 
-Workflow events are sent as HTTP POST requests to the given URL. The message consists of the
-following JSON structure:
+Workflow events are sent as HTTP POST requests to the given URL. The message consists of the following JSON structure:
 
 ```json
 {
@@ -403,15 +373,12 @@ The JSON object contains the following attributes:
 | metadata  | The workflow metadata including the {ref}`config manifest<config-manifest>`. For a list of all fields, have a look at the bottom message examples. This attribute is only provided for the following events: `started`, `completed`. |
 
 :::{note}
-The content of the `trace` attribute depends on the [Trace report](#trace-report) settings defined in the
-`nextflow.config` file. See the {ref}`Trace configuration<config-trace>` section to learn more.
+The content of the `trace` attribute depends on the [Trace report](#trace-report) settings defined in the `nextflow.config` file. See the {ref}`Trace configuration<config-trace>` section to learn more.
 :::
 
 ### Weblog Started example message
 
-When a workflow execution is started, a message like the following is posted to the specified end-point. Be aware that the
-properties in the parameter scope will look different for your workflow. Here is an example output from the `nf-core/hlatyping`
-pipeline with the weblog feature enabled:
+When a workflow execution is started, a message like the following is posted to the specified end-point. Be aware that the properties in the parameter scope will look different for your workflow. Here is an example output from the `nf-core/hlatyping` pipeline with the weblog feature enabled:
 
 ```json
 {

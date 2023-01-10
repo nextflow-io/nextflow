@@ -2,12 +2,9 @@
 
 # Operators
 
-Nextflow **operators** are methods that allow you to manipulate channels. Every operator,
-with the exception of {ref}`operator-set`, produces one or more new channels, allowing you to
-chain operators to fit your needs.
+Nextflow **operators** are methods that allow you to manipulate channels. Every operator, with the exception of {ref}`operator-set`, produces one or more new channels, allowing you to chain operators to fit your needs.
 
-This page is a comprehensive reference for all Nextflow operators. However, if you are new
-to Nextflow, here are some suggested operators to learn for common use cases:
+This page is a comprehensive reference for all Nextflow operators. However, if you are new to Nextflow, here are some suggested operators to learn for common use cases:
 
 - Filtering: [filter](#filter), [randomSample](#randomsample), [take](#take), [unique](#unique)
 - Reduction: [collect](#collect), [groupTuple](#grouptuple), [reduce](#reduce)
@@ -25,13 +22,9 @@ to Nextflow, here are some suggested operators to learn for common use cases:
 Requires Nextflow version `19.08.0-edge` or later.
 :::
 
-The `branch` operator allows you to forward the items emitted by a source channel to one
-or more output channels, choosing one out of them at a time.
+The `branch` operator allows you to forward the items emitted by a source channel to one or more output channels, choosing one out of them at a time.
 
-The selection criteria is defined by specifying a {ref}`closure <script-closure>` that provides
-one or more boolean expression, each of which is identified by a unique label. On the first expression
-that evaluates to a *true* value, the current item is bound to a named channel as the label identifier.
-For example:
+The selection criteria is defined by specifying a {ref}`closure <script-closure>` that provides one or more boolean expression, each of which is identified by a unique label. On the first expression that evaluates to a *true* value, the current item is bound to a named channel as the label identifier. For example:
 
 ```groovy
 Channel
@@ -55,8 +48,7 @@ Channel
 ```
 
 :::{note}
-The above *small* and *large* strings may be printed in any order
-due to the asynchronous execution of the `view` operator.
+The above *small* and *large* strings may be printed in any order due to the asynchronous execution of the `view` operator.
 :::
 
 A default fallback condition can be specified using `true` as the last branch condition:
@@ -71,8 +63,7 @@ Channel
     }
 ```
 
-The value returned by each branch condition can be customised by specifying an optional expression statement(s)
-just after the condition expression. For example:
+The value returned by each branch condition can be customised by specifying an optional expression statement(s) just after the condition expression. For example:
 
 ```groovy
 Channel
@@ -90,12 +81,10 @@ Channel
 ```
 
 :::{tip}
-When the `return` keyword is omitted, the value of the last expression statement is
-implicitly returned.
+When the `return` keyword is omitted, the value of the last expression statement is implicitly returned.
 :::
 
-To create a branch criteria as variable that can be passed as an argument to more than one
-`branch` operator use the `branchCriteria` built-in method as shown below:
+To create a branch criteria as variable that can be passed as an argument to more than one `branch` operator use the `branchCriteria` built-in method as shown below:
 
 ```groovy
 def criteria = branchCriteria {
@@ -111,15 +100,9 @@ Channel.of(10, 20, 1).branch(criteria).set { ch2 }
 
 The `buffer` operator gathers the items emitted by the source channel into subsets and emits these subsets separately.
 
-There are a number of ways you can regulate how `buffer` gathers the items from
-the source channel into subsets:
+There are a number of ways you can regulate how `buffer` gathers the items from the source channel into subsets:
 
-- `buffer( closingCondition )`: starts to collect the items emitted by the channel into
-  a subset until the `closingCondition` is verified. After that the subset is emitted
-  to the resulting channel and new items are gathered into a new subset. The process is repeated
-  until the last value in the source channel is sent. The `closingCondition` can be specified
-  either as a {ref}`regular expression <script-regexp>`, a Java class, a literal value, or a boolean predicate
-  that has to be satisfied. For example:
+- `buffer( closingCondition )`: starts to collect the items emitted by the channel into a subset until the `closingCondition` is verified. After that the subset is emitted to the resulting channel and new items are gathered into a new subset. The process is repeated until the last value in the source channel is sent. The `closingCondition` can be specified either as a {ref}`regular expression <script-regexp>`, a Java class, a literal value, or a boolean predicate that has to be satisfied. For example:
 
   ```groovy
   Channel
@@ -132,12 +115,7 @@ the source channel into subsets:
   [3,1,2]
   ```
 
-- `buffer( openingCondition, closingCondition )`: starts to gather the items emitted by the channel
-  as soon as one of the them verify the `openingCondition` and it continues until there is one item
-  which verify the `closingCondition`. After that the subset is emitted and it continues applying the
-  described logic until the last channel item is emitted.
-  Both conditions can be defined either as a {ref}`regular expression <script-regexp>`, a literal value,
-  a Java class, or a boolean predicate that need to be satisfied. For example:
+- `buffer( openingCondition, closingCondition )`: starts to gather the items emitted by the channel as soon as one of the them verify the `openingCondition` and it continues until there is one item which verify the `closingCondition`. After that the subset is emitted and it continues applying the described logic until the last channel item is emitted. Both conditions can be defined either as a {ref}`regular expression <script-regexp>`, a literal value, a Java class, or a boolean predicate that need to be satisfied. For example:
 
   ```groovy
   Channel
@@ -150,8 +128,7 @@ the source channel into subsets:
   [2,3,4]
   ```
 
-- `buffer( size: n )`: transform the source channel in such a way that it emits tuples
-  made up of `n` elements. An incomplete tuple is discarded. For example:
+- `buffer( size: n )`: transform the source channel in such a way that it emits tuples made up of `n` elements. An incomplete tuple is discarded. For example:
 
   ```groovy
   Channel
@@ -165,8 +142,7 @@ the source channel into subsets:
   [2, 3]
   ```
 
-  If you want to emit the last items in a tuple containing less than `n` elements, simply
-  add the parameter `remainder` specifying `true`, for example:
+  If you want to emit the last items in a tuple containing less than `n` elements, simply add the parameter `remainder` specifying `true`, for example:
 
   ```groovy
   Channel
@@ -181,8 +157,7 @@ the source channel into subsets:
   [1]
   ```
 
-- `buffer( size: n, skip: m )`: as in the previous example, it emits tuples containing `n` elements,
-  but skips `m` values before starting to collect the values for the next tuple (including the first emission). For example:
+- `buffer( size: n, skip: m )`: as in the previous example, it emits tuples containing `n` elements, but skips `m` values before starting to collect the values for the next tuple (including the first emission). For example:
 
   ```groovy
   Channel
@@ -195,8 +170,7 @@ the source channel into subsets:
   [3, 4, 5]
   ```
 
-  If you want to emit the remaining items in a tuple containing less than `n` elements, simply
-  add the parameter `remainder` specifying `true`, as shown in the previous example.
+  If you want to emit the remaining items in a tuple containing less than `n` elements, simply add the parameter `remainder` specifying `true`, as shown in the previous example.
 
 See also: [collate](#collate) operator.
 
@@ -217,8 +191,7 @@ Channel
 [1]
 ```
 
-As shown in the above example the last tuple may be incomplete e.g. contain fewer elements than the specified size.
-If you want to avoid this, specify `false` as the second parameter. For example:
+As shown in the above example the last tuple may be incomplete e.g. contain fewer elements than the specified size. If you want to avoid this, specify `false` as the second parameter. For example:
 
 ```groovy
 Channel
@@ -232,8 +205,7 @@ Channel
 [1, 2, 3]
 ```
 
-A second version of the `collate` operator allows you to specify, after the `size`, the `step` by which elements
-are collected in tuples. For example:
+A second version of the `collate` operator allows you to specify, after the `size`, the `step` by which elements are collected in tuples. For example:
 
 ```groovy
 Channel
@@ -257,8 +229,7 @@ See also: [buffer](#buffer) operator.
 
 ## collect
 
-The `collect` operator collects all the items emitted by a channel to a `List` and return
-the resulting object as a sole emission. For example:
+The `collect` operator collects all the items emitted by a channel to a `List` and return the resulting object as a sole emission. For example:
 
 ```groovy
 Channel
@@ -271,8 +242,7 @@ Channel
 [1,2,3,4]
 ```
 
-An optional {ref}`closure <script-closure>` can be specified to transform each item before adding it to the resulting list.
-For example:
+An optional {ref}`closure <script-closure>` can be specified to transform each item before adding it to the resulting list. For example:
 
 ```groovy
 Channel
@@ -296,8 +266,7 @@ See also: [toList](#tolist) and [toSortedList](#tosortedlist) operator.
 
 ## collectFile
 
-The `collectFile` operator allows you to gather the items emitted by a channel and save them to one or more files.
-The operator returns a new channel that emits the collected file(s).
+The `collectFile` operator allows you to gather the items emitted by a channel and save them to one or more files. The operator returns a new channel that emits the collected file(s).
 
 In the simplest case, just specify the name of a file where the entries have to be stored. For example:
 
@@ -311,10 +280,7 @@ Channel
     }
 ```
 
-A second version of the `collectFile` operator allows you to gather the items emitted by a channel and group them together
-into files whose name can be defined by a dynamic criteria. The grouping criteria is specified by a {ref}`closure <script-closure>`
-that must return a pair in which the first element defines the file name for the group and the second element the actual
-value to be appended to that file. For example:
+A second version of the `collectFile` operator allows you to gather the items emitted by a channel and group them together into files whose name can be defined by a dynamic criteria. The grouping criteria is specified by a {ref}`closure <script-closure>` that must return a pair in which the first element defines the file name for the group and the second element the actual value to be appended to that file. For example:
 
 ```groovy
 Channel
@@ -342,8 +308,7 @@ Hello
 ```
 
 :::{tip}
-When the items emitted by the source channel are files, the grouping criteria can be omitted. In this case
-the items content will be grouped into file(s) having the same name as the source items.
+When the items emitted by the source channel are files, the grouping criteria can be omitted. In this case the items content will be grouped into file(s) having the same name as the source items.
 :::
 
 The following parameters can be used with the `collectFile` operator:
@@ -361,13 +326,10 @@ The following parameters can be used with the `collectFile` operator:
 | `tempDir`    | Folder where temporary files, used by the collecting process, are stored.                                                                                                                                                                                                                            |
 
 :::{note}
-The file content is sorted in such a way that it does not depend on the order in which
-entries were added to it, which guarantees that it is consistent (i.e. does not change) across different executions
-with the same data.
+The file content is sorted in such a way that it does not depend on the order in which entries were added to it, which guarantees that it is consistent (i.e. does not change) across different executions with the same data.
 :::
 
-The ordering of file's content can be defined by using the `sort` parameter. The following criteria
-can be specified:
+The ordering of file's content can be defined by using the `sort` parameter. The following criteria can be specified:
 
 | Sort      | Description                                                                                                                                                                                |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -401,25 +363,21 @@ The following example shows how use a `closure` to collect and sort all sequence
 Channel
     .fromPath('/data/sequences.fa')
     .splitFasta( record: [id: true, sequence: true] )
-    .collectFile( name:'result.fa', sort: { it.size() } )  {
+    .collectFile( name:'result.fa', sort: { it.size() } ) {
         it.sequence
     }
     .view { it.text }
 ```
 
 :::{warning}
-The `collectFile` operator needs to store files in a temporary folder that is automatically deleted on
-workflow completion. For performance reasons this folder is located in the machine's local storage,
-and it will require as much free space as the data that is being collected. Optionally, a different temporary data
-folder can be specified by using the `tempDir` parameter.
+The `collectFile` operator needs to store files in a temporary folder that is automatically deleted on workflow completion. For performance reasons this folder is located in the machine's local storage, and it will require as much free space as the data that is being collected. Optionally, a different temporary data folder can be specified by using the `tempDir` parameter.
 :::
 
 (operator-combine)=
 
 ## combine
 
-The `combine` operator combines (cartesian product) the items emitted by two channels or by a channel and a `Collection`
-object (as right operand). For example:
+The `combine` operator combines (cartesian product) the items emitted by two channels or by a channel and a `Collection` object (as right operand). For example:
 
 ```groovy
 numbers = Channel.of(1, 2, 3)
@@ -438,9 +396,7 @@ numbers
 [3, ciao]
 ```
 
-A second version of the `combine` operator allows you to combine items that share a common
-matching key. The index of the key element is specified by using the `by` parameter (zero-based index,
-multiple indices can be specified as a list of integers). For example:
+A second version of the `combine` operator allows you to combine items that share a common matching key. The index of the key element is specified by using the `by` parameter (zero-based index, multiple indices can be specified as a list of integers). For example:
 
 ```groovy
 left = Channel.of(['A', 1], ['B', 2], ['A', 3])
@@ -466,11 +422,9 @@ See also [join](#join) and [cross](#cross).
 
 ## concat
 
-The `concat` operator allows you to *concatenate* the items emitted by two or more channels to a new channel.
-The items emitted by the resulting channel are in the same order as specified in the operator arguments.
+The `concat` operator allows you to *concatenate* the items emitted by two or more channels to a new channel. The items emitted by the resulting channel are in the same order as specified in the operator arguments.
 
-In other words, given *N* channels, the items from the *i+1 th* channel are emitted only after all
-of the items from the *i th* channel have been emitted.
+In other words, given *N* channels, the items from the *i+1 th* channel are emitted only after all of the items from the *i th* channel have been emitted.
 
 For example:
 
@@ -497,8 +451,7 @@ c
 
 ## count
 
-The `count` operator creates a channel that emits a single item: a number that represents the total number of
-items emitted by the source channel. For example:
+The `count` operator creates a channel that emits a single item: a number that represents the total number of items emitted by the source channel. For example:
 
 ```groovy
 Channel
@@ -508,9 +461,7 @@ Channel
 // -> 4
 ```
 
-An optional parameter can be provided to select which items are to be counted.
-The selection criteria can be specified either as a {ref}`regular expression <script-regexp>`,
-a literal value, a Java class, or a boolean predicate that needs to be satisfied. For example:
+An optional parameter can be provided to select which items are to be counted. The selection criteria can be specified either as a {ref}`regular expression <script-regexp>`, a literal value, a Java class, or a boolean predicate that needs to be satisfied. For example:
 
 ```groovy
 Channel
@@ -536,12 +487,9 @@ Channel
 
 ## cross
 
-The `cross` operator allows you to combine the items of two channels in such a way that
-the items of the source channel are emitted along with the items emitted by the target channel
-for which they have a matching key.
+The `cross` operator allows you to combine the items of two channels in such a way that the items of the source channel are emitted along with the items emitted by the target channel for which they have a matching key.
 
-The key is defined, by default, as the first entry in an array, a list or map object,
-or the value itself for any other data type. For example:
+The key is defined, by default, as the first entry in an array, a list or map object, or the value itself for any other data type. For example:
 
 ```groovy
 source = Channel.of( [1, 'alpha'], [2, 'beta'] )
@@ -559,21 +507,18 @@ source.cross(target).view()
 [ [2, beta],  [2, t] ]
 ```
 
-The above example shows how the items emitted by the source channels are associated to the ones
-emitted by the target channel (on the right) having the same key.
+The above example shows how the items emitted by the source channels are associated to the ones emitted by the target channel (on the right) having the same key.
 
 There are two important caveats when using the `cross` operator:
 
 1. The operator is not `commutative`, i.e. the result of `a.cross(b)` is different from `b.cross(a)`
-2. The source channel should emits items for which there's no key repetition i.e. the emitted
-   items have an unique key identifier.
+2. The source channel should emits items for which there's no key repetition i.e. the emitted items have an unique key identifier.
 
 Optionally, a mapping function can be specified in order to provide a custom rule to associate an item to a key.
 
 ## distinct
 
-The `distinct` operator allows you to remove *consecutive* duplicated items from a channel, so that each emitted item
-is different from the preceding one. For example:
+The `distinct` operator allows you to remove *consecutive* duplicated items from a channel, so that each emitted item is different from the preceding one. For example:
 
 ```groovy
 Channel
@@ -592,8 +537,7 @@ Channel
 Done
 ```
 
-You can also specify an optional {ref}`closure <script-closure>` that customizes the way it distinguishes between distinct items.
-For example:
+You can also specify an optional {ref}`closure <script-closure>` that customizes the way it distinguishes between distinct items. For example:
 
 ```groovy
 Channel
@@ -614,11 +558,9 @@ Done
 
 ## dump
 
-The `dump` operator prints the items emitted by the channel to which is applied only when the option
-`-dump-channels` is specified on the `run` command line, otherwise it is ignored.
+The `dump` operator prints the items emitted by the channel to which is applied only when the option `-dump-channels` is specified on the `run` command line, otherwise it is ignored.
 
-This is useful to enable the debugging of one or more channel content on-demand by using a command line option
-instead of modifying your script code.
+This is useful to enable the debugging of one or more channel content on-demand by using a command line option instead of modifying your script code.
 
 An optional `tag` parameter allows you to select which channel to dump. For example:
 
@@ -634,9 +576,7 @@ Channel
     .dump(tag: 'bar')
 ```
 
-Then you will be able to specify the tag `foo` or `bar` as an argument of the `-dump-channels` option to print
-either the content of the first or the second channel. Multiple tag names can be specified separating them with a `,`
-character.
+Then you will be able to specify the tag `foo` or `bar` as an argument of the `-dump-channels` option to print either the content of the first or the second channel. Multiple tag names can be specified separating them with a `,` character.
 
 The output can be formatted using the optional `pretty` boolean option:
 
@@ -648,12 +588,9 @@ Channel
 
 ## filter
 
-The `filter` operator allows you to get only the items emitted by a channel that satisfy a condition and discarding
-all the others. The filtering condition can be specified by using either a {ref}`regular expression <script-regexp>`,
-a literal value, a type qualifier (i.e. a Java class) or any boolean predicate.
+The `filter` operator allows you to get only the items emitted by a channel that satisfy a condition and discarding all the others. The filtering condition can be specified by using either a {ref}`regular expression <script-regexp>`, a literal value, a type qualifier (i.e. a Java class) or any boolean predicate.
 
-The following example shows how to filter a channel by using a regular expression that returns only strings that
-begin with `a`:
+The following example shows how to filter a channel by using a regular expression that returns only strings that begin with `a`:
 
 ```groovy
 Channel
@@ -667,8 +604,7 @@ a
 aa
 ```
 
-The following example shows how to filter a channel by specifying the type qualifier `Number` so that only numbers
-are returned:
+The following example shows how to filter a channel by specifying the type qualifier `Number` so that only numbers are returned:
 
 ```groovy
 Channel
@@ -682,9 +618,7 @@ Channel
 4.5
 ```
 
-Finally, a filtering condition can be defined by using any a boolean predicate. A predicate is expressed by
-a {ref}`closure <script-closure>` returning a boolean value. For example the following fragment shows how filter
-a channel emitting numbers so that the odd values are returned:
+Finally, a filtering condition can be defined by using any a boolean predicate. A predicate is expressed by a {ref}`closure <script-closure>` returning a boolean value. For example the following fragment shows how filter a channel emitting numbers so that the odd values are returned:
 
 ```groovy
 Channel
@@ -700,18 +634,14 @@ Channel
 ```
 
 :::{tip}
-In the above example the filter condition is wrapped in curly brackets,
-instead of parentheses, because it specifies a {ref}`closure <script-closure>` as the operator's argument.
-In reality it is just syntactic sugar for `filter({ it % 2 == 1 })`
+In the above example the filter condition is wrapped in curly brackets, instead of parentheses, because it specifies a {ref}`closure <script-closure>` as the operator's argument. In reality it is just syntactic sugar for `filter({ it % 2 == 1 })`
 :::
 
 (operator-first)=
 
 ## first
 
-The `first` operator creates a channel that returns the first item emitted by the source channel, or eventually
-the first item that matches an optional condition. The condition can be specified by using a {ref}`regular expression<script-regexp>`,
-a Java `class` type or any boolean predicate. For example:
+The `first` operator creates a channel that returns the first item emitted by the source channel, or eventually the first item that matches an optional condition. The condition can be specified by using a {ref}`regular expression<script-regexp>`, a Java `class` type or any boolean predicate. For example:
 
 ```groovy
 // no condition is specified, emits the very first item: 1
@@ -743,9 +673,7 @@ Channel
 
 ## flatMap
 
-The `flatMap` operator applies a function of your choosing to every item emitted by a channel, and
-returns the items so obtained as a new channel. Whereas the mapping function returns a list of items,
-this list is flattened so that each single item is emitted on its own.
+The `flatMap` operator applies a function of your choosing to every item emitted by a channel, and returns the items so obtained as a new channel. Whereas the mapping function returns a list of items, this list is flattened so that each single item is emitted on its own.
 
 For example:
 
@@ -792,8 +720,7 @@ square: 9
 
 ## flatten
 
-The `flatten` operator transforms a channel in such a way that every item of type `Collection` or `Array`
-is flattened so that each single entry is emitted separately by the resulting channel. For example:
+The `flatten` operator transforms a channel in such a way that every item of type `Collection` or `Array` is flattened so that each single entry is emitted separately by the resulting channel. For example:
 
 ```groovy
 Channel
@@ -819,9 +746,7 @@ See also: [flatMap](#flatmap) operator.
 This operator is deprecated. Use the [groupTuple](#grouptuple) operator instead.
 :::
 
-The `groupBy` operator collects the values emitted by the source channel grouping them together using a mapping
-function that associates each item with a key. When finished, it emits an associative
-array that maps each key to the set of items identified by that key.
+The `groupBy` operator collects the values emitted by the source channel grouping them together using a mapping function that associates each item with a key. When finished, it emits an associative array that maps each key to the set of items identified by that key.
 
 For example:
 
@@ -836,8 +761,7 @@ Channel
 [ b:['bonjour'], c:['ciao'], h:['hello','hola','hi'] ]
 ```
 
-The mapping function is an optional parameter. When omitted, the values are grouped
-according to these rules:
+The mapping function is an optional parameter. When omitted, the values are grouped according to these rules:
 
 - Any value of type `Map` is associated with the value of its first entry, or `null` when the map itself is empty.
 - Any value of type `Map.Entry` is associated with the value of its `key` attribute.
@@ -848,11 +772,9 @@ according to these rules:
 
 ## groupTuple
 
-The `groupTuple` operator collects tuples (or lists) of values emitted by the source channel grouping together the
-elements that share the same key. Finally it emits a new tuple object for each distinct key collected.
+The `groupTuple` operator collects tuples (or lists) of values emitted by the source channel grouping together the elements that share the same key. Finally it emits a new tuple object for each distinct key collected.
 
-In other words, the operator transforms a sequence of tuple like *(K, V, W, ..)* into a new channel emitting a sequence of
-*(K, list(V), list(W), ..)*
+In other words, the operator transforms a sequence of tuple like *(K, V, W, ..)* into a new channel emitting a sequence of *(K, list(V), list(W), ..)*
 
 For example:
 
@@ -869,9 +791,7 @@ Channel
 [3, [B, D]]
 ```
 
-By default the first entry in the tuple is used as grouping key. A different key can be chosen by using the
-`by` parameter and specifying the index of the entry to be used as key (the index is zero-based). For example,
-grouping by the second value in each tuple:
+By default the first entry in the tuple is used as grouping key. A different key can be chosen by using the `by` parameter and specifying the index of the entry to be used as key (the index is zero-based). For example, grouping by the second value in each tuple:
 
 ```groovy
 Channel
@@ -907,18 +827,11 @@ Sorting options:
 | `custom` | A custom sorting criteria used to order the tuples element holding list of values. It can be specified by using either a {ref}`Closure <script-closure>` or a [Comparator](http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html) object. |
 
 :::{tip}
-You should always specify the number of expected elements in each tuple using the `size` attribute
-to allow the `groupTuple` operator to stream the collected values as soon as possible. However, there
-are use cases in which each tuple has a different size depending on the grouping key. In this case use the
-built-in function `groupKey` that allows you to create a special grouping key object such that it's possible
-to associate the group size for a given key.
+You should always specify the number of expected elements in each tuple using the `size` attribute to allow the `groupTuple` operator to stream the collected values as soon as possible. However, there are use cases in which each tuple has a different size depending on the grouping key. In this case use the built-in function `groupKey` that allows you to create a special grouping key object such that it's possible to associate the group size for a given key.
 :::
 
 :::{tip}
-You should always specify the number of expected elements in each tuple with the `size` attribute,
-so that the `groupTuple` operator can stream each collected value as soon as possible. In cases where
-the size of each tuple may vary depending on the grouping key, you can use the built-in `groupKey` function,
-which allows you to create a special grouping key object with an associated size.
+You should always specify the number of expected elements in each tuple with the `size` attribute, so that the `groupTuple` operator can stream each collected value as soon as possible. In cases where the size of each tuple may vary depending on the grouping key, you can use the built-in `groupKey` function, which allows you to create a special grouping key object with an associated size.
 
 Here are some examples:
 
@@ -940,7 +853,7 @@ data_ch = Channel.of(
     [ 'region3', 'chr2', '/path/to/region3_chr2.vcf' ] )
 
 data_ch
-    .map {  region, chr, vcf -> tuple( groupKey(chr, chr_frequency[chr]), vcf )  }
+    .map { region, chr, vcf -> tuple( groupKey(chr, chr_frequency[chr]), vcf ) }
     .groupTuple()
     .view()
 ```
@@ -956,8 +869,7 @@ The last example will output:
 
 ## ifEmpty
 
-The `ifEmpty` operator creates a channel which emits a default value, specified as the operator parameter, when the channel to which
-is applied is *empty* i.e. doesn't emit any value. Otherwise it will emit the same sequence of entries as the original channel.
+The `ifEmpty` operator creates a channel which emits a default value, specified as the operator parameter, when the channel to which is applied is *empty* i.e. doesn't emit any value. Otherwise it will emit the same sequence of entries as the original channel.
 
 Thus, the following example prints:
 
@@ -981,8 +893,7 @@ Channel .empty() .ifEmpty('Hello') .view()
 Hello
 ```
 
-The `ifEmpty` value parameter can be defined with a {ref}`closure <script-closure>`. In this case the result value of the closure evaluation
-will be emitted when the empty condition is satisfied.
+The `ifEmpty` value parameter can be defined with a {ref}`closure <script-closure>`. In this case the result value of the closure evaluation will be emitted when the empty condition is satisfied.
 
 See also: {ref}`channel-empty` method.
 
@@ -990,8 +901,7 @@ See also: {ref}`channel-empty` method.
 
 ## join
 
-The `join` operator creates a channel that joins together the items emitted by two channels for which exists
-a matching key. The key is defined, by default, as the first element in each item emitted.
+The `join` operator creates a channel that joins together the items emitted by two channels for which exists a matching key. The key is defined, by default, as the first element in each item emitted.
 
 For example:
 
@@ -1009,8 +919,7 @@ left.join(right).view()
 
 The `index` of a different matching element can be specified by using the `by` parameter.
 
-The `join` operator can emit all the pairs that are incomplete, i.e. the items for which a matching element
-is missing, by specifying the optional parameter `remainder` as shown below:
+The `join` operator can emit all the pairs that are incomplete, i.e. the items for which a matching element is missing, by specifying the optional parameter `remainder` as shown below:
 
 ```groovy
 left  = Channel.of(['X', 1], ['Y', 2], ['Z', 3], ['P', 7])
@@ -1055,9 +964,7 @@ Channel
 
 ## map
 
-The `map` operator applies a function of your choosing to every item emitted by a channel, and
-returns the items so obtained as a new channel. The function applied is called the mapping function
-and is expressed with a {ref}`closure <script-closure>` as shown in the example below:
+The `map` operator applies a function of your choosing to every item emitted by a channel, and returns the items so obtained as a new channel. The function applied is called the mapping function and is expressed with a {ref}`closure <script-closure>` as shown in the example below:
 
 ```groovy
 Channel
@@ -1079,8 +986,7 @@ Done
 
 ## max
 
-The `max` operator waits until the source channel completes, and then emits the item that has the greatest value.
-For example:
+The `max` operator waits until the source channel completes, and then emits the item that has the greatest value. For example:
 
 ```groovy
 Channel
@@ -1093,9 +999,7 @@ Channel
 Max value is 8
 ```
 
-An optional {ref}`closure <script-closure>` parameter can be specified in order to provide
-a function that returns the value to be compared. The example below shows how to find the string
-item that has the maximum length:
+An optional {ref}`closure <script-closure>` parameter can be specified in order to provide a function that returns the value to be compared. The example below shows how to find the string item that has the maximum length:
 
 ```groovy
 Channel
@@ -1108,8 +1012,7 @@ Channel
 "hello"
 ```
 
-Alternatively it is possible to specify a comparator function i.e. a {ref}`closure <script-closure>`
-taking two parameters that represent two emitted items to be compared. For example:
+Alternatively it is possible to specify a comparator function i.e. a {ref}`closure <script-closure>` taking two parameters that represent two emitted items to be compared. For example:
 
 ```groovy
 Channel
@@ -1124,8 +1027,7 @@ Channel
 
 The `merge` operator lets you join items emitted by two (or more) channels into a new channel.
 
-For example, the following code merges two channels together: one which emits a series of odd integers
-and the other which emits a series of even integers:
+For example, the following code merges two channels together: one which emits a series of odd integers and the other which emits a series of even integers:
 
 ```groovy
 odds  = Channel.of(1, 3, 5, 7, 9)
@@ -1154,21 +1056,16 @@ odds
 ```
 
 :::{danger}
-In general, the use of the `merge` operator is discouraged. Processes and channel operators are not
-guaranteed to emit items in the order that they were received, due to their parallel and asynchronous
-nature. Therefore, if you try to merge output channels from different processes, the resulting channel
-may be different on each run, which will cause resumed runs to not work properly.
+In general, the use of the `merge` operator is discouraged. Processes and channel operators are not guaranteed to emit items in the order that they were received, due to their parallel and asynchronous nature. Therefore, if you try to merge output channels from different processes, the resulting channel may be different on each run, which will cause resumed runs to not work properly.
 
-You should always use a matching key (e.g. sample ID) to merge multiple channels, so that they are
-combined in a deterministic way. For this purpose, you can use the [join](#join) operator.
+You should always use a matching key (e.g. sample ID) to merge multiple channels, so that they are combined in a deterministic way. For this purpose, you can use the [join](#join) operator.
 :::
 
 (operator-min)=
 
 ## min
 
-The `min` operator waits until the source channel completes, and then emits the item that has the lowest value.
-For example:
+The `min` operator waits until the source channel completes, and then emits the item that has the lowest value. For example:
 
 ```groovy
 Channel
@@ -1181,9 +1078,7 @@ Channel
 Min value is 2
 ```
 
-An optional {ref}`closure <script-closure>` parameter can be specified in order to provide
-a function that returns the value to be compared. The example below shows how to find the string
-item that has the minimum length:
+An optional {ref}`closure <script-closure>` parameter can be specified in order to provide a function that returns the value to be compared. The example below shows how to find the string item that has the minimum length:
 
 ```groovy
 Channel
@@ -1196,8 +1091,7 @@ Channel
 "hi"
 ```
 
-Alternatively it is possible to specify a comparator function i.e. a {ref}`closure <script-closure>`
-taking two parameters that represent two emitted items to be compared. For example:
+Alternatively it is possible to specify a comparator function i.e. a {ref}`closure <script-closure>` taking two parameters that represent two emitted items to be compared. For example:
 
 ```groovy
 Channel
@@ -1233,9 +1127,7 @@ c1.mix(c2,c3)
 ```
 
 :::{note}
-The items emitted by the resulting mixed channel may appear in any order,
-regardless of which source channel they came from. Thus, the following example
-could also be a possible result of the above example:
+The items emitted by the resulting mixed channel may appear in any order, regardless of which source channel they came from. Thus, the following example could also be a possible result of the above example:
 
 ```
 'z'
@@ -1255,12 +1147,9 @@ could also be a possible result of the above example:
 Requires Nextflow version `19.11.0-edge` or later.
 :::
 
-The `multiMap` operator allows you to forward the items emitted by a source channel to two
-or more output channels, mapping each input value as a separate element.
+The `multiMap` operator allows you to forward the items emitted by a source channel to two or more output channels, mapping each input value as a separate element.
 
-The mapping criteria is defined with a {ref}`closure <script-closure>` that specifies the
-target channels (labelled with a unique identifier) followed by an expression that maps each
-item from the input channel to the target channel.
+The mapping criteria is defined with a {ref}`closure <script-closure>` that specifies the target channels (labelled with a unique identifier) followed by an expression that maps each item from the input channel to the target channel.
 
 For example:
 
@@ -1287,9 +1176,7 @@ bar 9
 bar 16
 ```
 
-The mapping expression can be omitted when the value to be emitted is the same as
-the following one. If you just need to forward the same value to multiple channels,
-you can use the following shorthand:
+The mapping expression can be omitted when the value to be emitted is the same as the following one. If you just need to forward the same value to multiple channels, you can use the following shorthand:
 
 ```groovy
 Channel
@@ -1300,8 +1187,7 @@ Channel
 
 As before, this creates two channels, but now both of them receive the same source items.
 
-You can use the `multiMapCriteria` method to create a multi-map criteria as a variable
-that can be passed as an argument to one or more `multiMap` operations, as shown below:
+You can use the `multiMapCriteria` method to create a multi-map criteria as a variable that can be passed as an argument to one or more `multiMap` operations, as shown below:
 
 ```groovy
 def criteria = multiMapCriteria {
@@ -1314,19 +1200,14 @@ Channel.of(10, 20, 1).multiMap(criteria).set { ch2 }
 ```
 
 :::{note}
-If you use `multiMap` to split a tuple or map into multiple channels, it is
-recommended that you retain a matching key (e.g. sample ID) with *each* new
-channel, so that you can re-combine these channels later on if needed. In general,
-you should not expect to be able to merge channels correctly without a matching key,
-due to the parallel and asynchronous nature of Nextflow pipelines.
+If you use `multiMap` to split a tuple or map into multiple channels, it is recommended that you retain a matching key (e.g. sample ID) with *each* new channel, so that you can re-combine these channels later on if needed. In general, you should not expect to be able to merge channels correctly without a matching key, due to the parallel and asynchronous nature of Nextflow pipelines.
 :::
 
 (operator-randomsample)=
 
 ## randomSample
 
-The `randomSample` operator allows you to create a channel emitting the specified number of items randomly taken
-from the channel to which is applied. For example:
+The `randomSample` operator allows you to create a channel emitting the specified number of items randomly taken from the channel to which is applied. For example:
 
 ```groovy
 Channel
@@ -1337,8 +1218,7 @@ Channel
 
 The above snippet will print 10 numbers in the range from 1 to 100.
 
-The operator supports a second parameter that allows you to set the initial `seed` for the random number generator.
-By setting it, the `randomSample` operator will always return the same pseudo-random sequence. For example:
+The operator supports a second parameter that allows you to set the initial `seed` for the random number generator. By setting it, the `randomSample` operator will always return the same pseudo-random sequence. For example:
 
 ```groovy
 Channel
@@ -1347,20 +1227,15 @@ Channel
     .view()
 ```
 
-The above example will print 10 random numbers in the range between 1 and 100. At each run of the script, the same
-sequence will be returned.
+The above example will print 10 random numbers in the range between 1 and 100. At each run of the script, the same sequence will be returned.
 
 (operator-reduce)=
 
 ## reduce
 
-The `reduce` operator applies a function of your choosing to every item emitted by a channel.
-Each time this function is invoked it takes two parameters: the accumulated value and the *i-th*
-emitted item. The result is passed as the accumulated value to the next function call, along with
-the *i+1 th* item, until all the items are processed.
+The `reduce` operator applies a function of your choosing to every item emitted by a channel. Each time this function is invoked it takes two parameters: the accumulated value and the *i-th* emitted item. The result is passed as the accumulated value to the next function call, along with the *i+1 th* item, until all the items are processed.
 
-Finally, the `reduce` operator emits the result of the last invocation of your function
-as the sole output.
+Finally, the `reduce` operator emits the result of the last invocation of your function as the sole output.
 
 For example:
 
@@ -1380,21 +1255,20 @@ result = 15
 ```
 
 :::{tip}
-A common use case for this operator is to use the first paramter as an accumulator and
-the second parameter as the `i-th` item to be processed.
+A common use case for this operator is to use the first paramter as an accumulator and the second parameter as the `i-th` item to be processed.
 :::
 
 Optionally you can specify an initial value for the accumulator as shown below:
+
 ```groovy
-myChannel.reduce( initialValue ) {  a, b -> ... }
+myChannel.reduce( initialValue ) { a, b -> ... }
 ```
 
 (operator-set)=
 
 ## set
 
-The `set` operator assigns the channel to a variable whose name is specified as a closure parameter.
-For example:
+The `set` operator assigns the channel to a variable whose name is specified as a closure parameter. For example:
 
 ```groovy
 Channel.of(10, 20, 30).set { my_channel }
@@ -1406,17 +1280,13 @@ This is semantically equivalent to the following assignment:
 my_channel = Channel.of(10, 20, 30)
 ```
 
-However the `set` operator is more idiomatic in Nextflow scripting, since it can be used at the end
-of a chain of operator transformations, thus resulting in a more fluent and readable operation.
+However the `set` operator is more idiomatic in Nextflow scripting, since it can be used at the end of a chain of operator transformations, thus resulting in a more fluent and readable operation.
 
 ## splitCsv
 
-The `splitCsv` operator allows you to parse text items emitted by a channel, that are formatted using the
-[CSV format](http://en.wikipedia.org/wiki/Comma-separated_values), and split them into records or group them into
-list of records with a specified length.
+The `splitCsv` operator allows you to parse text items emitted by a channel, that are formatted using the [CSV format](http://en.wikipedia.org/wiki/Comma-separated_values), and split them into records or group them into list of records with a specified length.
 
-In the simplest case just apply the `splitCsv` operator to a channel emitting a CSV formatted text files or
-text entries. For example:
+In the simplest case just apply the `splitCsv` operator to a channel emitting a CSV formatted text files or text entries. For example:
 
 ```groovy
 Channel
@@ -1425,11 +1295,9 @@ Channel
     .view { row -> "${row[0]} - ${row[1]} - ${row[2]}" }
 ```
 
-The above example shows hows CSV text is parsed and is split into single rows. Values can be accessed
-by its column index in the row object.
+The above example shows hows CSV text is parsed and is split into single rows. Values can be accessed by its column index in the row object.
 
-When the CSV begins with a header line defining the column names, you can specify the parameter `header: true` which
-allows you to reference each value by its name, as shown in the following example:
+When the CSV begins with a header line defining the column names, you can specify the parameter `header: true` which allows you to reference each value by its name, as shown in the following example:
 
 ```groovy
 Channel
@@ -1445,8 +1313,7 @@ It will print
 70 - 80 - 90
 ```
 
-Alternatively you can provide custom header names by specifying a the list of strings in the `header` parameter
-as shown below:
+Alternatively you can provide custom header names by specifying a the list of strings in the `header` parameter as shown below:
 
 ```groovy
 Channel
@@ -1472,13 +1339,9 @@ Available parameters:
 
 ## splitFasta
 
-The `splitFasta` operator allows you to split the entries emitted by a channel, that are formatted using the
-[FASTA format](http://en.wikipedia.org/wiki/FASTA_format). It returns a channel which emits text item
-for each sequence in the received FASTA content.
+The `splitFasta` operator allows you to split the entries emitted by a channel, that are formatted using the [FASTA format](http://en.wikipedia.org/wiki/FASTA_format). It returns a channel which emits text item for each sequence in the received FASTA content.
 
-The number of sequences in each text chunk produced by the `splitFasta` operator can be set by using
-the `by` parameter. The following example shows how to read a FASTA file and split it into chunks containing 10 sequences
-each:
+The number of sequences in each text chunk produced by the `splitFasta` operator can be set by using the `by` parameter. The following example shows how to read a FASTA file and split it into chunks containing 10 sequences each:
 
 ```groovy
 Channel
@@ -1488,16 +1351,12 @@ Channel
 ```
 
 :::{warning}
-Chunks are stored in memory by default. When splitting large files, specify the parameter `file: true` to save the
-chunks into files in order to avoid an `OutOfMemoryException`. See the parameter table below for details.
+Chunks are stored in memory by default. When splitting large files, specify the parameter `file: true` to save the chunks into files in order to avoid an `OutOfMemoryException`. See the parameter table below for details.
 :::
 
-A second version of the `splitFasta` operator allows you to split a FASTA content into record objects, instead
-of text chunks. A record object contains a set of fields that let you access and manipulate the FASTA sequence
-information with ease.
+A second version of the `splitFasta` operator allows you to split a FASTA content into record objects, instead of text chunks. A record object contains a set of fields that let you access and manipulate the FASTA sequence information with ease.
 
-In order to split a FASTA content into record objects, simply use the `record` parameter specifying the map of
-required the fields, as shown in the example below:
+In order to split a FASTA content into record objects, simply use the `record` parameter specifying the map of required the fields, as shown in the example below:
 
 ```groovy
 Channel
@@ -1507,9 +1366,7 @@ Channel
      .view { record -> record.seqString }
 ```
 
-In this example, the file `misc/sample.fa` is split into records containing the `id` and the `seqString` fields
-(i.e. the sequence id and the sequence data). The following `filter` operator only keeps the sequences whose ID
-starts with the `ENST0` prefix, finally the sequence content is printed by using the `subscribe` operator.
+In this example, the file `misc/sample.fa` is split into records containing the `id` and the `seqString` fields (i.e. the sequence id and the sequence data). The following `filter` operator only keeps the sequences whose ID starts with the `ENST0` prefix, finally the sequence content is printed by using the `subscribe` operator.
 
 Available parameters:
 
@@ -1543,13 +1400,9 @@ You can also use `countFasta` to count the number of entries in the FASTA file(s
 
 ## splitFastq
 
-The `splitFastq` operator allows you to split the entries emitted by a channel, that are formatted using the
-[FASTQ format](http://en.wikipedia.org/wiki/FASTQ_format). It returns a channel which emits a text chunk
-for each sequence in the received item.
+The `splitFastq` operator allows you to split the entries emitted by a channel, that are formatted using the [FASTQ format](http://en.wikipedia.org/wiki/FASTQ_format). It returns a channel which emits a text chunk for each sequence in the received item.
 
-The number of sequences in each text chunk produced by the `splitFastq` operator is defined by the
-parameter `by`. The following example shows you how to read a FASTQ file and split it into chunks containing 10
-sequences each:
+The number of sequences in each text chunk produced by the `splitFastq` operator is defined by the parameter `by`. The following example shows you how to read a FASTQ file and split it into chunks containing 10 sequences each:
 
 ```groovy
 Channel
@@ -1559,16 +1412,12 @@ Channel
 ```
 
 :::{warning}
-Chunks are stored in memory by default. When splitting large files, specify the parameter `file: true` to save the
-chunks into files in order to avoid an `OutOfMemoryException`. See the parameter table below for details.
+Chunks are stored in memory by default. When splitting large files, specify the parameter `file: true` to save the chunks into files in order to avoid an `OutOfMemoryException`. See the parameter table below for details.
 :::
 
-A second version of the `splitFastq` operator allows you to split a FASTQ formatted content into record objects,
-instead of text chunks. A record object contains a set of fields that let you access and manipulate the FASTQ sequence
-data with ease.
+A second version of the `splitFastq` operator allows you to split a FASTQ formatted content into record objects, instead of text chunks. A record object contains a set of fields that let you access and manipulate the FASTQ sequence data with ease.
 
-In order to split FASTQ sequences into record objects simply use the `record` parameter specifying the map of
-the required fields, or just specify `record: true` as in the example shown below:
+In order to split FASTQ sequences into record objects simply use the `record` parameter specifying the map of the required fields, or just specify `record: true` as in the example shown below:
 
 ```groovy
 Channel
@@ -1577,8 +1426,7 @@ Channel
     .view { record -> record.readHeader }
 ```
 
-Finally the `splitFastq` operator is able to split paired-end read pair FASTQ files. It must be applied to a channel
-which emits tuples containing at least two elements that are the files to be split. For example:
+Finally the `splitFastq` operator is able to split paired-end read pair FASTQ files. It must be applied to a channel which emits tuples containing at least two elements that are the files to be split. For example:
 
 ```groovy
 Channel
@@ -1588,13 +1436,11 @@ Channel
 ```
 
 :::{note}
-The `fromFilePairs` requires the `flat: true` option in order to emit the file pairs as separate elements
-in the produced tuples.
+The `fromFilePairs` requires the `flat: true` option in order to emit the file pairs as separate elements in the produced tuples.
 :::
 
 :::{note}
-This operator assumes that the order of the paired-end reads correspond with each other and both files contain
-the same number of reads.
+This operator assumes that the order of the paired-end reads correspond with each other and both files contain the same number of reads.
 :::
 
 Available parameters:
@@ -1626,8 +1472,7 @@ You can also use `countFastq` to count the number of entries in the FASTQ file(s
 
 ## splitText
 
-The `splitText` operator allows you to split multi-line strings or text file items, emitted by a source channel
-into chunks containing `n` lines, which will be emitted by the resulting channel.
+The `splitText` operator allows you to split multi-line strings or text file items, emitted by a source channel into chunks containing `n` lines, which will be emitted by the resulting channel.
 
 For example:
 
@@ -1640,8 +1485,7 @@ Channel
 
 It splits the content of the files with suffix `.txt`, and prints it line by line.
 
-By default the `splitText` operator splits each item into chunks of one line. You can define the number of lines in each chunk by using
-the parameter `by`, as shown in the following example:
+By default the `splitText` operator splits each item into chunks of one line. You can define the number of lines in each chunk by using the parameter `by`, as shown in the following example:
 
 ```groovy
 Channel
@@ -1653,8 +1497,7 @@ Channel
     }
 ```
 
-An optional {ref}`closure <script-closure>` can be specified in order to transform the text chunks produced by the operator.
-The following example shows how to split text files into chunks of 10 lines and transform them to capital letters:
+An optional {ref}`closure <script-closure>` can be specified in order to transform the text chunks produced by the operator. The following example shows how to split text files into chunks of 10 lines and transform them to capital letters:
 
 ```groovy
 Channel
@@ -1688,8 +1531,7 @@ You can also use `countLines` to count the number of lines in the text file(s).
 
 ## sum
 
-The `sum` operator creates a channel that emits the sum of all the items emitted by the channel itself.
-For example:
+The `sum` operator creates a channel that emits the sum of all the items emitted by the channel itself. For example:
 
 ```groovy
 Channel
@@ -1702,8 +1544,7 @@ Channel
 The sum is 21
 ```
 
-An optional {ref}`closure <script-closure>` parameter can be specified in order to provide
-a function that, given an item, returns the value to be summed. For example:
+An optional {ref}`closure <script-closure>` parameter can be specified in order to provide a function that, given an item, returns the value to be summed. For example:
 
 ```groovy
 Channel
@@ -1746,12 +1587,9 @@ See also [until](#until).
 The `tap` operator can no longer be used because it relies on `Channel.create()`, which was deprecated in DSL2.
 :::
 
-The `tap` operator combines the functions of the `into` and `separate` operators in such a way that
-it connects two channels, copying the values from the source into the tapped channel. At the same
-time it splits the source channel into a newly created channel that is returned by the operator itself.
+The `tap` operator combines the functions of the `into` and `separate` operators in such a way that it connects two channels, copying the values from the source into the tapped channel. At the same time it splits the source channel into a newly created channel that is returned by the operator itself.
 
-The `tap` can be useful in certain scenarios where you may be required to concatenate multiple operations,
-as in the following example:
+The `tap` can be useful in certain scenarios where you may be required to concatenate multiple operations, as in the following example:
 
 ```groovy
 log1 = Channel.create()
@@ -1783,8 +1621,7 @@ Log 2: bb
 Log 2: cc
 ```
 
-The `tap` operator also allows the target channel to be specified by using a closure. The advantage of this syntax
-is that you won't need to previously create the target channel, because it is created implicitly by the operator itself.
+The `tap` operator also allows the target channel to be specified by using a closure. The advantage of this syntax is that you won't need to previously create the target channel, because it is created implicitly by the operator itself.
 
 Using the closure syntax the above example can be rewritten as shown below:
 
@@ -1803,8 +1640,7 @@ log2.view { "Log 2: $it" }
 
 ## toInteger
 
-The `toInteger` operator allows you to convert the string values emitted by a channel to `Integer` values. For
-example:
+The `toInteger` operator allows you to convert the string values emitted by a channel to `Integer` values. For example:
 
 ```groovy
 Channel
@@ -1820,8 +1656,7 @@ You can also use `toLong`, `toFloat`, and `toDouble` to convert to other numeric
 
 ## toList
 
-The `toList` operator collects all the items emitted by a channel to a `List` object
-and emits the resulting collection as a single item. For example:
+The `toList` operator collects all the items emitted by a channel to a `List` object and emits the resulting collection as a single item. For example:
 
 ```groovy
 Channel
@@ -1852,8 +1687,7 @@ See also: [collect](#collect) operator.
 
 ## toSortedList
 
-The `toSortedList` operator collects all the items emitted by a channel to a `List` object where they are sorted
-and emits the resulting collection as a single item. For example:
+The `toSortedList` operator collects all the items emitted by a channel to a `List` object where they are sorted and emits the resulting collection as a single item. For example:
 
 ```groovy
 Channel
@@ -1867,7 +1701,7 @@ Channel
 Done
 ```
 
-You may also pass a comparator closure as an argument to the `toSortedList` operator to customize the sorting criteria.  For example, to sort by the second element of a tuple in descending order:
+You may also pass a comparator closure as an argument to the `toSortedList` operator to customize the sorting criteria. For example, to sort by the second element of a tuple in descending order:
 
 ```groovy
 Channel
@@ -1884,8 +1718,7 @@ See also: [collect](#collect) operator.
 
 ## transpose
 
-The `transpose` operator transforms a channel in such a way that the emitted items are the result of a transposition
-of all tuple elements in each item. For example:
+The `transpose` operator transforms a channel in such a way that the emitted items are the result of a transposition of all tuple elements in each item. For example:
 
 ```groovy
 Channel.of(
@@ -1932,8 +1765,7 @@ Channel
 3
 ```
 
-You can also specify an optional {ref}`closure <script-closure>` that customizes the way it distinguishes between unique items.
-For example:
+You can also specify an optional {ref}`closure <script-closure>` that customizes the way it distinguishes between unique items. For example:
 
 ```groovy
 Channel
@@ -1949,8 +1781,7 @@ Channel
 
 ## until
 
-The `until` operator creates a channel that returns the items emitted by the source channel and stop when
-the condition specified is verified. For example:
+The `until` operator creates a channel that returns the items emitted by the source channel and stop when the condition specified is verified. For example:
 
 ```groovy
 Channel
@@ -1983,8 +1814,7 @@ Channel.of(1, 2, 3).view()
 
 Each item is printed on a separate line unless otherwise specified by using the `newLine: false` optional parameter.
 
-How the channel items are printed can be controlled by using an optional closure parameter. The closure must return
-the actual value of the item to be printed:
+How the channel items are printed can be controlled by using an optional closure parameter. The closure must return the actual value of the item to be printed:
 
 ```groovy
 Channel.of(1, 2, 3)

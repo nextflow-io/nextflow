@@ -2,25 +2,19 @@
 
 # Executors
 
-In the Nextflow framework architecture, the *executor* is the component that determines the system where a pipeline
-process is run and supervises its execution.
+In the Nextflow framework architecture, the *executor* is the component that determines the system where a pipeline process is run and supervises its execution.
 
-The executor provides an abstraction between the pipeline processes and the underlying execution system. This
-allows you to write the pipeline functional logic independently from the actual processing platform.
+The executor provides an abstraction between the pipeline processes and the underlying execution system. This allows you to write the pipeline functional logic independently from the actual processing platform.
 
-In other words you can write your pipeline script once and launch it on your computer, a cluster resource manager,
-or the cloud, by simply changing the executor definition in the Nextflow configuration file.
+In other words you can write your pipeline script once and launch it on your computer, a cluster resource manager, or the cloud, by simply changing the executor definition in the Nextflow configuration file.
 
 (awsbatch-executor)=
 
 ## AWS Batch
 
-Nextflow supports the [AWS Batch](https://aws.amazon.com/batch/) service that allows job submission in the cloud
-without having to spin out and manage a cluster of virtual machines. AWS Batch uses Docker containers to run tasks,
-which greatly simplifies pipeline deployment.
+Nextflow supports the [AWS Batch](https://aws.amazon.com/batch/) service that allows job submission in the cloud without having to spin out and manage a cluster of virtual machines. AWS Batch uses Docker containers to run tasks, which greatly simplifies pipeline deployment.
 
-The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline
-script or the `nextflow.config` file.
+The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file.
 
 To enable this executor, set `process.executor = 'awsbatch'` in the `nextflow.config` file.
 
@@ -40,12 +34,9 @@ See the {ref}`AWS Batch<aws-batch>` page for further configuration details.
 
 ## Azure Batch
 
-Nextflow supports the [Azure Batch](https://azure.microsoft.com/en-us/services/batch/) service that allows job submission in the cloud
-without having to spin out and manage a cluster of virtual machines. Azure Batch uses Docker containers to run tasks,
-which greatly simplifies pipeline deployment.
+Nextflow supports the [Azure Batch](https://azure.microsoft.com/en-us/services/batch/) service that allows job submission in the cloud without having to spin out and manage a cluster of virtual machines. Azure Batch uses Docker containers to run tasks, which greatly simplifies pipeline deployment.
 
-The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline
-script or the `nextflow.config` file.
+The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file.
 
 To enable this executor, set `process.executor = 'azurebatch'` in the `nextflow.config` file.
 
@@ -57,11 +48,9 @@ See the {ref}`Azure Batch <azure-batch>` page for further configuration details.
 
 ## Bridge
 
-[Bridge](https://github.com/cea-hpc/bridge) is an abstraction layer to ease batch system and resource manager usage in
-heterogeneous HPC environments.
+[Bridge](https://github.com/cea-hpc/bridge) is an abstraction layer to ease batch system and resource manager usage in heterogeneous HPC environments.
 
-It is open source software that can be installed on top of existing classical job schedulers such as Slurm, LSF, or other
-schedulers. Bridge allows you to submit jobs, get information on running jobs, stop jobs, get information on the cluster system, etc.
+It is open source software that can be installed on top of existing classical job schedulers such as Slurm, LSF, or other schedulers. Bridge allows you to submit jobs, get information on running jobs, stop jobs, get information on the cluster system, etc.
 
 For more details on how to install the Bridge system, see the [documentation](https://github.com/cea-hpc/bridge).
 
@@ -97,8 +86,7 @@ Flux does not support the `memory` directive.
 :::
 
 :::{note}
-By default, Flux will send all output to the `.command.log` file. To send this output to stdout and stderr instead,
-set `flux.terminalOutput = true` in your config file.
+By default, Flux will send all output to the `.command.log` file. To send this output to stdout and stderr instead, set `flux.terminalOutput = true` in your config file.
 :::
 
 (ga4ghtes-executor)=
@@ -109,12 +97,9 @@ set `flux.terminalOutput = true` in your config file.
 This is an experimental feature and it may change in future releases.
 :::
 
-The [Task Execution Schema](https://github.com/ga4gh/task-execution-schemas) (TES) project
-by the [GA4GH](https://www.ga4gh.org) standardization initiative is an effort to define a
-standardized schema and API for describing batch execution tasks in a portable manner.
+The [Task Execution Schema](https://github.com/ga4gh/task-execution-schemas) (TES) project by the [GA4GH](https://www.ga4gh.org) standardization initiative is an effort to define a standardized schema and API for describing batch execution tasks in a portable manner.
 
-Nextflow includes experimental support for the TES API by providing a `tes` executor, which allows
-the submission of workflow tasks to a remote execution backend exposing a TES API endpoint.
+Nextflow includes experimental support for the TES API by providing a `tes` executor, which allows the submission of workflow tasks to a remote execution backend exposing a TES API endpoint.
 
 To use this feature, define the following variables in the workflow launching environment:
 
@@ -124,11 +109,9 @@ export NXF_EXECUTOR=tes
 export NXF_EXECUTOR_TES_ENDPOINT='http://back.end.com'
 ```
 
-It is important that the endpoint is specified without the trailing slash; otherwise, the resulting URLs will not be
-normalized and the requests to TES will fail.
+It is important that the endpoint is specified without the trailing slash; otherwise, the resulting URLs will not be normalized and the requests to TES will fail.
 
-You will then be able to run your workflow over TES using the usual Nextflow command line. Be sure to specify the Docker
-image to use, i.e.:
+You will then be able to run your workflow over TES using the usual Nextflow command line. Be sure to specify the Docker image to use, i.e.:
 
 ```bash
 nextflow run rnaseq-nf -with-docker alpine
@@ -139,8 +122,7 @@ If the variable `NXF_EXECUTOR_TES_ENDPOINT` is omitted, the default endpoint is 
 :::
 
 :::{tip}
-You can use a local [Funnel](https://ohsu-comp-bio.github.io/funnel/) server using the following launch
-command line:
+You can use a local [Funnel](https://ohsu-comp-bio.github.io/funnel/) server using the following launch command line:
 
 ```bash
 ./funnel server --Server.HTTPPort 8000 --LocalStorage.AllowedDirs $HOME run
@@ -150,8 +132,7 @@ command line:
 :::
 
 :::{warning}
-Make sure the TES backend can access the Nextflow work directory when
-data is exchanged using a local or shared file system.
+Make sure the TES backend can access the Nextflow work directory when data is exchanged using a local or shared file system.
 :::
 
 ### Known Limitations
@@ -164,15 +145,11 @@ data is exchanged using a local or shared file system.
 
 ## Google Cloud Batch
 
-[Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of
-containerized workloads in the Google Cloud Platform infrastructure.
+[Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
-Nextflow provides built-in support for the Cloud Batch API, which allows the seamless deployment of a Nextflow pipeline
-in the cloud, offloading the process executions as pipelines (requires Nextflow `22.07.1-edge` or later).
+Nextflow provides built-in support for the Cloud Batch API, which allows the seamless deployment of a Nextflow pipeline in the cloud, offloading the process executions as pipelines (requires Nextflow `22.07.1-edge` or later).
 
-The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline
-script or the `nextflow.config` file. Additionally, the pipeline work directory must be located in a Google Storage
-bucket.
+The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file. Additionally, the pipeline work directory must be located in a Google Storage bucket.
 
 To enable this executor, set `process.executor = 'google-batch'` in the `nextflow.config` file.
 
@@ -194,15 +171,11 @@ See the {ref}`Google Cloud Batch <google-batch>` page for further configuration 
 
 ## Google Life Sciences
 
-[Google Cloud Life Sciences](https://cloud.google.com/life-sciences) is a managed computing service that allows the execution of
-containerized workloads in the Google Cloud Platform infrastructure.
+[Google Cloud Life Sciences](https://cloud.google.com/life-sciences) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
-Nextflow provides built-in support for the Life Sciences API, which allows the seamless deployment of a Nextflow pipeline
-in the cloud, offloading the process executions as pipelines (requires Nextflow `20.01.0` or later).
+Nextflow provides built-in support for the Life Sciences API, which allows the seamless deployment of a Nextflow pipeline in the cloud, offloading the process executions as pipelines (requires Nextflow `20.01.0` or later).
 
-The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline
-script or the `nextflow.config` file. Additionally, the pipeline work directory must be located in a Google Storage
-bucket.
+The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file. Additionally, the pipeline work directory must be located in a Google Storage bucket.
 
 To enable this executor, set `process.executor = 'google-lifesciences'` in the `nextflow.config` file.
 
@@ -232,9 +205,7 @@ Nextflow manages each process as a separate job that is submitted to the cluster
 The pipeline must be launched from a node where the `condor_submit` command is available, which is typically the cluster login node.
 
 :::{note}
-The HTCondor executor for Nextflow does not currently support HTCondor's ability to transfer input/output data to
-the corresponding job's compute node. Therefore, the data must be made accessible to the compute nodes through
-a shared file system directory from where the Nextflow workflow is executed (or specified via the `-w` option).
+The HTCondor executor for Nextflow does not currently support HTCondor's ability to transfer input/output data to the corresponding job's compute node. Therefore, the data must be made accessible to the compute nodes through a shared file system directory from where the Nextflow workflow is executed (or specified via the `-w` option).
 :::
 
 To enable the HTCondor executor, set `process.executor = 'condor'` in the `nextflow.config` file.
@@ -289,8 +260,7 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-disk`
 - {ref}`process-memory`
 
-See the {ref}`ignite-page` page to learn how to configure Nextflow to deploy and run an
-Ignite cluster in your infrastructure.
+See the {ref}`ignite-page` page to learn how to configure Nextflow to deploy and run an Ignite cluster in your infrastructure.
 
 (k8s-executor)=
 
@@ -313,12 +283,9 @@ See the {ref}`Kubernetes <k8s-page>` page to learn how to set up a Kubernetes cl
 
 ## Local
 
-The `local` executor is used by default. It runs the pipeline processes on the computer where Nextflow
-is launched. The processes are parallelised by spawning multiple threads, taking advantage of the multi-core
-architecture of the CPU.
+The `local` executor is used by default. It runs the pipeline processes on the computer where Nextflow is launched. The processes are parallelised by spawning multiple threads, taking advantage of the multi-core architecture of the CPU.
 
-The `local` executor is useful for developing and testing a pipeline script on your computer, before
-switching to a cluster or cloud environment with production data.
+The `local` executor is useful for developing and testing a pipeline script on your computer, before switching to a cluster or cloud environment with production data.
 
 (lsf-executor)=
 
@@ -341,11 +308,9 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-time`
 
 :::{note}
-LSF supports both *per-core* and *per-job* memory limits. Nextflow assumes that LSF works in the
-*per-core* mode, thus it divides the requested {ref}`process-memory` by the number of requested {ref}`process-cpus`.
+LSF supports both *per-core* and *per-job* memory limits. Nextflow assumes that LSF works in the *per-core* mode, thus it divides the requested {ref}`process-memory` by the number of requested {ref}`process-cpus`.
 
-When LSF is configured to work in the *per-job* memory limit mode, you must specify this limit
-with the `perJobMemLimit` option in the {ref}`config-executor` scope of your Nextflow config file.
+When LSF is configured to work in the *per-job* memory limit mode, you must specify this limit with the `perJobMemLimit` option in the {ref}`config-executor` scope of your Nextflow config file.
 
 See also the [Platform LSF documentation](https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_job_memlimit.5.dita).
 :::
@@ -358,12 +323,9 @@ See also the [Platform LSF documentation](https://www.ibm.com/support/knowledgec
 This feature is experimental, and it may change in future Nextflow releases.
 :::
 
-The `moab` executor allows you to run your pipeline script using the
-[Moab](https://en.wikipedia.org/wiki/Moab_Cluster_Suite) resource manager by
-[Adaptive Computing](http://www.adaptivecomputing.com/).
+The `moab` executor allows you to run your pipeline script using the [Moab](https://en.wikipedia.org/wiki/Moab_Cluster_Suite) resource manager by [Adaptive Computing](http://www.adaptivecomputing.com/).
 
-Nextflow manages each process as a separate job that is submitted to the cluster using the `msub` command provided
-by the resource manager.
+Nextflow manages each process as a separate job that is submitted to the cluster using the `msub` command provided by the resource manager.
 
 The pipeline must be launched from a node where the `msub` command is available, which is typically the cluster login node.
 
@@ -383,8 +345,7 @@ Resource requests and other job characteristics can be controlled via the follow
 
 The `nsqii` executor allows you to run your pipeline script using the [NQSII](https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster) resource manager.
 
-Nextflow manages each process as a separate job that is submitted to the cluster using the `qsub` command provided
-by the scheduler.
+Nextflow manages each process as a separate job that is submitted to the cluster using the `qsub` command provided by the scheduler.
 
 The pipeline must be launched from a node where the `qsub` command is available, which is typically the cluster login node.
 
@@ -431,8 +392,7 @@ Resource requests and other job characteristics can be controlled via the follow
 
 The `pbs` executor allows you to run your pipeline script using a resource manager from the [PBS/Torque](http://en.wikipedia.org/wiki/Portable_Batch_System) family of batch schedulers.
 
-Nextflow manages each process as a separate job that is submitted to the cluster using the `qsub` command provided
-by the scheduler.
+Nextflow manages each process as a separate job that is submitted to the cluster using the `qsub` command provided by the scheduler.
 
 The pipeline must be launched from a node where the `qsub` command is available, which is typically the cluster login node.
 
@@ -452,8 +412,7 @@ Resource requests and other job characteristics can be controlled via the follow
 
 The `pbspro` executor allows you to run your pipeline script using the [PBS Pro](https://www.pbspro.org/) resource manager.
 
-Nextflow manages each process as a separate job that is submitted to the cluster using the `qsub` command provided
-by the scheduler.
+Nextflow manages each process as a separate job that is submitted to the cluster using the `qsub` command provided by the scheduler.
 
 The pipeline must be launched from a node where the `qsub` command is available, which is typically the cluster login node.
 
@@ -471,8 +430,7 @@ Resource requests and other job characteristics can be controlled via the follow
 
 ## SGE
 
-The `sge` executor allows you to run your pipeline script using a [Sun Grid Engine](http://en.wikipedia.org/wiki/Oracle_Grid_Engine)
-cluster or a compatible platform ([Open Grid Engine](http://gridscheduler.sourceforge.net/), [Univa Grid Engine](http://www.univa.com/products/grid-engine.php), etc).
+The `sge` executor allows you to run your pipeline script using a [Sun Grid Engine](http://en.wikipedia.org/wiki/Oracle_Grid_Engine) cluster or a compatible platform ([Open Grid Engine](http://gridscheduler.sourceforge.net/), [Univa Grid Engine](http://www.univa.com/products/grid-engine.php), etc).
 
 Nextflow manages each process as a separate grid job that is submitted to the cluster using the `qsub` command.
 
@@ -514,7 +472,5 @@ SLURM partitions can be specified with the `queue` directive.
 :::
 
 :::{tip}
-Nextflow does not provide direct support for SLURM multi-clusters. If you need to
-submit workflow executions to a cluster other than the current one, specify it with the
-`SLURM_CLUSTERS` variable in the launch environment.
+Nextflow does not provide direct support for SLURM multi-clusters. If you need to submit workflow executions to a cluster other than the current one, specify it with the `SLURM_CLUSTERS` variable in the launch environment.
 :::

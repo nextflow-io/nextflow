@@ -2,19 +2,16 @@
 
 # DSL 2
 
-Nextflow provides a syntax extension that allows the definition of module libraries and
-simplifies the writing of complex data analysis pipelines.
+Nextflow provides a syntax extension that allows the definition of module libraries and simplifies the writing of complex data analysis pipelines.
 
-To enable this feature you need to define the following directive at the beginning of
-your workflow script:
+To enable this feature you need to define the following directive at the beginning of your workflow script:
 
 ```groovy
 nextflow.enable.dsl=2
 ```
 
 :::{tip}
-As of version `22.03.0-edge` Nextflow defaults to DSL 2 if no version is specified explicitly.
-You can restore the previous behavior setting in into your environment the following variable:
+As of version `22.03.0-edge` Nextflow defaults to DSL 2 if no version is specified explicitly. You can restore the previous behavior setting in into your environment the following variable:
 
 ```bash
 export NXF_DEFAULT_DSL=1
@@ -22,8 +19,7 @@ export NXF_DEFAULT_DSL=1
 :::
 
 :::{note}
-As of version `22.03.0-edge` the DSL version specification (either 1 or 2) can also be specified in
-the Nextflow configuration file using the same notation shown above.
+As of version `22.03.0-edge` the DSL version specification (either 1 or 2) can also be specified in the Nextflow configuration file using the same notation shown above.
 :::
 
 ## Function
@@ -48,15 +44,13 @@ def bar(alpha, omega) {
 }
 ```
 
-The above snippet defines two simple functions, that can be invoked in the workflow script as `foo()` which
-returns the `Hello world` string and `bar(10,20)` which returns the sum of two parameters (`30` in this case).
+The above snippet defines two simple functions, that can be invoked in the workflow script as `foo()` which returns the `Hello world` string and `bar(10,20)` which returns the sum of two parameters (`30` in this case).
 
 :::{note}
 Functions implicitly return the result of the last evaluated statement.
 :::
 
-The keyword `return` can be used to explicitly exit from a function and return the specified value.
-For example:
+The keyword `return` can be used to explicitly exit from a function and return the specified value. For example:
 
 ```groovy
 def fib( x ) {
@@ -71,12 +65,9 @@ def fib( x ) {
 
 ### Process definition
 
-The new DSL separates the definition of a process from its invocation. The process definition follows the usual
-syntax as described in the {ref}`process documentation <process-page>`. The only difference is that the
-`from` and `into` channel declarations have to be omitted.
+The new DSL separates the definition of a process from its invocation. The process definition follows the usual syntax as described in the {ref}`process documentation <process-page>`. The only difference is that the `from` and `into` channel declarations have to be omitted.
 
-Then a process can be invoked as a function in the `workflow` scope, passing the expected
-input channels as parameters as if it were a custom function. For example:
+Then a process can be invoked as a function in the `workflow` scope, passing the expected input channels as parameters as if it were a custom function. For example:
 
 ```groovy
 nextflow.enable.dsl=2
@@ -117,9 +108,7 @@ A process component can be invoked only once in the same workflow context.
 
 ### Process composition
 
-Processes having matching *input-output* declaration can be composed so that the output
-of the first process is passed as input to the next process. Taking in consideration
-the previous example, it's possible to write the following:
+Processes having matching *input-output* declaration can be composed so that the output of the first process is passed as input to the next process. Taking in consideration the previous example, it's possible to write the following:
 
 ```groovy
 workflow {
@@ -129,8 +118,7 @@ workflow {
 
 ### Process output
 
-A process output can also be accessed using the `out` attribute on the corresponding
-process object. For example:
+A process output can also be accessed using the `out` attribute on the corresponding process object. For example:
 
 ```groovy
 workflow {
@@ -140,14 +128,11 @@ workflow {
 }
 ```
 
-When a process defines two or more output channels, each of them can be accessed
-using the array element operator e.g. `out[0]`, `out[1]`, etc. or using
-*named outputs* (see below).
+When a process defines two or more output channels, each of them can be accessed using the array element operator e.g. `out[0]`, `out[1]`, etc. or using *named outputs* (see below).
 
 ### Process named output
 
-The `emit` option can be added to the process output definition to assign a name identifier. This name
-can be used to reference the channel within the caller scope. For example:
+The `emit` option can be added to the process output definition to assign a name identifier. This name can be used to reference the channel within the caller scope. For example:
 
 ```groovy
 process foo {
@@ -194,8 +179,7 @@ workflow {
 
 ### Workflow definition
 
-The `workflow` keyword allows the definition of sub-workflow components that enclose the
-invocation of one or more processes and operators:
+The `workflow` keyword allows the definition of sub-workflow components that enclose the invocation of one or more processes and operators:
 
 ```groovy
 workflow my_pipeline {
@@ -204,8 +188,7 @@ workflow my_pipeline {
 }
 ```
 
-For example, the above snippet defines a workflow component, named `my_pipeline`, that can be invoked from
-another workflow component definition as any other function or process with `my_pipeline()`.
+For example, the above snippet defines a workflow component, named `my_pipeline`, that can be invoked from another workflow component definition as any other function or process with `my_pipeline()`.
 
 ### Workflow parameters
 
@@ -236,8 +219,7 @@ workflow my_pipeline {
 ```
 
 :::{warning}
-When the `take` keyword is used, the beginning of the workflow body must be identified with the
-`main` keyword.
+When the `take` keyword is used, the beginning of the workflow body must be identified with the `main` keyword.
 :::
 
 Then, the input can be specified as an argument in the workflow invocation statement:
@@ -249,8 +231,7 @@ workflow {
 ```
 
 :::{note}
-Workflow inputs are always channels by definition. If a basic data type is provided instead,
-such as a number, string, list, etc, it is implicitly converted to a {ref}`value channel <channel-type-value>`.
+Workflow inputs are always channels by definition. If a basic data type is provided instead, such as a number, string, list, etc, it is implicitly converted to a {ref}`value channel <channel-type-value>`.
 :::
 
 ### Workflow output
@@ -267,14 +248,11 @@ workflow my_pipeline {
 }
 ```
 
-Then, the result of the `my_pipeline` execution can be accessed using the `out` property, i.e.
-`my_pipeline.out`. When multiple output channels are declared, use the array bracket notation
-to access each output channel as described for the [Process output](#process-output) definition.
+Then, the result of the `my_pipeline` execution can be accessed using the `out` property, i.e. `my_pipeline.out`. When multiple output channels are declared, use the array bracket notation to access each output channel as described for the [Process output](#process-output) definition.
 
 ### Workflow named output
 
-If the output channel is assigned to an identifier in the `emit` declaration, such identifier can be used
-to reference the channel within the caller scope. For example:
+If the output channel is assigned to an identifier in the `emit` declaration, such identifier can be used to reference the channel within the caller scope. For example:
 
 ```groovy
 workflow my_pipeline {
@@ -290,13 +268,10 @@ Then, the result of the above snippet can accessed using `my_pipeline.out.my_dat
 
 ### Workflow entrypoint
 
-A workflow definition which does not declare any name (also known as *implicit workflow*) is
-the entry point of execution for the workflow application.
+A workflow definition which does not declare any name (also known as *implicit workflow*) is the entry point of execution for the workflow application.
 
 :::{note}
-Implicit workflow definition is ignored when a script is included as a module. This
-allows the writing of a workflow script that can be used either as a library module or as
-an application script.
+Implicit workflow definition is ignored when a script is included as a module. This allows the writing of a workflow script that can be used either as a library module or as an application script.
 :::
 
 :::{tip}
@@ -305,8 +280,7 @@ A different workflow entrypoint can be specified using the `-entry` command line
 
 ### Workflow composition
 
-Workflows defined in your script or imported with [Module inclusion](#module-inclusion) can be invoked and composed
-as any other process in your application.
+Workflows defined in your script or imported with [Module inclusion](#module-inclusion) can be invoked and composed as any other process in your application.
 
 ```groovy
 workflow flow1 {
@@ -336,25 +310,18 @@ workflow {
 ```
 
 :::{note}
-Nested workflow execution determines an implicit scope. Therefore the same process can be
-invoked in two different workflow scopes, like for example `foo` in the above snippet that
-is used both in `flow1` and `flow2`. The workflow execution path, along with the
-process names, determines the *fully qualified process name* that is used to distinguish the
-two different process invocations, i.e. `flow1:foo` and `flow2:foo` in the above example.
+Nested workflow execution determines an implicit scope. Therefore the same process can be invoked in two different workflow scopes, like for example `foo` in the above snippet that is used both in `flow1` and `flow2`. The workflow execution path, along with the process names, determines the *fully qualified process name* that is used to distinguish the two different process invocations, i.e. `flow1:foo` and `flow2:foo` in the above example.
 :::
 
 :::{tip}
-The fully qualified process name can be used as a valid {ref}`process selector <config-process-selectors>` in the
-`nextflow.config` file and it has priority over the simple process name.
+The fully qualified process name can be used as a valid {ref}`process selector <config-process-selectors>` in the `nextflow.config` file and it has priority over the simple process name.
 :::
 
 ## Modules
 
-The new DSL allows the definition of *module scripts* that
-can be included and shared across workflow applications.
+The new DSL allows the definition of *module scripts* that can be included and shared across workflow applications.
 
-A module script (or simply, module) can contain the definition of functions, processes and workflows
-as described in the previous sections.
+A module script (or simply, module) can contain the definition of functions, processes and workflows as described in the previous sections.
 
 :::{note}
 Functions, processes and workflows are globally referred to as *components*.
@@ -375,11 +342,9 @@ workflow {
 }
 ```
 
-The above snippet includes a process with name `foo` defined in the module script in the main
-execution context. This way, `foo` can be invoked in the `workflow` scope.
+The above snippet includes a process with name `foo` defined in the module script in the main execution context. This way, `foo` can be invoked in the `workflow` scope.
 
-Nextflow implicitly looks for the script file `./some/module.nf` resolving the path
-against the *including* script location.
+Nextflow implicitly looks for the script file `./some/module.nf` resolving the path against the *including* script location.
 
 :::{note}
 Relative paths must begin with the `./` prefix. Also, the `include` statement must be defined **outside** of the workflow definition.
@@ -389,8 +354,7 @@ Relative paths must begin with the `./` prefix. Also, the `include` statement mu
 
 ### Module directory
 
-As of version `22.10.0`, the module can be defined as a directory whose name matches the module name and
-contains a script named `main.nf`. For example:
+As of version `22.10.0`, the module can be defined as a directory whose name matches the module name and contains a script named `main.nf`. For example:
 
 ```
 some
@@ -408,9 +372,7 @@ Module directories allows the use of module scoped binaries scripts. See [Module
 
 ### Multiple inclusions
 
-A Nextflow script allows the inclusion of an arbitrary number of modules and components. When multiple
-components need to be included from the same module script, the component names can be
-specified in the same inclusion using the curly brackets notation as shown below:
+A Nextflow script allows the inclusion of an arbitrary number of modules and components. When multiple components need to be included from the same module script, the component names can be specified in the same inclusion using the curly brackets notation as shown below:
 
 ```groovy
 include { foo; bar } from './some/module'
@@ -424,9 +386,7 @@ workflow {
 
 ### Module aliases
 
-When including a module component, it's possible to specify an *alias* with the `as` keyword.
-This allows the inclusion and the invocation of components with the same name
-in your script using different names. For example:
+When including a module component, it's possible to specify an *alias* with the `as` keyword. This allows the inclusion and the invocation of components with the same name in your script using different names. For example:
 
 ```groovy
 include { foo } from './some/module'
@@ -482,16 +442,14 @@ Hola Mundo
 ```
 
 :::{note}
-The module inherits the parameters defined *before* the `include` statement, therefore any further
-parameter set later is ignored.
+The module inherits the parameters defined *before* the `include` statement, therefore any further parameter set later is ignored.
 :::
 
 :::{tip}
 Define all pipeline parameters at the beginning of the script *before* any `include` declaration.
 :::
 
-The option `addParams` can be used to extend the module parameters without affecting the external
-scope. For example:
+The option `addParams` can be used to extend the module parameters without affecting the external scope. For example:
 
 ```groovy
 include {sayHello} from './some/module' addParams(foo: 'Ciao')
@@ -507,18 +465,15 @@ The above snippet prints:
 Ciao world!
 ```
 
-Finally, the include option `params` allows the specification of one or more parameters without
-inheriting any value from the external environment.
+Finally, the include option `params` allows the specification of one or more parameters without inheriting any value from the external environment.
 
 (module-templates)=
 
 ### Module templates
 
-The module script can be defined in an external {ref}`template <process-template>` file. With DSL2 the template file
-can be placed under the `templates` directory where the module script is located.
+The module script can be defined in an external {ref}`template <process-template>` file. With DSL2 the template file can be placed under the `templates` directory where the module script is located.
 
-For example, let's suppose to have a project L with a module script defining 2 processes (P1 and P2) and both use templates.
-The template files can be made available under the local `templates` directory:
+For example, let's suppose to have a project L with a module script defining 2 processes (P1 and P2) and both use templates. The template files can be made available under the local `templates` directory:
 
 ```
 Project L
@@ -542,8 +497,7 @@ Pipeline B
 └-main.nf
 ```
 
-With the possibility to keep the template files inside the project L, A and B can use the modules defined in L without any changes.
-A future project C would do the same, just cloning L (if not available on the system) and including its module script.
+With the possibility to keep the template files inside the project L, A and B can use the modules defined in L without any changes. A future project C would do the same, just cloning L (if not available on the system) and including its module script.
 
 Beside promoting sharing modules across pipelines, there are several advantages in keeping the module template under the script path:
 
@@ -551,8 +505,7 @@ Beside promoting sharing modules across pipelines, there are several advantages 
 2. module components can be tested independently from the pipeline(s) importing them,
 3. it is possible to create libraries of module components.
 
-Ultimately, having multiple template locations allows a more structured organization within the same project. If a project
-has several module components, and all them use templates, the project could group module scripts and their templates as needed. For example:
+Ultimately, having multiple template locations allows a more structured organization within the same project. If a project has several module components, and all them use templates, the project could group module scripts and their templates as needed. For example:
 
 ```
 baseDir
@@ -600,8 +553,7 @@ The binary scripts must be placed in the module directory names `<module-dir>/re
       └─another-module-script2.py
 ```
 
-Those scripts will be accessible as any other command in the tasks environment, provided they have been granted
-the Linux execute permissions.
+Those scripts will be accessible as any other command in the tasks environment, provided they have been granted the Linux execute permissions.
 
 :::{note}
 This feature requires the use of a local or shared file system as the pipeline work directory.
@@ -627,9 +579,7 @@ cheers
     .view()
 ```
 
-The same is valid for the result (channel) of a process execution. Therefore a process output can be consumed by
-two or more processes without the need to fork it using the `into` operator, making the
-writing of workflow scripts more fluent and readable.
+The same is valid for the result (channel) of a process execution. Therefore a process output can be consumed by two or more processes without the need to fork it using the `into` operator, making the writing of workflow scripts more fluent and readable.
 
 ## Pipes
 
@@ -654,14 +604,11 @@ workflow {
 }
 ```
 
-The above snippet defines a process named `foo` and invokes it passing the content of the
-`data` channel. The result is then piped to the {ref}`operator-map` operator which converts each string
-to uppercase and finally, the last {ref}`operator-view` operator prints it.
+The above snippet defines a process named `foo` and invokes it passing the content of the `data` channel. The result is then piped to the {ref}`operator-map` operator which converts each string to uppercase and finally, the last {ref}`operator-view` operator prints it.
 
 ### The *and* operator
 
-The `&` *and* operator allows feeding of two or more processes with the content of the same
-channel(s). For example:
+The `&` *and* operator allows feeding of two or more processes with the content of the same channel(s). For example:
 
 ```groovy
 process foo {
@@ -691,15 +638,10 @@ workflow {
 }
 ```
 
-In the above snippet the channel emitting the `Hello` string is piped with the {ref}`operator-map`
-which reverses the string value. Then, the result is passed to both `foo` and `bar`
-processes which are executed in parallel. Each process outputs a channel, and the two channels are merged
-into a single channel using the {ref}`operator-mix` operator. Finally the result is printed
-using the {ref}`operator-view` operator.
+In the above snippet the channel emitting the `Hello` string is piped with the {ref}`operator-map` which reverses the string value. Then, the result is passed to both `foo` and `bar` processes which are executed in parallel. Each process outputs a channel, and the two channels are merged into a single channel using the {ref}`operator-mix` operator. Finally the result is printed using the {ref}`operator-view` operator.
 
 :::{tip}
-The break-line operator `\` can be used to split long statements over multiple lines.
-The above snippet can also be written as:
+The break-line operator `\` can be used to split long statements over multiple lines. The above snippet can also be written as:
 
 ```groovy
 workflow {

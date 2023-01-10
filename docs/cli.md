@@ -2,9 +2,7 @@
 
 # Command line interface (CLI)
 
-Nextflow provides a robust command line interface for the management and
-execution pipelines. The top-level interface consists of two aspects,
-*options* and *commands*.
+Nextflow provides a robust command line interface for the management and execution pipelines. The top-level interface consists of two aspects, *options* and *commands*.
 
 Here's what you'll see at the top-level upon invoking the Nextflow CLI:
 
@@ -17,14 +15,10 @@ Usage: nextflow [options] COMMAND [arg...]
 
 ## Options
 
-The top-level options are meant to be invoked in relation to the core
-Nextflow application and are applied to all commands. For options
-specific to any command, refer the CLI Commands section.
+The top-level options are meant to be invoked in relation to the core Nextflow application and are applied to all commands. For options specific to any command, refer the CLI Commands section.
 
 :::{note}
-Nextflow options use a single dash prefix, e.g. `-foo`. Do not confuse with
-double dash notation, e.g. `--foo`, which is instead used for
-{ref}`Pipeline parameters <cli-params>`.
+Nextflow options use a single dash prefix, e.g. `-foo`. Do not confuse with double dash notation, e.g. `--foo`, which is instead used for {ref}`Pipeline parameters <cli-params>`.
 :::
 
 An overview of the top-level options:
@@ -70,8 +64,7 @@ $ nextflow -C my.config COMMAND [arg...]
 
 **Description**
 
-The `-C` option is used to override *all* settings specified in the default config file.
-For soft override, please refer the `-c` option.
+The `-C` option is used to override *all* settings specified in the default config file. For soft override, please refer the `-c` option.
 
 **Examples**
 
@@ -93,8 +86,7 @@ $ nextflow -Dkey=value COMMAND [arg...]
 
 **Description**
 
-This options allows the definition of custom Java system properties that can be used to
-properly configure or fine tuning the JVM instance used by the Nextflow runtime.
+This options allows the definition of custom Java system properties that can be used to properly configure or fine tuning the JVM instance used by the Nextflow runtime.
 
 For specifying other JVM level options, please refer to the {ref}`config-env-vars` section.
 
@@ -118,9 +110,7 @@ $ nextflow -bg COMMAND [arg...]
 
 **Description**
 
-The `-bg` option is used to invoke the nextflow execution in the background and allows
-the user to continue interacting with the terminal. This option is similar to `nohup` in
-behavior.
+The `-bg` option is used to invoke the nextflow execution in the background and allows the user to continue interacting with the terminal. This option is similar to `nohup` in behavior.
 
 **Examples**
 
@@ -142,9 +132,7 @@ $ nextflow -c nxf.config COMMAND [arg...]
 
 **Description**
 
-The `-c` option is used to append a new configuration to the default configuration.
-The `-c` option allows us to update the config in an additive manner. For **hard override**,
-refer the `-C` option.
+The `-c` option is used to append a new configuration to the default configuration. The `-c` option allows us to update the config in an additive manner. For **hard override**, refer the `-C` option.
 
 **Examples**
 
@@ -170,11 +158,9 @@ $ nextflow -dockerize COMMAND [arg...]
 
 **Description**
 
-The `-dockerize` option is used to invoke the execution of **Nextflow** within a Docker container
-itself without installing a Java VM in the hosting environment.
+The `-dockerize` option is used to invoke the execution of **Nextflow** within a Docker container itself without installing a Java VM in the hosting environment.
 
-Note, this option is *not* needed to run containerised pipeline jobs. For invoking a pipeline with the `docker` profile or executor,
-please to refer the `-with-docker` options the `run` command.
+Note, this option is *not* needed to run containerised pipeline jobs. For invoking a pipeline with the `docker` profile or executor, please to refer the `-with-docker` options the `run` command.
 
 **Examples**
 
@@ -196,8 +182,7 @@ $ nextflow -h
 
 **Description**
 
-The `-h` option prints out the overview of the CLI interface and enumerates the top-level *options*
-and *commands*.
+The `-h` option prints out the overview of the CLI interface and enumerates the top-level *options* and *commands*.
 
 ### Execution logs
 
@@ -211,8 +196,7 @@ $ nextflow -log custom.log COMMAND [arg...]
 
 **Description**
 
-The `log` option takes a path of the new log file which to be used instead of the
-default `.nextflow.log` or to save logs files to another directory.
+The `log` option takes a path of the new log file which to be used instead of the default `.nextflow.log` or to save logs files to another directory.
 
 **Examples**
 
@@ -234,9 +218,7 @@ $ nextflow -q COMMAND [arg...]
 
 **Description**
 
-The `-q` option suppresses the banner, process related info and exits once the
-execution is completed. Please note that it does not affect any explicit print
-statement within a pipeline.
+The `-q` option suppresses the banner, process related info and exits once the execution is completed. Please note that it does not affect any explicit print statement within a pipeline.
 
 **Examples**
 
@@ -280,8 +262,7 @@ $ nextflow -v
 
 **Description**
 
-The `-v` option prints out information about *Nextflow* such as the version and build.
-The `-version` option in addition prints out the citation reference and official website.
+The `-v` option prints out information about *Nextflow* such as the version and build. The `-version` option in addition prints out the citation reference and official website.
 
 **Examples**
 
@@ -345,10 +326,7 @@ $ nextflow clean [run_name|session_id] [options]
 
 **Description**
 
-Upon invocation within a directory, `nextflow` creates a project specific `.nextflow.log`
-file, `.nextflow` cache directory as well as a `work` directory. The `clean` command is
-designed to facilitate removal of these files from previous executions.
-A list of run names and session ids can be generated by invoking `nextflow log -q`.
+Upon invocation within a directory, `nextflow` creates a project specific `.nextflow.log` file, `.nextflow` cache directory as well as a `work` directory. The `clean` command is designed to facilitate removal of these files from previous executions. A list of run names and session ids can be generated by invoking `nextflow log -q`.
 
 If no run name or session id is provided, it will clean the latest run.
 
@@ -440,9 +418,7 @@ $ nextflow clone [options] [project]
 
 **Description**
 
-The `clone` command downloads a pipeline from a Git-hosting platform into the *current directory*
-and modifies it accordingly. For downloading a pipeline into the global cache `~/.nextflow/assets`,
-please refer to the `nextflow pull` command.
+The `clone` command downloads a pipeline from a Git-hosting platform into the *current directory* and modifies it accordingly. For downloading a pipeline into the global cache `~/.nextflow/assets`, please refer to the `nextflow pull` command.
 
 **Options**
 
@@ -481,9 +457,7 @@ $ nextflow config [options] [project name or path]
 
 **Description**
 
-The `config` command is used for printing the project's configuration i.e. the `nextflow.config`
-and is especially useful for understanding the resolved profiles and parameters that Nextflow will use
-run a pipeline. For in-depth information, please refer the {ref}`config-profiles` section.
+The `config` command is used for printing the project's configuration i.e. the `nextflow.config` and is especially useful for understanding the resolved profiles and parameters that Nextflow will use run a pipeline. For in-depth information, please refer the {ref}`config-profiles` section.
 
 **Options**
 
@@ -566,8 +540,7 @@ $ nextflow console
 
 **Description**
 
-The `console` command is a wrapper over the Groovy *console* and provides a Graphic User
-Interface (GUI) and an interactive REPL (Read-Eval-Print-Loop) for quick experimentation.
+The `console` command is a wrapper over the Groovy *console* and provides a Graphic User Interface (GUI) and an interactive REPL (Read-Eval-Print-Loop) for quick experimentation.
 
 **Options**
 
@@ -593,8 +566,7 @@ $ nextflow drop [options] [project]
 
 **Description**
 
-The `drop` command is used to remove the projects which have been downloaded into the
-global cache. Please refer the `list` command for generating a list of downloaded pipelines.
+The `drop` command is used to remove the projects which have been downloaded into the global cache. Please refer the `list` command for generating a list of downloaded pipelines.
 
 **Options**
 
@@ -629,9 +601,7 @@ $ nextflow help [options] [command]
 
 **Description**
 
-The `help` command prints out the overview of the CLI interface and enumerates the top-level
-*options* and *commands*. Note that this command is equivalent to simply invoking `nextflow`
-at the command line.
+The `help` command prints out the overview of the CLI interface and enumerates the top-level *options* and *commands*. Note that this command is equivalent to simply invoking `nextflow` at the command line.
 
 **Options**
 
@@ -669,10 +639,7 @@ $ nextflow info [options] [project]
 
 **Description**
 
-The `info` command prints out the nextflow runtime information about the hardware as
-well as the software versions of the Nextflow version and build, operating system,
-and Groovy and Java runtime. It can also be used to display information about a
-specific project.
+The `info` command prints out the nextflow runtime information about the hardware as well as the software versions of the Nextflow version and build, operating system, and Groovy and Java runtime. It can also be used to display information about a specific project.
 
 If no run name or session id is provided, it will clean the latest run.
 
@@ -728,11 +695,7 @@ $ nextflow kuberun [options] [project]
 
 **Description**
 
-The `kuberun` command builds upon the `run` command and offers a deep integration with
-the Kubernetes execution environment. This command deploys the Nextflow runtime as a Kubernetes
-pod and assumes that you've already installed the `kubectl` CLI. The `kuberun` command
-does not allow the execution of **local** Nextflow scripts. For more information please refer
-the {ref}`k8s-page` section.
+The `kuberun` command builds upon the `run` command and offers a deep integration with the Kubernetes execution environment. This command deploys the Nextflow runtime as a Kubernetes pod and assumes that you've already installed the `kubectl` CLI. The `kuberun` command does not allow the execution of **local** Nextflow scripts. For more information please refer the {ref}`k8s-page` section.
 
 **Options**
 
@@ -844,11 +807,7 @@ $ nextflow log [options] [run_name | session_id]
 
 **Description**
 
-The `log` command is used to query the execution metadata associated with pipelines executed
-by Nextflow. The list of executed pipelines can be generated by issuing `nextflow log` at the terminal.
-Instead of run name, it's also possible to use a session id. Moreover, this command contains multiple options
-to facilitate the queries and is especially useful while debugging a pipeline and while inspecting pipeline
-execution metadata.
+The `log` command is used to query the execution metadata associated with pipelines executed by Nextflow. The list of executed pipelines can be generated by issuing `nextflow log` at the terminal. Instead of run name, it's also possible to use a session id. Moreover, this command contains multiple options to facilitate the queries and is especially useful while debugging a pipeline and while inspecting pipeline execution metadata.
 
 **Options**
 
@@ -960,8 +919,7 @@ $ nextflow pull [options] [project]
 
 **Description**
 
-The `pull` command downloads a pipeline from a Git-hosting platform into the global cache `~/.nextflow/assets`
-and modifies it accordingly. For downloading a pipeline into a local directory, please refer to the `nextflow clone` command.
+The `pull` command downloads a pipeline from a Git-hosting platform into the global cache `~/.nextflow/assets` and modifies it accordingly. For downloading a pipeline into a local directory, please refer to the `nextflow clone` command.
 
 **Options**
 
@@ -1016,9 +974,7 @@ $ nextflow run [options] [project]
 
 **Description**
 
-The `run` command is used to initiate the execution of the a pipeline script or
-download a pipeline project. Along with serving the purpose of script execution, this command
-facilitates rapid iterations, inspections of any pipeline as well as debugging.
+The `run` command is used to initiate the execution of the a pipeline script or download a pipeline project. Along with serving the purpose of script execution, this command facilitates rapid iterations, inspections of any pipeline as well as debugging.
 
 **Options**
 
@@ -1115,8 +1071,7 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
   $ nextflow run nextflow-io/hello -with-tower
   ```
 
-- Invoke the nextflow pipeline execution with a custom parameters `YAML/JSON` file.
-  The parameters which are specified through this mechanism are merged with the resolved configuration (base configuration and profiles) and only the common fields are overwritten by the `YAML/JSON` file.:
+- Invoke the nextflow pipeline execution with a custom parameters `YAML/JSON` file. The parameters which are specified through this mechanism are merged with the resolved configuration (base configuration and profiles) and only the common fields are overwritten by the `YAML/JSON` file.:
 
   ```
   $ nextflow run main.nf -params-file pipeline_params.yml
@@ -1166,8 +1121,7 @@ $ nextflow view [options] [project]
 
 **Description**
 
-The `view` command is used to inspect the pipelines which are already stored in the global nextflow cache.
-For downloading a pipeline into the global cache `~/.nextflow/assets`, please refer to the `pull` command.
+The `view` command is used to inspect the pipelines which are already stored in the global nextflow cache. For downloading a pipeline into the global cache `~/.nextflow/assets`, please refer to the `pull` command.
 
 **Options**
 
@@ -1249,9 +1203,7 @@ workflow {
 
 ## Pipeline parameters
 
-Pipeline script can use an arbitrary number of parameters that can be overridden either
-using the command line or the Nextflow configuration file. Any script parameter can be specified
-on the command line prefixing the parameter name with double dash characters e.g.:
+Pipeline script can use an arbitrary number of parameters that can be overridden either using the command line or the Nextflow configuration file. Any script parameter can be specified on the command line prefixing the parameter name with double dash characters e.g.:
 
 ```bash
 nextflow run <my script> --foo Hello
@@ -1260,14 +1212,11 @@ nextflow run <my script> --foo Hello
 Then, the parameter can be accessed in the pipeline script using the `params.foo` identifier.
 
 :::{note}
-When the parameter name is formatted using `camelCase`, a second parameter
-is created with the same value using `kebab-case`, and the other way around.
+When the parameter name is formatted using `camelCase`, a second parameter is created with the same value using `kebab-case`, and the other way around.
 :::
 
 :::{warning}
-When a command line parameter includes one or more glob characters, i.e. wildcards like `*` or `?`,
-the parameter value needs to be enclosed in quotes to prevent Bash expansion and preserve
-the glob characters. For example:
+When a command line parameter includes one or more glob characters, i.e. wildcards like `*` or `?`, the parameter value needs to be enclosed in quotes to prevent Bash expansion and preserve the glob characters. For example:
 
 ```bash
 nextflow run <my script> --files "*.fasta"

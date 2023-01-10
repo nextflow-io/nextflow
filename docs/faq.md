@@ -6,9 +6,7 @@
 
 Q: *I have a collection of input files (e.g. carrots.fa, onions.fa, broccoli.fa). How can I specify that a process is performed on each input file in a parallel manner?*
 
-A: The idea here is to create a *channel* that will trigger a process
-execution for each of your files. First define a parameter that specifies where
-the input files are:
+A: The idea here is to create a *channel* that will trigger a process execution for each of your files. First define a parameter that specifies where the input files are:
 
 ```groovy
 params.input = "data/*.fa"
@@ -20,11 +18,7 @@ Each of the files in the data directory can be made into a channel with:
 vegetable_datasets = Channel.fromPath(params.input)
 ```
 
-From here, each time the variable `vegetable_datasets` is called as an
-input to a process, the process will be performed on each of the files
-in the vegetable datasets. For example, each input file may contain a
-collection of unaligned sequences. We can specify a process to align
-them as follows:
+From here, each time the variable `vegetable_datasets` is called as an input to a process, the process will be performed on each of the files in the vegetable datasets. For example, each input file may contain a collection of unaligned sequences. We can specify a process to align them as follows:
 
 ```groovy
 process clustalw2_align {
@@ -41,11 +35,9 @@ process clustalw2_align {
 }
 ```
 
-This would result in the alignment of the three vegetable fasta files
-into `carrots.aln`, `onions.aln` and `broccoli.aln`.
+This would result in the alignment of the three vegetable fasta files into `carrots.aln`, `onions.aln` and `broccoli.aln`.
 
-These aligned files are now in the channel `vegetable_alns` and can be
-used as input for a further process.
+These aligned files are now in the channel `vegetable_alns` and can be used as input for a further process.
 
 ## How do I get a unique ID based on the file name?
 
@@ -57,18 +49,15 @@ A: First we can specify a results directory as shown below:
 results_path = $PWD/results
 ```
 
-The best way to manage this is to have the channel emit a tuple
-containing both the file base name (`broccoli`) and the full file path
-(`data/broccoli.fa`):
+The best way to manage this is to have the channel emit a tuple containing both the file base name (`broccoli`) and the full file path (`data/broccoli.fa`):
 
 ```groovy
 datasets = Channel
-                .fromPath(params.input)
-                .map { file -> tuple(file.baseName, file) }
+    .fromPath(params.input)
+    .map { file -> tuple(file.baseName, file) }
 ```
 
-And in the process we can then reference these variables (`datasetID`
-and `datasetFile`):
+And in the process we can then reference these variables (`datasetID` and `datasetFile`):
 
 ```groovy
 process clustalw2_align {
@@ -87,28 +76,19 @@ process clustalw2_align {
 }
 ```
 
-In our example above would now have the folder `broccoli` in the results directory which would
-contain the file `broccoli.aln`.
+In our example above would now have the folder `broccoli` in the results directory which would contain the file `broccoli.aln`.
 
-If the input file has multiple extensions (e.g. `broccoli.tar.gz`), you will want to use
-`file.simpleName` instead, to strip all of them.
+If the input file has multiple extensions (e.g. `broccoli.tar.gz`), you will want to use `file.simpleName` instead, to strip all of them.
 
 ## How do I invoke custom scripts and tools?
 
 *Q: I have executables in my code, how should I call them in Nextflow?*
 
-A: Nextflow will automatically add the directory `bin` into the `PATH`
-environmental variable. So therefore any executable in the `bin`
-folder of a Nextflow pipeline can be called without the need to
-reference the full path.
+A: Nextflow will automatically add the directory `bin` into the `PATH` environmental variable. So therefore any executable in the `bin` folder of a Nextflow pipeline can be called without the need to reference the full path.
 
-For example, we may wish to reformat our *ClustalW* alignments from
-Question 3 into *PHYLIP* format. We will use the handy tool
-`esl-reformat` for this task.
+For example, we may wish to reformat our *ClustalW* alignments from Question 3 into *PHYLIP* format. We will use the handy tool `esl-reformat` for this task.
 
-First we place copy (or create a symlink to) the `esl-reformat`
-executable to the project's bin folder. From above we see the *ClustalW*
-alignments are in the channel `clustalw_alns`:
+First we place copy (or create a symlink to) the `esl-reformat` executable to the project's bin folder. From above we see the *ClustalW* alignments are in the channel `clustalw_alns`:
 
 ```groovy
 process phylip_reformat {
@@ -123,7 +103,6 @@ process phylip_reformat {
     esl-reformat phylip ${clustalw_alignment} ${clustalw_alignment.baseName}.phy
     """
 }
-
 
 process generate_bootstrap_replicates {
     input:
@@ -141,8 +120,7 @@ process generate_bootstrap_replicates {
 
 ## How do I iterate over a process n times?
 
-To perform a process *n* times, we can specify the input to be
-`each x from y..z`. For example:
+To perform a process *n* times, we can specify the input to be `each x from y..z`. For example:
 
 ```groovy
 bootstrapReplicates=100
@@ -170,9 +148,7 @@ process bootstrapReplicateTrees {
 
 *Q: For example, I have 100 files emitted by a channel. I wish to perform one process where I iterate over each file inside the process.*
 
-A: The idea here to transform a channel emitting multiple items into a channel
-that will collect all files into a list object and produce that list as a single emission. We do this using the `collect()` operator. The process script would then be able to iterate over
-the files by using a simple for-loop.
+A: The idea here to transform a channel emitting multiple items into a channel that will collect all files into a list object and produce that list as a single emission. We do this using the `collect()` operator. The process script would then be able to iterate over the files by using a simple for-loop.
 
 This is also useful if all the items of a channel are required to be in the work directory.
 

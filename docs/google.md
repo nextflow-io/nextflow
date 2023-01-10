@@ -4,30 +4,21 @@
 
 ## Credentials
 
-Credentials for submitting requests to the Google Cloud Batch and Cloud LifeSciences API are picked up from your
-environment using [Application Default Credentials](https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http).
-Application Default Credentials are designed to use the credentials most natural to the
-environment in which a tool runs.
+Credentials for submitting requests to the Google Cloud Batch and Cloud LifeSciences API are picked up from your environment using [Application Default Credentials](https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http). Application Default Credentials are designed to use the credentials most natural to the environment in which a tool runs.
 
-The most common case will be to pick up your end-user Google credentials from your
-workstation. You can create these by running the command:
+The most common case will be to pick up your end-user Google credentials from your workstation. You can create these by running the command:
 
 ```bash
 gcloud auth application-default login
 ```
 
-and running through the authentication flow. This will write a credential file to your gcloud
-configuration directory that will be used for any tool you run on your workstation that
-picks up default credentials.
+and running through the authentication flow. This will write a credential file to your gcloud configuration directory that will be used for any tool you run on your workstation that picks up default credentials.
 
-The next most common case would be when running on a Compute Engine VM. In this case,
-Application Default Credentials will pick up the Compute Engine Service Account
-credentials for that VM.
+The next most common case would be when running on a Compute Engine VM. In this case, Application Default Credentials will pick up the Compute Engine Service Account credentials for that VM.
 
 See the [Application Default Credentials](https://github.com/googleapis/google-auth-library-java#google-auth-library-oauth2-http) documentation for how to enable other use cases.
 
-Finally, the `GOOGLE_APPLICATION_CREDENTIALS` environment variable can be used to specify location
-of the Google credentials file.
+Finally, the `GOOGLE_APPLICATION_CREDENTIALS` environment variable can be used to specify location of the Google credentials file.
 
 If you don't have it, the credentials file can be download from the Google Cloud Console following these steps:
 
@@ -38,8 +29,7 @@ If you don't have it, the credentials file can be download from the Google Cloud
 - Select JSON as *Key type*
 - Click the *Create* button and download the JSON file giving a name of your choice e.g. `creds.json`.
 
-Then, define the following variable replacing the path in the example with the one of your
-credentials file just downloaded:
+Then, define the following variable replacing the path in the example with the one of your credentials file just downloaded:
 
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS="/path/your/file/creds.json"
@@ -49,18 +39,15 @@ export GOOGLE_APPLICATION_CREDENTIALS="/path/your/file/creds.json"
 
 ## Cloud Batch
 
-[Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the
-Google Cloud Platform infrastructure.
+[Google Cloud Batch](https://cloud.google.com/batch) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
-Nextflow provides built-in support for Google Cloud Batch, allowing the seamless deployment of Nextflow pipelines
-in the cloud, in which tasks are offloaded to the Cloud Batch service.
+Nextflow provides built-in support for Google Cloud Batch, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded to the Cloud Batch service.
 
 Read the {ref}`Google Cloud Batch executor <google-batch-executor>` section to learn more about the `google-batch` executor in Nextflow.
 
 ### Requirements
 
-The support for Google Batch requires Nextflow version `22.07.1-edge` or later. If you have already Nextflow
-installed make sure to update to the latest edge release using these commands:
+The support for Google Batch requires Nextflow version `22.07.1-edge` or later. If you have already Nextflow installed make sure to update to the latest edge release using these commands:
 
 ```bash
 export NXF_EDGE=1
@@ -79,12 +66,10 @@ when done, make sure to use the latest edge release running the snippet in the p
 
 ### Configuration
 
-Make sure to have defined in your environment the `GOOGLE_APPLICATION_CREDENTIALS` variable.
-See the section [Credentials](#credentials) for details.
+Make sure to have defined in your environment the `GOOGLE_APPLICATION_CREDENTIALS` variable. See the section [Credentials](#credentials) for details.
 
 :::{note}
-Make sure your Google account is allowed to access the Google Cloud Batch service by checking
-the [APIs & Services](https://console.cloud.google.com/apis/dashboard) dashboard.
+Make sure your Google account is allowed to access the Google Cloud Batch service by checking the [APIs & Services](https://console.cloud.google.com/apis/dashboard) dashboard.
 :::
 
 Create or edit the file `nextflow.config` in your project root directory. The config must specify the following parameters:
@@ -113,14 +98,11 @@ Make sure to specify the project ID, not the project name.
 :::
 
 :::{note}
-Make sure to specify a location where Google Batch is available. Refer to the
-[Google Batch documentation](https://cloud.google.com/batch/docs/get-started#locations)
-for region availability.
+Make sure to specify a location where Google Batch is available. Refer to the [Google Batch documentation](https://cloud.google.com/batch/docs/get-started#locations) for region availability.
 :::
 
 :::{Note}
-A container image must be specified to deploy the process execution. You can use a different Docker image for
-each process using one or more {ref}`config-process-selectors`.
+A container image must be specified to deploy the process execution. You can use a different Docker image for each process using one or more {ref}`config-process-selectors`.
 :::
 
 The following configuration options are available:
@@ -141,13 +123,9 @@ The following configuration options are available:
 
 ### Process definition
 
-Processes can be defined as usual and by default the `cpus` and `memory` directives are used to instantiate a custom
-machine type with the specified compute resources.  If `memory` is not specified, 1GB of memory is allocated per cpu.
+Processes can be defined as usual and by default the `cpus` and `memory` directives are used to instantiate a custom machine type with the specified compute resources. If `memory` is not specified, 1GB of memory is allocated per cpu.
 
-The process `machineType` directive may optionally be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types)
-If specified, this value overrides the `cpus` and `memory` directives.
-If the `cpus` and `memory` directives are used, the values must comply with the allowed custom machine type [specifications](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#specifications) .  Extended memory is not directly supported, however high memory or cpu predefined
-instances may be utilized using the `machineType` directive
+The process `machineType` directive may optionally be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) If specified, this value overrides the `cpus` and `memory` directives. If the `cpus` and `memory` directives are used, the values must comply with the allowed custom machine type [specifications](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#specifications) . Extended memory is not directly supported, however high memory or cpu predefined instances may be utilized using the `machineType` directive
 
 Examples:
 
@@ -172,19 +150,16 @@ process predefined_resources_task {
 
 ### Pipeline execution
 
-The pipeline can be launched either in a local computer or a cloud instance. Pipeline input data can be stored either
-locally or in a Google Storage bucket.
+The pipeline can be launched either in a local computer or a cloud instance. Pipeline input data can be stored either locally or in a Google Storage bucket.
 
-The pipeline execution must specify a Google Storage bucket where the workflow's intermediate results are stored using
-the `-work-dir` command line options. For example:
+The pipeline execution must specify a Google Storage bucket where the workflow's intermediate results are stored using the `-work-dir` command line options. For example:
 
 ```bash
 nextflow run <script or project name> -work-dir gs://my-bucket/some/path
 ```
 
 :::{tip}
-Any input data **not** stored in a Google Storage bucket will automatically be transferred to the
-pipeline work bucket. Use this feature with caution being careful to avoid unnecessary data transfers.
+Any input data **not** stored in a Google Storage bucket will automatically be transferred to the pipeline work bucket. Use this feature with caution being careful to avoid unnecessary data transfers.
 :::
 
 :::{warning}
@@ -201,9 +176,7 @@ google {
 }
 ```
 
-Since this type of virtual machines can be retired by the provider before the job completion, it is advisable
-to add the following retry strategy to your config file to instruct Nextflow to automatically re-execute a job
-if the virtual machine was terminated preemptively:
+Since this type of virtual machines can be retired by the provider before the job completion, it is advisable to add the following retry strategy to your config file to instruct Nextflow to automatically re-execute a job if the virtual machine was terminated preemptively:
 
 ```groovy
 process {
@@ -214,8 +187,7 @@ process {
 
 ### Supported directives
 
-The integration with Google Batch is a developer preview feature. Currently the following Nextflow directives are
-supported:
+The integration with Google Batch is a developer preview feature. Currently the following Nextflow directives are supported:
 
 - {ref}`process-accelerator`
 - {ref}`process-container`
@@ -244,29 +216,24 @@ export NXF_MODE=google
 ```
 :::
 
-[Cloud Life Sciences](https://cloud.google.com/life-sciences/) is a managed computing service that allows the execution of
-containerized workloads in the Google Cloud Platform infrastructure.
+[Cloud Life Sciences](https://cloud.google.com/life-sciences/) is a managed computing service that allows the execution of containerized workloads in the Google Cloud Platform infrastructure.
 
-Nextflow provides built-in support for Cloud Life Sciences, allowing the seamless deployment of Nextflow
-pipelines in the cloud, in which tasks are offloaded to the Cloud Life Sciences service.
+Nextflow provides built-in support for Cloud Life Sciences, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded to the Cloud Life Sciences service.
 
 Read the {ref}`Google Life Sciences executor <google-lifesciences-executor>` page to learn about the `google-lifesciences` executor in Nextflow.
 
 :::{warning}
-This API works well for coarse-grained workloads (i.e. long running jobs). It's not suggested the use
-this feature for pipelines spawning many short lived tasks.
+This API works well for coarse-grained workloads (i.e. long running jobs). It's not suggested the use this feature for pipelines spawning many short lived tasks.
 :::
 
 (google-lifesciences-config)=
 
 ### Configuration
 
-Make sure to have defined in your environment the `GOOGLE_APPLICATION_CREDENTIALS` variable.
-See the section [Credentials](#credentials) for details.
+Make sure to have defined in your environment the `GOOGLE_APPLICATION_CREDENTIALS` variable. See the section [Credentials](#credentials) for details.
 
 :::{tip}
-Make sure to enable the Cloud Life Sciences API beforehand. To learn how to enable it
-follow [this link](https://cloud.google.com/life-sciences/docs/quickstart).
+Make sure to enable the Cloud Life Sciences API beforehand. To learn how to enable it follow [this link](https://cloud.google.com/life-sciences/docs/quickstart).
 :::
 
 Create a `nextflow.config` file in the project root directory. The config must specify the following parameters:
@@ -304,9 +271,9 @@ The following configuration options are available:
 | Name                                      | Description                                                                                                                                                                                                                                                                                                                                                 |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `google.project`                          | The Google Project Id to use for the pipeline execution.                                                                                                                                                                                                                                                                                                    |
-| `google.region`                           | The Google *region* where the computation is executed in Compute Engine VMs. Multiple regions can be provided separating them by a comma. Do not specify if a zone is provided. See  [available Compute Engine regions and zones](https://cloud.google.com/compute/docs/regions-zones/)                                                                     |
-| `google.zone`                             | The Google *zone* where the computation is executed in Compute Engine VMs. Multiple zones can be provided separating them by a comma. Do not specify if a region is provided. See  [available Compute Engine regions and zones](https://cloud.google.com/compute/docs/regions-zones/)                                                                       |
-| `google.location`                         | The Google *location* where the job executions are deployed to Cloud Life Sciences API. See  [available Cloud Life Sciences API locations](https://cloud.google.com/life-sciences/docs/concepts/locations) (default: the same as the region or the zone specified).                                                                                         |
+| `google.region`                           | The Google *region* where the computation is executed in Compute Engine VMs. Multiple regions can be provided separating them by a comma. Do not specify if a zone is provided. See [available Compute Engine regions and zones](https://cloud.google.com/compute/docs/regions-zones/)                                                                    |
+| `google.zone`                             | The Google *zone* where the computation is executed in Compute Engine VMs. Multiple zones can be provided separating them by a comma. Do not specify if a region is provided. See [available Compute Engine regions and zones](https://cloud.google.com/compute/docs/regions-zones/)                                                                      |
+| `google.location`                         | The Google *location* where the job executions are deployed to Cloud Life Sciences API. See [available Cloud Life Sciences API locations](https://cloud.google.com/life-sciences/docs/concepts/locations) (default: the same as the region or the zone specified).                                                                                         |
 | `google.enableRequesterPaysBuckets`       | When `true` uses the configured Google project id as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`)                                                |
 | `google.lifeSciences.bootDiskSize`        | Set the size of the virtual machine boot disk e.g `50.GB` (default: none).                                                                                                                                                                                                                                                                                  |
 | `google.lifeSciences.copyImage`           | The container image run to copy input and output files. It must include the `gsutil` tool (default: `google/cloud-sdk:alpine`).                                                                                                                                                                                                                             |
@@ -328,15 +295,9 @@ The following configuration options are available:
 
 ### Process definition
 
-Processes can be defined as usual and by default the `cpus` and `memory` directives are used to instantiate a custom
-machine type with the specified compute resources.  If `memory` is not specified, 1GB of memory is allocated per cpu.
-A persistent disk will be created with size corresponding to the `disk` directive.  If `disk` is not specified, the
-instance default is chosen to ensure reasonable I/O performance.
+Processes can be defined as usual and by default the `cpus` and `memory` directives are used to instantiate a custom machine type with the specified compute resources. If `memory` is not specified, 1GB of memory is allocated per cpu. A persistent disk will be created with size corresponding to the `disk` directive. If `disk` is not specified, the instance default is chosen to ensure reasonable I/O performance.
 
-The process `machineType` directive may optionally be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types)
-If specified, this value overrides the `cpus` and `memory` directives.
-If the `cpus` and `memory` directives are used, the values must comply with the allowed custom machine type [specifications](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#specifications) .  Extended memory is not directly supported, however high memory or cpu predefined
-instances may be utilized using the `machineType` directive
+The process `machineType` directive may optionally be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) If specified, this value overrides the `cpus` and `memory` directives. If the `cpus` and `memory` directives are used, the values must comply with the allowed custom machine type [specifications](https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#specifications) . Extended memory is not directly supported, however high memory or cpu predefined instances may be utilized using the `machineType` directive
 
 Examples:
 
@@ -362,19 +323,16 @@ process predefined_resources_task {
 
 ### Pipeline execution
 
-The pipeline can be launched either in a local computer or a cloud instance. Pipeline input data can be stored either
-locally or in a Google Storage bucket.
+The pipeline can be launched either in a local computer or a cloud instance. Pipeline input data can be stored either locally or in a Google Storage bucket.
 
-The pipeline execution must specify a Google Storage bucket where the workflow's intermediate results are stored using
-the `-work-dir` command line options. For example:
+The pipeline execution must specify a Google Storage bucket where the workflow's intermediate results are stored using the `-work-dir` command line options. For example:
 
 ```bash
 nextflow run <script or project name> -work-dir gs://my-bucket/some/path
 ```
 
 :::{tip}
-Any input data *not* stored in a Google Storage bucket will be automatically transferred to the
-pipeline work bucket. Use this feature with caution, being careful to avoid unnecessary data transfers.
+Any input data *not* stored in a Google Storage bucket will be automatically transferred to the pipeline work bucket. Use this feature with caution, being careful to avoid unnecessary data transfers.
 :::
 
 ### Preemptible instances
@@ -387,9 +345,7 @@ google {
 }
 ```
 
-Since this type of virtual machines can be retired by the provider before the job completion, it is advisable
-to add the following retry strategy to your config file to instruct Nextflow to automatically re-execute a job
-if the virtual machine was terminated preemptively:
+Since this type of virtual machines can be retired by the provider before the job completion, it is advisable to add the following retry strategy to your config file to instruct Nextflow to automatically re-execute a job if the virtual machine was terminated preemptively:
 
 ```groovy
 process {
@@ -408,13 +364,9 @@ For an exhaustive list of error codes, refer to the official Google Life Science
 
 ### Hybrid execution
 
-Nextflow allows the use of multiple executors in the same workflow. This feature enables the deployment
-of hybrid workloads, in which some jobs are executed in the local computer or local computing cluster, and
-some jobs are offloaded to Google Life Sciences.
+Nextflow allows the use of multiple executors in the same workflow. This feature enables the deployment of hybrid workloads, in which some jobs are executed in the local computer or local computing cluster, and some jobs are offloaded to Google Life Sciences.
 
-To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration file to apply
-the Google Life Sciences executor to the subset of processes that you want to offload.
-For example:
+To enable this feature, use one or more {ref}`config-process-selectors` in your Nextflow configuration file to apply the Google Life Sciences executor to the subset of processes that you want to offload. For example:
 
 ```groovy
 process {
@@ -430,44 +382,32 @@ google {
 }
 ```
 
-Then launch the pipeline with the `-bucket-dir` option to specify a Google Storage path
-for the jobs computed with Google Life Sciences and, optionally, the `-work-dir` to
-specify the local storage for the jobs computed locally:
+Then launch the pipeline with the `-bucket-dir` option to specify a Google Storage path for the jobs computed with Google Life Sciences and, optionally, the `-work-dir` to specify the local storage for the jobs computed locally:
 
 ```bash
 nextflow run <script or project name> -bucket-dir gs://my-bucket/some/path
 ```
 
 :::{warning}
-The Google Storage path needs to contain at least one sub-directory (e.g. `gs://my-bucket/work` rather than
-`gs://my-bucket`).
+The Google Storage path needs to contain at least one sub-directory (e.g. `gs://my-bucket/work` rather than `gs://my-bucket`).
 :::
 
 ### Limitations
 
 - Compute resources in Google Cloud are subject to [resource quotas](https://cloud.google.com/compute/quotas), which may affect your ability to run pipelines at scale. You can request quota increases, and your quotas may automatically increase over time as you use the platform. In particular, GPU quotas are initially set to 0, so you must explicitly request a quota increase in order to use GPUs. You can initially request an increase to 1 GPU at a time, and after one billing cycle you may be able to increase it further.
 
-- Currently it's not possible to specify a disk type different from the default one assigned
-  by the service depending on the chosen instance type.
+- Currently it's not possible to specify a disk type different from the default one assigned by the service depending on the chosen instance type.
 
 ### Troubleshooting
 
-- Make sure to enable the Compute Engine API, Life Sciences API and Cloud Storage API in the
-  [APIs & Services Dashboard](https://console.cloud.google.com/apis/dashboard) page.
+- Make sure to enable the Compute Engine API, Life Sciences API and Cloud Storage API in the [APIs & Services Dashboard](https://console.cloud.google.com/apis/dashboard) page.
 
-- Make sure to have enough compute resources to run your pipeline in your project
-  [Quotas](https://console.cloud.google.com/iam-admin/quotas) (i.e. Compute Engine CPUs,
-  Compute Engine Persistent Disk, Compute Engine In-use IP addresses, etc).
+- Make sure to have enough compute resources to run your pipeline in your project [Quotas](https://console.cloud.google.com/iam-admin/quotas) (i.e. Compute Engine CPUs, Compute Engine Persistent Disk, Compute Engine In-use IP addresses, etc).
 
-- Make sure your security credentials allow you to access any Google Storage bucket
-  where input data and temporary files are stored.
+- Make sure your security credentials allow you to access any Google Storage bucket where input data and temporary files are stored.
 
-- When a job fails, you can check the `google/` directory in the task work directory (in the bucket storage),
-  which contains useful information about the job execution.
-  To enable the creation of this directory, set `google.lifeSciences.debug = true` in the
-  Nextflow config.
+- When a job fails, you can check the `google/` directory in the task work directory (in the bucket storage), which contains useful information about the job execution. To enable the creation of this directory, set `google.lifeSciences.debug = true` in the Nextflow config.
 
 - You can enable the optional SSH daemon in the job VM by setting `google.lifeSciences.sshDaemon = true` in the Nextflow config.
 
-- Make sure you are choosing a `location` where the [Cloud Life Sciences API is available](https://cloud.google.com/life-sciences/docs/concepts/locations),
-  and a `region` or `zone` where the [Compute Engine API  is available](https://cloud.google.com/compute/docs/regions-zones/).
+- Make sure you are choosing a `location` where the [Cloud Life Sciences API is available](https://cloud.google.com/life-sciences/docs/concepts/locations), and a `region` or `zone` where the [Compute Engine API is available](https://cloud.google.com/compute/docs/regions-zones/).

@@ -2,17 +2,13 @@
 
 # Secrets
 
-As of version `21.09.0-edge`, Nextflow adds the built-in support for pipeline secrets to allow users to handle
-and manage sensitive information for pipeline execution in a safe manner.
+As of version `21.09.0-edge`, Nextflow adds the built-in support for pipeline secrets to allow users to handle and manage sensitive information for pipeline execution in a safe manner.
 
 ## How it works
 
-This feature allows decoupling the use secrets in your pipelines from the pipeline code and configuration files.
-Secrets are instead managed by Nextflow and store separately into a local store only accessible to the secrets
-owner.
+This feature allows decoupling the use secrets in your pipelines from the pipeline code and configuration files. Secrets are instead managed by Nextflow and store separately into a local store only accessible to the secrets owner.
 
-When the pipeline execution is launched Nextflow inject the secrets in pipeline jobs without leaking them
-into temporary execution files. The secrets are accessible into the job command via environment variables.
+When the pipeline execution is launched Nextflow inject the secrets in pipeline jobs without leaking them into temporary execution files. The secrets are accessible into the job command via environment variables.
 
 ## Command line
 
@@ -36,8 +32,7 @@ aws {
 }
 ```
 
-The above snippet access the secrets `MY_ACCESS_KEY` and `MY_SECRET_KEY` previously and assign them to
-the corresponding AWS credentials settings.
+The above snippet access the secrets `MY_ACCESS_KEY` and `MY_SECRET_KEY` previously and assign them to the corresponding AWS credentials settings.
 
 :::{warning}
 Secrets **cannot** be assigned to pipeline parameters.
@@ -58,18 +53,12 @@ process someJob {
 }
 ```
 
-The above snippet runs a command in with the variables `MY_ACCESS_KEY` and `MY_SECRET_KEY` are injected in the
-process execution environment holding the values defines in the secret store.
+The above snippet runs a command in with the variables `MY_ACCESS_KEY` and `MY_SECRET_KEY` are injected in the process execution environment holding the values defines in the secret store.
 
 :::{warning}
-The secrets are made available in the process context running the command script as environment variables.
-Therefore make sure to escape the variable name identifier with a backslash as shown
-in the example above, otherwise a variable with the same will be evaluated in the Nextflow script
-context instead of the command script.
+The secrets are made available in the process context running the command script as environment variables. Therefore make sure to escape the variable name identifier with a backslash as shown in the example above, otherwise a variable with the same will be evaluated in the Nextflow script context instead of the command script.
 :::
 
 :::{note}
-This feature is only available when using the local or grid executors (Slurm, Grid Engine, etc).
-The AWS Batch executor allows the use of secrets when deploying the pipeline execution via
-[Nextflow Tower](https://seqera.io/blog/pipeline-secrets-secure-handling-of-sensitive-information-in-tower/).
+This feature is only available when using the local or grid executors (Slurm, Grid Engine, etc). The AWS Batch executor allows the use of secrets when deploying the pipeline execution via [Nextflow Tower](https://seqera.io/blog/pipeline-secrets-secure-handling-of-sensitive-information-in-tower/).
 :::

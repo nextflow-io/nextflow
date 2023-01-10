@@ -2,28 +2,20 @@
 
 # Flux Framework
 
-The [Flux Framework](https://flux-framework.org/) is a modern resource manager that can span the space between
-cloud and HPC. If your center does not provide Flux for you, you can [build Flux on your own](https://flux-framework.readthedocs.io/en/latest/quickstart.html#building-the-code)
-and launch it as a job with your resource manager of choice (e.g. SLURM or a cloud provider).
+The [Flux Framework](https://flux-framework.org/) is a modern resource manager that can span the space between cloud and HPC. If your center does not provide Flux for you, you can [build Flux on your own](https://flux-framework.readthedocs.io/en/latest/quickstart.html#building-the-code) and launch it as a job with your resource manager of choice (e.g. SLURM or a cloud provider).
 
 ## Tutorial
 
-In the [`docker/flux`](https://github.com/nextflow-io/nextflow/tree/master/docker/flux) directory we provide
-a [Dockerfile for interacting with Flux](https://github.com/nextflow-io/nextflow/tree/master/docker/flux/.devcontainer/Dockerfile) along with a [VSCode Developer Container](https://code.visualstudio.com/docs/devcontainers/containers)
-environment that you can put at the root of the project to be provided with a Flux agent and the dependencies
-needed to build Nextflow. There are two ways to use this:
+In the [`docker/flux`](https://github.com/nextflow-io/nextflow/tree/master/docker/flux) directory we provide a [Dockerfile for interacting with Flux](https://github.com/nextflow-io/nextflow/tree/master/docker/flux/.devcontainer/Dockerfile) along with a [VSCode Developer Container](https://code.visualstudio.com/docs/devcontainers/containers) environment that you can put at the root of the project to be provided with a Flux agent and the dependencies needed to build Nextflow. There are two ways to use this:
 
 - Build a container from scratch and bind your code to it (e.g. for development or testing)
 - Use VSCode and DevContainers to create a more seamless environment
 
-Both strategies are described below. For this tutorial, you will generally want
-to prepare a pipeline to use the `flux` executor, create an environment with Flux, start a Flux instance, and
-interact with it.
+Both strategies are described below. For this tutorial, you will generally want to prepare a pipeline to use the `flux` executor, create an environment with Flux, start a Flux instance, and interact with it.
 
 ### Prepare your pipeline
 
-To run your pipeline with Flux, you'll want to specify it in your config. Here is an example
-`nextflow.config`:
+To run your pipeline with Flux, you'll want to specify it in your config. Here is an example `nextflow.config`:
 
 ```groovy
 manifest {
@@ -66,15 +58,13 @@ You can either build the Docker image from the root of the Nextflow repository:
 $ docker build -f docker/flux/.devcontainer/Dockerfile --platform linux/amd64 -o type=docker -t nextflow-flux .
 ```
 
-And then shell into the container for a development environment. You'll need to bind
-the present working directory to `/code` to see your local changes in the container:
+And then shell into the container for a development environment. You'll need to bind the present working directory to `/code` to see your local changes in the container:
 
 ```console
 $ docker run -it -v $PWD:/code nextflow-flux
 ```
 
-You can also move the `.devcontainer` directory to the root of your repository, and
-open it in VSCode:
+You can also move the `.devcontainer` directory to the root of your repository, and open it in VSCode:
 
 ```console
 $ cp -R docker/flux/.devcontainer .devcontainer
@@ -86,15 +76,11 @@ Then open in VSCode, and select **Re-open in container**:
 $ code .
 ```
 
-Then you should be able to open a terminal (**Terminal** -> **New Terminal**)
-to interact with the command line. Try running `make` again!
-Whichever of these two approaches you take, you should be in a container
-environment with the `flux` command available.
+Then you should be able to open a terminal (**Terminal** -> **New Terminal**) to interact with the command line. Try running `make` again! Whichever of these two approaches you take, you should be in a container environment with the `flux` command available.
 
 ### Start a Flux Instance
 
-Once in your container, you can start an interactive Flux instance (from which you can submit jobs on
-the command line to test with Nextflow) as follows:
+Once in your container, you can start an interactive Flux instance (from which you can submit jobs on the command line to test with Nextflow) as follows:
 
 ```console
 $ flux start --test-size=4
@@ -145,8 +131,7 @@ $ ls .
 demo.nf    nextflow.config
 ```
 
-If you've installed Nextflow already, you are good to go! If you are working
-with development code and need to build Nextflow:
+If you've installed Nextflow already, you are good to go! If you are working with development code and need to build Nextflow:
 
 ```console
 $ make assemble

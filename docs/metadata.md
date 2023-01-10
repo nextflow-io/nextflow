@@ -6,8 +6,7 @@
 
 ## Runtime metadata
 
-The implicit `workflow` object allows you to access some workflow and runtime metadata in your Nextflow scripts.
-For example:
+The implicit `workflow` object allows you to access some workflow and runtime metadata in your Nextflow scripts. For example:
 
 ```groovy
 println "Project : $workflow.projectDir"
@@ -17,8 +16,7 @@ println "Manifest's pipeline version: $workflow.manifest.version"
 ```
 
 :::{tip}
-To shortcut the access to multiple `workflow` properties you can use the Groovy
-[with](<http://docs.groovy-lang.org/latest/html/groovy-jdk/java/lang/Object.html#with(groovy.lang.Closure)>) method.
+To shortcut the access to multiple `workflow` properties you can use the Groovy [with](<http://docs.groovy-lang.org/latest/html/groovy-jdk/java/lang/Object.html#with(groovy.lang.Closure)>) method.
 :::
 
 The following table lists the properties that can be accessed on the `workflow` object:
@@ -69,10 +67,7 @@ The implicit `nextflow` object allows you to access the metadata information of 
 | nextflow.build     | Nextflow runtime build number.      |
 | nextflow.timestamp | Nextflow runtime compile timestamp. |
 
-The method `nextflow.version.matches` allows you to check if the Nextflow runtime satisfies the version
-requirement eventually needed by your workflow script. The required version string can be prefixed with the usual
-comparison operators eg `>`, `>=`, `=`, etc. or postfixed with the `+` operator to specify a minimal version
-requirement. For example:
+The method `nextflow.version.matches` allows you to check if the Nextflow runtime satisfies the version requirement eventually needed by your workflow script. The required version string can be prefixed with the usual comparison operators eg `>`, `>=`, `=`, etc. or postfixed with the `+` operator to specify a minimal version requirement. For example:
 
 ```groovy
 if( !nextflow.version.matches('21.04+') ) {
@@ -85,12 +80,9 @@ if( !nextflow.version.matches('21.04+') ) {
 
 ## Completion handler
 
-Due to the asynchronous nature of Nextflow the termination of a script does not correspond to the termination
-of the running workflow. Thus some information, only available on execution completion, needs to be accessed by
-using an asynchronous handler.
+Due to the asynchronous nature of Nextflow the termination of a script does not correspond to the termination of the running workflow. Thus some information, only available on execution completion, needs to be accessed by using an asynchronous handler.
 
-The `onComplete` event handler is invoked by the framework when the workflow execution is completed. It allows one
-to access the workflow termination status and other useful information. For example:
+The `onComplete` event handler is invoked by the framework when the workflow execution is completed. It allows one to access the workflow termination status and other useful information. For example:
 
 ```groovy
 workflow.onComplete {
@@ -105,8 +97,7 @@ If you want an e-mail notification on completion, check {ref}`mail-page`.
 
 ## Error handler
 
-The `onError` event handler is invoked by Nextflow when a runtime or process error caused the pipeline execution to stop.
-For example:
+The `onError` event handler is invoked by Nextflow when a runtime or process error caused the pipeline execution to stop. For example:
 
 ```groovy
 workflow.onError {
@@ -115,19 +106,14 @@ workflow.onError {
 ```
 
 :::{note}
-Both the `onError` and `onComplete` handlers are invoked when an error condition is encountered.
-The first is called as soon as the error is raised, while the second is called just before the pipeline execution
-is about to terminate. When using the `finish` {ref}`process-error-strategy`, there may be a significant gap
-between the two, depending on the time required to complete any pending job.
+Both the `onError` and `onComplete` handlers are invoked when an error condition is encountered. The first is called as soon as the error is raised, while the second is called just before the pipeline execution is about to terminate. When using the `finish` {ref}`process-error-strategy`, there may be a significant gap between the two, depending on the time required to complete any pending job.
 :::
 
 ## Decoupling metadata
 
-The workflow event handlers can be defined also in the `nextflow.config` file. This is useful to
-decouple the handling of pipeline events from the main script logic.
+The workflow event handlers can be defined also in the `nextflow.config` file. This is useful to decouple the handling of pipeline events from the main script logic.
 
-When the event handlers are included in a configuration file the only difference is that the `onComplete` and
-the `onError` closures have to be defined by using the assignment operator as shown below:
+When the event handlers are included in a configuration file the only difference is that the `onComplete` and the `onError` closures have to be defined by using the assignment operator as shown below:
 
 ```groovy
 workflow.onComplete = {
@@ -142,6 +128,5 @@ workflow.onError = {
 ```
 
 :::{note}
-It is possible to define workflow event handlers both in the pipeline script **and** in the
-configuration file.
+It is possible to define workflow event handlers both in the pipeline script **and** in the configuration file.
 :::

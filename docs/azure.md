@@ -10,9 +10,7 @@ The support for Azure Cloud requires Nextflow version `21.04.0` or later.
 
 ## Azure Blob Storage
 
-Nextflow has built-in support for [Azure Blob Storage](https://azure.microsoft.com/en-us/services/storage/blobs/).
-Files stored in an Azure blob container can be accessed transparently in your pipeline script like any other file
-in the local file system.
+Nextflow has built-in support for [Azure Blob Storage](https://azure.microsoft.com/en-us/services/storage/blobs/). Files stored in an Azure blob container can be accessed transparently in your pipeline script like any other file in the local file system.
 
 The Blob storage account name and key need to be provided in the Nextflow configuration file as shown below:
 
@@ -28,29 +26,20 @@ azure {
 Alternatively, the **Shared Access Token** can be specified with the `sasToken` option instead of `accountKey`.
 
 :::{tip}
-When creating the Shared Access Token, make sure to allow the resource types `Container` and `Object` and allow
-the permissions: `Read`, `Write`, `Delete`, `List`, `Add`, `Create`.
+When creating the Shared Access Token, make sure to allow the resource types `Container` and `Object` and allow the permissions: `Read`, `Write`, `Delete`, `List`, `Add`, `Create`.
 :::
 
 :::{tip}
 The value of `sasToken` is the token stripped by the character `?` from the beginning of the token.
 :::
 
-Once the Blob Storage credentials are set, you can access the files in the blob container like local files by prepending
-the file path with `az://` followed by the container name. For example, a blob container named `my-data`
-with a file named `foo.txt` can be specified in your Nextflow script as `az://my-data/foo.txt`.
+Once the Blob Storage credentials are set, you can access the files in the blob container like local files by prepending the file path with `az://` followed by the container name. For example, a blob container named `my-data` with a file named `foo.txt` can be specified in your Nextflow script as `az://my-data/foo.txt`.
 
 ## Azure File Shares
 
-As of version `nf-azure@0.11.0`, Nextflow has built-in support also for [Azure Files](https://azure.microsoft.com/en-us/services/storage/files/).
-Files available in the serverless Azure File shares can be mounted concurrently on the nodes of a pool executing the pipeline.
-These files become immediately available in the file system and can be referred as local files within the processes. This
-is especially useful when a task needs to access large amounts of data (such as genome indexes) during its execution. An
-arbitrary number of File shares can be mounted on each pool node.
+As of version `nf-azure@0.11.0`, Nextflow has built-in support also for [Azure Files](https://azure.microsoft.com/en-us/services/storage/files/). Files available in the serverless Azure File shares can be mounted concurrently on the nodes of a pool executing the pipeline. These files become immediately available in the file system and can be referred as local files within the processes. This is especially useful when a task needs to access large amounts of data (such as genome indexes) during its execution. An arbitrary number of File shares can be mounted on each pool node.
 
-The Azure File share must exist in the storage account configured for Blob Storage.
-The name of the source Azure File share and mount path (the destination path where the files are mounted) must be provided.
-Additional mount options (see the Azure Files documentation) can be set as well for further customisation of the mounting process.
+The Azure File share must exist in the storage account configured for Blob Storage. The name of the source Azure File share and mount path (the destination path where the files are mounted) must be provided. Additional mount options (see the Azure Files documentation) can be set as well for further customisation of the mounting process.
 
 For example:
 
@@ -73,8 +62,7 @@ azure {
 }
 ```
 
-The files in the File share are available to the task in the directory:
-`<YOUR MOUNT DESTINATION>/<YOUR SOURCE FILE SHARE NAME>`.
+The files in the File share are available to the task in the directory: `<YOUR MOUNT DESTINATION>/<YOUR SOURCE FILE SHARE NAME>`.
 
 For instance, given the following configuration:
 
@@ -98,11 +86,9 @@ The task can access the File share in `/mnt/mydata/dir1`.
 
 ## Azure Batch
 
-[Azure Batch](https://docs.microsoft.com/en-us/azure/batch/) is a managed computing service that allows the execution
-of containerised workloads in the Azure cloud infrastructure.
+[Azure Batch](https://docs.microsoft.com/en-us/azure/batch/) is a managed computing service that allows the execution of containerised workloads in the Azure cloud infrastructure.
 
-Nextflow provides built-in support for Azure Batch, allowing the seamless deployment of Nextflow pipelines
-in the cloud, in which tasks are offloaded as Batch jobs.
+Nextflow provides built-in support for Azure Batch, allowing the seamless deployment of Nextflow pipelines in the cloud, in which tasks are offloaded as Batch jobs.
 
 Read the {ref}`Azore Batch executor <azurebatch-executor>` section to learn more about the `azurebatch` executor in Nextflow.
 
@@ -137,8 +123,7 @@ azure {
 }
 ```
 
-In the above example, replace the location placeholder with the name of your Azure region and the account placeholders with the values
-corresponding to your configuration.
+In the above example, replace the location placeholder with the name of your Azure region and the account placeholders with the values corresponding to your configuration.
 
 :::{tip}
 The list of Azure regions can be found by executing the following Azure CLI command:
@@ -154,19 +139,15 @@ Finally, launch your pipeline with the above configuration:
 nextflow run <PIPELINE NAME> -w az://YOUR-CONTAINER/work
 ```
 
-Replacing `<PIPELINE NAME>` with a pipeline name e.g. `nextflow-io/rnaseq-nf` and `YOUR-CONTAINER` with a blob
-container in the storage account defined in the above configuration.
+Replacing `<PIPELINE NAME>` with a pipeline name e.g. `nextflow-io/rnaseq-nf` and `YOUR-CONTAINER` with a blob container in the storage account defined in the above configuration.
 
-See the [Batch documentation](https://docs.microsoft.com/en-us/azure/batch/quick-create-portal) for further
-details about the configuration for Azure Batch.
+See the [Batch documentation](https://docs.microsoft.com/en-us/azure/batch/quick-create-portal) for further details about the configuration for Azure Batch.
 
 ### Pools configuration
 
-When using the `autoPoolMode` option, Nextflow automatically creates a `pool` of compute nodes to execute the
-jobs in your pipeline. By default, it only uses one compute node of the type `Standard_D4_v3`.
+When using the `autoPoolMode` option, Nextflow automatically creates a `pool` of compute nodes to execute the jobs in your pipeline. By default, it only uses one compute node of the type `Standard_D4_v3`.
 
-The pool is not removed when the pipeline terminates, unless the configuration setting `deletePoolsOnCompletion = true`
-is added in your Nextflow configuration file.
+The pool is not removed when the pipeline terminates, unless the configuration setting `deletePoolsOnCompletion = true` is added in your Nextflow configuration file.
 
 Pool specific settings, such as VM type and count, should be provided in the `auto` pool configuration scope, for example:
 
@@ -192,9 +173,7 @@ Make sure your Batch account has enough resources to satisfy the pipeline's requ
 :::
 
 :::{warning}
-Nextflow uses the same pool ID across pipeline executions, if the pool features have not changed.
-Therefore, when using `deletePoolsOnCompletion = true`, make sure the pool is completely removed from the Azure Batch account
-before re-running the pipeline. The following message is returned when the pool is still shutting down:
+Nextflow uses the same pool ID across pipeline executions, if the pool features have not changed. Therefore, when using `deletePoolsOnCompletion = true`, make sure the pool is completely removed from the Azure Batch account before re-running the pipeline. The following message is returned when the pool is still shutting down:
 
 ```
 Error executing process > '<process name> (1)'
@@ -205,12 +184,9 @@ Caused by:
 
 ### Named pools
 
-If you want to have more precise control over the compute node pools used in your pipeline, such as using a different pool
-depending on the task in your pipeline, you can use the {ref}`process-queue` directive in Nextflow to specify the ID of a
-Azure Batch compute pool that should be used to execute that process.
+If you want to have more precise control over the compute node pools used in your pipeline, such as using a different pool depending on the task in your pipeline, you can use the {ref}`process-queue` directive in Nextflow to specify the ID of a Azure Batch compute pool that should be used to execute that process.
 
-The pool is expected to be already available in the Batch environment, unless the setting `allowPoolCreation = true` is
-provided in the `azure.batch` config scope in the pipeline configuration file. In the latter case, Nextflow will create the pools on-demand.
+The pool is expected to be already available in the Batch environment, unless the setting `allowPoolCreation = true` is provided in the `azure.batch` config scope in the pipeline configuration file. In the latter case, Nextflow will create the pools on-demand.
 
 The configuration details for each pool can be specified using a snippet as shown below:
 
@@ -232,25 +208,20 @@ azure {
 }
 ```
 
-The above example defines the configuration for two node pools. The first will provision 10 compute nodes of type `Standard_D2_v2`,
-the second 5 nodes of type `Standard_E2_v3`. See the [Advanced settings](#advanced-settings) below for the complete list of available
-configuration options.
+The above example defines the configuration for two node pools. The first will provision 10 compute nodes of type `Standard_D2_v2`, the second 5 nodes of type `Standard_E2_v3`. See the [Advanced settings](#advanced-settings) below for the complete list of available configuration options.
 
 ### Requirements on pre-existing named pools
 
-When Nextflow is configured to use a pool already available in the Batch account, the target pool must satisfy the following
-requirements:
+When Nextflow is configured to use a pool already available in the Batch account, the target pool must satisfy the following requirements:
 
 1. The pool must be declared as `dockerCompatible` (`Container Type` property).
 2. The task slots per node must match the number of cores for the selected VM. Otherwise, Nextflow will return an error like "Azure Batch pool 'ID' slots per node does not match the VM num cores (slots: N, cores: Y)".
 
 ### Pool autoscaling
 
-Azure Batch can automatically scale pools based on parameters that you define, saving you time and money. With automatic scaling,
-Batch dynamically adds nodes to a pool as task demands increase, and removes compute nodes as task demands decrease.
+Azure Batch can automatically scale pools based on parameters that you define, saving you time and money. With automatic scaling, Batch dynamically adds nodes to a pool as task demands increase, and removes compute nodes as task demands decrease.
 
-To enable this feature for pools created by Nextflow, add the option `autoScale = true` to the corresponding pool configuration scope.
-For example, when using the `autoPoolMode`, the setting looks like:
+To enable this feature for pools created by Nextflow, add the option `autoScale = true` to the corresponding pool configuration scope. For example, when using the `autoPoolMode`, the setting looks like:
 
 ```groovy
 azure {
@@ -286,12 +257,9 @@ $TargetDedicatedNodes = lifespan < interval ? {{vmCount}} : targetPoolSize;
 $NodeDeallocationOption = taskcompletion;
 ```
 
-The above formula initialises a pool with the number of VMs specified by the `vmCount` option, and scales up the pool on-demand,
-based on the number of pending tasks, up to `maxVmCount` nodes. If no jobs are submitted for execution, it scales down
-to zero nodes automatically.
+The above formula initialises a pool with the number of VMs specified by the `vmCount` option, and scales up the pool on-demand, based on the number of pending tasks, up to `maxVmCount` nodes. If no jobs are submitted for execution, it scales down to zero nodes automatically.
 
-If you need a different strategy, you can provide your own formula using the `scaleFormula` option.
-See the [Azure Batch](https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling) documentation for details.
+If you need a different strategy, you can provide your own formula using the `scaleFormula` option. See the [Azure Batch](https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling) documentation for details.
 
 ### Pool nodes
 
@@ -302,8 +270,7 @@ When Nextflow creates a pool of compute nodes, it selects:
 
 Together, these settings determine the Operating System and version installed on each node.
 
-By default, Nextflow creates pool nodes based on CentOS 8, but this behavior can be customised in the pool configuration.
-Below are configurations for image reference/SKU combinations to select two popular systems.
+By default, Nextflow creates pool nodes based on CentOS 8, but this behavior can be customised in the pool configuration. Below are configurations for image reference/SKU combinations to select two popular systems.
 
 - Ubuntu 20.04 (default):
 
@@ -332,20 +299,17 @@ As of version `21.05.0-edge`, a private container registry for Docker images can
 ```groovy
 azure {
     registry {
-        server =  '<YOUR REGISTRY SERVER>' // e.g.: docker.io, quay.io, <ACCOUNT>.azurecr.io, etc.
-        userName =  '<YOUR REGISTRY USER NAME>'
-        password =  '<YOUR REGISTRY PASSWORD>'
+        server = '<YOUR REGISTRY SERVER>' // e.g.: docker.io, quay.io, <ACCOUNT>.azurecr.io, etc.
+        userName = '<YOUR REGISTRY USER NAME>'
+        password = '<YOUR REGISTRY PASSWORD>'
     }
 }
 ```
 
-The private registry is an addition, not a replacement, to the existing configuration.
-Public images from other registries will still be pulled as normal, if they are requested.
+The private registry is an addition, not a replacement, to the existing configuration. Public images from other registries will still be pulled as normal, if they are requested.
 
 :::{note}
-When using containers hosted in a private registry, the registry name must also be provided in the container name
-specified via the {ref}`container <process-container>` directive using the format: `[server]/[your-organization]/[your-image]:[tag]`.
-Read more about fully qualified image names in the [Docker documentation](https://docs.docker.com/engine/reference/commandline/pull/#pull-from-a-different-registry).
+When using containers hosted in a private registry, the registry name must also be provided in the container name specified via the {ref}`container <process-container>` directive using the format: `[server]/[your-organization]/[your-image]:[tag]`. Read more about fully qualified image names in the [Docker documentation](https://docs.docker.com/engine/reference/commandline/pull/#pull-from-a-different-registry).
 :::
 
 ## Active Directory Authentication

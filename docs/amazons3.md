@@ -2,23 +2,19 @@
 
 # Amazon S3 storage
 
-Nextflow includes support for Amazon S3 storage. Files stored in an S3 bucket can be accessed
-transparently in your pipeline script like any other file in the local file system.
+Nextflow includes support for Amazon S3 storage. Files stored in an S3 bucket can be accessed transparently in your pipeline script like any other file in the local file system.
 
 ## S3 path
 
-In order to access an S3 file, you only need to prefix the file path with the `s3` schema and the `bucket` name
-where it is stored.
+In order to access an S3 file, you only need to prefix the file path with the `s3` schema and the `bucket` name where it is stored.
 
-For example, if you need to access the file `/data/sequences.fa` stored in a bucket named `my-bucket`,
-that file can be accessed using the following fully qualified path:
+For example, if you need to access the file `/data/sequences.fa` stored in a bucket named `my-bucket`, that file can be accessed using the following fully qualified path:
 
 ```
 s3://my-bucket/data/sequences.fa
 ```
 
-The usual file operations can be applied to a path handle with the above notation. For example, the content
-of an S3 file can be printed as follows:
+The usual file operations can be applied to a path handle with the above notation. For example, the content of an S3 file can be printed as follows:
 
 ```groovy
 println file('s3://my-bucket/data/sequences.fa').text
@@ -35,8 +31,7 @@ Amazon access credentials can be provided in two ways:
 
 ### AWS access and secret keys
 
-The AWS access and secret keys can be specified by using the `aws` section in the `nextflow.config` configuration
-file as shown below:
+The AWS access and secret keys can be specified by using the `aws` section in the `nextflow.config` configuration file as shown below:
 
 ```groovy
 aws {
@@ -55,24 +50,19 @@ If the access credentials are not found in the above file, Nextflow looks for AW
 5. The `default` profile in the AWS client configuration file located at `~/.aws/config`
 6. The temporary AWS credentials provided by an IAM instance role. See [IAM Roles](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html) documentation for details.
 
-More information regarding [AWS Security Credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html)
-are available in the AWS documentation.
+More information regarding [AWS Security Credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html) are available in the AWS documentation.
 
 ### IAM roles with Amazon EC2 instances
 
 When running your pipeline in an EC2 instance, IAM roles can be used to grant access to AWS resources.
 
-In this scenario, you only need to launch the EC2 instance with an IAM role which includes the
-`AmazonS3FullAccess` policy. Nextflow will detect and automatically acquire the permission to access S3 storage,
-without any further configuration.
+In this scenario, you only need to launch the EC2 instance with an IAM role which includes the `AmazonS3FullAccess` policy. Nextflow will detect and automatically acquire the permission to access S3 storage, without any further configuration.
 
-Learn more about [Using IAM Roles to Delegate Permissions to Applications that Run on Amazon EC2](http://docs.aws.amazon.com/IAM/latest/UserGuide/roles-usingrole-ec2instance.html) in the Amazon
-documentation.
+Learn more about [Using IAM Roles to Delegate Permissions to Applications that Run on Amazon EC2](http://docs.aws.amazon.com/IAM/latest/UserGuide/roles-usingrole-ec2instance.html) in the Amazon documentation.
 
 ## China regions
 
-To use an AWS China region, make sure to specify the corresponding AWS API S3 endpoint in the Nextflow configuration
-file as shown below:
+To use an AWS China region, make sure to specify the corresponding AWS API S3 endpoint in the Nextflow configuration file as shown below:
 
 ```groovy
 aws.client.endpoint = "https://s3.cn-north-1.amazonaws.com.cn"
