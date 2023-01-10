@@ -296,11 +296,6 @@ sudo                Executes Docker run command as ``sudo`` (default: ``false``)
 temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created.
 tty                 Allocates a pseudo-tty (default: ``false``).
 userEmulation       If true, runs all containers as the same user executing the ``nextflow run`` command, and mounts the user home folder in each container (default: ``false``). 
-
-
-
-
-
 ================== ================
 
 The above options can be used by prefixing them with the ``docker`` scope or surrounding them by curly
