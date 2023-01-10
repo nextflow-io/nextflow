@@ -293,8 +293,8 @@ registry            The registry from where Docker images are pulled. It should 
 remove              Cleans up the container after execution (default: ``true``). For details see: https://docs.docker.com/engine/reference/run/#clean-up---rm .
 runOptions          Passes extra command line options supported by the ``docker run`` command. For details, see: https://docs.docker.com/engine/reference/run/ .
 sudo                Executes Docker run command as ``sudo`` (default: ``false``).
-tty                 Allocates a pseudo-tty (default: ``false``).
 temp                Mounts a path of your choice as the ``/tmp`` directory in the container. Use the special value ``auto`` to create a temporary directory each time a container is created.
+tty                 Allocates a pseudo-tty (default: ``false``).
 userEmulation       If true, runs all containers as the same user executing the ``nextflow run`` command, and mounts the user home folder in each container (default: ``false``). 
 
 
