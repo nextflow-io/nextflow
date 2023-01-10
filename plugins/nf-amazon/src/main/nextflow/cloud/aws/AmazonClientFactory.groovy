@@ -227,18 +227,18 @@ class AmazonClientFactory {
     }
 
     AmazonS3 getS3Client(ClientConfiguration config=null) {
-        final builder = AmazonS3ClientBuilder.standard()
+        final clientBuilder = AmazonS3ClientBuilder.standard()
         if( region )
-            builder.withRegion(region)
+            clientBuilder.withRegion(region)
 
         final credentials = getCredentialsProvider0()
         if( credentials )
-            builder.withCredentials(credentials)
+            clientBuilder.withCredentials(credentials)
 
         if( config )
-            builder.withClientConfiguration(config)
+            clientBuilder.withClientConfiguration(config)
 
-        return builder.build()
+        return clientBuilder.build()
     }
 
     protected AWSCredentials getCredentials0() {
