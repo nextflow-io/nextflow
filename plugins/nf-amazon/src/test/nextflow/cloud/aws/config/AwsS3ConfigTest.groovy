@@ -37,6 +37,7 @@ class AwsS3ConfigTest extends Specification {
         !client.storageEncryption
         !client.debug
         !client.s3Acl
+        !client.pathStyleAccess
     }
 
     def 'should set config' () {
@@ -47,6 +48,7 @@ class AwsS3ConfigTest extends Specification {
                 storageKmsKeyId: 'key-1',
                 storageEncryption: 'AES256',
                 s3Acl: 'public-read',
+                s3PathStyleAccess: true
         ]
 
         when:
@@ -57,6 +59,7 @@ class AwsS3ConfigTest extends Specification {
         client.storageKmsKeyId == 'key-1'
         client.storageEncryption == 'AES256'
         client.s3Acl == CannedAccessControlList.PublicRead
+        client.pathStyleAccess
     }
 
     def 'should use legacy upload storage class' () {

@@ -24,10 +24,10 @@ import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider
+import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.InstanceMetadataRegionProvider
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.RegionUtils
-import com.amazonaws.regions.Regions
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.AWSBatchClient
 import com.amazonaws.services.batch.AWSBatchClientBuilder
@@ -54,6 +54,8 @@ import nextflow.exception.AbortOperationException
 @Slf4j
 @CompileStatic
 class AmazonClientFactory {
+
+    private AwsConfig awsConfig
 
     /**
      * The AWS access key credentials (optional)
@@ -94,18 +96,22 @@ class AmazonClientFactory {
         this(new AwsConfig(Collections.emptyMap()))
     }
 
-    AmazonClientFactory(AwsConfig config) {
+    AmazonClientFactory(AwsConfig config, String region=null) {
+        this.awsConfig = config
+
         if( config.accessKey && config.secretKey ) {
             this.accessKey = config.accessKey
             this.secretKey = config.secretKey
             this.assumeRoleArn = config.assumeRoleArn
         }
 
-        if( !accessKey && !fetchIamRole() )
+        if( !this.accessKey && !fetchIamRole() )
             throw new AbortOperationException("Missing AWS security credentials -- Provide access/security keys pair or define an IAM instance profile (suggested)")
 
         // -- get the aws default region
-        region = config.region ?: fetchRegion() ?: Regions.DEFAULT_REGION.getName()
+        this.region = region ?: config.region ?: fetchRegion()
+        if( !this.region )
+            throw new AbortOperationException('Missing AWS region -- Make sure to define in your system environment the variable `AWS_DEFAULT_REGION`')
     }
 
     /**
@@ -167,9 +173,9 @@ class AmazonClientFactory {
      */
     synchronized AmazonEC2 getEc2Client() {
 
-        final clientBuilder = AmazonEC2ClientBuilder .standard()
-        if( region )
-            clientBuilder.withRegion(region)
+        final clientBuilder = AmazonEC2ClientBuilder
+                .standard()
+                .withRegion(region)
 
         final credentials = getCredentialsProvider0()
         if( credentials )
@@ -187,9 +193,9 @@ class AmazonClientFactory {
      */
     @Memoized
     AWSBatch getBatchClient() {
-        final clientBuilder = AWSBatchClientBuilder .standard()
-        if( region )
-            clientBuilder.withRegion(region)
+        final clientBuilder = AWSBatchClientBuilder
+                .standard()
+                .withRegion(region)
 
         final credentials = getCredentialsProvider0()
         if( credentials )
@@ -201,9 +207,9 @@ class AmazonClientFactory {
     @Memoized
     AmazonECS getEcsClient() {
 
-        final clientBuilder = AmazonECSClientBuilder .standard()
-        if( region )
-            clientBuilder.withRegion(region)
+        final clientBuilder = AmazonECSClientBuilder
+                .standard()
+                .withRegion(region)
 
         final credentials = getCredentialsProvider0()
         if( credentials )
@@ -215,9 +221,9 @@ class AmazonClientFactory {
     @Memoized
     AWSLogs getLogsClient() {
 
-        final clientBuilder = AWSLogsAsyncClientBuilder.standard()
-        if( region )
-            clientBuilder.withRegion(region)
+        final clientBuilder = AWSLogsAsyncClientBuilder
+                .standard()
+                .withRegion(region)
 
         final credentials = getCredentialsProvider0()
         if( credentials )
@@ -226,19 +232,25 @@ class AmazonClientFactory {
         return clientBuilder.build()
     }
 
-    AmazonS3 getS3Client(ClientConfiguration config=null) {
-        final clientBuilder = AmazonS3ClientBuilder.standard()
-        if( region )
-            clientBuilder.withRegion(region)
+    AmazonS3 getS3Client(ClientConfiguration config=null, boolean global=false) {
+        final build = AmazonS3ClientBuilder
+                .standard()
+                .withRegion(region)
+                .withPathStyleAccessEnabled(awsConfig.s3Config.pathStyleAccess)
+                .withForceGlobalBucketAccessEnabled(global)
+
+        final endpoint = awsConfig.s3Config.endpoint
+        if( endpoint )
+            build.withEndpointConfiguration(new EndpointConfiguration(endpoint, region))
 
         final credentials = getCredentialsProvider0()
         if( credentials )
-            clientBuilder.withCredentials(credentials)
+            build.withCredentials(credentials)
 
         if( config )
-            clientBuilder.withClientConfiguration(config)
+            build.withClientConfiguration(config)
 
-        return clientBuilder.build()
+        return build.build()
     }
 
     protected AWSCredentials getCredentials0() {

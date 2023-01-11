@@ -47,14 +47,20 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
     AmazonS3 getS3Client() { s3Client0 }
 
     static {
-        def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY')
-        def secretKey = System.getenv('AWS_S3FS_SECRET_KEY')
-        def fs = (S3FileSystem)FileSystems.newFileSystem(URI.create("s3:///"), [access_key: accessKey, secret_key: secretKey])
+        def fs = (S3FileSystem)FileSystems.newFileSystem(URI.create("s3:///"), config0())
         s3Client0 = fs.client.getClient()
     }
 
+    static private Map config0() {
+        def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY')
+        def secretKey = System.getenv('AWS_S3FS_SECRET_KEY')
+        return [aws: [access_key: accessKey, secret_key: secretKey]]
+    }
+
     def setup() {
-        Global.session = Mock(Session) { getConfig() >> [:] }
+        def cfg = config0()
+        Global.config = cfg
+        Global.session = Mock(Session) { getConfig()>>cfg }
     }
 
     def 'should create a blob' () {

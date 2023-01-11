@@ -59,13 +59,12 @@ public class S3FileSystem extends FileSystem {
 	
 	private final S3FileSystemProvider provider;
 	private final AmazonS3Client client;
-	private final String endpoint;
+	private final String bucketName;
 
-	public S3FileSystem(S3FileSystemProvider provider, AmazonS3Client client,
-			String endpoint) {
+	public S3FileSystem(S3FileSystemProvider provider, AmazonS3Client client, String bucketName) {
 		this.provider = provider;
 		this.client = client;
-		this.endpoint = endpoint;
+		this.bucketName = bucketName;
 	}
 
 	@Override
@@ -75,12 +74,12 @@ public class S3FileSystem extends FileSystem {
 
 	@Override
 	public void close() throws IOException {
-		this.provider.fileSystem.compareAndSet(this, null);
+		this.provider.fileSystems.remove(bucketName);
 	}
 
 	@Override
 	public boolean isOpen() {
-		return this.provider.fileSystem.get() != null;
+		return this.provider.fileSystems.containsKey(bucketName);
 	}
 
 	@Override
@@ -148,7 +147,7 @@ public class S3FileSystem extends FileSystem {
 	 * @see <a href="http://docs.aws.amazon.com/general/latest/gr/rande.html">http://docs.aws.amazon.com/general/latest/gr/rande.html</a>
 	 * @return string
 	 */
-	public String getEndpoint() {
-		return endpoint;
+	public String getBucketName() {
+		return bucketName;
 	}
 }

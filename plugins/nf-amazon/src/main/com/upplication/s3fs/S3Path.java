@@ -424,8 +424,8 @@ public class S3Path implements Path, TagAwareFile {
 	public URI toUri() {
 		StringBuilder builder = new StringBuilder();
 		builder.append("s3://");
-		if (fileSystem.getEndpoint() != null) {
-			builder.append(fileSystem.getEndpoint());
+		if (fileSystem.getBucketName() != null) {
+			builder.append(fileSystem.getBucketName());
 		}
 		builder.append("/");
 		builder.append(bucket);

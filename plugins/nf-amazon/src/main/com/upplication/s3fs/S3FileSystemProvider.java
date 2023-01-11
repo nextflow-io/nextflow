@@ -74,6 +74,7 @@ import java.nio.file.attribute.FileTime;
 import java.nio.file.spi.FileSystemProvider;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -82,12 +83,11 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.AnonymousAWSCredentials;
-import com.amazonaws.services.s3.S3ClientOptions;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
@@ -146,12 +146,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 	private static Logger log = LoggerFactory.getLogger(S3FileSystemProvider.class);
 
-	public static final String ACCESS_KEY = "access_key";
-	public static final String SECRET_KEY = "secret_key";
-
-	public static final String SESSION_TOKEN = "session_token";
-
-	final AtomicReference<S3FileSystem> fileSystem = new AtomicReference<>();
+	final Map<String, S3FileSystem> fileSystems = new HashMap<>();
 
     private final S3ObjectSummaryLookup s3ObjectSummaryLookup = new S3ObjectSummaryLookup();
 
@@ -167,26 +162,27 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		Preconditions.checkNotNull(uri, "uri is null");
 		Preconditions.checkArgument(uri.getScheme().equals("s3"), "uri scheme must be 's3': '%s'", uri);
 
-		final AwsConfig awsConfig = new AwsConfig(env);
-		// first try to load amazon props
-		props = loadAmazonProperties();
-		// glob properties for legacy compatibility
-		props.putAll(awsConfig.getS3LegacyClientConfig());
-		// 
-		S3FileSystem result = createFileSystem(uri, awsConfig);
+		final String bucketName = uri.getHost();
+		synchronized (fileSystems) {
+			if( fileSystems.containsKey(bucketName))
+				throw new FileSystemAlreadyExistsException("S3 filesystem already exists. Use getFileSystem() instead");
 
-		// if this instance already has a S3FileSystem, throw exception
-		// otherwise set
-		if (!fileSystem.compareAndSet(null, result)) {
-			throw new FileSystemAlreadyExistsException("S3 filesystem already exists. Use getFileSystem() instead");
+			final AwsConfig awsConfig = new AwsConfig(env);
+			// first try to load amazon props
+			props = loadAmazonProperties();
+			// glob properties for legacy compatibility
+			props.putAll(awsConfig.getS3LegacyClientConfig());
+			//
+			final S3FileSystem result = createFileSystem(uri, awsConfig);
+			fileSystems.put(bucketName, result);
+			return result;
 		}
-
-		return result;
 	}
 
 	@Override
 	public FileSystem getFileSystem(URI uri) {
-		FileSystem fileSystem = this.fileSystem.get();
+		final String bucketName = uri.getHost();
+		FileSystem fileSystem = this.fileSystems.get(bucketName);
 
 		if (fileSystem == null) {
 			throw new FileSystemNotFoundException("S3 filesystem not yet created. Use newFileSystem() instead");
@@ -202,26 +198,20 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	 */
 	@Override
 	public Path getPath(URI uri) {
-		Preconditions.checkArgument(uri.getScheme().equals(getScheme()),
-				"URI scheme must be %s", getScheme());
-
-		if (uri.getHost() != null && !uri.getHost().isEmpty() &&
-				!uri.getHost().equals(fileSystem.get().getEndpoint())) {
-			throw new IllegalArgumentException(format(
-					"only empty URI host or URI host that matching the current fileSystem: %s",
-					fileSystem.get().getEndpoint())); // TODO
+		Preconditions.checkArgument(uri.getScheme().equals(getScheme()),"URI scheme must be %s", getScheme());
+		final String bucketName = uri.getHost();
+		final String endpoint = fileSystems.containsKey(bucketName) ? fileSystems.get(bucketName).getBucketName() : null;
+		if (bucketName != null && !bucketName.isEmpty() && !bucketName.equals(endpoint)) {
+			throw new IllegalArgumentException(format( "only empty URI host or URI host that matching the current fileSystem: %s", endpoint));
 		}
-		/**
-		 * TODO: set as a list. one s3FileSystem by region
-		 */
+
 		return getFileSystem(uri).getPath(uri.getPath());
 	}
 
     @Override
     public DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
 
-        Preconditions.checkArgument(dir instanceof S3Path,
-                "path must be an instance of %s", S3Path.class.getName());
+        Preconditions.checkArgument(dir instanceof S3Path,"path must be an instance of %s", S3Path.class.getName());
         final S3Path s3Path = (S3Path) dir;
 
         return new DirectoryStream<Path>() {
@@ -874,24 +864,16 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		AmazonS3Client client;
 		ClientConfiguration clientConfig = createClientConfig(props);
 
+		final String bucketName = uri.getHost();
 		final boolean anonymous = "true".equals(props.getProperty("anonymous"));
 		if( anonymous ) {
 			log.debug("Creating AWS S3 client with anonymous credentials");
 			client = new AmazonS3Client(new com.amazonaws.services.s3.AmazonS3Client(new AnonymousAWSCredentials(), clientConfig));
 		}
 		else {
-			final AmazonClientFactory factory = new AmazonClientFactory(awsConfig);
-			client = new AmazonS3Client(factory.getS3Client(clientConfig));
-		}
-
-		// note: path style access is going to be deprecated
-		// https://aws.amazon.com/blogs/aws/amazon-s3-path-deprecation-plan-the-rest-of-the-story/
-		boolean usePathStyle = "true".equals(props.getProperty("s_3_path_style_access")) || "true".equals(props.getProperty("s3_path_style_access"));
-		if (usePathStyle) {
-			S3ClientOptions options = S3ClientOptions.builder()
-					.setPathStyleAccess(usePathStyle)
-					.build();
-			client.getClient().setS3ClientOptions(options);
+			final boolean global = bucketName!=null;
+			final AmazonClientFactory factory = new AmazonClientFactory(awsConfig, Regions.US_EAST_1.getName());
+			client = new AmazonS3Client(factory.getS3Client(clientConfig, global));
 		}
 
 		// set the client acl
@@ -902,13 +884,6 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		client.setUploadMaxThreads(props.getProperty("upload_max_threads"));
 		client.setGlacierAutoRetrieval(props.getProperty("glacier_auto_retrieval"));
 		client.setGlacierExpirationDays(props.getProperty("glacier_expiration_days"));
-
-		if (uri.getHost() != null) {
-			client.setEndpoint(uri.getHost());
-		}
-		else if( props.getProperty("endpoint") != null ){
-			client.setEndpoint(props.getProperty("endpoint"));
-		}
 
 		return new S3FileSystem(this, client, uri.getHost());
 	}
