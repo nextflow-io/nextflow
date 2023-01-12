@@ -814,7 +814,10 @@ the :ref:`k8s-page` section.
 | -resume                   |             | Execute the script using the cached results, useful to continue executions that|
 |                           |             | was stopped by an error.                                                       |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
-| -r, -revision             |             | Revision of the project to run (either a git branch, tag or commit SHA number) |
+| -r, -revision             |             | Revision of the project to run (either a git branch, tag or commit SHA number).|
+|                           |             | When passing a git tag or branch, the ``workflow.revision`` and the associated |
+|                           |             | ``workflow.commitId`` is populated. When passing only the commit ID,           |
+|                           |             | no ``workflow.revision`` is returned.                                          |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -stub, -stub-run          |             | Execute the workflow replacing process scripts with command stubs.             |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
@@ -1042,7 +1045,10 @@ and modifies it accordingly. For downloading a pipeline into a local directory, 
 +---------------------------+------------+--------------------------------------------------------------------------------+
 | -hub                      |  github    | Service hub where the project is hosted. Options: ``gitlab`` or ``bitbucket``  |
 +---------------------------+------------+--------------------------------------------------------------------------------+
-| -r                        |            | Revision to run (either a git ``branch``, ``tag`` or commit ``SHA`` number).   |
+| -r, -revision             |            | Revision of the project to run (either a git branch, tag or commit SHA number).|
+|                           |            | When passing a git tag or branch, the ``workflow.revision`` and the associated |
+|                           |            | ``workflow.commitId`` is populated. When passing only the commit ID,           |
+|                           |            | no ``workflow.revision`` is returned.                                          |
 +---------------------------+------------+--------------------------------------------------------------------------------+
 | -user                     |            | Private repository user name                                                   |
 +---------------------------+------------+--------------------------------------------------------------------------------+
@@ -1146,8 +1152,10 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 | -resume                   |             | Execute the script using the cached results, useful to continue executions that|
 |                           |             | was stopped by an error.                                                       |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
-| -r, -revision             |             | Revision of the project to run                                                 |
-|                           |             | (either a git ``branch``, ``tag`` or commit ``SHA`` number).                   |
+| -r, -revision             |             | Revision of the project to run (either a git branch, tag, or commit SHA number)|
+|                           |             | When passing a git tag or branch, the ``workflow.revision`` and the associated |
+|                           |             | ``workflow.commitId`` is populated. When passing only the commit ID,           |
+|                           |             | no ``workflow.revision`` is returned.                                          |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -stub-run, -stub          | false       | Execute the workflow replacing process scripts with command stubs              |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
