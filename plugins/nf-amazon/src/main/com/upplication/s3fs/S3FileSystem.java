@@ -61,7 +61,6 @@ public class S3FileSystem extends FileSystem {
 	private final S3FileSystemProvider provider;
 	private final AmazonS3Client client;
 	private final String endpoint;
-
 	private final String bucketName;
 
 	public S3FileSystem(S3FileSystemProvider provider, AmazonS3Client client, URI uri) {

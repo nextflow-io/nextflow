@@ -47,7 +47,9 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.exception.AbortOperationException
+
 /**
+ * Implement a factory class for AWS client objects
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -55,7 +57,7 @@ import nextflow.exception.AbortOperationException
 @CompileStatic
 class AmazonClientFactory {
 
-    private AwsConfig awsConfig
+    private AwsConfig config
 
     /**
      * The AWS access key credentials (optional)
@@ -97,7 +99,7 @@ class AmazonClientFactory {
     }
 
     AmazonClientFactory(AwsConfig config, String region=null) {
-        this.awsConfig = config
+        this.config = config
 
         if( config.accessKey && config.secretKey ) {
             this.accessKey = config.accessKey
@@ -173,15 +175,15 @@ class AmazonClientFactory {
      */
     synchronized AmazonEC2 getEc2Client() {
 
-        final clientBuilder = AmazonEC2ClientBuilder
+        final builder = AmazonEC2ClientBuilder
                 .standard()
                 .withRegion(region)
 
         final credentials = getCredentialsProvider0()
         if( credentials )
-            clientBuilder.withCredentials(credentials)
+            builder.withCredentials(credentials)
 
-        return clientBuilder.build()
+        return builder.build()
     }
 
     /**
@@ -193,64 +195,64 @@ class AmazonClientFactory {
      */
     @Memoized
     AWSBatch getBatchClient() {
-        final clientBuilder = AWSBatchClientBuilder
+        final builder = AWSBatchClientBuilder
                 .standard()
                 .withRegion(region)
 
         final credentials = getCredentialsProvider0()
         if( credentials )
-            clientBuilder.withCredentials(credentials)
+            builder.withCredentials(credentials)
 
-        return clientBuilder.build()
+        return builder.build()
     }
 
     @Memoized
     AmazonECS getEcsClient() {
 
-        final clientBuilder = AmazonECSClientBuilder
+        final builder = AmazonECSClientBuilder
                 .standard()
                 .withRegion(region)
 
         final credentials = getCredentialsProvider0()
         if( credentials )
-            clientBuilder.withCredentials(credentials)
+            builder.withCredentials(credentials)
 
-        return clientBuilder.build()
+        return builder.build()
     }
 
     @Memoized
     AWSLogs getLogsClient() {
 
-        final clientBuilder = AWSLogsAsyncClientBuilder
+        final builder = AWSLogsAsyncClientBuilder
                 .standard()
                 .withRegion(region)
 
         final credentials = getCredentialsProvider0()
         if( credentials )
-            clientBuilder.withCredentials(credentials)
+            builder.withCredentials(credentials)
 
-        return clientBuilder.build()
+        return builder.build()
     }
 
-    AmazonS3 getS3Client(ClientConfiguration config=null, boolean global=false) {
-        final build = AmazonS3ClientBuilder
+    AmazonS3 getS3Client(ClientConfiguration clientConfig=null, boolean global=false) {
+        final builder = AmazonS3ClientBuilder
                 .standard()
                 .withRegion(region)
-                .withPathStyleAccessEnabled(awsConfig.s3Config.pathStyleAccess)
+                .withPathStyleAccessEnabled(config.s3Config.pathStyleAccess)
                 .withForceGlobalBucketAccessEnabled(global)
 
-        final endpoint = awsConfig.s3Config.endpoint
+        final endpoint = config.s3Config.endpoint
         if( endpoint )
-            build.withEndpointConfiguration(new EndpointConfiguration(endpoint, region))
+            builder.withEndpointConfiguration(new EndpointConfiguration(endpoint, region))
 
         final credentials = getCredentialsProvider0()
         if( credentials )
-            build.withCredentials(credentials)
+            builder.withCredentials(credentials)
 
-        if( config )
-            build.withClientConfiguration(config)
+        if( clientConfig )
+            builder.withClientConfiguration(clientConfig)
 
-        return build.build()
+        return builder.build()
     }
 
     protected AWSCredentials getCredentials0() {
