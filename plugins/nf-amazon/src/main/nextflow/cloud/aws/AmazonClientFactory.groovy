@@ -24,7 +24,6 @@ import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider
-import com.amazonaws.auth.STSSessionCredentialsProvider
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.InstanceMetadataRegionProvider
 import com.amazonaws.regions.Region
@@ -48,7 +47,6 @@ import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.exception.AbortOperationException
-
 /**
  * Implement a factory class for AWS client objects
  *
