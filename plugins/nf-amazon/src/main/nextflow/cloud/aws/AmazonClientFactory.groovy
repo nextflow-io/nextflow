@@ -24,6 +24,7 @@ import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider
+import com.amazonaws.auth.STSSessionCredentialsProvider
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.InstanceMetadataRegionProvider
 import com.amazonaws.regions.Region
@@ -237,13 +238,14 @@ class AmazonClientFactory {
     AmazonS3 getS3Client(ClientConfiguration clientConfig=null, boolean global=false) {
         final builder = AmazonS3ClientBuilder
                 .standard()
-                .withRegion(region)
                 .withPathStyleAccessEnabled(config.s3Config.pathStyleAccess)
                 .withForceGlobalBucketAccessEnabled(global)
 
         final endpoint = config.s3Config.endpoint
         if( endpoint )
             builder.withEndpointConfiguration(new EndpointConfiguration(endpoint, region))
+        else
+            builder.withRegion(region)
 
         final credentials = getCredentialsProvider0()
         if( credentials )
