@@ -63,7 +63,7 @@ manifest                    Entries of the workflow manifest.
 |
 
 .. note:: 
-    When passing a git tag or branch name using the ``-r`` argument in your CLI command, the ``workflow.revision`` and the associated ``workflow.commitId`` is populated. When passing only the Git commit ID using ``-r``, no ``workflow.revision`` is returned. 
+    When passing a Git tag or branch name using the ``-r`` argument in your CLI command, the ``workflow.revision`` and the associated ``workflow.commitId`` are populated. When passing only the Git commit ID using ``-r``, no ``workflow.revision`` is returned. 
 
 .. _metadata-nextflow:
 
