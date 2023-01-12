@@ -52,7 +52,7 @@ class AwsS3Config {
         this.storageClass = parseStorageClass((opts.storageClass ?: opts.uploadStorageClass) as String)     // 'uploadStorageClass' is kept for legacy purposes
         this.storageEncryption = parseStorageEncryption(opts.storageEncryption as String)
         this.storageKmsKeyId = opts.storageKmsKeyId
-        this.pathStyleAccess = opts.pathStyleAccess as Boolean
+        this.pathStyleAccess = opts.s3PathStyleAccess as Boolean
         this.s3Acl = parseS3Acl(opts.s3Acl as String)
     }
 

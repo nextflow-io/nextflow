@@ -17,7 +17,7 @@
 
 package com.upplication.s3fs.ng
 
-import java.nio.file.FileSystems
+
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.temporal.ChronoUnit
@@ -31,6 +31,7 @@ import dev.failsafe.function.ContextualSupplier
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
+import nextflow.file.FileHelper
 import spock.lang.Ignore
 import spock.lang.IgnoreIf
 import spock.lang.Requires
@@ -51,7 +52,7 @@ class S3ParallelDownloadTest extends Specification {
     AmazonS3 getS3Client() { s3Client0 }
 
     static {
-        def fs = (S3FileSystem)FileSystems.newFileSystem(URI.create("s3:///"), config0())
+        def fs = (S3FileSystem) FileHelper.getOrCreateFileSystemFor(URI.create("s3:///"), config0())
         s3Client0 = fs.client.getClient()
     }
 

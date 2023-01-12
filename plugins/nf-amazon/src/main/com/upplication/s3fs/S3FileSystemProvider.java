@@ -144,7 +144,7 @@ import static java.lang.String.format;
  */
 public class S3FileSystemProvider extends FileSystemProvider implements FileSystemTransferAware {
 
-	private static Logger log = LoggerFactory.getLogger(S3FileSystemProvider.class);
+	private static final Logger log = LoggerFactory.getLogger(S3FileSystemProvider.class);
 
 	final Map<String, S3FileSystem> fileSystems = new HashMap<>();
 
@@ -162,7 +162,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		Preconditions.checkNotNull(uri, "uri is null");
 		Preconditions.checkArgument(uri.getScheme().equals("s3"), "uri scheme must be 's3': '%s'", uri);
 
-		final String bucketName = uri.getHost();
+		final String bucketName = S3Path.bucketName(uri);
 		synchronized (fileSystems) {
 			if( fileSystems.containsKey(bucketName))
 				throw new FileSystemAlreadyExistsException("S3 filesystem already exists. Use getFileSystem() instead");
@@ -181,8 +181,8 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 	@Override
 	public FileSystem getFileSystem(URI uri) {
-		final String bucketName = uri.getHost();
-		FileSystem fileSystem = this.fileSystems.get(bucketName);
+		final String bucketName = S3Path.bucketName(uri);
+		final FileSystem fileSystem = this.fileSystems.get(bucketName);
 
 		if (fileSystem == null) {
 			throw new FileSystemNotFoundException("S3 filesystem not yet created. Use newFileSystem() instead");
@@ -199,12 +199,6 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	@Override
 	public Path getPath(URI uri) {
 		Preconditions.checkArgument(uri.getScheme().equals(getScheme()),"URI scheme must be %s", getScheme());
-		final String bucketName = uri.getHost();
-		final String endpoint = fileSystems.containsKey(bucketName) ? fileSystems.get(bucketName).getBucketName() : null;
-		if (bucketName != null && !bucketName.isEmpty() && !bucketName.equals(endpoint)) {
-			throw new IllegalArgumentException(format( "only empty URI host or URI host that matching the current fileSystem: %s", endpoint));
-		}
-
 		return getFileSystem(uri).getPath(uri.getPath());
 	}
 
@@ -864,7 +858,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		AmazonS3Client client;
 		ClientConfiguration clientConfig = createClientConfig(props);
 
-		final String bucketName = uri.getHost();
+		final String bucketName = S3Path.bucketName(uri);
 		final boolean anonymous = "true".equals(props.getProperty("anonymous"));
 		if( anonymous ) {
 			log.debug("Creating AWS S3 client with anonymous credentials");
@@ -885,7 +879,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		client.setGlacierAutoRetrieval(props.getProperty("glacier_auto_retrieval"));
 		client.setGlacierExpirationDays(props.getProperty("glacier_expiration_days"));
 
-		return new S3FileSystem(this, client, uri.getHost());
+		return new S3FileSystem(this, client, uri);
 	}
 
 	protected String getProp(Properties props, String... keys) {

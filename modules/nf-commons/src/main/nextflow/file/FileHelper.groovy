@@ -618,27 +618,28 @@ class FileHelper {
         /*
          * check if already exists a file system for it
          */
-        FileSystem fs
-        try { fs = provider.getFileSystem(uri) }
-        catch( FileSystemNotFoundException e ) { fs=null }
-        if( fs )
-            return fs
+        try {
+            final fs = provider.getFileSystem(uri)
+            if( fs )
+                return fs
+        }
+        catch( FileSystemNotFoundException e ) {
+            // fallback in following synchronised block
+        }
 
         /*
          * since the file system does not exist, create it a protected block
          */
-        Bolts.withLock(_fs_lock) {
-
+        return Bolts.withLock(_fs_lock) {
+            FileSystem fs
             try { fs = provider.getFileSystem(uri) }
             catch( FileSystemNotFoundException e ) { fs=null }
             if( !fs ) {
                 log.debug "Creating a file system instance for provider: ${provider.class.simpleName}"
                 fs = provider.newFileSystem(uri, config!=null ? config : envFor(uri.scheme))
             }
-            fs
+            return fs
         }
-
-        return fs
     }
 
     static FileSystem getOrCreateFileSystemFor( String scheme, Map env = null ) {
