@@ -42,6 +42,7 @@
 package com.upplication.s3fs;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -60,12 +61,13 @@ public class S3FileSystem extends FileSystem {
 	private final S3FileSystemProvider provider;
 	private final AmazonS3Client client;
 	private final String endpoint;
+	private final String bucketName;
 
-	public S3FileSystem(S3FileSystemProvider provider, AmazonS3Client client,
-			String endpoint) {
+	public S3FileSystem(S3FileSystemProvider provider, AmazonS3Client client, URI uri) {
 		this.provider = provider;
 		this.client = client;
-		this.endpoint = endpoint;
+		this.endpoint = uri.getHost();
+		this.bucketName = S3Path.bucketName(uri);
 	}
 
 	@Override
@@ -74,13 +76,13 @@ public class S3FileSystem extends FileSystem {
 	}
 
 	@Override
-	public void close() throws IOException {
-		this.provider.fileSystem.compareAndSet(this, null);
+	public void close() {
+		this.provider.fileSystems.remove(bucketName);
 	}
 
 	@Override
 	public boolean isOpen() {
-		return this.provider.fileSystem.get() != null;
+		return this.provider.fileSystems.containsKey(bucketName);
 	}
 
 	@Override
@@ -150,5 +152,9 @@ public class S3FileSystem extends FileSystem {
 	 */
 	public String getEndpoint() {
 		return endpoint;
+	}
+
+	public String getBucketName() {
+		return bucketName;
 	}
 }

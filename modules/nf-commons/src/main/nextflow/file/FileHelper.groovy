@@ -595,13 +595,17 @@ class FileHelper {
     /**
      * Acquire or create the file system for the given {@link URI}
      *
-     * @param uri A {@link URI} locating a file into a file system
-     * @param env An option environment specification that may be used to instantiate the underlying file system.
-     *          As defined by {@link FileSystemProvider#newFileSystem(java.net.URI, java.util.Map)}
-     * @return The corresponding {@link FileSystem} object
-     * @throws IllegalArgumentException if does not exist a valid provider for the given URI scheme
+     * @param uri
+     *      A {@link URI} locating a file into a file system
+     * @param config
+     *      A {@link Map} object representing the file system configuration. The structure of this object is entirely
+     *      delegate to the file system implementation
+     * @return
+     *      The corresponding {@link FileSystem} object
+     * @throws
+     *      IllegalArgumentException if does not exist a valid provider for the given URI scheme
      */
-    static FileSystem getOrCreateFileSystemFor( URI uri, Map env = null ) {
+    static FileSystem getOrCreateFileSystemFor( URI uri, Map config = null ) {
         assert uri
 
         /*
@@ -614,27 +618,28 @@ class FileHelper {
         /*
          * check if already exists a file system for it
          */
-        FileSystem fs
-        try { fs = provider.getFileSystem(uri) }
-        catch( FileSystemNotFoundException e ) { fs=null }
-        if( fs )
-            return fs
+        try {
+            final fs = provider.getFileSystem(uri)
+            if( fs )
+                return fs
+        }
+        catch( FileSystemNotFoundException e ) {
+            // fallback in following synchronised block
+        }
 
         /*
          * since the file system does not exist, create it a protected block
          */
-        Bolts.withLock(_fs_lock) {
-
+        return Bolts.withLock(_fs_lock) {
+            FileSystem fs
             try { fs = provider.getFileSystem(uri) }
             catch( FileSystemNotFoundException e ) { fs=null }
             if( !fs ) {
                 log.debug "Creating a file system instance for provider: ${provider.class.simpleName}"
-                fs = provider.newFileSystem(uri, env ?: envFor(uri.scheme))
+                fs = provider.newFileSystem(uri, config!=null ? config : envFor(uri.scheme))
             }
-            fs
+            return fs
         }
-
-        return fs
     }
 
     static FileSystem getOrCreateFileSystemFor( String scheme, Map env = null ) {

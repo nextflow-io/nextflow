@@ -18,12 +18,13 @@
 package nextflow.cloud.aws
 
 import com.amazonaws.AmazonClientException
+import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.auth.BasicSessionCredentials
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider
+import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.InstanceMetadataRegionProvider
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.RegionUtils
@@ -47,6 +48,7 @@ import groovy.util.logging.Slf4j
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.exception.AbortOperationException
 /**
+ * Implement a factory class for AWS client objects
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -54,10 +56,7 @@ import nextflow.exception.AbortOperationException
 @CompileStatic
 class AmazonClientFactory {
 
-    /**
-     * Reference to {@link AmazonEC2Client} object
-     */
-    private AmazonEC2Client ec2Client
+    private AwsConfig config
 
     /**
      * The AWS access key credentials (optional)
@@ -70,11 +69,8 @@ class AmazonClientFactory {
     private String secretKey
 
     /**
-     * The AWS session key credentials (optional)
+     * The AWS IAM role to be assumed
      */
-    @Deprecated
-    private String sessionToken
-
     private String assumeRoleArn
 
     /**
@@ -94,9 +90,6 @@ class AmazonClientFactory {
     String getSecretKey() { secretKey }
 
 
-    String getSessionToken() { sessionToken }
-
-
     /**
      * Initialise the Amazon cloud driver with default (empty) parameters
      */
@@ -104,19 +97,21 @@ class AmazonClientFactory {
         this(new AwsConfig(Collections.emptyMap()))
     }
 
-    AmazonClientFactory(AwsConfig config) {
+    AmazonClientFactory(AwsConfig config, String region=null) {
+        this.config = config
+
         if( config.accessKey && config.secretKey ) {
             this.accessKey = config.accessKey
             this.secretKey = config.secretKey
             this.assumeRoleArn = config.assumeRoleArn
         }
 
-        if( !accessKey && !fetchIamRole() )
+        if( !this.accessKey && !fetchIamRole() )
             throw new AbortOperationException("Missing AWS security credentials -- Provide access/security keys pair or define an IAM instance profile (suggested)")
 
         // -- get the aws default region
-        region = config.region ?: fetchRegion()
-        if( !region )
+        this.region = region ?: config.region ?: fetchRegion()
+        if( !this.region )
             throw new AbortOperationException('Missing AWS region -- Make sure to define in your system environment the variable `AWS_DEFAULT_REGION`')
     }
 
@@ -179,15 +174,15 @@ class AmazonClientFactory {
      */
     synchronized AmazonEC2 getEc2Client() {
 
-        final clientBuilder = AmazonEC2ClientBuilder .standard()
-        if( region )
-            clientBuilder.withRegion(region)
+        final builder = AmazonEC2ClientBuilder
+                .standard()
+                .withRegion(region)
 
         final credentials = getCredentialsProvider0()
         if( credentials )
-            clientBuilder.withCredentials(credentials)
+            builder.withCredentials(credentials)
 
-        return clientBuilder.build()
+        return builder.build()
     }
 
     /**
@@ -199,66 +194,72 @@ class AmazonClientFactory {
      */
     @Memoized
     AWSBatch getBatchClient() {
-        final clientBuilder = AWSBatchClientBuilder .standard()
-        if( region )
-            clientBuilder.withRegion(region)
+        final builder = AWSBatchClientBuilder
+                .standard()
+                .withRegion(region)
 
         final credentials = getCredentialsProvider0()
         if( credentials )
-            clientBuilder.withCredentials(credentials)
+            builder.withCredentials(credentials)
 
-        return clientBuilder.build()
+        return builder.build()
     }
 
     @Memoized
     AmazonECS getEcsClient() {
 
-        final clientBuilder = AmazonECSClientBuilder .standard()
-        if( region )
-            clientBuilder.withRegion(region)
+        final builder = AmazonECSClientBuilder
+                .standard()
+                .withRegion(region)
 
         final credentials = getCredentialsProvider0()
         if( credentials )
-            clientBuilder.withCredentials(credentials)
+            builder.withCredentials(credentials)
 
-        clientBuilder.build()
+        return builder.build()
     }
 
     @Memoized
     AWSLogs getLogsClient() {
 
-        final clientBuilder = AWSLogsAsyncClientBuilder.standard()
-        if( region )
-            clientBuilder.withRegion(region)
+        final builder = AWSLogsAsyncClientBuilder
+                .standard()
+                .withRegion(region)
 
         final credentials = getCredentialsProvider0()
         if( credentials )
-            clientBuilder.withCredentials(credentials)
+            builder.withCredentials(credentials)
 
-        return clientBuilder.build()
+        return builder.build()
     }
 
-    AmazonS3 getS3Client() {
-        final clientBuilder = AmazonS3ClientBuilder.standard()
-        if( region )
-            clientBuilder.withRegion(region)
+    AmazonS3 getS3Client(ClientConfiguration clientConfig=null, boolean global=false) {
+        final builder = AmazonS3ClientBuilder
+                .standard()
+                .withPathStyleAccessEnabled(config.s3Config.pathStyleAccess)
+                .withForceGlobalBucketAccessEnabled(global)
+
+        final endpoint = config.s3Config.endpoint
+        if( endpoint )
+            builder.withEndpointConfiguration(new EndpointConfiguration(endpoint, region))
+        else
+            builder.withRegion(region)
 
         final credentials = getCredentialsProvider0()
         if( credentials )
-            clientBuilder.withCredentials(credentials)
+            builder.withCredentials(credentials)
 
-        return clientBuilder.build()
+        if( clientConfig )
+            builder.withClientConfiguration(clientConfig)
+
+        return builder.build()
     }
 
     protected AWSCredentials getCredentials0() {
-        if( !accessKey || !secretKey ) {
+        if( !accessKey || !secretKey )
             return null
-        }
 
-        if( sessionToken )
-            new BasicSessionCredentials(accessKey, secretKey, sessionToken)
-        else
-            new BasicAWSCredentials(accessKey, secretKey)
+        return new BasicAWSCredentials(accessKey, secretKey)
     }
 
     protected AWSCredentialsProvider getCredentialsProvider0() {

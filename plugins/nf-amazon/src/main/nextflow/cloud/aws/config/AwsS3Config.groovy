@@ -44,12 +44,15 @@ class AwsS3Config {
 
     private CannedAccessControlList s3Acl
 
+    private Boolean pathStyleAccess
+
     AwsS3Config(Map opts) {
         this.debug = opts.debug as Boolean
         this.endpoint = opts.endpoint ?: SysEnv.get('AWS_S3_ENDPOINT')
         this.storageClass = parseStorageClass((opts.storageClass ?: opts.uploadStorageClass) as String)     // 'uploadStorageClass' is kept for legacy purposes
         this.storageEncryption = parseStorageEncryption(opts.storageEncryption as String)
         this.storageKmsKeyId = opts.storageKmsKeyId
+        this.pathStyleAccess = opts.s3PathStyleAccess as Boolean
         this.s3Acl = parseS3Acl(opts.s3Acl as String)
     }
 
@@ -96,5 +99,9 @@ class AwsS3Config {
 
     CannedAccessControlList getS3Acl() {
         return s3Acl
+    }
+
+    Boolean getPathStyleAccess() {
+        return pathStyleAccess
     }
 }
