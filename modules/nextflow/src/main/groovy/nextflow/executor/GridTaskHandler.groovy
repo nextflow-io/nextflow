@@ -185,7 +185,11 @@ class GridTaskHandler extends TaskHandler {
             final exitStatus = process.waitFor()
 
             if( exitStatus ) {
-                throw new ProcessNonZeroExitStatusException("Failed to submit process to grid scheduler for execution", result, exitStatus, builder.command())
+                final command = pipeScript
+                    ? builder.command() << '<' << TaskRun.CMD_RUN
+                    : builder.command()
+
+                throw new ProcessNonZeroExitStatusException("Failed to submit process to grid scheduler for execution", result, exitStatus, command)
             }
 
             // -- return the process stdout
