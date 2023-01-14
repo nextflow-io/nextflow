@@ -1,6 +1,9 @@
 nf-tower changelog
 ===================
-1.5.8 - 13 Dic 2022
+1.5.9 - 14 Jan 2023
+- Bump groovy 3.0.14 [7c204236]
+
+1.5.8 - 13 Dec 2022
 - Fix tower plugin min nextflow requirement [1713a1cd]
 - Fix TowerArchiver resolve envar paths relative to baseDir (#3438) [ci skip] [46af18e5]
 - Bump nf-tower@1.5.8 [652d0880]
