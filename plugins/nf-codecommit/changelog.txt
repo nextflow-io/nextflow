@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+0.1.3 - 14 Jan 2023
+- Bump groovy 3.0.14 [6f3ed6e8]
+
 0.1.2 - 17 Jun 2022
 - Fix CodeCommit credentials usage
 
