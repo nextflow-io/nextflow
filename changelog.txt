@@ -31,6 +31,13 @@ NEXTFLOW CHANGE-LOG
 - Bump 23.01.0-edge version [9ec31444]
 - Bump groovy 3.0.14 [7c204236] [6f3ed6e8]
 - Bump Grengine 3.0 [c0b1a7a6]
+- Bump nf-wave@0.7.0 [45d274e3]
+- Bump nf-tower@1.5.9 [db0ebe72]
+- Bump nf-google@1.6.0 [a663fe16]
+- Bump nf-console@1.0.5 [45fd53ad]
+- Bump nf-codecommit@0.1.3 [cf39ef8f]
+- Bump nf-azure@0.15.1 [7a6a78aa]
+- Bump nf-amazon@1.14.0 [41fdcc72]
 
 22.10.5 - 14 Jan 2023
 - Fix FilePorter concurrency issue (#3511) [0f757156]
