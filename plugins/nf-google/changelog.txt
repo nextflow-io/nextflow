@@ -1,6 +1,11 @@
 nf-google changelog
 ===================
-1.5.0 - 13 Dic 2022
+1.6.0 - 14 Jan 2023
+- Refactor Google Batch executor [c0a25fc2]
+- Improve container native executor configuration [03126371]
+- Bump groovy 3.0.14 [7c204236]
+
+1.5.0 - 13 Dec 2022
 - Add allowedLocations option to google batch (#3453) [c619eb81]
 - Add warning on Google Logs failure [bdbcdde9]
 - Fix Quote the logName in the Cloud Logging filter (#3464) [b3975063]
