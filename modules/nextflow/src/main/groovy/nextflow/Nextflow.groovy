@@ -78,7 +78,7 @@ class Nextflow {
             FileHelper.visitFiles(opts, fs.getPath(folder), pattern) { Path it -> result.add(it) }
         }
         catch (NoSuchFileException e) {
-            log.debug "No such file: $folder -- Skipping visit"
+            log.debug "No such file or directory: $folder -- Skipping visit"
         }
         return result
 
