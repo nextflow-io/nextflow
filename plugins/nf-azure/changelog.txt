@@ -1,5 +1,10 @@
 nf-azure changelog
 ===================
+0.15.1 - 14 Jan 2023
+- Improve container native executor configuration [03126371]
+- Minor logging change [646776a8]
+- Bump groovy 3.0.14 [7c204236]
+
 0.15.0 - 23 Nov 2022
 - Allow identity based authentication on Azure Batch (#3132) [a08611be]
 - Add Azure SAS token validation [e2244b48]
