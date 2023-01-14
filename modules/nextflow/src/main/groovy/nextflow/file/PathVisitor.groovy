@@ -166,7 +166,7 @@ class PathVisitor {
             }
         }
         catch (NoSuchFileException e) {
-            log.debug "No such file: $folder -- Skipping visit"
+            log.debug "No such file or directory: $folder -- Skipping visit"
         }
         finally {
             if( !count && opts.checkIfExists as boolean )
