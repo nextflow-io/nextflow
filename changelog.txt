@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.10.5 - 14 Jan 2023
+- Fix FilePorter concurrency issue (#3511) [0f757156]
+- Fix watchPath hang shutdown execution [e03d9ca6]
+- Add `schedulingPriority` option to AWS Batch (use with `shareIdentifier`) (#3505) [543ee7b1]
+
 22.12.0-edge - 13 Dec 2022
 - Add `fair` process directive [60d34cfd]
 - Add support for singularity registry setting [37c1aeb9]
