@@ -19,6 +19,7 @@ package nextflow.executor
 
 import nextflow.Session
 import nextflow.processor.TaskRun
+import nextflow.util.Duration
 import spock.lang.Specification
 /**
  *
@@ -112,4 +113,36 @@ class AbstractGridExecutorTest extends Specification {
         exec.sanitizeJobName('foo') == 'foo'
         exec.sanitizeJobName(LONG) == LONG.substring(0,256)
     }
+
+    def 'should fetch queue status'() {
+        given:
+        def STATUS = ['123': AbstractGridExecutor.QueueStatus.RUNNING]
+        def NAME = 'TheExecutorName'
+        and:
+        def session = Mock(Session) { getConfig()>>[:] }
+        and:
+        def exec = Spy(AbstractGridExecutor)
+        exec.session = session
+        exec.@queueInterval = Duration.of('1m')
+        exec.name = NAME
+
+
+        when:
+        def result = exec.getQueueStatus('foo')
+        then:
+        1 * session.getExecConfigProp(NAME,'queueGlobalStatus',false)>>false
+        1 * exec.getQueueStatus0('foo') >> STATUS
+        and:
+        result == STATUS
+
+
+        when:
+        result = exec.getQueueStatus('foo')
+        then:
+        1 * session.getExecConfigProp(NAME,'queueGlobalStatus',false)>>true
+        1 * exec.getQueueStatus0(null) >> STATUS
+        and:
+        result == STATUS
+    }
+
 }
