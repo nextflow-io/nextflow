@@ -1,6 +1,17 @@
 nf-amazon changelog
 ===================
-1.13.0 - 13 Dic 2022
+1.14.0 - 14 Jan 2023
+- Add `schedulingPriority` option to AWS Batch (use with `shareIdentifier`) (#3505) [06960bb2]
+- Fix FilePorter concurrency issue (#3511) [11ccfa26]
+- Fix support for AWS ACL for Batch #2671 [a9644919]
+- Improve container native executor configuration [03126371]
+- Improve AWS batch exit code reporting [d1bb2fe2]
+- Refactor Fusion config [902e5b34]
+- Refactor Fusion package [52f4c5d5]
+- Remove unnecessary Fusion env var [dfa47556]
+- Bump groovy 3.0.14 [7c204236]
+
+1.13.0 - 13 Dec 2022
 - Add support for AWS Glacier restore [b6110766]
 - Add support for S3 storageClass to publishDir [066f9203]
 - Fix math overflow when copying large AWS S3 files [f32ea0ba]
