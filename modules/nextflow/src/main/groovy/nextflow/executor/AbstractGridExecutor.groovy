@@ -297,6 +297,11 @@ abstract class AbstractGridExecutor extends Executor {
     }
 
     Map<String,QueueStatus> getQueueStatus(queue) {
+        final global = session.getExecConfigProp(name, 'queueGlobalStatus',false)
+        if( global ) {
+            log.debug1("Executor '$name' fetching queue global status")
+            queue = null
+        }
         Map<String,QueueStatus> status = Throttle.cache("${name}_${queue}", queueInterval) {
             final result = getQueueStatus0(queue)
             log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status >\n" + dumpQueueStatus(result)
@@ -339,7 +344,7 @@ abstract class AbstractGridExecutor extends Executor {
      */
     protected abstract Map<String,QueueStatus> parseQueueStatus( String text )
 
-    boolean checkStartedStatus(jobId, queueName ) {
+    boolean checkStartedStatus(jobId, queueName) {
         assert jobId
 
         // -- fetch the queue status
