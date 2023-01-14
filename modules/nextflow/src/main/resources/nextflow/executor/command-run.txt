@@ -91,6 +91,10 @@ nxf_fs_rsync() {
   rsync -rRl $1 $2
 }
 
+nxf_fs_rclone() {
+  rclone copyto $1 $2/$1
+}
+
 on_exit() {
     exit_status=${nxf_main_ret:=$?}
     printf $exit_status {{exit_file}}

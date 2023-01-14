@@ -2285,6 +2285,7 @@ Value   Description
 copy    Output files are copied from the scratch directory to the work directory.
 move    Output files are moved from the scratch directory to the work directory.
 rsync   Output files are copied from the scratch directory to the work directory by using the ``rsync`` utility.
+rclone  Output files are copied from the scratch directory to the work directory by using the `rclone <https://rclone.org>`_ utility (note: it must be available in your cluster computing nodes, requires version ``23.01.0-edge`` or later).
 ======= ==================
 
 See also: `scratch`_.
