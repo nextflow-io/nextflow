@@ -1277,7 +1277,7 @@ class TaskProcessor {
         final fail = e instanceof InvocationTargetException ? e.targetException : e
 
         if( fail instanceof NoSuchFileException ) {
-            return "No such file: $fail.message"
+            return "No such file or directory: $fail.message"
         }
         if( fail instanceof MissingPropertyException ) {
             def name = fail.property ?: LoggerHelper.getDetailMessage(fail)
