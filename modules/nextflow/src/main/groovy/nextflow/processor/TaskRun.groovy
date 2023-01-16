@@ -46,6 +46,7 @@ import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.ValueOutParam
+import nextflow.spack.SpackCache
 /**
  * Models a task instance
  *
@@ -585,6 +586,15 @@ class TaskRun implements Cloneable {
 
         final cache = new CondaCache(processor.session.getCondaConfig())
         cache.getCachePathFor(config.conda as String)
+    }
+
+    @Memoized
+    Path getSpackEnv() {
+        if( !config.spack || !processor.session.getSpackConfig().isEnabled() )
+            return null
+
+        final cache = new SpackCache(processor.session.getSpackConfig())
+        cache.getCachePathFor(config.spack as String)
     }
 
     @Memoized
