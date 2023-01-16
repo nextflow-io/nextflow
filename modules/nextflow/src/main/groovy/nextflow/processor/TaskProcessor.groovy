@@ -1497,7 +1497,7 @@ class TaskProcessor {
         final env = workDir.resolve(TaskRun.CMD_ENV).text
         final result = new HashMap(50)
         for(String line : env.readLines() ) {
-            def (k,v) = line.tokenize('=')
+            def (k, v) = line.split('=', limit=2);
             result.put(k,v)
         }
         return result
