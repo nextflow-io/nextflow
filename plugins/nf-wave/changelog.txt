@@ -1,5 +1,11 @@
 nf-wave changelog
 ==================
+0.7.0 - 14 Jan 2022
+- Improve container native executor configuration [03126371]
+- Prevent redirection on Wave client [124cfb3e]
+- Refactor Fusion package [52f4c5d5]
+- Update groovy deps [6f3ed6e8]
+
 0.6.3 - 13 Dic 2022
 - Fix Wave layer invalid checksum due to not closed stream [e188bbf9]
 - Fix Fusion test [2245a1c7]
