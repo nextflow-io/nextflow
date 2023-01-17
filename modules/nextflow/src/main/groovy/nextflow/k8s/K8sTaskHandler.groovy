@@ -253,8 +253,8 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         return useJobResource()
-             ? builder.buildAsJob()
-             : builder.build()
+            ? builder.buildAsJob()
+            : builder.build()
     }
 
     protected PodOptions getPodOptions() {
