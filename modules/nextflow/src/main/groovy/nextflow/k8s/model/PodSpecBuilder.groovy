@@ -91,6 +91,8 @@ class PodSpecBuilder {
 
     String computeResourceType
 
+    Boolean waitForWorkers
+
     AcceleratorResource accelerator
 
     Collection<PodMountConfig> configMaps = []
@@ -363,6 +365,7 @@ class PodSpecBuilder {
         sshAuthMountPath = opts.sshAuthMountPath
         mpiJobWorkers = opts.mpiJobWorkers
         computeResourceType = opts.computeResourceType
+        waitForWorkers = opts.waitForWorkers
 
         return this
     }
@@ -617,6 +620,10 @@ class PodSpecBuilder {
               ]
            ]
         ]
+	if( waitForWorkers ) {
+           final spec = result.spec as Map
+           spec.waitForWorkers = waitForWorkers
+        }
         return result
     }
 

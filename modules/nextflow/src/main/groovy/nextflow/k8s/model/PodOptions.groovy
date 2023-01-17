@@ -72,6 +72,8 @@ class PodOptions {
     private String sshAuthMountPath 
  
     private String computeResourceType
+
+    private Boolean waitForWorkers
     
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
@@ -166,6 +168,9 @@ class PodOptions {
         else if( entry.computeResourceType ) {
             this.computeResourceType = entry.computeResourceType as String
         }
+        else if( entry.waitForWorkers ) {
+            this.waitForWorkers = entry.waitForWorkers as Boolean
+        }
         else
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -182,6 +187,14 @@ class PodOptions {
     Collection<PodMountSecret> getMountSecrets() { mountSecrets }
 
     Collection<PodVolumeClaim> getVolumeClaims() { mountClaims }
+
+    String getSshAuthMountPath() { sshAuthMountPath }
+
+    Integer getMpiJobWorkers() { mpiJobWorkers }
+
+    String getComputeResourceType() { computeResourceType }
+
+    Boolean getWaitForWorkers() { waitForWorkers }
 
     Map<String,String> getLabels() { labels }
 
@@ -304,6 +317,7 @@ class PodOptions {
         result.mpiJobWorkers = other.mpiJobWorkers!=0 ? other.mpiJobWorkers : this.mpiJobWorkers
         result.sshAuthMountPath = other.sshAuthMountPath!=null ? other.sshAuthMountPath : this.sshAuthMountPath
         result.computeResourceType = other.computeResourceType!=null ? other.computeResourceType : this.computeResourceType
+        result.waitForWorkers = other.waitForWorkers!=null? other.waitForWorkers : this.waitForWorkers
 
         return result
     }

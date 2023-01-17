@@ -495,7 +495,7 @@ class K8sTaskHandlerTest extends Specification {
         def handler = Spy(new K8sTaskHandler(client: client, task:task))
 
         def POD_NAME = 'new-pod-id'
-        def REQUEST =  [foo: 'bar']
+        def REQUEST =  [foo: 'bar', kind: 'Pod']
         def RESPONSE = new K8sResponseJson([metadata: [name:POD_NAME]])
         def YAML = Paths.get('file.yaml')
         when:
@@ -573,6 +573,100 @@ class K8sTaskHandlerTest extends Specification {
             ]
         ]
     }
+
+    def 'should submit an mpijob' () {
+        given:
+        def WORK_DIR = Paths.get('/some/work/dir')
+        def task = Mock(TaskRun)
+        def client = Mock(K8sClient)
+        def builder = Mock(K8sWrapperBuilder)
+        def config = Mock(TaskConfig)
+        def executor = Mock(K8sExecutor)
+        def handler = Spy(new K8sTaskHandler(builder: builder, client: client, executor: executor))
+        def podOptions = Mock(PodOptions)
+        and:
+        podOptions.automountServiceAccountToken >> true
+        podOptions.computeResourceType >> 'MPIJob'
+        podOptions.sshAuthMountPath >> '/ssh/path'
+        podOptions.mpiJobWorkers >> 2
+        podOptions.waitForWorkers >> true
+        Map result
+
+        when:
+        result = handler.newSubmitRequest(task)
+        then:
+        1 * client.getConfig() >> new ClientConfig()
+        _ * handler.fusionEnabled() >> false
+        1 * handler.fixOwnership() >> false
+        1 * handler.useJobResource() >> true
+        1 * handler.entrypointOverride() >> true
+        1 * handler.getSyntheticPodName(task) >> 'nf-123'
+        1 * handler.getLabels(task) >> [:]
+        1 * handler.getAnnotations() >> [:]
+        1 * handler.getContainerMounts() >> []
+        1 * handler.getPodOptions() >> podOptions
+        1 * task.getContainer() >> 'debian:latest'
+        1 * task.getWorkDir() >> WORK_DIR
+        1 * task.getConfig() >> config
+
+        result == [
+            apiVersion: 'kubeflow.org/v2beta1', 
+            kind: 'MPIJob', 
+            metadata: [
+                name: 'nf-123', 
+                namespace: 'default'
+            ], 
+            spec: [
+              slotsPerWorker: 1,
+              runPolicy: [
+                cleanPodPolicy: 'All'
+              ],
+              waitForWorkers: true,
+              sshAuthMountPath: '/ssh/path',
+              mpiReplicaSpecs: [
+                Launcher: [
+                   replicas: 1, 
+                   template: [
+                     spec: [
+                       restartPolicy: 'Never', 
+                       containers: [
+                         [ 
+                             name: 'nf-123', 
+                             image: 'debian:latest', 
+                             command: ['/bin/bash', '-ue', '/some/work/dir/.command.run'], 
+                             resources: [
+                                requests: [
+                                  cpu: 1, 
+                                  memory: '2048Mi'
+                                ], 
+                                limits: [ 
+                                  memory: '2048Mi'
+                                ]
+                             ]
+                         ]
+                       ]
+                     ]
+                   ]
+                ], 
+                Worker: [
+                 replicas: 2, 
+                 template: [
+                   spec: [
+                     restartPolicy: 'Never', 
+                     containers: [ 
+                        [
+                          name: 'nf-123', 
+                          image: 'debian:latest'
+                        ]
+                     ]
+                   ]
+                 ]
+                ]
+              ]
+            ]
+        ]
+    }
+
 
     def 'should check if running'  () {
         given:
