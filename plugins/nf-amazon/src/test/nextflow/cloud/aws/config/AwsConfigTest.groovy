@@ -28,68 +28,6 @@ import spock.lang.Unroll
  */
 class AwsConfigTest extends Specification {
 
-    @Unroll
-    def 'should fetch aws creds'() {
-        expect:
-        AwsConfig.getAwsCredentials0(ENV, CREDS) == EXPECTED
-
-        where:
-        ENV                                                     | CREDS                                 | EXPECTED
-        null                                                    | null                                  | null
-        [AWS_ACCESS_KEY: 'x', AWS_SECRET_KEY: '222']            | null                                  | ['x','222']
-        [AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999']  | null                                  | ['q','999']
-        [AWS_ACCESS_KEY: 'x', AWS_SECRET_KEY: '222',  AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999']     | null | ['q','999']
-        [AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999']  | [accessKey: 'b', secretKey: '333']    | ['b','333']
-        null                                                    | [accessKey: 'b', secretKey: '333']    | ['b','333']
-        null                                                    | [accessKey: 'b']                      | null
-        [AWS_ACCESS_KEY_ID: 'q', AWS_SECRET_ACCESS_KEY: '999']  | [accessKey: 'b', secretKey: '333']    | ['b','333']
-    }
-
-    def 'should lod creds from file'() {
-        given:
-        def file = Files.createTempFile('test','test')
-        file.text = '''
-            [default]
-            aws_access_key_id = aaa
-            aws_secret_access_key = bbbb
-            '''
-
-        expect:
-        AwsConfig.getAwsCredentials0(null, null, [file]) == ['aaa','bbbb']
-        and:
-        AwsConfig.getAwsCredentials0([AWS_ACCESS_KEY: 'x', AWS_SECRET_KEY: '222'], null, [file]) == ['x','222']
-
-        cleanup:
-        file?.delete()
-    }
-
-    def 'should load creds with a profile'() {
-
-        given:
-        def file = Files.createTempFile('test','test')
-        file.text = '''
-            [default]
-            aws_access_key_id = aaa
-            aws_secret_access_key = bbbb
-            
-            [foo]
-            aws_access_key_id = xxx
-            aws_secret_access_key = yyy
-
-            [bar]
-            aws_access_key_id = ppp
-            aws_secret_access_key = qqq
-            aws_session_token = www
-            '''
-
-        expect:
-        AwsConfig.getAwsCredentials0([AWS_PROFILE: 'foo'], null, [file]) == ['xxx','yyy']
-        and:
-        AwsConfig.getAwsCredentials0([AWS_DEFAULT_PROFILE: 'bar'], null, [file]) == ['ppp','qqq']
-
-        cleanup:
-        file?.delete()
-    }
 
     def 'should get aws region'() {
         expect:
@@ -134,36 +72,6 @@ class AwsConfigTest extends Specification {
 
         cleanup:
         file?.delete()
-    }
-
-    def 'should get aws credentials with file and profile from config' () {
-
-        given:
-        def file = Files.createTempFile('test','test')
-        file.text = '''
-            [default]
-            aws_access_key_id = aaa
-            aws_secret_access_key = bbbb
-            
-            [foo]
-            aws_access_key_id = xxx
-            aws_secret_access_key = yyy
-
-            [bar]
-            aws_access_key_id = ppp
-            aws_secret_access_key = qqq
-            aws_session_token = www
-            '''
-
-        expect:
-        AwsConfig.getAwsCredentials0([:], [profile:'foo'], [file]) == ['xxx','yyy']
-        AwsConfig.getAwsCredentials0([AWS_DEFAULT_PROFILE: 'bar'], [profile:'foo'], [file]) == ['xxx','yyy']
-        AwsConfig.getAwsCredentials0([AWS_DEFAULT_PROFILE: 'bar'], [:], [file]) == ['ppp','qqq']
-        AwsConfig.getAwsCredentials0([:], [:], [file]) == ['aaa','bbbb']
-
-        cleanup:
-        file?.delete()
-
     }
 
     def 'should get aws config' () {
