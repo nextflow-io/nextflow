@@ -96,7 +96,7 @@ nxf_fs_rclone() {
 }
 
 nxf_fs_fcp() {
-  fcp copyto $1 $2/$1
+  fcp $1 $2/$1
 }
 
 on_exit() {
