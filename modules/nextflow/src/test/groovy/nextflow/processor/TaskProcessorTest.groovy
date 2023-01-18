@@ -43,6 +43,8 @@ import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
 import spock.lang.Specification
 import spock.lang.Unroll
+import test.TestHelper
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -917,5 +919,23 @@ class TaskProcessorTest extends Specification {
         1 * processor.bindOutputs0(emission5)
         then:
         processor.@fairBuffers.size()==0
+    }
+
+    def 'should parse env map' () {
+        given:
+        def workDir = TestHelper.createInMemTempDir()
+        def envFile = workDir.resolve(TaskRun.CMD_ENV)
+        envFile.text =  '''
+                        ALPHA=one
+                        DELTA=x=y
+                        OMEGA=
+                        '''.stripIndent()
+        and:
+        def processor = Spy(TaskProcessor)
+
+        when:
+        def result = processor.collectOutEnvMap(workDir)
+        then:
+        result == [ALPHA:'one', DELTA: "x=y", OMEGA: '']
     }
 }

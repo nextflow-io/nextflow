@@ -50,10 +50,8 @@ class FusionHelper {
         final engine = containerConfig.getEngine()
         final containerBuilder = ContainerBuilder.create(engine, containerName)
                 .addMountWorkDir(false)
-                .addRunOptions('--rm')
+                .addRunOptions(containerConfig.fusionOptions())
                 .params(containerConfig)
-                .params(device: '/dev/fuse')
-                .params(capAdd: 'SYS_ADMIN')
 
         // add fusion env vars
         for(Map.Entry<String,String> it : launcher.fusionEnv()) {

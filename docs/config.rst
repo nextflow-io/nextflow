@@ -175,8 +175,9 @@ delayBetweenAttempts        Delay between download attempts from S3 (default `10
 maxParallelTransfers        Max parallel upload/download transfer operations *per job* (default: ``4``).
 maxTransferAttempts         Max number of downloads attempts from S3 (default: `1`).
 maxSpotAttempts             Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: ``5``, requires ``22.04.0`` or later)
-shareIdentifier             The share identifier for all tasks when using `fair-share scheduling for AWS Batch <https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/>`_ (requires ``22.09.0-edge`` or later)
 retryMode                   The retry mode configuration setting, to accommodate rate-limiting on `AWS services <https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html>`_ (default: ``standard``)
+schedulingPriority          The scheduling priority for all tasks when using `fair-share scheduling for AWS Batch <https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/>`_ (default: ``0``, requires ``23.01.0-edge`` or later)
+shareIdentifier             The share identifier for all tasks when using `fair-share scheduling for AWS Batch <https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/>`_ (requires ``22.09.0-edge`` or later)
 =========================== ================
 
 
@@ -352,6 +353,7 @@ queueSize             The number of tasks the executor will handle in a parallel
 submitRateLimit       Determines the max rate of job submission per time unit, for example ``'10sec'`` (10 jobs per second) or ``'50/2min'`` (50 jobs every 2 minutes) (default: unlimited).
 pollInterval          Determines how often to check for process termination. Default varies for each executor.
 dumpInterval          Determines how often to log the executor status (default: ``5min``).
+queueGlobalStatus     Determines how job status is retrieved. When ``false`` only the queue associated with the job execution is queried. When ``true`` the job status is queried globally i.e. irrespective of the submission queue (default: ``false``, requires version ``23.01.0-edge`` or later).
 queueStatInterval     Determines how often to fetch the queue status from the scheduler (default: ``1min``). Used only by grid executors.
 exitReadTimeout       Determines how long to wait before returning an error status when a process is terminated but the ``.exitcode`` file does not exist or is empty (default: ``270 sec``). Used only by grid executors.
 killBatchSize         Determines the number of jobs that can be killed in a single command execution (default: ``100``).
@@ -425,7 +427,7 @@ securityContext     Defines the `security context <https://kubernetes.io/docs/ta
 storageClaimName    The name of the persistent volume claim where store workflow result data.
 storageMountPath    The path location used to mount the persistent volume claim (default: ``/workspace``).
 storageSubPath      The path in the persistent volume to be mounted (default: root).
-computeResourceType Define whether use Kubernetes ``Pod`` or ``Job`` resource type to carry out Nextflow tasks (default: ``Pod``).
+computeResourceType Define whether use Kubernetes ``Pod`` or ``Job`` resource type to carry out Nextflow tasks (default: ``Pod``, requires version ``22.05.0-edge`` or later).
 fetchNodeName       If you trace the hostname, activate this option (default: ``false``, requires version ``22.05.0-edge`` or later).
 volumeClaims        (deprecated)
 maxErrorRetry       Defines the Kubernetes API max request retries (default is set to 4)

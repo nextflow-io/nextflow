@@ -19,7 +19,6 @@ package nextflow.executor.local
 
 import java.nio.file.Path
 
-import nextflow.Session
 import nextflow.container.ContainerConfig
 import nextflow.file.http.XPath
 import nextflow.processor.TaskBean
@@ -56,18 +55,16 @@ class LocalTaskHandlerTest extends Specification {
         given:
         def WORK_DIR = XPath.get('http://some/work/dir')
         and:
-        def session = Mock(Session) {
-            getContainerConfig() >> new ContainerConfig([engine:'docker',enabled:true])
-        }
         def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
         and:
         def task = Mock(TaskRun) {
             getContainer() >> 'ubuntu:latest'
             getWorkDir() >> WORK_DIR
             getConfig() >> Mock(TaskConfig)
+            getContainerConfig() >> new ContainerConfig([engine:'docker',enabled:true])
             toTaskBean() >> bean
         }
-        def executor = Mock(LocalExecutor) { getSession() >> session }
+        def executor = Mock(LocalExecutor) 
         and:
         def handler = Spy(new LocalTaskHandler(task, executor))
 
@@ -76,7 +73,7 @@ class LocalTaskHandlerTest extends Specification {
         then:
         handler.fusionEnabled() >> true
         and:
-        builder.command() == ['sh','-c','docker run -i -e "NXF_FUSION_WORK=/fusion/http/some/work/dir" -e "NXF_FUSION_BUCKETS=http://some" --rm --device /dev/fuse --cap-add SYS_ADMIN ubuntu:latest bash -o pipefail -c \'trap "{ ret=$?; cp .command.log /fusion/http/some/work/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/http/some/work/dir/.command.run 2>&1 | tee .command.log\'']
+        builder.command() == ['sh','-c','docker run -i -e "NXF_FUSION_WORK=/fusion/http/some/work/dir" --rm --privileged ubuntu:latest bash -o pipefail -c \'trap "{ ret=$?; cp .command.log /fusion/http/some/work/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/http/some/work/dir/.command.run 2>&1 | tee .command.log\'']
         builder.directory() == null
         builder.redirectErrorStream()
         builder.redirectOutput().file()

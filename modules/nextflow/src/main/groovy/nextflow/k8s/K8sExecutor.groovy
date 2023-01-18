@@ -77,6 +77,11 @@ class K8sExecutor extends Executor {
         return true
     }
 
+    @Override
+    String containerConfigEngine() {
+        return 'docker'
+    }
+
     /**
      * @return A {@link TaskMonitor} associated to this executor type
      */
