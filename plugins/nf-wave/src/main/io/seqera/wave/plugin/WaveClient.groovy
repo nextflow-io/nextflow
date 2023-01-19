@@ -150,6 +150,7 @@ class WaveClient {
     SubmitContainerTokenResponse sendRequest(WaveAssets assets) {
         final req = makeRequest(assets)
         req.towerAccessToken = tower.accessToken
+        req.towerRefreshToken = tower.refreshToken
         req.towerWorkspaceId = tower.workspaceId
         req.towerEndpoint = tower.endpoint
         return sendRequest(req)
@@ -180,6 +181,7 @@ class WaveClient {
 
         // set the request access token
         request.towerAccessToken = accessToken
+        request.towerRefreshToken = refreshToken
 
         final body = JsonOutput.toJson(request)
         final uri = URI.create("${endpoint}/container-token")
