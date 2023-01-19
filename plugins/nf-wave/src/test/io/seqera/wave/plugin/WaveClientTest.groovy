@@ -600,6 +600,31 @@ class WaveClientTest extends Specification {
 
     }
 
+    def 'should send request with tower access token and refresh token' () {
+        given:
+        SysEnv.push([TOWER_WORKFLOW_ID:'1234', TOWER_REFRESH_TOKEN: 'xyz', TOWER_ACCESS_TOKEN: 'foo'])
+        and:
+        def config = [wave:[:], tower:[endpoint: 'http://foo.com']]
+        def sess = Mock(Session) {getConfig() >> config }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        def assets = Mock(WaveAssets)
+        def request = new SubmitContainerTokenRequest()
+        when:
+        wave.sendRequest(assets)
+        then:
+        1 * wave.makeRequest(assets) >> request
+        1 * wave.sendRequest(request) >> { List it ->
+            assert (it[0] == request)
+            assert (it[0] as SubmitContainerTokenRequest).towerAccessToken == 'foo'
+            assert (it[0] as SubmitContainerTokenRequest).towerRefreshToken == 'xyz'
+            assert (it[0] as SubmitContainerTokenRequest).towerEndpoint == 'http://foo.com'
+        }
+
+        cleanup:
+        SysEnv.pop()
+    }
+
     // --== launch web server ==--
     @Shared
     def CONFIG_RESP = [
