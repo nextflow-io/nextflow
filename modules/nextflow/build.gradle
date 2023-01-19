@@ -33,7 +33,7 @@ dependencies {
     api "commons-codec:commons-codec:1.15"
     api "commons-io:commons-io:2.11.0"
     api "com.beust:jcommander:1.35"
-    api("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
+    api("com.esotericsoftware:kryo:5.4.0")
     api('org.iq80.leveldb:leveldb:0.12')
     api('org.eclipse.jgit:org.eclipse.jgit:6.2.0.202206071550-r')
     api ('javax.activation:activation:1.1.1')
