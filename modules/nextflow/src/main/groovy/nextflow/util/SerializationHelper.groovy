@@ -281,7 +281,7 @@ class PathSerializer extends Serializer<Path> {
         }
 
         // try to find provider
-        def uri = URI.create("$scheme://$path")
+        def uri = URI.create("$scheme://${path.replace(' ', '%20')}")
         def fs = FileHelper.getOrCreateFileSystemFor(uri)
         return fs.provider().getPath(uri)
     }
