@@ -89,7 +89,7 @@ class BucketTokenizer {
     }
 
     /**
-     * @return The object key, effectively the same as {@link #path} stripping the leading slash character
+     * @return the object key, effectively the same as {@link #path}, stripping the leading slash character
      */
     String getKey() {
         path?.startsWith('/') ? path.substring(1) : path

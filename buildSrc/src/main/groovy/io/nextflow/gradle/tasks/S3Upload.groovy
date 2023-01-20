@@ -11,7 +11,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.TaskAction
 /**
- * Upload files to a S3 bucket
+ * Upload files to an S3 bucket
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -21,7 +21,7 @@ class S3Upload extends AbstractS3Task {
     /**
      * The S3 target path
      *
-     * the provider mess is needed to lazy evaluate the `project.version` property
+     * the provider object is needed to lazy evaluate the `project.version` property
      *   https://docs.gradle.org/current/userguide/lazy_configuration.html#lazy_properties
      *   https://stackoverflow.com/questions/13198358/how-to-get-project-version-in-custom-gradle-plugin/13198744
      *

@@ -14,8 +14,8 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 /**
- * This task traverse a S3 plugins repo and creates
- * and updates plugins repository index. Finally push
+ * This task traverses an S3 plugins repo and creates
+ * and updates the plugins repository index. Then pushes
  * the updated index to the Github repository.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -31,7 +31,7 @@ class GithubRepositoryPublisher extends DefaultTask {
     @Input String indexUrl
 
     /**
-     * The auth access token to post to access Github plugins repo
+     * The auth access token to access the Github plugins repo
      */
     @Input String githubToken
 
@@ -116,7 +116,7 @@ class GithubRepositoryPublisher extends DefaultTask {
      * Traverse an S3 bucket and return a map with all releases for each
      * plugin id
      *
-     * @return The map holding the plugin releases for each plugin id
+     * @return The map that contains the plugin releases for each plugin id
      */
     Map<String,List<PluginRelease>> listPlugins() {
         Map<String,List<PluginRelease>> result = [:]
