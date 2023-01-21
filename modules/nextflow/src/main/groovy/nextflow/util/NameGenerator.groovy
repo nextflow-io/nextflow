@@ -152,6 +152,9 @@ class NameGenerator {
             // André-Marie Ampère - French physicist and mathematician, one of the founders of the science of classical electromagnetism. https://en.wikipedia.org/wiki/Andr%C3%A9-Marie_Amp%C3%A8re
             "ampere",
 
+            // Piero Angela - Italian television host, science journalist, writer, and pianist. He is best known as the creator and presenter of broadcasting science outreach programmes modelled on BBC and David Attenborough documentaries, and also for his scientific journalism published in numerous publications. https://en.wikipedia.org/wiki/Piero_Angela
+            "angela",
+        
             // Archimedes was a physicist, engineer and mathematician who invented too many things to list them here. https://en.wikipedia.org/wiki/Archimedes
             "archimedes",
 
