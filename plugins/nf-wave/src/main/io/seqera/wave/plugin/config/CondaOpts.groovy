@@ -24,7 +24,7 @@ package io.seqera.wave.plugin.config
  */
 class CondaOpts {
 
-    final public String DEFAULT_MAMBA_IMAGE = 'mambaorg/micromamba:1.0.0'
+    final public String DEFAULT_MAMBA_IMAGE = 'mambaorg/micromamba:1.2.0'
 
     final String mambaImage
     final List<String> commands
