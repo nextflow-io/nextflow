@@ -17,22 +17,47 @@
 
 package nextflow.cloud.aws.util
 
+
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.Serializer
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
 import com.upplication.s3fs.S3Path
 import groovy.transform.CompileStatic
-import nextflow.util.PathSerializer
+import groovy.util.logging.Slf4j
 import nextflow.util.SerializerRegistrant
 import org.pf4j.Extension
-
 /**
  * Register the S3Path serializer
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @Extension
 @CompileStatic
-class S3PathSerializer implements SerializerRegistrant  {
+class S3PathSerializer extends Serializer<S3Path> implements SerializerRegistrant  {
+
     @Override
     void register(Map<Class, Object> serializers) {
-        serializers.put(S3Path, PathSerializer)
+        serializers.put(S3Path, S3PathSerializer)
     }
+
+    @Override
+    void write(Kryo kryo, Output output, S3Path target) {
+        final scheme = target.getFileSystem().provider().getScheme()
+        final path = target.toString()
+        log.trace "S3Path serialization > scheme: $scheme; path: $path"
+        output.writeString(scheme)
+        output.writeString(path)
+    }
+
+    @Override
+    S3Path read(Kryo kryo, Input input, Class<S3Path> type) {
+        final scheme = input.readString()
+        final path = input.readString()
+        if( scheme != 's3' ) throw new IllegalStateException("Unexpected scheme for S3 path -- offending value '$scheme'")
+        log.trace "S3Path de-serialization > scheme: $scheme; path: $path"
+        return (S3Path) S3PathFactory.create("s3://${path}")
+    }
+    
 }
