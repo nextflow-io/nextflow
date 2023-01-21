@@ -280,7 +280,11 @@ class PathSerializer extends Serializer<Path> {
             return FileSystems.getDefault().getPath(path)
         }
 
-        // try to find provider
+        // NOTE: PATHS FOR NON DEFAULT FILE SYSTEMS SHOULD BE CREATED
+        // BY THE CORRESPONDING SPECIALISED SERIALIZER CLASSES
+        //
+        // THIS IS LEGACY CODE THAT EVENTUALLY SHOULD BE REMOVED
+        //
         def uri = URI.create("$scheme://$path")
         def fs = FileHelper.getOrCreateFileSystemFor(uri)
         return fs.provider().getPath(uri)
