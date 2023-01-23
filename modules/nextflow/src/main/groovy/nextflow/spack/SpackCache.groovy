@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2022, Pawsey Supercomputing Research Centre
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +14,7 @@
  * limitations under the License.
  */
 
-package nextflow.conda
+package nextflow.spack
 
 import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
@@ -35,34 +34,31 @@ import nextflow.util.Duration
 import nextflow.util.Escape
 import org.yaml.snakeyaml.Yaml
 /**
- * Handle Conda environment creation and caching
+ * Handle Spack environment creation and caching
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Marco De La Pierre <marco.delapierre@gmail.com>
  */
 @Slf4j
 @CompileStatic
-class CondaCache {
+class SpackCache {
 
     /**
-     * Cache the prefix path for each Conda environment
+     * Cache the prefix path for each Spack environment
      */
-    static final private Map<String,DataflowVariable<Path>> condaPrefixPaths = new ConcurrentHashMap<>()
+    static final private Map<String,DataflowVariable<Path>> spackPrefixPaths = new ConcurrentHashMap<>()
 
     /**
-     * The Conda settings defined in the nextflow config file
+     * The Spack settings defined in the nextflow config file
      */
-    private CondaConfig config
+    private SpackConfig config
 
     /**
      * Timeout after which the environment creation is aborted
      */
-    private Duration createTimeout = Duration.of('20min')
+    private Duration createTimeout = Duration.of('60min')
 
+    // MARCO MARCO this has to become spackOptions (as in spack <options> env create -d ..)
     private String createOptions
-
-    private boolean useMamba 
-
-    private boolean useMicromamba 
 
     private Path configCacheDir0
 
@@ -78,24 +74,18 @@ class CondaCache {
 
     @PackageScope List<String> getChannels() { channels }
 
-    @PackageScope String getBinaryName() {
-        if (useMamba)
-            return "mamba"
-        if (useMicromamba) 
-            return "micromamba"
-        return "conda"
-    }
+    @PackageScope String getBinaryName() { return "spack" }
 
     /** Only for testing purpose - do not use */
     @PackageScope
-    CondaCache() {}
+    SpackCache() {}
 
     /**
-     * Create a Conda env cache object
+     * Create a Spack env cache object
      *
      * @param config A {@link Map} object
      */
-    CondaCache(CondaConfig config) {
+    SpackCache(SpackConfig config) {
         this.config = config
 
         if( config.createTimeout )
@@ -107,46 +97,37 @@ class CondaCache {
         if( config.cacheDir )
             configCacheDir0 = (config.cacheDir as Path).toAbsolutePath()
 
-        if( config.useMamba && config.useMicroMamba)
-            throw new IllegalArgumentException("Both conda.useMamba and conda.useMicromamba were enabled -- Please choose only one")
-        
-        if( config.useMamba )
-            useMamba = config.useMamba as boolean
-
-        if( config.useMicromamba )
-            useMicromamba = config.useMicromamba as boolean
-
         if( config.getChannels() )
             channels = config.getChannels()
     }
 
     /**
-     * Retrieve the directory where store the conda environment.
+     * Retrieve the directory where store the spack environment.
      *
      * If tries these setting in the following order:
-     * 1) {@code conda.cacheDir} setting in the nextflow config file;
-     * 2) the {@code $workDir/conda} path
+     * 1) {@code spack.cacheDir} setting in the nextflow config file;
+     * 2) the {@code $workDir/spack} path
      *
      * @return
-     *      the {@code Path} where store the conda envs
+     *      the {@code Path} where store the spack envs
      */
     @PackageScope
     Path getCacheDir() {
 
         def cacheDir = configCacheDir0
 
-        if( !cacheDir && getEnv().NXF_CONDA_CACHEDIR )
-            cacheDir = getEnv().NXF_CONDA_CACHEDIR as Path
+        if( !cacheDir && getEnv().NXF_SPACK_CACHEDIR )
+            cacheDir = getEnv().NXF_SPACK_CACHEDIR as Path
 
         if( !cacheDir )
-            cacheDir = getSessionWorkDir().resolve('conda')
+            cacheDir = getSessionWorkDir().resolve('spack')
 
         if( cacheDir.fileSystem != FileSystems.default ) {
-            throw new IOException("Cannot store Conda environments to a remote work directory -- Use a POSIX compatible work directory or specify an alternative path with the `conda.cacheDir` config setting")
+            throw new IOException("Cannot store Spack environments to a remote work directory -- Use a POSIX compatible work directory or specify an alternative path with the `spack.cacheDir` config setting")
         }
 
         if( !cacheDir.exists() && !cacheDir.mkdirs() ) {
-            throw new IOException("Failed to create Conda cache directory: $cacheDir -- Make sure a file with the same name does not exist and you have write permission")
+            throw new IOException("Failed to create Spack cache directory: $cacheDir -- Make sure a file with the same name does not exist and you have write permission")
         }
 
         return cacheDir
@@ -158,7 +139,7 @@ class CondaCache {
 
     @PackageScope
     boolean isYamlFilePath(String str) {
-        (str.endsWith('.yml') || str.endsWith('.yaml')) && !str.contains('\n')
+        (str.endsWith('.yaml')) && !str.contains('\n')
     }
 
     boolean isTextFilePath(String str) {
@@ -167,21 +148,21 @@ class CondaCache {
 
 
     /**
-     * Get the path on the file system where store a Conda environment
+     * Get the path on the file system where store a Spack environment
      *
-     * @param condaEnv The conda environment
-     * @return the conda unique prefix {@link Path} where the env is created
+     * @param spackEnv The spack environment
+     * @return the spack unique prefix {@link Path} where the env is created
      */
     @PackageScope
-    Path condaPrefixPath(String condaEnv) {
-        assert condaEnv
+    Path spackPrefixPath(String spackEnv) {
+        assert spackEnv
 
         String content
         String name = 'env'
         // check if it's a YAML file
-        if( isYamlFilePath(condaEnv) ) {
+        if( isYamlFilePath(spackEnv) ) {
             try {
-                final path = condaEnv as Path
+                final path = spackEnv as Path
                 content = path.text
                 final yaml = (Map)new Yaml().load(content)
                 if( yaml.name )
@@ -190,40 +171,40 @@ class CondaCache {
                     name = path.baseName
             }
             catch( NoSuchFileException e ) {
-                throw new IllegalArgumentException("Conda environment file does not exist: $condaEnv")
+                throw new IllegalArgumentException("Spack environment file does not exist: $spackEnv")
             }
             catch( Exception e ) {
-                throw new IllegalArgumentException("Error parsing Conda environment YAML file: $condaEnv -- Check the log file for details", e)
+                throw new IllegalArgumentException("Error parsing Spack environment YAML file: $spackEnv -- Check the log file for details", e)
             }
         }
-        else if( isTextFilePath(condaEnv) )  {
+        else if( isTextFilePath(spackEnv) )  {
             try {
-                final path = condaEnv as Path
+                final path = spackEnv as Path
                 content = path.text
                 name = path.baseName
             }
             catch( NoSuchFileException e ) {
-                throw new IllegalArgumentException("Conda environment file does not exist: $condaEnv")
+                throw new IllegalArgumentException("Spack environment file does not exist: $spackEnv")
             }
             catch( Exception e ) {
-                throw new IllegalArgumentException("Error parsing Conda environment text file: $condaEnv -- Check the log file for details", e)
+                throw new IllegalArgumentException("Error parsing Spack environment text file: $spackEnv -- Check the log file for details", e)
             }
         }
         // it's interpreted as user provided prefix directory
-        else if( condaEnv.contains('/') ) {
-            final prefix = condaEnv as Path
+        else if( spackEnv.contains('/') ) {
+            final prefix = spackEnv as Path
             if( !prefix.isDirectory() )
-                throw new IllegalArgumentException("Conda prefix path does not exist or is not a directory: $prefix")
+                throw new IllegalArgumentException("Spack prefix path does not exist or is not a directory: $prefix")
             if( prefix.fileSystem != FileSystems.default )
-                throw new IllegalArgumentException("Conda prefix path must be a POSIX file path: $prefix")
+                throw new IllegalArgumentException("Spack prefix path must be a POSIX file path: $prefix")
 
             return prefix
         }
-        else if( condaEnv.contains('\n') ) {
-            throw new IllegalArgumentException("Invalid Conda environment definition: $condaEnv")
+        else if( spackEnv.contains('\n') ) {
+            throw new IllegalArgumentException("Invalid Spack environment definition: $spackEnv")
         }
         else {
-            content = condaEnv
+            content = spackEnv
         }
 
         final hash = CacheHelper.hasher(content).hash().toString()
@@ -231,26 +212,26 @@ class CondaCache {
     }
 
     /**
-     * Run the conda tool to create an environment in the file system.
+     * Run the spack tool to create an environment in the file system.
      *
-     * @param condaEnv The conda environment definition
-     * @return the conda environment prefix {@link Path}
+     * @param spackEnv The spack environment definition
+     * @return the spack environment prefix {@link Path}
      */
     @PackageScope
-    Path createLocalCondaEnv(String condaEnv) {
-        final prefixPath = condaPrefixPath(condaEnv)
+    Path createLocalSpackEnv(String spackEnv) {
+        final prefixPath = spackPrefixPath(spackEnv)
         if( prefixPath.isDirectory() ) {
-            log.debug "${binaryName} found local env for environment=$condaEnv; path=$prefixPath"
+            log.debug "${binaryName} found local env for environment=$spackEnv; path=$prefixPath"
             return prefixPath
         }
 
         final file = new File("${prefixPath.parent}/.${prefixPath.name}.lock")
-        final wait = "Another Nextflow instance is creating the conda environment $condaEnv -- please wait till it completes"
+        final wait = "Another Nextflow instance is creating the spack environment $spackEnv -- please wait till it completes"
         final err =  "Unable to acquire exclusive lock after $createTimeout on file: $file"
 
         final mutex = new FileMutex(target: file, timeout: createTimeout, waitMessage: wait, errorMessage: err)
         try {
-            mutex .lock { createLocalCondaEnv0(condaEnv, prefixPath) }
+            mutex .lock { createLocalSpackEnv0(spackEnv, prefixPath) }
         }
         finally {
             file.delete()
@@ -265,32 +246,31 @@ class CondaCache {
     }
 
     @PackageScope
-    Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
+    Path createLocalSpackEnv0(String spackEnv, Path prefixPath) {
 
-        log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
+        log.info "Creating env using ${binaryName}: $spackEnv [cache $prefixPath]"
 
         String opts = createOptions ? "$createOptions " : ''
-        // micromamba does not and might never support the mkdir flag, since the mkdir behaviour is the default
-        if( binaryName != 'micromamba' )
-            opts += '--mkdir '
+        opts += '--mkdir '
 
+        // MARCO MARCO have to look at the right implementation here
         def cmd
-        if( isYamlFilePath(condaEnv) ) {
-            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+        if( isYamlFilePath(spackEnv) ) {
+            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(spackEnv))}"
         }
-        else if( isTextFilePath(condaEnv) ) {
+        else if( isTextFilePath(spackEnv) ) {
 
-            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(spackEnv))}"
         }
 
         else {
             final channelsOpt = channels.collect(it -> "-c $it ").join('')
-            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} ${channelsOpt}$condaEnv"
+            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} ${channelsOpt}$spackEnv"
         }
 
         try {
             runCommand( cmd )
-            log.debug "'${binaryName}' create complete env=$condaEnv path=$prefixPath"
+            log.debug "'${binaryName}' create complete env=$spackEnv path=$prefixPath"
         }
         catch( Exception e ){
             // clean-up to avoid to keep eventually corrupted image file
@@ -315,7 +295,7 @@ class CondaCache {
         def status = proc.exitValue()
         if( status != 0 ) {
             consumer.join()
-            def msg = "Failed to create Conda environment\n  command: $cmd\n  status : $status\n  message:\n"
+            def msg = "Failed to create spack environment\n  command: $cmd\n  status : $status\n  message:\n"
             msg += err.toString().trim().indent('    ')
             throw new IllegalStateException(msg)
         }
@@ -329,49 +309,49 @@ class CondaCache {
      * This method synchronise multiple concurrent requests so that only one
      * image download is actually executed.
      *
-     * @param condaEnv
-     *      Conda environment string
+     * @param spackEnv
+     *      Spack environment string
      * @return
      *      The {@link DataflowVariable} which hold (and pull) the local image file
      */
     @PackageScope
-    DataflowVariable<Path> getLazyImagePath(String condaEnv) {
+    DataflowVariable<Path> getLazyImagePath(String spackEnv) {
 
-        if( condaEnv in condaPrefixPaths ) {
-            log.trace "${binaryName} found local environment `$condaEnv`"
-            return condaPrefixPaths[condaEnv]
+        if( spackEnv in spackPrefixPaths ) {
+            log.trace "${binaryName} found local environment `$spackEnv`"
+            return spackPrefixPaths[spackEnv]
         }
 
-        synchronized (condaPrefixPaths) {
-            def result = condaPrefixPaths[condaEnv]
+        synchronized (spackPrefixPaths) {
+            def result = spackPrefixPaths[spackEnv]
             if( result == null ) {
-                result = new LazyDataflowVariable<Path>({ createLocalCondaEnv(condaEnv) })
-                condaPrefixPaths[condaEnv] = result
+                result = new LazyDataflowVariable<Path>({ createLocalSpackEnv(spackEnv) })
+                spackPrefixPaths[spackEnv] = result
             }
             else {
-                log.trace "${binaryName} found local cache for environment `$condaEnv` (2)"
+                log.trace "${binaryName} found local cache for environment `$spackEnv` (2)"
             }
             return result
         }
     }
 
     /**
-     * Create a conda environment caching it in the file system.
+     * Create a spack environment caching it in the file system.
      *
      * This method synchronise multiple concurrent requests so that only one
      * environment is actually created.
      *
-     * @param condaEnv The conda environment string
+     * @param spackEnv The spack environment string
      * @return the local environment path prefix {@link Path}
      */
-    Path getCachePathFor(String condaEnv) {
-        def promise = getLazyImagePath(condaEnv)
+    Path getCachePathFor(String spackEnv) {
+        def promise = getLazyImagePath(spackEnv)
         def result = promise.getVal()
         if( promise.isError() )
             throw new IllegalStateException(promise.getError())
         if( !result )
-            throw new IllegalStateException("Cannot create Conda environment `$condaEnv`")
-        log.trace "Conda cache for env `$condaEnv` path=$result"
+            throw new IllegalStateException("Cannot create Spack environment `$spackEnv`")
+        log.trace "Spack cache for env `$spackEnv` path=$result"
         return result
     }
 
