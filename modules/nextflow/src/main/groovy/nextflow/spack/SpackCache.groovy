@@ -52,19 +52,20 @@ class SpackCache {
      */
     private SpackConfig config
 
+    private boolean noChecksum
+
+    private Integer parallelBuilds
+
     /**
      * Timeout after which the environment creation is aborted
      */
     private Duration createTimeout = Duration.of('60min')
 
-    // MARCO MARCO this has to become spackOptions (as in spack <options> env create -d ..)
-    private String createOptions
-
     private Path configCacheDir0
 
     private List<String> channels = Collections.emptyList()
 
-    @PackageScope String getCreateOptions() { createOptions }
+    @PackageScope Integer getParallelBuilds() { parallelBuilds }
 
     @PackageScope Duration getCreateTimeout() { createTimeout }
 
@@ -88,11 +89,14 @@ class SpackCache {
     SpackCache(SpackConfig config) {
         this.config = config
 
+        if( config.noChecksum )
+            noChecksum = config.noChecksum as boolean
+
+        if( config.parallelBuilds )
+            parallelBuilds = config.parallelBuilds as Integer
+
         if( config.createTimeout )
             createTimeout = config.createTimeout as Duration
-
-        if( config.createOptions )
-            createOptions = config.createOptions
 
         if( config.cacheDir )
             configCacheDir0 = (config.cacheDir as Path).toAbsolutePath()
@@ -142,10 +146,6 @@ class SpackCache {
         (str.endsWith('.yaml')) && !str.contains('\n')
     }
 
-    boolean isTextFilePath(String str) {
-        str.endsWith('.txt') && !str.contains('\n')
-    }
-
 
     /**
      * Get the path on the file system where store a Spack environment
@@ -175,19 +175,6 @@ class SpackCache {
             }
             catch( Exception e ) {
                 throw new IllegalArgumentException("Error parsing Spack environment YAML file: $spackEnv -- Check the log file for details", e)
-            }
-        }
-        else if( isTextFilePath(spackEnv) )  {
-            try {
-                final path = spackEnv as Path
-                content = path.text
-                name = path.baseName
-            }
-            catch( NoSuchFileException e ) {
-                throw new IllegalArgumentException("Spack environment file does not exist: $spackEnv")
-            }
-            catch( Exception e ) {
-                throw new IllegalArgumentException("Error parsing Spack environment text file: $spackEnv -- Check the log file for details", e)
             }
         }
         // it's interpreted as user provided prefix directory
@@ -250,22 +237,27 @@ class SpackCache {
 
         log.info "Creating env using ${binaryName}: $spackEnv [cache $prefixPath]"
 
-        String opts = createOptions ? "$createOptions " : ''
-        opts += '--mkdir '
+        String opts = noChecksum ? "-n " : ''
+        opts += parallelBuilds ? "-j $parallelBuilds " : ''
+        opts += '-y '
 
-        // MARCO MARCO have to look at the right implementation here
         def cmd
         if( isYamlFilePath(spackEnv) ) {
-            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(spackEnv))}"
-        }
-        else if( isTextFilePath(spackEnv) ) {
-
-            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(spackEnv))}"
+            cmd =  "${binaryName} env create -d ${Escape.path(prefixPath)} ${Escape.path(makeAbsolute(spackEnv))} ; "
+            cmd += "${binaryName} env activate ${Escape.path(prefixPath)} ; "
+            cmd += "${binaryName} concretize -f ; "
+            cmd += "${binaryName} install ${opts} ; "
+            cmd += "${binaryName} env deactivate"
         }
 
         else {
             final channelsOpt = channels.collect(it -> "-c $it ").join('')
-            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} ${channelsOpt}$spackEnv"
+            cmd =  "${binaryName} env create -d ${Escape.path(prefixPath)} ; "
+            cmd += "${binaryName} env activate ${Escape.path(prefixPath)} ; "
+            cmd += "${binaryName} add ${channelsOpt} ; "
+            cmd += "${binaryName} concretize -f ; "
+            cmd += "${binaryName} install ${opts} ; "
+            cmd += "${binaryName} env deactivate"
         }
 
         try {
@@ -282,7 +274,7 @@ class SpackCache {
 
     @PackageScope
     int runCommand( String cmd ) {
-        log.trace """${binaryName} create
+        log.trace """${binaryName} env create
                      command: $cmd
                      timeout: $createTimeout""".stripIndent()
 
