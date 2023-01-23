@@ -1,5 +1,11 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.10.6 - 24 Jan 2023
+- backport: Add refresh token to wave request [47a7408b]
+- backport:Add tower endpoint to wave [fe24b422]
+- backport:Fix Wave layer invalid checksum due to not closed stream [20df6400]
+- Bump nf-wave@0.5.3 [c1ec759f]
+
 22.10.5 - 14 Jan 2023
 - Fix FilePorter concurrency issue (#3511) [0f757156]
 - Fix watchPath hang shutdown execution [e03d9ca6]
