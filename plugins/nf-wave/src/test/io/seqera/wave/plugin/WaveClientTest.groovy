@@ -30,6 +30,7 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
