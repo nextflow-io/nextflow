@@ -20,7 +20,6 @@ package nextflow.script
 import java.nio.file.Files
 
 import nextflow.scm.ProviderConfig
-import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.OutputCapture
@@ -39,9 +38,6 @@ import static nextflow.util.CacheHelper.HashMode
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ProcessConfigTest extends Specification {
-
-    @Rule
-    OutputCapture capture = new OutputCapture()
 
     def 'should return defaults' () {
 
@@ -741,34 +737,45 @@ class ProcessConfigTest extends Specification {
 
     }
 
-    def 'should warn for invalid error strategy' () {
+    def 'should throw exception for invalid error strategy' () {
         when:
-        def process = new ProcessConfig(Mock(BaseScript))
-        process.errorStrategy 'abort'
+        def process1 = new ProcessConfig(Mock(BaseScript))
+        process1.errorStrategy 'abort'
 
         then:
-        def warning = capture
-                .toString()
-                .readLines()
-                .findResults { line -> line.contains('Unrecognized error strategy') ? line : null }
-                .join('\n')
-        and:
-        warning.contains('Unrecognized error strategy: abort. Available strategies are: terminate, finish, ignore, retry')
-    }
+        def e1 = thrown(IllegalArgumentException)
+        e1.message ==
+                '''
+                Unrecognized error strategy: abort. Available strategies are: terminate, finish, ignore, retry
+                '''
+                .stripIndent().trim()
 
-    def 'should not warn for valid error strategy' () {
         when:
-        def process = new ProcessConfig(Mock(BaseScript))
-        process.errorStrategy 'retry'
+        def process2 = new ProcessConfig(Mock(BaseScript))
+        process2.errorStrategy 'terminated'
 
         then:
-        def warning = capture
-                .toString()
-                .readLines()
-                .findResults { line -> line.contains('Unrecognized error strategy') ? line : null }
-                .join('\n')
-        and:
-        !warning
+        def e2 = thrown(IllegalArgumentException)
+        e2.message ==
+                '''
+                Unrecognized error strategy: terminated. Available strategies are: terminate, finish, ignore, retry
+                '''
+                .stripIndent().trim()
     }
 
+    def 'should not throw exception for valid error strategy' () {
+        when:
+        def process1 = new ProcessConfig(Mock(BaseScript))
+        process1.errorStrategy 'retry'
+
+        then:
+        def e1 = noExceptionThrown()
+
+        when:
+        def process2 = new ProcessConfig(Mock(BaseScript))
+        process2.errorStrategy 'terminate'
+
+        then:
+        def e2 = noExceptionThrown()
+    }
 }
