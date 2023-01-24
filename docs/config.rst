@@ -353,6 +353,7 @@ queueSize             The number of tasks the executor will handle in a parallel
 submitRateLimit       Determines the max rate of job submission per time unit, for example ``'10sec'`` (10 jobs per second) or ``'50/2min'`` (50 jobs every 2 minutes) (default: unlimited).
 pollInterval          Determines how often to check for process termination. Default varies for each executor.
 dumpInterval          Determines how often to log the executor status (default: ``5min``).
+queueGlobalStatus     Determines how job status is retrieved. When ``false`` only the queue associated with the job execution is queried. When ``true`` the job status is queried globally i.e. irrespective of the submission queue (default: ``false``, requires version ``23.01.0-edge`` or later).
 queueStatInterval     Determines how often to fetch the queue status from the scheduler (default: ``1min``). Used only by grid executors.
 exitReadTimeout       Determines how long to wait before returning an error status when a process is terminated but the ``.exitcode`` file does not exist or is empty (default: ``270 sec``). Used only by grid executors.
 killBatchSize         Determines the number of jobs that can be killed in a single command execution (default: ``100``).
