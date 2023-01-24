@@ -20,8 +20,10 @@ package nextflow.script
 import java.nio.file.Files
 
 import nextflow.scm.ProviderConfig
+import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.Unroll
+import test.OutputCapture
 
 import nextflow.exception.IllegalDirectiveException
 import nextflow.processor.ErrorStrategy
@@ -38,6 +40,8 @@ import static nextflow.util.CacheHelper.HashMode
  */
 class ProcessConfigTest extends Specification {
 
+    @Rule
+    OutputCapture capture = new OutputCapture()
 
     def 'should return defaults' () {
 
@@ -736,4 +740,35 @@ class ProcessConfigTest extends Specification {
         !p3.disk
 
     }
+
+    def 'should warn for invalid error strategy' () {
+        when:
+        def process = new ProcessConfig(Mock(BaseScript))
+        process.errorStrategy 'abort'
+
+        then:
+        def warning = capture
+                .toString()
+                .readLines()
+                .findResults { line -> line.contains('Unrecognized error strategy') ? line : null }
+                .join('\n')
+        and:
+        warning.contains('Unrecognized error strategy: abort. Available strategies are: terminate, finish, ignore, retry')
+    }
+
+    def 'should not warn for valid error strategy' () {
+        when:
+        def process = new ProcessConfig(Mock(BaseScript))
+        process.errorStrategy 'retry'
+
+        then:
+        def warning = capture
+                .toString()
+                .readLines()
+                .findResults { line -> line.contains('Unrecognized error strategy') ? line : null }
+                .join('\n')
+        and:
+        !warning
+    }
+
 }
