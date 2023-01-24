@@ -763,7 +763,7 @@ class ProcessConfigTest extends Specification {
                 .stripIndent().trim()
     }
 
-    def 'should not throw exception for valid error strategy' () {
+    def 'should not throw exception for valid error strategy or closure' () {
         when:
         def process1 = new ProcessConfig(Mock(BaseScript))
         process1.errorStrategy 'retry'
@@ -777,5 +777,12 @@ class ProcessConfigTest extends Specification {
 
         then:
         def e2 = noExceptionThrown()
+
+        when:
+        def process3 = new ProcessConfig(Mock(BaseScript))
+        process3.errorStrategy { task.exitStatus==14 ? 'retry' : 'terminate' }
+
+        then:
+        def e3 = noExceptionThrown()
     }
 }

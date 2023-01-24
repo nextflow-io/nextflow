@@ -813,8 +813,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      */
     ProcessConfig errorStrategy( strategy ) {
         listOfStrategies = ['terminate', 'finish', 'ignore', 'retry']
-        if (!listOfStrategies.contains(strategy)) {
-            throw new IllegalArgumentException("Unrecognized error strategy: " + strategy + ". Available strategies are: " + listOfStrategies.join(', '))
+        if (strategy !instanceof Closure) {
+            if (!listOfStrategies.contains(strategy)) {
+                throw new IllegalArgumentException("Unrecognized error strategy: " + strategy + ". Available strategies are: " + listOfStrategies.join(', '))
+            }
         }
 
         configProperties.put('errorStrategy', strategy)
