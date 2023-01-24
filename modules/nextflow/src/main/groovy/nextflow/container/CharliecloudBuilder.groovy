@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Patrick Hüther <patrick.huether@gmail.com>
+ * @author Laurent Modolo <laurent.modolo@ens-lyon.fr>
  */
 @CompileStatic
 @Slf4j
