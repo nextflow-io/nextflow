@@ -149,6 +149,8 @@ To use a language other than Bash, simply start your process script with the cor
     process pythonStuff {
         input:
         path(x)
+        output:
+        stdout
         
         output:
         path "table.txt"
