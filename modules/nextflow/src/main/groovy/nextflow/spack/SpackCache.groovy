@@ -63,8 +63,6 @@ class SpackCache {
 
     private Path configCacheDir0
 
-    private List<String> channels = Collections.emptyList()
-
     @PackageScope Integer getParallelBuilds() { parallelBuilds }
 
     @PackageScope Duration getCreateTimeout() { createTimeout }
@@ -72,8 +70,6 @@ class SpackCache {
     @PackageScope Map<String,String> getEnv() { System.getenv() }
 
     @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
-
-    @PackageScope List<String> getChannels() { channels }
 
     @PackageScope String getBinaryName() { return "spack" }
 
@@ -100,9 +96,6 @@ class SpackCache {
 
         if( config.cacheDir )
             configCacheDir0 = (config.cacheDir as Path).toAbsolutePath()
-
-        if( config.getChannels() )
-            channels = config.getChannels()
     }
 
     /**
@@ -251,10 +244,9 @@ class SpackCache {
         }
 
         else {
-            final channelsOpt = channels.collect().join('')
             cmd =  "${binaryName} env create -d ${Escape.path(prefixPath)} ; "
             cmd += "${binaryName} env activate ${Escape.path(prefixPath)} ; "
-            cmd += "${binaryName} add ${channelsOpt} ; "
+            cmd += "${binaryName} add $spackEnv ; "
             cmd += "${binaryName} concretize -f ; "
             cmd += "${binaryName} install ${opts} ; "
             cmd += "${binaryName} env deactivate"
