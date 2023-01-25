@@ -200,16 +200,26 @@ class SpackCache {
     @PackageScope
     Path createLocalSpackEnv(String spackEnv) {
         final prefixPath = spackPrefixPath(spackEnv)
-        if( prefixPath.isDirectory() ) {
-            log.debug "${binaryName} found local env for environment=$spackEnv; path=$prefixPath"
-            return prefixPath
-        }
 
         final file = new File("${prefixPath.parent}/.${prefixPath.name}.lock")
         final wait = "Another Nextflow instance is creating the spack environment $spackEnv -- please wait till it completes"
         final err =  "Unable to acquire exclusive lock after $createTimeout on file: $file"
 
         final mutex = new FileMutex(target: file, timeout: createTimeout, waitMessage: wait, errorMessage: err)
+
+        if( prefixPath.isDirectory() ) {
+            log.debug "${binaryName} found local env for environment=$spackEnv; path=$prefixPath"
+            try {
+                // have to check environment packages, because they are stored externally in the host
+                // and might get modified there
+                mutex .lock { checkLocalSpackEnv0(spackEnv, prefixPath) }
+            }
+            finally {
+                file.delete()
+            }
+            return prefixPath
+        }
+
         try {
             mutex .lock { createLocalSpackEnv0(spackEnv, prefixPath) }
         }
@@ -223,6 +233,32 @@ class SpackCache {
     @PackageScope
     Path makeAbsolute( String envFile ) {
         Paths.get(envFile).toAbsolutePath()
+    }
+
+    @PackageScope
+    Path checkLocalSpackEnv0(String spackEnv, Path prefixPath) {
+
+        log.info "Checking env using ${binaryName}: $spackEnv [cache $prefixPath]"
+
+        String opts = noChecksum ? "-n " : ''
+        opts += parallelBuilds ? "-j $parallelBuilds " : ''
+        opts += '-y '
+
+        def cmd
+        cmd += "${binaryName} env activate ${Escape.path(prefixPath)} ; "
+        cmd += "${binaryName} install ${opts} ; "
+        cmd += "${binaryName} env deactivate"
+
+        try {
+            runCommand( cmd )
+            log.debug "'${binaryName}' check complete env=$spackEnv path=$prefixPath"
+        }
+        catch( Exception e ){
+            // clean-up to avoid to keep eventually corrupted image file
+            prefixPath.delete()
+            throw e
+        }
+        return prefixPath
     }
 
     @PackageScope
