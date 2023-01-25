@@ -251,7 +251,7 @@ class SpackCache {
         }
 
         else {
-            final channelsOpt = channels.collect(it -> "-c $it ").join('')
+            final channelsOpt = channels.collect().join('')
             cmd =  "${binaryName} env create -d ${Escape.path(prefixPath)} ; "
             cmd += "${binaryName} env activate ${Escape.path(prefixPath)} ; "
             cmd += "${binaryName} add ${channelsOpt} ; "
