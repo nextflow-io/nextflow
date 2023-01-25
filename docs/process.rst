@@ -136,6 +136,8 @@ To use a language other than Bash, simply start your process script with the cor
     process perlStuff {
         input:
         val(x)
+        output:
+        stdout
         
         """
         #!/usr/bin/perl
