@@ -1233,6 +1233,13 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 
     $ nextflow run main.nf -params-file pipeline_params.yml
 
+  The contents of a parameters file in JSON format looks like the following::  
+  
+    {
+      "<parameter1_name>": 1,
+      "<parameter2_name>": "foo"
+    }
+
 
 --------------------
 self-update
