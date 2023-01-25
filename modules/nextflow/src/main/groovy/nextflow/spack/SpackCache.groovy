@@ -238,7 +238,7 @@ class SpackCache {
     @PackageScope
     Path checkLocalSpackEnv0(String spackEnv, Path prefixPath) {
 
-        log.info "Checking env using ${binaryName}: $spackEnv [cache $prefixPath]"
+        log.debug "Checking env using ${binaryName}: $spackEnv [cache $prefixPath]"
 
         String opts = noChecksum ? "-n " : ''
         opts += parallelBuilds ? "-j $parallelBuilds " : ''
