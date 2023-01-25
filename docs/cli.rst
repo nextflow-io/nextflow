@@ -1233,7 +1233,7 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 
     $ nextflow run main.nf -params-file pipeline_params.yml
 
-  For example, the following params file::
+  For example, the following params file (in JSON)::
 
     {
       "alpha": 1,
