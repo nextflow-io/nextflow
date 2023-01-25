@@ -153,7 +153,7 @@ To use a language other than Bash, simply start your process script with the cor
     
         """
         #!/usr/bin/python
-        // Reads the content of a file, and writes it to `table.txt`
+        # Reads the content of a file, and writes it to `table.txt`
         with open('${x}') as inF, open('table.txt', 'w') as outF:
             for line in inF:
                 outF.write(line)
