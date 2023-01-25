@@ -245,7 +245,7 @@ class SpackCache {
         opts += '-y '
 
         def cmd
-        cmd += "${binaryName} env activate ${Escape.path(prefixPath)} ; "
+        cmd =  "${binaryName} env activate ${Escape.path(prefixPath)} ; "
         cmd += "${binaryName} install ${opts} ; "
         cmd += "${binaryName} env deactivate"
 
