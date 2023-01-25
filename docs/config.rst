@@ -15,7 +15,6 @@ of priority:
 1. Parameters specified on the command line (``--something value``)
 2. Parameters provided using the ``-params-file`` option
 3. Config file specified using the ``-c my_config`` option
-    - Excluding the `params` scope
 4. The config file named ``nextflow.config`` in the current directory
 5. The config file named ``nextflow.config`` in the workflow project directory
 6. The config file ``$HOME/.nextflow/config``
@@ -26,6 +25,12 @@ first override the same ones that may appear in the second one, and so on.
 
 .. tip::
   If you want to ignore any default configuration files and use only the custom one, use ``-C <config file>``.
+
+.. note::
+  Pipeline parameters (i.e. the ``params`` scope) should be overwritten through CLI options (``--something value``)
+  or a params file (``-params-file params.yml``). If you supply parameters through a custom config file (``-c my_config``),
+  it will be applied to the pipeline script but not to previous config files, such as the project's ``nextflow.config`` file.
+  See the :ref:`CLI page <cli>`. for more information about how to supply params through CLI options or a params file.
 
 
 Config syntax
@@ -578,7 +583,6 @@ parameter names with the ``params`` scope or surround them by curly brackets, as
         beta_2 = 'another string ..'
     }
 
-Note that in DSL2 pipelines, parameters specified in the ``params`` scope of a configuration file passed to the pipeline via -c` will _not_ overwrite defaults in the nextflow.config. It is recommended to instead to use a `-params-file` JSON/YAML file. See :ref:`CLI documentation <cli>`. for more information.
 
 .. _config-podman:
 
