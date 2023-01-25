@@ -116,8 +116,8 @@ class CondaCache {
         if( config.useMicromamba )
             useMicromamba = config.useMicromamba as boolean
 
-        if( config.getChannels() )
-            channels = config.getChannels()
+        if( config.channels )
+            channels = config.channels
     }
 
     /**
