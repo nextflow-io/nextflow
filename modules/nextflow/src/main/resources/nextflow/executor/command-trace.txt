@@ -66,6 +66,14 @@ nxf_stat() {
 
     [ $NXF_DEBUG = 1 ] && echo -e "++ stat SUM=${sum[*]}"
 
+    ## use memory metrics from cgroup if available
+    if [ -e /sys/fs/cgroup ]; then
+        sum[2]=$(($(cat /sys/fs/cgroup/memory/memory.memsw.usage_in_bytes) / 1024))
+        sum[3]=$(($(cat /sys/fs/cgroup/memory/memory.usage_in_bytes) / 1024))
+        sum[4]=$(($(cat /sys/fs/cgroup/memory/memory.memsw.max_usage_in_bytes) / 1024))
+        sum[5]=$(($(cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes) / 1024))
+    fi
+
     ## calc peaks
     for i in {1..7}; do
         if [ ${sum[i]} -lt ${cpu_peak[i]} ]; then
