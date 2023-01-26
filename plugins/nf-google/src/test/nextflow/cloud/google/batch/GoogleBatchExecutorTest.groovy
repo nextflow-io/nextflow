@@ -5,18 +5,16 @@
  *
  */
 
-package nextflow.executor
+package nextflow.cloud.google.batch
 
 import nextflow.Session
 import nextflow.SysEnv
-import nextflow.cloud.aws.batch.AwsBatchExecutor
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class AwsBatchExecutorTest extends Specification {
+class GoogleBatchExecutorTest extends Specification {
 
     def 'should check is fusion' () {
         given:
@@ -25,7 +23,7 @@ class AwsBatchExecutorTest extends Specification {
         def sess = Mock(Session) {
             getConfig() >> CONFIG
         }
-        def executor = new AwsBatchExecutor(session: sess)
+        def executor = new GoogleBatchExecutor(session: sess)
 
         expect:
         executor.isFusionEnabled() == EXPECTED

@@ -22,6 +22,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.container.ContainerBuilder
 import nextflow.container.ContainerConfig
 import nextflow.extension.FilesEx
@@ -36,10 +37,10 @@ import nextflow.io.BucketParser
 class FusionHelper {
 
     @Memoized
-    static boolean isFusionEnabled(Session session, Map<String,String> sysEnv=System.getenv()) {
+    static boolean isFusionEnabled(Session session) {
         def result = session.config.navigate('fusion.enabled')
         if( result == null )
-            result = sysEnv.get('NXF_FUSION_ENABLED')
+            result = SysEnv.get('NXF_FUSION_ENABLED')
         return result!=null ? result.toString()=='true' : false
     }
 
