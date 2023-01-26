@@ -26,6 +26,7 @@ import nextflow.cloud.google.batch.logging.BatchLogging
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
 import nextflow.extension.FilesEx
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
@@ -115,5 +116,10 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     @Override
     void shutdown() {
         client.shutdown()
+    }
+
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
     }
 }

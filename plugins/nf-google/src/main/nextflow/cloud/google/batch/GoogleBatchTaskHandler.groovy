@@ -20,6 +20,7 @@ import java.nio.file.Path
 
 import com.google.cloud.batch.v1.AllocationPolicy
 import com.google.cloud.batch.v1.ComputeResource
+import com.google.cloud.batch.v1.Environment
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.LogsPolicy
 import com.google.cloud.batch.v1.Runnable
@@ -32,6 +33,8 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.executor.BashWrapperBuilder
+import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -43,7 +46,7 @@ import nextflow.trace.TraceRecord
  */
 @Slf4j
 @CompileStatic
-class GoogleBatchTaskHandler extends TaskHandler {
+class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private GoogleBatchExecutor executor
 
@@ -84,14 +87,27 @@ class GoogleBatchTaskHandler extends TaskHandler {
     }
 
     protected BashWrapperBuilder createTaskWrapper() {
-        final taskBean = task.toTaskBean()
-        return new GoogleBatchScriptLauncher(taskBean, executor.remoteBinDir)
+        if( fusionEnabled() ) {
+            return fusionLauncher()
+        }
+        else {
+            final taskBean = task.toTaskBean()
+            return new GoogleBatchScriptLauncher(taskBean, executor.remoteBinDir)
+        }
     }
 
     /*
      * Only for testing -- do not use
      */
     protected GoogleBatchTaskHandler() {}
+
+    protected GoogleBatchLauncherSpec spec0(BashWrapperBuilder launcher) {
+        if( launcher instanceof GoogleBatchScriptLauncher )
+            return launcher
+        if( launcher instanceof FusionScriptLauncher )
+            return new GoogleBatchFusionAdapter(this, launcher)
+        throw new IllegalArgumentException("Unexpected Google Batch launcher type: ${launcher?.getClass()?.getName()}")
+    }
 
     @Override
     void submit() {
@@ -104,7 +120,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
         /*
          * create submit request
          */
-        final req = newSubmitRequest(task, launcher as GoogleBatchLauncherSpec)
+        final req = newSubmitRequest(task, spec0(launcher))
         log.trace "[GOOGLE BATCH] new job request > $req"
         final resp = client.submitJob(jobId, req)
         this.uid = resp.getUid()
@@ -133,10 +149,10 @@ class GoogleBatchTaskHandler extends TaskHandler {
             computeResource.setBootDiskMib( disk.getMega() )
 
         // container
-        final cmd = launcher.runCommand()
+        final cmd = launcher.launchCommand()
         final container = Runnable.Container.newBuilder()
             .setImageUri( task.container )
-            .addAllCommands( ['/bin/bash','-o','pipefail','-c', cmd] )
+            .addAllCommands( cmd )
             .addAllVolumes( launcher.getContainerMounts() )
 
         final accel = task.config.getAccelerator()
@@ -151,7 +167,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
         def containerOptions= task.config.getContainerOptions() ?: ''
         // accelerator requires privileged option
         // https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
-        if( task.config.getAccelerator() ) {
+        if( task.config.getAccelerator() || fusionEnabled() ) {
             if( containerOptions ) containerOptions += ' '
             containerOptions += '--privileged'
         }
@@ -160,11 +176,17 @@ class GoogleBatchTaskHandler extends TaskHandler {
             container.setOptions( containerOptions )
 
         // task spec
+        final env = Environment
+                .newBuilder()
+                .putAllVariables( launcher.getEnvironment() )
+                .build()
+
         taskSpec
             .setComputeResource(computeResource)
             .addRunnables(
                 Runnable.newBuilder()
                     .setContainer(container)
+                    .setEnvironment(env)
             )
             .addAllVolumes( launcher.getVolumes() )
 

@@ -32,4 +32,12 @@ interface GoogleBatchLauncherSpec {
      * @return A string representing the command to be executed by the containerised task
      */
     String runCommand()
+
+    default List<String> launchCommand() {
+        return ['/bin/bash','-o','pipefail','-c', runCommand() ]
+    }
+
+    default Map<String,String> getEnvironment() {
+        return Map.of()
+    }
 }
