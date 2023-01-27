@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package nextflow.conda
+package nextflow.spack
 
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -25,23 +25,22 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CondaCacheTest extends Specification {
+class SpackCacheTest extends Specification {
 
     def 'should env file' () {
 
         given:
-        def cache = new CondaCache()
+        def cache = new SpackCache()
 
         expect:
         !cache.isYamlFilePath('foo=1.0')
-        cache.isYamlFilePath('env.yml')
         cache.isYamlFilePath('env.yaml')
     }
 
     def 'should text file' () {
 
         given:
-        def cache = new CondaCache()
+        def cache = new SpackCache()
 
         expect:
         !cache.isTextFilePath('foo=1.0')
@@ -52,115 +51,60 @@ class CondaCacheTest extends Specification {
     }
 
 
-    def 'should create conda env prefix path for a string env' () {
+    def 'should create spack env prefix path for a string env' () {
 
         given:
         def ENV = 'bwa=1.7.2'
-        def cache = Spy(CondaCache)
-        def BASE = Paths.get('/conda/envs')
+        def cache = Spy(SpackCache)
+        def BASE = Paths.get('/spack/envs')
 
         when:
-        def prefix = cache.condaPrefixPath(ENV)
+        def prefix = cache.spackPrefixPath(ENV)
         then:
         1 * cache.isYamlFilePath(ENV)
         1 * cache.getCacheDir() >> BASE
-        prefix.toString() == '/conda/envs/env-eaeb133f4ca62c95e9c0eec7ef8d553b'
+        prefix.toString() == '/spack/envs/env-eaeb133f4ca62c95e9c0eec7ef8d553b'
     }
 
 
-    def 'should create conda env prefix path for a yaml env file' () {
+    def 'should create spack env prefix path for a yaml env file' () {
 
         given:
         def folder = Files.createTempDirectory('test')
-        def cache = Spy(CondaCache)
-        def BASE = Paths.get('/conda/envs')
-        def ENV = folder.resolve('foo.yml')
+        def cache = Spy(SpackCache)
+        def BASE = Paths.get('/spack/envs')
+        def ENV = folder.resolve('foo.yaml')
         ENV.text = '''
-            channels:
-              - bioconda
-              - defaults
-            dependencies:
-              # Default bismark
-              - star=2.5.4a
-              - bwa=0.7.15        
+            spack:
+              specs: [star=2.5.4a, bwa=0.7.15]
+
+              view: true
+              concretizer:
+                unify: true
             '''
             .stripIndent(true)  // https://issues.apache.org/jira/browse/GROOVY-9423
 
         when:
-        def prefix = cache.condaPrefixPath(ENV.toString())
+        def prefix = cache.spackPrefixPath(ENV.toString())
         then:
         1 * cache.isYamlFilePath(ENV.toString())
         1 * cache.getCacheDir() >> BASE
-        prefix.toString() == '/conda/envs/foo-9416240708c49c4e627414b46a743664'
+        prefix.toString() == '/spack/envs/foo-9416240708c49c4e627414b46a743664'
 
         cleanup:
         folder?.deleteDir()
 
     }
 
-    def 'should create conda env prefix path for a env yaml file with name' () {
+    def 'should return a spack prefix directory' () {
 
         given:
-        def cache = Spy(CondaCache)
-        def BASE = Paths.get('/conda/envs')
-        def ENV = Files.createTempFile('test','.yml')
-        ENV.text = '''  
-            name: my-env-1.1
-            channels:
-              - bioconda
-              - defaults
-            dependencies:
-              # Default bismark
-              - star=2.5.4a
-              - bwa=0.7.15        
-            '''
-                .stripIndent(true)
-
-        when:
-        def prefix = cache.condaPrefixPath(ENV.toString())
-        then:
-        1 * cache.isYamlFilePath(ENV.toString())
-        1 * cache.getCacheDir() >> BASE
-        prefix.toString() == '/conda/envs/my-env-1.1-e7fafe40ca966397a2c0d9bed7181aa7'
-
-    }
-
-    def 'should create conda env prefix path for a text env file' () {
-
-        given:
-        def folder = Files.createTempDirectory('test')
-        def cache = Spy(CondaCache)
-        def BASE = Paths.get('/conda/envs')
-        def ENV = folder.resolve('bar.txt')
-        ENV.text = '''
-                star=2.5.4a
-                bwa=0.7.15   
-                multiqc=1.2.3
-                '''
-                .stripIndent(true)  // https://issues.apache.org/jira/browse/GROOVY-9423
-
-        when:
-        def prefix = cache.condaPrefixPath(ENV.toString())
-        then:
-        1 * cache.isYamlFilePath(ENV.toString())
-        1 * cache.isTextFilePath(ENV.toString())
-        1 * cache.getCacheDir() >> BASE
-        prefix.toString() == '/conda/envs/bar-8a4aa7db8ddb8ce4eb4d450d4814a437'
-
-        cleanup:
-        folder?.deleteDir()
-
-    }
-
-    def 'should return a conda prefix directory' () {
-
-        given:
-        def cache = Spy(CondaCache)
+        def cache = Spy(SpackCache)
         def folder = Files.createTempDirectory('test')
         def ENV = folder.toString()
 
         when:
-        def prefix = cache.condaPrefixPath(ENV)
+        def prefix = cache.spackPrefixPath(ENV)
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.getCacheDir()
@@ -172,144 +116,87 @@ class CondaCacheTest extends Specification {
     }
 
 
-    def 'should create a conda environment' () {
+    def 'should create a spack environment' () {
 
         given:
-        def ENV = 'bwa=1.1.1'
+        def ENV = 'bwa@1.1.1'
         def PREFIX = Files.createTempDirectory('foo')
-        def cache = Spy(CondaCache)
+        def cache = Spy(SpackCache)
 
         when:
-        // the prefix directory exists ==> no conda command is executed
-        def result = cache.createLocalCondaEnv(ENV)
+        // the prefix directory exists ==> no spack command is executed
+        def result = cache.createLocalSpackEnv(ENV)
+        def cmd
+        cmd =  "spack env create -d $PREFIX ; "
+        cmd += "spack env activate $PREFIX ; "
+        cmd += "spack add $ENV ; "
+        cmd += "spack concretize -f ; "
+        cmd += "spack install -y ; "
+        cmd += "spack env deactivate"
+
         then:
-        1 * cache.condaPrefixPath(ENV) >> PREFIX
+        1 * cache.spackPrefixPath(ENV) >> PREFIX
         0 * cache.isYamlFilePath(ENV)
         0 * cache.runCommand(_)
         result == PREFIX
 
         when:
         PREFIX.deleteDir()
-        result = cache.createLocalCondaEnv0(ENV,PREFIX)
+        result = cache.createLocalSpackEnv0(ENV,PREFIX)
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "conda create --mkdir --yes --quiet --prefix $PREFIX $ENV" ) >> null
+        1 * cache.runCommand( cmd ) >> null
         result == PREFIX
 
     }
 
-    def 'should create a conda environment - using mamba' () {
-
+    def 'should create spack env with options' () {
         given:
-        def ENV = 'bwa=1.1.1'
-        def PREFIX = Files.createTempDirectory('foo')
-        def cache = Spy(new CondaCache(useMamba: true))
-
-        when:
-        // the prefix directory exists ==> no mamba command is executed
-        def result = cache.createLocalCondaEnv(ENV)
-        then:
-        1 * cache.condaPrefixPath(ENV) >> PREFIX
-        0 * cache.isYamlFilePath(ENV)
-        0 * cache.runCommand(_)
-        result == PREFIX
-
-        when:
-        PREFIX.deleteDir()
-        result = cache.createLocalCondaEnv0(ENV, PREFIX)
-        then:
-        1 * cache.isYamlFilePath(ENV)
-        0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("mamba create --mkdir --yes --quiet --prefix $PREFIX $ENV") >> null
-        result == PREFIX
-
-    }
-
-    def 'should create conda env with options' () {
-        given:
-        def ENV = 'bwa=1.1.1'
+        def ENV = 'bwa@1.1.1'
         def PREFIX = Paths.get('/foo/bar')
         and:
-        def cache = Spy(new CondaCache(createOptions: '--this --that'))
+        def cache = Spy(new SpackCache(parallelBuilds: 2, noChecksum))
 
         when:
-        def result = cache.createLocalCondaEnv0(ENV,PREFIX)
+        def result = cache.createLocalSpackEnv0(ENV,PREFIX)
+        def cmd
+        cmd =  "spack env create -d $PREFIX ; "
+        cmd += "spack env activate $PREFIX ; "
+        cmd += "spack add $ENV ; "
+        cmd += "spack concretize -f ; "
+        cmd += "spack install -n -j 2 -y ; "
+        cmd += "spack env deactivate"
+
         then:
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isTextFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "conda create --this --that --mkdir --yes --quiet --prefix $PREFIX $ENV" ) >> null
+        1 * cache.runCommand( cmd ) >> null
         result == PREFIX
     }
 
-    def 'should create conda env with options - using mamba' () {
-        given:
-        def ENV = 'bwa=1.1.1'
-        def PREFIX = Paths.get('/foo/bar')
-        and:
-        def cache = Spy(new CondaCache(useMamba: true, createOptions: '--this --that'))
-
-        when:
-        def result = cache.createLocalCondaEnv0(ENV, PREFIX)
-        then:
-        1 * cache.isYamlFilePath(ENV)
-        1 * cache.isTextFilePath(ENV)
-        0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("mamba create --this --that --mkdir --yes --quiet --prefix $PREFIX $ENV") >> null
-        result == PREFIX
-    }
-
-    def 'should create conda env with channels' () {
-        given:
-        def ENV = 'bwa=1.1.1'
-        def PREFIX = Paths.get('/foo/bar')
-        and:
-        def cache = Spy(new CondaCache(new CondaConfig([channels:['bioconda','defaults']])))
-
-        when:
-        def result = cache.createLocalCondaEnv0(ENV, PREFIX)
-        then:
-        1 * cache.isYamlFilePath(ENV)
-        1 * cache.isTextFilePath(ENV)
-        0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("conda create --mkdir --yes --quiet --prefix /foo/bar -c bioconda -c defaults bwa=1.1.1") >> null
-        result == PREFIX
-    }
-
-    def 'should create a conda env with a yaml file' () {
+    def 'should create a spack env with a yaml file' () {
 
         given:
-        def ENV = 'foo.yml'
-        def PREFIX = Paths.get('/conda/envs/my-env')
-        def cache = Spy(CondaCache)
+        def ENV = 'foo.yaml'
+        def PREFIX = Paths.get('/spack/envs/my-env')
+        def cache = Spy(SpackCache)
 
         when:
-        def result = cache.createLocalCondaEnv0(ENV, PREFIX)
+        def result = cache.createLocalSpackEnv0(ENV, PREFIX)
+        def cmd
+        cmd =  "spack env create -d $PREFIX /usr/base/$ENV ; "
+        cmd += "spack env activate $PREFIX ; "
+        cmd += "spack concretize -f ; "
+        cmd += "spack install -y ; "
+        cmd += "spack env deactivate"
+
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.isTextFilePath(ENV)
         1 * cache.makeAbsolute(ENV) >> Paths.get('/usr/base').resolve(ENV)
-        1 * cache.runCommand( "conda env create --prefix $PREFIX --file /usr/base/foo.yml" ) >> null
-        result == PREFIX
-
-    }
-
-    def 'should create a conda env with a text file' () {
-
-        given:
-        def ENV = 'foo.txt'
-        def PREFIX = Paths.get('/conda/envs/my-env')
-        and:
-        def cache = Spy(new CondaCache(createOptions: '--this --that'))
-
-        when:
-        def result = cache.createLocalCondaEnv0(ENV, PREFIX)
-        then:
-        1 * cache.isYamlFilePath(ENV)
-        1 * cache.isTextFilePath(ENV)
-        1 * cache.makeAbsolute(ENV) >> Paths.get('/usr/base').resolve(ENV)
-        1 * cache.runCommand( "conda create --this --that --mkdir --yes --quiet --prefix $PREFIX --file /usr/base/foo.txt" ) >> null
+        1 * cache.runCommand( cmd ) >> null
         result == PREFIX
 
     }
@@ -317,42 +204,27 @@ class CondaCacheTest extends Specification {
     def 'should get options from the config' () {
 
         when:
-        def cache = new CondaCache(new CondaConfig())
+        def cache = new SpackCache(new SpackConfig())
         then:
         cache.createTimeout.minutes == 20
         cache.createOptions == null
         cache.configCacheDir0 == null
-        !cache.@useMamba
-        !cache.@useMicromamba
-        cache.binaryName == "conda"
 
         when:
-        cache = new CondaCache(new CondaConfig(createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache', useMamba: true))
+        cache = new SpackCache(new SpackConfig(createTimeout: '5 min', cacheDir: '/spack/cache', noChecksum: true, parallelBuilds: 2))
         then:
         cache.createTimeout.minutes == 5
-        cache.createOptions == '--foo --bar'
-        cache.configCacheDir0 == Paths.get('/conda/cache')
-        cache.@useMamba
-        !cache.@useMicromamba
-        cache.binaryName == "mamba"
-
-        when:
-        cache = new CondaCache(new CondaConfig(createTimeout: '5 min', createOptions: '--foo --bar', cacheDir: '/conda/cache', useMicromamba: true))
-        then:
-        cache.createTimeout.minutes == 5
-        cache.createOptions == '--foo --bar'
-        cache.configCacheDir0 == Paths.get('/conda/cache')
-        !cache.@useMamba
-        cache.@useMicromamba
-        cache.binaryName == "micromamba"
+        cache.configCacheDir0 == Paths.get('/spack/cache')
+        cache.@noChecksum
+        cache.parallelBuilds = 2
     }
 
     def 'should define cache dir from config' () {
 
         given:
         def folder = Files.createTempDirectory('test'); folder.deleteDir()
-        def config = new CondaConfig(cacheDir: folder.toString())
-        CondaCache cache = Spy(CondaCache, constructorArgs: [config])
+        def config = new SpackConfig(cacheDir: folder.toString())
+        SpackCache cache = Spy(SpackCache, constructorArgs: [config])
 
         when:
         def result = cache.getCacheDir()
@@ -368,9 +240,9 @@ class CondaCacheTest extends Specification {
     def 'should define cache dir from rel path' () {
 
         given:
-        def folder = Paths.get('.test-conda-cache-' + Math.random())
-        def config = new CondaConfig(cacheDir: folder.toString())
-        CondaCache cache = Spy(CondaCache, constructorArgs: [config])
+        def folder = Paths.get('.test-spack-cache-' + Math.random())
+        def config = new SpackConfig(cacheDir: folder.toString())
+        SpackCache cache = Spy(SpackCache, constructorArgs: [config])
 
         when:
         def result = cache.getCacheDir()
@@ -388,13 +260,13 @@ class CondaCacheTest extends Specification {
 
         given:
         def folder = Files.createTempDirectory('test'); folder.deleteDir()
-        def config = new CondaConfig()
-        CondaCache cache = Spy(CondaCache, constructorArgs: [config])
+        def config = new SpackConfig()
+        SpackCache cache = Spy(SpackCache, constructorArgs: [config])
 
         when:
         def result = cache.getCacheDir()
         then:
-        2 * cache.getEnv() >> [NXF_CONDA_CACHEDIR: folder.toString()]
+        2 * cache.getEnv() >> [NXF_SPACK_CACHEDIR: folder.toString()]
         0 * cache.getSessionWorkDir()
         result == folder
         result.exists()
@@ -407,13 +279,13 @@ class CondaCacheTest extends Specification {
 
         given:
         def folder = Files.createTempDirectory('test');
-        def cache = Spy(CondaCache)
+        def cache = Spy(SpackCache)
 
         when:
         def result = cache.getCacheDir()
         then:
         1 * cache.getSessionWorkDir() >> folder
-        result == folder.resolve('conda')
+        result == folder.resolve('spack')
         result.exists()
 
         cleanup:
