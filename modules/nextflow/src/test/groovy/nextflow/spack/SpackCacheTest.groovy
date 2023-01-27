@@ -150,7 +150,6 @@ class SpackCacheTest extends Specification {
 
         then:
         1 * cache.isYamlFilePath(ENV)
-        1 * cache.isTextFilePath(ENV)
         0 * cache.makeAbsolute(_)
         1 * cache.runCommand( """spack env create -d $PREFIX ; 
                                  spack env activate $PREFIX ; 
@@ -170,16 +169,9 @@ class SpackCacheTest extends Specification {
 
         when:
         def result = cache.createLocalSpackEnv0(ENV, PREFIX)
-        def cmd
-        cmd =  ""
-        cmd += ""
-        cmd += ""
-        cmd += ""
-        cmd += ""
 
         then:
         1 * cache.isYamlFilePath(ENV)
-        0 * cache.isTextFilePath(ENV)
         1 * cache.makeAbsolute(ENV) >> Paths.get('/usr/base').resolve(ENV)
         1 * cache.runCommand( """spack env create -d $PREFIX /usr/base/$ENV ; 
                                  spack env activate $PREFIX ; 
