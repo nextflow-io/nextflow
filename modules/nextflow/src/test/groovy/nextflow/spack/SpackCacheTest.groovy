@@ -143,7 +143,7 @@ class SpackCacheTest extends Specification {
         def ENV = 'bwa@1.1.1'
         def PREFIX = Paths.get('/foo/bar')
         and:
-        def cache = Spy( new SpackCache([parallelBuilds: 2, noChecksum]) )
+        def cache = Spy(new SpackCache([parallelBuilds: 2, noChecksum: true]))
 
         when:
         def result = cache.createLocalSpackEnv0(ENV,PREFIX)
