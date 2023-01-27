@@ -167,20 +167,20 @@ and for all its required dependencies. As a result, Spack builds can last for lo
 This can represent an inconvenience, in that it can significantly lenghten the duration of Nextflow processes.
 Here we briefly discuss two strategies to mitigate this aspect, and render the usage of Spack more effective.
 
-1. Use a Spack yaml file, and pre-build the environment outside of Nextflow, prior to running the pipeline.
-Building packages outside of the Nextflow pipeline will work since Spack always installs packages in its own directories,
-and only creates symbolic links in the environment. This sequence of commands will do the trick in most cases::
+1.  Use a Spack yaml file, and pre-build the environment outside of Nextflow, prior to running the pipeline.
+    Building packages outside of the Nextflow pipeline will work since Spack always installs packages in its own directories,
+    and only creates symbolic links in the environment. This sequence of commands will do the trick in most cases::
 
-  spack env create myenv /path/to/spack.yaml
-  spack env activate myenv
-  spack concretize -f
-  spack install -y
-  spack env deactivate
+    spack env create myenv /path/to/spack.yaml
+    spack env activate myenv
+    spack concretize -f
+    spack install -y
+    spack env deactivate
 
-2. Use the Nextflow stub functionality prior to running the pipeline for production.
-Nextflow will run the stub pipeline, skipping process executions but still setting up the required software packages.
-This option is useful if it is not possible to write a Spack yaml file for the environment.
-The stub functionality is described in the :ref:`Stub <process-stub>` section of the Processes page.
+2.  Use the Nextflow stub functionality prior to running the pipeline for production.
+    Nextflow will run the stub pipeline, skipping process executions but still setting up the required software packages.
+    This option is useful if it is not possible to write a Spack yaml file for the environment.
+    The stub functionality is described in the :ref:`Stub <process-stub>` section of the Processes page.
 
 
 Configuration file
