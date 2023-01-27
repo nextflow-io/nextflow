@@ -203,7 +203,7 @@ class SpackCacheTest extends Specification {
         cache.createTimeout.minutes == 5
         cache.configCacheDir0 == Paths.get('/spack/cache')
         cache.@noChecksum
-        cache.parallelBuilds = 2
+        cache.parallelBuilds == 2
     }
 
     def 'should define cache dir from config' () {

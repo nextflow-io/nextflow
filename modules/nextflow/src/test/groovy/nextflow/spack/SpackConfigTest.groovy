@@ -44,3 +44,4 @@ class SpackConfigTest extends Specification {
         false       | [enabled: false]  | [NXF_SPACK_ENABLED: true]  // <-- config has priority
         true        | [enabled: true]   | [NXF_SPACK_ENABLED: true]
     }
+}
