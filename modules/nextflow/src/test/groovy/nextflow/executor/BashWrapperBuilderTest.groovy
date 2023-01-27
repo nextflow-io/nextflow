@@ -260,6 +260,7 @@ class BashWrapperBuilderTest extends Specification {
                 headerScript: '#BSUB -x 1\n#BSUB -y 2',
                 beforeScript: 'echo Before',
                 condaEnv: Paths.get('/conda/env/path') ) .buildNew0()
+                spackEnv: Paths.get('/spack/env/path') ) .buildNew0()
 
         then:
         wrapper == load('test-bash-wrapper.txt', [folder: folder.toString()])
@@ -630,6 +631,25 @@ class BashWrapperBuilderTest extends Specification {
         binding.conda_activate == '''\
                 # conda environment
                 source $(conda info --json | awk '/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }')/bin/activate /some/conda/env/foo
+                '''.stripIndent()
+
+    }
+
+    def 'should create spack activate snippet' () {
+
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.spack_activate == null
+        binding.containsKey('spack_activate')
+
+        when:
+        def SPACK = Paths.get('/some/spack/env/foo')
+        binding = newBashWrapperBuilder(spackEnv: SPACK).makeBinding()
+        then:
+        binding.spack_activate == '''\
+                # spack environment
+                spack env activate -d /some/spack/env/foo
                 '''.stripIndent()
 
     }
