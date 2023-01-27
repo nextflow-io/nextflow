@@ -18,19 +18,15 @@
 package io.seqera.wave.plugin.config
 
 /**
- * Conda build options
+ * Spack build options
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CondaOpts {
+class SpackOpts {
 
-    final public String DEFAULT_MAMBA_IMAGE = 'mambaorg/micromamba:1.2.0'
-
-    final String mambaImage
     final List<String> commands
 
-    CondaOpts(Map opts) {
-        this.mambaImage = opts.mambaImage ?: DEFAULT_MAMBA_IMAGE
+    SpackOpts(Map opts) {
         this.commands = opts.commands as List<String>
     }
 
