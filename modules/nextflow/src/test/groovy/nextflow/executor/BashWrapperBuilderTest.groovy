@@ -260,6 +260,28 @@ class BashWrapperBuilderTest extends Specification {
                 headerScript: '#BSUB -x 1\n#BSUB -y 2',
                 beforeScript: 'echo Before',
                 condaEnv: Paths.get('/conda/env/path') ) .buildNew0()
+
+        then:
+        wrapper == load('test-bash-wrapper.txt', [folder: folder.toString()])
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should render launcher script with spack' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        /*
+         * simple bash run
+         */
+        when:
+        def wrapper = newBashWrapperBuilder(
+                name: 'Hello 1',
+                workDir: folder,
+                headerScript: '#BSUB -x 1\n#BSUB -y 2',
+                beforeScript: 'echo Before',
                 spackEnv: Paths.get('/spack/env/path') ) .buildNew0()
 
         then:
