@@ -50,7 +50,7 @@ class SpackCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         1 * cache.getCacheDir() >> BASE
-        prefix.toString() == '/spack/envs/env-eaeb133f4ca62c95e9c0eec7ef8d553b'
+        prefix.toString() == '/spack/envs/spack-b4711cfb529e61a3e4929e3c4d2b9fb2'
     }
 
 
