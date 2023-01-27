@@ -104,7 +104,25 @@ lists the required packages and channels structured using the YAML format. For e
       concretizer:
         unify: true
 
-The ``view`` and ``concretizer`` options are sensible Spack defaults for environments.
+Here, the ``view`` and ``concretizer`` options are sensible Spack defaults for environments.
+
+There are concise ways to specify the target microarchitecture (and eventually other options) within a Spack environment file.
+Considering again the example of an AMD Zen3 target microprocessor::
+
+    spack:
+      definitions:
+      - packages:
+        - star@2.5.4a
+        - bwa@0.7.15
+      specs:
+      - matrix:
+        - [$packages]
+        - [target=zen3]
+    
+      view: true
+      concretizer:
+        unify: true
+
 Read the Spack documentation for more details about how to create `environment files <https://spack.readthedocs.io/en/latest/environments.html>`_.
 
 The path of an environment file can be specified using the ``spack`` directive::
@@ -146,7 +164,7 @@ and for all its required dependencies. As a result, Spack builds can last for lo
 This can represent an inconvenience, in that it can significantly lenghten the duration of Nextflow processes.
 Here we briefly discuss two strategies to mitigate this aspect, and render the usage of Spack more effective.
 
-1. Use a Spack YAML file, and pre-build the environment outside of Nextflow, prior to running the pipeline.
+1. Use a Spack yaml file, and pre-build the environment outside of Nextflow, prior to running the pipeline.
 Building packages outside of the Nextflow pipeline will work since Spack always installs packages in its own directories,
 and only creates symbolic links in the environment. This sequence of commands will do the trick in most cases::
 
@@ -158,7 +176,7 @@ and only creates symbolic links in the environment. This sequence of commands wi
 
 2. Use the Nextflow stub functionality prior to running the pipeline for production.
 Nextflow will run the stub pipeline, skipping process executions but still setting up the required software packages.
-This option is useful if it is not possible to write a Spack YAML file for the environment.
+This option is useful if it is not possible to write a Spack yaml file for the environment.
 The stub functionality is described in the :ref:`Stub <process-stub>` section of the Processes page.
 
 
