@@ -15,7 +15,7 @@
  *
  */
 
-package nextflow.conda
+package nextflow.spack
 
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -24,14 +24,14 @@ import spock.lang.Unroll
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CondaConfigTest extends Specification {
+class SpackConfigTest extends Specification {
 
     @Unroll
     def 'should check enabled flag'() {
         given:
-        def conda = new CondaConfig(CONFIG, ENV)
+        def spack = new SpackConfig(CONFIG, ENV)
         expect:
-        conda.isEnabled() == EXPECTED
+        spack.isEnabled() == EXPECTED
 
         where:
         EXPECTED    | CONFIG            | ENV
@@ -39,29 +39,8 @@ class CondaConfigTest extends Specification {
         false       | [enabled: false]  | [:]
         true        | [enabled: true]   | [:]
         and:
-        false       | [:]               | [NXF_CONDA_ENABLED: false]
-        true        | [:]               | [NXF_CONDA_ENABLED: true]
-        false       | [enabled: false]  | [NXF_CONDA_ENABLED: true]  // <-- config has priority
-        true        | [enabled: true]   | [NXF_CONDA_ENABLED: true]
+        false       | [:]               | [NXF_SPACK_ENABLED: false]
+        true        | [:]               | [NXF_SPACK_ENABLED: true]
+        false       | [enabled: false]  | [NXF_SPACK_ENABLED: true]  // <-- config has priority
+        true        | [enabled: true]   | [NXF_SPACK_ENABLED: true]
     }
-
-
-    @Unroll
-    def 'should check channels options'() {
-        given:
-        def conda = new CondaConfig(CONFIG, [:])
-        expect:
-        conda.getChannels() == EXPECTED
-
-        where:
-        EXPECTED                | CONFIG
-        []                      | [:]
-        ['bioconda']            | [channels:'bioconda']
-        ['bioconda']            | [channels:['bioconda']]
-        and:
-        ['this','that','other'] | [channels:'this,that,other']
-        ['this','that','other'] | [channels:'this, that ,other']
-        and:
-        ['this','that','other'] | [channels:['this','that','other']]
-    }
-}
