@@ -244,7 +244,7 @@ class SpackCache {
 
         def cmd
         cmd =  "spack env activate ${Escape.path(prefixPath)} ; "
-        cmd += "spack install ${opts} ; "
+        cmd += "spack install ${opts}; "
         cmd += "spack env deactivate"
 
         try {
@@ -273,7 +273,7 @@ class SpackCache {
             cmd =  "spack env create -d ${Escape.path(prefixPath)} ${Escape.path(makeAbsolute(spackEnv))} ; "
             cmd += "spack env activate ${Escape.path(prefixPath)} ; "
             cmd += "spack concretize -f ; "
-            cmd += "spack install ${opts} ; "
+            cmd += "spack install ${opts}; "
             cmd += "spack env deactivate"
         }
 
@@ -282,7 +282,7 @@ class SpackCache {
             cmd += "spack env activate ${Escape.path(prefixPath)} ; "
             cmd += "spack add $spackEnv ; "
             cmd += "spack concretize -f ; "
-            cmd += "spack install ${opts} ; "
+            cmd += "spack install ${opts}; "
             cmd += "spack env deactivate"
         }
 
