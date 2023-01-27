@@ -15,9 +15,9 @@ using Spack recipes and environment files.
 
 This allows Nextflow applications to build packages from source on the compute infrastructure in use,
 whilst taking advantage of the configuration flexibility provided by Nextflow.
-At facilities, such as certain HPC centres, where Spack has been configured by the administrators,
-this results in optimised builds without user intervention. With appropriate options,
-this also permits end users to customise binary optimisations.
+At shared compute facilities where Spack has been configured by the administrators,
+this may result in optimised builds without user intervention. With appropriate options,
+this also permits end users to customise binary optimisations by themselves.
 
 
 Prerequisites
@@ -108,19 +108,15 @@ lists the required packages and channels structured using the YAML format. For e
 Here, the ``view`` and ``concretizer`` options are sensible Spack defaults for environments.
 
 There are concise ways to specify the target microarchitecture (and eventually other options) within a Spack environment file.
-The following environment file specifies build optimisation for an AMD Zen3 target microprocessor,
-as well as high level of compiler optimisations via flags::
+For instance, the following environment file specifies build optimisation for an AMD Zen3 target microprocessor::
 
     spack:
-      definitions:
-      - packages:
-        - star@2.5.4a
-        - bwa@0.7.15
+      packages:
+        all:
+          target: [zen3]
       specs:
-      - matrix:
-        - [$packages]
-        - [target=zen3]
-        - ['cflags=O3 cxxflags=O3 fflags=O3']
+      - star@2.5.4a
+      - bwa@0.7.15
     
       view: true
       concretizer:

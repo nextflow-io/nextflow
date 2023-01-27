@@ -264,6 +264,7 @@ createTimeout       Defines the amount of time the Spack environment creation ca
 
 Nextflow does not allow for fine-grained configuration of the Spack package manager.
 Instead, this has to be performed directly on the host Spack installation.
+For more information see the `Spack documentation <https://spack.readthedocs.io>`_.
 
 
 .. _config-dag:
