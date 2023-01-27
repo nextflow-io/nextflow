@@ -262,6 +262,9 @@ parallelBuilds      Sets number of parallel package builds (Spack default: coinc
 createTimeout       Defines the amount of time the Spack environment creation can last. The creation process is terminated when the timeout is exceeded (default: ``60 min``).
 ================== ================
 
+Nextflow does not allow for fine-grained configuration of the Spack package manager.
+Instead, this has to be performed directly on the host Spack installation.
+
 
 .. _config-dag:
 
