@@ -71,8 +71,6 @@ class SpackCache {
 
     @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
 
-    @PackageScope String getBinaryName() { return "spack" }
-
     /** Only for testing purpose - do not use */
     @PackageScope
     SpackCache() {}
@@ -208,7 +206,7 @@ class SpackCache {
         final mutex = new FileMutex(target: file, timeout: createTimeout, waitMessage: wait, errorMessage: err)
 
         if( prefixPath.isDirectory() ) {
-            log.debug "${binaryName} found local env for environment=$spackEnv; path=$prefixPath"
+            log.debug "spack found local env for environment=$spackEnv; path=$prefixPath"
             try {
                 // have to check environment packages, because they are stored externally in the host
                 // and might get modified there
@@ -238,20 +236,20 @@ class SpackCache {
     @PackageScope
     Path checkLocalSpackEnv0(String spackEnv, Path prefixPath) {
 
-        log.debug "Checking env using ${binaryName}: $spackEnv [cache $prefixPath]"
+        log.debug "Checking env using spack: $spackEnv [cache $prefixPath]"
 
         String opts = noChecksum ? "-n " : ''
         opts += parallelBuilds ? "-j $parallelBuilds " : ''
         opts += '-y '
 
         def cmd
-        cmd =  "${binaryName} env activate ${Escape.path(prefixPath)} ; "
-        cmd += "${binaryName} install ${opts} ; "
-        cmd += "${binaryName} env deactivate"
+        cmd =  "spack env activate ${Escape.path(prefixPath)} ; "
+        cmd += "spack install ${opts} ; "
+        cmd += "spack env deactivate"
 
         try {
             runCommand( cmd )
-            log.debug "'${binaryName}' check complete env=$spackEnv path=$prefixPath"
+            log.debug "'spack' check complete env=$spackEnv path=$prefixPath"
         }
         catch( Exception e ){
             // clean-up to avoid to keep eventually corrupted image file
@@ -264,7 +262,7 @@ class SpackCache {
     @PackageScope
     Path createLocalSpackEnv0(String spackEnv, Path prefixPath) {
 
-        log.info "Creating env using ${binaryName}: $spackEnv [cache $prefixPath]"
+        log.info "Creating env using spack: $spackEnv [cache $prefixPath]"
 
         String opts = noChecksum ? "-n " : ''
         opts += parallelBuilds ? "-j $parallelBuilds " : ''
@@ -272,25 +270,25 @@ class SpackCache {
 
         def cmd
         if( isYamlFilePath(spackEnv) ) {
-            cmd =  "${binaryName} env create -d ${Escape.path(prefixPath)} ${Escape.path(makeAbsolute(spackEnv))} ; "
-            cmd += "${binaryName} env activate ${Escape.path(prefixPath)} ; "
-            cmd += "${binaryName} concretize -f ; "
-            cmd += "${binaryName} install ${opts} ; "
-            cmd += "${binaryName} env deactivate"
+            cmd =  "spack env create -d ${Escape.path(prefixPath)} ${Escape.path(makeAbsolute(spackEnv))} ; "
+            cmd += "spack env activate ${Escape.path(prefixPath)} ; "
+            cmd += "spack concretize -f ; "
+            cmd += "spack install ${opts} ; "
+            cmd += "spack env deactivate"
         }
 
         else {
-            cmd =  "${binaryName} env create -d ${Escape.path(prefixPath)} ; "
-            cmd += "${binaryName} env activate ${Escape.path(prefixPath)} ; "
-            cmd += "${binaryName} add $spackEnv ; "
-            cmd += "${binaryName} concretize -f ; "
-            cmd += "${binaryName} install ${opts} ; "
-            cmd += "${binaryName} env deactivate"
+            cmd =  "spack env create -d ${Escape.path(prefixPath)} ; "
+            cmd += "spack env activate ${Escape.path(prefixPath)} ; "
+            cmd += "spack add $spackEnv ; "
+            cmd += "spack concretize -f ; "
+            cmd += "spack install ${opts} ; "
+            cmd += "spack env deactivate"
         }
 
         try {
             runCommand( cmd )
-            log.debug "'${binaryName}' create complete env=$spackEnv path=$prefixPath"
+            log.debug "'spack' create complete env=$spackEnv path=$prefixPath"
         }
         catch( Exception e ){
             // clean-up to avoid to keep eventually corrupted image file
@@ -302,7 +300,7 @@ class SpackCache {
 
     @PackageScope
     int runCommand( String cmd ) {
-        log.trace """${binaryName} env create
+        log.trace """spack env create
                      command: $cmd
                      timeout: $createTimeout""".stripIndent()
 
@@ -338,7 +336,7 @@ class SpackCache {
     DataflowVariable<Path> getLazyImagePath(String spackEnv) {
 
         if( spackEnv in spackPrefixPaths ) {
-            log.trace "${binaryName} found local environment `$spackEnv`"
+            log.trace "spack found local environment `$spackEnv`"
             return spackPrefixPaths[spackEnv]
         }
 
@@ -349,7 +347,7 @@ class SpackCache {
                 spackPrefixPaths[spackEnv] = result
             }
             else {
-                log.trace "${binaryName} found local cache for environment `$spackEnv` (2)"
+                log.trace "spack found local cache for environment `$spackEnv` (2)"
             }
             return result
         }
