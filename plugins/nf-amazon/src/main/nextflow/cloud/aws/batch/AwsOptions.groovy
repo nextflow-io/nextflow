@@ -40,6 +40,8 @@ import static nextflow.cloud.aws.util.AwsHelper.parseS3Acl
 @CompileStatic
 class AwsOptions implements CloudTransferOptions {
 
+    public static final List<String> VALID_CHECKSUM_ALGORITHMS = ['CRC32','CRC32C','SHA1','SHA256']
+
     public static final List<String> VALID_RETRY_MODES = ['legacy','standard','adaptive']
 
     public static final int DEFAULT_AWS_MAX_ATTEMPTS = 5
@@ -105,6 +107,11 @@ class AwsOptions implements CloudTransferOptions {
     CannedAccessControlList s3Acl
 
     /**
+     * S3 checksum algorithm
+     */
+    String s3ChecksumAlgorithm
+
+    /**
      * @return A list of volume mounts using the docker cli convention ie. `/some/path` or `/some/path:/container/path` or `/some/path:/container/path:ro`
      */
     List<String> getVolumes() { volumes != null ? Collections.unmodifiableList(volumes) : Collections.<String>emptyList() }
@@ -120,6 +127,7 @@ class AwsOptions implements CloudTransferOptions {
     AwsOptions(Session session) {
         cliPath = getCliPath0(session)
         s3Acl = parseS3Acl(session.config.navigate('aws.client.s3Acl') as String)
+        s3ChecksumAlgorithm = session.config.navigate('aws.client.s3ChecksumAlgorithm') as String
         debug = session.config.navigate('aws.client.debug') as Boolean
         storageClass = session.config.navigate('aws.client.uploadStorageClass') as String
         storageKmsKeyId = session.config.navigate('aws.client.storageKmsKeyId') as String
@@ -136,6 +144,8 @@ class AwsOptions implements CloudTransferOptions {
         retryMode = session.config.navigate('aws.batch.retryMode', 'standard')
         shareIdentifier = session.config.navigate('aws.batch.shareIdentifier')
         schedulingPriority = session.config.navigate('aws.batch.schedulingPriority', 0) as Integer
+        if( s3ChecksumAlgorithm && s3ChecksumAlgorithm !in VALID_CHECKSUM_ALGORITHMS )
+            log.warn "Unexpected value for 'aws.client.s3ChecksumAlgorithm' config setting - offending value: $s3ChecksumAlgorithm - valid values: ${VALID_CHECKSUM_ALGORITHMS.join(',')}"
         if( retryMode == 'built-in' )
             retryMode = null // this force falling back on NF built-in retry mode instead of delegating to AWS CLI tool
         if( retryMode && retryMode !in VALID_RETRY_MODES )

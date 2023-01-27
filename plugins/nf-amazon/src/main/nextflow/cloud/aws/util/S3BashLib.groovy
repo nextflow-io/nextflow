@@ -35,6 +35,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
     private String cli = 'aws'
     private String retryMode
     private String acl = ''
+    private String checksumAlgorithm = ''
 
     S3BashLib withCliPath(String cliPath) {
         if( cliPath )
@@ -77,6 +78,12 @@ class S3BashLib extends BashFunLib<S3BashLib> {
         return this
     }
 
+    S3BashLib withChecksumAlgorithm(String value) {
+        if( value )
+            this.checksumAlgorithm = "--checksum-algorithm $value "
+        return this
+    }
+
     protected String retryEnv() {
         if( !retryMode )
             return ''
@@ -94,11 +101,11 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             local name=\$1
             local s3path=\$2
             if [[ "\$name" == - ]]; then
-              $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass - "\$s3path"
+              $cli s3 cp --only-show-errors ${debug}${acl}${checksumAlgorithm}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass - "\$s3path"
             elif [[ -d "\$name" ]]; then
-              $cli s3 cp --only-show-errors --recursive ${debug}${acl}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli s3 cp --only-show-errors --recursive ${debug}${acl}${checksumAlgorithm}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass "\$name" "\$s3path/\$name"
             else
-              $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli s3 cp --only-show-errors ${debug}${acl}${checksumAlgorithm}${storageEncryption}${storageKmsKeyId}--storage-class $storageClass "\$name" "\$s3path/\$name"
             fi
         }
         
@@ -133,6 +140,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
                 .withRetryMode( opts.retryMode )
                 .withDebug( opts.debug )
                 .withAcl( opts.s3Acl )
+                .withChecksumAlgorithm( opts.s3ChecksumAlgorithm )
     }
 
     static String script(AwsOptions opts) {

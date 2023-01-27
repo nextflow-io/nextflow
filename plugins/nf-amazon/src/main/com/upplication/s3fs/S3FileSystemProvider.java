@@ -945,6 +945,8 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 		// set the client acl
 		client.setCannedAcl(getProp(props, "s_3_acl", "s3_acl", "s3Acl"));
+		// TODO: set checksum algorithm ?
+		// TODO: S3CopyObjectOperation setChecksumAlgorithm()
 		client.setStorageEncryption(props.getProperty("storage_encryption"));
 		client.setKmsKeyId(props.getProperty("storage_kms_key_id"));
 		client.setUploadChunkSize(props.getProperty("upload_chunk_size"));
