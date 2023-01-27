@@ -113,18 +113,11 @@ class SpackCacheTest extends Specification {
         when:
         // the prefix directory exists ==> no spack command is executed
         def result = cache.createLocalSpackEnv(ENV)
-        def cmd
-        cmd =  "spack env create -d $PREFIX ; "
-        cmd += "spack env activate $PREFIX ; "
-        cmd += "spack add $ENV ; "
-        cmd += "spack concretize -f ; "
-        cmd += "spack install -y ; "
-        cmd += "spack env deactivate"
 
         then:
         1 * cache.spackPrefixPath(ENV) >> PREFIX
         0 * cache.isYamlFilePath(ENV)
-        0 * cache.runCommand(_)
+        1 * cache.runCommand( "spack env activate $PREFIx ; spack install -y ; spack env deactivate" )
         result == PREFIX
 
         when:
@@ -133,7 +126,7 @@ class SpackCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( cmd ) >> null
+        1 * cache.runCommand( "spack env create -d $PREFIX ; spack env activate $PREFIX ; spack add $ENV ; spack concretize -f ; spack install -y ; spack env deactivate" ) >> null
         result == PREFIX
 
     }
