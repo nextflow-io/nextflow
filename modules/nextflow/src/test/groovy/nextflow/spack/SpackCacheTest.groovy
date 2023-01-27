@@ -147,19 +147,17 @@ class SpackCacheTest extends Specification {
 
         when:
         def result = cache.createLocalSpackEnv0(ENV,PREFIX)
-        def cmd
-        cmd =  "spack env create -d $PREFIX ; "
-        cmd += "spack env activate $PREFIX ; "
-        cmd += "spack add $ENV ; "
-        cmd += "spack concretize -f ; "
-        cmd += "spack install -n -j 2 -y ; "
-        cmd += "spack env deactivate"
 
         then:
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isTextFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( cmd ) >> null
+        1 * cache.runCommand( """spack env create -d $PREFIX ; 
+                                 spack env activate $PREFIX ; 
+                                 spack add $ENV ; 
+                                 spack concretize -f ; 
+                                 spack install -n -j 2 -y ; 
+                                 spack env deactivate""".stripMargin() ) >> null
         result == PREFIX
     }
 
@@ -173,17 +171,21 @@ class SpackCacheTest extends Specification {
         when:
         def result = cache.createLocalSpackEnv0(ENV, PREFIX)
         def cmd
-        cmd =  "spack env create -d $PREFIX /usr/base/$ENV ; "
-        cmd += "spack env activate $PREFIX ; "
-        cmd += "spack concretize -f ; "
-        cmd += "spack install -y ; "
-        cmd += "spack env deactivate"
+        cmd =  ""
+        cmd += ""
+        cmd += ""
+        cmd += ""
+        cmd += ""
 
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.isTextFilePath(ENV)
         1 * cache.makeAbsolute(ENV) >> Paths.get('/usr/base').resolve(ENV)
-        1 * cache.runCommand( cmd ) >> null
+        1 * cache.runCommand( """spack env create -d $PREFIX /usr/base/$ENV ; 
+                                 spack env activate $PREFIX ; 
+                                 spack concretize -f ; 
+                                 spack install -y ; 
+                                 spack env deactivate""".stripMargin() ) >> null
         result == PREFIX
 
     }
