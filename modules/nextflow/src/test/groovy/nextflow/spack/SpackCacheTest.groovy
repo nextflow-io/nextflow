@@ -50,7 +50,7 @@ class SpackCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         1 * cache.getCacheDir() >> BASE
-        prefix.toString() == '/spack/envs/spack-b4711cfb529e61a3e4929e3c4d2b9fb2'
+        prefix.toString() == '/spack/envs/env-dce1faa0a04e92386f05195016ca8440'
     }
 
 
@@ -76,7 +76,7 @@ class SpackCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV.toString())
         1 * cache.getCacheDir() >> BASE
-        prefix.toString() == '/spack/envs/foo-9416240708c49c4e627414b46a743664'
+        prefix.toString() == '/spack/envs/foo-ce5aa4c05c80124f5f5b75d4df55eeb5'
 
         cleanup:
         folder?.deleteDir()
@@ -143,7 +143,7 @@ class SpackCacheTest extends Specification {
         def ENV = 'bwa@1.1.1'
         def PREFIX = Paths.get('/foo/bar')
         and:
-        def cache = Spy(new SpackCache(parallelBuilds: 2, noChecksum))
+        def cache = Spy( new SpackCache(new SpackConfig(parallelBuilds: 2, noChecksum)) )
 
         when:
         def result = cache.createLocalSpackEnv0(ENV,PREFIX)
@@ -193,7 +193,7 @@ class SpackCacheTest extends Specification {
         when:
         def cache = new SpackCache(new SpackConfig())
         then:
-        cache.createTimeout.minutes == 20
+        cache.createTimeout.minutes == 60
         cache.createOptions == null
         cache.configCacheDir0 == null
 
