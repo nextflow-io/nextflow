@@ -34,6 +34,7 @@ class WaveConfig {
     final private List<URL> containerConfigUrl
     final private Duration tokensCacheMaxDuration
     final private CondaOpts condaOpts
+    final private SpackOpts spackOpts
     final private List<String> strategy
     final private Boolean bundleProjectResources
     final private String buildRepository
@@ -46,6 +47,7 @@ class WaveConfig {
         this.containerConfigUrl = parseConfig(opts, env)
         this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '15m') as Duration
         this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
+        this.spackOpts = opts.navigate('build.spack', Collections.emptyMap()) as SpackOpts
         this.buildRepository = opts.navigate('build.repository') as String
         this.cacheRepository = opts.navigate('build.cacheRepository') as String
         this.strategy = parseStrategy(opts.strategy)
@@ -61,6 +63,8 @@ class WaveConfig {
 
     CondaOpts condaOpts() { this.condaOpts }
 
+    SpackOpts spackOpts() { this.spackOpts }
+
     List<String> strategy() { this.strategy }
 
     boolean bundleProjectResources() { bundleProjectResources }
@@ -71,7 +75,7 @@ class WaveConfig {
 
     protected List<String> parseStrategy(value) {
         if( !value ) {
-            final defaultStrategy = List.of('container','dockerfile','conda')
+            final defaultStrategy = List.of('container','dockerfile','conda', 'spack')
             log.debug "Wave strategy not specified - using default: $defaultStrategy"
             return defaultStrategy
         }
@@ -83,7 +87,7 @@ class WaveConfig {
         else
             throw new IllegalArgumentException("Invalid value for 'wave.strategy' configuration attribute - offending value: $value")
         for( String it : result ) {
-            if( it !in ['conda','dockerfile','container'])
+            if( it !in ['spack','conda','dockerfile','container'])
                 throw new IllegalArgumentException("Invalid value for 'wave.strategy' configuration attribute - offending value: $it")
         }
         return result
