@@ -22,7 +22,7 @@ import spock.lang.Unroll
 
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Marco De La Pierre <marco.delapierre@gmail.com>
  */
 class SpackConfigTest extends Specification {
 
