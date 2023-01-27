@@ -1,162 +1,179 @@
-.. _conda-page:
+.. _spack-page:
 
 ******************
-Conda environments
+Spack environments
 ******************
 
-`Conda <https://conda.io/>`_ is an open source package and environment management
-system that simplifies the installation and the configuration of complex software packages
-in a platform agnostic manner.
 
-Nextflow has built-in support for Conda that allows the configuration of workflow dependencies
-using Conda recipes and environment files.
+`Spack <https://spack.io/>`_ Spack is a package manager for supercomputers, Linux, and macOS.
+It makes installing scientific software easy. Spack is not tied to a particular language;
+you can build a software stack in Python or R, link to libraries written in C, C++, or Fortran,
+and easily swap compilers or target specific microarchitectures.
 
-This allows Nextflow applications to use popular tool collections
-such as `Bioconda <https://bioconda.github.io>`_ whilst taking advantage of the configuration
-flexibility provided by Nextflow.
+Nextflow has built-in support for Spack that allows the configuration of workflow dependencies
+using Spack recipes and environment files.
+
+This allows Nextflow applications to build packages from source on the compute infrastructure in use,
+whilst taking advantage of the configuration flexibility provided by Nextflow.
+With appropriate options, this permits to build binaries that are optimised for the local CPU micro-architecture
+and that can run with improved performance.
 
 
 Prerequisites
 -------------
 
-This feature requires the Conda or `Miniconda <https://conda.io/miniconda.html>`_ package manager to be installed on your system.
+This feature requires the `Spack <https://spack.io>`_ package manager to be installed on your system.
 
 
 How it works
 ------------
 
-Nextflow  automatically creates and activates the Conda environment(s) given the dependencies
+Nextflow  automatically creates and activates the Spack environment(s) given the dependencies
 specified by each process.
 
-Dependencies are specified by using the :ref:`process-conda` directive, providing either
-the names of the required Conda packages, the path of a Conda environment yaml file or
-the path of an existing Conda environment directory.
+Dependencies are specified by using the :ref:`process-spack` directive, providing either
+the names of the required Spack packages, the path of a Spack environment yaml file or
+the path of an existing Spack environment directory.
 
-.. note:: Conda environments are stored on the file system. By default Nextflow instructs Conda to save
-  the required environments in the pipeline work directory. Therefore the same environment can be created/saved
-  multiple times across multiple executions when using a different work directory.
+.. note:: Spack always installs the software packages in its own directories, regardless of the Nextflow specifications.
+  The Spack environment created by Nextflow only contains symbolic links pointing to the appropriate package locations,
+  and therefore it is relatively small in size.
 
-You can specify the directory where the Conda environments are stored using the ``conda.cacheDir``
-configuration property (see the :ref:`configuration page <config-conda>` for details).
+You can specify the directory where the Spack environment is stored using the ``spack.cacheDir``
+configuration property (see the :ref:`configuration page <config-spack>` for details).
 When using a computing cluster, make sure to use a shared file system path
 accessible from all compute nodes.
 
-.. warning:: The Conda environment feature is not supported by executors that use
+.. warning:: The Spack environment feature is not supported by executors that use
   remote object storage as a work directory e.g. AWS Batch.
 
-Enabling Conda environment
+Enabling Spack environment
 ==========================
 
-As of version ``22.08.0-edge`` the use Conda recipes specified using the :ref:`process-conda`
+The use of Spack recipes specified using the :ref:`process-spack`
 directive needs to be enabled explicitly by setting the option shown below in the pipeline
 configuration file (i.e. ``nextflow.config``)::
 
-    conda.enabled = true
+    spack.enabled = true
 
 
-Alternatively it can be specified by setting the variable ``NXF_CONDA_ENABLED=true`` in your environment
-or by using the ``-with-conda true`` command line option.
+Alternatively it can be specified by setting the variable ``NXF_SPACK_ENABLED=true`` in your environment
+or by using the ``-with-spack true`` command line option.
 
 
-Use Conda package names
+Use Spack package names
 =======================
 
-Conda package names can specified using the ``conda`` directive. Multiple package names can be specified
+Spack package names can specified using the ``spack`` directive. Multiple package names can be specified
 by separating them with a blank space.
 For example::
 
   process foo {
-    conda 'bwa samtools multiqc'
+    spack 'bwa samtools py-multiqc'
 
     '''
     your_command --here
     '''
   }
 
-Using the above definition a Conda environment that includes BWA, Samtools and MultiQC tools is created and
+Using the above definition a Spack environment that includes BWA, Samtools and MultiQC tools is created and
 activated when the process is executed.
 
-The usual Conda package syntax and naming conventions can be used. The version of a package can be
-specified after the package name as shown here ``bwa=0.7.15``.
+The usual Spack package syntax and naming conventions can be used. The version of a package can be
+specified after the package name as shown here ``bwa@0.7.15``.
 
-The name of the channel where a package is located can be specified prefixing the package with
-the channel name as shown here ``bioconda::bwa=0.7.15``.
+Optimisation for the local CPU microarchitetcure can be requested by adding the option ``target=<LOCAL ARCH>``
+after a package name. For instance, if the compute infrastructure uses AMD Zen3 microprocessors,
+use the following to optimise all packages for it: ``bwa target=zen3 samtools target=zen3 py-multiqc target=zen3``.
+
+Read the Spack documentation for more details about `package specifications <https://spack.readthedocs.io/en/latest/basic_usage.html#specs-dependencies>`_.
 
 
-Use Conda environment files
+Use Spack environment files
 ===========================
 
-Conda environments can also be defined using one or more Conda environment files. This is a file that
+Spack environments can also be defined using one or more Spack environment files. This is a file that
 lists the required packages and channels structured using the YAML format. For example::
 
-    name: my-env
-    channels:
-      - conda-forge
-      - bioconda
-      - defaults
-    dependencies:
-      - star=2.5.4a
-      - bwa=0.7.15
+    spack:
+      specs:
+      - star@2.5.4a
+      - bwa@0.7.15
+    
+      view: true
+      concretizer:
+        unify: true
 
-Read the Conda documentation for more details about how to create `environment files <https://conda.io/docs/user-guide/tasks/manage-environments.html#creating-an-environment-file-manually>`_.
+The ``view`` and ``concretizer`` options are sensible Spack defaults for environments.
+Read the Spack documentation for more details about how to create `environment files <https://spack.readthedocs.io/en/latest/environments.html>`_.
 
-The path of an environment file can be specified using the ``conda`` directive::
+The path of an environment file can be specified using the ``spack`` directive::
 
   process foo {
-    conda '/some/path/my-env.yaml'
+    spack '/some/path/my-env.yaml'
 
     '''
     your_command --here
     '''
   }
 
-.. warning:: The environment file name **must** have a ``.yml`` or ``.yaml`` extension or else it won't be properly recognised.
-
-Alternatively it is also possible to provide the dependencies using a plain text file,
-just listing each package name as a separate line. For example::
-
-    bioconda::star=2.5.4a
-    bioconda::bwa=0.7.15
-    bioconda::multiqc=1.4
-
-.. warning:: Like before, the extension matters. Make sure the dependencies file has a ``.txt`` extension.
+.. warning:: The environment file name **must** have a ``.yaml`` extension or else it won't be properly recognised.
 
 
-Use existing Conda environments
+Use existing Spack environments
 ===============================
 
-If you already have a local Conda environment, you can use it in your workflow specifying the
-installation directory of such environment by using the ``conda`` directive::
+If you already have a local Spack environment, you can use it in your workflow specifying the
+installation directory of such environment by using the ``spack`` directive::
 
   process foo {
-    conda '/path/to/an/existing/env/directory'
+    spack '/path/to/an/existing/env/directory'
 
     '''
     your_command --here
     '''
   }
-
-
-Use Mamba to resolve packages
-=============================
-
-It is also possible to use `mamba <https://github.com/mamba-org/mamba>`_ to speed up the creation of conda environments. For more information on how to enable this feature please refer to :ref:`Conda <config-conda>`.
-
-.. warning:: This feature is experimental and may change in a future release.
 
 
 Best practices
 --------------
 
-When a ``conda`` directive is used in any ``process`` definition within the workflow script, Conda tool is required for
+Building Spack packages for Nextflow pipelines
+==============================================
+
+Spack builds most software package from their source codes, and it does this for a request package
+and for all its required dependencies. As a result, Spack builds can last for long, even several hours.
+This can represent an inconvenience, in that it can significantly lenghten the duration of Nextflow processes.
+Here we briefly discuss two strategies to mitigate this aspect, and render the usage of Spack more effective.
+
+1. Use a Spack YAML file, and pre-build the environment outside of Nextflow, prior to running the pipeline.
+Building packages outside of the Nextflow pipeline will work since Spack always installs packages in its own directories,
+and only creates symbolic links in the environment. This sequence of commands will do the trick in most cases::
+
+  spack env create myenv /path/to/spack.yaml
+  spack env activate myenv
+  spack concretize -f
+  spack install -y
+  spack env deactivate
+
+2. Use the Nextflow stub functionality prior to running the pipeline for production.
+Nextflow will run the stub pipeline, skipping process executions but still setting up the required software packages.
+This option is useful if it is not possible to write a Spack YAML file for the environment.
+The stub functionality is described in the :ref:`Stub <process-stub>` section of the Processes page.
+
+
+Configuration file
+==================
+
+When a ``spack`` directive is used in any ``process`` definition within the workflow script, Spack tool is required for
 the workflow execution.
 
-Specifying the Conda environments in a separate configuration :ref:`profile <config-profiles>` is therefore
+Specifying the Spack environments in a separate configuration :ref:`profile <config-profiles>` is therefore
 recommended to allow the execution via a command line option and to enhance the workflow portability. For example::
 
   profiles {
-    conda {
-      process.conda = 'samtools'
+    spack {
+      process.spack = 'samtools'
     }
 
     docker {
@@ -165,11 +182,11 @@ recommended to allow the execution via a command line option and to enhance the 
     }
   }
 
-The above configuration snippet allows the execution either with Conda or Docker specifying ``-profile conda`` or
+The above configuration snippet allows the execution either with Spack or Docker specifying ``-profile spack`` or
 ``-profile docker`` when running the workflow script.
 
 
 Advanced settings
 -----------------
 
-Conda advanced configuration settings are described in the :ref:`Conda <config-conda>` section on the Nextflow configuration page.
+Spack advanced configuration settings are described in the :ref:`Spack <config-spack>` section on the Nextflow configuration page.
