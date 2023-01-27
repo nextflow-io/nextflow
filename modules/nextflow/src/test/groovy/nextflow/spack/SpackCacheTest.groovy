@@ -33,28 +33,15 @@ class SpackCacheTest extends Specification {
         def cache = new SpackCache()
 
         expect:
-        !cache.isYamlFilePath('foo=1.0')
+        !cache.isYamlFilePath('foo@1.0')
         cache.isYamlFilePath('env.yaml')
-    }
-
-    def 'should text file' () {
-
-        given:
-        def cache = new SpackCache()
-
-        expect:
-        !cache.isTextFilePath('foo=1.0')
-        !cache.isTextFilePath('env.yaml')
-        !cache.isTextFilePath('foo.txt\nbar.txt')
-        cache.isTextFilePath('env.txt')
-        cache.isTextFilePath('foo/bar/env.txt')
     }
 
 
     def 'should create spack env prefix path for a string env' () {
 
         given:
-        def ENV = 'bwa=1.7.2'
+        def ENV = 'bwa@1.7.2'
         def cache = Spy(SpackCache)
         def BASE = Paths.get('/spack/envs')
 
@@ -76,7 +63,7 @@ class SpackCacheTest extends Specification {
         def ENV = folder.resolve('foo.yaml')
         ENV.text = '''
             spack:
-              specs: [star=2.5.4a, bwa=0.7.15]
+              specs: [star@2.5.4a, bwa@0.7.15]
 
               view: true
               concretizer:
