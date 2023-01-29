@@ -55,7 +55,7 @@ class WaveRunCmd {
 
     void runContainer(List<String> args) {
         if( !args )
-            throw new AbortOperationException("Missing container image - usage: nextflow plugin exec nf-wave container-run <image>")
+            throw new AbortOperationException("Missing container image - usage: nextflow plugin nf-wave:run-container <image>")
         final image = args.pop()
         final target = resolveTargetImage(image)
         log.info "Resolved image: '$image' => '$target'"
@@ -98,7 +98,7 @@ class WaveRunCmd {
 
     void getContainer(List<String> args) {
         if( !args )
-            throw new AbortOperationException("Missing container image - usage: nextflow plugin exec nf-wave get-container <image>")
+            throw new AbortOperationException("Missing container image - usage: nextflow plugin nf-wave:get-container <image>")
         final image = args.pop()
         final target = resolveTargetImage(image)
         log.info """\
