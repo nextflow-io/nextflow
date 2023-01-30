@@ -75,6 +75,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'publishDir',
             'scratch',
             'shell',
+            'spack',
             'storeDir',
             'tag',
             'time',

@@ -243,6 +243,30 @@ useMicromamba       uses the ``micromamba`` binary instead of ``conda`` to creat
 ================== ================
 
 
+.. _config-spack:
+
+Scope `spack`
+-------------
+
+The ``spack`` scope allows for the definition of the configuration settings that control the creation of a Spack environment
+by the Spack package manager.
+
+The following settings are available:
+
+================== ================
+Name                Description
+================== ================
+cacheDir            Defines the path where Spack environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.
+noChecksum          Disables checksum verification for source tarballs (unsafe). Useful when requesting a package version not yet encoded in the corresponding Spack recipe (default: ``false``).
+parallelBuilds      Sets number of parallel package builds (Spack default: coincides with number of available CPU cores).
+createTimeout       Defines the amount of time the Spack environment creation can last. The creation process is terminated when the timeout is exceeded (default: ``60 min``).
+================== ================
+
+Nextflow does not allow for fine-grained configuration of the Spack package manager.
+Instead, this has to be performed directly on the host Spack installation.
+For more information see the `Spack documentation <https://spack.readthedocs.io>`_.
+
+
 .. _config-dag:
 
 Scope `dag`
@@ -1008,7 +1032,7 @@ NXF_ASSETS                      Defines the directory where downloaded pipeline 
 NXF_CHARLIECLOUD_CACHEDIR       Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 NXF_CLASSPATH                   Allows the extension of the Java runtime classpath with extra JAR files or class folders.
 NXF_CLOUD_DRIVER                Defines the default cloud driver to be used if not specified in the config file or as command line option, either ``aws`` or ``google``.
-NXF_CONDA_CACHEDIR              Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all compute nodes.
+NXF_CONDA_CACHEDIR              Directory where Conda environments are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 NXF_CONDA_ENABLED               Enable the use of Conda recipes defined by using the :ref:process-conda directive. (default: ``false``, requires version ``22.08.0-edge`` or later).
 NXF_DEBUG                       Defines scripts debugging level: ``1`` dump task environment variables in the task log file; ``2`` enables command script execution tracing; ``3`` enables command wrapper execution tracing.
 NXF_DEFAULT_DSL                 Defines the DSL version that should be used in not specified otherwise in the script of config file (default: ``2``, requires version ``22.03.0-edge`` or later)
@@ -1028,6 +1052,8 @@ NXF_PID_FILE                    Name of the file where the process PID is saved 
 NXF_SCM_FILE                    Defines the path location of the SCM config file (requires version ``20.10.0`` or later).
 NXF_SINGULARITY_CACHEDIR        Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 NXF_SINGULARITY_LIBRARYDIR      Directory where remote Singularity images are retrieved. It should be a directory accessible to all compute nodes (requires: ``21.09.0-edge`` or later).
+NXF_SPACK_CACHEDIR              Directory where Spack environments are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
+NXF_SPACK_ENABLED               Enable the use of Spack recipes defined by using the :ref:process-spack directive. (default: ``false``, requires version ``23.02.0-edge`` or later).
 NXF_TEMP                        Directory where temporary files are stored
 NXF_VER                         Defines what version of Nextflow to use.
 NXF_WORK                        Directory where working files are stored (usually your *scratch* directory)

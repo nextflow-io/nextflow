@@ -63,6 +63,7 @@ import nextflow.script.ScriptFile
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
+import nextflow.spack.SpackConfig
 import nextflow.trace.AnsiLogObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
@@ -1151,6 +1152,12 @@ class Session implements ISession {
     CondaConfig getCondaConfig() {
         final cfg = config.conda as Map ?: Collections.emptyMap()
         return new CondaConfig(cfg, getSystemEnv())
+    }
+
+    @Memoized
+    SpackConfig getSpackConfig() {
+        final cfg = config.spack as Map ?: Collections.emptyMap()
+        return new SpackConfig(cfg, getSystemEnv())
     }
 
     /**

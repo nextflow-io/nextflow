@@ -233,6 +233,7 @@ class BashWrapperBuilder {
         binding.module_load = getModuleLoadSnippet()
         binding.before_script = getBeforeScriptSnippet()
         binding.conda_activate = getCondaActivateSnippet()
+        binding.spack_activate = getSpackActivateSnippet()
 
         /*
          * add the task environment
@@ -380,6 +381,15 @@ class BashWrapperBuilder {
         def result = "# conda environment\n"
         result += 'source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')'
         result += "/bin/activate ${Escape.path(condaEnv)}\n"
+        return result
+    }
+
+    private String getSpackActivateSnippet() {
+        if( !spackEnv )
+            return null
+        def result = "# spack environment\n"
+        result += 'spack env activate -d '
+        result += "${Escape.path(spackEnv)}\n"
         return result
     }
 

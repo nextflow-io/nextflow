@@ -2093,6 +2093,11 @@ class TaskProcessor {
             keys.add(conda)
         }
 
+        final spack = task.getSpackEnv()
+        if( spack ) {
+            keys.add(spack)
+        }
+
         if( session.stubRun ) {
             keys.add('stub-run')
         }

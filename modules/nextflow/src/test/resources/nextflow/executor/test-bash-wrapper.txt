@@ -120,6 +120,8 @@ nxf_main() {
     echo Before
     # conda environment
     source $(conda info --json | awk '/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }')/bin/activate /conda/env/path
+    # spack environment
+    spack env activate -d /spack/env/path
     set -u
     [[ $NXF_SCRATCH ]] && cd $NXF_SCRATCH
     nxf_stage

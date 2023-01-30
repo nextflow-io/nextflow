@@ -16,7 +16,7 @@ Quick overview
 Nextflow is a bioinformatics workflow manager that enables the development of portable and reproducible workflows.
 It supports deploying workflows on a variety of execution platforms including local, HPC schedulers, AWS Batch,
 Google Cloud Life Sciences, and Kubernetes. Additionally, it provides support for manage your workflow dependencies
-through built-in support for Conda, Docker, Podmand, Singularity, and Modules.
+through built-in support for Conda, Spack, Docker, Podman, Singularity, Modules, and more.
 
 ## Contents
 - [Rationale](#rationale)
@@ -24,6 +24,7 @@ through built-in support for Conda, Docker, Podmand, Singularity, and Modules.
 - [Documentation](#documentation)
 - [Tool Management](#tool-management)
   - [Conda environments](#conda-environments)
+  - [Spack environments](#spack-environments)
   - [Docker, Podman and Singularity](#containers)
   - [Environment Modules](#environment-modules)
 - [HPC Schedulers](#hpc-schedulers)
@@ -163,6 +164,12 @@ Conda environments
 ------------------
 
 [Conda environments](https://www.nextflow.io/docs/latest/conda.html) provide another option for managing software packages in your workflow. 
+
+
+Spack environments
+------------------
+
+Spack environments provide an option to build software packages from source using Spack, a popular package manager within the HPC community.
 
 
 Environment Modules
