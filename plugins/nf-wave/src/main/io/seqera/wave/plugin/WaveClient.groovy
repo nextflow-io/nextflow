@@ -140,6 +140,7 @@ class WaveClient {
                 containerConfig: containerConfig,
                 containerFile: assets.dockerFileEncoded(),
                 condaFile: assets.condaFileEncoded(),
+                spackFile: assets.spackFileEncoded(),
                 buildRepository: config().buildRepository(),
                 cacheRepository: config.cacheRepository(),
                 timestamp: OffsetDateTime.now().toString(),
@@ -269,13 +270,22 @@ class WaveClient {
 
     protected void checkConflicts(Map<String,String> attrs, String name) {
         if( attrs.dockerfile && attrs.conda ) {
-            throw new IllegalArgumentException("Process '${name}' declares both a 'conda' directive and a module bundle dockerfile that conflicts each other")
+            throw new IllegalArgumentException("Process '${name}' declares both a 'conda' directive and a module bundle dockerfile that conflict each other")
         }
         if( attrs.container && attrs.dockerfile ) {
-            throw new IllegalArgumentException("Process '${name}' declares both a 'container' directive and a module bundle dockerfile that conflicts each other")
+            throw new IllegalArgumentException("Process '${name}' declares both a 'container' directive and a module bundle dockerfile that conflict each other")
         }
         if( attrs.container && attrs.conda ) {
-            throw new IllegalArgumentException("Process '${name}' declares both 'container' and 'conda' directives that conflicts each other")
+            throw new IllegalArgumentException("Process '${name}' declares both 'container' and 'conda' directives that conflict each other")
+        }
+        if( attrs.dockerfile && attrs.spack ) {
+            throw new IllegalArgumentException("Process '${name}' declares both a 'spack' directive and a module bundle dockerfile that conflict each other")
+        }
+        if( attrs.container && attrs.spack ) {
+            throw new IllegalArgumentException("Process '${name}' declares both 'container' and 'spack' directives that conflict each other")
+        }
+        if( attrs.spack && attrs.conda ) {
+            throw new IllegalArgumentException("Process '${name}' declares both 'spack' and 'conda' directives that conflict each other")
         }
     }
 
@@ -297,6 +307,7 @@ class WaveClient {
         def attrs = new HashMap<String,String>()
         attrs.container = containerImage
         attrs.conda = task.config.conda as String
+        attrs.spack = task.config.spack as String
         if( bundle!=null && bundle.dockerfile ) {
             attrs.dockerfile = bundle.dockerfile.text
         }
@@ -336,6 +347,25 @@ class WaveClient {
         }
 
         /*
+         * If 'spack' directive is specified use it to create a Dockefile
+         * to assemble the target container
+         */
+        Path spackFile = null
+        if( attrs.spack ) {
+            if( dockerScript )
+                throw new IllegalArgumentException("Unexpected spack and dockerfile conflict")
+
+            // map the recipe to a dockerfile
+            if( isSpackFile(attrs.spack) ) {
+                spackFile = Path.of(attrs.spack)
+                dockerScript = spackFileToDockerFile()
+            }
+            else {
+                dockerScript = spackRecipeToDockerFile(attrs.spack)
+            }
+        }
+
+        /*
          * The process should declare at least a container image name via 'container' directive
          * or a dockerfile file to build, otherwise there's no job to be done by wave
          */
@@ -365,6 +395,7 @@ class WaveClient {
                     containerConfig,
                     dockerScript,
                     condaFile,
+                    spackFile,
                     projectRes)
     }
 
@@ -403,11 +434,25 @@ class WaveClient {
         return addCommands(result)
     }
 
+    // MARCO MARCO WORK IN PROGRESS
+    protected String spackFileToDockerFile() {
+        def result = """\
+        FROM ${config.spackOpts().mambaImage}
+        COPY --chown=\$SPACK_USER:\$SPACK_USER spack.yaml /tmp/spack.yaml
+        RUN micromamba install -y -n base -f /tmp/spack.yaml && \\
+            micromamba clean -a -y
+        """.stripIndent()
+
+        return addCommands(result)
+    }
+
     protected String addCommands(String result) {
-        if( !config.condaOpts().commands )
-            return result
-        for( String cmd : config.condaOpts().commands ) {
-            result += cmd + "\n"
+        if( config.condaOpts().commands )
+            for( String cmd : config.condaOpts().commands ) {
+                result += cmd + "\n"
+        if( config.spackOpts().commands )
+            for( String cmd : config.spackOpts().commands ) {
+                result += cmd + "\n"
         }
         return result
     }
@@ -425,10 +470,29 @@ class WaveClient {
         return addCommands(result)
     }
 
+    // MARCO MARCO WORK IN PROGRESS
+    protected String spackRecipeToDockerFile(String recipe) {
+        def result = """\
+        FROM ${config.spackOpts().mambaImage}
+        RUN \\
+           micromamba install -y -n base $channelsOpts \\
+           $recipe \\
+           && micromamba clean -a -y
+        """.stripIndent()
+
+        return addCommands(result)
+    }
+
     protected boolean isCondaFile(String value) {
         if( value.contains('\n') )
             return false
         return value.endsWith('.yaml') || value.endsWith('.yml') || value.endsWith('.txt')
+    }
+
+    protected boolean isSpackFile(String value) {
+        if( value.contains('\n') )
+            return false
+        return value.endsWith('.yaml')
     }
 
     protected boolean refreshJwtToken0(String refresh) {
