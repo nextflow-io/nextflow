@@ -391,11 +391,26 @@ class SessionTest extends Specification {
     }
 
     @Unroll
-    def 'should get config config' () {
+    def 'should get config for conda environments' () {
         given:
         def session =  Spy(new Session([conda: CONFIG]))
         expect:
         session.condaConfig.isEnabled() == EXPECTED
+        
+        where:
+        EXPECTED    | CONFIG            | ENV
+        false       | [:]               | [:]
+        false       | [enabled: false]  | [:]
+        true        | [enabled: true]   | [:]
+
+    }
+
+    @Unroll
+    def 'should get config for spack environments' () {
+        given:
+        def session =  Spy(new Session([spack: CONFIG]))
+        expect:
+        session.spackConfig.isEnabled() == EXPECTED
         
         where:
         EXPECTED    | CONFIG            | ENV

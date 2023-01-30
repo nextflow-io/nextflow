@@ -1429,8 +1429,33 @@ Multiple packages can be specified separating them with a blank space eg. ``bwa=
 The name of the channel from where a specific package needs to be downloaded can be specified using the usual
 Conda notation i.e. prefixing the package with the channel name as shown here ``bioconda::bwa=0.7.15``.
 
-The ``conda`` directory also allows the specification of a Conda environment file
+The ``conda`` directive also allows the specification of a Conda environment file
 path or the path of an existing environment directory. See the :ref:`conda-page` page for further details.
+
+
+.. _process-spack:
+
+spack
+-----
+
+The ``spack`` directive allows for the definition of the process dependencies using the `Spack <https://spack.io>`_
+package manager.
+
+Nextflow automatically sets up an environment for the given package names listed by in the ``spack`` directive.
+For example::
+
+  process foo {
+    spack 'bwa@0.7.15'
+
+    '''
+    your_command --here
+    '''
+  }
+
+Multiple packages can be specified separating them with a blank space eg. ``bwa@0.7.15 fastqc@0.11.5``.
+
+The ``spack`` directive also allows the specification of a Spack environment file
+path or the path of an existing environment directory. See the :ref:`spack-page` page for further details.
 
 
 .. _process-container:
@@ -2285,6 +2310,8 @@ Value   Description
 copy    Output files are copied from the scratch directory to the work directory.
 move    Output files are moved from the scratch directory to the work directory.
 rsync   Output files are copied from the scratch directory to the work directory by using the ``rsync`` utility.
+rclone  Output files are copied from the scratch directory to the work directory by using the `rclone <https://rclone.org>`_ utility (note: it must be available in your cluster computing nodes, requires version ``23.01.0-edge`` or later).
+fcp     Output files are copied from the scratch directory to the work directory by using the `fcp <https://github.com/Svetlitski/fcp>`_ utility (note: it must be available in your cluster computing nodes, requires version ``23.02.0-edge`` or later).
 ======= ==================
 
 See also: `scratch`_.

@@ -70,6 +70,14 @@ nxf_fs_rsync() {
   rsync -rRl $1 $2
 }
 
+nxf_fs_rclone() {
+  rclone copyto $1 $2/$1
+}
+
+nxf_fs_fcp() {
+  fcp $1 $2/$1
+}
+
 on_exit() {
     exit_status=${nxf_main_ret:=$?}
     printf $exit_status > {{folder}}/.exitcode
@@ -112,6 +120,8 @@ nxf_main() {
     echo Before
     # conda environment
     source $(conda info --json | awk '/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }')/bin/activate /conda/env/path
+    # spack environment
+    spack env activate -d /spack/env/path
     set -u
     [[ $NXF_SCRATCH ]] && cd $NXF_SCRATCH
     nxf_stage
