@@ -54,7 +54,7 @@ jobs:
         run: make assemble
 
       - name: Test
-        run: cat $HOME/.nextflow/scm; #make test
+        run: make test
 
       - name: Publish tests report
         uses: actions/upload-artifact@v3
