@@ -471,7 +471,7 @@ class WaveClient {
     }
 
     // MARCO MARCO WORK IN PROGRESS
-    // MARCO DISALLOW THIS, OR USE COMMA SEP SYNTAX FOR INPUT PARAM
+    // MARCO MAKE IT SO THAT YOU CAN ADD COMMAS WHERE APPROPRIATE
     protected String spackRecipeToDockerFile(String recipe) {
         def result = """\
         FROM ${config.spackOpts().mambaImage}
