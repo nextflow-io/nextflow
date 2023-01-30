@@ -24,9 +24,16 @@ package io.seqera.wave.plugin.config
  */
 class SpackOpts {
 
+    final public String DEFAULT_SPACK_BUILDER_IMAGE = 'spack/ubuntu-jammy:v0.19.0'
+    final public String DEFAULT_SPACK_RUNNER_IMAGE = 'ubuntu:22.04'
+
+    final String spackBuilderImage
+    final String spackRunnerImage
     final List<String> commands
 
     SpackOpts(Map opts) {
+        this.spackBuilderImage = opts.spackBuilderImage ?: DEFAULT_SPACK_BUILDER_IMAGE
+        this.spackRunnerImage = opts.spackRunnerImage ?: DEFAULT_SPACK_RUNNER_IMAGE
         this.commands = opts.commands as List<String>
     }
 
