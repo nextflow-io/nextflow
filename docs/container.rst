@@ -11,6 +11,11 @@ platform that supports a container runtime. Furthermore, the same pipeline can b
 executed with any of the supported container runtimes, depending on which runtimes are available
 in the target compute environment.
 
+.. note::
+  When creating your container images to use with Nextflow, be aware that Nextflow runs a background
+  process for each job in the target environment. Make sure the following tools are available in your
+  image: ``bash``, ``ps``, ``awk``, ``date``, ``grep``, ``ps``, ``sed``, ``tail``, and ``tee``.
+
 .. _container-charliecloud:
 
 Charliecloud
