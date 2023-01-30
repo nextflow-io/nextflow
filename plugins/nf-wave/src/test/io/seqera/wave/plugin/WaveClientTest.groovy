@@ -36,6 +36,7 @@ import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.spack.SpackConfig
 import org.apache.commons.compress.archivers.ArchiveStreamFactory
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
@@ -165,6 +166,7 @@ class WaveClientTest extends Specification {
         !req.containerPlatform
         !req.containerFile
         !req.condaFile
+        !req.spackFile
         !req.containerConfig.layers
         and:
         req.fingerprint == 'bd2cb4b32df41f2d290ce2366609f2ad'
@@ -186,6 +188,7 @@ class WaveClientTest extends Specification {
         and:
         !req.containerFile
         !req.condaFile
+        !req.spackFile
         !req.containerConfig.layers
         and:
         req.fingerprint == 'd31044e6594126479585c0cdca15c15e'
@@ -204,6 +207,7 @@ class WaveClientTest extends Specification {
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == DOCKERFILE
         !req.condaFile
+        !req.spackFile
         !req.containerConfig.layers
     }
 
@@ -221,6 +225,7 @@ class WaveClientTest extends Specification {
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == DOCKERFILE
         !req.condaFile
+        !req.spackFile
         !req.containerConfig.layers
     }
 
@@ -240,6 +245,28 @@ class WaveClientTest extends Specification {
         !req.containerImage
         new String(req.containerFile.decodeBase64()) == DOCKERFILE
         new String(req.condaFile.decodeBase64()) == CONDAFILE.text
+        !req.containerConfig.layers
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should create request object with spack file' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def DOCKERFILE = 'from foo:latest'
+        def SPACKFILE = folder.resolve('spack.yaml'); SPACKFILE.text = 'some spack recipe here'
+        and:
+        def session = Mock(Session) { getConfig() >> [:]}
+        def wave = new WaveClient(session)
+
+        when:
+        def req = wave.makeRequest(new WaveAssets(null, null, null, null, DOCKERFILE, SPACKFILE))
+        then:
+        !req.containerImage
+        new String(req.containerFile.decodeBase64()) == DOCKERFILE
+        new String(req.spackFile.decodeBase64()) == SPACKFILE.text
         !req.containerConfig.layers
 
         cleanup:
@@ -306,7 +333,24 @@ class WaveClientTest extends Specification {
                 '''.stripIndent()
     }
 
-    def 'should create dockerfile content with custom config' () {
+    // MARCO MARCO IN PROGRESS - SEE WAVECLIENT.GROOVY
+    def 'should create dockerfile content from spack recipe' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        def RECIPE = 'bwa@0.7.15 salmon@1.1.1'
+        when:
+        def client = new WaveClient(session)
+        then:
+        client.spackRecipeToDockerFile(RECIPE) == '''\
+                FROM mambaorg/micromamba:1.2.0
+                RUN \\
+                   micromamba install -y -n base -c conda-forge -c defaults \\
+                   bwa=0.7.15 salmon=1.1.1 \\
+                   && micromamba clean -a -y
+                '''.stripIndent()
+    }
+
+    def 'should create dockerfile content with custom channels' () {
         given:
         def session = Mock(Session) {
             getConfig() >> [:]
@@ -325,7 +369,7 @@ class WaveClientTest extends Specification {
                 '''.stripIndent()
     }
 
-    def 'should create dockerfile content with custom channels' () {
+    def 'should create dockerfile content with custom conda config' () {
         given:
         def CONDA_OPTS = [mambaImage:'my-base:123', commands: ['USER my-user', 'RUN apt-get update -y && apt-get install -y procps']]
         def session = Mock(Session) { getConfig() >> [wave:[build:[conda:CONDA_OPTS]]]}
@@ -334,6 +378,26 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaRecipeToDockerFile(RECIPE) == '''\
+                FROM my-base:123
+                RUN \\
+                   micromamba install -y -n base -c conda-forge -c defaults \\
+                   bwa=0.7.15 salmon=1.1.1 \\
+                   && micromamba clean -a -y
+                USER my-user
+                RUN apt-get update -y && apt-get install -y procps
+                '''.stripIndent()
+    }
+
+    // MARCO MARCO IN PROGRESS - SEE WAVECLIENT.GROOVY
+    def 'should create dockerfile content with custom spack config' () {
+        given:
+        def SPACK_OPTS = [ spackBuilderImage:'spack/foo:1', spackRunnerImage:'ubuntu/foo', spackOsPackages:'libfoo', spackCFlags:'-foo', spackCXXFlags:'-foo2', spackFFlags:'-foo3', spackTarget:'nextcpu', commands:['USER hola'] ]
+        def session = Mock(Session) { getConfig() >> [wave:[build:[spack:SPACK_OPTS]]]}
+        def RECIPE = 'bwa@0.7.15 salmon@1.1.1'
+        when:
+        def client = new WaveClient(session)
+        then:
+        client.spackRecipeToDockerFile(RECIPE) == '''\
                 FROM my-base:123
                 RUN \\
                    micromamba install -y -n base -c conda-forge -c defaults \\
@@ -359,6 +423,22 @@ class WaveClientTest extends Specification {
 
     }
 
+    // MARCO MARCO IN PROGRESS - SEE WAVECLIENT.GROOVY
+    def 'should create dockerfile content from spack file' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        when:
+        def client = new WaveClient(session)
+        then:
+        client.spackFileToDockerFile()== '''\
+                FROM mambaorg/micromamba:1.2.0
+                COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
+                RUN micromamba install -y -n base -f /tmp/conda.yml && \\
+                    micromamba clean -a -y
+                '''.stripIndent()
+
+    }
+
     def 'should create asset with image' () {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
@@ -375,6 +455,7 @@ class WaveClientTest extends Specification {
         !assets.dockerFileContent
         !assets.containerConfig
         !assets.condaFile
+        !assets.spackFile
         !assets.projectResources
         !assets.containerPlatform
     }
@@ -396,6 +477,7 @@ class WaveClientTest extends Specification {
         !assets.dockerFileContent
         !assets.containerConfig
         !assets.condaFile
+        !assets.spackFile
         !assets.projectResources
     }
 
@@ -417,6 +499,7 @@ class WaveClientTest extends Specification {
         !assets.dockerFileContent
         !assets.containerConfig
         !assets.condaFile
+        !assets.spackFile
         !assets.projectResources
     }
 
@@ -442,6 +525,7 @@ class WaveClientTest extends Specification {
         and:
         !assets.dockerFileContent
         !assets.condaFile
+        !assets.spackFile
         !assets.projectResources
     }
 
@@ -467,6 +551,7 @@ class WaveClientTest extends Specification {
         !assets.containerImage
         !assets.containerConfig
         !assets.condaFile
+        !assets.spackFile
         !assets.projectResources
 
         cleanup:
@@ -496,6 +581,35 @@ class WaveClientTest extends Specification {
         !assets.containerImage
         !assets.containerConfig
         !assets.condaFile
+        !assets.spackFile
+        !assets.projectResources
+    }
+
+    // MARCO MARCO IN PROGRESS - SEE WAVECLIENT.GROOVY
+    def 'should create asset with spack recipe' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [spack:'salmon@1.2.3'] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null)
+        then:
+        assets.dockerFileContent == '''\
+                    FROM mambaorg/micromamba:1.2.0
+                    RUN \\
+                       micromamba install -y -n base -c conda-forge -c defaults \\
+                       salmon=1.2.3 \\
+                       && micromamba clean -a -y
+                    '''.stripIndent()
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.condaFile
+        !assets.spackFile
         !assets.projectResources
     }
 
@@ -524,6 +638,40 @@ class WaveClientTest extends Specification {
         !assets.moduleResources
         !assets.containerImage
         !assets.containerConfig
+        !assets.spackFile
+        !assets.projectResources
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    // MARCO MARCO IN PROGRESS - SEE WAVECLIENT.GROOVY
+    def 'should create asset with spack file' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def spackFile = folder.resolve('spack.yaml'); spackFile.text = 'the-spack-recipe-here'
+        and:
+        def session = Mock(Session) { getConfig() >> [:]}
+        def task = Mock(TaskRun) {getConfig() >> [spack:spackFile.toString()] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null)
+        then:
+        assets.dockerFileContent == '''\
+                    FROM mambaorg/micromamba:1.2.0
+                    COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
+                    RUN micromamba install -y -n base -f /tmp/conda.yml && \\
+                        micromamba clean -a -y
+                    '''.stripIndent()
+        and:
+        assets.spackFile == spackFile
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.condaFile
         !assets.projectResources
 
         cleanup:
@@ -583,6 +731,11 @@ class WaveClientTest extends Specification {
         result = client.resolveConflicts([dockerfile:'x',container:'z'], ['conda','dockerfile'])
         then:
         result == [dockerfile:'x']
+
+        when:
+        result = client.resolveConflicts([spack:'x',container:'z'], ['conda','spack'])
+        then:
+        result == [spack:'x']
     }
 
     def 'should check conflicts' () {
@@ -600,19 +753,37 @@ class WaveClientTest extends Specification {
         client.checkConflicts([conda:'this', container:'that'], 'foo')
         then:
         def e = thrown(IllegalArgumentException)
-        e.message == "Process 'foo' declares both 'container' and 'conda' directives that conflicts each other"
+        e.message == "Process 'foo' declares both 'container' and 'conda' directives that conflict each other"
 
         when:
         client.checkConflicts([conda:'this', dockerfile:'that'], 'foo')
         then:
         e = thrown(IllegalArgumentException)
-        e.message == "Process 'foo' declares both a 'conda' directive and a module bundle dockerfile that conflicts each other"
+        e.message == "Process 'foo' declares both a 'conda' directive and a module bundle dockerfile that conflict each other"
 
         when:
         client.checkConflicts([container:'this', dockerfile:'that'], 'foo')
         then:
         e = thrown(IllegalArgumentException)
-        e.message == "Process 'foo' declares both a 'container' directive and a module bundle dockerfile that conflicts each other"
+        e.message == "Process 'foo' declares both a 'container' directive and a module bundle dockerfile that conflict each other"
+
+        when:
+        client.checkConflicts([spack:'this', dockerfile:'that'], 'foo')
+        then:
+        e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both a 'spack' directive and a module bundle dockerfile that conflict each other"
+
+        when:
+        client.checkConflicts([spack:'this', container:'that'], 'foo')
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both 'container' and 'spack' directives that conflict each other"
+
+        when:
+        client.checkConflicts([conda:'this', spack:'that'], 'foo')
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == "Process 'foo' declares both 'spack' and 'conda' directives that conflict each other"
 
     }
 
