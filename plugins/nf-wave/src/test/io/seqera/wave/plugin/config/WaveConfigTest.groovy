@@ -106,6 +106,33 @@ class WaveConfigTest extends Specification {
         
     }
 
+    def 'should get spack config' () {
+        when:
+        def opts = new WaveConfig([:])
+        then:
+        opts.spackOpts().spackBuilderImage == 'spack/ubuntu-jammy:v0.19.0'
+        opts.spackOpts().spackRunnerImage == 'ubuntu:22.04'
+        opts.spackOpts().spackOsPackages == 'libgomp1'
+        opts.spackOpts().spackCFlags == '-O3'
+        opts.spackOpts().spackCXXFlags == '-O3'
+        opts.spackOpts().spackFFlags == '-O3'
+        opts.spackOpts().spackTarget == 'DEFAULT_SPACK_TARGET'
+        opts.spackOpts().commands == null
+
+        when:
+        opts = new WaveConfig([build:[spack:[ spackBuilderImage:'spack/foo:1', spackRunnerImage:'ubuntu/foo', spackOsPackages:'libfoo', spackCFlags:'-foo', spackCXXFlags:'-foo2', spackFFlags:'-foo3', spackTarget:'nextcpu', commands:['USER hola'] ]]])
+        then:
+        opts.spackOpts().spackBuilderImage == 'spack/foo:1'
+        opts.spackOpts().spackRunnerImage == 'ubuntu/foo'
+        opts.spackOpts().spackOsPackages == 'libfoo'
+        opts.spackOpts().spackCFlags == '-foo'
+        opts.spackOpts().spackCXXFlags == '-foo2'
+        opts.spackOpts().spackFFlags == '-foo3'
+        opts.spackOpts().spackTarget == 'nextcpu'
+        opts.spackOpts().commands == ['USER hola']
+        
+    }
+
     def 'should get build and cache repos' () {
         when:
         def opts = new WaveConfig([:])
@@ -125,7 +152,7 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.strategy() == ['container','dockerfile','conda']
+        opts.strategy() == ['container','dockerfile','conda','spack']
 
         when:
         opts = new WaveConfig([strategy:STRATEGY])
@@ -134,12 +161,13 @@ class WaveConfigTest extends Specification {
 
         where:
         STRATEGY                | EXPECTED
-        null                    | ['container','dockerfile','conda']
+        null                    | ['container','dockerfile','conda','spack']
         'dockerfile'            | ['dockerfile']
         'conda,container'       | ['conda','container']
         'conda , container'     | ['conda','container']
         ['conda','container']   | ['conda','container']
         [' conda',' container'] | ['conda','container']
+        'spack'                 | ['spack']
     }
 
     def 'should fail to set strategy' () {
