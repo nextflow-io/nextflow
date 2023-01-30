@@ -26,14 +26,26 @@ class SpackOpts {
 
     final public String DEFAULT_SPACK_BUILDER_IMAGE = 'spack/ubuntu-jammy:v0.19.0'
     final public String DEFAULT_SPACK_RUNNER_IMAGE = 'ubuntu:22.04'
+    final public String DEFAULT_SPACK_OSPACKAGES = 'libgomp1'
+    final public String DEFAULT_SPACK_FLAGS = '-O3'
 
     final String spackBuilderImage
     final String spackRunnerImage
+    final String spackOsPackages
+    final String spackCFlags
+    final String spackCXXFlags
+    final String spackFFlags
+    final String spackTarget
     final List<String> commands
 
     SpackOpts(Map opts) {
         this.spackBuilderImage = opts.spackBuilderImage ?: DEFAULT_SPACK_BUILDER_IMAGE
         this.spackRunnerImage = opts.spackRunnerImage ?: DEFAULT_SPACK_RUNNER_IMAGE
+        this.spackOsPackages = opts.spackOsPackages ?: DEFAULT_SPACK_OSPACKAGES
+        this.spackCFlags = opts.spackCFlags ?: DEFAULT_SPACK_FLAGS
+        this.spackCXXFlags = opts.spackCXXFlags ?: DEFAULT_SPACK_FLAGS
+        this.spackFFlags = opts.spackFFlags ?: DEFAULT_SPACK_FLAGS
+        this.spackTarget = opts.spackTarget ?: 'DEFAULT_SPACK_TARGET'
         this.commands = opts.commands as List<String>
     }
 
