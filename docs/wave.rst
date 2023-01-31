@@ -158,7 +158,6 @@ wave.spack.spackCFlags                          C compiler flags used during the
 wave.spack.spackCXXFlags                        C++ compiler flags used during the build. Default: ``-O3`` for GCC compiler. Recommended: one of ``-O3`` (high optimisation) or ``-O2`` (moderate optimisation).
 wave.spack.spackFFlags                          Fortran compiler flags used during the build. Default: ``-O3`` for GCC compiler. Recommended: one of ``-O3`` (high optimisation) or ``-O2`` (moderate optimisation).
 wave.spack.spackTarget                          Target CPU architecture for which the compiler will optimise the build (default: architecture identified by Nextflow in the running machine)
-wave.spack.spackPlatform                        Target platform for the build, i.e. `linux`, `cray`, `darwin`, .. (default: platform identified by Nextflow in the running machine)
 wave.spack.commands                             One or more commands to be added to the Dockerfile used to build a Spack based image.
 wave.strategy                                   The strategy to be used when resolving ambiguous Wave container requirement (default: ``'container,dockerfile,conda,spack'``)
 ============================================== =================
