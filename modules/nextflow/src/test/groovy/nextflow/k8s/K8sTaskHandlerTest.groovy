@@ -954,11 +954,11 @@ class K8sTaskHandlerTest extends Specification {
         when:
         opts = handler.getPodOptions()
         then:
-        1 * k8sConfig.getPodOptions() >> new PodOptions([[env: 'NXF_FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
+        1 * k8sConfig.getPodOptions() >> new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
         and:
         1 * taskConfig.getPodOptions() >> new PodOptions([:])
         and: 
-        opts == new PodOptions([[env: 'NXF_FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
+        opts == new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
     }
 
     def 'should update startTimeMillis and completeTimeMillis with terminated state' () {
@@ -1029,7 +1029,7 @@ class K8sTaskHandlerTest extends Specification {
         handler.getTask() >> task
         handler.fusionEnabled() >> true
         handler.fusionLauncher() >> Mock(FusionScriptLauncher) {
-            fusionEnv() >> [NXF_FUSION_BUCKETS: 'this,that']
+            fusionEnv() >> [FUSION_BUCKETS: 'this,that']
         }
         and:
         task.getContainer() >> 'debian:latest'
@@ -1060,7 +1060,7 @@ class K8sTaskHandlerTest extends Specification {
                                      image:'debian:latest',
                                      args:['bash', '-o', 'pipefail', '-c', 'trap "{ ret=$?; cp .command.log null||true; exit $ret; }" EXIT; bash null 2>&1 | tee .command.log'],
                                      securityContext:[privileged:true],
-                                     env:[[name:'NXF_FUSION_BUCKETS', value:'this,that']]]
+                                     env:[[name:'FUSION_BUCKETS', value:'this,that']]]
                             ]
                     ]
         ]
