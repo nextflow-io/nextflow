@@ -842,6 +842,9 @@ the :ref:`k8s-page` section.
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-report              | report.html | Create processes execution html report.                                        |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
+| -with-spack               |             | Use the specified Spack environment package or                                 |
+|                           |             | file (must end with ``.yaml``)                                                 |
++---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-singularity         |             | Enable process execution in a Singularity container.                           |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-timeline            |timeline.html| Create processes execution timeline file.                                      |
@@ -859,6 +862,8 @@ the :ref:`k8s-page` section.
 | -without-docker           | false       | Disable process execution with Docker.                                         |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -without-podman           |             | Disable process execution in a Podman container.                               |
++---------------------------+-------------+--------------------------------------------------------------------------------+
+| -without-spack            | false       | Disable process execution with Spack.                                          |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -without-wave             |             | Disable the use of Wave containers service.                                    |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
@@ -1179,6 +1184,9 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 | -with-report              | report.html | Create processes execution html report.                                        |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-singularity         |             | Enable process execution in a Singularity container.                           |
++---------------------------+-------------+--------------------------------------------------------------------------------+
+| -with-spack               |             | Use the specified Spack environment package or                                 |
+|                           |             | file (must end with ``.yaml``)                                                 |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-timeline            |timeline.html| Create processes execution timeline file.                                      |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
