@@ -37,12 +37,10 @@ class SpackOpts {
     final String spackFFlags
     final String spackGenericTarget
     final String spackTarget
-    final String spackPlatform
     final List<String> commands
 
     // MARCO MARCO ADD SOME MOREFROM INTERNAL PROCESSING
     // spackTarget (Finalise - archspec)
-    // spackPlatform (Finalise - archspec)
     SpackOpts(Map opts) {
         this.spackBuilderImage = opts.spackBuilderImage ?: DEFAULT_SPACK_BUILDER_IMAGE
         this.spackRunnerImage = opts.spackRunnerImage ?: DEFAULT_SPACK_RUNNER_IMAGE
@@ -52,7 +50,6 @@ class SpackOpts {
         this.spackFFlags = opts.spackFFlags ?: DEFAULT_SPACK_FLAGS
         this.spackGenericTarget = opts.spackGenericTarget ?: 'x86_64' //'DEFAULT_SPACK_GENERIC_TARGET' // likely needed by Wave backend
         this.spackTarget = opts.spackTarget ?: 'x86_64' //'DEFAULT_SPACK_TARGET'
-        this.spackPlatform = opts.spackPlatform ?: 'linux' //'DEFAULT_SPACK_PLATFORM'
         this.commands = opts.commands as List<String>
     }
 
