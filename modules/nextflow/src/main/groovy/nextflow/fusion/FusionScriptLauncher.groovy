@@ -95,7 +95,7 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         if( env==null ) {
             final work = toContainerMount(remoteWorkDir).toString()
             final result = new LinkedHashMap(10)
-            result.NXF_FUSION_WORK = work
+            result.FUSION_WORK = work
             // foreign env
             final provider = new FusionEnvProvider()
             result.putAll(provider.getEnvironment(scheme))
