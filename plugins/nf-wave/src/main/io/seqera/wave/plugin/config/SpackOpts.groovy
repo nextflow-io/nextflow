@@ -36,8 +36,12 @@ class SpackOpts {
     final String spackCXXFlags
     final String spackFFlags
     final String spackTarget
+    final String spackPlatform
     final List<String> commands
 
+    // MARCO MARCO ADD SOME MOREFROM INTERNAL PROCESSING
+    // spackTarget (Finalise - archspec)
+    // spackPlatform (Finalise - archspec)
     SpackOpts(Map opts) {
         this.spackBuilderImage = opts.spackBuilderImage ?: DEFAULT_SPACK_BUILDER_IMAGE
         this.spackRunnerImage = opts.spackRunnerImage ?: DEFAULT_SPACK_RUNNER_IMAGE
@@ -45,7 +49,8 @@ class SpackOpts {
         this.spackCFlags = opts.spackCFlags ?: DEFAULT_SPACK_FLAGS
         this.spackCXXFlags = opts.spackCXXFlags ?: DEFAULT_SPACK_FLAGS
         this.spackFFlags = opts.spackFFlags ?: DEFAULT_SPACK_FLAGS
-        this.spackTarget = opts.spackTarget ?: 'DEFAULT_SPACK_TARGET'
+        this.spackTarget = opts.spackTarget ?: 'x86_64' //'DEFAULT_SPACK_TARGET'
+        this.spackPlatform = opts.spackPlatform ?: 'linux' //'DEFAULT_SPACK_PLATFORM'
         this.commands = opts.commands as List<String>
     }
 

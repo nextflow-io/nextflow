@@ -117,10 +117,11 @@ class WaveConfigTest extends Specification {
         opts.spackOpts().spackCXXFlags == '-O3'
         opts.spackOpts().spackFFlags == '-O3'
         opts.spackOpts().spackTarget == 'DEFAULT_SPACK_TARGET'
+        opts.spackOpts().spackPlatform == 'DEFAULT_SPACK_PLATFORM'
         opts.spackOpts().commands == null
 
         when:
-        opts = new WaveConfig([build:[spack:[ spackBuilderImage:'spack/foo:1', spackRunnerImage:'ubuntu/foo', spackOsPackages:'libfoo', spackCFlags:'-foo', spackCXXFlags:'-foo2', spackFFlags:'-foo3', spackTarget:'nextcpu', commands:['USER hola'] ]]])
+        opts = new WaveConfig([build:[spack:[ spackBuilderImage:'spack/foo:1', spackRunnerImage:'ubuntu/foo', spackOsPackages:'libfoo', spackCFlags:'-foo', spackCXXFlags:'-foo2', spackFFlags:'-foo3', spackTarget:'nextcpu',  spackPlatform:'nextunix', commands:['USER hola'] ]]])
         then:
         opts.spackOpts().spackBuilderImage == 'spack/foo:1'
         opts.spackOpts().spackRunnerImage == 'ubuntu/foo'
@@ -129,6 +130,7 @@ class WaveConfigTest extends Specification {
         opts.spackOpts().spackCXXFlags == '-foo2'
         opts.spackOpts().spackFFlags == '-foo3'
         opts.spackOpts().spackTarget == 'nextcpu'
+        opts.spackOpts().spackPlatform == 'nextunix'
         opts.spackOpts().commands == ['USER hola']
         
     }

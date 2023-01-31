@@ -391,7 +391,7 @@ class WaveClientTest extends Specification {
     // MARCO MARCO IN PROGRESS - SEE WAVECLIENT.GROOVY
     def 'should create dockerfile content with custom spack config' () {
         given:
-        def SPACK_OPTS = [ spackBuilderImage:'spack/foo:1', spackRunnerImage:'ubuntu/foo', spackOsPackages:'libfoo', spackCFlags:'-foo', spackCXXFlags:'-foo2', spackFFlags:'-foo3', spackTarget:'nextcpu', commands:['USER hola'] ]
+        def SPACK_OPTS = [ spackBuilderImage:'spack/foo:1', spackRunnerImage:'ubuntu/foo', spackOsPackages:'libfoo', spackCFlags:'-foo', spackCXXFlags:'-foo2', spackFFlags:'-foo3', spackTarget:'nextcpu',  spackPlatform:'nextunix', commands:['USER hola'] ]
         def session = Mock(Session) { getConfig() >> [wave:[build:[spack:SPACK_OPTS]]]}
         def RECIPE = 'bwa@0.7.15 salmon@1.1.1'
         when:
