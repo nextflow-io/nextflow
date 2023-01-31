@@ -299,7 +299,7 @@ class SpackCache {
     }
 
     @PackageScope
-    void runCommand( String cmd ) {
+    int runCommand( String cmd ) {
         log.trace """spack env create
                      command: $cmd
                      timeout: $createTimeout""".stripIndent()
