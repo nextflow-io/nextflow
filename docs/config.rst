@@ -26,6 +26,12 @@ first override the same ones that may appear in the second one, and so on.
 .. tip::
   If you want to ignore any default configuration files and use only the custom one, use ``-C <config file>``.
 
+.. note::
+  Pipeline parameters (i.e. the ``params`` scope) should be overwritten through CLI options (``--something value``)
+  or a params file (``-params-file params.yml``). If you supply parameters through a custom config file (``-c my_config``),
+  it will be applied to the pipeline script but not to previous config files, such as the project's ``nextflow.config`` file.
+  See the :ref:`CLI page <cli>`. for more information about how to supply params through CLI options or a params file.
+
 
 Config syntax
 -------------
