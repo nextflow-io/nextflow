@@ -35,6 +35,7 @@ class SpackOpts {
     final String spackCFlags
     final String spackCXXFlags
     final String spackFFlags
+    final String spackGenericTarget
     final String spackTarget
     final String spackPlatform
     final List<String> commands
@@ -49,6 +50,7 @@ class SpackOpts {
         this.spackCFlags = opts.spackCFlags ?: DEFAULT_SPACK_FLAGS
         this.spackCXXFlags = opts.spackCXXFlags ?: DEFAULT_SPACK_FLAGS
         this.spackFFlags = opts.spackFFlags ?: DEFAULT_SPACK_FLAGS
+        this.spackGenericTarget = opts.spackGenericTarget ?: 'x86_64' //'DEFAULT_SPACK_GENERIC_TARGET' // likely needed by Wave backend
         this.spackTarget = opts.spackTarget ?: 'x86_64' //'DEFAULT_SPACK_TARGET'
         this.spackPlatform = opts.spackPlatform ?: 'linux' //'DEFAULT_SPACK_PLATFORM'
         this.commands = opts.commands as List<String>
