@@ -96,7 +96,7 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     }
     
     @Override
-    protected String composeVolumePath(String path, boolean readOnly = false) {
+    protected String composeVolumePath(String path, boolean readOnlyInputs = false) {
         def mountCmd = "-b ${escape(path)}"
         if (readOnlyInputs)
             mountCmd = "-b ${getRoot(escape(path))}"
