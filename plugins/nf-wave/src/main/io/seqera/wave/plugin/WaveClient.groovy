@@ -505,7 +505,7 @@ class WaveClient {
         RUN cd /opt/spack-environment && spack env activate . && spack install --fail-fast && spack gc -y
 
         # Strip binaries
-        RUN find -L /opt/view/* -type f -exec readlink -f '{}' \; | \\
+        RUN find -L /opt/view/* -type f -exec readlink -f '{}' \\; | \\
             xargs file -i | \\
             grep 'charset=binary' | \\
             grep 'x-executable\|x-archive\|x-sharedlib' | \\
