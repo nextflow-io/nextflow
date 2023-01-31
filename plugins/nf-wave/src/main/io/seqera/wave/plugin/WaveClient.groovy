@@ -435,6 +435,9 @@ class WaveClient {
     }
 
     // MARCO MARCO WORK IN PROGRESS
+    // Dockerfile template adpated from the Spack package manager
+    // https://github.com/spack/spack/blob/develop/share/spack/templates/container/Dockerfile
+    // LICENSE APACHE 2.0
     protected String spackFileToDockerFile() {
         def result = """\
         FROM ${config.spackOpts().mambaImage}
@@ -471,17 +474,67 @@ class WaveClient {
     }
 
     // MARCO MARCO WORK IN PROGRESS
-    // MARCO MAKE IT SO THAT YOU CAN ADD COMMAS WHERE APPROPRIATE
+    // DEFINE recipeWithCommas
+    //
+    // Dockerfile template adpated from the Spack package manager
+    // https://github.com/spack/spack/blob/develop/share/spack/templates/container/Dockerfile
+    // LICENSE APACHE 2.0
     protected String spackRecipeToDockerFile(String recipe) {
         def result = """\
-        FROM ${config.spackOpts().mambaImage}
-        RUN \\
-           micromamba install -y -n base $channelsOpts \\
-           $recipe \\
-           && micromamba clean -a -y
+        # Builder image
+        FROM ${config.spackOpts().spackBuilderimage} as builder
+
+        RUN mkdir /opt/spack-environment \\
+        &&  (sed -e 's;compilers:;compilers::;' \\
+                 -e 's;^ *flags: *{};      flags:\n        cflags: ${config.spackOpts().spackCFlags}\n        cxxflags: ${config.spackOpts().spackCXXFlags}\n        fflags: ${config.spackOpts().spackFFlags};' \\
+                 /root/.spack/${config.spackOpts().spackPlatform}/compilers.yaml) > /opt/spack-environment/compilers.yaml \\
+        &&  (echo "spack:" \\
+        &&   echo "  include: /opt/spack-environment/compilers.yaml" \\
+        &&   echo "  packages:" \\
+        &&   echo "    all:" \\
+        &&   echo "      target: [${config.spackOpts().spackTarget}]" \\
+        &&   echo "  specs: [${config.spackOpts().recipeWithCommas}]" \\
+        &&   echo "  concretizer:" \\
+        &&   echo "    unify: true" \\
+        &&   echo "  config:" \\
+        &&   echo "    install_tree: /opt/software" \\
+        &&   echo "  view: /opt/view") > /opt/spack-environment/spack.yaml
+
+        # Install packages, clean afterwards
+        RUN cd /opt/spack-environment && spack env activate . && spack install --fail-fast && spack gc -y
+
+        # Strip binaries
+        RUN find -L /opt/view/* -type f -exec readlink -f '{}' \; | \\
+            xargs file -i | \\
+            grep 'charset=binary' | \\
+            grep 'x-executable\|x-archive\|x-sharedlib' | \\
+            awk -F: '{print $1}' | xargs strip -s
+
+        RUN cd /opt/spack-environment && \\
+            spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh
+
+        # Runner image
+        FROM ${config.spackOpts().spackRunnerimage}
+
+        COPY --from=builder /opt/spack-environment /opt/spack-environment
+        COPY --from=builder /opt/software /opt/software
+        COPY --from=builder /opt/._view /opt/._view
+        COPY --from=builder /opt/view /opt/view
+        COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
+
+        RUN apt-get -yqq update && apt-get -yqq upgrade \\
+         && apt-get -yqq install ${config.spackOpts().spackOsPackages} \\
+         && rm -rf /var/lib/apt/lists/*
         """.stripIndent()
 
-        return addCommands(result)
+        result = addCommands(result)
+
+        result += """\
+        ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "$*", "--" ]
+        CMD [ "/bin/bash" ]
+        """.stripIndent()
+
+        return result
     }
 
     protected boolean isCondaFile(String value) {
