@@ -453,6 +453,7 @@ class WaveClient {
         if( config.condaOpts().commands )
             for( String cmd : config.condaOpts().commands ) {
                 result += cmd + "\n"
+            }
         if( config.spackOpts().commands )
             for( String cmd : config.spackOpts().commands ) {
                 result += cmd + "\n"
