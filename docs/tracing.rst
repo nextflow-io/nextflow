@@ -127,7 +127,6 @@ were used. These plots are very helpful to check that task resources are used ef
 
 Learn more about how resource usage is computed in the :ref:`Metrics documentation <metrics-page>`.
 
-
 Tasks
 -----
 
@@ -135,6 +134,8 @@ The `Tasks` section lists all executed tasks, reporting for each of them the sta
 and many other metrics. You can see an example below:
 
 .. image:: images/report-tasks-min.png
+
+.. _trace-required-packages:
 
 .. note::
   Nextflow collects these metrics through a background process for each job in the target environment.
