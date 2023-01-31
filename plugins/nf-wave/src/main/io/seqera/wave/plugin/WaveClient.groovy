@@ -440,10 +440,7 @@ class WaveClient {
     // LICENSE APACHE 2.0
     protected String spackFileToDockerFile() {
         def result = """\
-        FROM ${config.spackOpts().mambaImage}
-        COPY --chown=\$SPACK_USER:\$SPACK_USER spack.yaml /tmp/spack.yaml
-        RUN micromamba install -y -n base -f /tmp/spack.yaml && \\
-            micromamba clean -a -y
+        FROM ${config.spackOpts().spackBuilderImage}
         """.stripIndent()
 
         return addCommands(result)
@@ -483,7 +480,7 @@ class WaveClient {
     protected String spackRecipeToDockerFile(String recipe) {
         def result = """\
         # Builder image
-        FROM ${config.spackOpts().spackBuilderimage} as builder
+        FROM ${config.spackOpts().spackBuilderImage} as builder
 
         RUN mkdir /opt/spack-environment \\
         &&  (sed -e 's;compilers:;compilers::;' \\
@@ -494,7 +491,7 @@ class WaveClient {
         &&   echo "  packages:" \\
         &&   echo "    all:" \\
         &&   echo "      target: [${config.spackOpts().spackTarget}]" \\
-        &&   echo "  specs: [${config.spackOpts().recipeWithCommas}]" \\
+        &&   echo "  specs: [${recipe}]" \\
         &&   echo "  concretizer:" \\
         &&   echo "    unify: true" \\
         &&   echo "  config:" \\
@@ -508,14 +505,14 @@ class WaveClient {
         RUN find -L /opt/view/* -type f -exec readlink -f '{}' \\; | \\
             xargs file -i | \\
             grep 'charset=binary' | \\
-            grep 'x-executable\|x-archive\|x-sharedlib' | \\
-            awk -F: '{print $1}' | xargs strip -s
+            grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
+            awk -F: '{print \$1}' | xargs strip -s
 
         RUN cd /opt/spack-environment && \\
             spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh
 
         # Runner image
-        FROM ${config.spackOpts().spackRunnerimage}
+        FROM ${config.spackOpts().spackRunnerImage}
 
         COPY --from=builder /opt/spack-environment /opt/spack-environment
         COPY --from=builder /opt/software /opt/software
@@ -531,7 +528,7 @@ class WaveClient {
         result = addCommands(result)
 
         result += """\
-        ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "$*", "--" ]
+        ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
         CMD [ "/bin/bash" ]
         """.stripIndent()
 
