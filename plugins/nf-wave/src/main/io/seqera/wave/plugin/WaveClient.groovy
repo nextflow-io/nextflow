@@ -484,7 +484,7 @@ class WaveClient {
 
         RUN mkdir /opt/spack-environment \\
         &&  (sed -e 's;compilers:;compilers::;' \\
-                 -e 's;^ *flags: *{};      flags:\\n        cflags: ${config.spackOpts().spackCFlags}\\n        cxxflags: ${config.spackOpts().spackCXXFlags}\\n        fflags: ${config.spackOpts().spackFFlags};' \\
+                 -e 's;^ *flags: *{};    flags:\\n      cflags: ${config.spackOpts().spackCFlags}\\n      cxxflags: ${config.spackOpts().spackCXXFlags}\\n      fflags: ${config.spackOpts().spackFFlags};' \\
                  /root/.spack/linux/compilers.yaml) > /opt/spack-environment/compilers.yaml \\
         &&  (echo "spack:" \\
         &&   echo "  include: [/opt/spack-environment/compilers.yaml]" \\
