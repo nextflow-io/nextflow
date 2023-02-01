@@ -26,7 +26,6 @@ import spock.lang.Unroll
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Patrick Hüther <patrick.huether@gmail.com>
- * @author Laurent Modolo <laurent.modolo@ens-lyon.fr>
  */
 class CharliecloudBuilderTest extends Specification {
 
@@ -83,16 +82,6 @@ class CharliecloudBuilderTest extends Specification {
 
         when:
         cmd = new CharliecloudBuilder('ubuntu').params(entry:'/bin/sh').build().getRunCommand('bwa --this --that file.fastq')
-        then:
-        cmd == 'ch-run --unset-env="*" -c "$PWD" -w --no-home --set-env -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
-
-        when:
-        cmd = new CharliecloudBuilder('ubuntu').params(readOnlyInputs:true).build().getRunCommand('bwa --this --that file.fastq')
-        then:
-        cmd == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
-
-        when:
-        cmd = new CharliecloudBuilder('ubuntu').params(readOnlyInputs:false).build().getRunCommand('bwa --this --that file.fastq')
         then:
         cmd == 'ch-run --unset-env="*" -c "$PWD" -w --no-home --set-env -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
     }
