@@ -117,7 +117,7 @@ class SpackCacheTest extends Specification {
         then:
         1 * cache.spackPrefixPath(ENV) >> PREFIX
         0 * cache.isYamlFilePath(ENV)
-        1 * cache.runCommand( "spack env activate $PREFIX ; spack install -y ; spack env deactivate" ) >> null
+        1 * cache.runCommand( "spack env activate $PREFIX ; spack install -y ; spack env deactivate" )
         result == PREFIX
 
         when:
