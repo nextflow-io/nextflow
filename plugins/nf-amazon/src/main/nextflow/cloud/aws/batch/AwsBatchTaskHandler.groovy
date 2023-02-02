@@ -607,7 +607,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( !name ) return null
         if( !ContainerNameValidator.isValidImageName(name) ) throw new IllegalArgumentException("Invalid container image name: $name")
 
-        def result = name.replaceAll(/[^a-zA-Z0-9\-_]+/,'-')
+        def result = stripTag(name.trim()).replaceAll(/[^a-zA-Z0-9\-_]+/,'-')
         // Batch job definition length cannot exceed 128 characters
         // take first 40 chars + add a unique MD5 hash (32 chars)
         if( result.length()>125 ) {
@@ -616,6 +616,17 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
 
         return "nf-" + result
+    }
+
+    protected String stripTag(String name) {
+        final p = name.lastIndexOf(':')
+        if( p==-1 )
+            return name
+        final suffix = p<name.length() ? name.substring(p) : null
+        if( !suffix || suffix.contains('/') )
+            return name
+        else
+            return name.substring(0,p)
     }
 
     protected List<String> classicSubmitCli() {

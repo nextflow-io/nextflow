@@ -385,8 +385,8 @@ class AwsBatchTaskHandlerTest extends Specification {
         expect:
         handler.normalizeJobDefinitionName(null) == null
         handler.normalizeJobDefinitionName('foo') == 'nf-foo'
-        handler.normalizeJobDefinitionName('foo:1') == 'nf-foo-1'
-        handler.normalizeJobDefinitionName('docker.io/foo/bar:1') == 'nf-docker-io-foo-bar-1'
+        handler.normalizeJobDefinitionName('foo:1') == 'nf-foo'
+        handler.normalizeJobDefinitionName('docker.io/foo/bar:1') == 'nf-docker-io-foo-bar'
         and:
         handler.normalizeJobDefinitionName('docker.io/some-container-very-long-name-123456789/123456789/123456789/123456789/123456789/123456789/123456789/123456789/123456789/123456789/name:123') == 'nf-docker-io-some-container-very-long-name--35e0fa487af0f525a8c14e7866449d8e'
 
@@ -396,6 +396,21 @@ class AwsBatchTaskHandlerTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
+    def 'should string tag' () {
+        given:
+        def handler = Spy(AwsBatchTaskHandler)
+
+        expect:
+        handler.stripTag(NAME) == EXPECTED
+
+        where:
+        NAME                | EXPECTED
+        'foo'               | 'foo'
+        'foo:1.0'           | 'foo'
+        'host:8080/foo'     | 'host:8080/foo'
+        'host:8080/foo:'    | 'host:8080/foo'
+        'host:8080/foo:2.0' | 'host:8080/foo'
+    }
 
     def 'should validate job validation method' () {
         given:
