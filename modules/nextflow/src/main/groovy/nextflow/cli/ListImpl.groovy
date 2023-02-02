@@ -1,5 +1,6 @@
 /*
  * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,20 +13,41 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cli
 
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.scm.AssetManager
+
 /**
- * Define the interface for plugin commands
+ * CLI `list` sub-command
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface PluginExecAware {
+@Slf4j
+@CompileStatic
+class ListImpl {
 
-    static final String CMD_SEP = ':'
+    interface Options {}
 
-    int exec(ILauncherOptions options, String pluginId, String cmd, List<String> args)
+    @Delegate
+    private Options options
+
+    ListImpl(Options options) {
+        this.options = options
+    }
+
+    void run() {
+
+        def all = AssetManager.list()
+        if( !all ) {
+            log.info '(none)'
+            return
+        }
+
+        all.each { println it }
+    }
 
 }

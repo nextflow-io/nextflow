@@ -15,31 +15,38 @@
  * limitations under the License.
  */
 
-package nextflow.util
+package nextflow.cli.v1
 
-
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.cli.v1.AbstractCmd
+import nextflow.cli.ViewImpl
+
 /**
- * This class is used to resolve at runtime some spurious dependencies
- * with optional modules
+ * CLI `view` sub-command (v1)
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@Deprecated
 @CompileStatic
-class SpuriousDeps {
+@Parameters(commandDescription = 'View project script file(s)')
+class ViewCmd extends AbstractCmd implements ViewImpl.Options {
 
-    static AbstractCmd cmdCloud() {
-        try {
-            final clazz = Class.forName('nextflow.cli.CmdCloud')
-            return (AbstractCmd)clazz.newInstance()
-        }
-        catch (ClassNotFoundException e) {
-            return null
-        }
+    static public final String NAME = 'view'
+
+    @Override
+    String getName() { NAME }
+
+    @Parameter(description = 'project name', required = true)
+    List<String> args = []
+
+    @Parameter(names = ['-l'], arity = 0, description = 'List repository content')
+    boolean all
+
+    @Parameter(names = ['-q'], arity = 0, description = 'Hide header line')
+    boolean quiet
+
+    @Override
+    void run() {
+        new ViewImpl(this).run()
     }
-
 }

@@ -13,33 +13,40 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
 
-package nextflow.util
+package nextflow.cli.v1
 
-
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.cli.v1.AbstractCmd
+import nextflow.cli.ILauncherOptions
+import nextflow.cli.PluginImpl
+
 /**
- * This class is used to resolve at runtime some spurious dependencies
- * with optional modules
- *
+ * CLI `plugin` sub-command (v1)
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@Deprecated
 @CompileStatic
-class SpuriousDeps {
+@Parameters(commandDescription = 'Manage plugins and execute custom plugin commands')
+class PluginCmd extends AbstractCmd implements PluginImpl.Options {
 
-    static AbstractCmd cmdCloud() {
-        try {
-            final clazz = Class.forName('nextflow.cli.CmdCloud')
-            return (AbstractCmd)clazz.newInstance()
-        }
-        catch (ClassNotFoundException e) {
-            return null
-        }
+    @Parameter(hidden = true)
+    List<String> args
+
+    @Override
+    ILauncherOptions getLauncherOptions() {
+        launcher.options
+    }
+
+    @Override
+    String getName() { 'plugin' }
+
+    @Override
+    void run() {
+        new PluginImpl(this).run()
     }
 
 }

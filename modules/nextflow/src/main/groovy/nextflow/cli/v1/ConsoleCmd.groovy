@@ -1,5 +1,6 @@
 /*
  * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,20 +13,32 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package nextflow.cli
+package nextflow.cli.v1
+
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
+import groovy.transform.CompileStatic
+import nextflow.cli.ConsoleImpl
 
 /**
- * Define the interface for plugin commands
+ * CLI `console` sub-command (v1)
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface PluginExecAware {
+@CompileStatic
+@Parameters(commandDescription = 'Launch Nextflow interactive console')
+class ConsoleCmd extends AbstractCmd implements ConsoleImpl.Options {
 
-    static final String CMD_SEP = ':'
+    @Parameter(description = 'Nextflow console arguments')
+    List<String> args
 
-    int exec(ILauncherOptions options, String pluginId, String cmd, List<String> args)
+    @Override
+    String getName() { 'console' }
 
+    @Override
+    void run() {
+        new ConsoleImpl(this).run()
+    }
 }

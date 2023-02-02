@@ -26,8 +26,8 @@ import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import com.google.common.hash.Hashing
 import groovy.util.logging.Slf4j
-import nextflow.cli.CmdKubeRun
-import nextflow.cli.CmdRun
+import nextflow.cli.KubeRunImpl
+import nextflow.cli.RunImpl
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
@@ -89,7 +89,7 @@ class K8sDriverLauncher {
     /**
      * Command run options
      */
-    private CmdKubeRun cmd
+    private KubeRunImpl cmd
 
     /**
      * Kubernetes client
@@ -259,11 +259,11 @@ class K8sDriverLauncher {
         // -- load local config if available
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
-                .setOptions(cmd.launcher.options)
+                .setLauncherOptions(cmd.launcher.options)
                 .setProfile(cmd.profile)
-                .setCmdRun(cmd)
+                .setRunOptions(cmd)
 
-        if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.runRemoteConfig ) {
+        if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.remoteConfig ) {
             // -- check and parse project remote config
             Plugins.init()
             final pipelineConfig = new AssetManager(pipelineName, cmd) .getConfigFile()
@@ -311,8 +311,8 @@ class K8sDriverLauncher {
 
         // -- use the volume claims specified in the command line
         //   to populate the pod config
-        for( int i=0; i<cmd.volMounts?.size(); i++ ){
-            def entry = cmd.volMounts.get(i)
+        for( int i=0; i<cmd.volumeMounts?.size(); i++ ){
+            def entry = cmd.volumeMounts.get(i)
             def parts = entry.tokenize(':')
             def name = parts[0]
             def path = parts[1]
@@ -335,7 +335,7 @@ class K8sDriverLauncher {
                     k8s.storageClaimName = name
                     k8s.storageMountPath = path
                 }
-                else if( !cmd.volMounts ) {
+                else if( !cmd.volumeMounts ) {
                     k8s.pod.add( [volumeClaim: name, mountPath: path] )
                 }
             }
@@ -373,9 +373,9 @@ class K8sDriverLauncher {
     }
 
 
-    private Field getField(CmdRun cmd, String name) {
+    private Field getField(RunImpl cmd, String name) {
         def clazz = cmd.class
-        while( clazz != CmdRun ) {
+        while( clazz != RunImpl ) {
             clazz = cmd.class.getSuperclass()
         }
         clazz.getDeclaredField(name)
@@ -479,8 +479,8 @@ class K8sDriverLauncher {
             result << "-params-file $paramsFile"
         }
 
-        if ( cmd.runRemoteConfig )
-            cmd.runRemoteConfig.forEach { result << "-config $it" }
+        if ( cmd.remoteConfig )
+            cmd.remoteConfig.forEach { result << "-config $it" }
 
         if ( cmd.remoteProfile )
             result << "-profile ${cmd.remoteProfile}"

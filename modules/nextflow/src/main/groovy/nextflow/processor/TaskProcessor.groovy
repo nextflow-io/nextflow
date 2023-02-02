@@ -483,7 +483,7 @@ class TaskProcessor {
 
         /**
          * The thread pool used by GPars. The thread pool to be used is set in the static
-         * initializer of {@link nextflow.cli.CmdRun} class. See also {@link nextflow.util.CustomPoolFactory}
+         * initializer of {@link nextflow.cli.RunImpl} class. See also {@link nextflow.util.CustomPoolFactory}
          */
         final PGroup group = Dataflow.retrieveCurrentDFPGroup()
 

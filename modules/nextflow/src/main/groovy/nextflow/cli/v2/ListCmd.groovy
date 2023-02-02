@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,20 +12,30 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package nextflow.cli
+package nextflow.cli.v2
+
+import groovy.transform.CompileStatic
+import nextflow.cli.ListImpl
+import picocli.CommandLine.Command
 
 /**
- * Define the interface for plugin commands
+ * CLI `list` sub-command (v2)
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
-interface PluginExecAware {
+@CompileStatic
+@Command(
+    name = 'list',
+    description = 'List all downloaded projects'
+)
+class ListCmd extends AbstractCmd implements ListImpl.Options {
 
-    static final String CMD_SEP = ':'
-
-    int exec(ILauncherOptions options, String pluginId, String cmd, List<String> args)
+    @Override
+    Integer call() {
+        new ListImpl(this).run()
+        return 0
+    }
 
 }

@@ -27,10 +27,10 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.NF
-import nextflow.cli.CliOptions
-import nextflow.cli.CmdConfig
-import nextflow.cli.CmdNode
-import nextflow.cli.CmdRun
+import nextflow.cli.ConfigImpl
+import nextflow.cli.ILauncherOptions
+import nextflow.cli.NodeImpl
+import nextflow.cli.RunImpl
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.secret.SecretHolder
@@ -53,11 +53,11 @@ class ConfigBuilder {
 
     static final public String DEFAULT_PROFILE = 'standard'
 
-    CliOptions options
+    ILauncherOptions launcherOptions
 
-    CmdRun cmdRun
+    RunImpl runOptions
 
-    CmdNode cmdNode
+    NodeImpl nodeOptions
 
     Path baseDir
 
@@ -102,14 +102,14 @@ class ConfigBuilder {
         return this
     }
 
-    ConfigBuilder setOptions( CliOptions options ) {
-        this.options = options
+    ConfigBuilder setLauncherOptions( ILauncherOptions launcherOptions ) {
+        this.launcherOptions = launcherOptions
         return this
     }
 
-    ConfigBuilder setCmdRun( CmdRun cmdRun ) {
-        this.cmdRun = cmdRun
-        setProfile(cmdRun.profile)
+    ConfigBuilder setRunOptions( RunImpl runOptions ) {
+        this.runOptions = runOptions
+        setProfile(runOptions.profile)
         return this
     }
 
@@ -128,12 +128,12 @@ class ConfigBuilder {
         return this
     }
 
-    ConfigBuilder setCmdNode( CmdNode node ) {
-        this.cmdNode = node
+    ConfigBuilder setNodeOptions( NodeImpl node ) {
+        this.nodeOptions = node
         return this
     }
 
-    ConfigBuilder setCmdConfig( CmdConfig cmdConfig ) {
+    ConfigBuilder setCmdConfig( ConfigImpl cmdConfig ) {
         showAllProfiles = cmdConfig.showAllProfiles
         setProfile(cmdConfig.profile)
         return this
@@ -237,8 +237,8 @@ class ConfigBuilder {
 
         def customConfigs = []
         if( userConfigFiles ) customConfigs.addAll(userConfigFiles)
-        if( options?.userConfig ) customConfigs.addAll(options.userConfig)
-        if( cmdRun?.runConfig ) customConfigs.addAll(cmdRun.runConfig)
+        if( launcherOptions?.userConfig ) customConfigs.addAll(launcherOptions.userConfig)
+        if( runOptions?.runConfig ) customConfigs.addAll(runOptions.runConfig)
         if( customConfigs ) {
             for( def item : customConfigs ) {
                 def configFile = item instanceof Path ? item : currentDir.resolve(item.toString())
@@ -264,8 +264,8 @@ class ConfigBuilder {
     @PackageScope
     ConfigObject buildGivenFiles(List<Path> files) {
 
-        final Map<String,String> vars = cmdRun?.env
-        final boolean exportSysEnv = cmdRun?.exportSysEnv
+        final Map<String,String> vars = runOptions?.env
+        final boolean exportSysEnv = runOptions?.exportSysEnv
 
         def items = []
         if( files ) for( Path file : files ) {
@@ -289,26 +289,26 @@ class ConfigBuilder {
         }
 
         // set the cluster options for the node command
-        if( cmdNode?.clusterOptions )  {
+        if( nodeOptions?.clusterOptions )  {
             def str = new StringBuilder()
-            cmdNode.clusterOptions.each { k, v ->
+            nodeOptions.clusterOptions.each { k, v ->
                 str << "cluster." << k << '=' << wrapValue(v) << '\n'
             }
             items << str
         }
 
         // -- add the executor obj from the command line args
-        if( cmdRun?.clusterOptions )  {
+        if( runOptions?.clusterOptions )  {
             def str = new StringBuilder()
-            cmdRun.clusterOptions.each { k, v ->
+            runOptions.clusterOptions.each { k, v ->
                 str << "cluster." << k << '=' << wrapValue(v) << '\n'
             }
             items << str
         }
 
-        if( cmdRun?.executorOptions )  {
+        if( runOptions?.executorOptions )  {
             def str = new StringBuilder()
-            cmdRun.executorOptions.each { k, v ->
+            runOptions.executorOptions.each { k, v ->
                 str << "executor." << k << '=' << wrapValue(v) << '\n'
             }
             items << str
@@ -343,14 +343,14 @@ class ConfigBuilder {
     protected ConfigObject buildConfig0( Map env, List configEntries )  {
         assert env != null
 
-        final ignoreIncludes = options ? options.ignoreConfigIncludes : false
+        final ignoreIncludes = launcherOptions ? launcherOptions.ignoreConfigIncludes : false
         final slurper = new ConfigParser()
                 .setRenderClosureAsString(showClosures)
                 .setIgnoreIncludes(ignoreIncludes)
         ConfigObject result = new ConfigObject()
 
-        if( cmdRun && (cmdRun.hasParams()) )
-            slurper.setParams(cmdRun.parsedParams(configVars()))
+        if( runOptions && (runOptions.hasParams()) )
+            slurper.setParams(runOptions.parsedParams(configVars()))
 
         // add the user specified environment to the session env
         env.sort().each { name, value -> result.env.put(name,value) }
@@ -529,227 +529,227 @@ class ConfigBuilder {
     }
 
     @PackageScope
-    void configRunOptions(ConfigObject config, Map env, CmdRun cmdRun) {
+    void configRunOptions(ConfigObject config, Map env, RunImpl runOptions) {
 
         // -- set config options
-        if( cmdRun.cacheable != null )
-            config.cacheable = cmdRun.cacheable
+        if( runOptions.cacheable != null )
+            config.cacheable = runOptions.cacheable
 
         // -- set the run name
-        if( cmdRun.runName )
-            config.runName = cmdRun.runName
+        if( runOptions.runName )
+            config.runName = runOptions.runName
 
-        if( cmdRun.stubRun )
-            config.stubRun = cmdRun.stubRun
+        if( runOptions.stubRun )
+            config.stubRun = runOptions.stubRun
 
         // -- sets the working directory
-        if( cmdRun.workDir )
-            config.workDir = cmdRun.workDir
+        if( runOptions.workDir )
+            config.workDir = runOptions.workDir
 
         else if( !config.workDir )
             config.workDir = env.get('NXF_WORK') ?: 'work'
 
-        if( cmdRun.bucketDir )
-            config.bucketDir = cmdRun.bucketDir
+        if( runOptions.bucketDir )
+            config.bucketDir = runOptions.bucketDir
 
         // -- sets the library path
-        if( cmdRun.libPath )
-            config.libDir = cmdRun.libPath
+        if( runOptions.libPath )
+            config.libDir = runOptions.libPath
 
         else if ( !config.isSet('libDir') && env.get('NXF_LIB') )
             config.libDir = env.get('NXF_LIB')
 
         // -- override 'process' parameters defined on the cmd line
-        cmdRun.process.each { name, value ->
+        runOptions.processOptions.each { name, value ->
             config.process[name] = parseValue(value)
         }
 
-        if( cmdRun.withoutConda && config.conda instanceof Map ) {
+        if( runOptions.withoutConda && config.conda instanceof Map ) {
             // disable conda execution
             log.debug "Disabling execution with Conda as requested by command-line option `-without-conda`"
             config.conda.enabled = false
         }
 
         // -- apply the conda environment
-        if( cmdRun.withConda ) {
-            if( cmdRun.withConda != '-' )
-                config.process.conda = cmdRun.withConda
+        if( runOptions.withConda ) {
+            if( runOptions.withConda != '-' )
+                config.process.conda = runOptions.withConda
             config.conda.enabled = true
         }
 
-        if( cmdRun.withoutSpack && config.spack instanceof Map ) {
+        if( runOptions.withoutSpack && config.spack instanceof Map ) {
             // disable spack execution
             log.debug "Disabling execution with Spack as requested by command-line option `-without-spack`"
             config.spack.enabled = false
         }
 
         // -- apply the spack environment
-        if( cmdRun.withSpack ) {
-            if( cmdRun.withSpack != '-' )
-                config.process.spack = cmdRun.withSpack
+        if( runOptions.withSpack ) {
+            if( runOptions.withSpack != '-' )
+                config.process.spack = runOptions.withSpack
             config.spack.enabled = true
         }
 
         // -- sets the resume option
-        if( cmdRun.resume )
-            config.resume = cmdRun.resume
+        if( runOptions.resume )
+            config.resume = runOptions.resume
 
         if( config.isSet('resume') )
             config.resume = normalizeResumeId(config.resume as String)
 
         // -- sets `dumpKeys` option
-        if( cmdRun.dumpHashes )
-            config.dumpHashes = cmdRun.dumpHashes
+        if( runOptions.dumpHashes )
+            config.dumpHashes = runOptions.dumpHashes
 
-        if( cmdRun.dumpChannels )
-            config.dumpChannels = cmdRun.dumpChannels.tokenize(',')
+        if( runOptions.dumpChannels )
+            config.dumpChannels = runOptions.dumpChannels.tokenize(',')
 
         // -- other configuration parameters
-        if( cmdRun.poolSize ) {
-            config.poolSize = cmdRun.poolSize
+        if( runOptions.poolSize ) {
+            config.poolSize = runOptions.poolSize
         }
-        if( cmdRun.queueSize ) {
-            config.executor.queueSize = cmdRun.queueSize
+        if( runOptions.queueSize ) {
+            config.executor.queueSize = runOptions.queueSize
         }
-        if( cmdRun.pollInterval ) {
-            config.executor.pollInterval = cmdRun.pollInterval
+        if( runOptions.pollInterval ) {
+            config.executor.pollInterval = runOptions.pollInterval
         }
 
         // -- sets trace file options
-        if( cmdRun.withTrace ) {
+        if( runOptions.withTrace ) {
             if( !(config.trace instanceof Map) )
                 config.trace = [:]
             config.trace.enabled = true
-            if( cmdRun.withTrace != '-' )
-                config.trace.file = cmdRun.withTrace
+            if( runOptions.withTrace != '-' )
+                config.trace.file = runOptions.withTrace
             else if( !config.trace.file )
                 config.trace.file = TraceFileObserver.DEF_FILE_NAME
         }
 
         // -- sets report report options
-        if( cmdRun.withReport ) {
+        if( runOptions.withReport ) {
             if( !(config.report instanceof Map) )
                 config.report = [:]
             config.report.enabled = true
-            if( cmdRun.withReport != '-' )
-                config.report.file = cmdRun.withReport
+            if( runOptions.withReport != '-' )
+                config.report.file = runOptions.withReport
             else if( !config.report.file )
                 config.report.file = ReportObserver.DEF_FILE_NAME
         }
 
         // -- sets timeline report options
-        if( cmdRun.withTimeline ) {
+        if( runOptions.withTimeline ) {
             if( !(config.timeline instanceof Map) )
                 config.timeline = [:]
             config.timeline.enabled = true
-            if( cmdRun.withTimeline != '-' )
-                config.timeline.file = cmdRun.withTimeline
+            if( runOptions.withTimeline != '-' )
+                config.timeline.file = runOptions.withTimeline
             else if( !config.timeline.file )
                 config.timeline.file = TimelineObserver.DEF_FILE_NAME
         }
 
         // -- sets DAG report options
-        if( cmdRun.withDag ) {
+        if( runOptions.withDag ) {
             if( !(config.dag instanceof Map) )
                 config.dag = [:]
             config.dag.enabled = true
-            if( cmdRun.withDag != '-' )
-                config.dag.file = cmdRun.withDag
+            if( runOptions.withDag != '-' )
+                config.dag.file = runOptions.withDag
             else if( !config.dag.file )
                 config.dag.file = GraphObserver.DEF_FILE_NAME
         }
 
-        if( cmdRun.withNotification ) {
+        if( runOptions.withNotification ) {
             if( !(config.notification instanceof Map) )
                 config.notification = [:]
-            if( cmdRun.withNotification in ['true','false']) {
-                config.notification.enabled = cmdRun.withNotification == 'true'
+            if( runOptions.withNotification in ['true','false']) {
+                config.notification.enabled = runOptions.withNotification == 'true'
             }
             else {
                 config.notification.enabled = true
-                config.notification.to = cmdRun.withNotification
+                config.notification.to = runOptions.withNotification
             }
         }
 
         // -- sets the messages options
-        if( cmdRun.withWebLog ) {
+        if( runOptions.withWebLog ) {
             if( !(config.weblog instanceof Map) )
                 config.weblog = [:]
             config.weblog.enabled = true
-            if( cmdRun.withWebLog != '-' )
-                config.weblog.url = cmdRun.withWebLog
+            if( runOptions.withWebLog != '-' )
+                config.weblog.url = runOptions.withWebLog
             else if( !config.weblog.url )
                 config.weblog.url = WebLogObserver.DEF_URL
         }
 
         // -- sets tower options
-        if( cmdRun.withTower ) {
+        if( runOptions.withTower ) {
             if( !(config.tower instanceof Map) )
                 config.tower = [:]
             config.tower.enabled = true
-            if( cmdRun.withTower != '-' )
-                config.tower.endpoint = cmdRun.withTower
+            if( runOptions.withTower != '-' )
+                config.tower.endpoint = runOptions.withTower
             else if( !config.tower.endpoint )
                 config.tower.endpoint = 'https://api.tower.nf'
         }
 
         // -- set wave options
-        if( cmdRun.withWave ) {
+        if( runOptions.withWave ) {
             if( !(config.wave instanceof Map) )
                 config.wave = [:]
             config.wave.enabled = true
-            if( cmdRun.withWave != '-' )
-                config.wave.endpoint = cmdRun.withWave
+            if( runOptions.withWave != '-' )
+                config.wave.endpoint = runOptions.withWave
             else if( !config.wave.endpoint )
                 config.wave.endpoint = 'https://wave.seqera.io'
         }
 
         // -- set fusion options
-        if( cmdRun.withFusion ) {
+        if( runOptions.withFusion ) {
             if( !(config.fusion instanceof Map) )
                 config.fusion = [:]
-            config.fusion.enabled = cmdRun.withFusion == 'true'
+            config.fusion.enabled = runOptions.withFusion == 'true'
         }
 
         // -- nextflow setting
-        if( cmdRun.dsl1 || cmdRun.dsl2 ) {
+        if( runOptions.dsl1 || runOptions.dsl2 ) {
             if( config.nextflow !instanceof Map )
                 config.nextflow = [:]
-            if( cmdRun.dsl1 )
+            if( runOptions.dsl1 )
                 config.nextflow.enable.dsl = 1
-            if( cmdRun.dsl2 )
+            if( runOptions.dsl2 )
                 config.nextflow.enable.dsl = 2
         }
 
         // -- add the command line parameters to the 'taskConfig' object
-        if( cmdRun.hasParams() )
-            config.params = mergeMaps( (Map)config.params, cmdRun.parsedParams(configVars()), NF.strictMode )
+        if( runOptions.hasParams() )
+            config.params = mergeMaps( (Map)config.params, runOptions.parsedParams(configVars()), NF.strictMode )
 
-        if( cmdRun.withoutDocker && config.docker instanceof Map ) {
+        if( runOptions.withoutDocker && config.docker instanceof Map ) {
             // disable docker execution
             log.debug "Disabling execution in Docker container as requested by command-line option `-without-docker`"
             config.docker.enabled = false
         }
 
-        if( cmdRun.withDocker ) {
-            configContainer(config, 'docker', cmdRun.withDocker)
+        if( runOptions.withDocker ) {
+            configContainer(config, 'docker', runOptions.withDocker)
         }
 
-        if( cmdRun.withPodman ) {
-            configContainer(config, 'podman', cmdRun.withPodman)
+        if( runOptions.withPodman ) {
+            configContainer(config, 'podman', runOptions.withPodman)
         }
 
-        if( cmdRun.withSingularity ) {
-            configContainer(config, 'singularity', cmdRun.withSingularity)
+        if( runOptions.withSingularity ) {
+            configContainer(config, 'singularity', runOptions.withSingularity)
         }
 
-        if( cmdRun.withCharliecloud ) {
-            configContainer(config, 'charliecloud', cmdRun.withCharliecloud)
+        if( runOptions.withCharliecloud ) {
+            configContainer(config, 'charliecloud', runOptions.withCharliecloud)
         }
     }
 
     private void configContainer(ConfigObject config, String engine, def cli) {
-        log.debug "Enabling execution in ${engine.capitalize()} container as requested by command-line option `-with-$engine ${cmdRun.withDocker}`"
+        log.debug "Enabling execution in ${engine.capitalize()} container as requested by command-line option `-with-$engine ${runOptions.withDocker}`"
 
         if( !config.containsKey(engine) )
             config.put(engine, [:])
@@ -796,11 +796,11 @@ class ConfigBuilder {
 
     ConfigObject buildConfigObject() {
         // -- configuration file(s)
-        def configFiles = validateConfigFiles(options?.config)
+        def configFiles = validateConfigFiles(launcherOptions?.config)
         def config = buildGivenFiles(configFiles)
 
-        if( cmdRun )
-            configRunOptions(config, System.getenv(), cmdRun)
+        if( runOptions )
+            configRunOptions(config, System.getenv(), runOptions)
 
         return config
     }
@@ -890,12 +890,12 @@ class ConfigBuilder {
         }
     }
 
-    static String resolveConfig(Path baseDir, CmdRun cmdRun) {
+    static String resolveConfig(Path baseDir, RunImpl runOptions) {
 
         final config = new ConfigBuilder()
                 .setShowClosures(true)
-                .setOptions(cmdRun.launcher.options)
-                .setCmdRun(cmdRun)
+                .setLauncherOptions(runOptions.launcherOptions)
+                .setRunOptions(runOptions)
                 .setBaseDir(baseDir)
                 .buildConfigObject()
 

@@ -15,31 +15,35 @@
  * limitations under the License.
  */
 
-package nextflow.util
+package nextflow.cli.v1
 
-
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.cli.v1.AbstractCmd
+import nextflow.cli.CloneImpl
+
 /**
- * This class is used to resolve at runtime some spurious dependencies
- * with optional modules
+ * CLI `clone` sub-command (v1)
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@Deprecated
 @CompileStatic
-class SpuriousDeps {
+@Parameters(commandDescription = 'Clone a project into a folder')
+class CloneCmd extends AbstractCmd implements CloneImpl.Options, HubOptions {
 
-    static AbstractCmd cmdCloud() {
-        try {
-            final clazz = Class.forName('nextflow.cli.CmdCloud')
-            return (AbstractCmd)clazz.newInstance()
-        }
-        catch (ClassNotFoundException e) {
-            return null
-        }
+    static public final String NAME = 'clone'
+
+    @Parameter(required = true, description = 'name of the project to clone')
+    List<String> args
+
+    @Parameter(names = ['-r'], description = 'Revision to clone - It can be a git branch, tag or revision number')
+    String revision
+
+    @Override
+    String getName() { NAME }
+
+    @Override
+    void run() {
+        new CloneImpl(this).run()
     }
-
 }

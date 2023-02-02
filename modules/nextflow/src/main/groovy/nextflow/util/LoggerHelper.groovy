@@ -53,8 +53,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
-import nextflow.cli.CliOptions
-import nextflow.cli.Launcher
+import nextflow.cli.ILauncherOptions
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessException
 import nextflow.exception.ScriptRuntimeException
@@ -89,7 +88,7 @@ class LoggerHelper {
 
     static private String logFileName
 
-    private CliOptions opts
+    private ILauncherOptions opts
 
     private boolean rolling = false
 
@@ -138,7 +137,7 @@ class LoggerHelper {
         return this
     }
 
-    LoggerHelper(CliOptions opts) {
+    LoggerHelper(ILauncherOptions opts) {
         this.opts = opts
         this.loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory()
     }
@@ -341,15 +340,7 @@ class LoggerHelper {
      * @param traceConf The list of packages for which use a Trace logging level
      */
 
-    static void configureLogger( Launcher launcher ) {
-        new LoggerHelper(launcher.options)
-                .setDaemon(launcher.isDaemon())
-                .setRolling(true)
-                .setSyslog(launcher.options.syslog)
-                .setup()
-    }
-
-    static void configureLogger( final CliOptions opts, boolean daemon = false ) {
+    static void configureLogger( final ILauncherOptions opts, boolean daemon = false ) {
         new LoggerHelper(opts)
                 .setDaemon(daemon)
                 .setRolling(true)

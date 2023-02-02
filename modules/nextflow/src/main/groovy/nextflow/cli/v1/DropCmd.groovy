@@ -15,31 +15,35 @@
  * limitations under the License.
  */
 
-package nextflow.util
+package nextflow.cli.v1
 
-
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.cli.v1.AbstractCmd
+import nextflow.cli.DropImpl
+
 /**
- * This class is used to resolve at runtime some spurious dependencies
- * with optional modules
+ * CLI `drop` sub-command (v1)
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@Deprecated
 @CompileStatic
-class SpuriousDeps {
+@Parameters(commandDescription = 'Delete the local copy of a project')
+class DropCmd extends AbstractCmd implements DropImpl.Options {
 
-    static AbstractCmd cmdCloud() {
-        try {
-            final clazz = Class.forName('nextflow.cli.CmdCloud')
-            return (AbstractCmd)clazz.newInstance()
-        }
-        catch (ClassNotFoundException e) {
-            return null
-        }
+    static public final String NAME = 'drop'
+
+    @Parameter(required = true, description = 'name of the project to drop')
+    List<String> args
+
+    @Parameter(names = ['-f'], description = 'Delete the repository without taking care of local changes')
+    boolean force
+
+    @Override
+    String getName() { NAME }
+
+    @Override
+    void run() {
+        new DropImpl(this).run()
     }
-
 }

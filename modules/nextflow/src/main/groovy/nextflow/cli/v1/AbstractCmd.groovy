@@ -1,5 +1,6 @@
 /*
  * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,20 +13,29 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
-package nextflow.cli
+package nextflow.cli.v1
+
+import com.beust.jcommander.Parameter
+import groovy.transform.CompileStatic
 
 /**
- * Define the interface for plugin commands
+ * Base class for CLI v1 commands
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface PluginExecAware {
+@CompileStatic
+abstract class AbstractCmd implements Runnable {
 
-    static final String CMD_SEP = ':'
+    private Launcher launcher
 
-    int exec(ILauncherOptions options, String pluginId, String cmd, List<String> args)
+    abstract String getName()
 
+    Launcher getLauncher() { launcher }
+
+    void setLauncher( Launcher value ) { this.launcher = value }
+
+    @Parameter(names = ['-h','-help'], arity = 0, description = 'Print the command usage', help = true)
+    boolean help
 }

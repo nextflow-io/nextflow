@@ -28,7 +28,7 @@ import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
-import nextflow.cli.HubOptions
+import nextflow.cli.IHubOptions
 import nextflow.config.ConfigParser
 import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
@@ -97,7 +97,7 @@ class AssetManager {
      *
      * @param pipeline The pipeline to be managed by this manager e.g. {@code nextflow-io/hello}
      */
-    AssetManager( String pipelineName, HubOptions cliOpts = null) {
+    AssetManager( String pipelineName, IHubOptions cliOpts = null) {
         assert pipelineName
         // read the default config file (if available)
         def config = ProviderConfig.getDefault()
@@ -116,11 +116,11 @@ class AssetManager {
      *
      * @param pipelineName A project name or a project repository Git URL
      * @param config A {@link Map} holding the configuration properties defined in the {@link ProviderConfig#DEFAULT_SCM_FILE} file
-     * @param cliOpts User credentials provided on the command line. See {@link HubOptions} trait
+     * @param cliOpts User credentials provided on the command line. See {@link IHubOptions}
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
-    AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null ) {
+    AssetManager build( String pipelineName, Map config = null, IHubOptions cliOpts = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
@@ -151,10 +151,10 @@ class AssetManager {
     /**
      * Sets the user credentials on the {@link RepositoryProvider} object
      *
-     * @param cliOpts The user credentials specified on the program command line. See {@code HubOptions}
+     * @param cliOpts The user credentials specified on the program command line. See {@code IHubOptions}
      */
     @PackageScope
-    void setupCredentials( HubOptions cliOpts ) {
+    void setupCredentials( IHubOptions cliOpts ) {
         if( cliOpts?.hubUser ) {
             cliOpts.hubProvider = hub
             final user = cliOpts.getHubUser()
@@ -213,11 +213,11 @@ class AssetManager {
      * Find out the "hub provider" (i.e. the platform on which the remote repository is stored
      * for example: github, bitbucket, etc) and verifies that it is a known provider.
      *
-     * @param cliOpts The user hub info provider as command line options. See {@link HubOptions}
+     * @param cliOpts The user hub info provider as command line options. See {@link IHubOptions}
      * @return The name of hub name e.g. {@code github}, {@code bitbucket}, etc.
      */
     @PackageScope
-    String checkHubProvider( HubOptions cliOpts ) {
+    String checkHubProvider( IHubOptions cliOpts ) {
 
         def result = hub
         if( !result )

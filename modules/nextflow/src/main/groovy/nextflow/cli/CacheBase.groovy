@@ -16,6 +16,7 @@
  */
 
 package nextflow.cli
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -28,7 +29,7 @@ import nextflow.util.HistoryFile
 import static nextflow.util.HistoryFile.Record
 
 /**
- * Common cache operations shared by {@link CmdLog} and {@link CmdClean}
+ * Common cache operations shared by {@link LogImpl} and {@link CleanImpl}
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

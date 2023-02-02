@@ -43,6 +43,7 @@ dependencies {
     api 'jline:jline:2.9'
     api 'org.pf4j:pf4j:3.4.1'
     api 'dev.failsafe:failsafe:3.1.0'
+    api 'info.picocli:picocli-groovy:4.7.1'
 
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
 
@@ -63,7 +64,7 @@ test {
 }
 
 application {
-    mainClass = 'nextflow.cli.Launcher'
+    mainClass = 'nextflow.cli.v2.Launcher'
 }
 
 run{

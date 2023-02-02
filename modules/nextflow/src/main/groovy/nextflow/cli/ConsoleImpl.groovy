@@ -15,31 +15,41 @@
  * limitations under the License.
  */
 
-package nextflow.util
-
+package nextflow.cli
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import nextflow.cli.v1.AbstractCmd
+import nextflow.plugin.Plugins
+import nextflow.ui.console.ConsoleExtension
+
 /**
- * This class is used to resolve at runtime some spurious dependencies
- * with optional modules
+ * CLI `console` sub-command
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
-@Deprecated
 @CompileStatic
-class SpuriousDeps {
+class ConsoleImpl {
 
-    static AbstractCmd cmdCloud() {
-        try {
-            final clazz = Class.forName('nextflow.cli.CmdCloud')
-            return (AbstractCmd)clazz.newInstance()
-        }
-        catch (ClassNotFoundException e) {
-            return null
-        }
+    interface Options {
+        List<String> getArgs()
     }
 
+    @Delegate
+    private Options options
+
+    ConsoleImpl(Options options) {
+        this.options = options
+    }
+
+    void run() {
+        Plugins.setup()
+        Plugins.start('nf-console')
+        final console = Plugins.getExtension(ConsoleExtension)
+        if( !console )
+            throw new IllegalStateException("Failed to find Nextflow Console extension")
+        // normalise the console args prepending the `console` command itself
+        def args1 = args ?: []
+        args1.add(0, 'console')
+        // go !
+        console.run(args1 as String[])
+    }
 }

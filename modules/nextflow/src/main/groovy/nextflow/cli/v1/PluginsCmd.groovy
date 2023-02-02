@@ -15,17 +15,27 @@
  *
  */
 
-package nextflow.cli
+package nextflow.cli.v1
+
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 /**
- * Define the interface for plugin commands
+ * Deprecated - see {@link PluginCmd} instead
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-interface PluginExecAware {
+@Slf4j
+@Deprecated
+@CompileStatic
+class PluginsCmd extends PluginCmd {
 
-    static final String CMD_SEP = ':'
+    @Override
+    String getName() { 'plugins' }
 
-    int exec(ILauncherOptions options, String pluginId, String cmd, List<String> args)
-
+    @Override
+    void run() {
+        log.info "Command 'plugins' has been deprecated - Use 'plugin' instead"
+        super.run()
+    }
 }
