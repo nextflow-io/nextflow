@@ -171,7 +171,8 @@ class CharliecloudCache {
             return localPath
         }
 
-        final file = new File("${localPath.parent.parent.parent}/.${localPath.name}.lock")
+        // final file = new File("${localPath.parent.parent.parent}/.${localPath.name}.lock")
+        final file = new File("${localPath.parent.parent.parent}/.ch-pulling.lock")
         final wait = "Another Nextflow instance is pulling the image $imageUrl with Charliecloud -- please wait until the download completes"
         final err =  "Unable to acquire exclusive lock after $pullTimeout on file: $file"
 

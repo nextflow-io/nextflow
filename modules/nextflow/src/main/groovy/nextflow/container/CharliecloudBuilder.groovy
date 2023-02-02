@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Patrick Hüther <patrick.huether@gmail.com>
+ * @author Laurent Modolo <laurent.modolo@ens-lyon.fr>
  */
 @CompileStatic
 @Slf4j
@@ -46,6 +47,9 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         if( params.containsKey('runOptions') )
             addRunOptions(params.runOptions.toString())
 
+        if( params.containsKey('readOnlyInputs') )
+            this.readOnlyInputs = params.readOnlyInputs?.toString() == 'true'
+
         return this
     }
 
@@ -58,7 +62,9 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     CharliecloudBuilder build(StringBuilder result) {
         assert image
 
-        result << 'ch-run --unset-env="*" -c "$PWD" -w --no-home --set-env '
+        result << 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env '
+        if (!readOnlyInputs)
+            result << '-w '
 
         appendEnv(result)
 
@@ -78,9 +84,23 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
         return this
     }
 
+    protected String getRoot(String path) {
+        def rootPath = path.tokenize("/")
+
+        if (rootPath.size() >= 1 && path[0] == '/')
+            rootPath = "/${rootPath[0]}"
+        else
+            throw new IllegalArgumentException("Not a valid working directory value (absolute path?): ${path}")
+
+        return rootPath
+    }
+    
     @Override
-    protected String composeVolumePath(String path, boolean readOnly = false) {
-        return "-b ${escape(path)}"
+    protected String composeVolumePath(String path, boolean readOnlyInputs = false) {
+        def mountCmd = "-b ${escape(path)}"
+        if (readOnlyInputs)
+            mountCmd = "-b ${getRoot(escape(path))}"
+        return mountCmd
     }
 
     @Override

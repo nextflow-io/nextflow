@@ -26,6 +26,7 @@ import spock.lang.Unroll
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Patrick Hüther <patrick.huether@gmail.com>
+ * @author Laurent Modolo <laurent.modolo@ens-lyon.fr>
  */
 class CharliecloudBuilderTest extends Specification {
 
@@ -38,52 +39,84 @@ class CharliecloudBuilderTest extends Specification {
         expect:
         new CharliecloudBuilder('busybox')
                 .build()
-                .runCommand == 'ch-run --unset-env="*" -c "$PWD" -w --no-home --set-env -b "$PWD" busybox --'
+                .runCommand == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -w -b "$PWD" busybox --'
 
         new CharliecloudBuilder('busybox')
                 .params(runOptions: '-j')
                 .build()
-                .runCommand == 'ch-run --unset-env="*" -c "$PWD" -w --no-home --set-env -b "$PWD" -j busybox --'
+                .runCommand == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -w -b "$PWD" -j busybox --'
         
         new CharliecloudBuilder('busybox')
                 .params(temp: '/foo')
                 .build()
-                .runCommand == 'ch-run --unset-env="*" -c "$PWD" -w --no-home --set-env -b /foo:/tmp -b "$PWD" busybox --'
+                .runCommand == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -w -b /foo:/tmp -b "$PWD" busybox --'
 
         new CharliecloudBuilder('busybox')
                 .addEnv('X=1')
                 .addEnv(ALPHA:'aaa', BETA: 'bbb')
                 .build()
-                .runCommand == 'ch-run --unset-env="*" -c "$PWD" -w --no-home --set-env --set-env=X=1 --set-env=ALPHA=aaa --set-env=BETA=bbb -b "$PWD" busybox --'
+                .runCommand == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -w --set-env=X=1 --set-env=ALPHA=aaa --set-env=BETA=bbb -b "$PWD" busybox --'
 
         new CharliecloudBuilder('ubuntu')
                 .addMount(path1)
                 .build()
-                .runCommand == 'ch-run --unset-env="*" -c "$PWD" -w --no-home --set-env -b /foo/data/file1 -b "$PWD" ubuntu --'
+                .runCommand == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -w -b /foo/data/file1 -b "$PWD" ubuntu --'
 
         new CharliecloudBuilder('ubuntu')
                 .addMount(path1)
                 .addMount(path2)
                 .build()
-                .runCommand == 'ch-run --unset-env="*" -c "$PWD" -w --no-home --set-env -b /foo/data/file1 -b /bar/data/file2 -b "$PWD" ubuntu --'
+                .runCommand == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -w -b /foo/data/file1 -b /bar/data/file2 -b "$PWD" ubuntu --'
     }
 
+    def db_file = Paths.get('/home/db')
     def 'should get run command' () {
 
         when:
         def cmd = new CharliecloudBuilder('ubuntu').build().getRunCommand()
         then:
-        cmd == 'ch-run --unset-env="*" -c "$PWD" -w --no-home --set-env -b "$PWD" ubuntu --'
+        cmd == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -w -b "$PWD" ubuntu --'
 
         when:
         cmd = new CharliecloudBuilder('ubuntu').build().getRunCommand('bwa --this --that file.fastq')
         then:
-        cmd == 'ch-run --unset-env="*" -c "$PWD" -w --no-home --set-env -b "$PWD" ubuntu -- bwa --this --that file.fastq'
+        cmd == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -w -b "$PWD" ubuntu -- bwa --this --that file.fastq'
 
         when:
         cmd = new CharliecloudBuilder('ubuntu').params(entry:'/bin/sh').build().getRunCommand('bwa --this --that file.fastq')
         then:
-        cmd == 'ch-run --unset-env="*" -c "$PWD" -w --no-home --set-env -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
+        cmd == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -w -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
+
+        when:
+        cmd = new CharliecloudBuilder('ubuntu').params(entry:'/bin/sh').params(readOnlyInputs: 'true').build().getRunCommand('bwa --this --that file.fastq')
+        then:
+        cmd == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
+
+        when:
+        cmd = new CharliecloudBuilder('ubuntu').params(entry:'/bin/sh').params(readOnlyInputs: 'false').build().getRunCommand('bwa --this --that file.fastq')
+        then:
+        cmd == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -w -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
+
+        when:
+        cmd = new CharliecloudBuilder('ubuntu')
+            .params(entry:'/bin/sh')
+            .addMount(db_file)
+            .addMount(db_file)
+            .params(readOnlyInputs: 'true')
+            .build().getRunCommand('bwa --this --that file.fastq')
+        then:
+        cmd == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -b /home -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
+
+        when:
+        cmd = new CharliecloudBuilder('ubuntu')
+            .params(entry:'/bin/sh')
+            .addMount(db_file)
+            .addMount(db_file)
+            .params(readOnlyInputs: 'false')
+            .build()
+            .getRunCommand('bwa --this --that file.fastq')
+        then:
+        cmd == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -w -b /home/db -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
     }
 
     @Unroll
