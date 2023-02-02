@@ -1,6 +1,6 @@
 NEXTFLOW
 
-Copyright 2020-2022, Seqera Labs
+Copyright 2020-2023, Seqera Labs
 Copyright 2013-2019, Centre for Genomic Regulation (CRG)
 
 
@@ -141,5 +141,5 @@ This software includes source code and libraries developed by:
     Copyright 2008, http://www.snakeyaml.org
     Licensed under Apache License, Version 2.0
 
-Nextflow is a registered trademark of Centre for Genomic Regulation, Spain (CRG).
+Nextflow is a registered trademark of Seqera Labs, Spain.
 See the trademark policy for details https://github.com/nextflow-io/trademark
