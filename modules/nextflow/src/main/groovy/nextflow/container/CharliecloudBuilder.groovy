@@ -85,12 +85,12 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
     }
 
     protected String getRoot(String path) {
-        def rootPath = path.split("/")
+        def rootPath = path.tokenize("/")
 
-        if (rootPath.size() >= 1)
-            rootPath = "/${rootPath[1]}"
+        if (rootPath.size() >= 1 && path[0] == '/')
+            rootPath = "/${rootPath[0]}"
         else
-            throw new IllegalArgumentException("Not a valid working directory value: ${path}")
+            throw new IllegalArgumentException("Not a valid working directory value (absolute path?): ${path}")
 
         return rootPath
     }
