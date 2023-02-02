@@ -69,6 +69,7 @@ class CharliecloudBuilderTest extends Specification {
                 .runCommand == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -w -b /foo/data/file1 -b /bar/data/file2 -b "$PWD" ubuntu --'
     }
 
+    def db_file = Paths.get('/home/db')
     def 'should get run command' () {
 
         when:
@@ -95,6 +96,27 @@ class CharliecloudBuilderTest extends Specification {
         cmd = new CharliecloudBuilder('ubuntu').params(entry:'/bin/sh').params(readOnlyInputs: 'false').build().getRunCommand('bwa --this --that file.fastq')
         then:
         cmd == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -w -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
+
+        when:
+        cmd = new CharliecloudBuilder('ubuntu')
+            .params(entry:'/bin/sh')
+            .addMount(db_file)
+            .addMount(db_file)
+            .params(readOnlyInputs: 'true')
+            .build().getRunCommand('bwa --this --that file.fastq')
+        then:
+        cmd == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -b /home -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
+
+        when:
+        cmd = new CharliecloudBuilder('ubuntu')
+            .params(entry:'/bin/sh')
+            .addMount(db_file)
+            .addMount(db_file)
+            .params(readOnlyInputs: 'false')
+            .build()
+            .getRunCommand('bwa --this --that file.fastq')
+        then:
+        cmd == 'ch-run --unset-env="*" -c "$PWD" --no-home --set-env -w -b /home/db -b "$PWD" ubuntu -- /bin/sh -c "bwa --this --that file.fastq"'
     }
 
     @Unroll
