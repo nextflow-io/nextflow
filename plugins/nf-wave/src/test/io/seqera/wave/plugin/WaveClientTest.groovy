@@ -756,9 +756,9 @@ class WaveClientTest extends Specification {
         
         where:
         CONFIG                                      | EXPECTED
-        [:]                                         | 'https://fusionfs.seqera.io/releases/v0.7-amd64.json'
-        [wave:[containerPlatform: 'arm64']]         | 'https://fusionfs.seqera.io/releases/v0.7-arm64.json'
-        [wave:[containerPlatform: 'linux/arm64']]   | 'https://fusionfs.seqera.io/releases/v0.7-arm64.json'
-        [wave:[containerPlatform: 'linux/arm64/v8']]    | 'https://fusionfs.seqera.io/releases/v0.7-arm64.json'
+        [:]                                         | 'https://fusionfs.seqera.io/releases/v0.7.1-amd64.json'
+        [wave:[containerPlatform: 'arm64']]         | 'https://fusionfs.seqera.io/releases/v0.7.1-arm64.json'
+        [wave:[containerPlatform: 'linux/arm64']]   | 'https://fusionfs.seqera.io/releases/v0.7.1-arm64.json'
+        [wave:[containerPlatform: 'linux/arm64/v8']]    | 'https://fusionfs.seqera.io/releases/v0.7.1-arm64.json'
     }
 }

@@ -59,7 +59,7 @@ class FusionScriptLauncherS3Test extends Specification {
 
         expect:
         fusion.fusionEnv() == [AWS_S3_ENDPOINT: 'http://foo.com',
-                               NXF_FUSION_WORK: '/fusion/s3/foo/work']
+                               FUSION_WORK: '/fusion/s3/foo/work']
 
         cleanup:
         SysEnv.pop()
@@ -79,7 +79,7 @@ class FusionScriptLauncherS3Test extends Specification {
         expect:
         fusion.fusionEnv() == [AWS_ACCESS_KEY_ID: 'xxx',
                                AWS_SECRET_ACCESS_KEY: 'zzz',
-                               NXF_FUSION_WORK: '/fusion/s3/foo/work']
+                               FUSION_WORK: '/fusion/s3/foo/work']
 
         cleanup:
         Global.config = null
@@ -102,7 +102,7 @@ class FusionScriptLauncherS3Test extends Specification {
         fusion.fusionEnv() == [AWS_ACCESS_KEY_ID: 'k1',
                                AWS_SECRET_ACCESS_KEY: 's1',
                                AWS_S3_ENDPOINT: 'http://minio.com',
-                               NXF_FUSION_WORK: '/fusion/s3/foo/work']
+                               FUSION_WORK: '/fusion/s3/foo/work']
 
         cleanup:
         Global.config = null
