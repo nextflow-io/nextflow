@@ -195,7 +195,7 @@ class ConfigBuilderTest extends Specification {
         file?.delete()
     }
 
-    def 'CLI params should override the ones defined in the config file (2)' () {
+    def 'CLI params should override the ones defined in the config file [2]' () {
         setup:
         def file = Files.createTempFile('test',null)
         file.text = '''
@@ -2047,7 +2047,7 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should access top params from profile (2)' () {
+    def 'should access top params from profile [2]' () {
         given:
         def folder = Files.createTempDirectory('test')
         def file1 = folder.resolve('file1.conf')

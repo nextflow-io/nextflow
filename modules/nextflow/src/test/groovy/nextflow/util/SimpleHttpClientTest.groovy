@@ -82,7 +82,7 @@ class SimpleHttpClientTest extends Specification{
         thrown(UnknownHostException)
     }
 
-    def 'check isJson() method'() {
+    def 'check isJson method'() {
 
         when:
         def httpClient = new SimpleHttpClient()
