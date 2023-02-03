@@ -189,7 +189,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             final exitStatus = process.waitFor()
 
             if( exitStatus ) {
-                throw new ProcessNonZeroExitStatusException("Failed to submit process to grid scheduler for execution", result, exitStatus, builder.command())
+                throw new ProcessNonZeroExitStatusException("Failed to submit process to grid scheduler for execution", result, exitStatus, launchCmd0(builder,pipeScript))
             }
 
             // -- return the process stdout
@@ -234,6 +234,15 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         return result
     }
 
+    protected List<String> launchCmd0(ProcessBuilder builder, String pipeScript) {
+        if( !pipeScript )
+            return builder.command()
+        final result = new ArrayList(builder.command())
+        result.add('<')
+        result.add(TaskRun.CMD_RUN)
+        return result
+    }
+    
     /*
      * {@inheritDocs}
      */

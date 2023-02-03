@@ -17,6 +17,7 @@
 package nextflow.cloud.google.batch.client
 
 import com.google.api.gax.core.CredentialsProvider
+import com.google.api.gax.rpc.FixedHeaderProvider
 import com.google.auth.Credentials
 import com.google.cloud.batch.v1.BatchServiceClient
 import com.google.cloud.batch.v1.BatchServiceSettings
@@ -64,7 +65,12 @@ class BatchClient {
         final provider = createCredentialsProvider(config)
         if( provider ) {
             log.debug "[GOOGLE BATCH] Creating service client with config credentials"
-            final settings = BatchServiceSettings.newBuilder().setCredentialsProvider(provider).build()
+            final userAgent = FixedHeaderProvider.create('user-agent', 'Nextflow')
+            final settings = BatchServiceSettings
+                            .newBuilder()
+                            .setHeaderProvider(userAgent)
+                            .setCredentialsProvider(provider)
+                            .build()
             return BatchServiceClient.create(settings)
         }
         else {

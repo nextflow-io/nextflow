@@ -40,7 +40,7 @@ class FusionHelper {
     static boolean isFusionEnabled(Session session, Map<String,String> sysEnv=SysEnv.get()) {
         def result = session.config.navigate('fusion.enabled')
         if( result == null )
-            result = sysEnv.get('NXF_FUSION_ENABLED')
+            result = sysEnv.get('FUSION_ENABLED')
         return result!=null ? result.toString()=='true' : false
     }
 

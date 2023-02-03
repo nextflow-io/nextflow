@@ -125,7 +125,20 @@ class GridTaskHandlerTest extends Specification {
         result == '''\
                 #!/bin/bash
                 #$ directive=one
-                docker run -i -e "NXF_FUSION_WORK=/fusion/http/foo.com/some/dir" ubuntu:latest bash -o pipefail -c 'trap "{ ret=$?; cp .command.log /fusion/http/foo.com/some/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/http/foo.com/some/dir/.command.run 2>&1 | tee .command.log'
+                docker run -i -e "NXF_FUSION_WORK=/fusion/http/foo.com/some/dir" ubuntu:latest /usr/bin/fusion bash /fusion/http/foo.com/some/dir/.command.run'
                 '''.stripIndent(true)
+    }
+
+    def 'should create launch command' () {
+        given:
+        def builder = new ProcessBuilder().command(CMD)
+        def exec = Spy(GridTaskHandler)
+        expect:
+        exec.launchCmd0(builder, PIPE) == EXPECTED
+
+        where:
+        CMD         | PIPE  | EXPECTED
+        ['qsub']    | null  | ['qsub']
+        ['qsub']    | 'xyz' | ['qsub', '<', '.command.run']
     }
 }

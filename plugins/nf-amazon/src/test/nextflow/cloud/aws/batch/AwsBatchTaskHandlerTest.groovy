@@ -370,12 +370,12 @@ class AwsBatchTaskHandlerTest extends Specification {
             getTask() >> Mock(TaskRun) {getWorkDir() >> S3PathFactory.parse('s3://my-bucket/work/dir') }
             fusionEnabled() >> true
             fusionLauncher() >> Mock(FusionScriptLauncher) {
-                fusionEnv() >> [NXF_FUSION_BUCKETS: 's3://FOO,s3://BAR']
+                fusionEnv() >> [FUSION_BUCKETS: 's3://FOO,s3://BAR']
             }
         }
 
         expect:
-        handler.getEnvironmentVars() == [kv('NXF_FUSION_BUCKETS','s3://FOO,s3://BAR')]
+        handler.getEnvironmentVars() == [kv('FUSION_BUCKETS','s3://FOO,s3://BAR')]
     }
 
     def 'should strip invalid chars for job definition name' () {
@@ -913,7 +913,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def result =  handler.getSubmitCommand()
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; cp .command.log /fusion/s3/my-bucket/work/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/s3/my-bucket/work/dir/.command.run 2>&1 | tee .command.log'
+        result.join(' ') == '/usr/bin/fusion bash /fusion/s3/my-bucket/work/dir/.command.run'
     }
 
 }
