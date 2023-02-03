@@ -913,7 +913,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def result =  handler.getSubmitCommand()
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; cp .command.log /fusion/s3/my-bucket/work/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/s3/my-bucket/work/dir/.command.run 2>&1 | tee .command.log'
+        result.join(' ') == '/usr/bin/fusion bash /fusion/s3/my-bucket/work/dir/.command.run'
     }
 
 }

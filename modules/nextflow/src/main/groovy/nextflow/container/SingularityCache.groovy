@@ -155,7 +155,8 @@ class SingularityCache {
 
         def workDir = Global.session.workDir
         if( workDir.fileSystem != FileSystems.default ) {
-            throw new IOException("Cannot store ${appName} image to a remote work directory -- Use a POSIX compatible work directory or specify an alternative path with the `NXF_${envPrefix}_CACHEDIR` env variable")
+            // when the work dir is a remote path use the local launch directory to cache image files
+            workDir = Path.of('.nextflow').toAbsolutePath()
         }
 
         missingCacheDir = true
@@ -260,7 +261,7 @@ class SingularityCache {
         log.trace "${appName} pulling remote image `$imageUrl`"
 
         if( missingCacheDir )
-            log.warn1 "${appName} cache directory has not been defined -- Remote image will be stored in the path: $targetPath.parent -- Use env variable NXF_${envPrefix}_CACHEDIR to specify a different location"
+            log.warn1 "${appName} cache directory has not been defined -- Remote image will be stored in the path: $targetPath.parent -- Use the environment variable NXF_${envPrefix}_CACHEDIR to specify a different location"
 
         log.info "Pulling ${appName} image $imageUrl [cache $targetPath]"
 
