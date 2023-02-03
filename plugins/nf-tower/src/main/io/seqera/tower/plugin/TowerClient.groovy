@@ -550,7 +550,7 @@ class TowerClient implements TraceObserver {
                     continue
                 }
                 else {
-                    log.trace("Got error $code - refreshTries=$refreshTries - currentRefresh=$currentRefresh")
+                    log.trace("Got HTTP code $code - refreshTries=$refreshTries - currentRefresh=$currentRefresh", e)
                 }
 
                 String msg
