@@ -259,7 +259,7 @@ class K8sDriverLauncher {
         // -- load local config if available
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
-                .setLauncherOptions(cmd.launcher.options)
+                .setLauncherOptions(cmd.launcherOptions)
                 .setProfile(cmd.profile)
                 .setRunOptions(cmd)
 
@@ -445,12 +445,12 @@ class K8sDriverLauncher {
         // -- configure NF command line
         result << "nextflow"
 
-        if( cmd.launcher.options.trace )
-            result << "-trace ${cmd.launcher.options.trace.join(',')}"
-        if( cmd.launcher.options.debug )
-            result << "-debug ${cmd.launcher.options.debug.join(',')}"
-        if( cmd.launcher.options.jvmOpts )
-            cmd.launcher.options.jvmOpts.each { k,v -> result << "-D$k=$v" }
+        if( cmd.launcherOptions.trace )
+            result << "-trace ${cmd.launcherOptions.trace.join(',')}"
+        if( cmd.launcherOptions.debug )
+            result << "-debug ${cmd.launcherOptions.debug.join(',')}"
+        if( cmd.launcherOptions.jvmOpts )
+            cmd.launcherOptions.jvmOpts.each { k,v -> result << "-D$k=$v" }
 
         result << "run"
         result << pipelineName
@@ -485,7 +485,7 @@ class K8sDriverLauncher {
         if ( cmd.remoteProfile )
             result << "-profile ${cmd.remoteProfile}"
 
-        if( cmd.process?.executor )
+        if( cmd.processOptions?.executor )
             abort('process.executor')
 
         unsupportedCliOptions(

@@ -58,6 +58,9 @@ class ConfigImpl {
         this.options = options
     }
 
+    /* For testing purposes only */
+    ConfigImpl() {}
+
     void run() {
         Plugins.init()
         Path base = null

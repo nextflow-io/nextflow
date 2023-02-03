@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package nextflow.cli
+package nextflow.cli.v1
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -32,7 +32,7 @@ import test.OutputCapture
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
  */
-class CmdSecretTest extends Specification {
+class SecretCmdTest extends Specification {
 
     @Rule
     OutputCapture capture = new OutputCapture()
@@ -63,7 +63,7 @@ class CmdSecretTest extends Specification {
 
     def 'should validate #COMMAND doesnt accept #ARGUMENTS' () {
         when:
-        new CmdSecret(args: [COMMAND] + ARGUMENTS).run()
+        new SecretsCmd(args: [COMMAND] + ARGUMENTS).run()
 
         then:
         thrown(AbortOperationException)
@@ -86,7 +86,7 @@ class CmdSecretTest extends Specification {
         secretFile.delete()
 
         when:
-        new CmdSecret(args: ['list']).run()
+        new SecretsCmd(args: ['list']).run()
         def screen = capture
                 .toString()
                 .readLines()
@@ -102,7 +102,7 @@ class CmdSecretTest extends Specification {
         secretFile.delete()
 
         when:
-        new CmdSecret(args: ['set','foo','bar']).run()
+        new SecretsCmd(args: ['set','foo','bar']).run()
 
         then:
         secretFile.text.indexOf('"name": "foo"') != -1
@@ -122,7 +122,7 @@ class CmdSecretTest extends Specification {
         secretFile.permissions = 'rw-------'
 
         when:
-        new CmdSecret(args: ['delete', 'foo']).run()
+        new SecretsCmd(args: ['delete', 'foo']).run()
 
         then:
         secretFile.text.indexOf('"name": "foo"') == -1

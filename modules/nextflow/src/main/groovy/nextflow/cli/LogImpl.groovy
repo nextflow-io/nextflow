@@ -84,6 +84,9 @@ class LogImpl implements CacheBase {
         this.options = options
     }
 
+    /* For testing purposes only */
+    LogImpl() {}
+
     void run() {
         Plugins.init()
         init()

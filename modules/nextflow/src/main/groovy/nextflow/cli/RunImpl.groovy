@@ -128,6 +128,21 @@ class RunImpl {
         this.options = options
     }
 
+    /* For testing purposes only */
+    RunImpl() {}
+
+    @Override
+    Boolean getDisableJobsCancellation() {
+        options.disableJobsCancellation != null
+            ? options.disableJobsCancellation
+            : sysEnv.get('NXF_DISABLE_JOBS_CANCELLATION') as boolean
+    }
+
+    @Override
+    String getParamsFile() {
+        options.paramsFile ?: sysEnv.get('NXF_PARAMS_FILE')
+    }
+
     void run() {
         final scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
         final pipeline = stdin ? '-' : ( args ? args[0] : null )

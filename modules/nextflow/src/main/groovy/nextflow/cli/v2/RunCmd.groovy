@@ -34,8 +34,7 @@ import picocli.CommandLine.ParentCommand
 @CompileStatic
 @Command(
     name = 'run',
-    description = 'Execute a pipeline',
-    showEndOfOptionsDelimiterInUsageHelp = true
+    description = 'Execute a pipeline'
 )
 class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
 
@@ -222,18 +221,6 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
 
     @Parameters(description = 'Set pipeline parameters', hidden = true)
     Map<String,String> params = new LinkedHashMap<>()
-
-    @Override
-    Boolean getDisableJobsCancellation() {
-        disableJobsCancellation != null
-            ? disableJobsCancellation
-            : System.getenv('NXF_DISABLE_JOBS_CANCELLATION') as boolean
-    }
-
-    @Override
-    String getParamsFile() {
-        paramsFile ?: System.getenv('NXF_PARAMS_FILE')
-    }
 
     @Override
     boolean getStdin() {

@@ -17,17 +17,18 @@
 
 package nextflow.cli
 
-import nextflow.plugin.Plugins
-import spock.lang.IgnoreIf
-
 import java.nio.file.Files
 
+import nextflow.cli.v1.Launcher
+import nextflow.cli.v1.LauncherOptions
+import nextflow.plugin.Plugins
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CmdConfigTest extends Specification {
+class ConfigImplTest extends Specification {
 
     def cleanup() {
         Plugins.stop()
@@ -42,7 +43,7 @@ class CmdConfigTest extends Specification {
         config.docker.enabled = true
 
         final buffer = new ByteArrayOutputStream()
-        def cmd = new CmdConfig()
+        def cmd = new ConfigImpl()
 
         when:
         cmd.printDefault0(config, buffer)
@@ -71,10 +72,10 @@ class CmdConfigTest extends Specification {
         config.process.omega = "Hi' there"
 
         final buffer = new ByteArrayOutputStream()
-        def cmd = new CmdConfig()
+        def options = Mock(ConfigImpl.Options) { sort >> true }
+        def cmd = new ConfigImpl(options)
 
         when:
-        cmd.sort = true
         cmd.printProperties0(config, buffer)
 
         then:
@@ -88,12 +89,13 @@ class CmdConfigTest extends Specification {
                 .stripIndent().leftTrim()
 
     }
+
     def 'should canonical notation' () {
 
         given:
         ByteArrayOutputStream buffer
         ConfigObject config
-        def cmd = new CmdConfig()
+        def cmd = new ConfigImpl( Mock(ConfigImpl.Options) )
 
         when:
         buffer = new ByteArrayOutputStream()
@@ -138,7 +140,7 @@ class CmdConfigTest extends Specification {
         given:
         ByteArrayOutputStream buffer
         ConfigObject config
-        def cmd = new CmdConfig()
+        def cmd = new ConfigImpl( Mock(ConfigImpl.Options) )
 
         when:
         buffer = new ByteArrayOutputStream()
@@ -189,10 +191,11 @@ class CmdConfigTest extends Specification {
         '''
         def buffer = new ByteArrayOutputStream()
         // command definition 
-        def cmd = new CmdConfig()
-        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
-        cmd.stdout = buffer
-        cmd.args = [ '.' ]
+        def options = Mock(ConfigImpl.Options) {
+            launcherOptions >> new LauncherOptions(config: [CONFIG.toString()])
+            args >> [ '.' ]
+        }
+        def cmd = new ConfigImpl(options: options, stdout: buffer)
 
         when:
         cmd.run()
@@ -240,10 +243,11 @@ class CmdConfigTest extends Specification {
 
         def buffer = new ByteArrayOutputStream()
         // command definition
-        def cmd = new CmdConfig()
-        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
-        cmd.stdout = buffer
-        cmd.args = [ '.' ]
+        def options = Mock(ConfigImpl.Options) {
+            launcherOptions >> new LauncherOptions(config: [CONFIG.toString()])
+            args >> [ '.' ]
+        }
+        def cmd = new ConfigImpl(options: options, stdout: buffer)
 
         when:
         cmd.run()
@@ -280,11 +284,12 @@ class CmdConfigTest extends Specification {
     def 'should resolve remote config' () {
         given:
         def buffer = new ByteArrayOutputStream()
-        def cmd = new CmdConfig(
-                args: ['https://github.com/nextflow-io/hello'],
-                showAllProfiles: true,
-                launcher: Mock(Launcher),
-                stdout: buffer  )
+        def options = Mock(ConfigImpl.Options) {
+            args >> ['https://github.com/nextflow-io/hello']
+            showAllProfiles >> true
+            launcherOptions >> Mock(LauncherOptions)
+        }
+        def cmd = new ConfigImpl(options: options, stdout: buffer)
 
         when:
         cmd.run()
@@ -324,10 +329,12 @@ class CmdConfigTest extends Specification {
 
         def buffer = new ByteArrayOutputStream()
         // command definition
-        def cmd = new CmdConfig(showAllProfiles: true)
-        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
-        cmd.stdout = buffer
-        cmd.args = ['.']
+        def options = Mock(ConfigImpl.Options) {
+            showAllProfiles >> true
+            launcherOptions >> new LauncherOptions(config: [CONFIG.toString()])
+            args >> ['.']
+        }
+        def cmd = new ConfigImpl(options: options, stdout: buffer)
 
         when:
         cmd.run()

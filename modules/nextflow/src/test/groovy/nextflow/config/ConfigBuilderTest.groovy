@@ -20,11 +20,11 @@ package nextflow.config
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import nextflow.cli.CliOptions
-import nextflow.cli.CmdConfig
-import nextflow.cli.CmdNode
-import nextflow.cli.CmdRun
-import nextflow.cli.Launcher
+import nextflow.cli.ConfigImpl
+import nextflow.cli.NodeImpl
+import nextflow.cli.RunImpl
+import nextflow.cli.v1.Launcher
+import nextflow.cli.v1.LauncherOptions
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
 import nextflow.trace.TraceHelper
@@ -179,9 +179,9 @@ class ConfigBuilderTest extends Specification {
         }
         '''
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [alpha: 'Hello', beta: 'World', omega: 'Last'])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        def opt = new LauncherOptions()
+        def run = new RunImpl( Mock(RunImpl.Options) { params >> [alpha: 'Hello', beta: 'World', omega: 'Last'] })
+        def result = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles(file)
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined as CLI options override the ones in the config file
@@ -195,7 +195,7 @@ class ConfigBuilderTest extends Specification {
         file?.delete()
     }
 
-    def 'CLI params should override the ones defined in the config file (2)' () {
+    def 'CLI params should override the ones defined in the config file [2]' () {
         setup:
         def file = Files.createTempFile('test',null)
         file.text = '''
@@ -212,9 +212,9 @@ class ConfigBuilderTest extends Specification {
         }
         '''
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [alpha: 'Hello', beta: 'World', omega: 'Last'])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        def opt = new LauncherOptions()
+        def run = new RunImpl( Mock(RunImpl.Options) { params >> [alpha: 'Hello', beta: 'World', omega: 'Last'] })
+        def result = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles(file)
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined as CLI options override the ones in the config file
@@ -264,9 +264,9 @@ class ConfigBuilderTest extends Specification {
         '''
 
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [one: '1', two: 'dos', three: 'tres'])
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(configMain.toPath())
+        def opt = new LauncherOptions()
+        def run = new RunImpl( Mock(RunImpl.Options) { params >> [one: '1', two: 'dos', three: 'tres'] })
+        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles(configMain.toPath())
 
         then:
         config.params.one == 1
@@ -310,9 +310,9 @@ class ConfigBuilderTest extends Specification {
         '''
 
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [igenomes_base: 'test'])
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(configMain.toPath())
+        def opt = new LauncherOptions()
+        def run = new RunImpl( Mock(RunImpl.Options) { params >> [igenomes_base: 'test'] })
+        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles(configMain.toPath())
 
         then:
         config.params.genomes.GRCh37 == [fasta:'test/genome.fa', bwa:'test/BWAIndex/genome.fa']
@@ -402,9 +402,9 @@ class ConfigBuilderTest extends Specification {
 
 
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB'])
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        def opt = new LauncherOptions()
+        def run = new RunImpl( Mock(RunImpl.Options) { params >> [alpha: 'AAA', beta: 'BBB'] })
+        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles(file)
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
@@ -415,9 +415,9 @@ class ConfigBuilderTest extends Specification {
         config.params.genomes.GRCh37.bowtie  == '/data/genome'
 
         when:
-        opt = new CliOptions()
-        run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB'], profile: 'first')
-        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        opt = new LauncherOptions()
+        run = new RunImpl( Mock(RunImpl.Options) { params >> [alpha: 'AAA', beta: 'BBB'] ; profile >> 'first' })
+        config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles(file)
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
@@ -430,9 +430,9 @@ class ConfigBuilderTest extends Specification {
 
 
         when:
-        opt = new CliOptions()
-        run = new CmdRun(params: [alpha: 'AAA', beta: 'BBB', genomes: 'xxx'], profile: 'second')
-        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        opt = new LauncherOptions()
+        run = new RunImpl( Mock(RunImpl.Options) { params >> [alpha: 'AAA', beta: 'BBB', genomes: 'xxx'] ; profile >> 'second' })
+        config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles(file)
         then:
         config.params.alpha == 'AAA'
         config.params.beta == 'BBB'
@@ -474,9 +474,9 @@ class ConfigBuilderTest extends Specification {
         }
         '''
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(paramsFile: params)
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).setBaseDir(baseDir).buildGivenFiles(file)
+        def opt = new LauncherOptions()
+        def run = new RunImpl( Mock(RunImpl.Options) { paramsFile >> params })
+        def result = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).setBaseDir(baseDir).buildGivenFiles(file)
 
         then:
         result.params.alpha == 'Hello'  // <-- params defined in the params-file overrides the ones in the config file
@@ -494,8 +494,8 @@ class ConfigBuilderTest extends Specification {
 
     def 'params should override params-file and override params in the config file' () {
         setup:
-        def params = Files.createTempFile('test', '.yml')
-        params.text = '''
+        def paramsFile = Files.createTempFile('test', '.yml')
+        paramsFile.text = '''
             alpha: "Hello" 
             beta: "World" 
             omega: "Last"
@@ -516,9 +516,9 @@ class ConfigBuilderTest extends Specification {
         }
         '''
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(paramsFile: params, params: [alpha: 'Hola', beta: 'Mundo'])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles(file)
+        def opt = new LauncherOptions()
+        def run = new RunImpl( Mock(RunImpl.Options) { getParamsFile() >> paramsFile ; params >> [alpha: 'Hola', beta: 'Mundo'] })
+        def result = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles(file)
 
         then:
         result.params.alpha == 'Hola'   // <-- this comes from the CLI
@@ -530,7 +530,7 @@ class ConfigBuilderTest extends Specification {
 
         cleanup:
         file?.delete()
-        params?.delete()
+        paramsFile?.delete()
     }
 
     def 'valid config files' () {
@@ -603,9 +603,9 @@ class ConfigBuilderTest extends Specification {
     def 'command executor options'() {
 
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(executorOptions: [ alpha: 1, 'beta.x': 'hola', 'beta.y': 'ciao' ])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles()
+        def opt = new LauncherOptions()
+        def run = new RunImpl( Mock(RunImpl.Options) { executorOptions >> [ alpha: 1, 'beta.x': 'hola', 'beta.y': 'ciao' ] })
+        def result = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles()
         then:
         result.executor.alpha == 1
         result.executor.beta.x == 'hola'
@@ -616,9 +616,9 @@ class ConfigBuilderTest extends Specification {
     def 'run command cluster options'() {
 
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(clusterOptions: [ alpha: 1, 'beta.x': 'hola', 'beta.y': 'ciao' ])
-        def result = new ConfigBuilder().setOptions(opt).setCmdRun(run).buildGivenFiles()
+        def opt = new LauncherOptions()
+        def run = new RunImpl( Mock(RunImpl.Options) { clusterOptions >> [ alpha: 1, 'beta.x': 'hola', 'beta.y': 'ciao' ] })
+        def result = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).buildGivenFiles()
         then:
         result.cluster.alpha == 1
         result.cluster.beta.x == 'hola'
@@ -629,9 +629,9 @@ class ConfigBuilderTest extends Specification {
     def 'run with docker'() {
 
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(withDocker: 'cbcrg/piper')
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        def opt = new LauncherOptions()
+        def run = new RunImpl( Mock(RunImpl.Options) { withDocker >> 'cbcrg/piper' })
+        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
 
         then:
         config.docker.enabled
@@ -653,18 +653,18 @@ class ConfigBuilderTest extends Specification {
                 '''
 
         when:
-        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        def run = new CmdRun(withDocker: '-')
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        def opt = new LauncherOptions(config: [file.toFile().canonicalPath] )
+        def run = new RunImpl( Mock(RunImpl.Options) { withDocker >> '-' })
+        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
         then:
         config.docker.enabled
         config.docker.image == 'busybox'
         config.process.container == 'busybox'
 
         when:
-        opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        run = new CmdRun(withDocker: 'cbcrg/mybox')
-        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        opt = new LauncherOptions(config: [file.toFile().canonicalPath] )
+        run = new RunImpl( Mock(RunImpl.Options) { withDocker >> 'cbcrg/mybox' })
+        config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
         then:
         config.docker.enabled
         config.process.container == 'cbcrg/mybox'
@@ -681,9 +681,9 @@ class ConfigBuilderTest extends Specification {
                 '''
                 process.$test.container = 'busybox'
                 '''
-        def opt = new CliOptions(config: [file.toFile().canonicalPath])
-        def run = new CmdRun(withDocker: '-')
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        def opt = new LauncherOptions(config: [file.toFile().canonicalPath])
+        def run = new RunImpl( Mock(RunImpl.Options) { withDocker >> '-' })
+        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
         then:
         config.docker.enabled
         config.process.$test.container == 'busybox'
@@ -693,17 +693,17 @@ class ConfigBuilderTest extends Specification {
                 '''
                 process.container = 'busybox'
                 '''
-        opt = new CliOptions(config: [file.toFile().canonicalPath])
-        run = new CmdRun(withDocker: '-')
-        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        opt = new LauncherOptions(config: [file.toFile().canonicalPath])
+        run = new RunImpl( Mock(RunImpl.Options) { withDocker >> '-' })
+        config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
         then:
         config.docker.enabled
         config.process.container == 'busybox'
 
         when:
-        opt = new CliOptions()
-        run = new CmdRun(withDocker: '-')
-        new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        opt = new LauncherOptions()
+        run = new RunImpl( Mock(RunImpl.Options) { withDocker >> '-' })
+        new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
         then:
         def e = thrown(AbortOperationException)
         e.message == 'You have requested to run with Docker but no image was specified'
@@ -713,9 +713,9 @@ class ConfigBuilderTest extends Specification {
                 '''
                 process.$test.tag = 'tag'
                 '''
-        opt = new CliOptions(config: [file.toFile().canonicalPath])
-        run = new CmdRun(withDocker: '-')
-        new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        opt = new LauncherOptions(config: [file.toFile().canonicalPath])
+        run = new RunImpl( Mock(RunImpl.Options) { withDocker >> '-' })
+        new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
         then:
         e = thrown(AbortOperationException)
         e.message == 'You have requested to run with Docker but no image was specified'
@@ -736,9 +736,9 @@ class ConfigBuilderTest extends Specification {
                 '''
 
         when:
-        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        def run = new CmdRun(withoutDocker: true)
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        def opt = new LauncherOptions(config: [file.toFile().canonicalPath] )
+        def run = new RunImpl( Mock(RunImpl.Options) { withoutDocker >> true })
+        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
         then:
         !config.docker.enabled
         config.docker.image == 'busybox'
@@ -749,12 +749,16 @@ class ConfigBuilderTest extends Specification {
     def 'config with cluster options'() {
 
         when:
-        def opt = new CliOptions()
-        def cmd = new CmdNode(clusterOptions: [join: 'x', group: 'y', interface: 'abc', slots: 10, 'tcp.alpha':'uno', 'tcp.beta': 'due'])
+        def opt = new LauncherOptions()
+        def cmd = new NodeImpl(
+            Mock(NodeImpl.Options) {
+                clusterOptions >> [join: 'x', group: 'y', interface: 'abc', slots: 10, 'tcp.alpha':'uno', 'tcp.beta': 'due']
+            }
+        )
 
         def config = new ConfigBuilder()
-                .setOptions(opt)
-                .setCmdNode(cmd)
+                .setLauncherOptions(opt)
+                .setNodeOptions(cmd)
                 .build()
 
         then:
@@ -790,7 +794,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
 
         then:
         config.trace instanceof Map
@@ -799,7 +803,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withTrace: 'some-file'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withTrace >> 'some-file' }))
         then:
         config.trace instanceof Map
         config.trace.enabled
@@ -808,7 +812,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.trace.file = 'foo.txt'
-        builder.configRunOptions(config, env, new CmdRun(withTrace: 'bar.txt'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withTrace >> 'bar.txt' }))
         then: // command line should override the config file
         config.trace instanceof Map
         config.trace.enabled
@@ -817,7 +821,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.trace.file = 'foo.txt'
-        builder.configRunOptions(config, env, new CmdRun(withTrace: '-'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withTrace >> '-' }))
         then: // command line should override the config file
         config.trace instanceof Map
         config.trace.enabled
@@ -825,7 +829,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withTrace: '-'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withTrace >> '-' }))
         then: // command line should override the config file
         config.trace instanceof Map
         config.trace.enabled
@@ -840,14 +844,14 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         !config.report
 
         when:
         config = new ConfigObject()
         config.report.file = 'foo.html'
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         config.report instanceof Map
         !config.report.enabled
@@ -855,7 +859,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withReport: 'my-report.html'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withReport >> 'my-report.html' }))
         then:
         config.report instanceof Map
         config.report.enabled
@@ -864,7 +868,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.report.file = 'this-report.html'
-        builder.configRunOptions(config, env, new CmdRun(withReport: 'my-report.html'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withReport >> 'my-report.html' }))
         then:
         config.report instanceof Map
         config.report.enabled
@@ -873,7 +877,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.report.file = 'this-report.html'
-        builder.configRunOptions(config, env, new CmdRun(withReport: '-'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withReport >> '-' }))
         then:
         config.report instanceof Map
         config.report.enabled
@@ -881,7 +885,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withReport: '-'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withReport >> '-' }))
         then:
         config.report instanceof Map
         config.report.enabled
@@ -897,14 +901,14 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         !config.dag
 
         when:
         config = new ConfigObject()
         config.dag.file = 'foo-dag.html'
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         config.dag instanceof Map
         !config.dag.enabled
@@ -912,7 +916,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withDag: 'my-dag.html'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withDag >> 'my-dag.html' }))
         then:
         config.dag instanceof Map
         config.dag.enabled
@@ -921,7 +925,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.dag.file = 'this-dag.html'
-        builder.configRunOptions(config, env, new CmdRun(withDag: 'my-dag.html'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withDag >> 'my-dag.html' }))
         then:
         config.dag instanceof Map
         config.dag.enabled
@@ -930,7 +934,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.dag.file = 'this-dag.html'
-        builder.configRunOptions(config, env, new CmdRun(withDag: '-'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withDag >> '-' }))
         then:
         config.dag instanceof Map
         config.dag.enabled
@@ -938,7 +942,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withDag: '-'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withDag >> '-' }))
         then:
         config.dag instanceof Map
         config.dag.enabled
@@ -953,14 +957,14 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         !config.weblog
 
         when:
         config = new ConfigObject()
         config.weblog.url = 'http://bar.com'
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         config.weblog instanceof Map
         !config.weblog.enabled
@@ -968,7 +972,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withWebLog: 'http://foo.com'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withWebLog >> 'http://foo.com' }))
         then:
         config.weblog instanceof Map
         config.weblog.enabled
@@ -978,7 +982,7 @@ class ConfigBuilderTest extends Specification {
         config = new ConfigObject()
         config.weblog.enabled = true
         config.weblog.url = 'http://bar.com'
-        builder.configRunOptions(config, env, new CmdRun(withWebLog: 'http://foo.com'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withWebLog >> 'http://foo.com' }))
         then:
         config.weblog instanceof Map
         config.weblog.enabled
@@ -988,7 +992,7 @@ class ConfigBuilderTest extends Specification {
         config = new ConfigObject()
         config.weblog.enabled = true
         config.weblog.url = 'http://bar.com'
-        builder.configRunOptions(config, env, new CmdRun(withWebLog: '-'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withWebLog >> '-' }))
         then:
         config.weblog instanceof Map
         config.weblog.enabled
@@ -997,7 +1001,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.weblog.enabled = true
-        builder.configRunOptions(config, env, new CmdRun(withWebLog: '-'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withWebLog >> '-' }))
         then:
         config.weblog instanceof Map
         config.weblog.enabled
@@ -1013,14 +1017,14 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         !config.timeline
 
         when:
         config = new ConfigObject()
         config.timeline.file = 'my-file.html'
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         config.timeline instanceof Map
         !config.timeline.enabled
@@ -1028,7 +1032,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withTimeline: 'my-timeline.html'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withTimeline >> 'my-timeline.html' }))
         then:
         config.timeline instanceof Map
         config.timeline.enabled
@@ -1038,7 +1042,7 @@ class ConfigBuilderTest extends Specification {
         config = new ConfigObject()
         config.timeline.enabled = true
         config.timeline.file = 'this-timeline.html'
-        builder.configRunOptions(config, env, new CmdRun(withTimeline: 'my-timeline.html'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withTimeline >> 'my-timeline.html' }))
         then:
         config.timeline instanceof Map
         config.timeline.enabled
@@ -1048,7 +1052,7 @@ class ConfigBuilderTest extends Specification {
         config = new ConfigObject()
         config.timeline.enabled = true
         config.timeline.file = 'my-timeline.html'
-        builder.configRunOptions(config, env, new CmdRun(withTimeline: '-'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withTimeline >> '-' }))
         then:
         config.timeline instanceof Map
         config.timeline.enabled
@@ -1057,7 +1061,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.timeline.enabled = true
-        builder.configRunOptions(config, env, new CmdRun(withTimeline: '-'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withTimeline >> '-' }))
         then:
         config.timeline instanceof Map
         config.timeline.enabled
@@ -1072,14 +1076,14 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         !config.tower
 
         when:
         config = new ConfigObject()
         config.tower.endpoint = 'http://foo.com'
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         config.tower instanceof Map
         !config.tower.enabled
@@ -1087,7 +1091,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withTower: 'http://bar.com'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withTower >> 'http://bar.com' }))
         then:
         config.tower instanceof Map
         config.tower.enabled
@@ -1096,7 +1100,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.tower.endpoint = 'http://foo.com'
-        builder.configRunOptions(config, env, new CmdRun(withTower: '-'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withTower >> '-' }))
         then:
         config.tower instanceof Map
         config.tower.enabled
@@ -1104,7 +1108,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withTower: '-'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withTower >> '-' }))
         then:
         config.tower instanceof Map
         config.tower.enabled
@@ -1119,14 +1123,14 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         !config.wave
 
         when:
         config = new ConfigObject()
         config.wave.endpoint = 'http://foo.com'
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         config.wave instanceof Map
         !config.wave.enabled
@@ -1134,7 +1138,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withWave: 'http://bar.com'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withWave >> 'http://bar.com' }))
         then:
         config.wave instanceof Map
         config.wave.enabled
@@ -1143,7 +1147,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.wave.endpoint = 'http://foo.com'
-        builder.configRunOptions(config, env, new CmdRun(withWave: '-'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withWave >> '-' }))
         then:
         config.wave instanceof Map
         config.wave.enabled
@@ -1151,7 +1155,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withWave: '-'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withWave >> '-' }))
         then:
         config.wave instanceof Map
         config.wave.enabled
@@ -1166,14 +1170,14 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         !config.conda
 
         when:
         config = new ConfigObject()
         config.conda.createOptions = 'something'
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         config.conda instanceof Map
         !config.conda.enabled
@@ -1181,7 +1185,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withConda: 'my-recipe.yml'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withConda >> 'my-recipe.yml' }))
         then:
         config.conda instanceof Map
         config.conda.enabled
@@ -1190,7 +1194,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.conda.enabled = true
-        builder.configRunOptions(config, env, new CmdRun(withConda: 'my-recipe.yml'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withConda >> 'my-recipe.yml' }))
         then:
         config.conda instanceof Map
         config.conda.enabled
@@ -1199,7 +1203,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.process.conda = 'my-recipe.yml'
-        builder.configRunOptions(config, env, new CmdRun(withConda: '-'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withConda >> '-' }))
         then:
         config.conda instanceof Map
         config.conda.enabled
@@ -1218,9 +1222,9 @@ class ConfigBuilderTest extends Specification {
                 '''
 
         when:
-        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        def run = new CmdRun(withoutConda: true)
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        def opt = new LauncherOptions(config: [file.toFile().canonicalPath])
+        def run = new RunImpl( Mock(RunImpl.Options) { withoutConda >> true } )
+        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
         then:
         !config.conda.enabled
         !config.process.conda
@@ -1234,14 +1238,14 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         !config.spack
 
         when:
         config = new ConfigObject()
         config.spack.createOptions = 'something'
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         config.spack instanceof Map
         !config.spack.enabled
@@ -1249,7 +1253,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withSpack: 'my-recipe.yaml'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withSpack >> 'my-recipe.yaml' }))
         then:
         config.spack instanceof Map
         config.spack.enabled
@@ -1258,7 +1262,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.spack.enabled = true
-        builder.configRunOptions(config, env, new CmdRun(withSpack: 'my-recipe.yaml'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withSpack >> 'my-recipe.yaml' }))
         then:
         config.spack instanceof Map
         config.spack.enabled
@@ -1267,7 +1271,7 @@ class ConfigBuilderTest extends Specification {
         when:
         config = new ConfigObject()
         config.process.spack = 'my-recipe.yaml'
-        builder.configRunOptions(config, env, new CmdRun(withSpack: '-'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { withSpack >> '-' }))
         then:
         config.spack instanceof Map
         config.spack.enabled
@@ -1286,9 +1290,9 @@ class ConfigBuilderTest extends Specification {
                 '''
 
         when:
-        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        def run = new CmdRun(withoutSpack: true)
-        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        def opt = new LauncherOptions(config: [file.toFile().canonicalPath])
+        def run = new RunImpl( Mock(RunImpl.Options) { withoutSpack >> true })
+        def config = new ConfigBuilder().setLauncherOptions(opt).setRunOptions(run).build()
         then:
         !config.spack.enabled
         !config.process.spack
@@ -1302,28 +1306,28 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         !config.isSet('resume')
 
         when:
         config = new ConfigObject()
         config.resume ='alpha-beta-delta'
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         config.resume == 'alpha-beta-delta'
 
         when:
         config = new ConfigObject()
         config.resume ='alpha-beta-delta'
-        builder.configRunOptions(config, env, new CmdRun(resume: 'xxx-yyy'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { resume >> 'xxx-yyy' }))
         then:
         config.resume == 'xxx-yyy'
 
         when:
         config = new ConfigObject()
         config.resume ='this-that'
-        builder.configRunOptions(config, env, new CmdRun(resume: 'xxx-yyy'))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { resume >> 'xxx-yyy' }))
         then:
         config.resume == 'xxx-yyy'
     }
@@ -1335,27 +1339,27 @@ class ConfigBuilderTest extends Specification {
         def builder = [:] as ConfigBuilder
 
         when:
-        builder.configRunOptions(config, [:], new CmdRun())
+        builder.configRunOptions(config, [:], new RunImpl( Mock(RunImpl.Options) ))
         then:
         config.workDir == 'work'
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, [NXF_WORK: '/foo/bar'], new CmdRun())
+        builder.configRunOptions(config, [NXF_WORK: '/foo/bar'], new RunImpl( Mock(RunImpl.Options) ))
         then:
         config.workDir == '/foo/bar'
 
         when:
         config = new ConfigObject()
         config.workDir = 'hello/there'
-        builder.configRunOptions(config, [:], new CmdRun())
+        builder.configRunOptions(config, [:], new RunImpl( Mock(RunImpl.Options) ))
         then:
         config.workDir == 'hello/there'
 
         when:
         config = new ConfigObject()
         config.workDir = 'hello/there'
-        builder.configRunOptions(config, [:], new CmdRun(workDir: 'my/work/dir'))
+        builder.configRunOptions(config, [:], new RunImpl( Mock(RunImpl.Options) { workDir >> 'my/work/dir' }))
         then:
         config.workDir == 'my/work/dir'
     }
@@ -1366,17 +1370,17 @@ class ConfigBuilderTest extends Specification {
         def builder = [:] as ConfigBuilder
 
         when:
-        builder.configRunOptions(config, [:], new CmdRun())
+        builder.configRunOptions(config, [:], new RunImpl( Mock(RunImpl.Options) ))
         then:
         !config.isSet('libDir')
 
         when:
-        builder.configRunOptions(config, [NXF_LIB:'/foo/bar'], new CmdRun())
+        builder.configRunOptions(config, [NXF_LIB:'/foo/bar'], new RunImpl( Mock(RunImpl.Options) ))
         then:
         config.libDir == '/foo/bar'
 
         when:
-        builder.configRunOptions(config, [:], new CmdRun(libPath: 'my/lib/dir'))
+        builder.configRunOptions(config, [:], new RunImpl( Mock(RunImpl.Options) { libPath >> 'my/lib/dir' }))
         then:
         config.libDir == 'my/lib/dir'
     }
@@ -1389,19 +1393,19 @@ class ConfigBuilderTest extends Specification {
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) ))
         then:
         !config.isSet('cacheable')
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(cacheable: false))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { cacheable >> false }))
         then:
         config.cacheable == false
 
         when:
         config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(cacheable: true))
+        builder.configRunOptions(config, env, new RunImpl( Mock(RunImpl.Options) { cacheable >> true }))
         then:
         config.cacheable == true
     }
@@ -1459,39 +1463,43 @@ class ConfigBuilderTest extends Specification {
         def builder
 
         when:
-        builder = new ConfigBuilder().setCmdRun(new CmdRun(profile: 'foo'))
+        builder = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) { profile >> 'foo' }))
         then:
         builder.profile == 'foo'
         builder.validateProfile
 
         when:
-        builder = new ConfigBuilder().setCmdRun(new CmdRun())
+        builder = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) ))
         then:
         builder.profile == 'standard'
         !builder.validateProfile
 
         when:
-        builder = new ConfigBuilder().setCmdRun(new CmdRun(profile: 'standard'))
+        builder = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) { profile >> 'standard' }))
         then:
         builder.profile == 'standard'
         builder.validateProfile
     }
 
     def 'should set config options' () {
+        def options
         def builder
 
         when:
-        builder = new ConfigBuilder().setCmdConfig(new CmdConfig())
+        options = Mock(ConfigImpl.Options)
+        builder = new ConfigBuilder().setCmdConfig(new ConfigImpl(options))
         then:
         !builder.showAllProfiles
 
         when:
-        builder = new ConfigBuilder().setCmdConfig(new CmdConfig(showAllProfiles: true))
+        options = Mock(ConfigImpl.Options) { showAllProfiles >> true }
+        builder = new ConfigBuilder().setCmdConfig(new ConfigImpl(options))
         then:
         builder.showAllProfiles
 
         when:
-        builder = new ConfigBuilder().setCmdConfig(new CmdConfig(profile: 'foo'))
+        options = Mock(ConfigImpl.Options) { profile >> 'foo' }
+        builder = new ConfigBuilder().setCmdConfig(new ConfigImpl(options))
         then:
         builder.profile == 'foo'
         builder.validateProfile
@@ -1534,56 +1542,56 @@ class ConfigBuilderTest extends Specification {
         def config
 
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun()).build()
+        config = new ConfigBuilder().setLauncherOptions(new LauncherOptions(config: EMPTY)).setRunOptions(new RunImpl( Mock(RunImpl.Options) )).build()
         then:
         config.params == [:]
 
         // get params for the CLI
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun(params: [foo:'one', bar:'two'])).build()
+        config = new ConfigBuilder().setLauncherOptions(new LauncherOptions(config: EMPTY)).setRunOptions(new RunImpl( Mock(RunImpl.Options) { params >> [foo:'one', bar:'two'] })).build()
         then:
         config.params == [foo:'one', bar:'two']
 
         // get params from config file
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun()).build()
+        config = new ConfigBuilder().setLauncherOptions(new LauncherOptions(config: [configFile])).setRunOptions(new RunImpl( Mock(RunImpl.Options) )).build()
         then:
         config.params == [foo:1, bar:2, data: '/some/path']
 
         // get params form JSON file
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun(paramsFile: jsonFile)).build()
+        config = new ConfigBuilder().setLauncherOptions(new LauncherOptions(config: EMPTY)).setRunOptions(new RunImpl( Mock(RunImpl.Options) { paramsFile >> jsonFile })).build()
         then:
         config.params == [foo:10, bar:20]
 
         // get params from YAML file
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun(paramsFile: yamlFile)).build()
+        config = new ConfigBuilder().setLauncherOptions(new LauncherOptions(config: EMPTY)).setRunOptions(new RunImpl( Mock(RunImpl.Options) { paramsFile >> yamlFile })).build()
         then:
         config.params == [foo:100, bar:200]
 
         // cli override config
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun(params:[foo:'hello', baz:'world'])).build()
+        config = new ConfigBuilder().setLauncherOptions(new LauncherOptions(config: [configFile])).setRunOptions(new RunImpl( Mock(RunImpl.Options) { params >> [foo:'hello', baz:'world'] })).build()
         then:
         config.params == [foo:'hello', bar:2, baz: 'world', data: '/some/path']
 
         // CLI override JSON
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: EMPTY)).setCmdRun(new CmdRun(params:[foo:'hello', baz:'world'], paramsFile: jsonFile)).build()
+        config = new ConfigBuilder().setLauncherOptions(new LauncherOptions(config: EMPTY)).setRunOptions(new RunImpl( Mock(RunImpl.Options) { params >> [foo:'hello', baz:'world'] ; paramsFile >> jsonFile })).build()
         then:
         config.params == [foo:'hello', bar:20, baz: 'world']
 
         // JSON override config
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun(paramsFile: jsonFile)).build()
+        config = new ConfigBuilder().setLauncherOptions(new LauncherOptions(config: [configFile])).setRunOptions(new RunImpl( Mock(RunImpl.Options) { paramsFile >> jsonFile })).build()
         then:
         config.params == [foo:10, bar:20, data: '/some/path']
 
 
         // CLI override JSON that override config
         when:
-        config = new ConfigBuilder().setOptions(new CliOptions(config: [configFile])).setCmdRun(new CmdRun(paramsFile: jsonFile, params: [foo:'Ciao'])).build()
+        config = new ConfigBuilder().setLauncherOptions(new LauncherOptions(config: [configFile])).setRunOptions(new RunImpl( Mock(RunImpl.Options) { paramsFile >> jsonFile ; params >> [foo:'Ciao'] })).build()
         then:
         config.params == [foo:'Ciao', bar:20, data: '/some/path']
     }
@@ -1591,7 +1599,7 @@ class ConfigBuilderTest extends Specification {
     def 'should run with conda' () {
 
         when:
-        def config = new ConfigBuilder().setCmdRun(new CmdRun(withConda: '/some/path/env.yml')).build()
+        def config = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) { withConda >> '/some/path/env.yml' })).build()
         then:
         config.process.conda == '/some/path/env.yml'
 
@@ -1600,7 +1608,7 @@ class ConfigBuilderTest extends Specification {
     def 'should run with spack' () {
 
         when:
-        def config = new ConfigBuilder().setCmdRun(new CmdRun(withSpack: '/some/path/env.yaml')).build()
+        def config = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) { withSpack >> '/some/path/env.yaml' })).build()
         then:
         config.process.spack == '/some/path/env.yaml'
 
@@ -1618,8 +1626,8 @@ class ConfigBuilderTest extends Specification {
 
 
         when:
-        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        def cfg = new ConfigBuilder().setOptions(opt).build()
+        def opt = new LauncherOptions(config: [file.toFile().canonicalPath] )
+        def cfg = new ConfigBuilder().setLauncherOptions(opt).build()
         then:
         cfg.params.foo == System.getenv('HOME')
 
@@ -1628,8 +1636,8 @@ class ConfigBuilderTest extends Specification {
                 '''
                 params.foo = bar
                 '''
-        opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        new ConfigBuilder().setOptions(opt).build()
+        opt = new LauncherOptions(config: [file.toFile().canonicalPath] )
+        new ConfigBuilder().setLauncherOptions(opt).build()
         then:
         def e = thrown(ConfigParseException)
         e.message == "Unknown config attribute `bar` -- check config file: ${file.toRealPath()}".toString()
@@ -1647,9 +1655,9 @@ class ConfigBuilderTest extends Specification {
                 '''
 
         when:
-        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        def opt = new LauncherOptions(config: [file.toFile().canonicalPath] )
         def builder = new ConfigBuilder()
-                .setOptions(opt)
+                .setLauncherOptions(opt)
                 .showMissingVariables(true)
         def cfg = builder.buildConfigObject()
         def str = ConfigHelper.toCanonicalString(cfg)
@@ -1676,8 +1684,8 @@ class ConfigBuilderTest extends Specification {
                 '''
                 params.x = foo.bar
                 '''
-        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        new ConfigBuilder().setOptions(opt).build()
+        def opt = new LauncherOptions(config: [file.toFile().canonicalPath] )
+        new ConfigBuilder().setLauncherOptions(opt).build()
         then:
         def e = thrown(ConfigParseException)
         e.message == "Unknown config attribute `foo.bar` -- check config file: ${file.toRealPath()}".toString()
@@ -1717,23 +1725,23 @@ class ConfigBuilderTest extends Specification {
         Map config
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        config = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) )).build()
         then:
         !config.notification
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun(withNotification: true)).build()
+        config = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) { withNotification >> true })).build()
         then:
         config.notification.enabled == true
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun(withNotification: false)).build()
+        config = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) { withNotification >> false })).build()
         then:
         config.notification.enabled == false
         config.notification.to == null
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun(withNotification: 'yo@nextflow.com')).build()
+        config = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) { withNotification >> 'yo@nextflow.com' })).build()
         then:
         config.notification.enabled == true
         config.notification.to == 'yo@nextflow.com'
@@ -1745,22 +1753,22 @@ class ConfigBuilderTest extends Specification {
         Map config
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        config = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) )).build()
         then:
         !config.fusion
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: true)).build()
+        config = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) { withFusion >> true })).build()
         then:
         config.fusion.enabled == true
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: false)).build()
+        config = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) { withFusion >> false })).build()
         then:
         config.fusion == [enabled: false]
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: true)).build()
+        config = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) { withFusion >> true })).build()
         then:
         config.fusion == [enabled: true]
     }
@@ -1770,12 +1778,12 @@ class ConfigBuilderTest extends Specification {
         Map config
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        config = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) )).build()
         then:
         !config.stubRun
 
         when:
-        config = new ConfigBuilder().setCmdRun(new CmdRun(stubRun: true)).build()
+        config = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) { stubRun >> true })).build()
         then:
         config.stubRun == true
     }
@@ -2047,7 +2055,7 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should access top params from profile (2)' () {
+    def 'should access top params from profile [2]' () {
         given:
         def folder = Files.createTempDirectory('test')
         def file1 = folder.resolve('file1.conf')
@@ -2145,9 +2153,9 @@ class ConfigBuilderTest extends Specification {
         """
 
         when:
-        def opt = new CliOptions()
-        def run = new CmdRun(params: [bar: "world", 'baz.y': "mondo", 'baz.z.beta': "Welt"])
-        def config = new ConfigBuilder(env: [NXF_CONFIG_FILE: configMain.toString()]).setOptions(opt).setCmdRun(run).build()
+        def opt = new LauncherOptions()
+        def run = new RunImpl( Mock(RunImpl.Options) { params >> [bar: "world", 'baz.y': "mondo", 'baz.z.beta': "Welt"] })
+        def config = new ConfigBuilder(env: [NXF_CONFIG_FILE: configMain.toString()]).setLauncherOptions(opt).setRunOptions(run).build()
 
         then:
         config.params.foo == 'Hello'
@@ -2222,7 +2230,7 @@ class ConfigBuilderTest extends Specification {
 
         when:
         def cfg1 = new ConfigBuilder()
-                .setOptions( new CliOptions(userConfig: [config.toString()]))
+                .setLauncherOptions( new LauncherOptions(userConfig: [config.toString()]))
                 .build()
         then:
         cfg1.params.test.foo == "foo_def"
@@ -2231,8 +2239,8 @@ class ConfigBuilderTest extends Specification {
         
         when:
         def cfg2 = new ConfigBuilder()
-                .setOptions( new CliOptions(userConfig: [config.toString()]))
-                .setCmdRun( new CmdRun(params: ['test.foo': 'CLI_FOO'] ))
+                .setLauncherOptions( new LauncherOptions(userConfig: [config.toString()]))
+                .setRunOptions( new RunImpl( Mock(RunImpl.Options) { params >> ['test.foo': 'CLI_FOO'] }))
                 .build()
         then:
         cfg2.params.test.foo == "CLI_FOO"
@@ -2263,7 +2271,7 @@ class ConfigBuilderTest extends Specification {
         '''.stripIndent()
 
         when:
-        def cfg1 = new ConfigBuilder().setCmdRun(new CmdRun(paramsFile: config.toString())).build()
+        def cfg1 = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) { paramsFile >> config.toString() })).build()
 
         then:
         cfg1.params.title == "something"
@@ -2291,7 +2299,7 @@ class ConfigBuilderTest extends Specification {
         '''.stripIndent()
 
         when:
-        def cfg1 = new ConfigBuilder().setCmdRun(new CmdRun(paramsFile: config.toString())).build()
+        def cfg1 = new ConfigBuilder().setRunOptions(new RunImpl( Mock(RunImpl.Options) { paramsFile >> config.toString() })).build()
 
         then:
         cfg1.params.title == "something"
@@ -2306,7 +2314,7 @@ class ConfigBuilderTest extends Specification {
 
     def 'should return parsed config' () {
         given:
-        def cmd = new CmdRun(profile: 'first', withTower: 'http://foo.com', launcher: new Launcher())
+        def cmd = new RunImpl( Mock(RunImpl.Options) { profile >> 'first' ; withTower >> 'http://foo.com' ; launcher: new Launcher() })
         def base = Files.createTempDirectory('test')
         base.resolve('nextflow.config').text = '''
         profiles {

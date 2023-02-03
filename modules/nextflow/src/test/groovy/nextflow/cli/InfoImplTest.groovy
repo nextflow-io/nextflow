@@ -33,7 +33,7 @@ import org.yaml.snakeyaml.Yaml
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
-class CmdInfoTest extends Specification {
+class InfoImplTest extends Specification {
 
     @Shared Path tempDir
 
@@ -56,12 +56,13 @@ class CmdInfoTest extends Specification {
 
     def 'should print project info' () {
 
-        given:
-        def buffer = new ByteArrayOutputStream()
-
         when:
-        new CmdInfo(args: ['hello'], out: new PrintStream(buffer)).run()
+        def buffer = new ByteArrayOutputStream()
         def screen = buffer.toString()
+        def options = Mock(InfoImpl.Options) { args >> ['hello'] }
+        def cmd = new InfoImpl(options: options, out: new PrintStream(buffer))
+
+        cmd.run()
 
         then:
         screen.contains(" project name: nextflow-io/hello")
@@ -74,14 +75,14 @@ class CmdInfoTest extends Specification {
 
     def 'should print json info' () {
 
-        given:
-        def buffer = new ByteArrayOutputStream()
-        def cmd = new CmdInfo(args: ['hello'], format: 'json', out: new PrintStream(buffer))
-
         when:
-        cmd.run()
+        def buffer = new ByteArrayOutputStream()
         def screen = buffer.toString()
         def json = (Map)new JsonSlurper().parseText(screen)
+        def options = Mock(InfoImpl.Options) { args >> ['hello'] ; format >> 'json' }
+        def cmd = new InfoImpl(options: options, out: new PrintStream(buffer))
+
+        cmd.run()
 
         then:
         json.projectName == "nextflow-io/hello"
@@ -100,14 +101,14 @@ class CmdInfoTest extends Specification {
 
     def 'should print yaml info' () {
 
-        given:
-        def buffer = new ByteArrayOutputStream()
-        def cmd = new CmdInfo(args: ['hello'], format: 'yaml', out: new PrintStream(buffer))
-
         when:
-        cmd.run()
+        def buffer = new ByteArrayOutputStream()
         def screen = buffer.toString()
         def json = (Map)new Yaml().load(screen)
+        def options = Mock(InfoImpl.Options) { args >> ['hello'] ; format >> 'yaml' }
+        def cmd = new InfoImpl(options: options, out: new PrintStream(buffer))
+
+        cmd.run()
 
         then:
         json.projectName == "nextflow-io/hello"

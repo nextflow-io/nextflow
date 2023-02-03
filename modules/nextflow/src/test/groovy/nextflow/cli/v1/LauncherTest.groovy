@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package nextflow.cli
+package nextflow.cli.v1
 
 import spock.lang.Specification
 
@@ -23,7 +23,6 @@ import java.nio.file.Files
 
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
-import spock.util.environment.RestoreSystemProperties
 import test.OutputCapture
 /**
  *
@@ -61,13 +60,13 @@ class LauncherTest extends Specification {
         when:
         launcher = new Launcher().parseMainArgs('help')
         then:
-        launcher.command instanceof CmdHelp
+        launcher.command instanceof HelpCmd
         launcher.command.args == null
 
         when:
         launcher = new Launcher().parseMainArgs('help','xxx')
         then:
-        launcher.command instanceof CmdHelp
+        launcher.command instanceof HelpCmd
         launcher.command.args == ['xxx']
 
     }
@@ -77,13 +76,13 @@ class LauncherTest extends Specification {
         when:
         def launcher = new Launcher().parseMainArgs('info')
         then:
-        launcher.command instanceof CmdInfo
+        launcher.command instanceof InfoCmd
         launcher.command.args == null
 
         when:
         launcher = new Launcher().parseMainArgs('info','xxx')
         then:
-        launcher.command instanceof CmdInfo
+        launcher.command instanceof InfoCmd
         launcher.command.args == ['xxx']
 
     }
@@ -93,13 +92,13 @@ class LauncherTest extends Specification {
         when:
         def launcher = new Launcher().parseMainArgs('pull','alpha')
         then:
-        launcher.command instanceof CmdPull
+        launcher.command instanceof PullCmd
         launcher.command.args == ['alpha']
 
         when:
         launcher = new Launcher().parseMainArgs('pull','xxx', '-hub', 'bitbucket', '-user','xx:11')
         then:
-        launcher.command instanceof CmdPull
+        launcher.command instanceof PullCmd
         launcher.command.args == ['xxx']
         launcher.command.hubProvider == 'bitbucket'
         launcher.command.hubUser == 'xx'
@@ -111,7 +110,7 @@ class LauncherTest extends Specification {
         when:
         def launcher = new Launcher().parseMainArgs('clone','xxx', '-hub', 'bitbucket', '-user','xx:yy')
         then:
-        launcher.command instanceof CmdClone
+        launcher.command instanceof CloneCmd
         launcher.command.args == ['xxx']
         launcher.command.hubProvider == 'bitbucket'
         launcher.command.hubUser == 'xx'
@@ -123,7 +122,7 @@ class LauncherTest extends Specification {
         when:
         def launcher = new Launcher().parseMainArgs('run','xxx', '-hub', 'bitbucket', '-user','xx:yy')
         then:
-        launcher.command instanceof CmdRun
+        launcher.command instanceof RunCmd
         launcher.command.args == ['xxx']
         launcher.command.hubProvider == 'bitbucket'
         launcher.command.hubUser == 'xx'
@@ -132,14 +131,14 @@ class LauncherTest extends Specification {
         when:
         launcher = new Launcher().parseMainArgs('run','alpha', '-hub', 'github')
         then:
-        launcher.command instanceof CmdRun
+        launcher.command instanceof RunCmd
         launcher.command.args == ['alpha']
         launcher.command.hubProvider == 'github'
 
         when:
         launcher = new Launcher().parseMainArgs('run', 'script.nf', '--alpha', '0', '--omega', '9')
         then:
-        launcher.command instanceof CmdRun
+        launcher.command instanceof RunCmd
         launcher.command.params.'alpha' == '0'
         launcher.command.params.'omega' == '9'
 
@@ -151,7 +150,7 @@ class LauncherTest extends Specification {
         given:
         def script = Files.createTempFile('file',null)
         def launcher = [:] as Launcher
-        launcher.allCommands = [ new CmdRun(), new CmdInfo() ]
+        launcher.allCommands = [ new RunCmd(), new InfoCmd() ]
 
         expect:
         launcher.normalizeArgs('a','-bb','-ccc','dddd') == ['a','-bb','-ccc','dddd']
@@ -299,143 +298,6 @@ class LauncherTest extends Specification {
         '-x=y'              | false
     }
 
-
-    @RestoreSystemProperties
-    def 'should setup proxy properties'() {
-
-        when:
-        Launcher.setProxy('HTTP', [HTTP_PROXY: 'alpha.com:333'])
-        then:
-        System.getProperty('http.proxyHost') == 'alpha.com'
-        System.getProperty('http.proxyPort') == '333'
-
-        when:
-        Launcher.setProxy('http', [http_proxy: 'gamma.com:444'])
-        then:
-        System.getProperty('http.proxyHost') == 'gamma.com'
-        System.getProperty('http.proxyPort') == '444'
-
-        when:
-        Launcher.setProxy('HTTPS', [HTTPS_PROXY: 'beta.com:5466'])
-        then:
-        System.getProperty('https.proxyHost') == 'beta.com'
-        System.getProperty('https.proxyPort') == '5466'
-
-        when:
-        Launcher.setProxy('https', [https_proxy: 'zeta.com:6646'])
-        then:
-        System.getProperty('https.proxyHost') == 'zeta.com'
-        System.getProperty('https.proxyPort') == '6646'
-
-        when:
-        Launcher.setProxy('FTP', [FTP_PROXY: 'delta.com:7566'])
-        then:
-        System.getProperty('ftp.proxyHost') == 'delta.com'
-        System.getProperty('ftp.proxyPort') == '7566'
-
-        when:
-        Launcher.setProxy('ftp', [ftp_proxy: 'epsilon.com:6658'])
-        then:
-        System.getProperty('ftp.proxyHost') == 'epsilon.com'
-        System.getProperty('ftp.proxyPort') == '6658'
-    }
-
-    @RestoreSystemProperties
-    def 'should setup proxy properties and configure the network authenticator'() {
-
-        when:
-        Launcher.setProxy('HTTP', [HTTP_PROXY: 'http://alphauser:alphapass@alpha.com:333'])
-        PasswordAuthentication auth = Authenticator.requestPasswordAuthentication(
-            'alpha.com', null, 333, 'http', null, null, null, Authenticator.RequestorType.PROXY
-        )
-        then:
-        System.getProperty('http.proxyHost') == 'alpha.com'
-        System.getProperty('http.proxyPort') == '333'
-        and:
-        auth.getUserName() == 'alphauser'
-        auth.getPassword() == 'alphapass'.toCharArray()
-
-        when:
-        Launcher.setProxy('http', [http_proxy: 'http://gammauser:gammapass@gamma.com:444'])
-        auth = Authenticator.requestPasswordAuthentication(
-            'gamma.com', null, 444, 'http', null, null, null, Authenticator.RequestorType.PROXY
-        )
-        then:
-        System.getProperty('http.proxyHost') == 'gamma.com'
-        System.getProperty('http.proxyPort') == '444'
-        and:
-        auth.getUserName() == 'gammauser'
-        auth.getPassword() == 'gammapass'.toCharArray()
-
-        when:
-        Launcher.setProxy('HTTPS', [HTTPS_PROXY: 'https://betauser:betapass@beta.com:5466'])
-        auth = Authenticator.requestPasswordAuthentication(
-            'beta.com', null, 5466, 'HTTPS', null, null, null, Authenticator.RequestorType.PROXY
-        )
-        then:
-        System.getProperty('https.proxyHost') == 'beta.com'
-        System.getProperty('https.proxyPort') == '5466'
-        and:
-        auth.getUserName() == 'betauser'
-        auth.getPassword() == 'betapass'.toCharArray()
-
-        when:
-        Launcher.setProxy('https', [https_proxy: 'https://zetauser:zetapass@zeta.com:6646'])
-        auth = Authenticator.requestPasswordAuthentication(
-            'zeta.com', null, 6646, 'https', null, null, null, Authenticator.RequestorType.PROXY
-        )
-        then:
-        System.getProperty('https.proxyHost') == 'zeta.com'
-        System.getProperty('https.proxyPort') == '6646'
-        and:
-        auth.getUserName() == 'zetauser'
-        auth.getPassword() == 'zetapass'.toCharArray()
-
-        when:
-        Launcher.setProxy('FTP', [FTP_PROXY: 'ftp://deltauser:deltapass@delta.com:7566'])
-        auth = Authenticator.requestPasswordAuthentication(
-            'delta.com', null, 7566, 'ftp', null, null, null, Authenticator.RequestorType.PROXY
-        )
-        then:
-        System.getProperty('ftp.proxyHost') == 'delta.com'
-        System.getProperty('ftp.proxyPort') == '7566'
-        and:
-        auth.getUserName() == 'deltauser'
-        auth.getPassword() == 'deltapass'.toCharArray()
-
-        when:
-        Launcher.setProxy('ftp', [ftp_proxy: 'ftp://epsilonuser:epsilonpass@epsilon.com:6658'])
-        auth = Authenticator.requestPasswordAuthentication(
-            'epsilon.com', null, 6658, 'ftp', null, null, null, Authenticator.RequestorType.PROXY
-        )
-        then:
-        System.getProperty('ftp.proxyHost') == 'epsilon.com'
-        System.getProperty('ftp.proxyPort') == '6658'
-        and:
-        auth.getUserName() == 'epsilonuser'
-        auth.getPassword() == 'epsilonpass'.toCharArray()
-    }
-
-    @RestoreSystemProperties
-    def 'should set no proxy property' () {
-
-        given:
-        System.properties.remove('http.nonProxyHosts')
-        
-        when:
-        Launcher.setNoProxy(ENV)
-        then:
-        System.getProperty('http.nonProxyHosts') == EXPECTED
-
-        where:
-        ENV                         | EXPECTED
-        [:]                         | null
-        [no_proxy: 'localhost' ]    | 'localhost'
-        [NO_PROXY: '127.0.0.1' ]    | '127.0.0.1'
-        [NO_PROXY:'localhost,127.0.0.1,.localdomain.com']  | 'localhost|127.0.0.1|.localdomain.com'
-
-    }
-
     def 'should make cli' () {
         given:
         def launcher = new Launcher()
@@ -469,7 +331,7 @@ class LauncherTest extends Specification {
         given:
         def launcher = new Launcher()
         when:
-        launcher.printCommands( [new CmdInfo(), new CmdRun(), new CmdList()] )
+        launcher.printCommands( [new InfoCmd(), new RunCmd(), new ListCmd()] )
         then:
         capture.toString() == '''
                 Commands:
@@ -483,16 +345,16 @@ class LauncherTest extends Specification {
 
     static class Opts {
 
-        @Parameter(names=['-log'], description = 'Set nextflow log file')
+        @Parameter(names = ['-log'], description = 'Set nextflow log file')
         String opt1
 
-        @Parameter(names=['-c','-config'], description = 'Add the specified file to configuration set')
+        @Parameter(names = ['-c','-config'], description = 'Add the specified file to configuration set')
         String opt2
 
         @DynamicParameter(names = ['-D'], description = 'Set JVM properties' )
         Map opt3
 
-        @Parameter(names=['hidden'], hidden = true)
+        @Parameter(names = ['hidden'], hidden = true)
         String opt4
 
     }

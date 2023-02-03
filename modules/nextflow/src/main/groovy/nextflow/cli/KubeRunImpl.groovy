@@ -48,9 +48,10 @@ class KubeRunImpl extends RunImpl {
     }
 
     @Delegate
-    private Options options
+    Options options
 
     KubeRunImpl(Options options) {
+        super(options)
         this.options = options
     }
 

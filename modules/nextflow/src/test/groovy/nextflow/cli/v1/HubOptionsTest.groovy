@@ -15,9 +15,8 @@
  * limitations under the License.
  */
 
-package nextflow.scm
+package nextflow.cli.v1
 
-import nextflow.cli.HubOptions
 import spock.lang.Specification
 
 /**
@@ -30,7 +29,7 @@ class HubOptionsTest extends Specification {
 
         when:
         def cmd = [:] as HubOptions
-        cmd.hubUser = credential
+        cmd.hubUserCli = credential
         then:
         cmd.getHubUser() == user
         cmd.getHubPassword() == password
@@ -40,8 +39,6 @@ class HubOptionsTest extends Specification {
         null            | null  | null
         'paolo'         | 'paolo'   | null
         'paolo:secret'  | 'paolo'   | 'secret'
-
-
 
     }
 }

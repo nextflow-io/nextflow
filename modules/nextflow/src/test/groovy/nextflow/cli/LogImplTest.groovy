@@ -16,6 +16,7 @@
  */
 
 package nextflow.cli
+
 import java.nio.file.Files
 
 import nextflow.cache.CacheDB
@@ -37,7 +38,7 @@ import test.OutputCapture
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CmdLogTest extends Specification {
+class LogImplTest extends Specification {
 
     def cleanup() {
         Plugins.stop()
@@ -101,7 +102,10 @@ class CmdLogTest extends Specification {
         history.write(runName,uuid,'b3d3aca8eb','run')
 
         when:
-        def log = new CmdLog(basePath: folder, args: [runName])
+        def options = Mock(LogImpl.Options) {
+            args >> [runName]
+        }
+        def log = new LogImpl(basePath: folder, options: options)
         log.run()
         def stdout = capture
                 .toString()
@@ -170,9 +174,12 @@ class CmdLogTest extends Specification {
         def history = new HistoryFile(folder.resolve(HistoryFile.FILE_NAME))
         history.write(runName,uuid,'b3d3aca8eb','run')
 
-
         when:
-        def log = new CmdLog(basePath: folder, filterStr: 'exit == 0', args: ['test_1'])
+        def options = Mock(LogImpl.Options) {
+            filterStr >> 'exit == 0'
+            args >> ['test_1']
+        }
+        def log = new LogImpl(basePath: folder, options: options)
         log.run()
 
         def stdout = capture

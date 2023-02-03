@@ -227,18 +227,6 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     Map<String,String> params = new LinkedHashMap<>()
 
     @Override
-    Boolean getDisableJobsCancellation() {
-        disableJobsCancellation != null
-            ? disableJobsCancellation
-            : System.getenv('NXF_DISABLE_JOBS_CANCELLATION') as boolean
-    }
-
-    @Override
-    String getParamsFile() {
-        paramsFile ?: System.getenv('NXF_PARAMS_FILE')
-    }
-
-    @Override
     String getLauncherCliString() {
         launcher.cliString
     }

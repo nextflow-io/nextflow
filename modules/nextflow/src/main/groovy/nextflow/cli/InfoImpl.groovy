@@ -58,6 +58,9 @@ class InfoImpl {
         this.options = options
     }
 
+    /* For testing purposes only */
+    InfoImpl() {}
+
     void run() {
 
         int level = moreDetailed ? 2 : ( detailed ? 1 : 0 )
