@@ -125,7 +125,7 @@ class GridTaskHandlerTest extends Specification {
         result == '''\
                 #!/bin/bash
                 #$ directive=one
-                docker run -i -e "NXF_FUSION_WORK=/fusion/http/foo.com/some/dir" ubuntu:latest /usr/bin/fusion bash /fusion/http/foo.com/some/dir/.command.run'
+                docker run -i -e "FUSION_WORK=/fusion/http/foo.com/some/dir" ubuntu:latest /usr/bin/fusion bash '/fusion/http/foo.com/some/dir/.command.run'
                 '''.stripIndent(true)
     }
 
