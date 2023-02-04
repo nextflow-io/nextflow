@@ -19,7 +19,6 @@ package nextflow.executor
 
 import static nextflow.processor.TaskStatus.*
 
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 import java.time.temporal.ChronoUnit
@@ -149,8 +148,8 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
                     final msg = """\
                         Failed to submit process '${task.name}'
                          - attempt : ${event.attemptCount}
-                         - command : ${CmdLineHelper.toLine(failure.command)}
-                         - reason  : $failure.reason
+                         - command : ${failure.command}
+                         - reason  : ${failure.reason}
                         """.stripIndent()
                     log.warn msg
 
@@ -187,9 +186,10 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             // -- wait the the process completes
             final result = process.text
             final exitStatus = process.waitFor()
+            final cmd = launchCmd0(builder,pipeScript)
 
             if( exitStatus ) {
-                throw new ProcessNonZeroExitStatusException("Failed to submit process to grid scheduler for execution", result, exitStatus, launchCmd0(builder,pipeScript))
+                throw new ProcessNonZeroExitStatusException("Failed to submit process to grid scheduler for execution", result, exitStatus, cmd)
             }
 
             // -- return the process stdout
@@ -220,29 +220,30 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         final config = task.getContainerConfig()
         final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), submit)
         log.debug "Launch cmd line: $cmd"
-        // since fusion uses a remote work directory
-        // assign a local file path for the grid submit output log
-        task.logFile = Files.createTempFile('nf-task','.log')
+        // create an inline script to launch the job execution
         return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
     }
 
     protected String submitDirective(TaskRun task) {
         final remoteLog = task.workDir.resolve(TaskRun.CMD_LOG).toString()
+        // replaces the log file with a null file because the cluster submit tool
+        // cannot write to a file hosted in a remote object storage
         final result = executor
                 .getHeaders(task)
-                .replaceAll(remoteLog, task.logFile.toString())
+                .replaceAll(remoteLog, '/dev/null')
         return result
     }
 
-    protected List<String> launchCmd0(ProcessBuilder builder, String pipeScript) {
-        if( !pipeScript )
-            return builder.command()
-        final result = new ArrayList(builder.command())
-        result.add('<')
-        result.add(TaskRun.CMD_RUN)
+    protected String launchCmd0(ProcessBuilder builder, String pipeScript) {
+        def result = CmdLineHelper.toLine(builder.command())
+        if( pipeScript ) {
+            result = "cat << 'LAUNCH_COMMAND_EOF' | ${result}\n"
+            result += pipeScript.trim() + '\n'
+            result += 'LAUNCH_COMMAND_EOF\n'
+        }
         return result
     }
-    
+
     /*
      * {@inheritDocs}
      */
@@ -269,8 +270,11 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             if( e instanceof ProcessNonZeroExitStatusException ) {
                 task.exitStatus = e.getExitStatus()
                 task.stdout = e.getReason()
+                task.script = e.getCommand()
             }
-            task.script = builder ? CmdLineHelper.toLine(builder.command()) : null
+            else {
+                task.script = builder ? CmdLineHelper.toLine(builder.command()) : null
+            }
             status = COMPLETED
             throw new ProcessFailedException("Error submitting process '${task.name}' for execution", e )
         }

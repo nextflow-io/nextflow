@@ -42,11 +42,11 @@ class GridTaskHandlerTest extends Specification {
         when:
         def predicate = handler.retryCondition("Socket timed out")
         then:
-        predicate.test(new ProcessNonZeroExitStatusException('Error', 'Socket timed out', 1, []))
+        predicate.test(new ProcessNonZeroExitStatusException('Error', 'Socket timed out', 1, null))
         and:
-        predicate.test(new ProcessNonZeroExitStatusException('Error', 'error\nBatch job submission failed\nSocket timed out on send/recv operation', 1, [] ))
+        predicate.test(new ProcessNonZeroExitStatusException('Error', 'error\nBatch job submission failed\nSocket timed out on send/recv operation', 1, null))
         and:
-        !predicate.test(new ProcessNonZeroExitStatusException('Error', 'OK', 0, []))
+        !predicate.test(new ProcessNonZeroExitStatusException('Error', 'OK', 0, null))
 
     }
 
@@ -60,7 +60,7 @@ class GridTaskHandlerTest extends Specification {
         handler.submit()
 
         then:
-        handler.safeExecute( _ )  >> { throw new ProcessNonZeroExitStatusException("Submit failed", "The limit is invalid", 10, ['qsub', 'foo']) }
+        handler.safeExecute( _ )  >> { throw new ProcessNonZeroExitStatusException("Submit failed", "The limit is invalid", 10, 'qsub foo') }
         and:
         exec.createBashWrapperBuilder(task) >> Mock(BashWrapperBuilder)
         exec.pipeLauncherScript() >> false
@@ -75,14 +75,12 @@ class GridTaskHandlerTest extends Specification {
 
     }
 
-    def 'should get submit directives' () {
+    def 'should replace log file with /dev/null' () {
         given:
         def WORK_DIR = Path.of('/some/dir')
-        def logFile = TestHelper.createInMemTempFile('log')
         and:
         def task = Mock(TaskRun) {
             getWorkDir() >> WORK_DIR
-            getLogFile() >> logFile
         }
         def exec = Mock(AbstractGridExecutor)
         def handler = Spy(new GridTaskHandler(task, exec))
@@ -96,7 +94,7 @@ class GridTaskHandlerTest extends Specification {
         result == """\
             #FOO this
             #BAR that
-            #OUT file=$logFile
+            #OUT file=/dev/null
             """.stripIndent()
     }
 
@@ -131,14 +129,16 @@ class GridTaskHandlerTest extends Specification {
 
     def 'should create launch command' () {
         given:
-        def builder = new ProcessBuilder().command(CMD)
         def exec = Spy(GridTaskHandler)
-        expect:
-        exec.launchCmd0(builder, PIPE) == EXPECTED
 
-        where:
-        CMD         | PIPE  | EXPECTED
-        ['qsub']    | null  | ['qsub']
-        ['qsub']    | 'xyz' | ['qsub', '<', '.command.run']
+        expect:
+        exec.launchCmd0(new ProcessBuilder().command(['qsub', '/some/file']), null) == 'qsub /some/file'
+        and:
+        exec.launchCmd0(new ProcessBuilder().command(['qsub']), 'docker run /some/file') ==
+                '''\
+                cat << 'LAUNCH_COMMAND_EOF' | qsub
+                docker run /some/file
+                LAUNCH_COMMAND_EOF
+                '''.stripIndent()
     }
 }

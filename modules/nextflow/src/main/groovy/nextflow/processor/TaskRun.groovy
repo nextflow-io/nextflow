@@ -17,6 +17,7 @@
 
 package nextflow.processor
 
+import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -141,15 +142,6 @@ class TaskRun implements Cloneable {
     def stderr
 
     /**
-     * Task log file path. If not specified defaults to "$workDir/.command.log"
-     */
-    Path logFile
-
-    Path getLogFile() {
-        logFile!=null ? logFile : workDir.resolve(CMD_LOG)
-    }
-
-    /**
      * @return The task produced stdout result as string
      */
     String getStdout() {
@@ -242,10 +234,10 @@ class TaskRun implements Cloneable {
     }
 
     List<String> dumpLogFile(int n = 50) {
-        if( !workDir )
+        if( !workDir || workDir.fileSystem!=FileSystems.default )
             return Collections.<String>emptyList()
         try {
-            return dumpObject(getLogFile(),n)
+            return dumpObject(workDir.resolve(CMD_LOG),n)
         }
         catch( Exception e ) {
             log.debug "Unable to dump error of process '$name' -- Cause: ${e}"
