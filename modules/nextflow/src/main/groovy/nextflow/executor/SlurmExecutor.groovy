@@ -16,6 +16,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 import java.util.regex.Pattern
 
@@ -91,16 +92,6 @@ class SlurmExecutor extends AbstractGridExecutor {
     }
 
     String getHeaderToken() { '#SBATCH' }
-
-    @Override
-    protected boolean pipeLauncherScript() {
-        return isFusionEnabled()
-    }
-
-    @Override
-    boolean isFusionEnabled() {
-        return FusionHelper.isFusionEnabled(session)
-    }
 
     /**
      * The command line to submit this job
@@ -196,5 +187,15 @@ class SlurmExecutor extends AbstractGridExecutor {
         }
 
         return result
+    }
+
+    @Override
+    protected boolean pipeLauncherScript() {
+        return isFusionEnabled()
+    }
+
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
     }
 }
