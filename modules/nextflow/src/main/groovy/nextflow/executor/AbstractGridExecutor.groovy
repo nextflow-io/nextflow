@@ -403,9 +403,9 @@ abstract class AbstractGridExecutor extends Executor {
 
     @Override
     boolean isContainerNative() {
-        // when fusion is enable it behave as native container environment
-        // because the command run wrapper script should not not a container.
-        // Instead is the command run wrapper command to be run via a container.
+        // when fusion is enabled it behaves as a native container environment
+        // because the command wrapper script should not manage the container execution.
+        // Instead, it is the command wrapper script that is launched run within a container process.
         return isFusionEnabled()
     }
 }

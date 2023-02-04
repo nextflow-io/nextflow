@@ -204,7 +204,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         }
     }
 
-    protected BashWrapperBuilder createScriptLauncher(TaskRun task) {
+    protected BashWrapperBuilder createTaskWrapper(TaskRun task) {
         return fusionEnabled()
             ? fusionLauncher()
             : executor.createBashWrapperBuilder(task)
@@ -251,7 +251,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         ProcessBuilder builder = null
         try {
             // -- create the wrapper script
-            createScriptLauncher(task).build()
+            createTaskWrapper(task).build()
             // -- start the execution and notify the event to the monitor
             builder = createProcessBuilder()
             // -- forward the job launcher script to the command stdin if required
