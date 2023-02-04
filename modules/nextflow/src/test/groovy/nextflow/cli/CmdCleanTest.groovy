@@ -69,7 +69,7 @@ class CmdCleanTest extends Specification {
     }
 
 
-    def 'non-empty folder (.command.file name) keep logs' () {
+    def 'non-empty folder [.command.file name] keep logs' () {
 
         given:
         def folder = Files.createTempDirectory('test')
