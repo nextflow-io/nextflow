@@ -219,7 +219,6 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         final launcher = fusionLauncher()
         final config = task.getContainerConfig()
         final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), submit)
-        log.debug "Launch cmd line: $cmd"
         // create an inline script to launch the job execution
         return '#!/bin/bash\n' + submitDirective(task) + cmd + '\n'
     }
