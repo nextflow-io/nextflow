@@ -362,7 +362,7 @@ class TaskRun implements Cloneable {
             try {
                 // -- look-up the 'sampleId' property, and if everything is fine
                 //    cache this value in the 'name' attribute
-                return name = "$baseName (${config.tag.trim()})"
+                return name = "$baseName (${config.tag.replace('\n','')})"
             }
             catch( IllegalStateException e ) {
                 log.debug "Cannot access `tag` property for task: $baseName ($index)"
