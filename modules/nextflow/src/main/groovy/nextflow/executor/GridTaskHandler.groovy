@@ -148,8 +148,8 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
                     final msg = """\
                         Failed to submit process '${task.name}'
                          - attempt : ${event.attemptCount}
-                         - command : ${failure.command}
                          - reason  : ${failure.reason}
+                         - command : ${failure.command}
                         """.stripIndent()
                     log.warn msg
 
