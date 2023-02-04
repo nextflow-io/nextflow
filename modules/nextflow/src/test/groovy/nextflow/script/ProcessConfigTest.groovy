@@ -22,7 +22,6 @@ import java.nio.file.Files
 import nextflow.scm.ProviderConfig
 import spock.lang.Specification
 import spock.lang.Unroll
-import test.OutputCapture
 
 import nextflow.exception.IllegalDirectiveException
 import nextflow.processor.ErrorStrategy
@@ -761,6 +760,18 @@ class ProcessConfigTest extends Specification {
                 Unrecognized error strategy: terminated. Available strategies are: terminate, finish, ignore, retry
                 '''
                 .stripIndent().trim()
+
+        when:
+        def process3 = new ProcessConfig(Mock(BaseScript))
+        process1.errorStrategy ','
+
+        then:
+        def e3 = thrown(IllegalArgumentException)
+        e3.message ==
+                '''
+                Unrecognized error strategy: ,. Available strategies are: terminate, finish, ignore, retry
+                '''
+                        .stripIndent().trim()
     }
 
     def 'should not throw exception for valid error strategy or closure' () {

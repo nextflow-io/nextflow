@@ -44,6 +44,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
     static final public transient LABEL_REGEXP = ~/[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9]+)?/
 
+    private static final List<String> VALID_ERROR_STRATEGIES = ErrorStrategy.values().collect { it -> it.toString() }
+
     static final public List<String> DIRECTIVES = [
             'accelerator',
             'afterScript',
@@ -813,10 +815,9 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      *      The {@link ProcessConfig} instance itself.
      */
     ProcessConfig errorStrategy( strategy ) {
-        listOfStrategies = ['terminate', 'finish', 'ignore', 'retry']
         if (strategy !instanceof Closure) {
-            if (!listOfStrategies.contains(strategy)) {
-                throw new IllegalArgumentException("Unrecognized error strategy: " + strategy + ". Available strategies are: " + listOfStrategies.join(', '))
+            if (strategy.toUpperCase() !in VALID_ERROR_STRATEGIES) {
+                throw new IllegalArgumentException("Unrecognized error strategy: ${strategy}. Available strategies are: ${VALID_ERROR_STRATEGIES.join(', ').toLowerCase()}")
             }
         }
 
