@@ -143,6 +143,36 @@ class PodSpecBuilderTest extends Specification {
 
     }
 
+    def 'should create pod spec with device and capabilities' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand('echo foo')
+                .withDevices(['/dev/fuse'])
+                .withCapabilities(add:['SYS_ADMIN'])
+                .build()
+
+        then:
+        spec ==  [ apiVersion: 'v1',
+                   kind: 'Pod',
+                   metadata: [name:'foo', namespace:'default'],
+                   spec: [
+                           restartPolicy:'Never',
+                           containers:[
+                                   [name:'foo',
+                                    image:'busybox',
+                                    command:['/bin/bash', '-c', 'echo foo'],
+                                    devices: ['/dev/fuse'],
+                                    securityContext: [capabilities: [add:['SYS_ADMIN']]]
+                                   ]
+                           ]
+                   ]
+        ]
+
+    }
+
     def 'should set namespace, labels and annotations' () {
 
         when:

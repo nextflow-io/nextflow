@@ -113,6 +113,10 @@ class PodSpecBuilder {
 
     int activeDeadlineSeconds
 
+    Map<String,List<String>> capabilities
+
+    List<String> devices
+
     /**
      * @return A sequential volume unique identifier
      */
@@ -295,6 +299,19 @@ class PodSpecBuilder {
         return this
     }
 
+    PodSpecBuilder withCapabilities(Map<String,List<String>> cap) {
+        this.capabilities = cap
+        for( String it : cap.keySet() ) {
+            if( it !in ['add','drop']) throw new IllegalArgumentException("K8s capability action can be either 'add' or 'drop' - offending value '$it'")
+        }
+        return this
+    }
+
+    PodSpecBuilder withDevices(List<String> dev) {
+        this.devices = dev
+        return this
+    }
+
     PodSpecBuilder withActiveDeadline(int seconds) {
         this.activeDeadlineSeconds = seconds
         return this
@@ -394,10 +411,20 @@ class PodSpecBuilder {
         if( imagePullPolicy )
             container.imagePullPolicy = imagePullPolicy
 
+        if( devices )
+            container.devices = devices
+
+        final secContext = new LinkedHashMap(10)
         if( privileged ) {
             // note: privileged flag needs to be defined in the *container* securityContext
             // not the 'spec' securityContext (see below)
-            container.securityContext = [ privileged: true ]
+            secContext.privileged =true
+        }
+        if( capabilities ) {
+            secContext.capabilities = capabilities
+        }
+        if( secContext ) {
+            container.securityContext = secContext
         }
 
         final spec = [
