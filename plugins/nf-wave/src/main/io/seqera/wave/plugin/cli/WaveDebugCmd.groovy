@@ -47,14 +47,40 @@ class WaveDebugCmd {
     }
 
     protected void taskDebug(List<String> args) {
+        if( !args )
+            throw new AbortOperationException("Missing id of the task to debug or remote task path")
+
+        final criteria = args.pop()
+
+        if ( criteria.startsWith('s3://') ) {
+            try {
+                final image = args.pop()
+                runRemoteTask(criteria, image)
+            } catch (NoSuchElementException ignored) {
+                throw new AbortOperationException("Missing container image - usage: nextflow plugin nf-wave:debug <remote-task-path> <image>")
+            }
+            return
+        }
+
+        runLocalTask(criteria)
+    }
+
+    protected runRemoteTask(String workDir, String image) {
+        final cmd = buildWaveRunCmd()
+        if ( image.startsWith("wave.seqera.io") ) {
+            // Run a waved container
+            cmd.runContainer(image, buildCommand(workDir))
+        } else {
+            // Wave it before running
+            cmd.runContainer([image] + buildCommand(workDir))
+        }
+    }
+
+    protected runLocalTask(String criteria) {
         HistoryFile history = HistoryFile.DEFAULT
         HistoryFile.Record runRecord
         if( !history.exists() || history.empty() || !(runRecord=history.findByIdOrName('last')[0]) )
             throw new AbortOperationException("It looks no pipeline was executed in this folder (or execution history is empty)")
-
-        if( !args )
-            throw new AbortOperationException("Missing id of the task to debug")
-        final criteria = args.pop()
 
         this.cacheDb = CacheFactory.create(runRecord.sessionId, runRecord.runName)
         cacheDb.openForRead()
@@ -62,23 +88,28 @@ class WaveDebugCmd {
             final trace = getOrFindTrace(criteria)
             if( trace==null )
                 throw new AbortOperationException("Cannot find any task with id: '$criteria'")
-
             if( !trace.workDir.startsWith('s3://') )
                 throw new AbortOperationException("Cannot run non-fusion enabled task - Task work dir: $trace.workDir")
-
             log.info "Launching debug session for task '${trace.get('name')}' - work directory: ${trace.workDir}"
-            final workDir = FileHelper.asPath(trace.workDir)
-            final fusionPath = FusionHelper.toContainerMount(workDir, 's3')
-            new WaveRunCmd(session)
-                    .withContainerParams([tty:true, privileged: true])
-                    .withEnvironment('AWS_ACCESS_KEY_ID')
-                    .withEnvironment('AWS_SECRET_ACCESS_KEY')
-                    .withEnvironment("FUSION_WORK=$fusionPath".toString())
-                    .runContainer(trace.get('container')?.toString(), ['/usr/bin/fusion','sh', '-c', '\'cd $FUSION_WORK && exec bash\''])
+            final cmd = buildWaveRunCmd()
+            cmd.runContainer(trace.get('container')?.toString(), buildCommand(trace.workDir))
         }
         finally {
             cacheDb.close()
         }
+    }
+
+    protected static List<String> buildCommand(String workDir) {
+        final workDirPath = FileHelper.asPath(workDir)
+        final fusionPath = FusionHelper.toContainerMount(workDirPath, 's3')
+        return ['/usr/bin/fusion','sh', '-c', "\'cd $fusionPath && PS1=\"[fusion] \" exec bash --norc\'".toString()]
+    }
+
+    protected WaveRunCmd buildWaveRunCmd() {
+        return new WaveRunCmd(session)
+                .withContainerParams([tty:true, privileged: true])
+                .withEnvironment('AWS_ACCESS_KEY_ID')
+                .withEnvironment('AWS_SECRET_ACCESS_KEY')
     }
 
     protected TraceRecord getOrFindTrace(String criteria) {
