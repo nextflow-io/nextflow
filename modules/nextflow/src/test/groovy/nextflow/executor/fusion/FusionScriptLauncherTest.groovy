@@ -67,7 +67,10 @@ class FusionScriptLauncherTest extends Specification {
                 remoteWorkDir: XPath.get('http://foo/work'))
 
         expect:
-        fusion.fusionEnv() == [FUSION_WORK: '/fusion/http/foo/work']
+        fusion.fusionEnv() == [
+                FUSION_WORK: '/fusion/http/foo/work',
+                FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/scratch=false),[*](nextflow.io/scratch=true)"
+        ]
     }
 
     def 'should get header script' () {
