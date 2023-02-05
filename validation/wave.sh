@@ -6,6 +6,14 @@ get_abs_filename() {
 
 export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 
+echo "Test Wave accessing private container repository"
 (cd wave-tests/example1; bash run.sh)
+
+echo "Test Wave building a container"
 (cd wave-tests/example2; bash run.sh)
+
+echo "Test Wave running rnaseq-nf with Fusion on local executor"
 (cd wave-tests/example6; bash run.sh)
+
+echo "Test Wave running rnaseq-nf with Fusion on AWS Batch"
+(cd wave-tests/example6; bash run-aws.sh)
