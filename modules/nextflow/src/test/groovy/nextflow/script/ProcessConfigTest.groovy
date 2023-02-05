@@ -736,4 +736,38 @@ class ProcessConfigTest extends Specification {
         !p3.disk
 
     }
+
+    def 'should throw exception for invalid error strategy' () {
+        when:
+        def process1 = new ProcessConfig(Mock(BaseScript))
+        process1.errorStrategy 'abort'
+
+        then:
+        def e1 = thrown(IllegalArgumentException)
+        e1.message == "Unknown error strategy 'abort' ― Available strategies are: terminate,finish,ignore,retry"
+
+    }
+
+    def 'should not throw exception for valid error strategy or closure' () {
+        when:
+        def process1 = new ProcessConfig(Mock(BaseScript))
+        process1.errorStrategy 'retry'
+
+        then:
+        def e1 = noExceptionThrown()
+
+        when:
+        def process2 = new ProcessConfig(Mock(BaseScript))
+        process2.errorStrategy 'terminate'
+
+        then:
+        def e2 = noExceptionThrown()
+
+        when:
+        def process3 = new ProcessConfig(Mock(BaseScript))
+        process3.errorStrategy { task.exitStatus==14 ? 'retry' : 'terminate' }
+
+        then:
+        def e3 = noExceptionThrown()
+    }
 }

@@ -35,4 +35,15 @@ enum ErrorStrategy {
         this.soft = soft
     }
 
+    static boolean isValid(CharSequence name) {
+        if( !name )
+            return false
+        try {
+            valueOf(name.toString().toUpperCase())
+            return true
+        }
+        catch (IllegalArgumentException e) {
+            return false
+        }
+    }
 }
