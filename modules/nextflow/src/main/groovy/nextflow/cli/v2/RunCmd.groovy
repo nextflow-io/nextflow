@@ -17,6 +17,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.cli.ILauncherOptions
 import nextflow.cli.RunImpl
 import nextflow.util.Duration
@@ -31,6 +32,7 @@ import picocli.CommandLine.ParentCommand
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@Slf4j
 @CompileStatic
 @Command(
     name = 'run',
@@ -222,14 +224,31 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     @Parameters(description = 'Set pipeline parameters')
     List<String> params
 
+    private Map<String,String> paramsMap = null
+
+    /**
+     * Get the pipeline params as a map.
+     *
+     * The double-dash ('--') notation is normally used to separate
+     * positional parameters from options. As a result, params will also
+     * contain the positional parameters of the `run` command (i.e. args),
+     * so they must be skipped when constructing the params map.
+     *
+     * This method assumes that params are specified as option-value pairs
+     * separated by a space. The equals-sign ('=') separator is not supported.
+     */
     @Override
     Map<String,String> getParams() {
-        Map<String,String> paramsMap = [:]
+        if( paramsMap == null ) {
+            paramsMap = [:]
 
-        for( int i = 0; i < params.size(); i += 2 ) {
-            String key = params[i]
-            String value = params[i + 1]
-            paramsMap.put(key, value)
+            for( int i = args.size(); i < params.size(); i += 2 ) {
+                String key = params[i]
+                String value = params[i + 1]
+                paramsMap.put(key, value)
+            }
+
+            log.trace "Parsing params from CLI: $paramsMap"
         }
 
         return paramsMap
