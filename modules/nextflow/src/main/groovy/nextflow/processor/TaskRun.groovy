@@ -17,6 +17,7 @@
 
 package nextflow.processor
 
+import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -233,7 +234,7 @@ class TaskRun implements Cloneable {
     }
 
     List<String> dumpLogFile(int n = 50) {
-        if( !workDir )
+        if( !workDir || workDir.fileSystem!=FileSystems.default )
             return Collections.<String>emptyList()
         try {
             return dumpObject(workDir.resolve(CMD_LOG),n)

@@ -18,7 +18,6 @@
 package nextflow.exception
 
 import groovy.transform.CompileStatic
-
 /**
  * Thrown the submission to a grid scheduler returned an error condition
  *
@@ -29,13 +28,13 @@ class ProcessNonZeroExitStatusException extends RuntimeException {
 
     private String reason
     private int exitStatus
-    private List<String> command
+    private String command
 
     String getReason() { reason }
     int getExitStatus() { exitStatus }
-    List<String> getCommand() { command }
+    String getCommand() { command }
 
-    ProcessNonZeroExitStatusException(String message, String reason, int exitStatus, List<String> command) {
+    ProcessNonZeroExitStatusException(String message, String reason, int exitStatus, String command) {
         super(message)
         this.reason = reason
         this.exitStatus = exitStatus
