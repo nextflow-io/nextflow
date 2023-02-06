@@ -99,7 +99,7 @@ class K8sDriverLauncherTest extends Specification {
         l.getLaunchCli() == expected
 
         where:
-        cmd                                         | expected
+        cmd                                             | expected
         new KubeRunCmd()                                | 'nextflow run foo'
         new KubeRunCmd(cacheable: false)                | 'nextflow run foo -cache false'
         new KubeRunCmd(resume: true)                    | 'nextflow run foo -resume true'

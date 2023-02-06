@@ -32,7 +32,7 @@ import test.OutputCapture
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
  */
-class SecretCmdTest extends Specification {
+class SecretsCmdTest extends Specification {
 
     @Rule
     OutputCapture capture = new OutputCapture()
