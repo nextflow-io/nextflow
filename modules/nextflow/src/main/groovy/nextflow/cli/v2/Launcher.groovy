@@ -56,7 +56,6 @@ import picocli.CommandLine.ScopeType
         FsCmd.class,
         HelpCommand.class,
         InfoCmd.class,
-        KubeRunCmd.class,
         ListCmd.class,
         LogCmd.class,
         NodeCmd.class,

@@ -19,7 +19,7 @@ package nextflow.k8s
 
 import java.nio.file.Files
 
-import nextflow.cli.KubeRunImpl
+import nextflow.cli.v1.KubeRunCmd
 import nextflow.cli.v1.Launcher
 import nextflow.cli.v1.LauncherOptions
 import nextflow.k8s.client.ClientConfig
@@ -100,35 +100,37 @@ class K8sDriverLauncherTest extends Specification {
 
         where:
         cmd                                         | expected
-        new KubeRunImpl()                                | 'nextflow run foo'
-        new KubeRunImpl(cacheable: false)                | 'nextflow run foo -cache false'
-        new KubeRunImpl(resume: true)                    | 'nextflow run foo -resume true'
-        new KubeRunImpl(poolSize: 10)                    | 'nextflow run foo -ps 10'
-        new KubeRunImpl(pollInterval: 5)                 | 'nextflow run foo -pi 5'
-        new KubeRunImpl(queueSize: 9)                    | 'nextflow run foo -qs 9'
-        new KubeRunImpl(revision: 'xyz')                 | 'nextflow run foo -r xyz'
-        new KubeRunImpl(latest: true)                    | 'nextflow run foo -latest true'
-        new KubeRunImpl(withTrace: true)                 | 'nextflow run foo -with-trace true'
-        new KubeRunImpl(withTimeline: true)              | 'nextflow run foo -with-timeline true'
-        new KubeRunImpl(withDag: true)                   | 'nextflow run foo -with-dag true'
-        new KubeRunImpl(dumpHashes: true)                | 'nextflow run foo -dump-hashes true'
-        new KubeRunImpl(dumpChannels: 'lala')            | 'nextflow run foo -dump-channels lala'
-        new KubeRunImpl(env: [XX:'hello', YY: 'world'])  | 'nextflow run foo -e.XX hello -e.YY world'
-        new KubeRunImpl(process: [mem: '100',cpus:'2'])  | 'nextflow run foo -process.mem 100 -process.cpus 2'
-        new KubeRunImpl(params: [alpha:'x', beta:'y'])   | 'nextflow run foo --alpha x --beta y'
-        new KubeRunImpl(params: [alpha: '/path/*.txt'])  | 'nextflow run foo --alpha /path/\\*.txt'
-        new KubeRunImpl(entryName: 'lala')               | 'nextflow run foo -entry lala'
+        new KubeRunCmd()                                | 'nextflow run foo'
+        new KubeRunCmd(cacheable: false)                | 'nextflow run foo -cache false'
+        new KubeRunCmd(resume: true)                    | 'nextflow run foo -resume true'
+        new KubeRunCmd(poolSize: 10)                    | 'nextflow run foo -ps 10'
+        new KubeRunCmd(pollInterval: 5)                 | 'nextflow run foo -pi 5'
+        new KubeRunCmd(queueSize: 9)                    | 'nextflow run foo -qs 9'
+        new KubeRunCmd(revision: 'xyz')                 | 'nextflow run foo -r xyz'
+        new KubeRunCmd(latest: true)                    | 'nextflow run foo -latest true'
+        new KubeRunCmd(withTrace: true)                 | 'nextflow run foo -with-trace true'
+        new KubeRunCmd(withTimeline: true)              | 'nextflow run foo -with-timeline true'
+        new KubeRunCmd(withDag: true)                   | 'nextflow run foo -with-dag true'
+        new KubeRunCmd(dumpHashes: true)                | 'nextflow run foo -dump-hashes true'
+        new KubeRunCmd(dumpChannels: 'lala')            | 'nextflow run foo -dump-channels lala'
+        new KubeRunCmd(env: [XX:'hello', YY: 'world'])  | 'nextflow run foo -e.XX hello -e.YY world'
+        new KubeRunCmd(process: [mem: '100',cpus:'2'])  | 'nextflow run foo -process.mem 100 -process.cpus 2'
+        new KubeRunCmd(params: [alpha:'x', beta:'y'])   | 'nextflow run foo --alpha x --beta y'
+        new KubeRunCmd(params: [alpha: '/path/*.txt'])  | 'nextflow run foo --alpha /path/\\*.txt'
+        new KubeRunCmd(entryName: 'lala')               | 'nextflow run foo -entry lala'
     }
 
     def 'should set the run name' () {
         given:
-        def cmd = new KubeRunImpl( Mock(KubeRunImpl.Options) { launcherOptions >> new LauncherOptions() } )
+        def cmd = new KubeRunCmd()
+        cmd.launcher = new Launcher(options: new LauncherOptions())
 
         when:
         def l = new K8sDriverLauncher(cmd: cmd, pipelineName: 'foo', runName: 'bar')
         then:
         l.getLaunchCli() == 'nextflow run foo -name bar'
     }
+
 
 
     def 'should create launcher spec pod' () {
@@ -405,7 +407,7 @@ class K8sDriverLauncherTest extends Specification {
         when:
         driver.@config = NXF_CONFIG
         driver.@k8sConfig = K8S_CONFIG
-        driver.@cmd = new KubeRunImpl( Mock(KubeRunImpl.Options) { paramsFile >> params.toString() } )
+        driver.@cmd = new KubeRunCmd(paramsFile: params.toString())
 
         driver.createK8sConfigMap()
         then:
@@ -452,7 +454,7 @@ class K8sDriverLauncherTest extends Specification {
         when:
         driver.@config = NXF_CONFIG
         driver.@k8sConfig = K8S_CONFIG
-        driver.@cmd = new KubeRunImpl( Mock(KubeRunImpl.Options) { paramsFile >> params.toString() } )
+        driver.@cmd = new KubeRunCmd(paramsFile: params.toString())
 
         driver.createK8sConfigMap()
         then:
@@ -484,7 +486,7 @@ class K8sDriverLauncherTest extends Specification {
         CFG_WITH_MOUNTS.k8s.storageMountPath = '/foo'
 
         when:
-        driver.@cmd = new KubeRunImpl( Mock(KubeRunImpl.Options) )
+        driver.@cmd = new KubeRunCmd()
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_EMPTY
@@ -494,7 +496,7 @@ class K8sDriverLauncherTest extends Specification {
         config.k8s.storageClaimName == null
 
         when:
-        driver.@cmd = new KubeRunImpl( Mock(KubeRunImpl.Options) )
+        driver.@cmd = new KubeRunCmd()
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
@@ -507,7 +509,7 @@ class K8sDriverLauncherTest extends Specification {
         new K8sConfig(config.k8s).getPodOptions() == new PodOptions([ [volumeClaim:'pvc', mountPath: '/foo'] ])
 
         when:
-        driver.@cmd = new KubeRunImpl( Mock(KubeRunImpl.Options) { volumeMounts >> ['pvc-1:/this','pvc-2:/that'] } )
+        driver.@cmd = new KubeRunCmd(volMounts: ['pvc-1:/this','pvc-2:/that'] )
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_EMPTY
@@ -525,7 +527,7 @@ class K8sDriverLauncherTest extends Specification {
 
 
         when:
-        driver.@cmd = new KubeRunImpl( Mock(KubeRunImpl.Options) { volumeMounts >> ['xyz:/this'] } )
+        driver.@cmd = new KubeRunCmd(volMounts: ['xyz:/this'] )
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
@@ -542,7 +544,7 @@ class K8sDriverLauncherTest extends Specification {
 
 
         when:
-        driver.@cmd = new KubeRunImpl( Mock(KubeRunImpl.Options) { volumeMounts >> ['xyz', 'bar:/mnt/bar'] } )
+        driver.@cmd = new KubeRunCmd(volMounts: ['xyz', 'bar:/mnt/bar'] )
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
@@ -571,14 +573,14 @@ class K8sDriverLauncherTest extends Specification {
         CFG_WITH_MOUNTS.k8s.volumeClaims = [ pvc: [mountPath:'/foo'] ]
 
         when:
-        driver.@cmd = new KubeRunImpl( Mock(KubeRunImpl.Options) )
+        driver.@cmd = new KubeRunCmd()
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_EMPTY
         config.process.executor == 'k8s'
 
         when:
-        driver.@cmd = new KubeRunImpl( Mock(KubeRunImpl.Options) )
+        driver.@cmd = new KubeRunCmd()
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS
@@ -587,7 +589,7 @@ class K8sDriverLauncherTest extends Specification {
         config.k8s.storageMountPath == '/foo'
 
         when:
-        driver.@cmd = new KubeRunImpl( Mock(KubeRunImpl.Options) { volumeMounts >> ['pvc-1:/this','pvc-2:/that'] } )
+        driver.@cmd = new KubeRunCmd(volMounts: ['pvc-1:/this','pvc-2:/that'] )
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_EMPTY
@@ -598,7 +600,7 @@ class K8sDriverLauncherTest extends Specification {
 
 
         when:
-        driver.@cmd = new KubeRunImpl( Mock(KubeRunImpl.Options) { volumeMounts >> ['xyz:/this'] } )
+        driver.@cmd = new KubeRunCmd(volMounts: ['xyz:/this'] )
         config = driver.makeConfig(NAME).toMap()
         then:
         1 *  driver.loadConfig(NAME) >> CFG_WITH_MOUNTS

@@ -26,8 +26,8 @@ import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
 import com.google.common.hash.Hashing
 import groovy.util.logging.Slf4j
-import nextflow.cli.KubeRunImpl
-import nextflow.cli.RunImpl
+import nextflow.cli.v1.KubeRunCmd
+import nextflow.cli.v1.RunCmd
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
@@ -89,7 +89,7 @@ class K8sDriverLauncher {
     /**
      * Command run options
      */
-    private KubeRunImpl cmd
+    private KubeRunCmd cmd
 
     /**
      * Kubernetes client
@@ -259,11 +259,11 @@ class K8sDriverLauncher {
         // -- load local config if available
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
-                .setLauncherOptions(cmd.launcherOptions)
+                .setOptions(cmd.launcher.options)
                 .setProfile(cmd.profile)
-                .setRunOptions(cmd)
+                .setCmdRun(cmd)
 
-        if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.remoteConfig ) {
+        if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.runRemoteConfig ) {
             // -- check and parse project remote config
             Plugins.init()
             final pipelineConfig = new AssetManager(pipelineName, cmd) .getConfigFile()
@@ -311,8 +311,8 @@ class K8sDriverLauncher {
 
         // -- use the volume claims specified in the command line
         //   to populate the pod config
-        for( int i=0; i<cmd.volumeMounts?.size(); i++ ){
-            def entry = cmd.volumeMounts.get(i)
+        for( int i=0; i<cmd.volMounts?.size(); i++ ){
+            def entry = cmd.volMounts.get(i)
             def parts = entry.tokenize(':')
             def name = parts[0]
             def path = parts[1]
@@ -335,7 +335,7 @@ class K8sDriverLauncher {
                     k8s.storageClaimName = name
                     k8s.storageMountPath = path
                 }
-                else if( !cmd.volumeMounts ) {
+                else if( !cmd.volMounts ) {
                     k8s.pod.add( [volumeClaim: name, mountPath: path] )
                 }
             }
@@ -373,9 +373,9 @@ class K8sDriverLauncher {
     }
 
 
-    private Field getField(RunImpl cmd, String name) {
+    private Field getField(RunCmd cmd, String name) {
         def clazz = cmd.class
-        while( clazz != RunImpl ) {
+        while( clazz != RunCmd ) {
             clazz = cmd.class.getSuperclass()
         }
         clazz.getDeclaredField(name)
@@ -445,12 +445,12 @@ class K8sDriverLauncher {
         // -- configure NF command line
         result << "nextflow"
 
-        if( cmd.launcherOptions.trace )
-            result << "-trace ${cmd.launcherOptions.trace.join(',')}"
-        if( cmd.launcherOptions.debug )
-            result << "-debug ${cmd.launcherOptions.debug.join(',')}"
-        if( cmd.launcherOptions.jvmOpts )
-            cmd.launcherOptions.jvmOpts.each { k,v -> result << "-D$k=$v" }
+        if( cmd.launcher.options.trace )
+            result << "-trace ${cmd.launcher.options.trace.join(',')}"
+        if( cmd.launcher.options.debug )
+            result << "-debug ${cmd.launcher.options.debug.join(',')}"
+        if( cmd.launcher.options.jvmOpts )
+            cmd.launcher.options.jvmOpts.each { k,v -> result << "-D$k=$v" }
 
         result << "run"
         result << pipelineName
@@ -471,7 +471,7 @@ class K8sDriverLauncher {
         addOption(result, cmd.&dumpHashes )
         addOption(result, cmd.&dumpChannels )
         addOption(result, cmd.&env )
-        addOption(result, cmd.&process )
+        addOption(result, cmd.&processOptions )
         addOption(result, cmd.&params )
         addOption(result, cmd.&entryName )
 
@@ -479,8 +479,8 @@ class K8sDriverLauncher {
             result << "-params-file $paramsFile"
         }
 
-        if ( cmd.remoteConfig )
-            cmd.remoteConfig.forEach { result << "-config $it" }
+        if ( cmd.runRemoteConfig )
+            cmd.runRemoteConfig.forEach { result << "-config $it" }
 
         if ( cmd.remoteProfile )
             result << "-profile ${cmd.remoteProfile}"

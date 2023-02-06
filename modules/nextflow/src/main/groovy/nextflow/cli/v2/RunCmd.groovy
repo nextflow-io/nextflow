@@ -219,8 +219,21 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     @Option(names = ['--with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
     String withWebLog
 
-    @Parameters(description = 'Set pipeline parameters', hidden = true)
-    Map<String,String> params = new LinkedHashMap<>()
+    @Parameters(description = 'Set pipeline parameters')
+    List<String> params
+
+    @Override
+    Map<String,String> getParams() {
+        Map<String,String> paramsMap = [:]
+
+        for( int i = 0; i < params.size(); i += 2 ) {
+            String key = params[i]
+            String value = params[i + 1]
+            paramsMap.put(key, value)
+        }
+
+        return paramsMap
+    }
 
     @Override
     boolean getStdin() {
