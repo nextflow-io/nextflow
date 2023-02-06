@@ -317,7 +317,7 @@ class FilesExTest extends Specification {
 
     }
 
-    def 'test moveTo (directory) ' () {
+    def 'test moveTo directory' () {
 
         given:
         def sourceFolder =  Files.createTempDirectory('folderToCopy')

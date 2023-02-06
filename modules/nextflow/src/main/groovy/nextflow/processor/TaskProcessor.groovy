@@ -1277,7 +1277,7 @@ class TaskProcessor {
         final fail = e instanceof InvocationTargetException ? e.targetException : e
 
         if( fail instanceof NoSuchFileException ) {
-            return "No such file: $fail.message"
+            return "No such file or directory: $fail.message"
         }
         if( fail instanceof MissingPropertyException ) {
             def name = fail.property ?: LoggerHelper.getDetailMessage(fail)
@@ -1497,12 +1497,20 @@ class TaskProcessor {
         final env = workDir.resolve(TaskRun.CMD_ENV).text
         final result = new HashMap(50)
         for(String line : env.readLines() ) {
-            def (k,v) = line.tokenize('=')
+            def (k,v) = tokenize0(line)
+            if (!k) continue
             result.put(k,v)
         }
         return result
     }
 
+    private List<String> tokenize0(String line) {
+        int p=line.indexOf('=')
+        return p==-1
+                ? List.of(line,'')
+                : List.of(line.substring(0,p), line.substring(p+1))
+    }
+    
     /**
      * Collects the process 'std output'
      *
@@ -2083,6 +2091,11 @@ class TaskProcessor {
         final conda = task.getCondaEnv()
         if( conda ) {
             keys.add(conda)
+        }
+
+        final spack = task.getSpackEnv()
+        if( spack ) {
+            keys.add(spack)
         }
 
         if( session.stubRun ) {

@@ -57,10 +57,9 @@ trait FusionAwareTask {
     }
 
     List<String> fusionSubmitCli() {
-        final logFile = fusionLauncher().toContainerMount(task.workDir.resolve(TaskRun.CMD_LOG))
-        final runFile = fusionLauncher().toContainerMount(task.workDir.resolve(TaskRun.CMD_RUN))
-        final cmd = "trap \"{ ret=\$?; cp ${TaskRun.CMD_LOG} ${logFile}||true; exit \$ret; }\" EXIT; bash ${runFile} 2>&1 | tee ${TaskRun.CMD_LOG}"
-        return ['bash','-o','pipefail','-c', cmd.toString() ]
+        final fusion = fusionLauncher()
+        final runFile = fusion.toContainerMount(task.workDir.resolve(TaskRun.CMD_RUN))
+        return ['/usr/bin/fusion', 'bash', runFile.toString() ]
     }
 
 }

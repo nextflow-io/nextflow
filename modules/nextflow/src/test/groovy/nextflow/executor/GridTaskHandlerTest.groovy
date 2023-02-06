@@ -67,4 +67,17 @@ class GridTaskHandlerTest extends Specification {
         task.exitStatus == 10
 
     }
+
+    def 'should create launch command' () {
+        given:
+        def builder = new ProcessBuilder().command(CMD)
+        def exec = Spy(GridTaskHandler)
+        expect:
+        exec.launchCmd0(builder, PIPE) == EXPECTED
+
+        where:
+        CMD         | PIPE  | EXPECTED
+        ['qsub']    | null  | ['qsub']
+        ['qsub']    | 'xyz' | ['qsub', '<', '.command.run']
+    }
 }

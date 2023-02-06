@@ -51,6 +51,8 @@ class FusionConfigTest extends Specification {
         OPTS                                    | ENV           | EXPECTED
         [:]                                     | [:]           | null
         [containerConfigUrl:'http://foo.com']   | [:]           | 'http://foo.com'
+        [containerConfigUrl:'https://bar.com']  | [:]           | 'https://bar.com'
+        [containerConfigUrl:'file:///some/file']| [:]           | 'file:///some/file'
         [:]                                     | [FUSION_CONTAINER_CONFIG_URL:'http://bar.com']           | 'http://bar.com'
         [containerConfigUrl:'http://foo.com']   | [FUSION_CONTAINER_CONFIG_URL:'http://bar.com']           | 'http://foo.com'
 

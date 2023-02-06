@@ -90,7 +90,8 @@ class ContainerConfig extends LinkedHashMap {
             return null
         if( eng=='docker' || eng=='podman' )
             return '--rm --privileged'
-        // default to null
+        if( eng=='singularity' || eng=='apptainer' )
+            return null
         log.warn "Fusion file system is not supported by '$eng' container engine"
         return null
     }
