@@ -148,14 +148,14 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         final launcher = fusionLauncher()
         final config = task.getContainerConfig()
         final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), submit)
-        log.debug "Launch cmd line: ${cmd.join(' ')}"
+        log.debug "Launch cmd line: ${cmd}"
 
         final logPath = Files.createTempFile('nf-task','.log')
 
         return new ProcessBuilder()
                 .redirectErrorStream(true)
                 .redirectOutput(logPath.toFile())
-                .command(cmd)
+                .command(List.of('sh','-c', cmd))
     }
 
     protected ProcessBuilder createLaunchProcessBuilder() {

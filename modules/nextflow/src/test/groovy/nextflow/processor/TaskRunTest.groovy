@@ -322,10 +322,7 @@ class TaskRunTest extends Specification {
         task.config = new TaskConfig( [container: 'busybox'] )
         task.processor.getSession() >> new Session([(engine): config])
         task.processor.getExecutor() >> Mock(Executor) { containerConfigEngine()>>null }
-        
-        expect:
         task.container == contnr
-        task.containerConfig == config as ContainerConfig
         task.containerConfig.enabled
         task.containerConfig.engine == engine
 

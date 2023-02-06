@@ -16,6 +16,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -76,8 +77,14 @@ abstract class AbstractGridExecutor extends Executor {
         // creates the wrapper script
         final builder = new BashWrapperBuilder(task)
         // job directives headers
-        builder.headerScript = getHeaders(task)
+        builder.headerScript = getHeaderScript(task)
         return builder
+    }
+
+    protected String getHeaderScript(TaskRun task) {
+        def result = getHeaders(task)
+        result += "NXF_CHDIR=${Escape.path(task.workDir)}\n"
+        return result
     }
 
     /**
@@ -392,6 +399,14 @@ abstract class AbstractGridExecutor extends Executor {
     protected String quote(Path path) {
         def str = Escape.path(path)
         path.toString() != str ? "\"$str\"" : str
+    }
+
+    @Override
+    boolean isContainerNative() {
+        // when fusion is enabled it behaves as a native container environment
+        // because the command wrapper script should not manage the container execution.
+        // Instead, it is the command wrapper script that is launched run within a container process.
+        return isFusionEnabled()
     }
 }
 

@@ -16,12 +16,11 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
-import nextflow.util.Escape
-
 /**
  * Implements a executor for PBS/Torque cluster
  *
@@ -70,13 +69,6 @@ class PbsExecutor extends AbstractGridExecutor {
             result << task.config.clusterOptions.toString() << ''
         }
 
-        return result
-    }
-
-    @Override
-    String getHeaders( TaskRun task ) {
-        String result = super.getHeaders(task)
-        result += "NXF_CHDIR=${Escape.path(task.workDir)}\n"
         return result
     }
 

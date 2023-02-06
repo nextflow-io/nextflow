@@ -18,6 +18,7 @@
 package nextflow.executor
 import java.nio.file.Path
 
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskRun
 /**
  * Execute a task script by running it on the SGE/OGE cluster
@@ -35,7 +36,6 @@ class SgeExecutor extends AbstractGridExecutor {
      */
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
-        result << '-wd' << quote(task.workDir)
         result << '-N' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
         result << '-j' << 'y'
@@ -80,18 +80,18 @@ class SgeExecutor extends AbstractGridExecutor {
         return result
     }
 
-
     /*
      * Prepare the 'qsub' cmdline
      */
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile ) {
-
         // The '-terse' command line control the output of the qsub command line, when
         // used it only return the ID of the submitted job.
         // NOTE: In some SGE implementations the '-terse' only works on the qsub command line
         // and it is ignored when used in the script job as directive, fir this reason it
         // should not be remove from here
-        return ['qsub', '-terse', scriptFile.name]
+        return pipeLauncherScript()
+                ? List.of('qsub', '-')
+                : List.of('qsub', '-terse', scriptFile.name)
     }
 
     protected String getHeaderToken() { '#$' }
@@ -175,5 +175,13 @@ class SgeExecutor extends AbstractGridExecutor {
         str.indexOf(' ') != -1 ? "\"$str\"" : str
     }
 
+    @Override
+    protected boolean pipeLauncherScript() {
+        return isFusionEnabled()
+    }
 
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
+    }
 }

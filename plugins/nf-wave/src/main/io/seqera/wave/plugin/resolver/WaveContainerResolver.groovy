@@ -41,8 +41,9 @@ import nextflow.processor.TaskRun
 class WaveContainerResolver implements ContainerResolver {
 
     private ContainerResolver defaultResolver = new DefaultContainerResolver()
-    private List<String> DOCKER_LIKE = ['docker','podman']
-    private final String DOCKER_PREFIX = 'docker://'
+    static final private List<String> DOCKER_LIKE = ['docker','podman','sarus']
+    static final private List<String> SINGULARITY_LIKE = ['singularity','apptainer']
+    static final private String DOCKER_PREFIX = 'docker://'
     private WaveClient client0
 
     synchronized protected WaveClient client() {
@@ -68,7 +69,7 @@ class WaveContainerResolver implements ContainerResolver {
             final image = defaultResolver.resolveImage(task, imageName)
             return waveContainer(task, image.target)
         }
-        else if( engine=='singularity' ) {
+        else if( engine in SINGULARITY_LIKE ) {
             // remove any `docker://` prefix if any
             if( imageName.startsWith(DOCKER_PREFIX) )
                 imageName = imageName.substring(DOCKER_PREFIX.length())
@@ -81,10 +82,11 @@ class WaveContainerResolver implements ContainerResolver {
             // then adapt it to singularity format
             return defaultResolver.resolveImage(task, image.target)
         }
-        else {
-            // other engine are not supported by wave
+        else if ( engine == 'sarus' ) {
             return defaultResolver.resolveImage(task, imageName)
         }
+        else
+            throw new IllegalArgumentException("Wave does not support '$engine' container engine")
     }
 
     /**

@@ -22,6 +22,7 @@ import java.nio.file.Paths
 import java.util.regex.Pattern
 
 import groovy.util.logging.Slf4j
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskRun
 /**
  * Processor for LSF resource manager
@@ -128,7 +129,6 @@ class LsfExecutor extends AbstractGridExecutor {
     protected boolean pipeLauncherScript() { true }
 
     protected String getHeaderToken() { '#BSUB' }
-
 
     /**
      * Parse the string returned by the {@code bsub} command and extract the job ID string
@@ -297,4 +297,8 @@ class LsfExecutor extends AbstractGridExecutor {
         perTaskReserve = session.getExecConfigProp(name, 'perTaskReserve', perTaskReserve)
     }
 
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
+    }
 }

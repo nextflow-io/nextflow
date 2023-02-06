@@ -127,7 +127,6 @@ class MoabExecutorTest extends Specification {
                 #MSUB -N nf-task_name
                 #MSUB -o /work/dir/.command.log
                 #MSUB -j oe
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -143,7 +142,6 @@ class MoabExecutorTest extends Specification {
                 #MSUB -j oe
                 #MSUB -q alpha
                 #MSUB -l walltime=00:01:00
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -161,7 +159,6 @@ class MoabExecutorTest extends Specification {
                 #MSUB -q alpha
                 #MSUB -l walltime=00:01:00
                 #MSUB -l mem=1mb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -182,7 +179,6 @@ class MoabExecutorTest extends Specification {
                 #MSUB -l nodes=1:ppn=2
                 #MSUB -l walltime=00:10:00
                 #MSUB -l mem=5mb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -201,7 +197,6 @@ class MoabExecutorTest extends Specification {
                 #MSUB -l nodes=1:ppn=8
                 #MSUB -l walltime=24:00:00
                 #MSUB -l mem=1gb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -218,7 +213,6 @@ class MoabExecutorTest extends Specification {
                 #MSUB -q delta
                 #MSUB -l walltime=54:10:00
                 #MSUB -l mem=2gb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -245,7 +239,6 @@ class MoabExecutorTest extends Specification {
                 #MSUB -N nf-task_name
                 #MSUB -o "/work/dir\\ 1/.command.log"
                 #MSUB -j oe
-                NXF_CHDIR=/work/dir\\ 1
                 '''
                 .stripIndent().leftTrim()
 
