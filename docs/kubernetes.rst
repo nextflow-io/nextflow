@@ -67,6 +67,9 @@ You can verify such configuration with the command below::
 Launch with ``kuberun``
 -----------------------
 
+.. danger::
+  The ``kuberun`` command was removed in version 22.04. Consider the use of `Launch with Fusion`_ as a better alternative.
+
 To deploy and launch the workflow execution use the Nextflow command ``kuberun`` as shown below::
 
     nextflow kuberun <pipeline-name> -v vol-claim:/mount/path
@@ -84,9 +87,12 @@ specified in the Nextflow configuration file, see the :ref:`Kubernetes configura
 Once the pod execution starts, the application in the foreground prints the console output produced by the running
 workflow pod.
 
-.. warning::
-  The ``kuberun`` is considered an obsolete approach for the deployment of Nextflow pipeline with Kubernetes and
-  it's not maintained anymore. Consider the use of `Launch with Fusion`_ as a better alternative.
+.. note::
+  The ``kuberun`` command does not allow the execution of local Nextflow scripts and it's has been designed to
+  provide a shortcut to simple pipeline deployment into a Kubernetes cluster.
+
+  For stable pipeline deployment, Nextflow needs to be executed as a pod as mentioned in the `Running in a pod`_ section.
+  In alternative take in consideration a managed provisioning service such as `Nextflow Tower <https://tower.nf>`_.
 
 Interactive login
 -----------------
@@ -179,16 +185,6 @@ Pod settings
 
 The process :ref:`process-pod` directive allows the definition of pods specific settings, such as environment variables,
 secrets and config maps when using the :ref:`k8s-executor` executor. See the :ref:`process-pod` directive for more details.
-
-Limitation
-==========
-
-.. note::
-  The ``kuberun`` command does not allow the execution of local Nextflow scripts and it's has been designed to
-  provide a shortcut to simple pipeline deployment into a Kubernetes cluster.
-
-  For stable pipeline deployment, Nextflow needs to be executed as a pod as mentioned in the `Running in a pod`_ section.
-  In alternative take in consideration a managed provisioning service such as `Nextflow Tower <https://tower.nf>`_.
 
 Advanced configuration
 ======================

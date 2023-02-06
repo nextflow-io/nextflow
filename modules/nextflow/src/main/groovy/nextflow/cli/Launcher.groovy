@@ -95,7 +95,6 @@ class Launcher {
                 new CmdLog(),
                 new CmdPull(),
                 new CmdRun(),
-                new CmdKubeRun(),
                 new CmdDrop(),
                 new CmdConfig(),
                 new CmdNode(),
