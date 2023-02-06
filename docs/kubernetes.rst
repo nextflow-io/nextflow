@@ -68,7 +68,7 @@ Launch with ``kuberun``
 -----------------------
 
 .. danger::
-  The ``kuberun`` command was removed in version 22.04. Consider the use of `Launch with Fusion`_ as a better alternative.
+  The ``kuberun`` command was removed in version 23.04. Consider the use of `Launch with Fusion`_ as a better alternative.
 
 To deploy and launch the workflow execution use the Nextflow command ``kuberun`` as shown below::
 

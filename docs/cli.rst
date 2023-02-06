@@ -729,7 +729,7 @@ kuberun
 --------------------
 
 .. danger::
-  The ``kuberun`` command was removed in version 22.04. Consider the use of Fusion or Nextflow Tower as a better alternative.
+  The ``kuberun`` command was removed in version 23.04. Consider the use of Fusion or Nextflow Tower as a better alternative.
 
 Deploy Nextflow into a Kubernetes cluster (experimental)
 
