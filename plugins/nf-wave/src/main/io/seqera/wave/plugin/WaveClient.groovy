@@ -489,10 +489,10 @@ RUN mkdir /opt/spack-env \\
          /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
 &&  (echo "spack:" \\
 &&   echo "  include: [/opt/spack-env/compilers.yaml]" \\
+&&   echo "  specs: [${recipe}]" \\
 &&   echo "  packages:" \\
 &&   echo "    all:" \\
 &&   echo "      target: [${config.spackOpts().spackTarget}]" \\
-&&   echo "  specs: [${recipe}]" \\
 &&   echo "  concretizer:" \\
 &&   echo "    unify: true" \\
 &&   echo "  config:" \\
