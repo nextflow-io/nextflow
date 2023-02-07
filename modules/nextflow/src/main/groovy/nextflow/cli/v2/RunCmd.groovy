@@ -242,9 +242,26 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
         if( paramsMap == null ) {
             paramsMap = [:]
 
-            for( int i = args.size(); i < params.size(); i += 2 ) {
-                String key = params[i]
-                String value = params[i + 1]
+            int i = args.size()
+            while( i < params.size() ) {
+                String current = params[i++]
+
+                String key
+                String value
+                if( current.contains('=') ) {
+                    int split = current.indexOf('=')
+                    key = current.substring(0, split)
+                    value = current.substring(split+1)
+                }
+                else if( i < params.size() && !params[i].startsWith('--') ) {
+                    key = current
+                    value = params[i++]
+                }
+                else {
+                    key = current
+                    value = 'true'
+                }
+
                 paramsMap.put(key, value)
             }
 
