@@ -398,6 +398,8 @@ class WaveClient {
         COPY --chown=\$MAMBA_USER:\$MAMBA_USER conda.yml /tmp/conda.yml
         RUN micromamba install -y -n base -f /tmp/conda.yml && \\
             micromamba clean -a -y
+        RUN apt-get update -y && apt-get install -y procps && \\
+            rm -rf /var/lib/apt/lists/*
         """.stripIndent()
 
         return addCommands(result)
@@ -417,9 +419,11 @@ class WaveClient {
         def result = """\
         FROM ${config.condaOpts().mambaImage}
         RUN \\
-           micromamba install -y -n base $channelsOpts \\
-           $recipe \\
-           && micromamba clean -a -y
+            micromamba install -y -n base $channelsOpts \\
+            $recipe \\
+            && micromamba clean -a -y
+        RUN apt-get update -y && apt-get install -y procps && \\
+            rm -rf /var/lib/apt/lists/*
         """.stripIndent()
 
         return addCommands(result)
