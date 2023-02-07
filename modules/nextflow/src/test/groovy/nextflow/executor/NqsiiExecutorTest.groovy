@@ -66,7 +66,6 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -j o
                 #PBS -b 1
                 #PBS -l cpunum_job=1
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -84,7 +83,6 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -q alpha
                 #PBS -l cpunum_job=1
                 #PBS -l elapstim_req=00:01:00
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -104,7 +102,6 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -l cpunum_job=1
                 #PBS -l elapstim_req=00:01:00
                 #PBS -l memsz_job=1mb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -126,7 +123,6 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -l cpunum_job=2
                 #PBS -l elapstim_req=00:10:00
                 #PBS -l memsz_job=5mb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -146,7 +142,6 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -l cpunum_job=8
                 #PBS -l elapstim_req=24:00:00
                 #PBS -l memsz_job=1gb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -165,7 +160,6 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -l cpunum_job=1
                 #PBS -l elapstim_req=54:10:00
                 #PBS -l memsz_job=2gb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -194,7 +188,6 @@ class NqsiiExecutorTest extends Specification {
                 #PBS -j o
                 #PBS -b 1
                 #PBS -l cpunum_job=1
-                NXF_CHDIR=/work/dir\\ 1
                 '''
                 .stripIndent().leftTrim()
 

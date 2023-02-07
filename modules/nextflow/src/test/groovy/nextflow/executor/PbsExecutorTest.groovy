@@ -63,7 +63,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -79,7 +78,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -j oe
                 #PBS -q alpha
                 #PBS -l walltime=00:01:00
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -97,7 +95,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -q alpha
                 #PBS -l walltime=00:01:00
                 #PBS -l mem=1mb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -118,7 +115,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -l nodes=1:ppn=2
                 #PBS -l walltime=00:10:00
                 #PBS -l mem=5mb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -137,7 +133,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -l nodes=1:ppn=8
                 #PBS -l walltime=24:00:00
                 #PBS -l mem=1gb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -154,7 +149,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -q delta
                 #PBS -l walltime=54:10:00
                 #PBS -l mem=2gb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
 
@@ -181,7 +175,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o "/work/dir\\ 1/.command.log"
                 #PBS -j oe
-                NXF_CHDIR=/work/dir\\ 1
                 '''
                 .stripIndent().leftTrim()
 
