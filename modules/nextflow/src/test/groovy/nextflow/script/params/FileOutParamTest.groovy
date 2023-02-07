@@ -74,7 +74,7 @@ class FileOutParamTest extends Specification {
     }
 
 
-    def 'should return a name relative to the workDir (with string)' () {
+    def 'should return a name relative to the workDir [with string]' () {
 
         given:
         def param = [:] as FileOutParam

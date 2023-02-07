@@ -215,7 +215,6 @@ class PbsProExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
     }

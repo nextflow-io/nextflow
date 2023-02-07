@@ -32,10 +32,20 @@ class SgeExecutorTest extends Specification {
     def 'test qsub cmd line' () {
 
         given:
-        def executor = [:] as SgeExecutor
+        def executor = Spy(SgeExecutor) { pipeLauncherScript()>>false }
 
         expect:
         executor.getSubmitCommandLine( Mock(TaskRun), Paths.get('/some/file/name.sh')) == ['qsub','-terse', 'name.sh']
+
+    }
+
+    def 'test qsub via stdin' () {
+
+        given:
+        def executor = Spy(SgeExecutor) { pipeLauncherScript()>>true }
+
+        expect:
+        executor.getSubmitCommandLine( Mock(TaskRun), Paths.get('/some/file/name.sh')) == ['qsub','-']
 
     }
 
@@ -61,7 +71,6 @@ class SgeExecutorTest extends Specification {
 
         then:
         executor.getHeaders(task) == '''
-                #$ -wd /abc
                 #$ -N nf-the_task_name
                 #$ -o /abc/.command.log
                 #$ -j y
@@ -77,7 +86,6 @@ class SgeExecutorTest extends Specification {
         config.name = 'task'
         then:
         executor.getHeaders(task) == '''
-                #$ -wd /abc
                 #$ -N nf-the_task_name
                 #$ -o /abc/.command.log
                 #$ -j y
@@ -96,7 +104,6 @@ class SgeExecutorTest extends Specification {
         config.clusterOptions = '-hard -alpha -beta'
         then:
         executor.getHeaders(task) == '''
-                #$ -wd /abc
                 #$ -N nf-the_task_name
                 #$ -o /abc/.command.log
                 #$ -j y
@@ -119,7 +126,6 @@ class SgeExecutorTest extends Specification {
         config.remove('clusterOptions')
         then:
         executor.getHeaders(task) == '''
-                #$ -wd /abc
                 #$ -N nf-the_task_name
                 #$ -o /abc/.command.log
                 #$ -j y
@@ -143,7 +149,6 @@ class SgeExecutorTest extends Specification {
         config.memory = '2 M'
         then:
         executor.getHeaders(task) == '''
-                #$ -wd /abc
                 #$ -N nf-the_task_name
                 #$ -o /abc/.command.log
                 #$ -j y
@@ -166,7 +171,6 @@ class SgeExecutorTest extends Specification {
         config.memory = '3 g'
         then:
         executor.getHeaders(task) == '''
-                #$ -wd /abc
                 #$ -N nf-the_task_name
                 #$ -o /abc/.command.log
                 #$ -j y
@@ -189,7 +193,6 @@ class SgeExecutorTest extends Specification {
         config.memory = '4 GB '
         then:
         executor.getHeaders(task) == '''
-                #$ -wd /abc
                 #$ -N nf-the_task_name
                 #$ -o /abc/.command.log
                 #$ -j y
@@ -226,7 +229,6 @@ class SgeExecutorTest extends Specification {
 
         then:
         executor.getHeaders(task) == '''
-                #$ -wd "/work/dir with/blanks"
                 #$ -N nf-the_task_name
                 #$ -o "/work/dir with/blanks/.command.log"
                 #$ -j y
