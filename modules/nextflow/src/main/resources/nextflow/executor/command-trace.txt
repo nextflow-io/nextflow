@@ -170,10 +170,18 @@ nxf_trace_linux() {
     local start_millis=$(nxf_date)
     ## capture error and kill mem watcher
     trap 'kill $mem_proc' ERR
-    
+
     ## run task script
+    local trap_pid
+    cleanup() {
+        [[ $trap_pid ]] && kill "$trap_pid"
+    }
+
     {{trace_cmd}} &
     local task=$!
+
+    trap_pid=$task
+    trap cleanup EXIT
 
     ## run mem stat
     mem_fd=$(nxf_fd)
@@ -181,6 +189,7 @@ nxf_trace_linux() {
     local mem_proc=$!
 
     wait $task
+    trap_pid=
 
     ## compute cpu usage time for processes
     local end_millis=$(nxf_date)
