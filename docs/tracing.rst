@@ -136,6 +136,8 @@ and many other metrics. You can see an example below:
 
 .. image:: images/report-tasks-min.png
 
+.. _trace-required-packages:
+
 .. note::
   Nextflow collects these metrics through a background process for each job in the target environment.
   Make sure the following tools are available in the environment where tasks are executed: ``awk``, ``date``, ``grep``, ``ps``, ``sed``, ``tail``, ``tee``.

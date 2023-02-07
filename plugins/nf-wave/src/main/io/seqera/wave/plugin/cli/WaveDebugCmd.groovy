@@ -73,8 +73,8 @@ class WaveDebugCmd {
                     .withContainerParams([tty:true, privileged: true])
                     .withEnvironment('AWS_ACCESS_KEY_ID')
                     .withEnvironment('AWS_SECRET_ACCESS_KEY')
-                    .withEnvironment("NXF_FUSION_WORK=$fusionPath".toString())
-                    .runContainer(trace.get('container')?.toString(), ['sh', '-c', '\'cd $NXF_FUSION_WORK && exec bash\''])
+                    .withEnvironment("FUSION_WORK=$fusionPath".toString())
+                    .runContainer(trace.get('container')?.toString(), ['/usr/bin/fusion','sh', '-c', '\'cd $FUSION_WORK && exec bash\''])
         }
         finally {
             cacheDb.close()
