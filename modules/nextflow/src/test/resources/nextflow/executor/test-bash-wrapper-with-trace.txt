@@ -145,7 +145,7 @@ nxf_trace_linux() {
     local start_millis=$(nxf_date)
     trap 'kill $mem_proc' ERR
 
-    local trap_pid
+    local trap_pid=
     cleanup() {
         [[ $trap_pid ]] && kill "$trap_pid"
     }

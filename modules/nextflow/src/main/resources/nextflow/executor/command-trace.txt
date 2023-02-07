@@ -172,7 +172,7 @@ nxf_trace_linux() {
     trap 'kill $mem_proc' ERR
 
     ## run task script
-    local trap_pid
+    local trap_pid=
     cleanup() {
         [[ $trap_pid ]] && kill "$trap_pid"
     }
