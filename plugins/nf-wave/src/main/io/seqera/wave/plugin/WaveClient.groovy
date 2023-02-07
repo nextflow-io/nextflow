@@ -435,15 +435,72 @@ class WaveClient {
     }
 
     // MARCO MARCO WORK IN PROGRESS
+    //
     // Dockerfile template adpated from the Spack package manager
     // https://github.com/spack/spack/blob/develop/share/spack/templates/container/Dockerfile
     // LICENSE APACHE 2.0
     protected String spackFileToDockerFile() {
+
         def result = """\
-        FROM ${config.spackOpts().spackBuilderImage}
+# Builder image
+FROM ${config.spackOpts().spackBuilderImage} as builder
+COPY --chown=\$MAMBA_USER:\$MAMBA_USER spack.yaml /tmp/spack.yaml
+
+RUN mkdir /opt/spack-env \\
+&&  (sed -e 's;compilers:;compilers::;' \\
+         -e 's;^ *flags: *{};    flags:\\n      cflags: ${config.spackOpts().spackCFlags}\\n      cxxflags: ${config.spackOpts().spackCXXFlags}\\n      fflags: ${config.spackOpts().spackFFlags};' \\
+         /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
+&&  (echo "spack:" \\
+&&   echo "  include: [/opt/spack-env/compilers.yaml]" \\
+&&   echo "  specs: [${recipe}]" \\
+&&   echo "  packages:" \\
+&&   echo "    all:" \\
+&&   echo "      target: [${config.spackOpts().spackTarget}]" \\
+&&   echo "  concretizer:" \\
+&&   echo "    unify: true" \\
+&&   echo "  config:" \\
+&&   echo "    install_tree: /opt/software" \\
+&&   echo "  view: /opt/view") > /opt/spack-env/spack.yaml
+
+# Install packages, clean afterwards
+RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
+
+# Strip binaries
+RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
+    xargs file -i | \\
+    grep 'charset=binary' | \\
+    grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
+    awk -F: '{print \$1}' | xargs strip -s
+
+RUN cd /opt/spack-env && \
+    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \
+    original_view=\$( cd /opt ; ls -1d ._view/* ) && \
+    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \
+    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \
+    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \
+    rm -rf /opt/view
+
+# Runner image
+FROM ${config.spackOpts().spackRunnerImage}
+
+COPY --from=builder /opt/spack-env /opt/spack-env
+COPY --from=builder /opt/software /opt/software
+COPY --from=builder /opt/._view /opt/._view
+COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
+
+RUN apt-get -yqq update && apt-get -yqq upgrade \\
+ && apt-get -yqq install ${config.spackOpts().spackOsPackages} \\
+ && rm -rf /var/lib/apt/lists/*
+        """ //.stripIndent()
+
+        result = addCommands(result)
+
+        result += """\
+        ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
+        CMD [ "/bin/bash" ]
         """.stripIndent()
 
-        return addCommands(result)
+        return result
     }
 
     protected String addCommands(String result) {
