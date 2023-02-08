@@ -17,6 +17,20 @@ the sharing of tasks input/output files.
 
 Nextflow can also be run on Windows through `WSL <https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux>`_.
 
+.. tip::
+    We recommend that you install Java through `SDKMAN! <https://sdkman.io/>`_, and that you use the latest
+    LTS version of Corretto or Temurin. See `this website <https://whichjdk.com/>`_ for more information. While
+    other Java distros may work at first or even most of the time, many users have experienced issues that are
+    difficult to debug and are usually resolved by using one of the recommended distros.
+
+    To install Corretto 17::
+
+        sdk install java 17.0.6-amzn
+
+    To install Temurin 17::
+
+        sdk install java 17.0.6-tem
+
 
 .. _getstarted-install:
 
