@@ -32,9 +32,9 @@ class GoogleBatchExecutorTest extends Specification {
         SysEnv.pop()
 
         where:
-        CONFIG                      | ENV                           | EXPECTED
-        [:]                         | [:]                           | false
-        [fusion:[enabled: true]]    | [:]                           | true
+        CONFIG                      | ENV                       | EXPECTED
+        [:]                         | [:]                       | false
+        [fusion:[enabled: true]]    | [:]                       | true
         [fusion:[enabled: false]]   | [FUSION_ENABLED:'true']   | false     // <-- config has priority
         [:]                         | [FUSION_ENABLED:'true']   | true
         [:]                         | [FUSION_ENABLED:'false']  | false
