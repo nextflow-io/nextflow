@@ -85,7 +85,7 @@ class Launcher extends AbstractCmd implements ILauncherOptions {
     boolean ignoreConfigIncludes
 
     @Option(names = ['-D'], description = 'Set JVM properties')
-    Map<String,String> jvmOpts = [:]
+    Map<String,String> jvmOpts
 
     @Option(names = ['--debug'], description = 'Enable DEBUG level logging for the specified package name -- multiple packages can be provided as a comma-separated list (e.g. \'-debug nextflow,io.seqera\')', hidden = true)
     List<String> debug
@@ -102,7 +102,7 @@ class Launcher extends AbstractCmd implements ILauncherOptions {
     @Option(names = ['--self-update'], arity = '0', description = 'Update Nextflow to the latest version', hidden = true)
     boolean selfUpdate
 
-    @Option(names = ['--syslog'], description = 'Send logs to syslog server (e.g. localhost:514)')
+    @Option(names = ['--syslog'], arity = '0..1', fallbackValue = 'localhost', description = 'Send logs to syslog server (e.g. localhost:514)')
     String syslog
 
     @Option(names = ['--trace'], description = 'Enable TRACE level logging for the specified package name -- multiple packages can be provided as a comma-separated list (e.g. \'-trace nextflow,io.seqera\')')

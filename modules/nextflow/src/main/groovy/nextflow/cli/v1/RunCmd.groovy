@@ -116,7 +116,7 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     String runName
 
     @Parameter(names = ['-offline'], description = 'Do not check for remote project updates')
-    boolean offline = System.getenv('NXF_OFFLINE')=='true'
+    boolean offline
 
     @Parameter(names = ['-params-file'], description = 'Load script parameters from a JSON/YAML file')
     String paramsFile
@@ -158,10 +158,10 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     String test
 
     @Parameter(names = ['-with-apptainer'], description = 'Enable process execution in a Apptainer container')
-    def withApptainer
+    String withApptainer
 
     @Parameter(names = ['-with-charliecloud'], description = 'Enable process execution in a Charliecloud container runtime')
-    def withCharliecloud
+    String withCharliecloud
 
     @Parameter(names = ['-with-conda'], description = 'Use the specified Conda environment package or file (must end with .yml|.yaml suffix)')
     String withConda
@@ -173,7 +173,7 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     String withDag
 
     @Parameter(names = ['-with-docker'], description = 'Enable process execution in a Docker container')
-    def withDocker
+    String withDocker
 
     @Parameter(names = ['-without-docker'], arity = 0, description = 'Disable process execution with Docker')
     boolean withoutDocker
@@ -188,16 +188,16 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     String withNotification
 
     @Parameter(names = ['-with-podman'], description = 'Enable process execution in a Podman container')
-    def withPodman
+    String withPodman
 
     @Parameter(names = ['-without-podman'], description = 'Disable process execution in a Podman container')
-    def withoutPodman
+    boolean withoutPodman
 
     @Parameter(names = ['-with-report'], description = 'Create processes execution html report')
     String withReport
 
     @Parameter(names = ['-with-singularity'], description = 'Enable process execution in a Singularity container')
-    def withSingularity
+    String withSingularity
 
     @Parameter(names = ['-with-spack'], description = 'Use the specified Spack environment package or file (must end with .yaml suffix)')
     String withSpack

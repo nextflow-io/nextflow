@@ -85,20 +85,20 @@ class RunImpl {
         boolean getStdin()
         boolean getStubRun()
         String getTest()
-        def getWithApptainer()
+        String getWithApptainer()
         String getWithConda()
         Boolean getWithoutConda()
-        def getWithCharliecloud()
+        String getWithCharliecloud()
         String getWithDag()
-        def getWithDocker()
+        String getWithDocker()
         boolean getWithoutDocker()
         String getWithFusion()
         boolean getWithMpi()
         String getWithNotification()
-        def getWithPodman()
-        def getWithoutPodman()
+        String getWithPodman()
+        boolean getWithoutPodman()
         String getWithReport()
-        def getWithSingularity()
+        String getWithSingularity()
         String getWithSpack()
         Boolean getWithoutSpack()
         String getWithTimeline()
@@ -131,14 +131,16 @@ class RunImpl {
     /* For testing purposes only */
     RunImpl() {}
 
-    @Override
     Boolean getDisableJobsCancellation() {
         options.disableJobsCancellation != null
             ? options.disableJobsCancellation
             : sysEnv.get('NXF_DISABLE_JOBS_CANCELLATION') as boolean
     }
 
-    @Override
+    boolean getOffline() {
+        options.offline || System.getenv('NXF_OFFLINE') as boolean
+    }
+
     String getParamsFile() {
         options.paramsFile ?: sysEnv.get('NXF_PARAMS_FILE')
     }
@@ -150,22 +152,22 @@ class RunImpl {
             throw new AbortOperationException("No project name was specified")
 
         if( withPodman && withoutPodman )
-            throw new AbortOperationException("Command line options `-with-podman` and `-without-podman` cannot be specified at the same time")
+            throw new AbortOperationException("Command line options `with-podman` and `without-podman` cannot be specified at the same time")
 
         if( withDocker && withoutDocker )
-            throw new AbortOperationException("Command line options `-with-docker` and `-without-docker` cannot be specified at the same time")
+            throw new AbortOperationException("Command line options `with-docker` and `without-docker` cannot be specified at the same time")
 
         if( withConda && withoutConda )
-            throw new AbortOperationException("Command line options `-with-conda` and `-without-conda` cannot be specified at the same time")
+            throw new AbortOperationException("Command line options `with-conda` and `without-conda` cannot be specified at the same time")
 
         if( withSpack && withoutSpack )
-            throw new AbortOperationException("Command line options `-with-spack` and `-without-spack` cannot be specified at the same time")
+            throw new AbortOperationException("Command line options `with-spack` and `without-spack` cannot be specified at the same time")
 
         if( offline && latest )
-            throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
+            throw new AbortOperationException("Command line options `latest` and `offline` cannot be specified at the same time")
 
         if( dsl1 && dsl2 )
-            throw new AbortOperationException("Command line options `-dsl1` and `-dsl2` cannot be specified at the same time")
+            throw new AbortOperationException("Command line options `dsl1` and `dsl2` cannot be specified at the same time")
 
         checkRunName()
 

@@ -71,8 +71,8 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     @Option(names = ['--cache'], arity = '1', description = 'Enable/disable process caching')
     Boolean cacheable
 
-    @Option(names = ['--cluster.'], description = 'Set cluster options', hidden = true)
-    Map<String,String> clusterOptions = [:]
+    @Option(names = ['--cluster.'], arity = '0..1', fallbackValue = 'true', description = 'Set cluster options', hidden = true)
+    Map<String,String> clusterOptions
 
     @Option(names = ['-c','--config'], hidden = true)
     List<String> runConfig
@@ -86,7 +86,7 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     @Option(names = ['--dsl2'], description = 'Execute the workflow using DSL2 syntax')
     boolean dsl2
 
-    @Option(names = ['--dump-channels'], description = 'Dump channels for debugging purposes')
+    @Option(names = ['--dump-channels'], arity = '0..1', fallbackValue = '*', description = 'Dump channels for debugging purposes')
     String dumpChannels
 
     @Option(names = ['--dump-hashes'], description = 'Dump task hash keys for debugging purposes')
@@ -96,10 +96,10 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     String entryName
 
     @Option(names = ['-e.','--env.'], description = 'Add the specified variable to execution environment')
-    Map<String,String> env = [:]
+    Map<String,String> env
 
-    @Option(names = ['--executor.'], description = 'Set executor options', hidden = true)
-    Map<String,String> executorOptions = [:]
+    @Option(names = ['--executor.'], arity = '0..1', fallbackValue = 'true', description = 'Set executor options', hidden = true)
+    Map<String,String> executorOptions
 
     @Option(names = ['-E','--export-sys-env'], description = 'Export the current system environment')
     boolean exportSysEnv
@@ -117,7 +117,7 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     String runName
 
     @Option(names = ['--offline'], description = 'Do not check for remote project updates')
-    boolean offline = System.getenv('NXF_OFFLINE')=='true'
+    boolean offline
 
     @Option(names = ['--params-file'], description = 'Load script parameters from a JSON/YAML file')
     String paramsFile
@@ -134,8 +134,8 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     @Option(names = ['--preview'], description = 'Run the workflow script skipping the execution of all processes')
     boolean preview
 
-    @Option(names = ['--process.'], description = 'Set process options' )
-    Map<String,String> processOptions = [:]
+    @Option(names = ['--process.'], arity = '0..1', fallbackValue = 'true', description = 'Set process options' )
+    Map<String,String> processOptions
 
     @Option(names = ['--profile'], description = 'Use a configuration profile -- multiple profiles can be specified as a comma-separated list')
     String profile
@@ -143,38 +143,38 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     @Option(names = ['--queue-size'], description = 'Max number of processes that can be executed in parallel by each executor')
     Integer queueSize
 
-    @Option(names = ['--resume'], description = 'Execute the script using the cached results, useful to continue executions that was stopped by an error')
+    @Option(names = ['--resume'], arity = '0..1', fallbackValue = 'last', description = 'Execute the script using the cached results, useful to continue executions that was stopped by an error')
     String resume
 
     @Option(names = ['-r','--revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
     String revision
 
-    @Option(names = ['--stub-run'], description = 'Execute the workflow replacing process scripts with command stubs')
+    @Option(names = ['--stub','--stub-run'], description = 'Execute the workflow replacing process scripts with command stubs')
     boolean stubRun
 
-    @Option(names = ['--test'], description = 'Test a script function with the name specified')
+    @Option(names = ['--test'], arity = '0..1', fallbackValue = '%all', description = 'Test a script function with the name specified')
     String test
 
     @Option(names = ['-w','--work-dir'], description = 'Directory where intermediate result files are stored')
     String workDir
 
-    @Option(names = ['--with-apptainer'], description = 'Enable process execution in a Apptainer container')
-    def withApptainer
+    @Option(names = ['--with-apptainer'], arity = '0..1', fallbackValue = '-', description = 'Enable process execution in a Apptainer container')
+    String withApptainer
 
-    @Option(names = ['--with-charliecloud'], description = 'Enable process execution in a Charliecloud container runtime')
-    def withCharliecloud
+    @Option(names = ['--with-charliecloud'], arity = '0..1', fallbackValue = '-', description = 'Enable process execution in a Charliecloud container runtime')
+    String withCharliecloud
 
-    @Option(names = ['--with-conda'], description = 'Use the specified Conda environment package or file (must end with .yml|.yaml suffix)')
+    @Option(names = ['--with-conda'], arity = '0..1', fallbackValue = '-', description = 'Use the specified Conda environment package or file (must end with .yml|.yaml suffix)')
     String withConda
 
     @Option(names = ['--without-conda'], arity = '0', description = 'Disable the use of Conda environments')
     Boolean withoutConda
 
-    @Option(names = ['--with-dag'], description = 'Create pipeline DAG file')
+    @Option(names = ['--with-dag'], arity = '0..1', fallbackValue = '-', description = 'Create pipeline DAG file')
     String withDag
 
-    @Option(names = ['--with-docker'], description = 'Enable process execution in a Docker container')
-    def withDocker
+    @Option(names = ['--with-docker'], arity = '0..1', fallbackValue = '-', description = 'Enable process execution in a Docker container')
+    String withDocker
 
     @Option(names = ['--without-docker'], arity = '0', description = 'Disable process execution with Docker')
     boolean withoutDocker
@@ -185,40 +185,40 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     @Option(names = ['--with-mpi'], hidden = true)
     boolean withMpi
 
-    @Option(names = ['-N','--with-notification'], description = 'Send a notification email on workflow completion to the specified recipients')
+    @Option(names = ['-N','--with-notification'], arity = '0..1', fallbackValue = '-', description = 'Send a notification email on workflow completion to the specified recipients')
     String withNotification
 
-    @Option(names = ['--with-podman'], description = 'Enable process execution in a Podman container')
-    def withPodman
+    @Option(names = ['--with-podman'], arity = '0..1', fallbackValue = '-', description = 'Enable process execution in a Podman container')
+    String withPodman
 
     @Option(names = ['--without-podman'], arity = '0', description = 'Disable process execution in a Podman container')
-    def withoutPodman
+    boolean withoutPodman
 
-    @Option(names = ['--with-report'], description = 'Create processes execution html report')
+    @Option(names = ['--with-report'], arity = '0..1', fallbackValue = '-', description = 'Create processes execution html report')
     String withReport
 
-    @Option(names = ['--with-singularity'], description = 'Enable process execution in a Singularity container')
-    def withSingularity
+    @Option(names = ['--with-singularity'], arity = '0..1', fallbackValue = '-', description = 'Enable process execution in a Singularity container')
+    String withSingularity
 
-    @Option(names = ['--with-spack'], description = 'Use the specified Spack environment package or file (must end with .yaml suffix)')
+    @Option(names = ['--with-spack'], arity = '0..1', fallbackValue = '-', description = 'Use the specified Spack environment package or file (must end with .yaml suffix)')
     String withSpack
 
     @Option(names = ['--without-spack'], arity = '0', description = 'Disable the use of Spack environments')
     Boolean withoutSpack
 
-    @Option(names = ['--with-timeline'], description = 'Create processes execution timeline file')
+    @Option(names = ['--with-timeline'], arity = '0..1', fallbackValue = '-', description = 'Create processes execution timeline file')
     String withTimeline
 
-    @Option(names = ['--with-tower'], description = 'Monitor workflow execution with Seqera Tower service')
+    @Option(names = ['--with-tower'], arity = '0..1', fallbackValue = '-', description = 'Monitor workflow execution with Seqera Tower service')
     String withTower
 
-    @Option(names = ['--with-trace'], description = 'Create processes execution tracing file')
+    @Option(names = ['--with-trace'], arity = '0..1', fallbackValue = '-', description = 'Create processes execution tracing file')
     String withTrace
 
-    @Option(names = ['--with-wave'], hidden = true)
+    @Option(names = ['--with-wave'], arity = '0..1', fallbackValue = '-', hidden = true)
     String withWave
 
-    @Option(names = ['--with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
+    @Option(names = ['--with-weblog'], arity = '0..1', fallbackValue = '-', description = 'Send workflow status messages via HTTP to target URL')
     String withWebLog
 
     @Parameters(description = 'Set pipeline parameters')

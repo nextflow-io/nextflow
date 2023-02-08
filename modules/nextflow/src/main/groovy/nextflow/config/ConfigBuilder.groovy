@@ -517,11 +517,11 @@ class ConfigBuilder {
             return null
         if( uniqueId == 'last' || uniqueId == 'true' ) {
             if( HistoryFile.disabled() )
-                throw new AbortOperationException("The resume session id should be specified via `-resume` option when history file tracking is disabled")
+                throw new AbortOperationException("The resume session id should be specified via `resume` option when history file tracking is disabled")
             uniqueId = HistoryFile.DEFAULT.getLast()?.sessionId
 
             if( !uniqueId ) {
-                log.warn "It appears you have never run this project before -- Option `-resume` is ignored"
+                log.warn "It appears you have never run this project before -- Option `resume` is ignored"
             }
         }
 
