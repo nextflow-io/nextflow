@@ -169,7 +169,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         // https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
         if( task.config.getAccelerator() || fusionEnabled() ) {
             if( containerOptions ) containerOptions += ' '
-            containerOptions += '--privileged'
+            containerOptions += '--security-opt apparmor=unconfined --security-opt seccomp=unconfined --device /dev/fuse'
         }
 
         if( containerOptions )
