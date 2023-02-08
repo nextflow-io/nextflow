@@ -60,7 +60,7 @@ class FusionScriptLauncherS3Test extends Specification {
         expect:
         fusion.fusionEnv() == [AWS_S3_ENDPOINT: 'http://foo.com',
                                FUSION_WORK: '/fusion/s3/foo/work',
-                               FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/scratch=false),[*](nextflow.io/scratch=true)"
+                               FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
                                 ]
 
         cleanup:
@@ -82,7 +82,7 @@ class FusionScriptLauncherS3Test extends Specification {
         fusion.fusionEnv() == [AWS_ACCESS_KEY_ID: 'xxx',
                                AWS_SECRET_ACCESS_KEY: 'zzz',
                                FUSION_WORK: '/fusion/s3/foo/work',
-                               FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/scratch=false),[*](nextflow.io/scratch=true)"
+                               FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
         ]
 
         cleanup:
@@ -107,7 +107,7 @@ class FusionScriptLauncherS3Test extends Specification {
                                AWS_SECRET_ACCESS_KEY: 's1',
                                AWS_S3_ENDPOINT: 'http://minio.com',
                                FUSION_WORK: '/fusion/s3/foo/work',
-                               FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/scratch=false),[*](nextflow.io/scratch=true)"
+                               FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
         ]
 
         cleanup:

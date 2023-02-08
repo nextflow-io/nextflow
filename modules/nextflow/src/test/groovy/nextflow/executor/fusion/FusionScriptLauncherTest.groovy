@@ -69,7 +69,7 @@ class FusionScriptLauncherTest extends Specification {
         expect:
         fusion.fusionEnv() == [
                 FUSION_WORK: '/fusion/http/foo/work',
-                FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/scratch=false),[*](nextflow.io/scratch=true)"
+                FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
         ]
     }
 
