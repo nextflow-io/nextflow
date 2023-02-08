@@ -27,8 +27,8 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class FusionConfig {
 
-    final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v0.7.2-amd64.json'
-    final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v0.7.2-arm64.json'
+    final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.0-amd64.json'
+    final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.0-arm64.json'
 
     final private Boolean enabled
     final private String containerConfigUrl

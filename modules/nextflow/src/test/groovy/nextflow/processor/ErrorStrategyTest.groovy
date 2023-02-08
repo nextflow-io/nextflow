@@ -15,30 +15,36 @@
  *
  */
 
-package nextflow.exception
+package nextflow.processor
 
-import groovy.transform.CompileStatic
+import spock.lang.Specification
+
 /**
- * Thrown the submission to a grid scheduler returned an error condition
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
-class ProcessNonZeroExitStatusException extends RuntimeException {
+class ErrorStrategyTest extends Specification {
 
-    private String reason
-    private int exitStatus
-    private String command
+    def "should check if it's a valid error strategy" () {
 
-    String getReason() { reason }
-    int getExitStatus() { exitStatus }
-    String getCommand() { command }
+        expect:
+        ErrorStrategy.isValid(NAME) == EXPECTED
 
-    ProcessNonZeroExitStatusException(String message, String reason, int exitStatus, String command) {
-        super(message)
-        this.reason = reason
-        this.exitStatus = exitStatus
-        this.command = command
+        where:
+        NAME            | EXPECTED
+        null            | false
+        ''              | false
+        'foo'           | false
+        and:
+        'terminate'     | true
+        'ignore'        | true
+        'retry'         | true
+        'finish'        | true
+        and:
+        'TERMINATE'     | true
+        'IGNORE'        | true
+        'RETRY'         | true
+        'FINISH'        | true
     }
 
 }
