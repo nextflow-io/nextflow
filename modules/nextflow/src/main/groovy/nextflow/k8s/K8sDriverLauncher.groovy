@@ -494,6 +494,7 @@ class K8sDriverLauncher {
                 cmd.&executorOptions,
                 cmd.&stdin,
                 cmd.&withSingularity,
+                cmd.&withApptainer,
                 cmd.&withDocker,
                 cmd.&withoutDocker,
                 cmd.&withMpi,

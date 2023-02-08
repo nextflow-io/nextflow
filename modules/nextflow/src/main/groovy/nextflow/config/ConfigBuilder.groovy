@@ -743,6 +743,10 @@ class ConfigBuilder {
             configContainer(config, 'singularity', cmdRun.withSingularity)
         }
 
+        if( cmdRun.withApptainer ) {
+            configContainer(config, 'apptainer', cmdRun.withApptainer)
+        }
+
         if( cmdRun.withCharliecloud ) {
             configContainer(config, 'charliecloud', cmdRun.withCharliecloud)
         }
