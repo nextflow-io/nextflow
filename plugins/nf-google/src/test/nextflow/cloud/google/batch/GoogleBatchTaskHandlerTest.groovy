@@ -73,6 +73,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def taskGroup = req.getTaskGroups(0)
         def runnable = taskGroup.getTaskSpec().getRunnables(0)
         def allocationPolicy = req.getAllocationPolicy()
+        def instancePolicyOrTemplate = allocationPolicy.getInstances(0)
         def instancePolicy = allocationPolicy.getInstances(0).getPolicy()
         and:
         taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == 0
@@ -84,6 +85,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
         runnable.getContainer().getOptions() == ''
         runnable.getContainer().getVolumesList() == ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        and:
+        instancePolicyOrTemplate.getInstanceTemplate() == ''
         and:
         instancePolicy.getAcceleratorsCount() == 0
         instancePolicy.getMachineType() == ''
@@ -194,6 +197,75 @@ class GoogleBatchTaskHandlerTest extends Specification {
         networkInterface.getNoExternalIpAddress() == true
         and:
         req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
+    }
+
+    def 'should use instance template' () {
+        given:
+        def GCS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('foo').build() ).build()
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        def INSTANCE_TEMPLATE = 'foo'
+        def exec = Mock(GoogleBatchExecutor) {
+            getConfig() >> Mock(BatchConfig) {
+                getInstanceTemplate() >> INSTANCE_TEMPLATE
+                getInstallGpuDrivers() >> true
+            }
+        }
+        and:
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> 2
+                getResourceLabels() >> [:]
+            }
+        }
+        and:
+        def launcher = Mock(GoogleBatchLauncherSpec)
+        launcher.runCommand() >> 'bash .command.run'
+        launcher.getContainerMounts() >> ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        launcher.getVolumes() >> [GCS_VOL]
+
+        and:
+        def handler = new GoogleBatchTaskHandler(task, exec)
+
+        when:
+        def req = handler.newSubmitRequest(task, launcher)
+        then:
+        def taskGroup = req.getTaskGroups(0)
+        def runnable = taskGroup.getTaskSpec().getRunnables(0)
+        def allocationPolicy = req.getAllocationPolicy()
+        def instancePolicyOrTemplate = allocationPolicy.getInstances(0)
+        def instancePolicy = allocationPolicy.getInstances(0).getPolicy()
+        and:
+        taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == 0
+        taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == 2_000
+        taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == 0
+        taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == 0
+        and:
+        runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
+        runnable.getContainer().getImageUri() == CONTAINER_IMAGE
+        runnable.getContainer().getOptions() == ''
+        runnable.getContainer().getVolumesList() == ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        and:
+        instancePolicyOrTemplate.getInstanceTemplate() == INSTANCE_TEMPLATE
+        instancePolicyOrTemplate.getInstallGpuDrivers() == true
+        and:
+        instancePolicy.getAcceleratorsCount() == 0
+        instancePolicy.getMachineType() == ''
+        instancePolicy.getMinCpuPlatform() == ''
+        instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
+        and:
+        allocationPolicy.getLocation().getAllowedLocationsCount() == 0
+        allocationPolicy.getNetwork().getNetworkInterfacesCount() == 0
+        and:
+        req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
+        and:
+        taskGroup.getTaskSpec().getVolumesList().size()==1
+        taskGroup.getTaskSpec().getVolumes(0) == GCS_VOL
     }
 
     def 'should create the trace record' () {

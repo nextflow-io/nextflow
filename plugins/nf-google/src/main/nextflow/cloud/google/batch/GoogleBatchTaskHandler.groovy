@@ -208,10 +208,17 @@ class GoogleBatchTaskHandler extends TaskHandler {
         if( executor.config.spot )
             instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.SPOT )
 
-        allocationPolicy.addInstances(
-            instancePolicyOrTemplate
-                .setPolicy(instancePolicy)
-        )
+        if( executor.config.getInstanceTemplate() ) {
+            instancePolicyOrTemplate.setInstanceTemplate( executor.config.getInstanceTemplate() )
+            instancePolicyOrTemplate.setInstallGpuDrivers( executor.config.getInstallGpuDrivers() )
+            allocationPolicy.addInstances(instancePolicyOrTemplate)
+        } else {
+            allocationPolicy.addInstances(
+                instancePolicyOrTemplate
+                    .setPolicy(instancePolicy)
+            )
+        }
+
 
         // network policy
         final networkInterface = AllocationPolicy.NetworkInterface.newBuilder()
