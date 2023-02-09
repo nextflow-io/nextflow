@@ -140,10 +140,11 @@ Execute the script by entering the following command in your terminal::
 
 It will output something similar to the text shown below::
 
-    N E X T F L O W  ~  version 19.04.0
+    N E X T F L O W  ~  version 22.10.6
+    Launching `tutorial.nf` [small_wiles] DSL2 - revision: e61bd183fe
     executor >  local (3)
-    [69/c8ea4a] process > splitLetters   [100%] 1 of 1 ✔
-    [84/c8b7f1] process > convertToUpper [100%] 2 of 2 ✔
+    [51/4d8bb0] process > splitLetters       [100%] 1 of 1 ✔
+    [79/cf1942] process > convertToUpper (2) [100%] 2 of 2 ✔
     HELLO
     WORLD!
 
@@ -158,7 +159,7 @@ Thus, it is perfectly possible that you will get the final result printed out in
     HELLO
 
 .. tip::
-    The hexadecimal string, e.g. ``22/7548fa``, is the unique hash of a task, and the prefix of the directory
+    The hexadecimal string, e.g. ``51/4d8bb0``, is the unique hash of a task, and the prefix of the directory
     where the task is executed. You can inspect a task's files by changing to the directory ``$PWD/work`` and
     using this string to find the specific task directory.
 
@@ -194,12 +195,13 @@ Then save the file with the same name, and execute it by adding the ``-resume`` 
 
 It will print output similar to this::
 
-    N E X T F L O W  ~  version 19.04.0
+    N E X T F L O W  ~  version 22.10.6
+    Launching `tutorial.nf` [confident_bernard] DSL2 - revision: e5dcd2d77b
     executor >  local (2)
-    [69/c8ea4a] process > splitLetters   [100%] 1 of 1, cached: 1 ✔
-    [d0/e94f07] process > convertToUpper [100%] 2 of 2 ✔
-    olleH
+    [51/4d8bb0] process > splitLetters       [100%] 1 of 1, cached: 1 ✔
+    [76/dc85fa] process > convertToUpper (1) [100%] 2 of 2 ✔
     !dlrow
+    olleH
 
 You will see that the execution of the process ``splitLetters`` is actually skipped (the process ID is the same), and
 its results are retrieved from the cache. The second process is executed as expected, printing the reversed strings.
@@ -226,13 +228,14 @@ string parameter, as shown below::
 The string specified on the command line will override the default value of the parameter. The output
 will look like this::
 
-    N E X T F L O W  ~  version 19.04.0
+    N E X T F L O W  ~  version 22.10.6
+    Launching `tutorial.nf` [cheesy_gutenberg] DSL2 - revision: e5dcd2d77b
     executor >  local (4)
-    [8b/16e7d7] process > splitLetters   [100%] 1 of 1 ✔
-    [eb/729772] process > convertToUpper [100%] 3 of 3 ✔
-    m el r
+    [87/bdea58] process > splitLetters       [100%] 1 of 1 ✔
+    [6e/c2f88c] process > convertToUpper (2) [100%] 3 of 3 ✔
     edno
     uojnoB
+    m el r
 
 .. tip::
     As of version 20.11.0-edge, any ``.`` (dot) character in a parameter name is interpreted as the delimiter
