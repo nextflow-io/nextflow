@@ -397,9 +397,8 @@ class WaveClient {
         FROM ${config.condaOpts().mambaImage}
         COPY --chown=\$MAMBA_USER:\$MAMBA_USER conda.yml /tmp/conda.yml
         RUN micromamba install -y -n base -f /tmp/conda.yml && \\
+            micromamba install -y -n base conda-forge::procps-ng && \\
             micromamba clean -a -y
-        RUN apt-get update -y && apt-get install -y procps && \\
-            rm -rf /var/lib/apt/lists/*
         """.stripIndent()
 
         return addCommands(result)
@@ -421,9 +420,8 @@ class WaveClient {
         RUN \\
             micromamba install -y -n base $channelsOpts \\
             $recipe \\
+            && micromamba install -y -n base conda-forge::procps-ng \\
             && micromamba clean -a -y
-        RUN apt-get update -y && apt-get install -y procps && \\
-            rm -rf /var/lib/apt/lists/*
         """.stripIndent()
 
         return addCommands(result)
