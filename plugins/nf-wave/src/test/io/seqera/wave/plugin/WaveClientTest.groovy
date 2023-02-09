@@ -302,9 +302,8 @@ class WaveClientTest extends Specification {
                 RUN \\
                     micromamba install -y -n base -c conda-forge -c defaults \\
                     bwa=0.7.15 salmon=1.1.1 \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
-                RUN apt-get update -y && apt-get install -y procps && \\
-                    rm -rf /var/lib/apt/lists/*
                 '''.stripIndent()
     }
 
@@ -323,9 +322,8 @@ class WaveClientTest extends Specification {
                 RUN \\
                     micromamba install -y -n base -c foo -c bar \\
                     bwa=0.7.15 salmon=1.1.1 \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
-                RUN apt-get update -y && apt-get install -y procps && \\
-                    rm -rf /var/lib/apt/lists/*
                 '''.stripIndent()
     }
 
@@ -342,9 +340,8 @@ class WaveClientTest extends Specification {
                 RUN \\
                     micromamba install -y -n base -c conda-forge -c defaults \\
                     bwa=0.7.15 salmon=1.1.1 \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
                     && micromamba clean -a -y
-                RUN apt-get update -y && apt-get install -y procps && \\
-                    rm -rf /var/lib/apt/lists/*
                 USER my-user
                 RUN apt-get update -y && apt-get install -y nano
                 '''.stripIndent()
@@ -360,9 +357,8 @@ class WaveClientTest extends Specification {
                 FROM mambaorg/micromamba:1.2.0
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml && \\
+                    micromamba install -y -n base conda-forge::procps-ng && \\
                     micromamba clean -a -y
-                RUN apt-get update -y && apt-get install -y procps && \\
-                    rm -rf /var/lib/apt/lists/*
                 '''.stripIndent()
 
     }
@@ -493,13 +489,12 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:1.2.0
-                    RUN \\
-                        micromamba install -y -n base -c conda-forge -c defaults \\
-                        salmon=1.2.3 \\
-                        && micromamba clean -a -y
-                    RUN apt-get update -y && apt-get install -y procps && \\
-                        rm -rf /var/lib/apt/lists/*
+                FROM mambaorg/micromamba:1.2.0
+                RUN \\
+                    micromamba install -y -n base -c conda-forge -c defaults \\
+                    salmon=1.2.3 \\
+                    && micromamba install -y -n base conda-forge::procps-ng \\
+                    && micromamba clean -a -y
                     '''.stripIndent()
         and:
         !assets.moduleResources
@@ -523,12 +518,11 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:1.2.0
-                    COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
-                    RUN micromamba install -y -n base -f /tmp/conda.yml && \\
-                        micromamba clean -a -y
-                    RUN apt-get update -y && apt-get install -y procps && \\
-                        rm -rf /var/lib/apt/lists/*
+                FROM mambaorg/micromamba:1.2.0
+                COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
+                RUN micromamba install -y -n base -f /tmp/conda.yml && \\
+                    micromamba install -y -n base conda-forge::procps-ng && \\
+                    micromamba clean -a -y
                     '''.stripIndent()
         and:
         assets.condaFile == condaFile
