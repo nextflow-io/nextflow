@@ -40,7 +40,6 @@ class CrgExecutor extends SgeExecutor {
             task.config.penv = 'smp'
         }
 
-        result << '-wd' << quote(task.workDir)
         result << '-N' << getJobNameFor(task)
         result << '-o' << quote(task.workDir.resolve(TaskRun.CMD_LOG))
         result << '-j' << 'y'

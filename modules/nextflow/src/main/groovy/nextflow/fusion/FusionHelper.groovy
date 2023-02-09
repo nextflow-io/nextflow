@@ -22,6 +22,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.container.ContainerBuilder
 import nextflow.container.ContainerConfig
 import nextflow.extension.FilesEx
@@ -36,15 +37,15 @@ import nextflow.io.BucketParser
 class FusionHelper {
 
     @Memoized
-    static boolean isFusionEnabled(Session session, Map<String,String> sysEnv=System.getenv()) {
+    static boolean isFusionEnabled(Session session, Map<String,String> sysEnv=SysEnv.get()) {
         def result = session.config.navigate('fusion.enabled')
         if( result == null )
-            result = sysEnv.get('NXF_FUSION_ENABLED')
+            result = sysEnv.get('FUSION_ENABLED')
         return result!=null ? result.toString()=='true' : false
     }
 
 
-    static List<String> runWithContainer(FusionScriptLauncher launcher, ContainerConfig containerConfig, String containerName, List<String> runCmd) {
+    static String runWithContainer(FusionScriptLauncher launcher, ContainerConfig containerConfig, String containerName, List<String> runCmd) {
         if( !containerName )
             throw new IllegalArgumentException("Missing task container -- Fusion requires the task to be executed by a container process")
         final engine = containerConfig.getEngine()
@@ -72,7 +73,7 @@ class FusionHelper {
                 .getRunCommand(patchCmd.join(' '))
                 .replaceAll('-w "\\$PWD" ','') // <-- hack to remove the PWD work dir
 
-        return ['sh', '-c', containerCmd]
+        return containerCmd
     }
 
     static Path toContainerMount(Path path, String scheme, Set<String> buckets) {

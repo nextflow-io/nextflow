@@ -45,7 +45,7 @@ class WaveConfig {
         this.enabled = opts.enabled
         this.endpoint = (opts.endpoint?.toString() ?: env.get('WAVE_API_ENDPOINT') ?: DEF_ENDPOINT)?.stripEnd('/')
         this.containerConfigUrl = parseConfig(opts, env)
-        this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '15m') as Duration
+        this.tokensCacheMaxDuration = opts.navigate('tokens.cache.maxDuration', '30m') as Duration
         this.condaOpts = opts.navigate('build.conda', Collections.emptyMap()) as CondaOpts
         this.spackOpts = opts.navigate('build.spack', Collections.emptyMap()) as SpackOpts
         this.buildRepository = opts.navigate('build.repository') as String

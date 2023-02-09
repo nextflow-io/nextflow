@@ -18,6 +18,7 @@
 package nextflow.cloud.aws.batch
 
 import java.nio.file.Paths
+import java.time.Instant
 
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.ContainerProperties
@@ -35,6 +36,7 @@ import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
+import nextflow.Const
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
@@ -370,12 +372,12 @@ class AwsBatchTaskHandlerTest extends Specification {
             getTask() >> Mock(TaskRun) {getWorkDir() >> S3PathFactory.parse('s3://my-bucket/work/dir') }
             fusionEnabled() >> true
             fusionLauncher() >> Mock(FusionScriptLauncher) {
-                fusionEnv() >> [NXF_FUSION_BUCKETS: 's3://FOO,s3://BAR']
+                fusionEnv() >> [FUSION_BUCKETS: 's3://FOO,s3://BAR']
             }
         }
 
         expect:
-        handler.getEnvironmentVars() == [kv('NXF_FUSION_BUCKETS','s3://FOO,s3://BAR')]
+        handler.getEnvironmentVars() == [kv('FUSION_BUCKETS','s3://FOO,s3://BAR')]
     }
 
     def 'should strip invalid chars for job definition name' () {
@@ -484,7 +486,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def handler = Spy(AwsBatchTaskHandler)
         handler.@client = client
 
-        def req = Mock(RegisterJobDefinitionRequest)
+        def req = new RegisterJobDefinitionRequest()
         def res = Mock(RegisterJobDefinitionResult)
 
         when:
@@ -493,7 +495,11 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * client.registerJobDefinition(req) >> res
         1 * res.getJobDefinitionName() >> JOB_NAME
         1 * res.getRevision() >> 10
+        and:
         result == "$JOB_NAME:10"
+        and:
+        req.getTags().get('nextflow.io/version') == Const.APP_VER
+        Instant.parse(req.getTags().get('nextflow.io/createdAt'))
 
     }
 
@@ -913,7 +919,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def result =  handler.getSubmitCommand()
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; cp .command.log /fusion/s3/my-bucket/work/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/s3/my-bucket/work/dir/.command.run 2>&1 | tee .command.log'
+        result.join(' ') == '/usr/bin/fusion bash /fusion/s3/my-bucket/work/dir/.command.run'
     }
 
 }
