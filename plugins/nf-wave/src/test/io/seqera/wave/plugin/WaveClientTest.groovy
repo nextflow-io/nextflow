@@ -333,22 +333,69 @@ class WaveClientTest extends Specification {
                 '''.stripIndent()
     }
 
-    // MARCO MARCO IN PROGRESS - SEE WAVECLIENT.GROOVY
-//    def 'should create dockerfile content from spack recipe' () {
-//        given:
-//        def session = Mock(Session) { getConfig() >> [:]}
-//        def RECIPE = 'bwa@0.7.15 salmon@1.1.1'
-//        when:
-//        def client = new WaveClient(session)
-//        then:
-//        client.spackRecipeToDockerFile(RECIPE) == '''\
-//                FROM mambaorg/micromamba:1.2.0
-//                RUN \\
-//                   micromamba install -y -n base -c conda-forge -c defaults \\
-//                   bwa=0.7.15 salmon=1.1.1 \\
-//                   && micromamba clean -a -y
-//                '''.stripIndent()
-//    }
+    def 'should create dockerfile content from spack recipe' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        def RECIPE = 'bwa@0.7.15' // salmon@1.1.1' MARCO MARCO TO BE READDED
+        when:
+        def client = new WaveClient(session)
+        then:
+        client.spackRecipeToDockerFile(RECIPE) == '''\
+# Builder image
+FROM spack/ubuntu-jammy:v0.19.0 as builder
+
+RUN mkdir -p /opt/spack-env \\
+&&  (sed -e 's;compilers:;compilers::;' \\
+         -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
+         /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
+&&  (echo "spack:" \\
+&&   echo "  include: [/opt/spack-env/compilers.yaml]" \\
+&&   echo "  concretizer:" \\
+&&   echo "    unify: true" \\
+&&   echo "  specs: [bwa@0.7.15]" \\
+&&   echo "  packages:" \\
+&&   echo "    all:" \\
+&&   echo "      target: [x86_64]" \\
+&&   echo "  config:" \\
+&&   echo "    install_tree: /opt/software" \\
+&&   echo "  view: /opt/view") > /opt/spack-env/spack.yaml
+
+# Install packages, clean afterwards
+RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
+
+# Strip binaries
+RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
+    xargs file -i | \\
+    grep 'charset=binary' | \\
+    grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
+    awk -F: '{print \$1}' | xargs strip -s
+
+RUN cd /opt/spack-env && \
+    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \
+    original_view=\$( cd /opt ; ls -1d ._view/* ) && \
+    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \
+    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \
+    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \
+    rm -rf /opt/view
+
+# Runner image
+FROM ubuntu:22.04
+
+COPY --from=builder /opt/spack-env /opt/spack-env
+COPY --from=builder /opt/software /opt/software
+COPY --from=builder /opt/._view /opt/._view
+COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
+
+# Near OS-agnostic package addition
+RUN ( apt update -y && apt install -y procps libgomp1 && rm -rf /var/lib/apt/lists/* ) || \\
+    ( yum install -y procps libgomp1 && yum clean all && rm -rf /var/cache/yum ) || \\
+    ( zypper ref && zypper install -y procps libgomp1 && zypper clean -a ) || \\
+    ( apk update && apk add --no-cache libgomp1 && rm -rf /var/cache/apk )
+
+ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
+CMD [ "/bin/bash" ]
+'''//.stripIndent()
+    }
 
     def 'should create dockerfile content with custom channels' () {
         given:
@@ -388,25 +435,71 @@ class WaveClientTest extends Specification {
                 '''.stripIndent()
     }
 
-    // MARCO MARCO IN PROGRESS - SEE WAVECLIENT.GROOVY
-//    def 'should create dockerfile content with custom spack config' () {
-//        given:
-//        def SPACK_OPTS = [ spackBuilderImage:'spack/foo:1', spackRunnerImage:'ubuntu/foo', spackOsPackages:'libfoo', spackCFlags:'-foo', spackCXXFlags:'-foo2', spackFFlags:'-foo3', spackTarget:'nextcpu',  spackPlatform:'nextunix', commands:['USER hola'] ]
-//        def session = Mock(Session) { getConfig() >> [wave:[build:[spack:SPACK_OPTS]]]}
-//        def RECIPE = 'bwa@0.7.15 salmon@1.1.1'
-//        when:
-//        def client = new WaveClient(session)
-//        then:
-//        client.spackRecipeToDockerFile(RECIPE) == '''\
-//                FROM my-base:123
-//                RUN \\
-//                   micromamba install -y -n base -c conda-forge -c defaults \\
-//                   bwa=0.7.15 salmon=1.1.1 \\
-//                   && micromamba clean -a -y
-//                USER my-user
-//                RUN apt-get update -y && apt-get install -y procps
-//                '''.stripIndent()
-//    }
+    def 'should create dockerfile content with custom spack config' () {
+        given:
+        def SPACK_OPTS = [ builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', cFlags:'-foo', cxxFlags:'-foo2', fFlags:'-foo3', target:'nextcpu', commands:['USER hola'] ]
+        def session = Mock(Session) { getConfig() >> [wave:[build:[spack:SPACK_OPTS]]]}
+        def RECIPE = 'bwa@0.7.15' // salmon@1.1.1' MARCO MARCO TO BE READDED
+        when:
+        def client = new WaveClient(session)
+        then:
+        client.spackRecipeToDockerFile(RECIPE) == '''\
+# Builder image
+FROM spack/foo:1 as builder
+
+RUN mkdir -p /opt/spack-env \\
+&&  (sed -e 's;compilers:;compilers::;' \\
+         -e 's;^ *flags: *{};    flags:\\n      cflags: -foo\\n      cxxflags: -foo2\\n      fflags: -foo3;' \\
+         /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
+&&  (echo "spack:" \\
+&&   echo "  include: [/opt/spack-env/compilers.yaml]" \\
+&&   echo "  concretizer:" \\
+&&   echo "    unify: true" \\
+&&   echo "  specs: [bwa@0.7.15]" \\
+&&   echo "  packages:" \\
+&&   echo "    all:" \\
+&&   echo "      target: [nextcpu]" \\
+&&   echo "  config:" \\
+&&   echo "    install_tree: /opt/software" \\
+&&   echo "  view: /opt/view") > /opt/spack-env/spack.yaml
+
+# Install packages, clean afterwards
+RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
+
+# Strip binaries
+RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
+    xargs file -i | \\
+    grep 'charset=binary' | \\
+    grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
+    awk -F: '{print \$1}' | xargs strip -s
+
+RUN cd /opt/spack-env && \
+    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \
+    original_view=\$( cd /opt ; ls -1d ._view/* ) && \
+    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \
+    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \
+    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \
+    rm -rf /opt/view
+
+# Runner image
+FROM ubuntu/foo
+
+COPY --from=builder /opt/spack-env /opt/spack-env
+COPY --from=builder /opt/software /opt/software
+COPY --from=builder /opt/._view /opt/._view
+COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
+
+# Near OS-agnostic package addition
+RUN ( apt update -y && apt install -y procps libfoo && rm -rf /var/lib/apt/lists/* ) || \\
+    ( yum install -y procps libfoo && yum clean all && rm -rf /var/cache/yum ) || \\
+    ( zypper ref && zypper install -y procps libfoo && zypper clean -a ) || \\
+    ( apk update && apk add --no-cache libfoo && rm -rf /var/cache/apk )
+USER hola
+
+ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
+CMD [ "/bin/bash" ]
+'''//.stripIndent()
+    }
 
     def 'should create dockerfile content from conda file' () {
         given:
@@ -423,21 +516,68 @@ class WaveClientTest extends Specification {
 
     }
 
-    // MARCO MARCO IN PROGRESS - SEE WAVECLIENT.GROOVY
-//    def 'should create dockerfile content from spack file' () {
-//        given:
-//        def session = Mock(Session) { getConfig() >> [:]}
-//        when:
-//        def client = new WaveClient(session)
-//        then:
-//        client.spackFileToDockerFile()== '''\
-//                FROM mambaorg/micromamba:1.2.0
-//                COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
-//                RUN micromamba install -y -n base -f /tmp/conda.yml && \\
-//                    micromamba clean -a -y
-//                '''.stripIndent()
-//
-//    }
+    def 'should create dockerfile content from spack file' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        when:
+        def client = new WaveClient(session)
+        then:
+        client.spackFileToDockerFile()== '''\
+# Builder image
+FROM spack/ubuntu-jammy:v0.19.0 as builder
+COPY spack.yaml /tmp/spack.yaml
+
+RUN mkdir -p /opt/spack-env \\
+&&  (sed -e 's;compilers:;compilers::;' \\
+         -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
+         /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
+&&  (sed '/^spack:/a  \\ \\ include: [/opt/spack-env/compilers.yaml]\\
+  concretizer:\\
+    unify: true' /tmp/spack.yaml) > /opt/spack-env/spack.yaml \\
+&&  (echo "  packages:" \\
+&&   echo "    all:" \\
+&&   echo "      target: [x86_64]" \\
+&&   echo "  config:" \\
+&&   echo "    install_tree: /opt/software" \\
+&&   echo "  view: /opt/view") >> /opt/spack-env/spack.yaml
+
+# Install packages, clean afterwards
+RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
+
+# Strip binaries
+RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
+    xargs file -i | \\
+    grep 'charset=binary' | \\
+    grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
+    awk -F: '{print \$1}' | xargs strip -s
+
+RUN cd /opt/spack-env && \
+    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \
+    original_view=\$( cd /opt ; ls -1d ._view/* ) && \
+    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \
+    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \
+    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \
+    rm -rf /opt/view
+
+# Runner image
+FROM ubuntu:22.04
+
+COPY --from=builder /opt/spack-env /opt/spack-env
+COPY --from=builder /opt/software /opt/software
+COPY --from=builder /opt/._view /opt/._view
+COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
+
+# Near OS-agnostic package addition
+RUN ( apt update -y && apt install -y procps libgomp1 && rm -rf /var/lib/apt/lists/* ) || \\
+    ( yum install -y procps libgomp1 && yum clean all && rm -rf /var/cache/yum ) || \\
+    ( zypper ref && zypper install -y procps libgomp1 && zypper clean -a ) || \\
+    ( apk update && apk add --no-cache libgomp1 && rm -rf /var/cache/apk )
+
+ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
+CMD [ "/bin/bash" ]
+'''//.stripIndent()
+
+    }
 
     def 'should create asset with image' () {
         given:
@@ -585,33 +725,80 @@ class WaveClientTest extends Specification {
         !assets.projectResources
     }
 
-    // MARCO MARCO IN PROGRESS - SEE WAVECLIENT.GROOVY
-//    def 'should create asset with spack recipe' () {
-//        given:
-//        def session = Mock(Session) { getConfig() >> [:]}
-//        and:
-//        def task = Mock(TaskRun) {getConfig() >> [spack:'salmon@1.2.3'] }
-//        and:
-//        def client = new WaveClient(session)
-//
-//        when:
-//        def assets = client.resolveAssets(task, null)
-//        then:
-//        assets.dockerFileContent == '''\
-//                    FROM mambaorg/micromamba:1.2.0
-//                    RUN \\
-//                       micromamba install -y -n base -c conda-forge -c defaults \\
-//                       salmon=1.2.3 \\
-//                       && micromamba clean -a -y
-//                    '''.stripIndent()
-//        and:
-//        !assets.moduleResources
-//        !assets.containerImage
-//        !assets.containerConfig
-//        !assets.condaFile
-//        !assets.spackFile
-//        !assets.projectResources
-//    }
+    def 'should create asset with spack recipe' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:]}
+        and:
+        def task = Mock(TaskRun) {getConfig() >> [spack:'salmon@1.2.3'] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null)
+        then:
+        assets.dockerFileContent == '''\
+# Builder image
+FROM spack/ubuntu-jammy:v0.19.0 as builder
+
+RUN mkdir -p /opt/spack-env \\
+&&  (sed -e 's;compilers:;compilers::;' \\
+         -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
+         /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
+&&  (echo "spack:" \\
+&&   echo "  include: [/opt/spack-env/compilers.yaml]" \\
+&&   echo "  concretizer:" \\
+&&   echo "    unify: true" \\
+&&   echo "  specs: [salmon@1.2.3]" \\
+&&   echo "  packages:" \\
+&&   echo "    all:" \\
+&&   echo "      target: [x86_64]" \\
+&&   echo "  config:" \\
+&&   echo "    install_tree: /opt/software" \\
+&&   echo "  view: /opt/view") > /opt/spack-env/spack.yaml
+
+# Install packages, clean afterwards
+RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
+
+# Strip binaries
+RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
+    xargs file -i | \\
+    grep 'charset=binary' | \\
+    grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
+    awk -F: '{print \$1}' | xargs strip -s
+
+RUN cd /opt/spack-env && \
+    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \
+    original_view=\$( cd /opt ; ls -1d ._view/* ) && \
+    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \
+    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \
+    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \
+    rm -rf /opt/view
+
+# Runner image
+FROM ubuntu:22.04
+
+COPY --from=builder /opt/spack-env /opt/spack-env
+COPY --from=builder /opt/software /opt/software
+COPY --from=builder /opt/._view /opt/._view
+COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
+
+# Near OS-agnostic package addition
+RUN ( apt update -y && apt install -y procps libgomp1 && rm -rf /var/lib/apt/lists/* ) || \\
+    ( yum install -y procps libgomp1 && yum clean all && rm -rf /var/cache/yum ) || \\
+    ( zypper ref && zypper install -y procps libgomp1 && zypper clean -a ) || \\
+    ( apk update && apk add --no-cache libgomp1 && rm -rf /var/cache/apk )
+
+ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
+CMD [ "/bin/bash" ]
+'''//.stripIndent()
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.condaFile
+        !assets.spackFile
+        !assets.projectResources
+    }
 
     def 'should create asset with conda file' () {
         given:
@@ -645,38 +832,85 @@ class WaveClientTest extends Specification {
         folder?.deleteDir()
     }
 
-    // MARCO MARCO IN PROGRESS - SEE WAVECLIENT.GROOVY
-//    def 'should create asset with spack file' () {
-//        given:
-//        def folder = Files.createTempDirectory('test')
-//        def spackFile = folder.resolve('spack.yaml'); spackFile.text = 'the-spack-recipe-here'
-//        and:
-//        def session = Mock(Session) { getConfig() >> [:]}
-//        def task = Mock(TaskRun) {getConfig() >> [spack:spackFile.toString()] }
-//        and:
-//        def client = new WaveClient(session)
-//
-//        when:
-//        def assets = client.resolveAssets(task, null)
-//        then:
-//        assets.dockerFileContent == '''\
-//                    FROM mambaorg/micromamba:1.2.0
-//                    COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
-//                    RUN micromamba install -y -n base -f /tmp/conda.yml && \\
-//                        micromamba clean -a -y
-//                    '''.stripIndent()
-//        and:
-//        assets.spackFile == spackFile
-//        and:
-//        !assets.moduleResources
-//        !assets.containerImage
-//        !assets.containerConfig
-//        !assets.condaFile
-//        !assets.projectResources
-//
-//        cleanup:
-//        folder?.deleteDir()
-//    }
+    def 'should create asset with spack file' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def spackFile = folder.resolve('spack.yaml'); spackFile.text = 'the-spack-recipe-here'
+        and:
+        def session = Mock(Session) { getConfig() >> [:]}
+        def task = Mock(TaskRun) {getConfig() >> [spack:spackFile.toString()] }
+        and:
+        def client = new WaveClient(session)
+
+        when:
+        def assets = client.resolveAssets(task, null)
+        then:
+        assets.dockerFileContent == '''\
+# Builder image
+FROM spack/ubuntu-jammy:v0.19.0 as builder
+COPY spack.yaml /tmp/spack.yaml
+
+RUN mkdir -p /opt/spack-env \\
+&&  (sed -e 's;compilers:;compilers::;' \\
+         -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
+         /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
+&&  (sed '/^spack:/a  \\ \\ include: [/opt/spack-env/compilers.yaml]\\
+  concretizer:\\
+    unify: true' /tmp/spack.yaml) > /opt/spack-env/spack.yaml \\
+&&  (echo "  packages:" \\
+&&   echo "    all:" \\
+&&   echo "      target: [x86_64]" \\
+&&   echo "  config:" \\
+&&   echo "    install_tree: /opt/software" \\
+&&   echo "  view: /opt/view") >> /opt/spack-env/spack.yaml
+
+# Install packages, clean afterwards
+RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
+
+# Strip binaries
+RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
+    xargs file -i | \\
+    grep 'charset=binary' | \\
+    grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
+    awk -F: '{print \$1}' | xargs strip -s
+
+RUN cd /opt/spack-env && \
+    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \
+    original_view=\$( cd /opt ; ls -1d ._view/* ) && \
+    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \
+    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \
+    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \
+    rm -rf /opt/view
+
+# Runner image
+FROM ubuntu:22.04
+
+COPY --from=builder /opt/spack-env /opt/spack-env
+COPY --from=builder /opt/software /opt/software
+COPY --from=builder /opt/._view /opt/._view
+COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
+
+# Near OS-agnostic package addition
+RUN ( apt update -y && apt install -y procps libgomp1 && rm -rf /var/lib/apt/lists/* ) || \\
+    ( yum install -y procps libgomp1 && yum clean all && rm -rf /var/cache/yum ) || \\
+    ( zypper ref && zypper install -y procps libgomp1 && zypper clean -a ) || \\
+    ( apk update && apk add --no-cache libgomp1 && rm -rf /var/cache/apk )
+
+ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
+CMD [ "/bin/bash" ]
+'''//.stripIndent()
+        and:
+        assets.spackFile == spackFile
+        and:
+        !assets.moduleResources
+        !assets.containerImage
+        !assets.containerConfig
+        !assets.condaFile
+        !assets.projectResources
+
+        cleanup:
+        folder?.deleteDir()
+    }
 
     def 'should create assets with project resources' () {
         given:

@@ -442,7 +442,7 @@ class WaveClient {
         def result = """\
 # Builder image
 FROM ${config.spackOpts().builderImage} as builder
-COPY --chown=\$MAMBA_USER:\$MAMBA_USER spack.yaml /tmp/spack.yaml
+COPY spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
 &&  (sed -e 's;compilers:;compilers::;' \\
@@ -494,6 +494,7 @@ RUN ( apt update -y && apt install -y procps ${config.spackOpts().osPackages} &&
         result = addCommands(result)
 
         result += """\
+
 ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
 CMD [ "/bin/bash" ]
 """//.stripIndent()
@@ -590,6 +591,7 @@ RUN ( apt update -y && apt install -y procps ${config.spackOpts().osPackages} &&
         result = addCommands(result)
 
         result += """\
+
 ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
 CMD [ "/bin/bash" ]
 """//.stripIndent()
