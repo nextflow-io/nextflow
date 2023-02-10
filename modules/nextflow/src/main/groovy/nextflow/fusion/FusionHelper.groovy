@@ -37,13 +37,12 @@ import nextflow.io.BucketParser
 class FusionHelper {
 
     @Memoized
-    static boolean isFusionEnabled(Session session, Map<String,String> sysEnv=SysEnv.get()) {
+    static boolean isFusionEnabled(Session session) {
         def result = session.config.navigate('fusion.enabled')
         if( result == null )
-            result = sysEnv.get('FUSION_ENABLED')
+            result = SysEnv.get('FUSION_ENABLED')
         return result!=null ? result.toString()=='true' : false
     }
-
 
     static String runWithContainer(FusionScriptLauncher launcher, ContainerConfig containerConfig, String containerName, List<String> runCmd) {
         if( !containerName )

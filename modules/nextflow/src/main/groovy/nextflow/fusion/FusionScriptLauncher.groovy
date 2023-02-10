@@ -96,6 +96,7 @@ class FusionScriptLauncher extends BashWrapperBuilder {
             final work = toContainerMount(remoteWorkDir).toString()
             final result = new LinkedHashMap(10)
             result.FUSION_WORK = work
+            result.FUSION_TAGS="[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
             // foreign env
             final provider = new FusionEnvProvider()
             result.putAll(provider.getEnvironment(scheme))

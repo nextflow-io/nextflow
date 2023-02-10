@@ -13,8 +13,6 @@ It bridges the gap between cloud-native storage and data analysis workflow by im
 that allows any existing application to access object storage using the standard POSIX interface, thus simplifying
 and speeding up most operations. Currently it supports AWS S3.
 
-.. warning:: This is an incubating feature. It may change in future Nextflow releases.
-
 Getting started
 ===============
 
@@ -170,6 +168,28 @@ permission to jobs launched by Nextflow. You can find more details how to config
 Having the above configuration in place, you can run your pipeline using the following command::
 
     nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR BUCKET>/scratch
+
+
+NVMe storage
+=============
+
+Fusion file system implements a lazy download and upload algorithm that runs in the background to transfer files
+in parallel to and from object storage into a container local temporal folder. This means that the performance of
+the temporal folder inside the container (``/tmp`` in a default setup) is key to get maximum performance.
+
+The temporal folder is used only as a temporal cache, so the size of the volume can be much lower than the actual
+needs of your pipeline processes. Fusion has a build-in garbage collector that constantly monitors remaining disk
+space on temporal folder and immediately evicts old cached entries when necessary.
+
+The recommended setup to get maximum performance is to mount a NVMe disk as temporal folder and run the pipeline
+with Nextflow :ref:`scratch <process-scratch>` directive set to ``false`` to also avoid stage-out transfer time.
+
+Example extra configuration needed when using AWS Batch with `NVMe disks <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ssd-instance-store.html>`_
+to maximize performance::
+
+    aws.batch.volumes = '/path/to/ec2/nvme:/tmp'
+    process.scratch = false
+
 
 More examples
 =============
