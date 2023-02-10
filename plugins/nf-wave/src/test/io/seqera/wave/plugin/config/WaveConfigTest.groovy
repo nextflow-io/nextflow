@@ -110,27 +110,27 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.spackOpts().spackBuilderImage == 'spack/ubuntu-jammy:v0.19.0'
-        opts.spackOpts().spackRunnerImage == 'ubuntu:22.04'
-        opts.spackOpts().spackOsPackages == 'libgomp1'
-        opts.spackOpts().spackCFlags == '-O3'
-        opts.spackOpts().spackCXXFlags == '-O3'
-        opts.spackOpts().spackFFlags == '-O3'
-        opts.spackOpts().spackTarget == 'DEFAULT_SPACK_TARGET'
-        opts.spackOpts().spackPlatform == 'DEFAULT_SPACK_PLATFORM'
+        opts.spackOpts().builderImage == 'spack/ubuntu-jammy:v0.19.0'
+        opts.spackOpts().runnerImage == 'ubuntu:22.04'
+        opts.spackOpts().osPackages == 'libgomp1'
+        opts.spackOpts().cFlags == '-O3'
+        opts.spackOpts().cxxFlags == '-O3'
+        opts.spackOpts().fFlags == '-O3'
+        opts.spackOpts().genericTarget == 'x86_64' // MARCO MARCO use archspec
+        opts.spackOpts().target == 'x86_64' // MARCO MARCO use archspec
         opts.spackOpts().commands == null
 
         when:
-        opts = new WaveConfig([build:[spack:[ spackBuilderImage:'spack/foo:1', spackRunnerImage:'ubuntu/foo', spackOsPackages:'libfoo', spackCFlags:'-foo', spackCXXFlags:'-foo2', spackFFlags:'-foo3', spackTarget:'nextcpu',  spackPlatform:'nextunix', commands:['USER hola'] ]]])
+        opts = new WaveConfig([build:[spack:[ builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', cFlags:'-foo', cxxFlags:'-foo2', fFlags:'-foo3', genericTarget:'nextx86', target:'nextcpu', commands:['USER hola'] ]]])
         then:
-        opts.spackOpts().spackBuilderImage == 'spack/foo:1'
-        opts.spackOpts().spackRunnerImage == 'ubuntu/foo'
-        opts.spackOpts().spackOsPackages == 'libfoo'
-        opts.spackOpts().spackCFlags == '-foo'
-        opts.spackOpts().spackCXXFlags == '-foo2'
-        opts.spackOpts().spackFFlags == '-foo3'
-        opts.spackOpts().spackTarget == 'nextcpu'
-        opts.spackOpts().spackPlatform == 'nextunix'
+        opts.spackOpts().builderImage == 'spack/foo:1'
+        opts.spackOpts().runnerImage == 'ubuntu/foo'
+        opts.spackOpts().osPackages == 'libfoo'
+        opts.spackOpts().cFlags == '-foo'
+        opts.spackOpts().cxxFlags == '-foo2'
+        opts.spackOpts().fFlags == '-foo3'
+        opts.spackOpts().genericTarget == 'nextx86'
+        opts.spackOpts().target == 'nextcpu'
         opts.spackOpts().commands == ['USER hola']
         
     }

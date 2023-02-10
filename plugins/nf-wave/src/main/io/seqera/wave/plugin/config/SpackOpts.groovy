@@ -28,6 +28,8 @@ class SpackOpts {
     final public String DEFAULT_SPACK_RUNNER_IMAGE = 'ubuntu:22.04'
     final public String DEFAULT_SPACK_OSPACKAGES = 'libgomp1'
     final public String DEFAULT_SPACK_FLAGS = '-O3'
+    final public String DEFAULT_SPACK_GENERIC_TARGET = 'x86_64' // MARCO MARCO use archspec
+    final public String DEFAULT_SPACK_TARGET = 'x86_64' // MARCO MARCO use archspec
 
     final String builderImage
     final String runnerImage
@@ -39,8 +41,6 @@ class SpackOpts {
     final String target
     final List<String> commands
 
-    // MARCO MARCO ADD SOME MOREFROM INTERNAL PROCESSING
-    // spackTarget (Finalise - archspec)
     SpackOpts(Map opts) {
         this.builderImage = opts.builderImage ?: DEFAULT_SPACK_BUILDER_IMAGE
         this.runnerImage = opts.runnerImage ?: DEFAULT_SPACK_RUNNER_IMAGE
@@ -48,8 +48,8 @@ class SpackOpts {
         this.cFlags = opts.cFlags ?: DEFAULT_SPACK_FLAGS
         this.cxxFlags = opts.cxxFlags ?: DEFAULT_SPACK_FLAGS
         this.fFlags = opts.fFlags ?: DEFAULT_SPACK_FLAGS
-        this.genericTarget = opts.genericTarget ?: 'x86_64' //'DEFAULT_SPACK_GENERIC_TARGET' // likely needed by Wave backend
-        this.target = opts.target ?: 'x86_64' //'DEFAULT_SPACK_TARGET'
+        this.genericTarget = opts.genericTarget ?: DEFAULT_SPACK_GENERIC_TARGET
+        this.target = opts.target ?: DEFAULT_SPACK_TARGET
         this.commands = opts.commands as List<String>
     }
 
