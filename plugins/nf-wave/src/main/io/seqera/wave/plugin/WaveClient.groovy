@@ -450,23 +450,15 @@ RUN mkdir /opt/spack-env \\
 &&  (sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: ${config.spackOpts().spackCFlags}\\n      cxxflags: ${config.spackOpts().spackCXXFlags}\\n      fflags: ${config.spackOpts().spackFFlags};' \\
          /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
-&& cp /tmp/spack.yaml /opt/spack-env/spack.yaml \\
-
-BEGIN EDIT HERE!!!!!!
-
-&&  (echo "spack:" \\
-&&   echo "  include: [/opt/spack-env/compilers.yaml]" \\
-&&   echo "  specs: [${recipe}]" \\
-&&   echo "  packages:" \\
+&&  (sed '/^spack:/a  \\ \\ include: [/opt/spack-env/compilers.yaml]\\
+  concretizer:\\
+    unify: true' /tmp/spack.yaml) > /opt/spack-env/spack.yaml \\
+&&  (echo "  packages:" \\
 &&   echo "    all:" \\
 &&   echo "      target: [${config.spackOpts().spackTarget}]" \\
-&&   echo "  concretizer:" \\
-&&   echo "    unify: true" \\
 &&   echo "  config:" \\
 &&   echo "    install_tree: /opt/software" \\
 &&   echo "  view: /opt/view") >> /opt/spack-env/spack.yaml
-
-END EDIT HERE!!!!!
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
@@ -497,14 +489,14 @@ COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_s
 RUN apt update -yqq \\
  && apt install -yqq ${config.spackOpts().spackOsPackages} \\
  && rm -rf /var/lib/apt/lists/*
-        """ //.stripIndent()
+""" //.stripIndent()
 
         result = addCommands(result)
 
         result += """\
-        ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
-        CMD [ "/bin/bash" ]
-        """.stripIndent()
+ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
+CMD [ "/bin/bash" ]
+"""//.stripIndent()
 
         return result
     }
@@ -552,12 +544,12 @@ RUN mkdir /opt/spack-env \\
          /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
 &&  (echo "spack:" \\
 &&   echo "  include: [/opt/spack-env/compilers.yaml]" \\
+&&   echo "  concretizer:" \\
+&&   echo "    unify: true" \\
 &&   echo "  specs: [${recipe}]" \\
 &&   echo "  packages:" \\
 &&   echo "    all:" \\
 &&   echo "      target: [${config.spackOpts().spackTarget}]" \\
-&&   echo "  concretizer:" \\
-&&   echo "    unify: true" \\
 &&   echo "  config:" \\
 &&   echo "    install_tree: /opt/software" \\
 &&   echo "  view: /opt/view") > /opt/spack-env/spack.yaml
@@ -591,14 +583,14 @@ COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_s
 RUN apt update -yqq \\
  && apt install -yqq ${config.spackOpts().spackOsPackages} \\
  && rm -rf /var/lib/apt/lists/*
-        """ //.stripIndent()
+""" //.stripIndent()
 
         result = addCommands(result)
 
         result += """\
-        ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
-        CMD [ "/bin/bash" ]
-        """.stripIndent()
+ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
+CMD [ "/bin/bash" ]
+"""//.stripIndent()
 
         return result
     }
