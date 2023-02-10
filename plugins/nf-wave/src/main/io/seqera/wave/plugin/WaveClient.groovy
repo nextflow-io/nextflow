@@ -434,8 +434,6 @@ class WaveClient {
         return addCommands(result)
     }
 
-    // MARCO MARCO WORK IN PROGRESS
-    //
     // Dockerfile template adpated from the Spack package manager
     // https://github.com/spack/spack/blob/develop/share/spack/templates/container/Dockerfile
     // LICENSE APACHE 2.0
@@ -486,9 +484,10 @@ COPY --from=builder /opt/software /opt/software
 COPY --from=builder /opt/._view /opt/._view
 COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
 
-RUN apt update -yqq \\
- && apt install -yqq procps ${config.spackOpts().osPackages} \\
- && rm -rf /var/lib/apt/lists/*
+# Near OS-agnostic package addition
+RUN ( apt update -y && apt install -y procps ${config.spackOpts().osPackages} && rm -rf /var/lib/apt/lists/* ) || \\
+    ( yum install -y procps ${config.spackOpts().osPackages} && yum clean all && rm -rf /var/cache/yum ) || \\
+    ( zypper install -y procps ${config.spackOpts().osPackages} && zypper clean -a )
 """ //.stripIndent()
 
         result = addCommands(result)
@@ -580,9 +579,10 @@ COPY --from=builder /opt/software /opt/software
 COPY --from=builder /opt/._view /opt/._view
 COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
 
-RUN apt update -yqq \\
- && apt install -yqq procps ${config.spackOpts().osPackages} \\
- && rm -rf /var/lib/apt/lists/*
+# Near OS-agnostic package addition
+RUN ( apt update -y && apt install -y procps ${config.spackOpts().osPackages} && rm -rf /var/lib/apt/lists/* ) || \\
+    ( yum install -y procps ${config.spackOpts().osPackages} && yum clean all && rm -rf /var/cache/yum ) || \\
+    ( zypper install -y procps ${config.spackOpts().osPackages} && zypper clean -a )
 """ //.stripIndent()
 
         result = addCommands(result)
