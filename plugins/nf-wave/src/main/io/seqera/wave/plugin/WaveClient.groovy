@@ -487,7 +487,8 @@ COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_s
 # Near OS-agnostic package addition
 RUN ( apt update -y && apt install -y procps ${config.spackOpts().osPackages} && rm -rf /var/lib/apt/lists/* ) || \\
     ( yum install -y procps ${config.spackOpts().osPackages} && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper install -y procps ${config.spackOpts().osPackages} && zypper clean -a )
+    ( zypper ref && zypper install -y procps ${config.spackOpts().osPackages} && zypper clean -a ) || \\
+    ( apk update && apk add --no-cache ${config.spackOpts().osPackages} && rm -rf /var/cache/apk )
 """ //.stripIndent()
 
         result = addCommands(result)
@@ -582,7 +583,8 @@ COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_s
 # Near OS-agnostic package addition
 RUN ( apt update -y && apt install -y procps ${config.spackOpts().osPackages} && rm -rf /var/lib/apt/lists/* ) || \\
     ( yum install -y procps ${config.spackOpts().osPackages} && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper install -y procps ${config.spackOpts().osPackages} && zypper clean -a )
+    ( zypper ref && zypper install -y procps ${config.spackOpts().osPackages} && zypper clean -a ) || \\
+    ( apk update && apk add --no-cache ${config.spackOpts().osPackages} && rm -rf /var/cache/apk )
 """ //.stripIndent()
 
         result = addCommands(result)
