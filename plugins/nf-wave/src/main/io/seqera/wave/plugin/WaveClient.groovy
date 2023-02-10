@@ -446,7 +446,7 @@ class WaveClient {
 FROM ${config.spackOpts().spackBuilderImage} as builder
 COPY --chown=\$MAMBA_USER:\$MAMBA_USER spack.yaml /tmp/spack.yaml
 
-RUN mkdir /opt/spack-env \\
+RUN mkdir -p /opt/spack-env \\
 &&  (sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: ${config.spackOpts().spackCFlags}\\n      cxxflags: ${config.spackOpts().spackCXXFlags}\\n      fflags: ${config.spackOpts().spackFFlags};' \\
          /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
@@ -538,7 +538,7 @@ CMD [ "/bin/bash" ]
 # Builder image
 FROM ${config.spackOpts().spackBuilderImage} as builder
 
-RUN mkdir /opt/spack-env \\
+RUN mkdir -p /opt/spack-env \\
 &&  (sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: ${config.spackOpts().spackCFlags}\\n      cxxflags: ${config.spackOpts().spackCXXFlags}\\n      fflags: ${config.spackOpts().spackFFlags};' \\
          /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
