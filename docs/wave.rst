@@ -104,12 +104,16 @@ the ``container`` directive and any Dockerfile(s).
 Build Spack based containers
 ----------------------------
 
+.. warning::
+  Spack based Wave containers are currently in beta testing. 
+  Functionality is still sub-optimal, due to long build times that may result in backend time-out and subsequent task failure.
+
 Wave allows the provisioning of containers based on the :ref:`process-spack` directive used by the processes in your
 pipeline. This is an alternative to building Spack packages in the local computer.
 Moreover, this enables to run optimised builds with almost no user intervention.
 
 Having Wave enabled in your pipeline, there's nothing else to do other than define the ``spack`` requirements in
-the pipeline processes provided the same process does not also specify a ``container`` directive or a Dockerfile.
+the pipeline processes provided the same process does not also specify a ``container`` or ``conda`` directive or a Dockerfile.
 
 In the latter case, add the following setting to your pipeline configuration::
 
@@ -117,6 +121,11 @@ In the latter case, add the following setting to your pipeline configuration::
 
 The above setting instructs Wave to only use the ``spack`` directive to provision the pipeline containers, ignoring the use of
 the ``container`` directive and any Dockerfile(s).
+
+.. note::
+  If using a Spack YAML file to provide the required packages, you should avoid editing the following sections, 
+  which are already configured by the Wave plugin: ``packages``, ``config`` and ``view`` (your edits will be ignored), and 
+  ``compilers`` and ``concretizer`` (your edits will be considered, and may interfere with the setup by the Wave plugin).
 
 Push to a private repository
 ----------------------------
@@ -145,21 +154,21 @@ The following configuration options are available:
 ============================================== =================
 Name                                           Description
 ============================================== =================
-wave.enabled                                    Enable/disable the execution of Wave containers
-wave.endpoint                                   The Wave service endpoint (default: ``https://wave.seqera.io``)
+wave.enabled                                    Enable/disable the execution of Wave containers.
+wave.endpoint                                   The Wave service endpoint (default: ``https://wave.seqera.io``).
 wave.build.repository                           The container repository where image built by Wave needs to be uploaded (note: the corresponding credentials need to be provided in your Nextflow Tower account).
 wave.build.cacheRepository                      The container repository used to cache image layers build by the Wave service (note: the corresponding credentials need to be provided in your Nextflow Tower account).
 wave.build.conda.mambaImage                     The Mamba container image is used to build Conda based container. This is expected to be `micromamba-docker <https://github.com/mamba-org/micromamba-docker>`_ image.
 wave.build.conda.commands                       One or more commands to be added to the Dockerfile used to build a Conda based image.
 wave.build.spack.builderImage                   The Spack container image is used to build Spack based container. This is expected to be one of the `Spack-provided <https://spack.readthedocs.io/en/latest/containers.html>`_ images.
 wave.build.spack.runnerImage                    The OS container image is used for the production container. This is expected to match the OS of the ``builderImage`` above.
-wave.build.spack.osPackages                     Additional OS packages to be installed in the production container (default: ``libgomp1`` for Ubuntu/Debian)
+wave.build.spack.osPackages                     Additional OS packages to be installed in the production container. Note that package names may vary depending on the OS of the ``runnerImage`` above (default: ``libgomp1``, valid for Ubuntu/Debian).
 wave.build.spack.cFlags                         C compiler flags used during the build. Default: ``-O3`` for GCC compiler. Recommended: one of ``-O3`` (high optimisation) or ``-O2`` (moderate optimisation).
 wave.build.spack.cxxFlags                       C++ compiler flags used during the build. Default: ``-O3`` for GCC compiler. Recommended: one of ``-O3`` (high optimisation) or ``-O2`` (moderate optimisation).
 wave.build.spack.fFlags                         Fortran compiler flags used during the build. Default: ``-O3`` for GCC compiler. Recommended: one of ``-O3`` (high optimisation) or ``-O2`` (moderate optimisation).
-wave.build.spack.target                         Target CPU architecture for which the compiler will optimise the build (default: architecture identified by Nextflow in the execution machine)
+wave.build.spack.target                         Target CPU architecture for which the compiler will optimise the build (default: architecture identified by Nextflow in the execution machine).
 wave.build.spack.commands                       One or more commands to be added to the Dockerfile used to build a Spack based image.
-wave.strategy                                   The strategy to be used when resolving ambiguous Wave container requirement (default: ``'container,dockerfile,conda,spack'``)
+wave.strategy                                   The strategy to be used when resolving ambiguous Wave container requirement (default: ``'container,dockerfile,conda,spack'``).
 ============================================== =================
 
 More examples
