@@ -17,6 +17,7 @@
 
 package nextflow.cloud.google.batch
 
+import com.google.cloud.batch.v1.GCS
 import com.google.cloud.batch.v1.Volume
 import groovy.transform.CompileStatic
 import nextflow.fusion.FusionAwareTask
@@ -47,7 +48,12 @@ class GoogleBatchFusionAdapter implements GoogleBatchLauncherSpec {
 
     @Override
     List<Volume> getVolumes() {
-        return List.of()
+        return [
+                Volume.newBuilder()
+                        .setDeviceName('fusion')
+                        .setMountPath('/tmp')
+                        .build()
+        ]
     }
 
     @Override

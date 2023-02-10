@@ -16,6 +16,7 @@
 
 package nextflow.cloud.google.batch
 
+
 import java.nio.file.Path
 
 import com.google.cloud.batch.v1.AllocationPolicy
@@ -39,6 +40,10 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
+
+import static GoogleBatchCustomMachineSelector.customMachineTypeUri
+import static nextflow.cloud.google.batch.GoogleBatchCloudinfoMachineSelector.bestMachineType
+
 /**
  * Implements a task handler for Google Batch executor
  * 
@@ -167,9 +172,15 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         def containerOptions= task.config.getContainerOptions() ?: ''
         // accelerator requires privileged option
         // https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
-        if( task.config.getAccelerator() || fusionEnabled() ) {
+        if( task.config.getAccelerator() ) {
             if( containerOptions ) containerOptions += ' '
             containerOptions += '--privileged'
+        }
+
+        // Fusion configuration
+        if( fusionEnabled() && !task.config.getAccelerator() ) {
+            if( containerOptions ) containerOptions += ' '
+            containerOptions += '--security-opt apparmor=unconfined --security-opt seccomp=unconfined --device /dev/fuse '
         }
 
         if( containerOptions )
@@ -229,6 +240,22 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         if( executor.config.spot )
             instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.SPOT )
+
+        // Fusion configuration
+        if( fusionEnabled() ) {
+            instancePolicy.addDisks(AllocationPolicy.AttachedDisk.newBuilder()
+                    .setNewDisk(AllocationPolicy.Disk.newBuilder()
+                            .setType("local-ssd")
+                            .setSizeGb(375)
+                    )
+                    .setDeviceName("fusion")
+            )
+
+
+            final cpus = task.config.getCpus()
+            final memory = task.config.getMemory() ? task.config.getMemory().toMega().toInteger() : 1024
+            instancePolicy.setMachineType(getMachineType(cpus, memory, client.location))
+        }
 
         allocationPolicy.addInstances(
             instancePolicyOrTemplate
@@ -365,6 +392,18 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             result.put('native_id', "$jobId/$uid")
         }
         return result
+    }
+
+
+    private String getMachineType(int cpus, int memoryMB, String location) {
+        try {
+            return bestMachineType(cpus, memoryMB, location)
+        }
+        catch (Exception e) {
+            log.debug "[GOOGLE BATCH] Cannot select machine type using cloud info. Fallback to custom machine type."
+        }
+
+        return customMachineTypeUri(GoogleBatchCustomMachineSelector.CpuSeries.N2.getCpuSeries(), cpus, memoryMB)
     }
 
 }
