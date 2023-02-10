@@ -8,6 +8,7 @@
 .node-nextflow*
 .devcontainer
 .vscode/*
+*/*/bin/*
 **/build/**
 build/**
 modules/**/build/
