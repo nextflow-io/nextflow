@@ -29,27 +29,27 @@ class SpackOpts {
     final public String DEFAULT_SPACK_OSPACKAGES = 'libgomp1'
     final public String DEFAULT_SPACK_FLAGS = '-O3'
 
-    final String spackBuilderImage
-    final String spackRunnerImage
-    final String spackOsPackages
-    final String spackCFlags
-    final String spackCXXFlags
-    final String spackFFlags
-    final String spackGenericTarget
-    final String spackTarget
+    final String builderImage
+    final String runnerImage
+    final String osPackages
+    final String cFlags
+    final String cxxFlags
+    final String fFlags
+    final String genericTarget
+    final String target
     final List<String> commands
 
     // MARCO MARCO ADD SOME MOREFROM INTERNAL PROCESSING
     // spackTarget (Finalise - archspec)
     SpackOpts(Map opts) {
-        this.spackBuilderImage = opts.spackBuilderImage ?: DEFAULT_SPACK_BUILDER_IMAGE
-        this.spackRunnerImage = opts.spackRunnerImage ?: DEFAULT_SPACK_RUNNER_IMAGE
-        this.spackOsPackages = opts.spackOsPackages ?: DEFAULT_SPACK_OSPACKAGES
-        this.spackCFlags = opts.spackCFlags ?: DEFAULT_SPACK_FLAGS
-        this.spackCXXFlags = opts.spackCXXFlags ?: DEFAULT_SPACK_FLAGS
-        this.spackFFlags = opts.spackFFlags ?: DEFAULT_SPACK_FLAGS
-        this.spackGenericTarget = opts.spackGenericTarget ?: 'x86_64' //'DEFAULT_SPACK_GENERIC_TARGET' // likely needed by Wave backend
-        this.spackTarget = opts.spackTarget ?: 'x86_64' //'DEFAULT_SPACK_TARGET'
+        this.builderImage = opts.builderImage ?: DEFAULT_SPACK_BUILDER_IMAGE
+        this.runnerImage = opts.runnerImage ?: DEFAULT_SPACK_RUNNER_IMAGE
+        this.osPackages = opts.osPackages ?: DEFAULT_SPACK_OSPACKAGES
+        this.cFlags = opts.cFlags ?: DEFAULT_SPACK_FLAGS
+        this.cxxFlags = opts.cxxFlags ?: DEFAULT_SPACK_FLAGS
+        this.fFlags = opts.fFlags ?: DEFAULT_SPACK_FLAGS
+        this.genericTarget = opts.genericTarget ?: 'x86_64' //'DEFAULT_SPACK_GENERIC_TARGET' // likely needed by Wave backend
+        this.target = opts.target ?: 'x86_64' //'DEFAULT_SPACK_TARGET'
         this.commands = opts.commands as List<String>
     }
 

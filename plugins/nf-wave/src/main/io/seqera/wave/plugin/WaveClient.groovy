@@ -443,19 +443,19 @@ class WaveClient {
 
         def result = """\
 # Builder image
-FROM ${config.spackOpts().spackBuilderImage} as builder
+FROM ${config.spackOpts().builderImage} as builder
 COPY --chown=\$MAMBA_USER:\$MAMBA_USER spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
 &&  (sed -e 's;compilers:;compilers::;' \\
-         -e 's;^ *flags: *{};    flags:\\n      cflags: ${config.spackOpts().spackCFlags}\\n      cxxflags: ${config.spackOpts().spackCXXFlags}\\n      fflags: ${config.spackOpts().spackFFlags};' \\
+         -e 's;^ *flags: *{};    flags:\\n      cflags: ${config.spackOpts().cFlags}\\n      cxxflags: ${config.spackOpts().cxxFlags}\\n      fflags: ${config.spackOpts().fFlags};' \\
          /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
 &&  (sed '/^spack:/a  \\ \\ include: [/opt/spack-env/compilers.yaml]\\
   concretizer:\\
     unify: true' /tmp/spack.yaml) > /opt/spack-env/spack.yaml \\
 &&  (echo "  packages:" \\
 &&   echo "    all:" \\
-&&   echo "      target: [${config.spackOpts().spackTarget}]" \\
+&&   echo "      target: [${config.spackOpts().target}]" \\
 &&   echo "  config:" \\
 &&   echo "    install_tree: /opt/software" \\
 &&   echo "  view: /opt/view") >> /opt/spack-env/spack.yaml
@@ -479,7 +479,7 @@ RUN cd /opt/spack-env && \
     rm -rf /opt/view
 
 # Runner image
-FROM ${config.spackOpts().spackRunnerImage}
+FROM ${config.spackOpts().runnerImage}
 
 COPY --from=builder /opt/spack-env /opt/spack-env
 COPY --from=builder /opt/software /opt/software
@@ -487,7 +487,7 @@ COPY --from=builder /opt/._view /opt/._view
 COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
 
 RUN apt update -yqq \\
- && apt install -yqq ${config.spackOpts().spackOsPackages} \\
+ && apt install -yqq ${config.spackOpts().osPackages} \\
  && rm -rf /var/lib/apt/lists/*
 """ //.stripIndent()
 
@@ -536,11 +536,11 @@ CMD [ "/bin/bash" ]
 
         def result = """\
 # Builder image
-FROM ${config.spackOpts().spackBuilderImage} as builder
+FROM ${config.spackOpts().builderImage} as builder
 
 RUN mkdir -p /opt/spack-env \\
 &&  (sed -e 's;compilers:;compilers::;' \\
-         -e 's;^ *flags: *{};    flags:\\n      cflags: ${config.spackOpts().spackCFlags}\\n      cxxflags: ${config.spackOpts().spackCXXFlags}\\n      fflags: ${config.spackOpts().spackFFlags};' \\
+         -e 's;^ *flags: *{};    flags:\\n      cflags: ${config.spackOpts().cFlags}\\n      cxxflags: ${config.spackOpts().cxxFlags}\\n      fflags: ${config.spackOpts().fFlags};' \\
          /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
 &&  (echo "spack:" \\
 &&   echo "  include: [/opt/spack-env/compilers.yaml]" \\
@@ -549,7 +549,7 @@ RUN mkdir -p /opt/spack-env \\
 &&   echo "  specs: [${recipe}]" \\
 &&   echo "  packages:" \\
 &&   echo "    all:" \\
-&&   echo "      target: [${config.spackOpts().spackTarget}]" \\
+&&   echo "      target: [${config.spackOpts().target}]" \\
 &&   echo "  config:" \\
 &&   echo "    install_tree: /opt/software" \\
 &&   echo "  view: /opt/view") > /opt/spack-env/spack.yaml
@@ -573,7 +573,7 @@ RUN cd /opt/spack-env && \
     rm -rf /opt/view
 
 # Runner image
-FROM ${config.spackOpts().spackRunnerImage}
+FROM ${config.spackOpts().runnerImage}
 
 COPY --from=builder /opt/spack-env /opt/spack-env
 COPY --from=builder /opt/software /opt/software
@@ -581,7 +581,7 @@ COPY --from=builder /opt/._view /opt/._view
 COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
 
 RUN apt update -yqq \\
- && apt install -yqq ${config.spackOpts().spackOsPackages} \\
+ && apt install -yqq ${config.spackOpts().osPackages} \\
  && rm -rf /var/lib/apt/lists/*
 """ //.stripIndent()
 

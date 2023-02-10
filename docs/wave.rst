@@ -149,16 +149,16 @@ wave.enabled                                    Enable/disable the execution of 
 wave.endpoint                                   The Wave service endpoint (default: ``https://wave.seqera.io``)
 wave.build.repository                           The container repository where image built by Wave needs to be uploaded (note: the corresponding credentials need to be provided in your Nextflow Tower account).
 wave.build.cacheRepository                      The container repository used to cache image layers build by the Wave service (note: the corresponding credentials need to be provided in your Nextflow Tower account).
-wave.conda.mambaImage                           The Mamba container image is used to build Conda based container. This is expected to be `micromamba-docker <https://github.com/mamba-org/micromamba-docker>`_ image.
-wave.conda.commands                             One or more commands to be added to the Dockerfile used to build a Conda based image.
-wave.spack.spackBuilderImage                    The Spack container image is used to build Spack based container. This is expected to be one of the `Spack-provided <https://spack.readthedocs.io/en/latest/containers.html>`_ images.
-wave.spack.spackRunnerImage                     The OS container image is used for the production Spack based container. This is expected to match the OS of the ``spackBuilderImage`` above.
-wave.spack.spackOsPackages                      Additional OS packages to be installed in the production based container (default: ``libgomp1`` for Ubuntu/Debian)
-wave.spack.spackCFlags                          C compiler flags used during the build. Default: ``-O3`` for GCC compiler. Recommended: one of ``-O3`` (high optimisation) or ``-O2`` (moderate optimisation).
-wave.spack.spackCXXFlags                        C++ compiler flags used during the build. Default: ``-O3`` for GCC compiler. Recommended: one of ``-O3`` (high optimisation) or ``-O2`` (moderate optimisation).
-wave.spack.spackFFlags                          Fortran compiler flags used during the build. Default: ``-O3`` for GCC compiler. Recommended: one of ``-O3`` (high optimisation) or ``-O2`` (moderate optimisation).
-wave.spack.spackTarget                          Target CPU architecture for which the compiler will optimise the build (default: architecture identified by Nextflow in the running machine)
-wave.spack.commands                             One or more commands to be added to the Dockerfile used to build a Spack based image.
+wave.build.conda.mambaImage                     The Mamba container image is used to build Conda based container. This is expected to be `micromamba-docker <https://github.com/mamba-org/micromamba-docker>`_ image.
+wave.build.conda.commands                       One or more commands to be added to the Dockerfile used to build a Conda based image.
+wave.build.spack.builderImage                   The Spack container image is used to build Spack based container. This is expected to be one of the `Spack-provided <https://spack.readthedocs.io/en/latest/containers.html>`_ images.
+wave.build.spack.runnerImage                    The OS container image is used for the production container. This is expected to match the OS of the ``builderImage`` above.
+wave.build.spack.osPackages                     Additional OS packages to be installed in the production container (default: ``libgomp1`` for Ubuntu/Debian)
+wave.build.spack.cFlags                         C compiler flags used during the build. Default: ``-O3`` for GCC compiler. Recommended: one of ``-O3`` (high optimisation) or ``-O2`` (moderate optimisation).
+wave.build.spack.cxxFlags                       C++ compiler flags used during the build. Default: ``-O3`` for GCC compiler. Recommended: one of ``-O3`` (high optimisation) or ``-O2`` (moderate optimisation).
+wave.build.spack.fFlags                         Fortran compiler flags used during the build. Default: ``-O3`` for GCC compiler. Recommended: one of ``-O3`` (high optimisation) or ``-O2`` (moderate optimisation).
+wave.build.spack.target                         Target CPU architecture for which the compiler will optimise the build (default: architecture identified by Nextflow in the execution machine)
+wave.build.spack.commands                       One or more commands to be added to the Dockerfile used to build a Spack based image.
 wave.strategy                                   The strategy to be used when resolving ambiguous Wave container requirement (default: ``'container,dockerfile,conda,spack'``)
 ============================================== =================
 
