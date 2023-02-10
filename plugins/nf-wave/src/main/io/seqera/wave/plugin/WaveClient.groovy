@@ -487,7 +487,7 @@ COPY --from=builder /opt/._view /opt/._view
 COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
 
 RUN apt update -yqq \\
- && apt install -yqq ${config.spackOpts().osPackages} \\
+ && apt install -yqq procps ${config.spackOpts().osPackages} \\
  && rm -rf /var/lib/apt/lists/*
 """ //.stripIndent()
 
@@ -581,7 +581,7 @@ COPY --from=builder /opt/._view /opt/._view
 COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
 
 RUN apt update -yqq \\
- && apt install -yqq ${config.spackOpts().osPackages} \\
+ && apt install -yqq procps ${config.spackOpts().osPackages} \\
  && rm -rf /var/lib/apt/lists/*
 """ //.stripIndent()
 
