@@ -195,7 +195,6 @@ Then save the file with the same name, and execute it by adding the ``-resume`` 
 It will print output similar to this::
 
     N E X T F L O W  ~  version 22.10.6
-    Launching `tutorial.nf` [confident_bernard] DSL2 - revision: e5dcd2d77b
     executor >  local (2)
     [51/4d8bb0] process > splitLetters       [100%] 1 of 1, cached: 1 ✔
     [76/dc85fa] process > convertToUpper (1) [100%] 2 of 2 ✔
