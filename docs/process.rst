@@ -141,7 +141,7 @@ To use a language other than Bash, simply start your process script with the cor
         """
     }
 
-    process pythonStuff {
+    process pythonTask {
         """
         #!/usr/bin/python
 
@@ -149,6 +149,11 @@ To use a language other than Bash, simply start your process script with the cor
         y = 'world!'
         print "%s - %s" % (x,y)
         """
+    }
+
+    workflow {
+        perlTask()
+        pythonTask()
     }
 
 .. tip::
