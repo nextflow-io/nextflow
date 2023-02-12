@@ -180,6 +180,9 @@ The ``emit`` option can be used also to name the stdout::
         sayHello.out.verbiage.view()
     }
 
+.. note::
+  Optional params for a process input/output are always prefixed with a comma, except for ``stdout``. Because
+  ``stdout`` does not have an associated name or value like other types, the first param should not be prefixed.
 
 Workflow
 ========
@@ -566,7 +569,8 @@ Those scripts will be accessible as any other command in the tasks environment, 
 the Linux execute permissions.
 
 .. note::
-    This feature requires the use of a local or shared file system as the pipeline work directory.
+    This feature requires the use of a local or shared file system as the pipeline work directory or
+    :ref:`wave-page` when using cloud based executors.
 
 Channel forking
 ===============

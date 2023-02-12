@@ -18,7 +18,7 @@ For example::
     println "Manifest's pipeline version: $workflow.manifest.version"
 
 .. tip::
-    To shortcut the access to multiple ``workflow`` properties you can use the Groovy
+    To shortcut access to multiple ``workflow`` properties, you can use the Groovy
     `with <http://docs.groovy-lang.org/latest/html/groovy-jdk/java/lang/Object.html#with(groovy.lang.Closure)>`_ method.
 
 The following table lists the properties that can be accessed on the ``workflow`` object:
@@ -62,6 +62,8 @@ manifest                    Entries of the workflow manifest.
 | Properties marked with a `*` are accessible only in the workflow completion and error handlers. See the `Completion handler`_ section for details.
 |
 
+.. note:: 
+    When passing a Git tag or branch name using the ``-r`` argument in your CLI command, the ``workflow.revision`` and the associated ``workflow.commitId`` are populated. When passing only the Git commit ID using ``-r``, no ``workflow.revision`` is returned. 
 
 .. _metadata-nextflow:
 

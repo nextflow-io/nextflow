@@ -49,6 +49,10 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private String mountFlags0
 
+    private String device
+
+    private String capAdd
+
     DockerBuilder( String name ) {
         this.image = name
     }
@@ -95,6 +99,12 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         if( params.containsKey('privileged') )
             this.privileged = params.privileged?.toString() == 'true'
+
+        if( params.containsKey('device') )
+            this.device = params.device
+
+        if( params.containsKey('capAdd') )
+            this.capAdd = params.capAdd
 
         return this
     }
@@ -156,6 +166,12 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         if( privileged )
             result << '--privileged '
+
+        if( device )
+            result << '--device ' << device << ' '
+
+        if( capAdd )
+            result << '--cap-add ' << capAdd << ' '
 
         // the name is after the user option so it has precedence over any options provided by the user
         if( name )

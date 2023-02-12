@@ -94,6 +94,26 @@ class PublishDirTest extends Specification {
 
     }
 
+    def 'should create publish dir with extended params' () {
+        given:
+        PublishDir publish
+
+        when:
+        publish = PublishDir.create(tags: ['foo','bar'])
+        then:
+        publish.@tags == ['foo','bar']
+
+        when:
+        publish = PublishDir.create(contentType: 'text/json')
+        then:
+        publish.@contentType == 'text/json'
+
+        when:
+        publish = PublishDir.create(storageClass: 'xyz')
+        then:
+        publish.@storageClass == 'xyz'
+    }
+
     def 'should create symlinks for output files' () {
 
         given:

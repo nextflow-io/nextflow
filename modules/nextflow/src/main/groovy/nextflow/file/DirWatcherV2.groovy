@@ -114,7 +114,7 @@ class DirWatcherV2 implements DirListener, FileAlterationListener {
     void apply( Closure onNext ) {
         this.onNext = onNext
         if( !base.isDirectory() ) {
-            log.warn "Cannot watch a non-existent directory: $base -- Make sure that the path exists and is a directory"
+            log.warn "Cannot watch a non-existent directory: $base -- Ensure the path is a valid directory"
             onComplete?.call()
             return
         }

@@ -18,9 +18,7 @@ class S3PathFactory extends FileSystemPathFactory {
         // normalise 's3' path
         if( str.startsWith('s3://') && str[5]!='/' ) {
             final path = "s3:///${str.substring(5)}"
-            // note: this URI constructor parse the path parameter and extract the `scheme` and `authority` components
-            final uri = new URI(null,null, path,null,null)
-            return FileHelper.getOrCreateFileSystemFor(uri).provider().getPath(uri)
+            return create(path)
         }
         return null
     }
@@ -42,4 +40,22 @@ class S3PathFactory extends FileSystemPathFactory {
                 : null
     }
 
+    /**
+     * Creates a {@link S3Path} from a S3 formatted URI.
+     *
+     * @param path
+     *      A S3 URI path e.g. s3:///BUCKET_NAME/some/data.
+     *      NOTE it expect the s3 prefix provided with triple `/` .
+     *      This is required by the underlying implementation expecting the host name in the URI to be empty
+     *      and the bucket name to be the first path element
+     * @return
+     *      The corresponding {@link S3Path}
+     */
+    static S3Path create(String path) {
+        if( !path ) throw new IllegalArgumentException("Missing S3 path argument")
+        if( !path.startsWith('s3:///') ) throw new IllegalArgumentException("S3 path must start with s3:/// prefix -- offending value '$path'")
+        // note: this URI constructor parse the path parameter and extract the `scheme` and `authority` components
+        final uri = new URI(null,null, path,null,null)
+        return (S3Path)FileHelper.getOrCreateFileSystemFor(uri).provider().getPath(uri)
+    }
 }

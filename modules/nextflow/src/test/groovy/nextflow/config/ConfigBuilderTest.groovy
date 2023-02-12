@@ -195,7 +195,7 @@ class ConfigBuilderTest extends Specification {
         file?.delete()
     }
 
-    def 'CLI params should override the ones defined in the config file (2)' () {
+    def 'CLI params should override the ones defined in the config file [2]' () {
         setup:
         def file = Files.createTempFile('test',null)
         file.text = '''
@@ -1226,6 +1226,74 @@ class ConfigBuilderTest extends Specification {
         !config.process.conda
     }
 
+    def 'should enable spack env' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.spack
+
+        when:
+        config = new ConfigObject()
+        config.spack.createOptions = 'something'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.spack instanceof Map
+        !config.spack.enabled
+        config.spack.createOptions == 'something'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withSpack: 'my-recipe.yaml'))
+        then:
+        config.spack instanceof Map
+        config.spack.enabled
+        config.process.spack == 'my-recipe.yaml'
+
+        when:
+        config = new ConfigObject()
+        config.spack.enabled = true
+        builder.configRunOptions(config, env, new CmdRun(withSpack: 'my-recipe.yaml'))
+        then:
+        config.spack instanceof Map
+        config.spack.enabled
+        config.process.spack == 'my-recipe.yaml'
+
+        when:
+        config = new ConfigObject()
+        config.process.spack = 'my-recipe.yaml'
+        builder.configRunOptions(config, env, new CmdRun(withSpack: '-'))
+        then:
+        config.spack instanceof Map
+        config.spack.enabled
+        config.process.spack == 'my-recipe.yaml'
+    }
+
+    def 'should disable spack env' () {
+        given:
+        def file = Files.createTempFile('test','config')
+        file.deleteOnExit()
+        file.text =
+                '''
+                spack {
+                    enabled = true
+                }
+                '''
+
+        when:
+        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        def run = new CmdRun(withoutSpack: true)
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        then:
+        !config.spack.enabled
+        !config.process.spack
+    }
+
     def 'SHOULD SET `RESUME` OPTION'() {
 
         given:
@@ -1529,6 +1597,15 @@ class ConfigBuilderTest extends Specification {
 
     }
 
+    def 'should run with spack' () {
+
+        when:
+        def config = new ConfigBuilder().setCmdRun(new CmdRun(withSpack: '/some/path/env.yaml')).build()
+        then:
+        config.process.spack == '/some/path/env.yaml'
+
+    }
+
     def 'should warn about missing attribute' () {
 
         given:
@@ -1660,6 +1737,32 @@ class ConfigBuilderTest extends Specification {
         then:
         config.notification.enabled == true
         config.notification.to == 'yo@nextflow.com'
+    }
+
+    def 'should configure fusion' () {
+
+        given:
+        Map config
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        then:
+        !config.fusion
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: true)).build()
+        then:
+        config.fusion.enabled == true
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: false)).build()
+        then:
+        config.fusion == [enabled: false]
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: true)).build()
+        then:
+        config.fusion == [enabled: true]
     }
 
     def 'should configure stub run mode' () {
@@ -1944,7 +2047,7 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should access top params from profile (2)' () {
+    def 'should access top params from profile [2]' () {
         given:
         def folder = Files.createTempDirectory('test')
         def file1 = folder.resolve('file1.conf')

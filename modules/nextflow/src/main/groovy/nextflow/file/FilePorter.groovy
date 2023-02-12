@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.transform.ToString
@@ -57,7 +58,7 @@ class FilePorter {
 
     static final private Duration POLL_TIMEOUT = Duration.of('2sec')
 
-    final Map<Path,FileTransfer> stagingTransfers = new HashMap<>()
+    final Map<FileCopy,FileTransfer> stagingTransfers = new HashMap<>()
 
     private ExecutorService threadPool
 
@@ -76,32 +77,31 @@ class FilePorter {
                 .createAndRegisterShutdownCallback(session)
     }
 
-    Batch newBatch(Path stageDir) { new Batch(stageDir) }
+    Batch newBatch(Path stageDir) { new Batch(this, stageDir) }
 
     void transfer(Batch batch) {
         if( batch.size() ) {
             log.trace "Stage foreign files: $batch"
-            submitStagingActions(batch.foreignPaths, batch.stageDir)
+            submitStagingActions(batch.foreignPaths)
             log.trace "Stage foreign files completed: $batch"
         }
     }
 
-    protected FileTransfer createFileTransfer(Path source, Path stageDir) {
-        final stagePath = getCachePathFor(source,stageDir)
-        return new FileTransfer(source, stagePath, maxRetries)
+    protected FileTransfer createFileTransfer(Path source, Path target) {
+        return new FileTransfer(source, target, maxRetries)
     }
 
     protected Future submitForExecution(FileTransfer transfer) {
         threadPool.submit(transfer)
     }
 
-    protected FileTransfer getOrSubmit(Path source, Path stageDir) {
-        synchronized (stagingTransfers) {
-            FileTransfer transfer = stagingTransfers.get(source)
+    protected FileTransfer getOrSubmit(FileCopy copy) {
+        synchronized (this) {
+            FileTransfer transfer = stagingTransfers.get(copy)
             if( transfer == null ) {
-                transfer = createFileTransfer(source, stageDir)
+                transfer = createFileTransfer(copy.source, copy.target)
                 transfer.result = submitForExecution(transfer)
-                stagingTransfers.put(source, transfer)
+                stagingTransfers.put(copy, transfer)
             }
             // increment the ref count
             transfer.refCount.incrementAndGet()
@@ -117,14 +117,23 @@ class FilePorter {
         }
     }
 
-    protected List<FileTransfer> submitStagingActions(List<Path> paths, Path stageDir) {
+    /**
+     * Stages i.e. copies the file from the remote source to a local staging path
+     * using a thread pool
+     * @param copies
+     *      A map where each key-value pair represent a file to be copied.
+     *      The key element is the file source path. The value element represent the target path
+     * @return
+     *      A list of {@link FileTransfer} operations
+     */
+    protected List<FileTransfer> submitStagingActions(List<FileCopy> copies) {
 
-        final result = new ArrayList<FileTransfer>(paths.size())
-        for ( def file : paths ) {
+        final result = new ArrayList<FileTransfer>(copies.size())
+        for ( FileCopy it : copies ) {
             // here's the magic: use a Map to check if a future for the staging action already exist
             // - if exists take it to wait to the submit action termination
             // - otherwise create a new future submitting the action operation
-            result << getOrSubmit(file,stageDir)
+            result << getOrSubmit(it)
         }
 
         // wait for staging actions completion
@@ -157,15 +166,26 @@ class FilePorter {
     }
 
     /**
+     * Model a file stage requirement
+     */
+    @Canonical
+    static class FileCopy {
+        final Path source
+        final Path target
+    }
+
+    /**
      * Models a batch (collection) of foreign files that need to be transferred to
      * the process staging are co-located with the work directory
      */
     static class Batch  {
 
+        final private FilePorter owner
+
         /**
          * Holds the list of foreign files to be transferred
          */
-        private List<Path> foreignPaths = new ArrayList<>()
+        private List<FileCopy> foreignPaths = new ArrayList<>(100)
 
         /**
          * The *local* directory where against where files need to be staged.
@@ -178,7 +198,8 @@ class FilePorter {
          */
         private String stageScheme
 
-        Batch(Path stageDir) {
+        Batch(FilePorter owner, Path stageDir) {
+            this.owner = owner
             this.stageDir = stageDir
             this.stageScheme = stageDir.scheme
         }
@@ -194,8 +215,9 @@ class FilePorter {
          */
         Path addToForeign(Path path) {
             // copy the path with a thread pool
-            foreignPaths << path
-            return getCachePathFor(path, stageDir)
+            final copy = owner.getCachePathFor(path, stageDir)
+            foreignPaths << copy
+            return copy.target
         }
 
         /**
@@ -210,7 +232,7 @@ class FilePorter {
 
         @Override
         String toString() {
-            return "FilePorter.Batch[stageDir=${stageDir.toUriString()}; foreignPaths=${foreignPaths*.toUriString()}]"
+            return "FilePorter.Batch[stageDir=${stageDir.toUriString()}; foreignPaths=${foreignPaths}]"
         }
     }
 
@@ -310,16 +332,19 @@ class FilePorter {
         }
     }
 
-    static protected Path getCachePathFor(Path sourcePath, Path stageDir) {
+    synchronized protected FileCopy getCachePathFor(Path sourcePath, Path stageDir) {
         final dirPath = stageDir.toUriString() // <-- use a string to avoid changes in the dir to alter the hashing
         int i=0
         while( true ) {
-            final  uniq = [sourcePath, dirPath, i++]
+            final uniq = List.of(sourcePath, dirPath, i++)
             final hash = CacheHelper.hasher(uniq).hash().toString()
             final targetPath = getCacheDir0(stageDir, hash).resolve(sourcePath.getName())
+            final result = new FileCopy(sourcePath, targetPath)
+            if( stagingTransfers.containsKey(result) )
+                return result
             final exist = targetPath.exists()
             if( !exist || checkPathIntegrity(sourcePath, targetPath) )
-                return targetPath
+                return result
         }
     }
 

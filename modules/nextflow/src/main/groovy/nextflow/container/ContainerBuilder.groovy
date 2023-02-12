@@ -43,6 +43,8 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
             return new ApptainerBuilder(containerImage)
         if( engine == 'udocker' )
             return new UdockerBuilder(containerImage)
+        if( engine == 'sarus' )
+            return new SarusBuilder(containerImage)
         if( engine == 'shifter' )
             return new ShifterBuilder(containerImage)
         if( engine == 'charliecloud' )
@@ -85,12 +87,14 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
     String getImage() { image }
 
     V addRunOptions(String str) {
-        runOptions.add(str)
+        if( str )
+            runOptions.add(str)
         return (V)this
     }
 
     V addEngineOptions(String str) {
-        engineOptions.add(str)
+        if( str )
+            engineOptions.add(str)
         return (V)this
     }
 

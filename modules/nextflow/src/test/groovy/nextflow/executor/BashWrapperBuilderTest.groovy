@@ -40,7 +40,7 @@ class BashWrapperBuilderTest extends Specification {
     }
 
     private String load(String name, Map<String,String> binding=[:]) {
-        def template = new File("src/test/groovy/nextflow/executor/$name").text
+        def template = new File("src/test/resources/nextflow/executor/$name").text
         return binding ? new MustacheTemplateEngine().render(template, binding) : template
     }
 
@@ -259,7 +259,8 @@ class BashWrapperBuilderTest extends Specification {
                 workDir: folder,
                 headerScript: '#BSUB -x 1\n#BSUB -y 2',
                 beforeScript: 'echo Before',
-                condaEnv: Paths.get('/conda/env/path') ) .buildNew0()
+                condaEnv: Paths.get('/conda/env/path'),
+                spackEnv: Paths.get('/spack/env/path') ) .buildNew0()
 
         then:
         wrapper == load('test-bash-wrapper.txt', [folder: folder.toString()])
@@ -634,6 +635,25 @@ class BashWrapperBuilderTest extends Specification {
 
     }
 
+    def 'should create spack activate snippet' () {
+
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.spack_activate == null
+        binding.containsKey('spack_activate')
+
+        when:
+        def SPACK = Paths.get('/some/spack/env/foo')
+        binding = newBashWrapperBuilder(spackEnv: SPACK).makeBinding()
+        then:
+        binding.spack_activate == '''\
+                # spack environment
+                spack env activate -d /some/spack/env/foo
+                '''.stripIndent()
+
+    }
+
     def 'should cleanup scratch dir' () {
 
         when:
@@ -804,6 +824,81 @@ class BashWrapperBuilderTest extends Specification {
         binding.launch_cmd == 'docker run -i -v /work/dir:/work/dir -w "$PWD" -v /foo:/bar --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.kill_cmd == 'docker kill $NXF_BOXID'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
+    }
+
+    def 'should create wrapper with sarus'() {
+        when:
+        def binding = newBashWrapperBuilder(
+                containerEnabled: true,
+                containerImage: 'busybox',
+                containerConfig: [enabled: true, engine: 'sarus'] as ContainerConfig ).makeBinding()
+
+        then:
+        binding.launch_cmd == '''\
+        sarus pull busybox 1>&2
+        sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" busybox /bin/bash -ue /work/dir/.command.sh
+        '''.stripIndent().rightTrim()
+        binding.cleanup_cmd == ""
+        binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+    }
+
+    def 'should create wrapper with sarus and environment'() {
+        when:
+        def binding = newBashWrapperBuilder(
+                containerEnabled: true,
+                containerImage: 'busybox',
+                environment: [FOO: 'xxx'],
+                containerConfig: [enabled: true, engine: 'sarus'] as ContainerConfig ).makeBinding()
+
+        then:
+        binding.launch_cmd == '''\
+        sarus pull busybox 1>&2
+        sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" busybox /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
+        '''.stripIndent().rightTrim()
+        binding.cleanup_cmd == ""
+        binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+        and:
+        binding.container_env == '''\
+                    nxf_container_env() {
+                    cat << EOF
+                    export FOO="xxx"
+                    EOF
+                    }
+                    '''.stripIndent()
+    }
+
+    def 'should create wrapper with sarus with mount'() {
+        when:
+        def binding = newBashWrapperBuilder(
+                containerEnabled: true,
+                containerImage: 'busybox',
+                containerMount: '/folder with blanks' as Path,
+                containerConfig: [enabled: true, engine: 'sarus'] as ContainerConfig ).makeBinding()
+
+        then:
+        binding.launch_cmd == '''\
+        sarus pull busybox 1>&2
+        sarus run --mount=type=bind,source=/folder\\ with\\ blanks,destination=/folder\\ with\\ blanks --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" busybox /bin/bash -ue /work/dir/.command.sh
+        '''.stripIndent().rightTrim()
+        binding.cleanup_cmd == ""
+        binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+    }
+
+    def 'should create wrapper with sarus container custom options'() {
+        when:
+        def binding = newBashWrapperBuilder(
+                containerEnabled: true,
+                containerImage: 'busybox',
+                containerOptions: '--mount=type=bind,source=/foo,destination=/bar',
+                containerConfig: [enabled: true, engine: 'sarus'] as ContainerConfig ).makeBinding()
+
+        then:
+        binding.launch_cmd == '''\
+        sarus pull busybox 1>&2
+        sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" --mount=type=bind,source=/foo,destination=/bar busybox /bin/bash -ue /work/dir/.command.sh
+        '''.stripIndent().rightTrim()
+        binding.cleanup_cmd == ""
+        binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
     }
 
     def 'should create wrapper with shifter'() {
