@@ -960,22 +960,6 @@ to the same profile using a common prefix. For example::
 This configuration defines three different profiles: ``standard``, ``cluster``, and ``cloud``, that each set different process
 configuration strategies depending on the target runtime platform. The ``standard`` profile is used by default when no profile is specified. 
 
-In order to add attributes from a named config scope (``aws``, ``docker``, ``conda``, etc.) to a configuration profile, the named scope must be nested inside the profile, not at the profile name level. For example::
-
-    profiles {
-    // This defines a profile named aws, but not an AWS-scoped config. AWS-specific config will not be parsed at this level
-      aws {
-        process.memory = '2 GB'
-        timeline.enabled = true
-        
-    // This defines an AWS scope within the profile named aws
-        aws {
-          client {
-            maxConnections = 10
-          }
-        }
-      }
-    }
 
 .. tip::
     Multiple configuration profiles can be specified by separating the profile names
