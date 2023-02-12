@@ -227,7 +227,6 @@ The string specified on the command line will override the default value of the 
 will look like this::
 
     N E X T F L O W  ~  version 22.10.6
-    Launching `tutorial.nf` [cheesy_gutenberg] DSL2 - revision: e5dcd2d77b
     executor >  local (4)
     [87/bdea58] process > splitLetters       [100%] 1 of 1 ✔
     [6e/c2f88c] process > convertToUpper (2) [100%] 3 of 3 ✔
