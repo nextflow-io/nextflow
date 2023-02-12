@@ -141,7 +141,6 @@ Execute the script by entering the following command in your terminal::
 It will output something similar to the text shown below::
 
     N E X T F L O W  ~  version 22.10.6
-    Launching `tutorial.nf` [small_wiles] DSL2 - revision: e61bd183fe
     executor >  local (3)
     [51/4d8bb0] process > splitLetters       [100%] 1 of 1 ✔
     [79/cf1942] process > convertToUpper (2) [100%] 2 of 2 ✔
