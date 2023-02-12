@@ -18,6 +18,7 @@
 package nextflow.cloud.aws.batch
 
 import java.nio.file.Paths
+import java.time.Instant
 
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.ContainerProperties
@@ -35,6 +36,7 @@ import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
+import nextflow.Const
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
@@ -484,7 +486,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def handler = Spy(AwsBatchTaskHandler)
         handler.@client = client
 
-        def req = Mock(RegisterJobDefinitionRequest)
+        def req = new RegisterJobDefinitionRequest()
         def res = Mock(RegisterJobDefinitionResult)
 
         when:
@@ -493,7 +495,11 @@ class AwsBatchTaskHandlerTest extends Specification {
         1 * client.registerJobDefinition(req) >> res
         1 * res.getJobDefinitionName() >> JOB_NAME
         1 * res.getRevision() >> 10
+        and:
         result == "$JOB_NAME:10"
+        and:
+        req.getTags().get('nextflow.io/version') == Const.APP_VER
+        Instant.parse(req.getTags().get('nextflow.io/createdAt'))
 
     }
 
