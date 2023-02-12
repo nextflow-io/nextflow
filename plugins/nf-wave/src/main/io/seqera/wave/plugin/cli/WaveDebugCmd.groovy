@@ -29,6 +29,10 @@ import nextflow.file.FileHelper
 import nextflow.trace.TraceRecord
 import nextflow.util.HistoryFile
 
+import static nextflow.fusion.FusionConfig.FUSION_PATH
+
+import nextflow.util.StringUtils
+
 /**
  * Implement wave container task debug
  *
@@ -52,7 +56,7 @@ class WaveDebugCmd {
 
         final criteria = args.pop()
 
-        if ( criteria.startsWith('s3://') ) {
+        if ( isRemotePath(criteria) ) {
             try {
                 final image = args.pop()
                 runRemoteTask(criteria, image)
@@ -88,7 +92,7 @@ class WaveDebugCmd {
             final trace = getOrFindTrace(criteria)
             if( trace==null )
                 throw new AbortOperationException("Cannot find any task with id: '$criteria'")
-            if( !trace.workDir.startsWith('s3://') )
+            if( !isRemotePath(trace.workDir) )
                 throw new AbortOperationException("Cannot run non-fusion enabled task - Task work dir: $trace.workDir")
             log.info "Launching debug session for task '${trace.get('name')}' - work directory: ${trace.workDir}"
             final cmd = buildWaveRunCmd()
@@ -102,7 +106,7 @@ class WaveDebugCmd {
     protected static List<String> buildCommand(String workDir) {
         final workDirPath = FileHelper.asPath(workDir)
         final fusionPath = FusionHelper.toContainerMount(workDirPath, 's3')
-        return ['/usr/bin/fusion','sh', '-c', "\'cd $fusionPath && PS1=\"[fusion] \" exec bash --norc\'".toString()]
+        return [FUSION_PATH, 'sh', '-c', "\'cd $fusionPath && PS1=\"[fusion] \" exec bash --norc\'".toString()]
     }
 
     protected WaveRunCmd buildWaveRunCmd() {
@@ -138,4 +142,9 @@ class WaveDebugCmd {
         return result
     }
 
+    static boolean isRemotePath(String path) {
+        if (!path) return false
+        final result = StringUtils.getUrlProtocol(path)
+        return result!=null && result!='file'
+    }
 }
