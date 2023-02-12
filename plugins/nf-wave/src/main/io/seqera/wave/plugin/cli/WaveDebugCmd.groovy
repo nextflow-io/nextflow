@@ -61,7 +61,7 @@ class WaveDebugCmd {
                 final image = args.pop()
                 runRemoteTask(criteria, image)
             } catch (NoSuchElementException ignored) {
-                throw new AbortOperationException("Missing container image - usage: nextflow plugin nf-wave:debug <remote-task-path> <image>")
+                throw new AbortOperationException("Missing container image - usage: nextflow plugin nf-wave:debug-task <remote-task-path> <image>")
             }
             return
         }
