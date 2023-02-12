@@ -16,12 +16,11 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
-import nextflow.util.Escape
-
 /**
  * Implements a executor for PBS/Torque cluster
  *
@@ -74,13 +73,6 @@ class PbsExecutor extends AbstractGridExecutor {
     }
 
     @Override
-    String getHeaders( TaskRun task ) {
-        String result = super.getHeaders(task)
-        result += "NXF_CHDIR=${Escape.path(task.workDir)}\n"
-        return result
-    }
-
-    @Override
     String sanitizeJobName( String name ) {
         // some implementations do not allow parenthesis in the job name -- see #271
         name = name.replace('(','').replace(')','')
@@ -127,7 +119,7 @@ class PbsExecutor extends AbstractGridExecutor {
     protected List<String> queueStatusCommand(Object queue) {
         String cmd = 'qstat -f -1'
         if( queue ) cmd += ' ' + queue
-        return ['bash','-c', "set -o pipefail; $cmd | { egrep '(Job Id:|job_state =)' || true; }".toString()]
+        return ['bash','-c', "set -o pipefail; $cmd | { grep -E '(Job Id:|job_state =)' || true; }".toString()]
     }
 
     static private Map DECODE_STATUS = [

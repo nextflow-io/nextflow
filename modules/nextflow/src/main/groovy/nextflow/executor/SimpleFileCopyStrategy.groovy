@@ -259,7 +259,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * @return A shell copy or move command string
      */
 
-    static final List<String> VALID_STAGE_OUT_MODES = ['copy', 'move', 'rsync']
+    static final List<String> VALID_STAGE_OUT_MODES = ['copy', 'move', 'rsync', 'rclone', 'fcp']
 
     protected String stageOutCommand( String source, Path targetDir, String mode ) {
         def scheme = getPathScheme(targetDir)

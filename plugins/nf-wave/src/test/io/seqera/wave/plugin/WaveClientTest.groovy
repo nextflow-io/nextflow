@@ -30,6 +30,7 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.conda.CondaConfig
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
@@ -41,6 +42,8 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -295,7 +298,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaRecipeToDockerFile(RECIPE) == '''\
-                FROM mambaorg/micromamba:1.0.0
+                FROM mambaorg/micromamba:1.2.0
                 RUN \\
                    micromamba install -y -n base -c conda-forge -c defaults \\
                    bwa=0.7.15 salmon=1.1.1 \\
@@ -314,7 +317,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaRecipeToDockerFile(RECIPE) == '''\
-                FROM mambaorg/micromamba:1.0.0
+                FROM mambaorg/micromamba:1.2.0
                 RUN \\
                    micromamba install -y -n base -c foo -c bar \\
                    bwa=0.7.15 salmon=1.1.1 \\
@@ -348,7 +351,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaFileToDockerFile()== '''\
-                FROM mambaorg/micromamba:1.0.0
+                FROM mambaorg/micromamba:1.2.0
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                     micromamba clean -a -y
@@ -482,7 +485,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:1.0.0
+                    FROM mambaorg/micromamba:1.2.0
                     RUN \\
                        micromamba install -y -n base -c conda-forge -c defaults \\
                        salmon=1.2.3 \\
@@ -510,7 +513,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:1.0.0
+                    FROM mambaorg/micromamba:1.2.0
                     COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                     RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                         micromamba clean -a -y
@@ -663,6 +666,31 @@ class WaveClientTest extends Specification {
 
     }
 
+    def 'should send request with tower access token and refresh token' () {
+        given:
+        SysEnv.push([TOWER_WORKFLOW_ID:'1234', TOWER_REFRESH_TOKEN: 'xyz', TOWER_ACCESS_TOKEN: 'foo'])
+        and:
+        def config = [wave:[:], tower:[endpoint: 'http://foo.com']]
+        def sess = Mock(Session) {getConfig() >> config }
+        and:
+        def wave = Spy(new WaveClient(sess))
+        def assets = Mock(WaveAssets)
+        def request = new SubmitContainerTokenRequest()
+        when:
+        wave.sendRequest(assets)
+        then:
+        1 * wave.makeRequest(assets) >> request
+        1 * wave.sendRequest(request) >> { List it ->
+            assert (it[0] == request)
+            assert (it[0] as SubmitContainerTokenRequest).towerAccessToken == 'foo'
+            assert (it[0] as SubmitContainerTokenRequest).towerRefreshToken == 'xyz'
+            assert (it[0] as SubmitContainerTokenRequest).towerEndpoint == 'http://foo.com'
+        }
+
+        cleanup:
+        SysEnv.pop()
+    }
+
     // --== launch web server ==--
     @Shared
     def CONFIG_RESP = [
@@ -715,4 +743,22 @@ class WaveClientTest extends Specification {
                                                     | CONFIG_RESP.get('combined')
     }
 
+    @Unroll
+    def 'should get fusion default url' () {
+        given:
+        def config = CONFIG
+        def sess = Mock(Session) {getConfig() >> config }
+        and:
+        def wave = Spy(new WaveClient(sess))
+
+        expect:
+        wave.defaultFusionUrl().toURI().toString() == EXPECTED
+        
+        where:
+        CONFIG                                      | EXPECTED
+        [:]                                         | 'https://fusionfs.seqera.io/releases/v2.0-amd64.json'
+        [wave:[containerPlatform: 'arm64']]         | 'https://fusionfs.seqera.io/releases/v2.0-arm64.json'
+        [wave:[containerPlatform: 'linux/arm64']]   | 'https://fusionfs.seqera.io/releases/v2.0-arm64.json'
+        [wave:[containerPlatform: 'linux/arm64/v8']]    | 'https://fusionfs.seqera.io/releases/v2.0-arm64.json'
+    }
 }

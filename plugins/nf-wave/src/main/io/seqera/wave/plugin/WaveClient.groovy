@@ -34,7 +34,7 @@ import com.google.gson.reflect.TypeToken
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
-import io.seqera.wave.plugin.config.FusionConfig
+import nextflow.fusion.FusionConfig
 import io.seqera.wave.plugin.config.TowerConfig
 import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.exception.BadResponseException
@@ -102,7 +102,7 @@ class WaveClient {
         // create http client
         this.httpClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                .followRedirects(HttpClient.Redirect.NEVER)
                 .cookieHandler(cookieManager)
                 .connectTimeout(Duration.ofSeconds(10))
                 .build()
@@ -150,6 +150,7 @@ class WaveClient {
     SubmitContainerTokenResponse sendRequest(WaveAssets assets) {
         final req = makeRequest(assets)
         req.towerAccessToken = tower.accessToken
+        req.towerRefreshToken = tower.refreshToken
         req.towerWorkspaceId = tower.workspaceId
         req.towerEndpoint = tower.endpoint
         return sendRequest(req)
@@ -180,6 +181,7 @@ class WaveClient {
 
         // set the request access token
         request.towerAccessToken = accessToken
+        request.towerRefreshToken = refreshToken
 
         final body = JsonOutput.toJson(request)
         final uri = URI.create("${endpoint}/container-token")
@@ -204,7 +206,7 @@ class WaveClient {
                     return sendRequest0(request, attempt+1)
                 }
                 else
-                    throw new UnauthorizedException("Unauthorised [401] - Verify you have provided a valid access token")
+                    throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid access token")
             }
             else
                 throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
@@ -224,10 +226,18 @@ class WaveClient {
         return new Gson().fromJson(json, type)
     }
 
+    protected URL defaultFusionUrl() {
+        final isArm = config.containerPlatform()?.tokenize('/')?.contains('arm64')
+        return isArm
+                ? new URL(FusionConfig.DEFAULT_FUSION_ARM64_URL)
+                : new URL(FusionConfig.DEFAULT_FUSION_AMD64_URL)
+    }
+
     ContainerConfig resolveContainerConfig() {
         final urls = new ArrayList<URL>(config.containerConfigUrl())
-        if( fusion.enabled() && fusion.containerConfigUrl() ) {
-            urls.add( fusion.containerConfigUrl() )
+        if( fusion.enabled() ) {
+            final fusionUrl = fusion.containerConfigUrl() ?: defaultFusionUrl()
+            urls.add(fusionUrl)
         }
         if( !urls )
             return null
@@ -249,14 +259,12 @@ class WaveClient {
                 .build()
 
         final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
-        if( resp.statusCode()==200 ) {
-            log.debug "Wave container config response: ${resp.body()}"
+        final code = resp.statusCode()
+        if( code>=200 && code<400 ) {
+            log.debug "Wave container config response: [$code] ${resp.body()}"
             return jsonToContainerConfig(resp.body())
         }
-        else {
-            log.warn "Wave container config error response: [${resp.statusCode()}] ${resp.body()}"
-            return null
-        }
+        throw new BadResponseException("Unexpected response for containerContainerConfigUrl \'$configUrl\': [${resp.statusCode()}] ${resp.body()}")
     }
 
     protected void checkConflicts(Map<String,String> attrs, String name) {
