@@ -74,9 +74,11 @@ class WaveDebugCmd {
         if ( image.startsWith("wave.seqera.io") ) {
             // Run a waved container
             cmd.runContainer(image, buildCommand(workDir))
-        } else {
+        }
+        else {
             // Wave it before running
-            cmd.runContainer([image] + buildCommand(workDir))
+            List<String> args = [image] + buildCommand(workDir)
+            cmd.runContainer(args)
         }
     }
 
