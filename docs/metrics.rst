@@ -79,7 +79,7 @@ The plot has three tabs showing the usage of the physical memory (RAM), the virt
 .. note::
   To better understand the memory usage plot, it is important to know that:
 
-  - the total amount of memory used by a processs is the `virtual memory (vmem)`. The ``vmem`` contains all memory areas whether they are in the physical memory (RAM), in the Swap space, on the disk or shared with other processes,
+  - the total amount of memory used by a process is the `virtual memory (vmem)`. The ``vmem`` contains all memory areas whether they are in the physical memory (RAM), in the Swap space, on the disk or shared with other processes,
   - the `resident set size (RSS)` is the amount of space of `physical memory (RAM)` held by a process,
   - the relationship is: vmem :math:`\geq` RSS + Swap,
   - the ``memory`` directive sets the RAM requested by the process.
