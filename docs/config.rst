@@ -370,9 +370,9 @@ The ``executor`` configuration scope allows you to set the optional executor set
 Name                  Description
 ===================== =====================
 name                  The name of the executor to be used (default: ``local``).
-queueSize             The number of tasks the executor will handle in a parallel manner (default: ``100``).
+queueSize             The number of tasks the executor will handle in a parallel manner. Default varies for each executor (see below).
 submitRateLimit       Determines the max rate of job submission per time unit, for example ``'10sec'`` (10 jobs per second) or ``'50/2min'`` (50 jobs every 2 minutes) (default: unlimited).
-pollInterval          Determines how often to check for process termination. Default varies for each executor.
+pollInterval          Determines how often to check for process termination. Default varies for each executor (see below).
 dumpInterval          Determines how often to log the executor status (default: ``5min``).
 queueGlobalStatus     Determines how job status is retrieved. When ``false`` only the queue associated with the job execution is queried. When ``true`` the job status is queried globally i.e. irrespective of the submission queue (default: ``false``, requires version ``23.01.0-edge`` or later).
 queueStatInterval     Determines how often to fetch the queue status from the scheduler (default: ``1min``). Used only by grid executors.
@@ -389,6 +389,19 @@ retry.jitter          Jitter value when retrying failed job submissions (default
 retry.maxAttempts     Max attempts when retrying failed job submissions (default: ``3``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
 retry.reason          Regex pattern that when verified cause a failed submit operation to be re-tried (default: ``Socket timed out``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
 ===================== =====================
+
+Some executor settings have different default values depending on the executor.
+
+===================== =============== ==================
+Executor              ``queueSize``   ``pollInterval``
+===================== =============== ==================
+AWS Batch             ``1000``        ``10s``
+Azure Batch           ``1000``        ``10s``
+Google Batch          ``1000``        ``10s``
+Grid Executors        ``100``         ``5s``
+Kubernetes            ``100``         ``5s``
+Local                 N/A             ``100ms``
+===================== =============== ==================
 
 The executor settings can be defined as shown below::
 
