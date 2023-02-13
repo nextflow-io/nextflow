@@ -232,6 +232,10 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-with-conda', '-x') == ['run', '-with-conda','-', '-x']
         launcher.normalizeArgs('run','-with-conda', 'busybox') == ['run', '-with-conda','busybox']
 
+        launcher.normalizeArgs('run','-with-spack') == ['run', '-with-spack','-']
+        launcher.normalizeArgs('run','-with-spack', '-x') == ['run', '-with-spack','-', '-x']
+        launcher.normalizeArgs('run','-with-spack', 'busybox') == ['run', '-with-spack','busybox']
+
         launcher.normalizeArgs('run','-dump-channels') == ['run', '-dump-channels','*']
         launcher.normalizeArgs('run','-dump-channels', '-x') == ['run', '-dump-channels','*', '-x']
         launcher.normalizeArgs('run','-dump-channels', 'foo,bar') == ['run', '-dump-channels','foo,bar']
@@ -247,14 +251,6 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-N', 'paolo@yo.com') == ['run', '-N','paolo@yo.com']
         launcher.normalizeArgs('run','-N') == ['run', '-N','true']
         launcher.normalizeArgs('run','-N', '-x') == ['run', '-N','true', '-x']
-
-        launcher.normalizeArgs('run','-K', 'true') == ['run', '-K','true']
-        launcher.normalizeArgs('run','-K') == ['run', '-K','true']
-        launcher.normalizeArgs('run','-K', '-x') == ['run', '-K','true', '-x']
-
-        launcher.normalizeArgs('run','-with-k8s', 'true') == ['run', '-with-k8s','true']
-        launcher.normalizeArgs('run','-with-k8s') == ['run', '-with-k8s','true']
-        launcher.normalizeArgs('run','-with-k8s', '-x') == ['run', '-with-k8s','true', '-x']
 
         launcher.normalizeArgs('run','-syslog', 'host.com') == ['run', '-syslog','host.com']
         launcher.normalizeArgs('run','-syslog') == ['run', '-syslog','localhost']

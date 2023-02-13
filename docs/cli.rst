@@ -842,6 +842,9 @@ the :ref:`k8s-page` section.
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-report              | report.html | Create processes execution html report.                                        |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
+| -with-spack               |             | Use the specified Spack environment package or                                 |
+|                           |             | file (must end with ``.yaml``)                                                 |
++---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-singularity         |             | Enable process execution in a Singularity container.                           |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-timeline            |timeline.html| Create processes execution timeline file.                                      |
@@ -859,6 +862,8 @@ the :ref:`k8s-page` section.
 | -without-docker           | false       | Disable process execution with Docker.                                         |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -without-podman           |             | Disable process execution in a Podman container.                               |
++---------------------------+-------------+--------------------------------------------------------------------------------+
+| -without-spack            | false       | Disable process execution with Spack.                                          |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -without-wave             |             | Disable the use of Wave containers service.                                    |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
@@ -1180,6 +1185,9 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-singularity         |             | Enable process execution in a Singularity container.                           |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
+| -with-spack               |             | Use the specified Spack environment package or                                 |
+|                           |             | file (must end with ``.yaml``)                                                 |
++---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-timeline            |timeline.html| Create processes execution timeline file.                                      |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-tower               |             | Monitor workflow execution with Seqera Tower service.                          |
@@ -1228,11 +1236,27 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 
     $ nextflow run nextflow-io/hello -with-tower
 
-- Invoke the nextflow pipeline execution with a custom parameters ``YAML/JSON`` file.
-  The parameters which are specified through this mechanism are merged with the resolved configuration (base configuration and profiles) and only the common fields are overwritten by the ``YAML/JSON`` file.::
+- Invoke the nextflow pipeline execution with a custom parameters ``YAML/JSON`` file.::
 
-    $ nextflow run main.nf -params-file pipeline_params.yml
+  $ nextflow run main.nf -params-file pipeline_params.yml
 
+  For example, the following params file in YAML format::
+
+    alpha: 1
+    beta: 'foo'
+
+  Or in JSON format::
+
+    {
+      "alpha": 1,
+      "beta": "foo"
+    }
+
+  Is equivalent to the following command line::
+
+    $ nextflow run main.nf --alpha 1 --beta foo
+
+  The parameters which are specified through this mechanism are merged with the resolved configuration (base configuration and profiles). The values provided via params file overwrites the ones with the same name in the Nextflow configuration file.
 
 --------------------
 self-update

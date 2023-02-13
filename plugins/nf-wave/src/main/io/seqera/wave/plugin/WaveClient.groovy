@@ -150,6 +150,7 @@ class WaveClient {
     SubmitContainerTokenResponse sendRequest(WaveAssets assets) {
         final req = makeRequest(assets)
         req.towerAccessToken = tower.accessToken
+        req.towerRefreshToken = tower.refreshToken
         req.towerWorkspaceId = tower.workspaceId
         req.towerEndpoint = tower.endpoint
         return sendRequest(req)
@@ -180,6 +181,7 @@ class WaveClient {
 
         // set the request access token
         request.towerAccessToken = accessToken
+        request.towerRefreshToken = refreshToken
 
         final body = JsonOutput.toJson(request)
         final uri = URI.create("${endpoint}/container-token")
@@ -204,7 +206,7 @@ class WaveClient {
                     return sendRequest0(request, attempt+1)
                 }
                 else
-                    throw new UnauthorizedException("Unauthorised [401] - Verify you have provided a valid access token")
+                    throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid access token")
             }
             else
                 throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")

@@ -75,6 +75,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'publishDir',
             'scratch',
             'shell',
+            'spack',
             'storeDir',
             'tag',
             'time',
@@ -812,6 +813,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      *      The {@link ProcessConfig} instance itself.
      */
     ProcessConfig errorStrategy( strategy ) {
+        if( strategy instanceof CharSequence && !ErrorStrategy.isValid(strategy) ) {
+            throw new IllegalArgumentException("Unknown error strategy '${strategy}' ― Available strategies are: ${ErrorStrategy.values().join(',').toLowerCase()}")
+        }
+
         configProperties.put('errorStrategy', strategy)
         return this
     }

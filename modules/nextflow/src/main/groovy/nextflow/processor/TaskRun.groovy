@@ -17,6 +17,7 @@
 
 package nextflow.processor
 
+import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -46,6 +47,7 @@ import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.ValueOutParam
+import nextflow.spack.SpackCache
 /**
  * Models a task instance
  *
@@ -232,7 +234,7 @@ class TaskRun implements Cloneable {
     }
 
     List<String> dumpLogFile(int n = 50) {
-        if( !workDir )
+        if( !workDir || workDir.fileSystem!=FileSystems.default )
             return Collections.<String>emptyList()
         try {
             return dumpObject(workDir.resolve(CMD_LOG),n)
@@ -361,7 +363,7 @@ class TaskRun implements Cloneable {
             try {
                 // -- look-up the 'sampleId' property, and if everything is fine
                 //    cache this value in the 'name' attribute
-                return name = "$baseName (${config.tag})"
+                return name = "$baseName (${String.valueOf(config.tag).trim()})"
             }
             catch( IllegalStateException e ) {
                 log.debug "Cannot access `tag` property for task: $baseName ($index)"
@@ -585,6 +587,15 @@ class TaskRun implements Cloneable {
 
         final cache = new CondaCache(processor.session.getCondaConfig())
         cache.getCachePathFor(config.conda as String)
+    }
+
+    @Memoized
+    Path getSpackEnv() {
+        if( !config.spack || !processor.session.getSpackConfig().isEnabled() )
+            return null
+
+        final cache = new SpackCache(processor.session.getSpackConfig())
+        cache.getCachePathFor(config.spack as String)
     }
 
     @Memoized
