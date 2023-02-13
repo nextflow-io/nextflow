@@ -112,7 +112,7 @@ class WaveConfigTest extends Specification {
         then:
         opts.spackOpts().builderImage == 'spack/ubuntu-jammy:v0.19.0'
         opts.spackOpts().runnerImage == 'ubuntu:22.04'
-        opts.spackOpts().osPackages == 'libgomp1'
+        opts.spackOpts().osPackages == ''
         opts.spackOpts().cFlags == '-O3'
         opts.spackOpts().cxxFlags == '-O3'
         opts.spackOpts().fFlags == '-O3'

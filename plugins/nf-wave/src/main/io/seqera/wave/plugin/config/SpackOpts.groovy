@@ -26,7 +26,7 @@ class SpackOpts {
 
     final public String DEFAULT_SPACK_BUILDER_IMAGE = 'spack/ubuntu-jammy:v0.19.0'
     final public String DEFAULT_SPACK_RUNNER_IMAGE = 'ubuntu:22.04'
-    final public String DEFAULT_SPACK_OSPACKAGES = 'libgomp1'
+    final public String DEFAULT_SPACK_OSPACKAGES = ''
     final public String DEFAULT_SPACK_FLAGS = '-O3'
     final public String DEFAULT_SPACK_GENERIC_TARGET = 'x86_64' // MARCO MARCO use archspec
     final public String DEFAULT_SPACK_TARGET = 'x86_64' // MARCO MARCO use archspec

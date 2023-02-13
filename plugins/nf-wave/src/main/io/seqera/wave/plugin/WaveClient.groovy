@@ -487,10 +487,10 @@ COPY --from=builder /opt/._view /opt/._view
 COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
 
 # Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps ${config.spackOpts().osPackages} && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps ${config.spackOpts().osPackages} && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps ${config.spackOpts().osPackages} && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache ${config.spackOpts().osPackages} && rm -rf /var/cache/apk )
+RUN ( apt update -y && apt install -y procps libgomp1 ${config.spackOpts().osPackages} && rm -rf /var/lib/apt/lists/* ) || \\
+    ( yum install -y procps libgomp ${config.spackOpts().osPackages} && yum clean all && rm -rf /var/cache/yum ) || \\
+    ( zypper ref && zypper install -y procps libgomp1 ${config.spackOpts().osPackages} && zypper clean -a ) || \\
+    ( apk update && apk add --no-cache procps libgomp bash ${config.spackOpts().osPackages} && rm -rf /var/cache/apk )
 """ //.stripIndent()
 
         result = addCommands(result)
@@ -586,10 +586,10 @@ COPY --from=builder /opt/._view /opt/._view
 COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
 
 # Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps ${config.spackOpts().osPackages} && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps ${config.spackOpts().osPackages} && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps ${config.spackOpts().osPackages} && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache ${config.spackOpts().osPackages} && rm -rf /var/cache/apk )
+RUN ( apt update -y && apt install -y procps libgomp1 ${config.spackOpts().osPackages} && rm -rf /var/lib/apt/lists/* ) || \\
+    ( yum install -y procps libgomp ${config.spackOpts().osPackages} && yum clean all && rm -rf /var/cache/yum ) || \\
+    ( zypper ref && zypper install -y procps libgomp1 ${config.spackOpts().osPackages} && zypper clean -a ) || \\
+    ( apk update && apk add --no-cache procps libgomp bash ${config.spackOpts().osPackages} && rm -rf /var/cache/apk )
 """ //.stripIndent()
 
         result = addCommands(result)

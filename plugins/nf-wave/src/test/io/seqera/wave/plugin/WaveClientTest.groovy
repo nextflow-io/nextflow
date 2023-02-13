@@ -389,10 +389,10 @@ COPY --from=builder /opt/._view /opt/._view
 COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
 
 # Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps libgomp1 && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps libgomp1 && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps libgomp1 && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache libgomp1 && rm -rf /var/cache/apk )
+RUN ( apt update -y && apt install -y procps libgomp1  && rm -rf /var/lib/apt/lists/* ) || \\
+    ( yum install -y procps libgomp  && yum clean all && rm -rf /var/cache/yum ) || \\
+    ( zypper ref && zypper install -y procps libgomp1  && zypper clean -a ) || \\
+    ( apk update && apk add --no-cache procps libgomp bash  && rm -rf /var/cache/apk )
 
 ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
 CMD [ "/bin/bash" ]
@@ -494,10 +494,10 @@ COPY --from=builder /opt/._view /opt/._view
 COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
 
 # Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps libfoo && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps libfoo && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps libfoo && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache libfoo && rm -rf /var/cache/apk )
+RUN ( apt update -y && apt install -y procps libgomp1 libfoo && rm -rf /var/lib/apt/lists/* ) || \\
+    ( yum install -y procps libgomp libfoo && yum clean all && rm -rf /var/cache/yum ) || \\
+    ( zypper ref && zypper install -y procps libgomp1 libfoo && zypper clean -a ) || \\
+    ( apk update && apk add --no-cache procps libgomp bash libfoo && rm -rf /var/cache/apk )
 USER hola
 
 ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
@@ -574,10 +574,10 @@ COPY --from=builder /opt/._view /opt/._view
 COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
 
 # Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps libgomp1 && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps libgomp1 && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps libgomp1 && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache libgomp1 && rm -rf /var/cache/apk )
+RUN ( apt update -y && apt install -y procps libgomp1  && rm -rf /var/lib/apt/lists/* ) || \\
+    ( yum install -y procps libgomp  && yum clean all && rm -rf /var/cache/yum ) || \\
+    ( zypper ref && zypper install -y procps libgomp1  && zypper clean -a ) || \\
+    ( apk update && apk add --no-cache procps libgomp bash  && rm -rf /var/cache/apk )
 
 ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
 CMD [ "/bin/bash" ]
@@ -791,10 +791,10 @@ COPY --from=builder /opt/._view /opt/._view
 COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
 
 # Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps libgomp1 && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps libgomp1 && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps libgomp1 && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache libgomp1 && rm -rf /var/cache/apk )
+RUN ( apt update -y && apt install -y procps libgomp1  && rm -rf /var/lib/apt/lists/* ) || \\
+    ( yum install -y procps libgomp  && yum clean all && rm -rf /var/cache/yum ) || \\
+    ( zypper ref && zypper install -y procps libgomp1  && zypper clean -a ) || \\
+    ( apk update && apk add --no-cache procps libgomp bash  && rm -rf /var/cache/apk )
 
 ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
 CMD [ "/bin/bash" ]
@@ -901,10 +901,10 @@ COPY --from=builder /opt/._view /opt/._view
 COPY --from=builder /etc/profile.d/z10_spack_environment.sh /etc/profile.d/z10_spack_environment.sh
 
 # Near OS-agnostic package addition
-RUN ( apt update -y && apt install -y procps libgomp1 && rm -rf /var/lib/apt/lists/* ) || \\
-    ( yum install -y procps libgomp1 && yum clean all && rm -rf /var/cache/yum ) || \\
-    ( zypper ref && zypper install -y procps libgomp1 && zypper clean -a ) || \\
-    ( apk update && apk add --no-cache libgomp1 && rm -rf /var/cache/apk )
+RUN ( apt update -y && apt install -y procps libgomp1  && rm -rf /var/lib/apt/lists/* ) || \\
+    ( yum install -y procps libgomp  && yum clean all && rm -rf /var/cache/yum ) || \\
+    ( zypper ref && zypper install -y procps libgomp1  && zypper clean -a ) || \\
+    ( apk update && apk add --no-cache procps libgomp bash  && rm -rf /var/cache/apk )
 
 ENTRYPOINT ["/bin/bash", "--rcfile", "/etc/profile", "-l", "-c", "\$*", "--" ]
 CMD [ "/bin/bash" ]
