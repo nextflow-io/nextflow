@@ -34,8 +34,8 @@ import picocli.CommandLine.Parameters
 )
 class ViewCmd extends AbstractCmd implements ViewImpl.Options {
 
-    @Parameters(arity = '1..', description = 'project name')
-    List<String> args = []
+    @Parameters(description = 'project name')
+    String pipeline
 
     @Option(names = ['-l','--all'], arity = '0', description = 'List repository content')
     boolean all
@@ -44,8 +44,7 @@ class ViewCmd extends AbstractCmd implements ViewImpl.Options {
     boolean quiet
 
     @Override
-    Integer call() {
+    void run() {
         new ViewImpl(this).run()
-        return 0
     }
 }

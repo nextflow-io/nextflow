@@ -31,16 +31,17 @@ import nextflow.cli.DropImpl
 @Parameters(commandDescription = 'Delete the local copy of a project')
 class DropCmd extends AbstractCmd implements DropImpl.Options {
 
-    static public final String NAME = 'drop'
-
     @Parameter(required = true, description = 'name of the project to drop')
     List<String> args
 
-    @Parameter(names = ['-f'], description = 'Delete the repository without taking care of local changes')
+    @Parameter(names = ['-f','-force'], description = 'Delete the repository without taking care of local changes')
     boolean force
 
     @Override
-    String getName() { NAME }
+    String getPipeline() { args[0] }
+
+    @Override
+    String getName() { 'drop' }
 
     @Override
     void run() {

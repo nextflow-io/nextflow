@@ -33,7 +33,7 @@ import nextflow.scm.AssetManager
 class ViewImpl {
 
     interface Options {
-        List<String> getArgs()
+        String getPipeline()
         boolean getQuiet()
         boolean getAll()
     }
@@ -47,9 +47,9 @@ class ViewImpl {
 
     void run() {
         Plugins.init()
-        def manager = new AssetManager(args[0])
+        def manager = new AssetManager(pipeline)
         if( !manager.isLocal() )
-            throw new AbortOperationException("Unknown project name `${args[0]}`")
+            throw new AbortOperationException("Unknown project name `${pipeline}`")
 
         if( all ) {
             if( !quiet )

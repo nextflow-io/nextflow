@@ -39,8 +39,8 @@ class ConfigCmd extends AbstractCmd implements ConfigImpl.Options {
     @ParentCommand
     private Launcher launcher
 
-    @Parameters(index = '0', description = 'project name')
-    List<String> args = []
+    @Parameters(arity = '0..1', description = 'project name')
+    String pipeline
 
     @Option(names = ['-a','--show-profiles'], description = 'Show all configuration profiles')
     boolean showAllProfiles
@@ -58,12 +58,13 @@ class ConfigCmd extends AbstractCmd implements ConfigImpl.Options {
     boolean sort
 
     @Override
-    ILauncherOptions getLauncherOptions() { launcher }
+    ILauncherOptions getLauncherOptions() {
+        launcher.options
+    }
 
     @Override
-    Integer call() {
+    void run() {
         new ConfigImpl(this).run()
-        return 0
     }
 
 }

@@ -30,7 +30,7 @@ import nextflow.ui.console.ConsoleExtension
 class ConsoleImpl {
 
     interface Options {
-        List<String> getArgs()
+        String getScript()
     }
 
     @Delegate
@@ -46,10 +46,6 @@ class ConsoleImpl {
         final console = Plugins.getExtension(ConsoleExtension)
         if( !console )
             throw new IllegalStateException("Failed to find Nextflow Console extension")
-        // normalise the console args prepending the `console` command itself
-        def args1 = args ?: []
-        args1.add(0, 'console')
-        // go !
-        console.run(args1 as String[])
+        console.run(script)
     }
 }

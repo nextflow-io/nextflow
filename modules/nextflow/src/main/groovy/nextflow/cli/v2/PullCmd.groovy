@@ -34,8 +34,8 @@ import picocli.CommandLine.Parameters
 )
 class PullCmd extends AbstractCmd implements PullImpl.Options, HubOptions {
 
-    @Parameters(arity = '1', description = 'project name or repository url to pull')
-    List<String> args
+    @Parameters(description = 'project name or repository url to pull')
+    String pipeline
 
     @Option(names = ['--all'], arity = '0', description = 'Update all downloaded projects')
     boolean all
@@ -44,9 +44,8 @@ class PullCmd extends AbstractCmd implements PullImpl.Options, HubOptions {
     String revision
 
     @Override
-    Integer call() {
+    void run() {
         new PullImpl(this).run()
-        return 0
     }
 
 }

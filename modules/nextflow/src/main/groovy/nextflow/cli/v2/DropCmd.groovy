@@ -34,15 +34,14 @@ import picocli.CommandLine.Parameters
 )
 class DropCmd extends AbstractCmd implements DropImpl.Options {
 
-    @Parameters(arity = '1..', description = 'name of the project to drop')
-    List<String> args
+    @Parameters(description = 'name of the project to drop')
+    String pipeline
 
     @Option(names = ['-f','--force'], description = 'Delete the repository without taking care of local changes')
     boolean force
 
     @Override
-    Integer call() {
+    void run() {
         new DropImpl(this).run()
-        return 0
     }
 }

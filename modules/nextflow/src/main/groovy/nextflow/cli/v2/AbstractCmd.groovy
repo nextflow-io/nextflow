@@ -16,8 +16,6 @@
 
 package nextflow.cli.v2
 
-import java.util.concurrent.Callable
-
 import groovy.transform.CompileStatic
 import picocli.CommandLine
 import picocli.CommandLine.Command
@@ -35,17 +33,15 @@ import picocli.CommandLine.Command
     descriptionHeading = '%n',
     commandListHeading = '%nCommands:%n',
     requiredOptionMarker = ((char)'*'),
-    usageHelpWidth = 160,
     parameterListHeading = '%nParameters:%n',
     optionListHeading = '%nOptions:%n'
 )
-abstract class AbstractCmd implements Callable<Integer> {
+class AbstractCmd implements Runnable {
 
     @CommandLine.Spec
     CommandLine.Model.CommandSpec spec
 
-    String getCliString() {
-        spec.commandLine().getParseResult().originalArgs().join(' ')
-    }
+    @Override
+    void run() {}
 
 }

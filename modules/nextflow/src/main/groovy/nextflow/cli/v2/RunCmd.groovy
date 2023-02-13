@@ -52,17 +52,20 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     @ParentCommand
     private Launcher launcher
 
-    @Parameters(index = '0', description = 'Project name or repository url')
+    @Parameters(description = 'Project name or repository url')
+    String pipeline
+
+    @Parameters(description = 'Pipeline script args')
     List<String> args
 
     @Option(names = ['--ansi-log'], arity = '1', description = 'Use ANSI logging')
     void setAnsiLog(boolean value) {
-        launcher.ansiLog = value
+        launcher.options.ansiLog = value
     }
 
     @Option(names = ['--bg'], arity = '0', description = 'Run as a background process')
     void setBackground(boolean value) {
-        launcher.background = value
+        launcher.options.background = value
     }
 
     @Option(names = ['--bucket-dir'], description = 'Remote bucket where intermediate result files are stored')
@@ -221,7 +224,7 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     @Option(names = ['--with-weblog'], arity = '0..1', fallbackValue = '-', description = 'Send workflow status messages via HTTP to target URL')
     String withWebLog
 
-    @Parameters(description = 'Set pipeline parameters')
+    @Parameters(description = 'Pipeline parameters')
     List<String> params
 
     private Map<String,String> paramsMap = null
@@ -272,20 +275,18 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     }
 
     @Override
-    boolean getStdin() {
-        args.size() > 0 && args[0] == '-'
+    String getLauncherCliString() {
+        launcher.cliString
     }
 
     @Override
-    String getLauncherCliString() { getCliString() }
+    ILauncherOptions getLauncherOptions() {
+        launcher.options
+    }
 
     @Override
-    ILauncherOptions getLauncherOptions() { launcher }
-
-    @Override
-    Integer call() {
+    void run() {
         new RunImpl(this).run()
-        return 0
     }
 
 }

@@ -42,7 +42,7 @@ import org.yaml.snakeyaml.Yaml
 class InfoImpl {
 
     interface Options {
-        abstract List<String> getArgs()
+        abstract String getPipeline()
         abstract boolean getDetailed()
         abstract boolean getMoreDetailed()
         abstract String getFormat()
@@ -64,15 +64,15 @@ class InfoImpl {
     void run() {
 
         int level = moreDetailed ? 2 : ( detailed ? 1 : 0 )
-        if( !args ) {
+        if( !pipeline ) {
             println getInfo(level)
             return
         }
 
         Plugins.init()
-        final manager = new AssetManager(args[0])
+        final manager = new AssetManager(pipeline)
         if( !manager.isLocal() )
-            throw new AbortOperationException("Unknown project `${args[0]}`")
+            throw new AbortOperationException("Unknown project `${pipeline}`")
 
         if( !format || format == 'text' ) {
             printText(manager,level)

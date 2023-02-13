@@ -30,10 +30,8 @@ import groovy.transform.CompileStatic
 @Parameters(commandDescription = 'Print the usage help for a command')
 class HelpCmd extends AbstractCmd {
 
-    static public final String NAME = 'help'
-
     @Override
-    String getName() { NAME }
+    String getName() { 'help' }
 
     @Parameter(arity = 1, description = 'command name')
     List<String> args

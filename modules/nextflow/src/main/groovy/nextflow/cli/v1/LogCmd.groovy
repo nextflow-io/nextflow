@@ -31,8 +31,6 @@ import nextflow.cli.LogImpl
 @Parameters(commandDescription = 'Print executions log and runtime info')
 class LogCmd extends AbstractCmd implements LogImpl.Options {
 
-    static public final String NAME = 'log'
-
     @Parameter(names = ['-after'], description = 'Show log entries for runs executed after the specified one')
     String after
 
@@ -54,17 +52,17 @@ class LogCmd extends AbstractCmd implements LogImpl.Options {
     @Parameter(names = ['-q','-quiet'], arity = 0, description = 'Show only run names')
     boolean quiet
 
-    @Parameter(names = ['-s'], description = 'Character used to separate column values')
+    @Parameter(names = ['-s','-separator'], description = 'Character used to separate column values')
     String separator = '\\t'
 
     @Parameter(names = ['-t','-template'], description = 'Text template used to each record in the log ')
     String templateStr
 
-    @Parameter(description = 'Run name or session id')
-    List<String> args
+    @Parameter(description = 'Session IDs or run names')
+    List<String> args = []
 
     @Override
-    String getName() { NAME }
+    String getName() { 'log' }
 
     @Override
     void run() {

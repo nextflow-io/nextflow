@@ -43,8 +43,7 @@ class LauncherTest extends Specification {
         when:
         launcher = new Launcher().parseMainArgs('-version')
         then:
-        assert launcher.options.version
-        assert launcher.fullVersion
+        assert launcher.options.fullVersion
 
 
     }
@@ -77,13 +76,13 @@ class LauncherTest extends Specification {
         def launcher = new Launcher().parseMainArgs('info')
         then:
         launcher.command instanceof InfoCmd
-        launcher.command.args == null
+        launcher.command.pipeline == null
 
         when:
         launcher = new Launcher().parseMainArgs('info','xxx')
         then:
         launcher.command instanceof InfoCmd
-        launcher.command.args == ['xxx']
+        launcher.command.pipeline == 'xxx'
 
     }
 
@@ -93,13 +92,13 @@ class LauncherTest extends Specification {
         def launcher = new Launcher().parseMainArgs('pull','alpha')
         then:
         launcher.command instanceof PullCmd
-        launcher.command.args == ['alpha']
+        launcher.command.pipeline == 'alpha'
 
         when:
         launcher = new Launcher().parseMainArgs('pull','xxx', '-hub', 'bitbucket', '-user','xx:11')
         then:
         launcher.command instanceof PullCmd
-        launcher.command.args == ['xxx']
+        launcher.command.pipeline == 'xxx'
         launcher.command.hubProvider == 'bitbucket'
         launcher.command.hubUser == 'xx'
         launcher.command.hubPassword == '11'
@@ -123,7 +122,7 @@ class LauncherTest extends Specification {
         def launcher = new Launcher().parseMainArgs('run','xxx', '-hub', 'bitbucket', '-user','xx:yy')
         then:
         launcher.command instanceof RunCmd
-        launcher.command.args == ['xxx']
+        launcher.command.pipeline == 'xxx'
         launcher.command.hubProvider == 'bitbucket'
         launcher.command.hubUser == 'xx'
         launcher.command.hubPassword == 'yy'
@@ -132,7 +131,7 @@ class LauncherTest extends Specification {
         launcher = new Launcher().parseMainArgs('run','alpha', '-hub', 'github')
         then:
         launcher.command instanceof RunCmd
-        launcher.command.args == ['alpha']
+        launcher.command.pipeline == 'alpha'
         launcher.command.hubProvider == 'github'
 
         when:

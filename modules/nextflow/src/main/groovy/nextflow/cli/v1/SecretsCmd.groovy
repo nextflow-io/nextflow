@@ -21,7 +21,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.cli.CmdSecrets
+import nextflow.cli.SecretsImpl
 import nextflow.exception.AbortOperationException
 
 /**
@@ -40,8 +40,6 @@ class SecretsCmd extends AbstractCmd implements UsageAware {
         void usage(List<String> args)
     }
 
-    static public final String NAME = 'secrets'
-
     private List<SubCmd> commands = (List<SubCmd>)[
         new GetCmd(),
         new SetCmd(),
@@ -50,10 +48,10 @@ class SecretsCmd extends AbstractCmd implements UsageAware {
     ]
 
     @Parameter(hidden = true)
-    List<String> args
+    List<String> args = []
 
     @Override
-    String getName() { NAME }
+    String getName() { 'secrets' }
 
     @Override
     void run() {
@@ -144,7 +142,7 @@ class SecretsCmd extends AbstractCmd implements UsageAware {
             if( args.size() < 2 )
                 throw new AbortOperationException("Missing secret value")
 
-            new CmdSecrets().run(CmdSecrets.Command.SET, args)
+            new SecretsImpl().run(SecretsImpl.Command.SET, args)
         }
 
         @Override
@@ -168,7 +166,7 @@ class SecretsCmd extends AbstractCmd implements UsageAware {
             if( !args[0] )
                 throw new AbortOperationException("Missing secret name")
 
-            new CmdSecrets().run(CmdSecrets.Command.GET, args)
+            new SecretsImpl().run(SecretsImpl.Command.GET, args)
         }
 
         @Override
@@ -188,7 +186,7 @@ class SecretsCmd extends AbstractCmd implements UsageAware {
             if( args.size() > 0 )
                 throw new AbortOperationException("Wrong number of arguments")
 
-            new CmdSecrets().run(CmdSecrets.Command.LIST, args)
+            new SecretsImpl().run(SecretsImpl.Command.LIST, args)
         }
 
         @Override
@@ -211,7 +209,7 @@ class SecretsCmd extends AbstractCmd implements UsageAware {
             if( !args[0] )
                 throw new AbortOperationException("Missing secret name")
 
-            new CmdSecrets().run(CmdSecrets.Command.DELETE, args)
+            new SecretsImpl().run(SecretsImpl.Command.DELETE, args)
         }
 
         @Override

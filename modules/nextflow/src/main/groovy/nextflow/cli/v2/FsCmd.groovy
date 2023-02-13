@@ -33,41 +33,35 @@ import picocli.CommandLine.Parameters
 )
 class FsCmd extends AbstractCmd {
 
-    @Override
-    Integer call() {
-        spec.commandLine().usage(System.err)
-        return -1
-    }
-
     @Command(description = 'Copy a file')
     void copy(
-            @Parameters(paramLabel = 'SOURCE') String source,
-            @Parameters(paramLabel = 'TARGET') String target) {
+            @Parameters(paramLabel = '<source>') String source,
+            @Parameters(paramLabel = '<target>') String target) {
         new FsImpl().run(FsImpl.Command.COPY, [ source, target ])
     }
 
     @Command(description = 'Move a file')
     void move(
-            @Parameters(paramLabel = 'SOURCE') String source,
-            @Parameters(paramLabel = 'TARGET') String target) {
+            @Parameters(paramLabel = '<source>') String source,
+            @Parameters(paramLabel = '<target>') String target) {
         new FsImpl().run(FsImpl.Command.MOVE, [ source, target ])
     }
 
     @Command(description = 'List the contents of a folder')
     void list(
-            @Parameters(paramLabel = 'SOURCE') String source) {
+            @Parameters(paramLabel = '<source>') String source) {
         new FsImpl().run(FsImpl.Command.LIST, [ source ])
     }
 
     @Command(description = 'Print a file to stdout')
     void cat(
-            @Parameters(paramLabel = 'SOURCE') String source) {
+            @Parameters(paramLabel = '<source>') String source) {
         new FsImpl().run(FsImpl.Command.CAT, [ source ])
     }
 
     @Command(description = 'Remove a file')
     void remove(
-            @Parameters(paramLabel = 'SOURCE') String source) {
+            @Parameters(paramLabel = '<source>') String source) {
         new FsImpl().run(FsImpl.Command.REMOVE, [ source ])
     }
 

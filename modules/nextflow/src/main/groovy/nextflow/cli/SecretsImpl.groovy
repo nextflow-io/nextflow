@@ -28,7 +28,7 @@ import nextflow.secret.SecretsProvider
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class CmdSecrets {
+class SecretsImpl {
 
     enum Command {
         GET,

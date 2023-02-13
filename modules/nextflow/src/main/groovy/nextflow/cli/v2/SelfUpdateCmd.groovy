@@ -29,9 +29,8 @@ import picocli.CommandLine.Command
 )
 class SelfUpdateCmd extends AbstractCmd {
     @Override
-    Integer call() {
+    void run() {
         // actually it's doing nothing, the update process is managed by the external launcher script
         // this class in only necessary to print the usage help
-        return 0
     }
 }

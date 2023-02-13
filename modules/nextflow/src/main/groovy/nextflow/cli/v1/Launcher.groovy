@@ -55,8 +55,6 @@ class Launcher {
 
     private LauncherOptions options
 
-    private boolean fullVersion
-
     private AbstractCmd command
 
     private String cliString
@@ -131,7 +129,6 @@ class Launcher {
 
         normalizedArgs = normalizeArgs(args)
         jcommander.parse( normalizedArgs as String[] )
-        fullVersion = '-version' in normalizedArgs
         command = allCommands.find { it.name == jcommander.getParsedCommand()  }
         // whether is running a daemon
         daemonMode = command instanceof NodeCmd
@@ -203,7 +200,7 @@ class Launcher {
 
             // when the first argument is a file, it's supposed to be a script to be executed
             if( i==1 && !allCommands.find { it.name == current } && new File(current).isFile()  ) {
-                normalized.add(0,RunCmd.NAME)
+                normalized.add(0,'run')
             }
 
             else if( current == '-resume' ) {
@@ -482,7 +479,12 @@ class Launcher {
 
             // -- print out the version number, then exit
             if ( options.version ) {
-                println getVersion(fullVersion)
+                println getVersion(false)
+                return 0
+            }
+
+            if ( options.fullVersion ) {
+                println getVersion(true)
                 return 0
             }
 
@@ -546,8 +548,7 @@ class Launcher {
     }
 
     /**
-     * Dump th stack trace of current running threads
-     * @return
+     * Dump the stack trace of current running threads
      */
     private String dumpThreads() {
 
@@ -582,9 +583,14 @@ class Launcher {
      * @param full When {@code true} prints full version number including build timestamp
      */
     static String getVersion(boolean full = false) {
-        full
-            ? Const.SPLASH
-            : "${Const.APP_NAME} version ${Const.APP_VER}.${Const.APP_BUILDNUM}"
+
+        if ( full ) {
+            Const.SPLASH
+        }
+        else {
+            "${Const.APP_NAME} version ${Const.APP_VER}.${Const.APP_BUILDNUM}"
+        }
+
     }
 
 

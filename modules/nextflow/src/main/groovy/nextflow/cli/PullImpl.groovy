@@ -33,7 +33,7 @@ import nextflow.scm.AssetManager
 class PullImpl {
 
     interface Options extends IHubOptions {
-        List<String> getArgs()
+        String getPipeline()
         boolean getAll()
         String getRevision()
     }
@@ -50,11 +50,11 @@ class PullImpl {
 
     void run() {
 
-        if( !all && !args )
-            throw new AbortOperationException('Missing argument')
+        if( !pipeline && !all )
+            throw new AbortOperationException('Project name or option `all` is required')
 
-        def list = all ? AssetManager.list() : args.toList()
-        if( !list ) {
+        def pipelines = all ? AssetManager.list() : [pipeline]
+        if( !pipelines ) {
             log.info "(nothing to do)"
             return
         }
@@ -66,8 +66,8 @@ class PullImpl {
 
         // init plugin system
         Plugins.init()
-        
-        list.each {
+
+        pipelines.each {
             log.info "Checking $it ..."
             def manager = new AssetManager(it, this)
 

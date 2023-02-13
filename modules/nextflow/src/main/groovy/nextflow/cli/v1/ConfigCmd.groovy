@@ -32,8 +32,6 @@ import nextflow.cli.ILauncherOptions
 @Parameters(commandDescription = 'Print a project configuration')
 class ConfigCmd extends AbstractCmd implements ConfigImpl.Options {
 
-    static public final String NAME = 'config'
-
     @Parameter(description = 'project name')
     List<String> args = []
 
@@ -53,12 +51,17 @@ class ConfigCmd extends AbstractCmd implements ConfigImpl.Options {
     boolean sort
 
     @Override
+    String getPipeline() {
+        args.size() > 0 ? args[0] : null
+    }
+
+    @Override
     ILauncherOptions getLauncherOptions() {
         launcher.options
     }
 
     @Override
-    String getName() { NAME }
+    String getName() { 'config' }
 
     @Override
     void run() {

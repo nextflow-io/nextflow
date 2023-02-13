@@ -31,10 +31,8 @@ import nextflow.cli.InfoImpl
 @Parameters(commandDescription = 'Print project and system runtime information')
 class InfoCmd extends AbstractCmd implements InfoImpl.Options {
 
-    static public final String NAME = 'info'
-
     @Parameter(description = 'project name')
-    List<String> args
+    List<String> args = []
 
     @Parameter(names = ['-d'], arity = 0, description = 'Show detailed information')
     boolean detailed
@@ -42,14 +40,19 @@ class InfoCmd extends AbstractCmd implements InfoImpl.Options {
     @Parameter(names = ['-dd'], arity = 0, hidden = true)
     boolean moreDetailed
 
-    @Parameter(names = ['-o'], description = 'Output format, either: text (default), json, yaml')
+    @Parameter(names = ['-o','-output-format'], description = 'Output format, either: text (default), json, yaml')
     String format
 
     @Parameter(names = ['-u','-check-updates'], description = 'Check for remote updates')
     boolean checkForUpdates
 
     @Override
-    String getName() { NAME }
+    String getPipeline() {
+        args.size() > 0 ? args[0] : null
+    }
+
+    @Override
+    String getName() { 'info' }
 
     @Override
     void run() {

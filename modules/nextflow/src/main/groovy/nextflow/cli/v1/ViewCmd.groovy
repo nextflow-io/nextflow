@@ -31,19 +31,22 @@ import nextflow.cli.ViewImpl
 @Parameters(commandDescription = 'View project script file(s)')
 class ViewCmd extends AbstractCmd implements ViewImpl.Options {
 
-    static public final String NAME = 'view'
-
     @Override
-    String getName() { NAME }
+    String getName() { 'view' }
 
-    @Parameter(description = 'project name', required = true)
+    @Parameter(required = true, description = 'project name')
     List<String> args = []
 
-    @Parameter(names = ['-l'], arity = 0, description = 'List repository content')
+    @Parameter(names = ['-l','-all'], arity = 0, description = 'List repository content')
     boolean all
 
-    @Parameter(names = ['-q'], arity = 0, description = 'Hide header line')
+    @Parameter(names = ['-q','-quiet'], arity = 0, description = 'Hide header line')
     boolean quiet
+
+    @Override
+    String getPipeline() {
+        args.size() > 0 ? args[0] : null
+    }
 
     @Override
     void run() {

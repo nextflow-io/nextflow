@@ -60,16 +60,17 @@ class CleanCmd extends AbstractCmd implements CleanImpl.Options {
     @Option(names = ['-q', '--quiet'], arity = '0', description = 'Do not print names of files removed')
     boolean quiet
 
-    @Parameters
+    @Parameters(description = 'Session IDs or run names')
     List<String> args
 
     @Override
-    ILauncherOptions getLauncherOptions() { launcher }
+    ILauncherOptions getLauncherOptions() {
+        launcher.options
+    }
 
     @Override
-    Integer call() {
+    void run() {
         new CleanImpl(this).run()
-        return 0
     }
 
 }

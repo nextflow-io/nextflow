@@ -33,12 +33,11 @@ import picocli.CommandLine.Parameters
 )
 class ConsoleCmd extends AbstractCmd implements ConsoleImpl.Options {
 
-    @Parameters(description = 'Nextflow console arguments')
-    List<String> args
+    @Parameters(arity = '0..1', description = 'script filename')
+    String script
 
     @Override
-    Integer call() {
+    void run() {
         new ConsoleImpl(this).run()
-        return 0
     }
 }

@@ -34,8 +34,8 @@ import picocli.CommandLine.Parameters
 )
 class InfoCmd extends AbstractCmd implements InfoImpl.Options {
 
-    @Parameters(index = '0', description = 'project name')
-    List<String> args
+    @Parameters(arity = '0..1', description = 'project name')
+    String pipeline
 
     @Option(names = ['-d'], arity = '0', description = 'Show detailed information')
     boolean detailed
@@ -50,9 +50,8 @@ class InfoCmd extends AbstractCmd implements InfoImpl.Options {
     boolean checkForUpdates
 
     @Override
-    Integer call() {
+    void run() {
         new InfoImpl(this).run()
-        return 0
     }
 
 }

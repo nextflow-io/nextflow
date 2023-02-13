@@ -32,7 +32,12 @@ import nextflow.cli.ConsoleImpl
 class ConsoleCmd extends AbstractCmd implements ConsoleImpl.Options {
 
     @Parameter(description = 'Nextflow console arguments')
-    List<String> args
+    List<String> args = []
+
+    @Override
+    String getScript() {
+        args.size() > 0 ? args[0] : null
+    }
 
     @Override
     String getName() { 'console' }

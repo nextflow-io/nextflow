@@ -44,10 +44,8 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
         }
     }
 
-    static public final String NAME = 'run'
-
     @Parameter(description = 'Project name or repository url')
-    List<String> args
+    List<String> args = []
 
     @Parameter(names = ['-ansi'], hidden = true, arity = 0)
     void setAnsi(boolean value) {
@@ -94,7 +92,7 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     @Parameter(names = ['-entry'], arity = 1, description = 'Entry workflow name to be executed')
     String entryName
 
-    @DynamicParameter(names = ['-e.'], description = 'Add the specified variable to execution environment')
+    @DynamicParameter(names = ['-e.','-env.'], description = 'Add the specified variable to execution environment')
     Map<String,String> env = [:]
 
     @DynamicParameter(names = ['-executor.'], description = 'Set executor options', hidden = true )
@@ -223,8 +221,18 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     @Parameter(names = ['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
     String workDir
 
-    @DynamicParameter(names = ['--'], description = 'Set a parameter used by the pipeline', hidden = true)
-    Map<String,String> params = new LinkedHashMap<>()
+    @DynamicParameter(names = ['--'], description = 'Pipeline parameters', hidden = true)
+    Map<String,String> params = [:]
+
+    @Override
+    String getPipeline() {
+        stdin ? '-' : args[0]
+    }
+
+    @Override
+    List<String> getArgs() {
+        args.size() > 1 ? args[1..-1] : []
+    }
 
     @Override
     String getLauncherCliString() {
@@ -237,7 +245,7 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     }
 
     @Override
-    String getName() { NAME }
+    String getName() { 'run' }
 
     @Override
     void run() {

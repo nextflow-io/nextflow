@@ -31,16 +31,22 @@ import nextflow.cli.CloneImpl
 @Parameters(commandDescription = 'Clone a project into a folder')
 class CloneCmd extends AbstractCmd implements CloneImpl.Options, HubOptions {
 
-    static public final String NAME = 'clone'
-
     @Parameter(required = true, description = 'name of the project to clone')
     List<String> args
 
-    @Parameter(names = ['-r'], description = 'Revision to clone - It can be a git branch, tag or revision number')
+    @Parameter(names = ['-r','-revision'], description = 'Revision to clone - It can be a git branch, tag or revision number')
     String revision
 
     @Override
-    String getName() { NAME }
+    String getPipeline() { args[0] }
+
+    @Override
+    String getTargetName() {
+        args.size() > 1 ? args[1] : null
+    }
+
+    @Override
+    String getName() { 'clone' }
 
     @Override
     void run() {

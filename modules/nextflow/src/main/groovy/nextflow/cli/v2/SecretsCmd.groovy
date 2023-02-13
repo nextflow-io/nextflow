@@ -18,7 +18,7 @@
 package nextflow.cli.v2
 
 import groovy.transform.CompileStatic
-import nextflow.cli.CmdSecrets
+import nextflow.cli.SecretsImpl
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 
@@ -34,34 +34,28 @@ import picocli.CommandLine.Parameters
 )
 class SecretsCmd extends AbstractCmd {
 
-    @Override
-    Integer call() {
-        spec.commandLine().usage(System.err)
-        return -1
-    }
-
     @Command(description = 'Set a key-pair in the secrets store')
     void get(
-            @Parameters(paramLabel = 'NAME') String name) {
-        new CmdSecrets().run(CmdSecrets.Command.GET, [ name ])
+            @Parameters(paramLabel = '<name>') String name) {
+        new SecretsImpl().run(SecretsImpl.Command.GET, [ name ])
     }
 
     @Command(description = 'Get a secret value with the name')
     void set(
-            @Parameters(paramLabel = 'NAME') String name,
-            @Parameters(paramLabel = 'VALUE') String value) {
-        new CmdSecrets().run(CmdSecrets.Command.SET, [ name, value ])
+            @Parameters(paramLabel = '<name>') String name,
+            @Parameters(paramLabel = '<value>') String value) {
+        new SecretsImpl().run(SecretsImpl.Command.SET, [ name, value ])
     }
 
     @Command(description = 'List all names in the secrets store')
     void list() {
-        new CmdSecrets().run(CmdSecrets.Command.LIST, [])
+        new SecretsImpl().run(SecretsImpl.Command.LIST, [])
     }
 
     @Command(description = 'Delete an entry from the secrets store')
     void delete(
-            @Parameters(paramLabel = 'NAME') String name) {
-        new CmdSecrets().run(CmdSecrets.Command.DELETE, [ name ])
+            @Parameters(paramLabel = '<name>') String name) {
+        new SecretsImpl().run(SecretsImpl.Command.DELETE, [ name ])
     }
 
 }

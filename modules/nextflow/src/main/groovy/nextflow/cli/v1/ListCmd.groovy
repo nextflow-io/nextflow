@@ -30,10 +30,8 @@ import nextflow.cli.ListImpl
 @Parameters(commandDescription = 'List all downloaded projects')
 class ListCmd extends AbstractCmd implements ListImpl.Options {
 
-    static public final String NAME = 'list'
-
     @Override
-    String getName() { NAME }
+    String getName() { 'list' }
 
     @Override
     void run() {

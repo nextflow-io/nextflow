@@ -23,6 +23,8 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.cli.ILauncherOptions
 import nextflow.cli.PluginImpl
+import nextflow.exception.AbortOperationException
+import static nextflow.cli.PluginExecAware.CMD_SEP
 
 /**
  * CLI `plugin` sub-command (v1)
@@ -31,22 +33,34 @@ import nextflow.cli.PluginImpl
  */
 @CompileStatic
 @Parameters(commandDescription = 'Manage plugins and execute custom plugin commands')
-class PluginCmd extends AbstractCmd implements PluginImpl.Options {
+class PluginCmd extends AbstractCmd {
 
     @Parameter(hidden = true)
-    List<String> args
-
-    @Override
-    ILauncherOptions getLauncherOptions() {
-        launcher.options
-    }
+    List<String> args = []
 
     @Override
     String getName() { 'plugin' }
 
     @Override
     void run() {
-        new PluginImpl(this).run()
+        if( !args )
+            throw new AbortOperationException("Missing plugin command - usage: nextflow plugin install <pluginId,..>")
+
+        // plugin install command
+        if( args[0] == 'install' ) {
+            if( args.size()!=2 )
+                throw new AbortOperationException("Missing plugin install target - usage: nextflow plugin install <pluginId,..>")
+            PluginImpl.install(args[1].tokenize(','))
+        }
+
+        // plugin run command
+        else if( args[0].contains(CMD_SEP) ) {
+            PluginImpl.exec(args[0], args[1..-1], launcher.options)
+        }
+
+        else {
+            throw new AbortOperationException("Invalid plugin command: ${args[0]}")
+        }
     }
 
 }

@@ -52,7 +52,10 @@ import org.yaml.snakeyaml.Yaml
 class RunImpl {
 
     interface Options extends IHubOptions {
+        String getPipeline()
         List<String> getArgs()
+        Map<String,String> getParams()
+
         String getBucketDir()
         Boolean getCacheable()
         Map<String,String> getClusterOptions()
@@ -69,7 +72,6 @@ class RunImpl {
         String getLibPath()
         String getMainScript()
         boolean getOffline()
-        Map<String,String> getParams()
         String getParamsFile()
         String getPlugins()
         long getPollInterval()
@@ -82,7 +84,6 @@ class RunImpl {
         String getRevision()
         List<String> getRunConfig()
         String getRunName()
-        boolean getStdin()
         boolean getStubRun()
         String getTest()
         String getWithApptainer()
@@ -146,8 +147,6 @@ class RunImpl {
     }
 
     void run() {
-        final scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
-        final pipeline = stdin ? '-' : ( args ? args[0] : null )
         if( !pipeline )
             throw new AbortOperationException("No project name was specified")
 
@@ -218,7 +217,7 @@ class RunImpl {
         // set the commit id (if any)
         runner.session.commitId = scriptFile.commitId
         if( this.test ) {
-            runner.test(this.test, scriptArgs)
+            runner.test(this.test, args)
             return
         }
 
@@ -229,7 +228,7 @@ class RunImpl {
         runner.verifyAndTrackHistory(launcherCliString, runName)
 
         // -- run it!
-        runner.execute(scriptArgs, this.entryName)
+        runner.execute(args, this.entryName)
     }
 
     protected void checkRunName() {

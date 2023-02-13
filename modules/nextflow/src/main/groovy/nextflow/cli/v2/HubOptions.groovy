@@ -29,10 +29,10 @@ import picocli.CommandLine.Option
 @CompileStatic
 trait HubOptions implements IHubOptions {
 
-    @Option(names = ['--hub'], description = 'Service hub where the project is hosted')
+    @Option(names = ['--hub'], paramLabel = '<hub>', description = 'Service hub where the project is hosted')
     String hubProvider
 
-    @Option(names = ['--user'], description = 'Private repository user name')
+    @Option(names = ['--user'], paramLabel = '<user>', description = 'Private repository user name')
     String hubUserCli
 
 }

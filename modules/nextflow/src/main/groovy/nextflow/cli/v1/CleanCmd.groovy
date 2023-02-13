@@ -33,8 +33,6 @@ import nextflow.cli.ILauncherOptions
 @Parameters(commandDescription = 'Clean up project cache and work directories')
 class CleanCmd extends AbstractCmd implements CleanImpl.Options {
 
-    static public final String NAME = 'clean'
-
     @Parameter(names = ['-after'], description = 'Clean up runs executed after the specified one')
     String after
 
@@ -56,8 +54,8 @@ class CleanCmd extends AbstractCmd implements CleanImpl.Options {
     @Parameter(names = ['-q', '-quiet'], arity = 0, description = 'Do not print names of files removed')
     boolean quiet
 
-    @Parameter
-    List<String> args
+    @Parameter(description = 'Session IDs or run names')
+    List<String> args = []
 
     @Override
     ILauncherOptions getLauncherOptions() {
@@ -65,7 +63,7 @@ class CleanCmd extends AbstractCmd implements CleanImpl.Options {
     }
 
     @Override
-    String getName() { NAME }
+    String getName() { 'clean' }
 
     @Override
     void run() {

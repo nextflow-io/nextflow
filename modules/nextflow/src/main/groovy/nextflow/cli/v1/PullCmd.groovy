@@ -31,8 +31,6 @@ import nextflow.cli.PullImpl
 @Parameters(commandDescription = 'Download or update a project')
 class PullCmd extends AbstractCmd implements PullImpl.Options, HubOptions {
 
-    static public final String NAME = 'pull'
-
     @Parameter(arity = 1, description = 'project name or repository url to pull')
     List<String> args
 
@@ -43,7 +41,10 @@ class PullCmd extends AbstractCmd implements PullImpl.Options, HubOptions {
     String revision
 
     @Override
-    String getName() { NAME }
+    String getPipeline() { args[0] }
+
+    @Override
+    String getName() { 'pull' }
 
     @Override
     void run() {

@@ -43,8 +43,6 @@ class FsCmd extends AbstractCmd implements UsageAware {
         }
     }
 
-    static public final String NAME = 'fs'
-
     private List<SubCmd> commands = (List<SubCmd>)[
         new CmdCopy(),
         new CmdMove(),
@@ -54,10 +52,10 @@ class FsCmd extends AbstractCmd implements UsageAware {
     ]
 
     @Parameter(hidden = true)
-    List<String> args
+    List<String> args = []
 
     @Override
-    String getName() { NAME }
+    String getName() { 'fs' }
 
     @Override
     void run() {

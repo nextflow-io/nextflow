@@ -26,15 +26,16 @@ import nextflow.exception.ConfigParseException
 import nextflow.exception.ScriptCompilationException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.secret.SecretsLoader
+import nextflow.util.Escape
 import nextflow.util.LoggerHelper
 import nextflow.util.ProxyHelper
 import org.eclipse.jgit.api.errors.GitAPIException
 import picocli.CommandLine
+import picocli.CommandLine.ArgGroup
 import picocli.CommandLine.Command
 import picocli.CommandLine.HelpCommand
 import picocli.CommandLine.Option
 import picocli.CommandLine.ParseResult
-import picocli.CommandLine.ScopeType
 
 /**
  * Main application entry point. It parses the command line and
@@ -66,98 +67,106 @@ import picocli.CommandLine.ScopeType
         ViewCmd.class
     ]
 )
-class Launcher extends AbstractCmd implements ILauncherOptions {
+class Launcher extends AbstractCmd {
 
-    boolean ansiLogCli
+    @ArgGroup
+    private LauncherOptions options
 
-    void setAnsiLog(boolean value) { ansiLogCli = value }
+    private String cliString
 
-    @Option(names = ['--bg'], arity = '0', description = 'Execute nextflow in background')
-    boolean background
+    private boolean daemonMode
 
-    @Option(names = ['-C'], description = 'Use the specified configuration file(s), ignoring any defaults')
-    List<String> config
-
-    @Option(names = ['-c','--config'], description = 'Add the specified file to configuration set')
-    List<String> userConfig
-
-    @Option(names = ['--config-ignore-includes'], description = 'Disable the parsing of config includes')
-    boolean ignoreConfigIncludes
-
-    @Option(names = ['-D'], description = 'Set JVM properties')
-    Map<String,String> jvmOpts
-
-    @Option(names = ['--debug'], description = 'Enable DEBUG level logging for the specified package name -- multiple packages can be provided as a comma-separated list (e.g. \'-debug nextflow,io.seqera\')', hidden = true)
-    List<String> debug
-
-    @Option(names = ['-d','--dockerize'], arity = '0', description = 'Launch Nextflow via Docker (experimental)')
-    boolean dockerize
-
-    @Option(names = ['--log'], description = 'Set the log file path')
-    String logFile
-
-    @Option(names = ['-q','--quiet'], description = 'Do not print information messages')
-    boolean quiet
-
-    @Option(names = ['--self-update'], arity = '0', description = 'Update Nextflow to the latest version', hidden = true)
-    boolean selfUpdate
-
-    @Option(names = ['--syslog'], arity = '0..1', fallbackValue = 'localhost', description = 'Send logs to syslog server (e.g. localhost:514)')
-    String syslog
-
-    @Option(names = ['--trace'], description = 'Enable TRACE level logging for the specified package name -- multiple packages can be provided as a comma-separated list (e.g. \'-trace nextflow,io.seqera\')')
-    List<String> trace
-
-    @Option(names = ['-v'], description = 'Print the version number and exit')
-    boolean version
-
-    @Option(names = ['-V','--version'], description = 'Print the full version info and exit')
-    boolean fullVersion
-
-    boolean isDaemon() {
-        spec.commandLine().getCommand() == NodeCmd
+    Launcher() {
+        this.options = new LauncherOptions()
     }
 
     private int executionStrategy(ParseResult parseResult) {
-        init()
-        new CommandLine.RunLast().execute(parseResult)
-    }
+        def command = spec.commandLine().getCommand()
+        def args = parseResult.originalArgs() as String[]
 
-    private void init() {
-        // setup logging
-        if( !logFile ) {
+        // make command line string
+        this.cliString = makeCli(System.getenv('NXF_CLI'), args)
+
+        // whether is running a daemon
+        this.daemonMode = command == NodeCmd
+
+        // set the log file name
+        if( !options.logFile ) {
             if( isDaemon() )
-                logFile = System.getenv('NXF_LOG_FILE') ?: '.node-nextflow.log'
-            else if( spec.commandLine().getCommand() == RunCmd || debug || trace )
-                logFile = System.getenv('NXF_LOG_FILE') ?: ".nextflow.log"
+                options.logFile = System.getenv('NXF_LOG_FILE') ?: '.node-nextflow.log'
+            else if( command == RunCmd || options.debug || options.trace )
+                options.logFile = System.getenv('NXF_LOG_FILE') ?: ".nextflow.log"
         }
 
-        LoggerHelper.configureLogger(this, isDaemon())
+        LoggerHelper.configureLogger(options, isDaemon())
 
         // setup proxy environment
         ProxyHelper.setupEnvironment()
 
-        // log command string
-        log.debug '$>' + cliString
+        // launch the command
+        log.debug '$> ' + cliString
+
+        int exitCode = new CommandLine.RunLast().execute(parseResult)
+
+        if( log.isTraceEnabled() )
+            log.trace "Exit\n" + dumpThreads()
+
+        return exitCode
     }
 
+    private String makeCli(String cli, String... args) {
+        if( !cli )
+            cli = 'nextflow'
+        if( !args )
+            return cli
+        def cmd = ' ' + args[0]
+        int p = cli.indexOf(cmd)
+        if( p!=-1 )
+            cli = cli.substring(0,p)
+        if( cli.endsWith('nextflow') )
+            cli = 'nextflow'
+        cli += ' ' + Escape.cli(args)
+        return cli
+    }
+
+    LauncherOptions getOptions() { options }
+
+    String getCliString() { cliString }
+
+    boolean isDaemon() { daemonMode }
+
     @Override
-    Integer call() {
-        // print version if specified
-        if ( version ) {
-            println "${Const.APP_NAME} version ${Const.APP_VER}.${Const.APP_BUILDNUM}"
-            return 0
+    void run() {
+        // -- print out the version number, then exit
+        if( options.version ) {
+            println getVersion(false)
+            return
         }
 
-        // print full version if specified
-        if ( fullVersion ) {
-            println Const.SPLASH
-            return 0
+        if( options.fullVersion ) {
+            println getVersion(true)
+            return
         }
 
-        // print usage and exit
+        // -- print out the program help, then exit
         spec.commandLine().usage(System.err)
-        return -1
+    }
+
+    /**
+     * Dump the stack trace of current running threads
+     */
+    private String dumpThreads() {
+
+        def buffer = new StringBuffer()
+        Map<Thread, StackTraceElement[]> m = Thread.getAllStackTraces();
+        for(Map.Entry<Thread,  StackTraceElement[]> e : m.entrySet()) {
+            buffer.append('\n').append(e.getKey().toString()).append('\n')
+            for (StackTraceElement s : e.getValue()) {
+                buffer.append("  " + s).append('\n')
+            }
+        }
+
+        return buffer.toString()
     }
 
     /**
@@ -168,26 +177,23 @@ class Launcher extends AbstractCmd implements ILauncherOptions {
     static void main(String[] args) {
         try {
             // create launcher
-            Launcher launcher = new Launcher()
-            CommandLine commandLine = new CommandLine(launcher)
+            def launcher = new Launcher()
+            def cmd = new CommandLine(launcher)
                 .setExecutionStrategy(launcher::executionStrategy)
 
             // add secrets command if enabled
             if( SecretsLoader.isEnabled() )
-                commandLine.addSubcommand('secrets', new SecretsCmd())
+                cmd.addSubcommand(new SecretsCmd())
+
+            // when the first argument is a file, it's supposed to be a script to be executed
+            if( args.length > 0 && !cmd.getCommandSpec().subcommands().containsKey(args[0]) && new File(args[0]).isFile() ) {
+                def argsList = args as List<String>
+                argsList.add(0, 'run')
+                args = argsList as String[]
+            }
 
             // execute command
-            System.exit(commandLine.execute(args))
-        }
-
-        catch( AbortOperationException e ) {
-            System.err.println (e.message ?: "Unknown abort reason")
-            System.exit(1)
-        }
-
-        catch( Throwable e ) {
-            e.printStackTrace(System.err)
-            System.exit(1)
+            System.exit(cmd.execute(args))
         }
 
         catch( AbortRunException e ) {
@@ -235,6 +241,23 @@ class Launcher extends AbstractCmd implements ILauncherOptions {
             log.error("@unknown", fail)
             System.exit(1)
         }
+    }
+
+
+    /**
+     * Print the version number.
+     *
+     * @param full When {@code true} prints full version number including build timestamp
+     */
+    static String getVersion(boolean full = false) {
+
+        if ( full ) {
+            Const.SPLASH
+        }
+        else {
+            "${Const.APP_NAME} version ${Const.APP_VER}.${Const.APP_BUILDNUM}"
+        }
+
     }
 
 }

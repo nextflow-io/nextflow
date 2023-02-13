@@ -33,9 +33,8 @@ import picocli.CommandLine.Command
 class ListCmd extends AbstractCmd implements ListImpl.Options {
 
     @Override
-    Integer call() {
+    void run() {
         new ListImpl(this).run()
-        return 0
     }
 
 }

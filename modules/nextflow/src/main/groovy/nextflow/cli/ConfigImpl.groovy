@@ -39,7 +39,7 @@ import nextflow.util.ConfigHelper
 class ConfigImpl {
 
     interface Options {
-        List<String> getArgs()
+        String getPipeline()
         boolean getShowAllProfiles()
         String getProfile()
         boolean getPrintProperties()
@@ -64,7 +64,7 @@ class ConfigImpl {
     void run() {
         Plugins.init()
         Path base = null
-        if( args ) base = getBaseDir(args[0])
+        if( pipeline ) base = getBaseDir(pipeline)
         if( !base ) base = Paths.get('.')
 
         if( profile && showAllProfiles ) {

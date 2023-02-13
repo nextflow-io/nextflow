@@ -34,15 +34,17 @@ import picocli.CommandLine.Parameters
 )
 class CloneCmd extends AbstractCmd implements CloneImpl.Options, HubOptions {
 
-    @Parameters(arity = '1..', description = 'name of the project to clone')
-    List<String> args
+    @Parameters(index = '0', description = 'name of the project to clone')
+    String pipeline
+
+    @Parameters(arity = '0..1', description = 'target directory')
+    String targetName
 
     @Option(names = ['-r','--revision'], description = 'Revision to clone - It can be a git branch, tag or revision number')
     String revision
 
     @Override
-    Integer call() {
+    void run() {
         new CloneImpl(this).run()
-        return 0
     }
 }

@@ -73,7 +73,10 @@ class LauncherOptions implements ILauncherOptions {
     @Parameter(names = ['-trace'], description = 'Enable trace level logging for the specified package name - multiple packages can be provided separating them with a comma e.g. \'-trace nextflow,io.seqera\'')
     List<String> trace
 
-    @Parameter(names = ['-v','-version'], description = 'Print the program version')
+    @Parameter(names = ['-v'], description = 'Print the program version')
     boolean version
+
+    @Parameter(names = ['-version'], description = 'Print the program version (full)')
+    boolean fullVersion
 
 }

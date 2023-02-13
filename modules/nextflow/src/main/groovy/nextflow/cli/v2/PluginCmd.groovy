@@ -20,9 +20,11 @@ package nextflow.cli.v2
 import groovy.transform.CompileStatic
 import nextflow.cli.ILauncherOptions
 import nextflow.cli.PluginImpl
+import nextflow.exception.AbortOperationException
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import picocli.CommandLine.ParentCommand
+import static nextflow.cli.PluginExecAware.CMD_SEP
 
 /**
  * CLI `plugin` sub-command (v2)
@@ -34,21 +36,34 @@ import picocli.CommandLine.ParentCommand
     name = 'plugin',
     description = 'Manage plugins and execute custom plugin commands'
 )
-class PluginCmd extends AbstractCmd implements PluginImpl.Options {
+class PluginCmd extends AbstractCmd {
 
     @ParentCommand
     private Launcher launcher
 
     @Parameters
+    String command
+
+    @Parameters
     List<String> args
 
     @Override
-    ILauncherOptions getLauncherOptions() { launcher }
+    void run() {
+        // plugin install command
+        if( command == 'install' ) {
+            if( args.size()!=1 )
+                throw new AbortOperationException("Missing plugin install target - usage: nextflow plugin install <pluginId,..>")
+            PluginImpl.install(args[0].tokenize(','))
+        }
 
-    @Override
-    Integer call() {
-        new PluginImpl(this).run()
-        return 0
+        // plugin run command
+        else if( command.contains(CMD_SEP) ) {
+            PluginImpl.exec(command, args, launcher.options)
+        }
+
+        else {
+            throw new AbortOperationException("Invalid plugin command: ${command}")
+        }
     }
 
 }

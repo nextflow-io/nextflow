@@ -99,25 +99,25 @@ class K8sDriverLauncherTest extends Specification {
         l.getLaunchCli() == expected
 
         where:
-        cmd                                             | expected
-        new KubeRunCmd()                                | 'nextflow run foo'
-        new KubeRunCmd(cacheable: false)                | 'nextflow run foo -cache false'
-        new KubeRunCmd(resume: true)                    | 'nextflow run foo -resume true'
-        new KubeRunCmd(poolSize: 10)                    | 'nextflow run foo -ps 10'
-        new KubeRunCmd(pollInterval: 5)                 | 'nextflow run foo -pi 5'
-        new KubeRunCmd(queueSize: 9)                    | 'nextflow run foo -qs 9'
-        new KubeRunCmd(revision: 'xyz')                 | 'nextflow run foo -r xyz'
-        new KubeRunCmd(latest: true)                    | 'nextflow run foo -latest true'
-        new KubeRunCmd(withTrace: true)                 | 'nextflow run foo -with-trace true'
-        new KubeRunCmd(withTimeline: true)              | 'nextflow run foo -with-timeline true'
-        new KubeRunCmd(withDag: true)                   | 'nextflow run foo -with-dag true'
-        new KubeRunCmd(dumpHashes: true)                | 'nextflow run foo -dump-hashes true'
-        new KubeRunCmd(dumpChannels: 'lala')            | 'nextflow run foo -dump-channels lala'
-        new KubeRunCmd(env: [XX:'hello', YY: 'world'])  | 'nextflow run foo -e.XX hello -e.YY world'
-        new KubeRunCmd(process: [mem: '100',cpus:'2'])  | 'nextflow run foo -process.mem 100 -process.cpus 2'
-        new KubeRunCmd(params: [alpha:'x', beta:'y'])   | 'nextflow run foo --alpha x --beta y'
-        new KubeRunCmd(params: [alpha: '/path/*.txt'])  | 'nextflow run foo --alpha /path/\\*.txt'
-        new KubeRunCmd(entryName: 'lala')               | 'nextflow run foo -entry lala'
+        cmd                                                    | expected
+        new KubeRunCmd()                                       | 'nextflow run foo'
+        new KubeRunCmd(cacheable: false)                       | 'nextflow run foo -cache false'
+        new KubeRunCmd(resume: true)                           | 'nextflow run foo -resume true'
+        new KubeRunCmd(poolSize: 10)                           | 'nextflow run foo -ps 10'
+        new KubeRunCmd(pollInterval: 5)                        | 'nextflow run foo -pi 5'
+        new KubeRunCmd(queueSize: 9)                           | 'nextflow run foo -qs 9'
+        new KubeRunCmd(revision: 'xyz')                        | 'nextflow run foo -r xyz'
+        new KubeRunCmd(latest: true)                           | 'nextflow run foo -latest true'
+        new KubeRunCmd(withTrace: true)                        | 'nextflow run foo -with-trace true'
+        new KubeRunCmd(withTimeline: true)                     | 'nextflow run foo -with-timeline true'
+        new KubeRunCmd(withDag: true)                          | 'nextflow run foo -with-dag true'
+        new KubeRunCmd(dumpHashes: true)                       | 'nextflow run foo -dump-hashes true'
+        new KubeRunCmd(dumpChannels: 'lala')                   | 'nextflow run foo -dump-channels lala'
+        new KubeRunCmd(env: [XX:'hello', YY: 'world'])         | 'nextflow run foo -e.XX hello -e.YY world'
+        new KubeRunCmd(processOptions: [mem: '100',cpus:'2'])  | 'nextflow run foo -process.mem 100 -process.cpus 2'
+        new KubeRunCmd(params: [alpha:'x', beta:'y'])          | 'nextflow run foo --alpha x --beta y'
+        new KubeRunCmd(params: [alpha: '/path/*.txt'])         | 'nextflow run foo --alpha /path/\\*.txt'
+        new KubeRunCmd(entryName: 'lala')                      | 'nextflow run foo -entry lala'
     }
 
     def 'should set the run name' () {

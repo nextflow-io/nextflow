@@ -33,7 +33,8 @@ import nextflow.scm.AssetManager
 class CloneImpl {
 
     interface Options extends IHubOptions {
-        List<String> getArgs()
+        String getPipeline()
+        String getTargetName()
         String getRevision()
     }
 
@@ -47,13 +48,11 @@ class CloneImpl {
     void run() {
         // init plugin system
         Plugins.init()
-        // the pipeline name
-        String pipeline = args[0]
         final manager = new AssetManager(pipeline, this)
 
         // the target directory is the second parameter
         // otherwise default the current pipeline name
-        def target = new File(args.size()> 1 ? args[1] : manager.getBaseName())
+        def target = new File(targetName ?: manager.getBaseName())
         if( target.exists() ) {
             if( target.isFile() )
                 throw new AbortOperationException("A file with the same name already exists: $target")

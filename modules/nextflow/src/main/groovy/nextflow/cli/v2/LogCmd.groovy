@@ -61,13 +61,12 @@ class LogCmd extends AbstractCmd implements LogImpl.Options {
     @Option(names = ['-t','--template'], description = 'Text template used to each record in the log ')
     String templateStr
 
-    @Parameters(description = 'Run name or session id')
+    @Parameters(description = 'Session IDs or run names')
     List<String> args
 
     @Override
-    Integer call() {
+    void run() {
         new LogImpl(this).run()
-        return 0
     }
 
 }

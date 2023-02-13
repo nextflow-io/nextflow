@@ -36,7 +36,7 @@ class NodeImpl {
 
     interface Options {
         Map<String,String> getClusterOptions()
-        List<String> getArgs()
+        String getProvider()
 
         ILauncherOptions getLauncherOptions()
     }
@@ -50,7 +50,7 @@ class NodeImpl {
 
     void run() {
         System.setProperty('nxf.node.daemon', 'true')
-        launchDaemon(args ? args[0] : null)
+        launchDaemon(provider)
     }
 
     /**
@@ -58,7 +58,7 @@ class NodeImpl {
      *
      * @param config The nextflow configuration map
      */
-    protected launchDaemon(String name = null) {
+    protected launchDaemon(String name) {
 
         // create the config object
         def config = new ConfigBuilder()

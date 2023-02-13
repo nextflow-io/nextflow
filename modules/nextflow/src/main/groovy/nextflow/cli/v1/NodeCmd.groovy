@@ -33,8 +33,6 @@ import nextflow.cli.NodeImpl
 @Parameters(commandDescription = 'Launch Nextflow in deamon mode')
 class NodeCmd extends AbstractCmd implements NodeImpl.Options {
 
-    static public final String NAME = 'node'
-
     @Parameter(names = ['-bg'], arity = 0, description = 'Start the cluster node daemon in background')
     void setBackground(boolean value) {
         launcher.options.background = value
@@ -43,8 +41,13 @@ class NodeCmd extends AbstractCmd implements NodeImpl.Options {
     @DynamicParameter(names = ['-cluster.'], description = 'Define cluster config options')
     Map<String,String> clusterOptions = [:]
 
-    @Parameter
-    List<String> args
+    @Parameter(description = 'Daemon name or class')
+    List<String> args = []
+
+    @Override
+    String getProvider() {
+        args.size() ? args[0] : null
+    }
 
     @Override
     ILauncherOptions getLauncherOptions() {
@@ -52,7 +55,7 @@ class NodeCmd extends AbstractCmd implements NodeImpl.Options {
     }
 
     @Override
-    String getName() { NAME }
+    String getName() { 'node' }
 
     @Override
     void run() {

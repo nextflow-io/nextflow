@@ -33,7 +33,7 @@ import nextflow.scm.AssetManager
 class DropImpl {
 
     interface Options {
-        List<String> getArgs()
+        String getPipeline()
         boolean getForce()
     }
 
@@ -46,9 +46,9 @@ class DropImpl {
 
     void run() {
         Plugins.init()
-        def manager = new AssetManager(args[0])
+        def manager = new AssetManager(pipeline)
         if( !manager.localPath.exists() ) {
-            throw new AbortOperationException("No match found for: ${args[0]}")
+            throw new AbortOperationException("No match found for: ${pipeline}")
         }
 
         if( this.force || manager.isClean() ) {
