@@ -160,7 +160,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -j oe
                 #PBS -l nodes=1:x86:ppn=4
                 #PBS -l mem=8gb
-                NXF_CHDIR=/work/dir
                 '''
                 .stripIndent().leftTrim()
     }
