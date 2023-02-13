@@ -461,7 +461,7 @@ RUN mkdir -p /opt/spack-env \\
 " >> /opt/spack-env/spack.yaml
 
 # Install packages, clean afterwards
-RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
+RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast ${config.spackOpts().noChecksumString}&& spack gc -y
 
 # Strip binaries
 RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
@@ -560,7 +560,7 @@ spack: \\n\\
 " > /opt/spack-env/spack.yaml
 
 # Install packages, clean afterwards
-RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
+RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast ${config.spackOpts().noChecksumString}&& spack gc -y
 
 # Strip binaries
 RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\

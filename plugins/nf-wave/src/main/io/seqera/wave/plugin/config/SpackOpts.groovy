@@ -31,6 +31,8 @@ class SpackOpts {
     final public String DEFAULT_SPACK_GENERIC_TARGET = 'x86_64' // MARCO MARCO use archspec
     final public String DEFAULT_SPACK_TARGET = 'x86_64' // MARCO MARCO use archspec
 
+    final Boolean noChecksum
+    final String noChecksumString
     final String builderImage
     final String runnerImage
     final String osPackages
@@ -42,6 +44,8 @@ class SpackOpts {
     final List<String> commands
 
     SpackOpts(Map opts) {
+        this.noChecksum = opts.noChecksum ?: false
+        this.noChecksumString = this.noChecksum ? '-n ' : ''
         this.builderImage = opts.builderImage ?: DEFAULT_SPACK_BUILDER_IMAGE
         this.runnerImage = opts.runnerImage ?: DEFAULT_SPACK_RUNNER_IMAGE
         this.osPackages = opts.osPackages ?: DEFAULT_SPACK_OSPACKAGES

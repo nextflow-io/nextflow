@@ -439,7 +439,7 @@ CMD [ "/bin/bash" ]
 
     def 'should create dockerfile content with custom spack config' () {
         given:
-        def SPACK_OPTS = [ builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', cFlags:'-foo', cxxFlags:'-foo2', fFlags:'-foo3', target:'nextcpu', commands:['USER hola'] ]
+        def SPACK_OPTS = [ noChecksum:true, builderImage:'spack/foo:1', runnerImage:'ubuntu/foo', osPackages:'libfoo', cFlags:'-foo', cxxFlags:'-foo2', fFlags:'-foo3', target:'nextcpu', commands:['USER hola'] ]
         def session = Mock(Session) { getConfig() >> [wave:[build:[spack:SPACK_OPTS]]]}
         def RECIPE = 'bwa@0.7.15' // salmon@1.1.1' MARCO MARCO TO BE READDED
         when:
@@ -468,7 +468,7 @@ spack: \\n\\
 " > /opt/spack-env/spack.yaml
 
 # Install packages, clean afterwards
-RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
+RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast -n && spack gc -y
 
 # Strip binaries
 RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
