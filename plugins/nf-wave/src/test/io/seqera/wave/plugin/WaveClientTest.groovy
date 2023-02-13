@@ -345,20 +345,22 @@ class WaveClientTest extends Specification {
 FROM spack/ubuntu-jammy:v0.19.0 as builder
 
 RUN mkdir -p /opt/spack-env \\
-&&  (sed -e 's;compilers:;compilers::;' \\
+&&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
-         /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
-&&  (echo "spack:" \\
-&&   echo "  include: [/opt/spack-env/compilers.yaml]" \\
-&&   echo "  concretizer:" \\
-&&   echo "    unify: true" \\
-&&   echo "  specs: [bwa@0.7.15]" \\
-&&   echo "  packages:" \\
-&&   echo "    all:" \\
-&&   echo "      target: [x86_64]" \\
-&&   echo "  config:" \\
-&&   echo "    install_tree: /opt/software" \\
-&&   echo "  view: /opt/view") > /opt/spack-env/spack.yaml
+         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
+&&  echo -e "\\
+spack: \\n\\
+  include: [/opt/spack-env/compilers.yaml] \\n\\
+  concretizer: \\n\\
+    unify: true \\n\\
+  specs: [bwa@0.7.15] \\n\\
+  packages: \\n\\
+    all: \\n\\
+      target: [x86_64] \\n\\
+  config: \\n\\
+    install_tree: /opt/software \\n\\
+  view: /opt/view \\n\\
+" > /opt/spack-env/spack.yaml
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
@@ -370,12 +372,12 @@ RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
     awk -F: '{print \$1}' | xargs strip -s
 
-RUN cd /opt/spack-env && \
-    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \
-    original_view=\$( cd /opt ; ls -1d ._view/* ) && \
-    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \
-    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \
-    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \
+RUN cd /opt/spack-env && \\
+    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \\
+    original_view=\$( cd /opt ; ls -1d ._view/* ) && \\
+    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \\
+    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \\
+    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \\
     rm -rf /opt/view
 
 # Runner image
@@ -448,20 +450,22 @@ CMD [ "/bin/bash" ]
 FROM spack/foo:1 as builder
 
 RUN mkdir -p /opt/spack-env \\
-&&  (sed -e 's;compilers:;compilers::;' \\
+&&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: -foo\\n      cxxflags: -foo2\\n      fflags: -foo3;' \\
-         /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
-&&  (echo "spack:" \\
-&&   echo "  include: [/opt/spack-env/compilers.yaml]" \\
-&&   echo "  concretizer:" \\
-&&   echo "    unify: true" \\
-&&   echo "  specs: [bwa@0.7.15]" \\
-&&   echo "  packages:" \\
-&&   echo "    all:" \\
-&&   echo "      target: [nextcpu]" \\
-&&   echo "  config:" \\
-&&   echo "    install_tree: /opt/software" \\
-&&   echo "  view: /opt/view") > /opt/spack-env/spack.yaml
+         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
+&&  echo -e "\\
+spack: \\n\\
+  include: [/opt/spack-env/compilers.yaml] \\n\\
+  concretizer: \\n\\
+    unify: true \\n\\
+  specs: [bwa@0.7.15] \\n\\
+  packages: \\n\\
+    all: \\n\\
+      target: [nextcpu] \\n\\
+  config: \\n\\
+    install_tree: /opt/software \\n\\
+  view: /opt/view \\n\\
+" > /opt/spack-env/spack.yaml
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
@@ -473,12 +477,12 @@ RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
     awk -F: '{print \$1}' | xargs strip -s
 
-RUN cd /opt/spack-env && \
-    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \
-    original_view=\$( cd /opt ; ls -1d ._view/* ) && \
-    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \
-    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \
-    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \
+RUN cd /opt/spack-env && \\
+    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \\
+    original_view=\$( cd /opt ; ls -1d ._view/* ) && \\
+    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \\
+    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \\
+    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \\
     rm -rf /opt/view
 
 # Runner image
@@ -528,18 +532,20 @@ FROM spack/ubuntu-jammy:v0.19.0 as builder
 COPY spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
-&&  (sed -e 's;compilers:;compilers::;' \\
+&&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
-         /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
-&&  (sed '/^spack:/a  \\ \\ include: [/opt/spack-env/compilers.yaml]\\
+         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
+&&  sed '/^spack:/a  \\ \\ include: [/opt/spack-env/compilers.yaml]\\
   concretizer:\\
-    unify: true' /tmp/spack.yaml) > /opt/spack-env/spack.yaml \\
-&&  (echo "  packages:" \\
-&&   echo "    all:" \\
-&&   echo "      target: [x86_64]" \\
-&&   echo "  config:" \\
-&&   echo "    install_tree: /opt/software" \\
-&&   echo "  view: /opt/view") >> /opt/spack-env/spack.yaml
+    unify: true' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
+&&  echo -e "\\
+  packages: \\n\\
+    all: \\n\\
+      target: [x86_64] \\n\\
+  config: \\n\\
+    install_tree: /opt/software \\n\\
+  view: /opt/view \\n\\
+" >> /opt/spack-env/spack.yaml
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
@@ -551,12 +557,12 @@ RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
     awk -F: '{print \$1}' | xargs strip -s
 
-RUN cd /opt/spack-env && \
-    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \
-    original_view=\$( cd /opt ; ls -1d ._view/* ) && \
-    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \
-    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \
-    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \
+RUN cd /opt/spack-env && \\
+    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \\
+    original_view=\$( cd /opt ; ls -1d ._view/* ) && \\
+    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \\
+    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \\
+    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \\
     rm -rf /opt/view
 
 # Runner image
@@ -741,20 +747,22 @@ CMD [ "/bin/bash" ]
 FROM spack/ubuntu-jammy:v0.19.0 as builder
 
 RUN mkdir -p /opt/spack-env \\
-&&  (sed -e 's;compilers:;compilers::;' \\
+&&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
-         /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
-&&  (echo "spack:" \\
-&&   echo "  include: [/opt/spack-env/compilers.yaml]" \\
-&&   echo "  concretizer:" \\
-&&   echo "    unify: true" \\
-&&   echo "  specs: [salmon@1.2.3]" \\
-&&   echo "  packages:" \\
-&&   echo "    all:" \\
-&&   echo "      target: [x86_64]" \\
-&&   echo "  config:" \\
-&&   echo "    install_tree: /opt/software" \\
-&&   echo "  view: /opt/view") > /opt/spack-env/spack.yaml
+         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
+&&  echo -e "\\
+spack: \\n\\
+  include: [/opt/spack-env/compilers.yaml] \\n\\
+  concretizer: \\n\\
+    unify: true \\n\\
+  specs: [salmon@1.2.3] \\n\\
+  packages: \\n\\
+    all: \\n\\
+      target: [x86_64] \\n\\
+  config: \\n\\
+    install_tree: /opt/software \\n\\
+  view: /opt/view \\n\\
+" > /opt/spack-env/spack.yaml
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
@@ -766,12 +774,12 @@ RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
     awk -F: '{print \$1}' | xargs strip -s
 
-RUN cd /opt/spack-env && \
-    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \
-    original_view=\$( cd /opt ; ls -1d ._view/* ) && \
-    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \
-    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \
-    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \
+RUN cd /opt/spack-env && \\
+    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \\
+    original_view=\$( cd /opt ; ls -1d ._view/* ) && \\
+    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \\
+    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \\
+    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \\
     rm -rf /opt/view
 
 # Runner image
@@ -851,18 +859,20 @@ FROM spack/ubuntu-jammy:v0.19.0 as builder
 COPY spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
-&&  (sed -e 's;compilers:;compilers::;' \\
+&&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
-         /root/.spack/linux/compilers.yaml) > /opt/spack-env/compilers.yaml \\
-&&  (sed '/^spack:/a  \\ \\ include: [/opt/spack-env/compilers.yaml]\\
+         /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
+&&  sed '/^spack:/a  \\ \\ include: [/opt/spack-env/compilers.yaml]\\
   concretizer:\\
-    unify: true' /tmp/spack.yaml) > /opt/spack-env/spack.yaml \\
-&&  (echo "  packages:" \\
-&&   echo "    all:" \\
-&&   echo "      target: [x86_64]" \\
-&&   echo "  config:" \\
-&&   echo "    install_tree: /opt/software" \\
-&&   echo "  view: /opt/view") >> /opt/spack-env/spack.yaml
+    unify: true' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
+&&  echo -e "\\
+  packages: \\n\\
+    all: \\n\\
+      target: [x86_64] \\n\\
+  config: \\n\\
+    install_tree: /opt/software \\n\\
+  view: /opt/view \\n\\
+" >> /opt/spack-env/spack.yaml
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
@@ -874,12 +884,12 @@ RUN find -L /opt/._view/* -type f -exec readlink -f '{}' \\; | \\
     grep 'x-executable\\|x-archive\\|x-sharedlib' | \\
     awk -F: '{print \$1}' | xargs strip -s
 
-RUN cd /opt/spack-env && \
-    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \
-    original_view=\$( cd /opt ; ls -1d ._view/* ) && \
-    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \
-    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \
-    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \
+RUN cd /opt/spack-env && \\
+    spack env activate --sh -d . >> /etc/profile.d/z10_spack_environment.sh && \\
+    original_view=\$( cd /opt ; ls -1d ._view/* ) && \\
+    sed -i "s;/view/;/\$original_view/;" /etc/profile.d/z10_spack_environment.sh && \\
+    echo "# Needed for Perl applications" >>/etc/profile.d/z10_spack_environment.sh && \\
+    echo "export PERL5LIB=\$(eval ls -d /opt/._view/*/lib/5.*):\$PERL5LIB" >>/etc/profile.d/z10_spack_environment.sh && \\
     rm -rf /opt/view
 
 # Runner image
