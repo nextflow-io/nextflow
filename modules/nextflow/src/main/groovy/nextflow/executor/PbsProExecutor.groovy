@@ -70,7 +70,8 @@ class PbsProExecutor extends PbsExecutor {
             res << "mem=${task.config.getMemory().getMega()}mb".toString()
         }
         if( res ) {
-            if( task.config.clusterOptions && task.config.clusterOptions.indexOf('-l') != -1 ) {
+            final opts = task.config.clusterOptions?.toString()
+            if( opts && opts.tokenize(' ').contains('-l') ) {
                 log.warn1 'cpus and memory directives are ignored when clusterOptions contains -l option\ntip: clusterOptions = { "-l select=1:ncpus=${task.cpus}:mem=${task.memory.toMega()}mb:..." }'
             }
             else {

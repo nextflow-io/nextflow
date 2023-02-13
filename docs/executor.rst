@@ -458,7 +458,7 @@ Resource requests and other job characteristics can be controlled via the follow
 * :ref:`process-time`
 
 .. tip::
-  In Nextflow version 22.11.0-edge or later, it is possible to specify resource settings with both the ``clusterOptions`` and
+  As of Nextflow version 23.02.0-edge or later, it is possible to specify resource settings with both the ``clusterOptions`` and
   the ``cpus`` directives by specifying the cluster options dynamically::
 
     cpus = 2
@@ -492,7 +492,7 @@ Resource requests and other job characteristics can be controlled via the follow
 * :ref:`process-time`
 
 .. tip::
-  In Nextflow version 22.11.0-edge or later, it is possible to specify resource settings with both the ``clusterOptions`` and
+  As of Nextflow version 23.02.0-edge or later, it is possible to specify resource settings with both the ``clusterOptions`` and
   the ``cpus`` and ``memory`` directives by specifying the cluster options dynamically::
 
     cpus = 2

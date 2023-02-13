@@ -158,8 +158,8 @@ class PbsExecutorTest extends Specification {
                 #PBS -N nf-task_name
                 #PBS -o /work/dir/.command.log
                 #PBS -j oe
-                #PBS -l nodes=1:x86:ppn=4
                 #PBS -l mem=8gb
+                #PBS -l nodes=1:x86:ppn=4
                 '''
                 .stripIndent().leftTrim()
     }
