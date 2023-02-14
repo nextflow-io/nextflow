@@ -291,8 +291,9 @@ class PbsExecutorTest extends Specification {
     def 'should match cluster options' () {
         expect:
         PbsExecutor.matchOptions('-l foo')
+        PbsExecutor.matchOptions('-lfoo')
         PbsExecutor.matchOptions('-x -l foo')
-        PbsExecutor.matchOptions('-x -l foo')
+        PbsExecutor.matchOptions('-x -lfoo')
         and:
         !PbsExecutor.matchOptions(null)
         !PbsExecutor.matchOptions('')
