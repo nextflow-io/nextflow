@@ -42,14 +42,16 @@ trait FusionAwareTask {
 
     boolean fusionEnabled() {
         if( fusionEnabled==null ) {
-            fusionEnabled = FusionHelper.isFusionEnabled(getExecutor0().getSession())
+            fusionEnabled = getExecutor0().isFusionEnabled()
         }
         return fusionEnabled
     }
 
     FusionScriptLauncher fusionLauncher() {
         if( fusionLauncher==null ) {
-            fusionLauncher = FusionHelper.getFusionLauncher(task)
+            fusionLauncher = fusionEnabled()
+                    ? FusionScriptLauncher.create(task.toTaskBean(), task.workDir.scheme)
+                    : null
         }
         return fusionLauncher
     }

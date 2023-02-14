@@ -25,10 +25,8 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.ContainerBuilder
 import nextflow.container.ContainerConfig
-import nextflow.processor.TaskRun
 import nextflow.extension.FilesEx
 import nextflow.io.BucketParser
-
 /**
  * Helper method to handle fusion common logic
  *
@@ -45,17 +43,6 @@ class FusionHelper {
         return result!=null ? result.toString()=='true' : false
     }
 
-    @Memoized
-    static FusionScriptLauncher getFusionLauncher(TaskRun task) {
-        FusionScriptLauncher.create(task.toTaskBean(), task.workDir.scheme)
-    }
-
-    static String getFusionSubmitCli(TaskRun task, FusionScriptLauncher launcher) {
-        final logFile = launcher.toContainerMount(task.workDir.resolve(TaskRun.CMD_LOG))
-        final runFile = launcher.toContainerMount(task.workDir.resolve(TaskRun.CMD_RUN))
-        final cmd = "trap \"{ ret=\$?; cp ${TaskRun.CMD_LOG} ${logFile}||true; exit \$ret; }\" EXIT; bash ${runFile} 2>&1 | tee ${TaskRun.CMD_LOG}"
-        return cmd.toString()
-    }
 
     static String runWithContainer(FusionScriptLauncher launcher, ContainerConfig containerConfig, String containerName, List<String> runCmd) {
         if( !containerName )

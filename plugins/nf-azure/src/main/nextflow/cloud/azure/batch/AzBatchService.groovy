@@ -72,7 +72,8 @@ import nextflow.cloud.azure.config.CopyToolInstallMode
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
-import nextflow.executor.fusion.FusionHelper
+import nextflow.fusion.FusionHelper
+import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.CacheHelper
@@ -395,8 +396,9 @@ class AzBatchService implements Closeable {
             opts += "${task.config.getContainerOptions()} "
         // fusion environment settings
         final executor = task.getProcessor().getExecutor()
-        final launcher = FusionHelper.getFusionLauncher(task)
-        if( executor.isFusionEnabled() ) {
+        final fusionEnabled = executor.isFusionEnabled()
+        final launcher = fusionEnabled ? FusionScriptLauncher.create(task.toTaskBean(), 'az') : null
+        if( fusionEnabled ) {
             opts += "--privileged "
             for( Map.Entry<String,String> it : launcher.fusionEnv() ) {
                 opts += "-e $it.key=$it.value "
@@ -407,8 +409,8 @@ class AzBatchService implements Closeable {
                 .withImageName(container)
                 .withContainerRunOptions(opts)
         // submit command line
-        final cmd = executor.isFusionEnabled()
-                ? "sh -c '${FusionHelper.getFusionSubmitCli(task, launcher)}'"
+        final cmd = fusionEnabled
+                ? launcher.cli
                 : "sh -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'"
 
         final slots = computeSlots(task, pool)
