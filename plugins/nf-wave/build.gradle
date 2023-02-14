@@ -36,6 +36,6 @@ dependencies {
     api 'com.google.code.gson:gson:2.9.0'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.codehaus.groovy:groovy:3.0.14"
-    testImplementation "org.codehaus.groovy:groovy-nio:3.0.14"
+    testImplementation "org.codehaus.groovy:groovy:3.0.15"
+    testImplementation "org.codehaus.groovy:groovy-nio:3.0.15"
 }
