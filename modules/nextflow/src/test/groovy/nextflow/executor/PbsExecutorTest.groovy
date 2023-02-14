@@ -66,7 +66,6 @@ class PbsExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
-
         when:
         task.config = new TaskConfig()
         task.config.queue = 'alpha'
@@ -80,7 +79,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -l walltime=00:01:00
                 '''
                 .stripIndent().leftTrim()
-
 
         when:
         task.config = new TaskConfig()
@@ -97,8 +95,6 @@ class PbsExecutorTest extends Specification {
                 #PBS -l mem=1mb
                 '''
                 .stripIndent().leftTrim()
-
-
 
         when:
         task.config = new TaskConfig()
@@ -152,6 +148,20 @@ class PbsExecutorTest extends Specification {
                 '''
                 .stripIndent().leftTrim()
 
+        when:
+        task.config = new TaskConfig()
+        task.config.clusterOptions = '-l nodes=1:x86:ppn=4'
+        task.config.cpus = 2
+        task.config.memory = '8g'
+        then:
+        executor.getHeaders(task) == '''
+                #PBS -N nf-task_name
+                #PBS -o /work/dir/.command.log
+                #PBS -j oe
+                #PBS -l mem=8gb
+                #PBS -l nodes=1:x86:ppn=4
+                '''
+                .stripIndent().leftTrim()
     }
 
     def WorkDirWithBlanks() {
@@ -276,6 +286,18 @@ class PbsExecutorTest extends Specification {
         executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f -1 | { grep -E '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx') == ['bash','-c', "set -o pipefail; qstat -f -1 xxx | { grep -E '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx').each { assert it instanceof String }
+    }
+
+    def 'should match cluster options' () {
+        expect:
+        PbsExecutor.matchOptions('-l foo')
+        PbsExecutor.matchOptions('-lfoo')
+        PbsExecutor.matchOptions('-x -l foo')
+        PbsExecutor.matchOptions('-x -lfoo')
+        and:
+        !PbsExecutor.matchOptions(null)
+        !PbsExecutor.matchOptions('')
+        !PbsExecutor.matchOptions('-x-l foo')
     }
 
 }
