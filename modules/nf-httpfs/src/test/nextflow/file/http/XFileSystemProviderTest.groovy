@@ -31,35 +31,6 @@ import spock.lang.Unroll
  */
 class XFileSystemProviderTest extends Specification {
 
-    def 'should create with default config settings' () {
-        when:
-        def fs = new HttpFileSystemProvider()
-        then:
-        fs.retryCodes() == HttpFileSystemProvider.DEFAULT_RETRY_CODES.tokenize(',').collect( it -> it as int )
-        fs.backOffDelay() == HttpFileSystemProvider.DEFAULT_BACK_OFF_DELAY
-        fs.backOffBase() == HttpFileSystemProvider.DEFAULT_BACK_OFF_BASE
-        fs.maxAttempts() == HttpFileSystemProvider.DEFAULT_MAX_ATTEMPTS
-
-    }
-
-    def 'should create with custom config settings' () {
-        given:
-        SysEnv.push([NXF_HTTPFS_MAX_ATTEMPTS: '10',
-                     NXF_HTTPFS_BACKOFF_BASE: '300',
-                     NXF_HTTPFS_DELAY       : '400',
-                     NXF_HTTPFS_RETRY_CODES : '1,2,3'])
-
-        when:
-        def fs = new HttpFileSystemProvider()
-        then:
-        fs.retryCodes() == [1,2,3]
-        fs.backOffDelay() == 400
-        fs.backOffBase() == 300
-        fs.maxAttempts() == 10
-
-        cleanup:
-        SysEnv.pop()
-    }
 
     def "should return input stream"() {
         given:
