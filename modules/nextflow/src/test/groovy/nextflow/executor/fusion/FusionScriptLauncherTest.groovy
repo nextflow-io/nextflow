@@ -52,9 +52,6 @@ class FusionScriptLauncherTest extends Specification {
         then:
         result == Path.of('/fusion/http/bar/z.txt')
 
-        expect:
-        fusion.fusionBuckets() == [ 'foo', 'bar' ] as Set
-
     }
 
     def 'should get fusion env' () {
@@ -63,7 +60,6 @@ class FusionScriptLauncherTest extends Specification {
         and:
         def fusion = new FusionScriptLauncher(
                 scheme: 'http',
-                buckets: ['foo'] as Set,
                 remoteWorkDir: XPath.get('http://foo/work'))
 
         expect:

@@ -32,29 +32,20 @@ import spock.lang.Specification
 class FusionHelperTest extends Specification {
 
     def 'should make foreign path to fusion paths' () {
-        given:
-        def buckets = new HashSet()
-
         when:
-        def result = FusionHelper.toContainerMount(XPath.get('http://foo/a/b/c.txt'), 'http', buckets)
+        def result = FusionHelper.toContainerMount(XPath.get('http://foo/a/b/c.txt'), 'http')
         then:
         result == Path.of('/fusion/http/foo/a/b/c.txt')
-        and:
-        buckets == [ 'foo' ] as Set
 
         when:
-        result = FusionHelper.toContainerMount(XPath.get('http://foo/a/x/y.txt'), 'http', buckets)
+        result = FusionHelper.toContainerMount(XPath.get('http://foo/a/x/y.txt'), 'http')
         then:
         result == Path.of('/fusion/http/foo/a/x/y.txt')
-        and:
-        buckets == [ 'foo' ] as Set
 
         when:
-        result = FusionHelper.toContainerMount(XPath.get('http://bar/z.txt'), 'http', buckets)
+        result = FusionHelper.toContainerMount(XPath.get('http://bar/z.txt'), 'http')
         then:
         result == Path.of('/fusion/http/bar/z.txt')
-        and:
-        buckets == [ 'foo', 'bar' ] as Set
 
     }
 
