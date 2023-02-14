@@ -75,7 +75,7 @@ class FusionHelper {
         return containerCmd
     }
 
-    static Path toContainerMount(Path path, String scheme, Set<String> buckets) {
+    static Path toContainerMount(Path path, String scheme) {
         if( path == null )
             return null
 
@@ -85,12 +85,7 @@ class FusionHelper {
             throw new IllegalArgumentException("Unexpected path for Fusion script launcher: ${path.toUriString()}")
 
         final result = "/fusion/$p.scheme/${p.bucket}${p.path}"
-        buckets.add(p.bucket)
         return Path.of(result)
-    }
-
-    static Path toContainerMount(Path path, String scheme) {
-        return toContainerMount(path, scheme, new HashSet<String>(1))
     }
 
 }
