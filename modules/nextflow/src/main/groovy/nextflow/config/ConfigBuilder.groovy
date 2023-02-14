@@ -565,7 +565,7 @@ class ConfigBuilder {
         }
 
         if( cmdRun.withoutConda && config.conda instanceof Map ) {
-            // disable docker execution
+            // disable conda execution
             log.debug "Disabling execution with Conda as requested by command-line option `-without-conda`"
             config.conda.enabled = false
         }
@@ -575,6 +575,19 @@ class ConfigBuilder {
             if( cmdRun.withConda != '-' )
                 config.process.conda = cmdRun.withConda
             config.conda.enabled = true
+        }
+
+        if( cmdRun.withoutSpack && config.spack instanceof Map ) {
+            // disable spack execution
+            log.debug "Disabling execution with Spack as requested by command-line option `-without-spack`"
+            config.spack.enabled = false
+        }
+
+        // -- apply the spack environment
+        if( cmdRun.withSpack ) {
+            if( cmdRun.withSpack != '-' )
+                config.process.spack = cmdRun.withSpack
+            config.spack.enabled = true
         }
 
         // -- sets the resume option
@@ -688,7 +701,14 @@ class ConfigBuilder {
             if( cmdRun.withWave != '-' )
                 config.wave.endpoint = cmdRun.withWave
             else if( !config.wave.endpoint )
-                config.wave.endpoint = 'https://default.host'
+                config.wave.endpoint = 'https://wave.seqera.io'
+        }
+
+        // -- set fusion options
+        if( cmdRun.withFusion ) {
+            if( !(config.fusion instanceof Map) )
+                config.fusion = [:]
+            config.fusion.enabled = cmdRun.withFusion == 'true'
         }
 
         // -- nextflow setting
@@ -721,6 +741,10 @@ class ConfigBuilder {
 
         if( cmdRun.withSingularity ) {
             configContainer(config, 'singularity', cmdRun.withSingularity)
+        }
+
+        if( cmdRun.withApptainer ) {
+            configContainer(config, 'apptainer', cmdRun.withApptainer)
         }
 
         if( cmdRun.withCharliecloud ) {

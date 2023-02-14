@@ -186,7 +186,7 @@ class TimelineObserverTest extends Specification {
         observer.renderHtml()
         then:
         Files.exists(file)
-        file.text == Paths.get('src/test/groovy/nextflow/trace/timeline-expected.html').text
+        file.text == Paths.get('src/test/resources/nextflow/trace/timeline-expected.html').text
 
     }
 

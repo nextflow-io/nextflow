@@ -25,11 +25,13 @@ import com.google.cloud.batch.v1.LogsPolicy
 import com.google.cloud.batch.v1.Runnable
 import com.google.cloud.batch.v1.TaskGroup
 import com.google.cloud.batch.v1.TaskSpec
+import com.google.cloud.logging.LogEntry
+import com.google.cloud.logging.Payload.StringPayload
+import com.google.cloud.logging.Severity
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
-import nextflow.cloud.google.batch.logging.BatchLogging
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
@@ -43,8 +45,10 @@ class BatchLoggingTest extends Specification {
 
     def 'should parse stdout and stderr' () {
         given:
-        def OUT_TEXT = '  Task action/STARTUP/0/0/group0/0, STDOUT:  No user sessions are running outdated binaries.\n'
-        def ERR_TEXT = '  Task action/STARTUP/0/0/group0/0, STDERR:  Oops something has failed. We are sorry.\n'
+        def OUT_ENTRY1 = LogEntry.newBuilder(StringPayload.of('No user sessions are running outdated binaries.\n')).setSeverity(Severity.INFO).build()
+        def OUT_ENTRY2 = LogEntry.newBuilder(StringPayload.of('Hello world')).setSeverity(Severity.INFO).build()
+        def ERR_ENTRY1 = LogEntry.newBuilder(StringPayload.of('Oops something has failed. We are sorry.\n')).setSeverity(Severity.ERROR).build()
+        def ERR_ENTRY2 = LogEntry.newBuilder(StringPayload.of('blah blah')).setSeverity(Severity.ERROR).build()
         and:
         def client = new BatchLogging()
 
@@ -52,42 +56,34 @@ class BatchLoggingTest extends Specification {
         def stdout = new StringBuilder()
         def stderr = new StringBuilder()
         and:
-        client.parseOutput(OUT_TEXT, stdout, stderr)
+        client.parseOutput(OUT_ENTRY1, stdout, stderr)
         then:
         stdout.toString() == 'No user sessions are running outdated binaries.\n'
         and:
         stderr.toString() == ''
-        and:
-        client.currentMode() == 'STDOUT:  '
 
         when:
-        client.parseOutput(ERR_TEXT, stdout, stderr)
+        client.parseOutput(ERR_ENTRY1, stdout, stderr)
         then:
         stderr.toString() == 'Oops something has failed. We are sorry.\n'
-        and:
-        client.currentMode() == 'STDERR:  '
 
         when:
-        client.parseOutput('blah blah', stdout, stderr)
+        client.parseOutput(ERR_ENTRY2, stdout, stderr)
         then:
         // the message is appended to the stderr because not prefix is provided
         stderr.toString() == 'Oops something has failed. We are sorry.\nblah blah'
         and:
         // no change to the stdout
         stdout.toString() == 'No user sessions are running outdated binaries.\n'
-        and:
-        client.currentMode() == 'STDERR:  '
 
         when:
-        client.parseOutput('STDOUT:  Hello world', stdout, stderr)
+        client.parseOutput(OUT_ENTRY2, stdout, stderr)
         then:
         // the message is added to the stdout
         stdout.toString() == 'No user sessions are running outdated binaries.\nHello world'
         and:
         // no change to the stderr
         stderr.toString() == 'Oops something has failed. We are sorry.\nblah blah'
-        and:
-        client.currentMode() == 'STDOUT:  '
 
     }
 

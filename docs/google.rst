@@ -15,7 +15,7 @@ environment in which a tool runs.
 The most common case will be to pick up your end-user Google credentials from your
 workstation. You can create these by running the command::
 
-    gcloud auth application-default login 
+    gcloud auth application-default login
 
 and running through the authentication flow. This will write a credential file to your gcloud
 configuration directory that will be used for any tool you run on your workstation that
@@ -45,6 +45,8 @@ credentials file just downloaded::
 
     export GOOGLE_APPLICATION_CREDENTIALS=/path/your/file/creds.json
 
+.. _google-batch:
+
 Cloud Batch
 ============
 
@@ -61,7 +63,7 @@ Requirements
 The support for Google Batch requires Nextflow version ``22.07.1-edge`` or later. If you have already Nextflow
 installed make sure to update to the latest `edge` release using these commands::
 
-    export NXF_EDGE=1 
+    export NXF_EDGE=1
     nextflow -self-update
 
 If you don't have Nextflow, install it with command below::
@@ -121,6 +123,7 @@ Name                                           Description
 google.project                                 The Google Project Id to use for the pipeline execution.
 google.location                                The Google *location* where the job executions are deployed (default: ``us-central1``).
 google.enableRequesterPaysBuckets              When ``true`` uses the configured Google project id as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See `Requester Pays on Google Cloud Storage documentation  <https://cloud.google.com/storage/docs/requester-pays>`_ (default: ``false``).
+google.batch.allowedLocations                  Define the set of allowed locations for VMs to be provisioned. See `Google documentation <https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy>`_ for details (default: no restriction. Requires version ``22.12.0-edge`` or later).
 google.batch.bootDiskSize                      Set the size of the virtual machine boot disk, e.g ``50.GB`` (default: none).
 google.batch.cpuPlatform                       Set the minimum CPU Platform, e.g. ``'Intel Skylake'``. See `Specifying a minimum CPU Platform for VM instances <https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications>`_ (default: none).
 google.batch.spot                              When ``true`` enables the usage of *spot* virtual machines or ``false`` otherwise (default: ``false``).

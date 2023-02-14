@@ -54,7 +54,9 @@ abstract class Executor {
 
     TaskMonitor getMonitor() { monitor }
 
-    protected String getDisplayName() { name }
+    protected String getDisplayName() {
+        return fusionEnabled ? "$name (fusion enabled)" : name
+    }
 
     /**
      * Allows to post-initialize the executor
@@ -115,7 +117,7 @@ abstract class Executor {
 
     @Memoized
     Path getStageDir() {
-        return getWorkDir().resolve('stage')
+        return getWorkDir().resolve("stage-${getSession().uniqueId}")
     }
 
     boolean isForeignFile(Path path) {
@@ -159,6 +161,20 @@ abstract class Executor {
      */
     boolean isContainerNative() {
         return false
+    }
+
+    /**
+     * Determines which container engine settings in the nextflow config file
+     * will be used by this executor e.g. {@code 'docker'}, {@code 'singularity'}, etc.
+     *
+     * When {@code null} is returned the setting for the current engine marked as 'enabled' will be used.
+     *
+     * @return
+     *      {@code docker} when {#link #isContainerNative} is {@code true} and {@code null} otherwise
+     *
+     */
+    String containerConfigEngine() {
+        return null
     }
 
     /**

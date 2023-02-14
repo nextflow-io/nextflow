@@ -393,6 +393,8 @@ class TowerClient implements TraceObserver {
         final req = makeCompleteReq(session)
         final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
         logHttpResponse(urlTraceComplete, resp)
+        // shutdown file archiver
+        archiver?.shutdown(session)
     }
 
     @Override
@@ -548,7 +550,7 @@ class TowerClient implements TraceObserver {
                     continue
                 }
                 else {
-                    log.trace("Got error $code - refreshTries=$refreshTries - currentRefresh=$currentRefresh")
+                    log.trace("Got HTTP code $code - refreshTries=$refreshTries - currentRefresh=$currentRefresh", e)
                 }
 
                 String msg

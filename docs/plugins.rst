@@ -41,7 +41,7 @@ Alternatively, plugins can be required using the ``-plugins`` command line optio
     nextflow run <PIPELINE NAME> -plugins nf-hello@0.1.0
 
 Multiple plugins can be specified by separating them with a comma.
-When specifiying plugins via the command line, any plugin declarations in the Nextflow config file are ignored.
+When specifying plugins via the command line, any plugin declarations in the Nextflow config file are ignored.
 
 
 Index
@@ -95,7 +95,7 @@ And this function can be used by the pipeline::
 
     channel.of( reverseString('hi') )
 
-The above snipped includes a function from the plugin and allows the channel to call it directly.
+The above snippet includes a function from the plugin and allows the channel to call it directly.
 
 In the same way as operators, functions can be aliased::
 

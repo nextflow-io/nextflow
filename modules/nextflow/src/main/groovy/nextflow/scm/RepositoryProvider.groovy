@@ -17,6 +17,7 @@
 
 package nextflow.scm
 
+import static nextflow.util.StringUtils.*
 
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
@@ -171,7 +172,7 @@ abstract class RepositoryProvider {
     protected String invoke( String api ) {
         assert api
 
-        log.debug "Request [credentials ${config.getAuthObfuscated() ?: '-'}] -> $api"
+        log.debug "Request [credentials ${getAuthObfuscated() ?: '-'}] -> $api"
         def connection = new URL(api).openConnection() as URLConnection
         connection.setConnectTimeout(5_000)
 
@@ -190,6 +191,12 @@ abstract class RepositoryProvider {
         finally{
             content?.close()
         }
+    }
+
+    protected String getAuthObfuscated() {
+        final usr = getUser()
+        final pwd = getPassword()
+        return "${usr ? redact(usr) : '-'}:${pwd ? redact(pwd) : '-'}"
     }
 
     /**
@@ -247,7 +254,18 @@ abstract class RepositoryProvider {
                 break
 
             for( def item : list ) {
-                result.add( parse(item) )
+                final entry = parse(item)
+                if( result.contains(entry) ) {
+                    log.debug("Duplicate entry detected on request '$request'")
+                    return result
+                }
+                result.add(entry)
+            }
+
+            // prevent endless looping
+            if( page==100 ) {
+                log.warn("Too many requests '$request'")
+                break
             }
         }
         return result

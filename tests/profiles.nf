@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
 process foo {
   debug true
@@ -23,3 +22,5 @@ process foo {
 	echo cpus: ${task.cpus} memory: ${task.memory}
   """
 }
+
+workflow { foo() }

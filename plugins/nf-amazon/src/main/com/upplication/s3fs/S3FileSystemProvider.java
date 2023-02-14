@@ -406,13 +406,15 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	private S3OutputStream createUploaderOutputStream( S3Path fileToUpload ) {
 		AmazonS3Client s3 = fileToUpload.getFileSystem().getClient();
 
+		final String storageClass = fileToUpload.getStorageClass()!=null ? fileToUpload.getStorageClass() : props.getProperty("upload_storage_class");
 		final S3MultipartOptions opts = props != null ? new S3MultipartOptions(props) : new S3MultipartOptions();
 		final S3ObjectId objectId = fileToUpload.toS3ObjectId();
 		S3OutputStream stream = new S3OutputStream(s3.getClient(), objectId, opts)
 				.setCannedAcl(s3.getCannedAcl())
-				.setStorageClass(props.getProperty("upload_storage_class"))
+				.setStorageClass(storageClass)
 				.setStorageEncryption(props.getProperty("storage_encryption"))
 				.setKmsKeyId(props.getProperty("storage_kms_key_id"))
+				.setContentType(fileToUpload.getContentType())
 				.setTags(fileToUpload.getTagsList());
 		return stream;
 	}
@@ -445,6 +447,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
         // and we can use the File SeekableByteChannel implementation
 		final SeekableByteChannel seekable = Files .newByteChannel(tempFile, options);
 		final List<Tag> tags = ((S3Path) path).getTagsList();
+		final String contentType = ((S3Path) path).getContentType();
 
 		return new SeekableByteChannel() {
 			@Override
@@ -474,10 +477,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
                         */
                         s3Path.getFileSystem()
                                 .getClient()
-                                .putObject(s3Path.getBucket(), s3Path.getKey(),
-                                        stream,
-                                        metadata,
-										tags);
+                                .putObject(s3Path.getBucket(), s3Path.getKey(), stream, metadata, tags, contentType);
                     }
                 }
                 else {
@@ -548,8 +548,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 		s3Path.getFileSystem()
 				.getClient()
-				.putObject(s3Path.getBucket(), keyName,
-						new ByteArrayInputStream(new byte[0]), metadata, tags);
+				.putObject(s3Path.getBucket(), keyName, new ByteArrayInputStream(new byte[0]), metadata, tags, null);
 	}
 
 	@Override
@@ -611,11 +610,23 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 		AmazonS3Client client = s3Source.getFileSystem() .getClient();
 
+		final ObjectMetadata sourceObjMetadata = s3Source.getFileSystem().getClient().getObjectMetadata(s3Source.getBucket(), s3Source.getKey());
+		final S3MultipartOptions opts = props != null ? new S3MultipartOptions(props) : new S3MultipartOptions();
+		final long maxSize = opts.getMaxCopySize();
+		final long length = sourceObjMetadata.getContentLength();
 		final List<Tag> tags = ((S3Path) target).getTagsList();
+		final String contentType = ((S3Path) target).getContentType();
+		final String storageClass = ((S3Path) target).getStorageClass();
 
-		CopyObjectRequest copyObjRequest = new CopyObjectRequest(s3Source.getBucket(), s3Source.getKey(),s3Target.getBucket(), s3Target.getKey());
-		log.trace("Copy file via copy object - source: source={}, target={}, tags={}", s3Source, s3Target,tags);
-		client.copyObject(copyObjRequest, tags);
+		if( length <= maxSize ) {
+			CopyObjectRequest copyObjRequest = new CopyObjectRequest(s3Source.getBucket(), s3Source.getKey(),s3Target.getBucket(), s3Target.getKey());
+			log.trace("Copy file via copy object - source: source={}, target={}, tags={}, storageClass={}", s3Source, s3Target, tags, storageClass);
+			client.copyObject(copyObjRequest, tags, contentType, storageClass);
+		}
+		else {
+			log.trace("Copy file via multipart upload - source: source={}, target={}, tags={}, storageClass={}", s3Source, s3Target, tags, storageClass);
+			client.multipartCopyObject(s3Source, s3Target, length, opts, tags, contentType, storageClass);
+		}
 	}
 
 
@@ -938,6 +949,8 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		client.setKmsKeyId(props.getProperty("storage_kms_key_id"));
 		client.setUploadChunkSize(props.getProperty("upload_chunk_size"));
 		client.setUploadMaxThreads(props.getProperty("upload_max_threads"));
+		client.setGlacierAutoRetrieval(props.getProperty("glacier_auto_retrieval"));
+		client.setGlacierExpirationDays(props.getProperty("glacier_expiration_days"));
 
 		if (uri.getHost() != null) {
 			client.setEndpoint(uri.getHost());

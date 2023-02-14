@@ -28,6 +28,7 @@ import nextflow.container.ContainerBuilder
 import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
 import nextflow.exception.ProcessException
+import nextflow.file.FileHelper
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -140,7 +141,7 @@ class BashWrapperBuilder {
     }
 
     protected boolean fixOwnership() {
-        systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (shifter is not affected)
+        systemOsName == 'Linux' && containerConfig?.fixOwnership && runWithContainer && containerConfig.engine == 'docker' // <-- note: only for docker (other container runtimes are not affected)
     }
 
     protected isMacOS() {
@@ -232,6 +233,7 @@ class BashWrapperBuilder {
         binding.module_load = getModuleLoadSnippet()
         binding.before_script = getBeforeScriptSnippet()
         binding.conda_activate = getCondaActivateSnippet()
+        binding.spack_activate = getSpackActivateSnippet()
 
         /*
          * add the task environment
@@ -379,6 +381,15 @@ class BashWrapperBuilder {
         def result = "# conda environment\n"
         result += 'source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')'
         result += "/bin/activate ${Escape.path(condaEnv)}\n"
+        return result
+    }
+
+    private String getSpackActivateSnippet() {
+        if( !spackEnv )
+            return null
+        def result = "# spack environment\n"
+        result += 'spack env activate -d '
+        result += "${Escape.path(spackEnv)}\n"
         return result
     }
 
@@ -562,7 +573,7 @@ class BashWrapperBuilder {
         // The current work directory should be mounted only when
         // the task is executed in a temporary scratch directory (ie changeDir != null)
         // See https://github.com/nextflow-io/nextflow/issues/1710
-        builder.addMountWorkDir( changeDir as boolean )
+        builder.addMountWorkDir( changeDir as boolean || FileHelper.getWorkDirIsSymlink() )
 
         builder.build()
         return builder

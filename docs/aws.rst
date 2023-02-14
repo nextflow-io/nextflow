@@ -152,6 +152,12 @@ AWS CLI
 Nextflow requires to access the `AWS command line tool <https://aws.amazon.com/cli/>`_ (``aws``) from the container in
 which the job runs in order to stage the required input files and to copy back the resulting output files in the S3 storage.
 
+.. tip::
+  When using :ref:`wave-page` and :ref:`fusion-page` there is no need to configure the AWS command line tool in
+  the task containers or the host Ec2 instances for the deployment of Nextflow pipeline with AWS Batch.
+  You can ignore this requirement when using the Fusion file system feature. See the :ref:`fusion-page` documentation
+  for further details.
+
 The ``aws`` tool can be made available in the container in two ways:
 
 1. installed in the Docker image(s) used during the pipeline execution,
@@ -299,6 +305,12 @@ AWS CLI installation
 .. warning:: The `AWS CLI tool <https://aws.amazon.com/cli>`_ must to be installed in your custom AMI
   by using a self-contained package manager such as `Conda <https://conda.io>`_.
 
+.. tip::
+  When using :ref:`wave-page` and :ref:`fusion-page` there is no need to configure the AWS command line tool in
+  the task containers or the host Ec2 instances for the deployment of Nextflow pipeline with AWS Batch.
+  You can ignore this requirement when using the Fusion file system feature. See the :ref:`fusion-page` documentation
+  for further details.
+
 The reason is that when the AWS CLI tool executes using Conda it will use the version of python supplied by Conda.
 If you don't use Conda and install the AWS CLI using something like `pip <https://pypi.org/project/pip/>`_ the ``aws``
 command will attempt to run using the version of python found in the running container which won't be able to find
@@ -335,8 +347,9 @@ Replace the path above with the one matching the location where ``aws`` tool is 
 .. note:: Using a version of Nextflow prior 19.07.x the config setting `executor.awscli` should be used
   instead of `aws.batch.cliPath`.
 
+
 Docker installation
----------------------------------------
+-------------------
 Docker is required by Nextflow to execute tasks on AWS Batch. `Amazon ECS-Optimized Amazon Linux 2 AMI` has Docker installed,
 however if you create your AMI starting from a different AMI that does not have Docker installed, you need to do it manually.
 
@@ -392,7 +405,7 @@ of a specific job e.g. to define custom mount paths or other Batch Job special s
 
 To do that first create a *Job Definition* in the AWS Console (or with other means). Note the name of the *Job Definition*
 you created. You can then associate a process execution with this *Job definition* by using the :ref:`process-container`
-directive and specifing, in place of the container image name, the Job definition name prefixed by the
+directive and specifying, in place of the container image name, the Job definition name prefixed by the
 ``job-definition://`` string, as shown below::
 
   process.container = 'job-definition://your-job-definition-name'
@@ -411,13 +424,13 @@ The pipeline execution must specifies a AWS Storage bucket where jobs intermedia
 
 .. warning::
   The bucket path should include at least a top level directory name e.g. use ``s3://my-bucket/work``
-  not just ``s3://my-bucket``. 
+  not just ``s3://my-bucket``.
 
 Hybrid workloads
 ----------------
 
 Nextflow allows the use of multiple executors in the same workflow application. This feature enables the deployment
-of hybrid workloads in which some jobs are execute in the local computer or local computing cluster and
+of hybrid workloads in which some jobs are executed in the local computer or local computing cluster and
 some jobs are offloaded to AWS Batch service.
 
 To enable this feature use one or more :ref:`config-process-selectors` in your Nextflow configuration file to apply

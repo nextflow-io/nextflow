@@ -49,6 +49,7 @@ import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
+import nextflow.util.ThreadPoolManager
 import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
@@ -62,6 +63,7 @@ import nextflow.script.ScriptFile
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
+import nextflow.spack.SpackConfig
 import nextflow.trace.AnsiLogObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
@@ -637,6 +639,8 @@ class Session implements ISession {
     void destroy() {
         try {
             log.trace "Session > destroying"
+            // shutdown publish dir executor
+            publishPoolManager.shutdown(aborted)
             // invoke shutdown callbacks
             shutdown0()
             log.trace "Session > after cleanup"
@@ -766,8 +770,7 @@ class Session implements ISession {
         }
     }
 
-    @PackageScope
-    void forceTermination() {
+    protected void forceTermination() {
         terminated = true
         processesBarrier.forceTermination()
         monitorsBarrier.forceTermination()
@@ -817,6 +820,10 @@ class Session implements ISession {
         else {
             log.debug "Config process names validation disabled as requested"
         }
+    }
+
+    boolean enableModuleBinaries() {
+        config.navigate('nextflow.enable.moduleBinaries', false) as boolean
     }
 
     @PackageScope VersionNumber getCurrentVersion() {
@@ -1048,11 +1055,11 @@ class Session implements ISession {
         observers.each { trace -> trace.onFlowCreate(this) }
     }
 
-    void notifyFilePublish(Path destination) {
+    void notifyFilePublish(Path destination, Path source) {
         def copy = new ArrayList<TraceObserver>(observers)
         for( TraceObserver observer : copy  ) {
             try {
-                observer.onFilePublish(destination)
+                observer.onFilePublish(destination, source)
             }
             catch( Exception e ) {
                 log.error "Failed to invoke observer on file publish: $observer", e
@@ -1147,29 +1154,52 @@ class Session implements ISession {
         return new CondaConfig(cfg, getSystemEnv())
     }
 
+    @Memoized
+    SpackConfig getSpackConfig() {
+        final cfg = config.spack as Map ?: Collections.emptyMap()
+        return new SpackConfig(cfg, getSystemEnv())
+    }
+
     /**
-     * @return A {@link ContainerConfig} object representing the container engine configuration defined in config object
+     * Get the container engine configuration for the specified engine. If no engine is specified
+     * if returns the one enabled in the configuration file. If no configuration is found
+     * defaults to {@code docker} engine.
+     *
+     * @param engine
+     *      The container engine name for which
+     * @return
+     *      A {@link ContainerConfig} object representing the container engine configuration defined in config object
      */
     @Memoized
-    ContainerConfig getContainerConfig() {
+    ContainerConfig getContainerConfig(String engine) {
 
-        def engines = new LinkedList<Map>()
-        getContainerConfig0('docker', engines)
-        getContainerConfig0('podman', engines)
-        getContainerConfig0('shifter', engines)
-        getContainerConfig0('udocker', engines)
-        getContainerConfig0('singularity', engines)
-        getContainerConfig0('charliecloud', engines)
+        final allEngines = new LinkedList<Map>()
+        getContainerConfig0('docker', allEngines)
+        getContainerConfig0('podman', allEngines)
+        getContainerConfig0('sarus', allEngines)
+        getContainerConfig0('shifter', allEngines)
+        getContainerConfig0('udocker', allEngines)
+        getContainerConfig0('singularity', allEngines)
+        getContainerConfig0('apptainer', allEngines)
+        getContainerConfig0('charliecloud', allEngines)
 
-        def enabled = engines.findAll { it.enabled?.toString() == 'true' }
+        if( engine ) {
+            final result = allEngines.find(it -> it.engine==engine) ?: [engine: engine]
+            return new ContainerConfig(result)
+        }
+
+        final enabled = allEngines.findAll { it.enabled?.toString() == 'true' }
         if( enabled.size() > 1 ) {
             def names = enabled.collect { it.engine }
             throw new IllegalConfigException("Cannot enable more than one container engine -- Choose either one of: ${names.join(', ')}")
         }
 
-        (enabled ? enabled.get(0) : ( engines ? engines.get(0) : [engine:'docker'] )) as ContainerConfig
+        (enabled ? enabled.get(0) : ( allEngines ? allEngines.get(0) : [engine:'docker'] )) as ContainerConfig
     }
 
+    ContainerConfig getContainerConfig() {
+        return getContainerConfig(null)
+    }
 
     private void getContainerConfig0(String engine, List<Map> drivers) {
         def config = this.config?.get(engine)
@@ -1351,6 +1381,15 @@ class Session implements ISession {
 
     void printConsole(Path file) {
         ansiLogObserver ? ansiLogObserver.appendInfo(file.text) : Files.copy(file, System.out)
+    }
+
+    private ThreadPoolManager publishPoolManager = new ThreadPoolManager('PublishDir')
+
+    @Memoized
+    synchronized ExecutorService publishDirExecutorService() {
+        return publishPoolManager
+                .withConfig(config)
+                .create()
     }
 
 }

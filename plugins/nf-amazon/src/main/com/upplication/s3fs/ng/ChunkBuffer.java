@@ -26,6 +26,7 @@ import java.nio.ByteBuffer;
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Deprecated
 public class ChunkBuffer implements Comparable<ChunkBuffer> {
 
     private static final int BUFFER_SIZE = 8192;

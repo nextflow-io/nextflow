@@ -26,6 +26,7 @@ import nextflow.container.ContainerConfig
 import nextflow.exception.AbortOperationException
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
+import nextflow.trace.TraceHelper
 import nextflow.trace.WorkflowStatsObserver
 import nextflow.trace.TraceFileObserver
 import nextflow.util.Duration
@@ -238,7 +239,8 @@ class SessionTest extends Specification {
     }
 
     def 'test create observers'() {
-
+        given:
+        TraceHelper.testTimestampFmt = '20221001'
         def session
         def result
         def observer
@@ -285,10 +287,9 @@ class SessionTest extends Specification {
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == Paths.get('trace.txt').complete()
+        observer.tracePath == Paths.get('trace-20221001.txt').complete()
         observer.separator == '\t'
         observer.fields == ['task_id','name','exit','vmem']
-
 
     }
 
@@ -354,31 +355,62 @@ class SessionTest extends Specification {
     @Unroll
     def 'should return engine type' () {
         given:
-        def session =  new Session([(engine): config])
+        def session =  new Session([(ENGINE): CONFIG])
 
         expect:
-        session.containerConfig == config as ContainerConfig
+        session.containerConfig == CONFIG as ContainerConfig
         session.containerConfig.enabled
-        session.containerConfig.engine == engine
+        session.containerConfig.engine == ENGINE
 
         where:
-        engine         | config
+        ENGINE         | CONFIG
         'docker'       | [enabled: true, x:'alpha', y: 'beta']
         'docker'       | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
         'podman'       | [enabled: true, x:'alpha', y: 'beta']
         'podman'       | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
         'udocker'      | [enabled: true, x:'alpha', y: 'beta']
+        'sarus'        | [enabled: true, x:'delta', y: 'gamma']
         'shifter'      | [enabled: true, x:'delta', y: 'gamma']
         'singularity'  | [enabled: true, x:'delta', y: 'gamma']
         'charliecloud' | [enabled: true, x:'delta', y: 'gamma']
     }
 
+    def 'should get config for specific engine' () {
+        given:
+        def config = [docker:[registry:'docker.io'], podman: [registry:'quay.io']]
+        def session = new Session(config)
+
+        expect:
+        session.getContainerConfig(null) == new ContainerConfig(engine:'docker', registry:'docker.io')
+        and:
+        session.getContainerConfig('docker') == new ContainerConfig(engine:'docker', registry:'docker.io')
+        and:
+        session.getContainerConfig('podman') == new ContainerConfig(engine:'podman', registry:'quay.io')
+        and:
+        session.getContainerConfig('sarus') == new ContainerConfig(engine:'sarus')
+    }
+
     @Unroll
-    def 'should get config config' () {
+    def 'should get config for conda environments' () {
         given:
         def session =  Spy(new Session([conda: CONFIG]))
         expect:
         session.condaConfig.isEnabled() == EXPECTED
+        
+        where:
+        EXPECTED    | CONFIG            | ENV
+        false       | [:]               | [:]
+        false       | [enabled: false]  | [:]
+        true        | [enabled: true]   | [:]
+
+    }
+
+    @Unroll
+    def 'should get config for spack environments' () {
+        given:
+        def session =  Spy(new Session([spack: CONFIG]))
+        expect:
+        session.spackConfig.isEnabled() == EXPECTED
         
         where:
         EXPECTED    | CONFIG            | ENV
@@ -568,5 +600,18 @@ class SessionTest extends Specification {
         0 * session.showVersionWarning(_)
         0 * session.showVersionError(_)
 
+    }
+
+    def 'should get module binaries status'() {
+        given:
+        def session = new Session(CONFIG)
+
+        expect:
+        session.enableModuleBinaries() == EXPECTED
+        
+        where:
+        CONFIG                                      | EXPECTED
+        [:]                                         | false
+        [nextflow:[enable:[moduleBinaries: true]]]  | true
     }
 }

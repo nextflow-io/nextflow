@@ -33,18 +33,19 @@ import nextflow.util.CacheHelper
 @CompileStatic
 class WaveAssets {
     final String containerImage
+    final String containerPlatform
     final ResourcesBundle moduleResources
     final ContainerConfig containerConfig
     final String dockerFileContent
     final Path condaFile
     final ResourcesBundle projectResources
 
-    static fromImage(String containerImage) {
-        new WaveAssets(containerImage)
+    static fromImage(String containerImage,String containerPlatform=null) {
+        new WaveAssets(containerImage, containerPlatform)
     }
 
-    static fromDockerfile(String dockerfile) {
-        new WaveAssets(null, null, null, dockerfile)
+    static fromDockerfile(String dockerfile, String containerPlatform=null) {
+        new WaveAssets(null, containerPlatform, null, null, dockerfile)
     }
 
     String dockerFileEncoded() {
@@ -60,14 +61,15 @@ class WaveAssets {
     }
 
     @Memoized
-    String hashKey() {
+    String fingerprint() {
         final allMeta = new ArrayList(10)
         allMeta.add( this.containerImage )
         allMeta.add( this.moduleResources?.fingerprint() )
-        allMeta.add( this.containerConfig?.hashCode() )
+        allMeta.add( this.containerConfig?.fingerprint() )
         allMeta.add( this.dockerFileContent )
         allMeta.add( this.condaFile )
         allMeta.add( this.projectResources?.fingerprint() )
+        allMeta.add( this.containerPlatform )
         return CacheHelper.hasher(allMeta).hash().toString()
     }
 }

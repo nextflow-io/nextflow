@@ -30,9 +30,15 @@ public class S3MultipartOptions {
 
     private static final Logger log = LoggerFactory.getLogger(S3MultipartOptions.class);
 
-    public static final int DEFAULT_CHUNK_SIZE = 100 << 20;  // 100 MB
+    public static final int DEFAULT_CHUNK_SIZE = 100 << 20;  // 100 MiB
 
     public static final int DEFAULT_BUFFER_SIZE = 10485760;
+
+    /*
+     * S3 Max copy size
+     * https://docs.aws.amazon.com/AmazonS3/latest/API/API_CopyObject.html
+     */
+    public static final long DEFAULT_MAX_COPY_SIZE = 5_000_000_000L;
 
     /**
      * Upload chunk max size
@@ -50,6 +56,11 @@ public class S3MultipartOptions {
     private int bufferSize;
 
     /**
+     * Copy object max size
+     */
+    private long maxCopySize;
+
+    /**
      * Maximum number of attempts to upload a chunk in a multiparts upload process
      */
     private int maxAttempts;
@@ -60,7 +71,7 @@ public class S3MultipartOptions {
     private long retrySleep;
 
 
-    /**
+    /*
      * initialize default values
      */
     {
@@ -69,6 +80,7 @@ public class S3MultipartOptions {
         maxAttempts = 5;
         maxThreads = Runtime.getRuntime().availableProcessors() *3;
         bufferSize = DEFAULT_BUFFER_SIZE;
+        maxCopySize = DEFAULT_MAX_COPY_SIZE;
     }
 
     public S3MultipartOptions() {
@@ -81,19 +93,10 @@ public class S3MultipartOptions {
         setMaxAttempts(props.getProperty("upload_max_attempts"));
         setRetrySleep(props.getProperty("upload_retry_sleep"));
         setBufferSize(props.getProperty("upload_buffer_size"));
+        setMaxCopySize(props.getProperty("max_copy_size"));
     }
 
     public int getChunkSize() {
-        return chunkSize;
-    }
-
-    public int getChunkSize( long objectSize ) {
-        final int MAX_PARTS = 10_000;
-        long numOfParts = objectSize / chunkSize;
-        if( numOfParts > MAX_PARTS ) {
-            chunkSize = (int) objectSize / MAX_PARTS;
-        }
-
         return chunkSize;
     }
 
@@ -110,6 +113,8 @@ public class S3MultipartOptions {
     }
 
     public int getBufferSize() { return bufferSize; }
+
+    public long getMaxCopySize() { return maxCopySize; }
 
     public S3MultipartOptions setChunkSize(int chunkSize) {
         this.chunkSize = chunkSize;
@@ -143,6 +148,19 @@ public class S3MultipartOptions {
         }
         catch( NumberFormatException e ) {
             log.warn("Not a valid AWS S3 multipart upload buffer size: `{}` -- Using default", bufferSize);
+        }
+        return this;
+    }
+
+    public S3MultipartOptions setMaxCopySize(String value) {
+        if( value==null )
+            return this;
+
+        try {
+            maxCopySize = Long.parseLong(value);
+        }
+        catch( NumberFormatException e ) {
+            log.warn("Not a valid AWS S3 copy max size: `{}` -- Using default", maxCopySize);
         }
         return this;
     }

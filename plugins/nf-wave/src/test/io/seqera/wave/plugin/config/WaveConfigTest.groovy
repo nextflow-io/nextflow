@@ -32,7 +32,7 @@ class WaveConfigTest extends Specification {
         def opts = new WaveConfig([:])
         then:
         !opts.enabled()
-        opts.endpoint() == 'http://localhost:9090'
+        opts.endpoint() == 'https://wave.seqera.io'
     }
 
     def 'should create from env' () {
@@ -54,6 +54,15 @@ class WaveConfigTest extends Specification {
         then:
         opts.enabled()
         opts.endpoint() == 'http://localhost'
+    }
+
+    def 'should config containerPlatform' () {
+        when:
+        // config options have priority over sys env
+        def opts = new WaveConfig([enabled:true, containerPlatform: 'linux/arm64'], [:])
+        then:
+        opts.enabled()
+        opts.containerPlatform() == 'linux/arm64'
     }
 
     def 'should remove ending slash' () {
@@ -86,13 +95,13 @@ class WaveConfigTest extends Specification {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.condaOpts().baseImage == 'mambaorg/micromamba:0.25.1'
+        opts.condaOpts().mambaImage == 'mambaorg/micromamba:1.2.0'
         opts.condaOpts().commands == null
 
         when:
-        opts = new WaveConfig([build:[conda:[baseImage:'mambaorg/foo:1', commands:['USER hola']]]])
+        opts = new WaveConfig([build:[conda:[mambaImage:'mambaorg/foo:1', commands:['USER hola']]]])
         then:
-        opts.condaOpts().baseImage == 'mambaorg/foo:1'
+        opts.condaOpts().mambaImage == 'mambaorg/foo:1'
         opts.condaOpts().commands == ['USER hola']
         
     }
@@ -105,17 +114,18 @@ class WaveConfigTest extends Specification {
         opts.cacheRepository() == null
 
         when:
-        opts = new WaveConfig([build:[repo:'some/repo',cache:'some/cache']])
+        opts = new WaveConfig([build:[repository:'some/repo', cacheRepository:'some/cache']])
         then:
         opts.buildRepository() == 'some/repo'
         opts.cacheRepository() == 'some/cache'
     }
 
+    @Unroll
     def 'should set strategy' () {
         when:
         def opts = new WaveConfig([:])
         then:
-        opts.strategy() == []
+        opts.strategy() == ['container','dockerfile','conda']
 
         when:
         opts = new WaveConfig([strategy:STRATEGY])
@@ -124,7 +134,7 @@ class WaveConfigTest extends Specification {
 
         where:
         STRATEGY                | EXPECTED
-        null                    | []
+        null                    | ['container','dockerfile','conda']
         'dockerfile'            | ['dockerfile']
         'conda,container'       | ['conda','container']
         'conda , container'     | ['conda','container']

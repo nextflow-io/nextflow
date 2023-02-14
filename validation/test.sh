@@ -11,7 +11,7 @@ export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 export NXF_ANSI_LOG=false
 
 #
-# Integration test
+# Integration tests
 #
 if [[ $TEST_MODE == 'test_integration' ]]; then
 
@@ -35,17 +35,6 @@ if [[ $TEST_MODE == 'test_integration' ]]; then
       cd hello;
       $NXF_CMD run .
       $NXF_CMD run . -resume
-    )
-
-    #
-    # AMPA-NF
-    #
-    git clone https://github.com/cbcrg/ampa-nf
-    docker pull cbcrg/ampa-nf
-    (
-      cd ampa-nf;
-      $NXF_CMD run . -with-docker
-      $NXF_CMD run . -with-docker -resume
     )
 
     #
@@ -100,4 +89,9 @@ if [[ $TEST_MODE == 'test_google' ]]; then
     else
       echo "Missing GOOGLE_SECRET variable -- Skipping Google LS tests"
     fi
+fi
+
+if [[ $TEST_MODE == 'test_wave' ]]; then
+      echo "Wave tests"
+      bash wave.sh
 fi

@@ -296,7 +296,7 @@ class DAGTest extends Specification {
         pInList.add( ip1 )
 
         def pOutList = new OutputsList()
-        def op1 = Mock(OutParam) { getOutChannels() >> [chE] }
+        def op1 = Mock(OutParam) { getOutChannel() >> chE }
         pOutList.add( op1 )
 
         when:

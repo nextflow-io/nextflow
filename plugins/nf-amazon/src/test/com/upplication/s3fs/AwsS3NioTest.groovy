@@ -15,23 +15,28 @@ import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 
 import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.s3.model.AmazonS3Exception
 import com.amazonaws.services.s3.model.Tag
 import groovy.util.logging.Slf4j
+import nextflow.Global
+import nextflow.Session
+import nextflow.exception.AbortOperationException
 import nextflow.file.CopyMoveHelper
 import nextflow.file.FileHelper
+import nextflow.trace.TraceHelper
 import spock.lang.Ignore
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Timeout
-
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@Timeout(30)
+@Timeout(60)
 @IgnoreIf({System.getenv('NXF_SMOKE')})
 @Requires({System.getenv('AWS_S3FS_ACCESS_KEY') && System.getenv('AWS_S3FS_SECRET_KEY')})
 class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
@@ -46,6 +51,10 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def secretKey = System.getenv('AWS_S3FS_SECRET_KEY')
         def fs = (S3FileSystem)FileSystems.newFileSystem(URI.create("s3:///"), [access_key: accessKey, secret_key: secretKey])
         s3Client0 = fs.client.getClient()
+    }
+
+    def setup() {
+        Global.session = Mock(Session) { getConfig() >> [:] }
     }
 
     def 'should create a blob' () {
@@ -1196,4 +1205,240 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         cleanup:
         deleteBucket(bucketName)
     }
+
+    @Unroll
+    def 'should upload, copy and download a file' () {
+        given:
+        def TEXT = randomText(FILE_SIZE)
+        def folder = Files.createTempDirectory('test')
+        def file = Files.write(folder.resolve('foo.data'), TEXT.bytes)
+        and:
+        def bucket1 = createBucket()
+        def bucket2 = createBucket()
+
+        // upload a file to a remote bucket
+        when:
+        def target1 = s3path("s3://$bucket1/foo.data")
+        FileHelper.copyPath(file, target1)
+        // the file exist
+        then:
+        Files.exists(target1)
+        Files.size(target1) == Files.size(file)
+
+        // copy a file across buckets
+        when:
+        def target2 = s3path("s3://$bucket2/foo.data")
+        FileHelper.copyPath(target1, target2)
+        // the file exist
+        then:
+        Files.exists(target2)
+        Files.size(target2) == Files.size(target1)
+
+        // download a file locally
+        when:
+        def result = folder.resolve('result.data')
+        FileHelper.copyPath(target2, result)
+        then:
+        Files.exists(result)
+        and:
+        Files.size(target2) == Files.size(result)
+
+        cleanup:
+        deleteBucket(bucket1)
+        deleteBucket(bucket2)
+        folder?.deleteDir()
+
+        // check the limits in the file `amazon.properties`
+        // in the test resources
+        where:
+        _ | FILE_SIZE
+        _ | 50 * 1024
+        _ | 11 * 1024 * 1024
+    }
+
+    @Unroll
+    def 'should set file media type' () {
+        given:
+        def TEXT = randomText(FILE_SIZE)
+        def folder = Files.createTempDirectory('test')
+        def file = Files.write(folder.resolve('foo.data'), TEXT.bytes)
+        and:
+        def bucket1 = createBucket()
+        def bucket2 = createBucket()
+
+        // upload a file to a remote bucket
+        when:
+        def target1 = s3path("s3://$bucket1/foo.data")
+        and:
+        target1.setContentType('text/foo')
+        def client = target1.getFileSystem().getClient()
+        and:
+        FileHelper.copyPath(file, target1)
+        // the file exist
+        then:
+        Files.exists(target1)
+        and:
+        client
+                .getObjectMetadata(target1.getBucket(), target1.getKey())
+                .getContentType() == 'text/foo'
+
+        // copy a file across buckets
+        when:
+        def target2 = s3path("s3://$bucket2/foo.data")
+        and:
+        target2.setContentType('text/bar')
+        and:
+        FileHelper.copyPath(target1, target2)
+        // the file exist
+        then:
+        Files.exists(target2)
+        client
+                .getObjectMetadata(target2.getBucket(), target2.getKey())
+                .getContentType() == 'text/bar'
+
+        cleanup:
+        deleteBucket(bucket1)
+        deleteBucket(bucket2)
+        folder?.deleteDir()
+
+        // check the limits in the file `amazon.properties`
+        // in the test resources
+        where:
+        _ | FILE_SIZE
+        _ | 50 * 1024
+        _ | 11 * 1024 * 1024
+    }
+
+    @Unroll
+    def 'should set file storage class' () {
+        given:
+        def TEXT = randomText(FILE_SIZE)
+        def folder = Files.createTempDirectory('test')
+        def file = Files.write(folder.resolve('foo.data'), TEXT.bytes)
+        and:
+        def bucket1 = createBucket()
+        def bucket2 = createBucket()
+
+        // upload a file to a remote bucket
+        when:
+        def target1 = s3path("s3://$bucket1/foo.data")
+        and:
+        target1.setStorageClass('REDUCED_REDUNDANCY')
+        def client = target1.getFileSystem().getClient()
+        and:
+        FileHelper.copyPath(file, target1)
+        // the file exist
+        then:
+        Files.exists(target1)
+        and:
+        client
+                .getObjectMetadata(target1.getBucket(), target1.getKey())
+                .getStorageClass() == 'REDUCED_REDUNDANCY'
+
+        // copy a file across buckets
+        when:
+        def target2 = s3path("s3://$bucket2/foo.data")
+        and:
+        target2.setStorageClass('STANDARD_IA')
+        and:
+        FileHelper.copyPath(target1, target2)
+        // the file exist
+        then:
+        Files.exists(target2)
+        client
+                .getObjectMetadata(target2.getBucket(), target2.getKey())
+                .getStorageClass() == 'STANDARD_IA'
+
+        cleanup:
+        deleteBucket(bucket1)
+        deleteBucket(bucket2)
+        folder?.deleteDir()
+
+        // check the limits in the file `amazon.properties`
+        // in the test resources
+        where:
+        _ | FILE_SIZE
+        _ | 50 * 1024
+        _ | 11 * 1024 * 1024
+    }
+
+    def 'should overwrite a file' () {
+        given:
+        def bucket1 = createBucket()
+        def path = s3path("s3://$bucket1/foo/bar.txt")
+        and:
+        path.text = 'foo'
+
+        when:
+        def file = TraceHelper.newFileWriter(path, true, 'Test')
+        file.write('Hola')
+        file.close()
+        then:
+        path.text == 'Hola'
+
+        cleanup:
+        deleteBucket(bucket1)
+    }
+
+    def 'should not overwrite a file' () {
+        given:
+        def bucket1 = createBucket()
+        def path = s3path("s3://$bucket1/foo/bar.txt")
+        and:
+        path.text = 'foo'
+
+        when:
+        TraceHelper.newFileWriter(path, false, 'Test')
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == "Test file already exists: ${path.toUriString()} -- enable the 'test.overwrite' option in your config file to overwrite existing files"
+
+        cleanup:
+        deleteBucket(bucket1)
+    }
+
+    @Ignore // takes too long to test via CI server
+    def 'should restore from glacier' () {
+        given:
+        def TEXT = randomText(10_000)
+        def folder = Files.createTempDirectory('test')
+        def sourceFile = Files.write(folder.resolve('foo.data'), TEXT.bytes)
+        def downloadFile = folder.resolve('copy.data')
+        and:
+        def bucket1 = createBucket()
+
+        // upload a file to a remote bucket
+        when:
+        def target = s3path("s3://$bucket1/foo.data")
+        and:
+        target.setStorageClass('GLACIER')
+        def client = target.getFileSystem().getClient()
+        and:
+        FileHelper.copyPath(sourceFile, target)
+        // the file exist
+        then:
+        Files.exists(target)
+        and:
+        client
+                .getObjectMetadata(target.getBucket(), target.getKey())
+                .getStorageClass() == 'GLACIER'
+
+        when:
+        FileHelper.copyPath(target, downloadFile)
+        then:
+        thrown(AmazonS3Exception)
+
+        when:
+        client.setGlacierAutoRetrieval(true)
+        and:
+        FileHelper.copyPath(target, downloadFile)
+        then:
+        Files.exists(downloadFile)
+
+        cleanup:
+        client?.setGlacierAutoRetrieval(false)
+        folder?.delete()
+        deleteBucket(bucket1)
+    }
+
 }
