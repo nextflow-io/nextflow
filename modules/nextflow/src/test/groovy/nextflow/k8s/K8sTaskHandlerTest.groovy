@@ -1030,6 +1030,7 @@ class K8sTaskHandlerTest extends Specification {
         then:
         launcher.fusionEnv() >> [FUSION_BUCKETS: 'this,that']
         launcher.toContainerMount(WORK_DIR.resolve('.command.run')) >> Path.of('/fusion/http/work/dir/.command.run')
+        launcher.fusionSubmitCli(task) >> ['/usr/bin/fusion', 'bash', '.command.run']
         and:
         handler.getTask() >> task
         handler.fusionEnabled() >> true
@@ -1061,7 +1062,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-123',
                                      image:'debian:latest',
-                                     args:['/usr/bin/fusion', 'bash', '/fusion/http/work/dir/.command.run'],
+                                     args:['/usr/bin/fusion', 'bash', '.command.run'],
                                      securityContext:[privileged:true],
                                      env:[[name:'FUSION_BUCKETS', value:'this,that']]]
                             ]

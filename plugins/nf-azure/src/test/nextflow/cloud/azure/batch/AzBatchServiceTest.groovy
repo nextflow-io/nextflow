@@ -4,6 +4,8 @@ import java.util.function.Predicate
 
 import com.google.common.hash.HashCode
 import com.microsoft.azure.batch.protocol.models.CloudPool
+import nextflow.Global
+import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.processor.TaskConfig
@@ -459,6 +461,8 @@ class AzBatchServiceTest extends Specification {
 
     def 'should create task for submit' () {
         given:
+        Global.session = Mock(Session) { getConfig()>>[:] }
+        and:
         def POOL_ID = 'my-pool'
         def SAS = '123'
         def CONFIG = [storage: [sasToken: SAS]]

@@ -57,9 +57,7 @@ trait FusionAwareTask {
     }
 
     List<String> fusionSubmitCli() {
-        final fusion = fusionLauncher()
-        final runFile = fusion.toContainerMount(task.workDir.resolve(TaskRun.CMD_RUN))
-        return ['/usr/bin/fusion', 'bash', runFile.toString() ]
+        return fusionLauncher().fusionSubmitCli(task)
     }
 
 }

@@ -16,9 +16,6 @@
 
 package nextflow.cloud.azure.batch
 
-import com.microsoft.azure.batch.auth.BatchApplicationTokenCredentials
-import com.microsoft.azure.batch.auth.BatchCredentials
-
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
@@ -26,6 +23,8 @@ import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
 import com.microsoft.azure.batch.BatchClient
+import com.microsoft.azure.batch.auth.BatchApplicationTokenCredentials
+import com.microsoft.azure.batch.auth.BatchCredentials
 import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials
 import com.microsoft.azure.batch.protocol.models.AutoUserScope
 import com.microsoft.azure.batch.protocol.models.AutoUserSpecification
@@ -65,6 +64,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Global
+import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzFileShareOpts
 import nextflow.cloud.azure.config.AzPoolOpts
@@ -395,8 +395,7 @@ class AzBatchService implements Closeable {
         if( task.config.getContainerOptions() )
             opts += "${task.config.getContainerOptions()} "
         // fusion environment settings
-        final executor = task.getProcessor().getExecutor()
-        final fusionEnabled = executor.isFusionEnabled()
+        final fusionEnabled = FusionHelper.isFusionEnabled((Session)Global.session)
         final launcher = fusionEnabled ? FusionScriptLauncher.create(task.toTaskBean(), 'az') : null
         if( fusionEnabled ) {
             opts += "--privileged "
@@ -409,8 +408,8 @@ class AzBatchService implements Closeable {
                 .withImageName(container)
                 .withContainerRunOptions(opts)
         // submit command line
-        final cmd = fusionEnabled
-                ? launcher.cli
+        final String cmd = fusionEnabled
+                ? launcher.fusionSubmitCli(task).join(' ')
                 : "sh -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'"
 
         final slots = computeSlots(task, pool)
