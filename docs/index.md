@@ -18,6 +18,7 @@ dsl2
 cli
 container
 conda
+spack
 wave
 fusion
 aws

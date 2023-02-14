@@ -732,7 +732,7 @@ The `kuberun` command builds upon the `run` command and offers a deep integratio
 | -remoteConfig            |               | Add the specified file from the K8s cluster to configuration set.                                        |
 | -remoteProfile           |               | Choose a configuration profile in the remoteConfig.                                                      |
 | -resume                  |               | Execute the script using the cached results, useful to continue executions that was stopped by an error. |
-| -r, -revision            |               | Revision of the project to run (either a git branch, tag or commit SHA number)                           |
+| -r, -revision            |               | Revision of the project to run (either a git branch, tag or commit SHA number). When passing a git tag or branch, the `workflow.revision` and the associated `workflow.commitId` is populated. When passing only the commit ID, no `workflow.revision` is returned. |
 | -stub, -stub-run         |               | Execute the workflow replacing process scripts with command stubs.                                       |
 | -test                    |               | Test a script function with the name specified.                                                          |
 | -user                    |               | Private repository user name.                                                                            |
@@ -745,6 +745,7 @@ The `kuberun` command builds upon the `run` command and offers a deep integratio
 | -with-podman             |               | Enable process execution in a Podman container.                                                          |
 | -with-report             | report.html   | Create processes execution html report.                                                                  |
 | -with-singularity        |               | Enable process execution in a Singularity container.                                                     |
+| -with-spack              |               | Use the specified Spack environment package or file (must end with `.yaml`)                              |
 | -with-timeline           | timeline.html | Create processes execution timeline file.                                                                |
 | -with-tower              |               | Monitor workflow execution with Tower.                                                                   |
 | -with-trace              | trace.txt     | Create processes execution tracing file.                                                                 |
@@ -753,6 +754,7 @@ The `kuberun` command builds upon the `run` command and offers a deep integratio
 | -without-conda           | false         | Disable process execution with Conda.                                                                    |
 | -without-docker          | false         | Disable process execution with Docker.                                                                   |
 | -without-podman          |               | Disable process execution in a Podman container.                                                         |
+| -without-spack           | false         | Disable process execution with Spack.                                                                    |
 | -without-wave            |               | Disable the use of Wave containers.                                                                      |
 | -w, -work-dir            | work          | Directory where intermediate result files are stored.                                                    |
 
@@ -928,7 +930,7 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 | -all                     | false   | Update all downloaded projects.                                           |
 | -help, -h                | false   | Print the command usage.                                                  |
 | -hub                     | github  | Service hub where the project is hosted. Options: `gitlab` or `bitbucket` |
-| -r                       |         | Revision to run (either a git `branch`, `tag` or commit `SHA` number).    |
+| -r, -revision            |         | Revision of the project to run (either a git branch, tag or commit SHA number). When passing a git tag or branch, the `workflow.revision` and the associated `workflow.commitId` is populated. When passing only the commit ID, no `workflow.revision` is returned. |
 | -user                    |         | Private repository user name                                              |
 
 **Examples**
@@ -1004,7 +1006,7 @@ The `run` command is used to initiate the execution of the a pipeline script or 
 | -profile                 |               | Choose a configuration profile.                                                                                           |
 | -qs, -queue-size         |               | Max number of processes that can be executed in parallel by each executor.                                                |
 | -resume                  |               | Execute the script using the cached results, useful to continue executions that was stopped by an error.                  |
-| -r, -revision            |               | Revision of the project to run (either a git `branch`, `tag` or commit `SHA` number).                                     |
+| -r, -revision            |               | Revision of the project to run (either a git branch, tag or commit SHA number). When passing a git tag or branch, the `workflow.revision` and the associated `workflow.commitId` is populated. When passing only the commit ID, no `workflow.revision` is returned. |
 | -stub-run, -stub         | false         | Execute the workflow replacing process scripts with command stubs                                                         |
 | -test                    |               | Test a script function with the name specified.                                                                           |
 | -user                    |               | Private repository user name.                                                                                             |
@@ -1016,19 +1018,21 @@ The `run` command is used to initiate the execution of the a pipeline script or 
 | -with-podman             |               | Enable process execution in a Podman container.                                                                           |
 | -with-report             | report.html   | Create processes execution html report.                                                                                   |
 | -with-singularity        |               | Enable process execution in a Singularity container.                                                                      |
+| -with-spack              |               | Use the specified Spack environment package or file (must end with `.yaml`)                                               |
 | -with-timeline           | timeline.html | Create processes execution timeline file.                                                                                 |
 | -with-tower              |               | Monitor workflow execution with Seqera Tower service.                                                                     |
 | -with-trace              | trace.txt     | Create processes execution tracing file.                                                                                  |
 | -with-weblog             |               | Send workflow status messages via HTTP to target URL.                                                                     |
 | -without-docker          | false         | Disable process execution with Docker.                                                                                    |
 | -without-podman          |               | Disable process execution in a Podman container.                                                                          |
+| -without-spack           | false         | Disable process execution with Spack.                                                                                     |
 | -w, -work-dir            | work          | Directory where intermediate result files are stored.                                                                     |
 
 **Examples**
 
 - Run a specific revision of a downloaded pipeline.
 
-  ```
+  ```console
   $ nextflow run nextflow-io/hello -r v1.1
 
   N E X T F L O W  ~  version 20.07.1
@@ -1037,45 +1041,69 @@ The `run` command is used to initiate the execution of the a pipeline script or 
 
 - Choose a `profile` for running the project. Assumes that a profile named `docker` has already been defined in the config file.
 
-  ```
+  ```console
   $ nextflow run main.nf -profile docker
   ```
 
-- Invoke the pipeline execution and generate the summary HTML report. For more information on the metrics, please refer the {ref}`perfanalysis-page` section:
+- Invoke the pipeline execution and generate the summary HTML report. For more information on the metrics, please refer the {ref}`tracing-page` section:
 
-  ```
+  ```console
   $ nextflow run main.nf -with-report
   ```
 
 - Invoke the nextflow pipeline execution with a custom queue size. By default, the value of **queue-size** is the same as the number of available CPUs.
 
-  ```
+  ```console
   $ nextflow run nextflow-io/hello -qs 4
   ```
 
 - Execute the pipeline with DSL-2 syntax.
 
-  ```
+  ```console
   $ nextflow run nextflow-io/hello -dsl2
   ```
 
 - Invoke the pipeline with a specific workflow as the entry-point, this option is meant to be used with DSL-2. For more information on DSL-2, please refer to {ref}`dsl2-page`
 
-  ```
+  ```console
   $ nextflow run main.nf -entry workflow_A
   ```
 
 - Invoke the nextflow pipeline execution with the integrated monitoring dashboard Tower. For more information, please refer to the [tower.nf](https://tower.nf) website.
 
-  ```
+  ```console
   $ nextflow run nextflow-io/hello -with-tower
   ```
 
-- Invoke the nextflow pipeline execution with a custom parameters `YAML/JSON` file. The parameters which are specified through this mechanism are merged with the resolved configuration (base configuration and profiles) and only the common fields are overwritten by the `YAML/JSON` file.:
+- Invoke the nextflow pipeline execution with a custom parameters ``YAML/JSON`` file.
 
-  ```
+  ```console
   $ nextflow run main.nf -params-file pipeline_params.yml
   ```
+
+  For example, the following params file in YAML format:
+
+  ```yaml
+  alpha: 1
+  beta: 'foo'
+  ```
+
+  Or in JSON format:
+
+  ```json
+  {
+    "alpha": 1,
+    "beta": "foo"
+  }
+  ```
+
+  Is equivalent to the following command line:
+
+  ```console
+  $ nextflow run main.nf --alpha 1 --beta foo
+  ```
+
+  The parameters which are specified through this mechanism are merged with the resolved configuration (base configuration and profiles). The values provided via params file overwrites the ones with the same name in the Nextflow configuration file.
 
 ### self-update
 

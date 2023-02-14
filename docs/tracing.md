@@ -1,4 +1,4 @@
-(perfanalysis-page)=
+(tracing-page)=
 
 # Tracing & visualisation
 
@@ -126,6 +126,8 @@ Plots are shown for CPU, memory, job duration and disk I/O. They have two (or th
 ```
 
 Learn more about how resource usage is computed in the {ref}`Metrics documentation <metrics-page>`.
+
+(execution-report-tasks)=
 
 ### Tasks
 

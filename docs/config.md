@@ -4,7 +4,7 @@
 
 ## Configuration file
 
-When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file can contain conflicting settings, the sources are ranked to decide which settings to are applied. All possible configuration sources are reported below, listed in order of priority:
+When a pipeline script is launched, Nextflow looks for configuration files in multiple locations. Since each configuration file can contain conflicting settings, the sources are ranked to determine which settings are applied. Possible configuration sources, in order of priority:
 
 1. Parameters specified on the command line (`--something value`)
 2. Parameters provided using the `-params-file` option
@@ -14,10 +14,10 @@ When a pipeline script is launched, Nextflow looks for configuration files in mu
 6. The config file `$HOME/.nextflow/config`
 7. Values defined within the pipeline script itself (e.g. `main.nf`)
 
-When more than one of these ways of specifying configurations are used, they are merged, so that the settings in the first override the same ones that may appear in the second one, and so on.
+When more than one of these options for specifying configurations are used, they are merged, so that the settings in the first override the same settings appearing in the second, and so on.
 
 :::{tip}
-If you want to ignore any default configuration files and use only the custom one, use `-C <config file>`.
+If you want to ignore any default configuration files and use only a custom one, use `-C <config file>`.
 :::
 
 ### Config syntax
@@ -28,11 +28,11 @@ A Nextflow configuration file is a simple text file containing a set of properti
 name = value
 ```
 
-Please note, string values need to be wrapped in quotation characters while numbers and boolean values (`true`, `false`) do not. Also note that values are typed, meaning for example that, `1` is different from `'1'`, since the first is interpreted as the number one, while the latter is interpreted as a string value.
+Please note, string values need to be wrapped in quotation characters while numbers and boolean values (`true`, `false`) do not. Also note that values are typed. This means that, for example, `1` is different from `'1'` — the former is interpreted as the number one, while the latter is interpreted as a string value.
 
 ### Config variables
 
-Configuration properties can be used as variables in the configuration file itself, by using the usual `$propertyName` or `${expression}` syntax.
+Configuration properties can be used as variables in the configuration file by using the usual `$propertyName` or `${expression}` syntax.
 
 For example:
 
@@ -44,11 +44,11 @@ customPath = "$PATH:/my/app/folder"
 
 Please note, the usual rules for {ref}`string-interpolation` are applied, thus a string containing a variable reference must be wrapped in double-quote chars instead of single-quote chars.
 
-The same mechanism allows you to access environment variables defined in the hosting system. Any variable whose name is not defined in the Nextflow configuration file(s) is supposed to be a reference to an environment variable with that name. So, in the above example the property `customPath` is defined as the current system `PATH` to which the string `/my/app/folder` is appended.
+The same mechanism allows you to access environment variables defined in the hosting system. Any variable name not defined in the Nextflow configuration file(s) is interpreted to be a reference to an environment variable with that name. So, in the above example, the property `customPath` is defined as the current system `PATH` to which the string `/my/app/folder` is appended.
 
 ### Config comments
 
-Configuration files use the same conventions for comments used by the Groovy or Java programming languages. Thus, use `//` to comment a single line or `/*` .. `*/` to comment a block on multiple lines.
+Configuration files use the same conventions for comments used by the Groovy or Java programming languages. Thus, use `//` to comment a single line, or `/*` .. `*/` to comment a block on multiple lines.
 
 ### Config include
 
@@ -66,7 +66,7 @@ When a relative path is used, it is resolved against the actual location of the 
 
 ## Config scopes
 
-Configuration settings can be organized in different scopes by dot prefixing the property names with a scope identifier or grouping the properties in the same scope using the curly brackets notation. This is shown in the following example:
+Configuration settings can be organized in different scopes by dot prefixing the property names with a scope identifier, or grouping the properties in the same scope using the curly brackets notation. For example:
 
 ```groovy
 alpha.x = 1
@@ -82,7 +82,7 @@ beta {
 
 ### Scope `aws`
 
-The `aws` scope allows you to configure the access to Amazon S3 storage. Use the attributes `accessKey` and `secretKey` to specify your bucket credentials. For example:
+The `aws` scope allows you to configure access to Amazon S3 storage. Use the attributes `accessKey` and `secretKey` to specify your bucket credentials. For example:
 
 ```groovy
 aws {
@@ -93,15 +93,15 @@ aws {
 }
 ```
 
-Click the following link to learn more about [AWS Security Credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html).
+See [AWS Security Credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html) for more information.
 
-Advanced client configuration options can be set by using the `client` attribute. The following properties can be used:
+Advanced client configuration options can be set using the `client` attribute. The following properties can be used:
 
 | Name                     | Description                                                                                                                                                                                                                                                                                                                                                                  |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | anonymous                | Allow the access of public S3 buckets without the need to provide AWS credentials. Any service that does not accept unsigned requests will return a service access error.                                                                                                                                                                                                    |
-| s3Acl                    | Allow the setting of a predefined bucket permissions also known as *canned ACL*. Permitted values are `Private`, `PublicRead`, `PublicReadWrite`, `AuthenticatedRead`, `LogDeliveryWrite`, `BucketOwnerRead`, `BucketOwnerFullControl` and `AwsExecRead`. See [Amazon docs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl) for details. |
-| connectionTimeout        | The amount of time to wait (in milliseconds) when initially establishing a connection before giving up and timing out.                                                                                                                                                                                                                                                       |
+| s3Acl                    | Allow the setting of predefined bucket permissions, also known as *canned ACL*. Permitted values are `Private`, `PublicRead`, `PublicReadWrite`, `AuthenticatedRead`, `LogDeliveryWrite`, `BucketOwnerRead`, `BucketOwnerFullControl`, and `AwsExecRead`. See [Amazon docs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl) for details. |
+| connectionTimeout        | The amount of time to wait (in milliseconds) when initially establishing a connection before timing out.                                                                                                                                                                                                                                                       |
 | endpoint                 | The AWS S3 API entry point e.g. `s3-us-west-1.amazonaws.com`.                                                                                                                                                                                                                                                                                                                |
 | glacierAutoRetrieval     | Enable auto retrieval of S3 objects stored with Glacier class store (EXPERIMENTAL. default: `false`, requires version `22.12.0-edge` or later).                                                                                                                                                                                                                          |
 | glacierExpirationDays    | The time, in days, between when an object is restored to the bucket and when it expires (EXPERIMENTAL. default: `7`, requires version `22.12.0-edge` or later).                                                                                                                                                                                                          |
@@ -306,10 +306,11 @@ The `executor` configuration scope allows you to set the optional executor setti
 | Name              | Description                                                                                                                                                                                                                              |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | name              | The name of the executor to be used (default: `local`).                                                                                                                                                                                  |
-| queueSize         | The number of tasks the executor will handle in a parallel manner (default: `100`).                                                                                                                                                      |
+| queueSize         | The number of tasks the executor will handle in a parallel manner. Default varies for each executor (see below).                                                                                                                         |
 | submitRateLimit   | Determines the max rate of job submission per time unit, for example `'10sec'` (10 jobs per second) or `'50/2min'` (50 jobs every 2 minutes) (default: unlimited).                                                                       |
-| pollInterval      | Determines how often to check for process termination. Default varies for each executor.                                                                                                                                                 |
+| pollInterval      | Determines how often to check for process termination. Default varies for each executor (see below).                                                                                                                                     |
 | dumpInterval      | Determines how often to log the executor status (default: `5min`).                                                                                                                                                                       |
+| queueGlobalStatus | Determines how job status is retrieved. When `false` only the queue associated with the job execution is queried. When `true` the job status is queried globally i.e. irrespective of the submission queue (default: `false`, requires version `23.01.0-edge` or later). |
 | queueStatInterval | Determines how often to fetch the queue status from the scheduler (default: `1min`). Used only by grid executors.                                                                                                                        |
 | exitReadTimeout   | Determines how long to wait before returning an error status when a process is terminated but the `.exitcode` file does not exist or is empty (default: `270 sec`). Used only by grid executors.                                         |
 | killBatchSize     | Determines the number of jobs that can be killed in a single command execution (default: `100`).                                                                                                                                         |
@@ -323,6 +324,17 @@ The `executor` configuration scope allows you to set the optional executor setti
 | retry.jitter      | Jitter value when retrying failed job submissions (default: `0.25`). NOTE: used only by grid executors (requires `22.03.0-edge` or later).                                                                                               |
 | retry.maxAttempts | Max attempts when retrying failed job submissions (default: `3`). NOTE: used only by grid executors (requires `22.03.0-edge` or later).                                                                                                  |
 | retry.reason      | Regex pattern that when verified cause a failed submit operation to be re-tried (default: `Socket timed out`). NOTE: used only by grid executors (requires `22.03.0-edge` or later).                                                     |
+
+Some executor settings have different default values depending on the executor.
+
+| Executor       | `queueSize` | `pollInterval` |
+| -------------- | ----------- | -------------- |
+| AWS Batch      | `1000`      | `10s`          |
+| Azure Batch    | `1000`      | `10s`          |
+| Google Batch   | `1000`      | `10s`          |
+| Grid Executors | `100`       | `5s`           |
+| Kubernetes     | `100`       | `5s`           |
+| Local          | N/A         | `100ms`        |
 
 The executor settings can be defined as shown below:
 
@@ -719,6 +731,25 @@ The following settings are available:
 
 Read {ref}`container-singularity` page to learn more about how to use Singularity containers with Nextflow.
 
+(config-spack)=
+
+### Scope `spack`
+
+The `spack` scope allows for the definition of the configuration settings that control the creation of a Spack environment by the Spack package manager.
+
+The following settings are available:
+
+| Name           | Description                                                                                                                                                                 |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| cacheDir       | Defines the path where Spack environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.        |
+| noChecksum     | Disables checksum verification for source tarballs (unsafe). Useful when requesting a package version not yet encoded in the corresponding Spack recipe (default: `false`). |
+| parallelBuilds | Sets number of parallel package builds (Spack default: coincides with number of available CPU cores).                                                                       |
+| createTimeout  | Defines the amount of time the Spack environment creation can last. The creation process is terminated when the timeout is exceeded (default: `60 min`).                    |
+
+Nextflow does not allow for fine-grained configuration of the Spack package manager.
+Instead, this has to be performed directly on the host Spack installation.
+For more information see the [Spack documentation](https://spack.readthedocs.io).
+
 (config-timeline)=
 
 ### Scope `timeline`
@@ -829,9 +860,9 @@ The use of the `cleanup` option will prevent the use of the *resume* feature on 
 
 ## Config profiles
 
-Configuration files can contain the definition of one or more *profiles*. A profile is a set of configuration attributes that can be activated/chosen when launching a pipeline execution by using the `-profile` command line option.
+Configuration files can contain the definition of one or more *profiles*. A profile is a set of configuration attributes that can be selected during pipeline execution by using the `-profile` command line option.
 
-Configuration profiles are defined by using the special scope `profiles` which group the attributes that belong to the same profile using a common prefix. For example:
+Configuration profiles are defined by using the special scope `profiles`, which group the attributes that belong to the same profile using a common prefix. For example:
 
 ```groovy
 profiles {
@@ -855,7 +886,8 @@ profiles {
 }
 ```
 
-This configuration defines three different profiles: `standard`, `cluster` and `cloud` that set different process configuration strategies depending on the target runtime platform. By convention the `standard` profile is implicitly used when no other profile is specified by the user.
+This configuration defines three different profiles: `standard`, `cluster`, and `cloud`, that each set different process
+configuration strategies depending on the target runtime platform. The `standard` profile is used by default when no profile is specified. 
 
 :::{tip}
 Multiple configuration profiles can be specified by separating the profile names with a comma, for example:
@@ -899,13 +931,13 @@ The following environment variables control the configuration of the Nextflow ru
 | NXF_CHARLIECLOUD_CACHEDIR     | Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.                                                                    |
 | NXF_CLASSPATH                 | Allows the extension of the Java runtime classpath with extra JAR files or class folders.                                                                                                                              |
 | NXF_CLOUD_DRIVER              | Defines the default cloud driver to be used if not specified in the config file or as command line option, either `aws` or `google`.                                                                                   |
-| NXF_CONDA_CACHEDIR            | Directory where Conda environments are store. When using a computing cluster it must be a shared folder accessible from all compute nodes.                                                                             |
+| NXF_CONDA_CACHEDIR            | Directory where Conda environments are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.                                                                            |
 | NXF_CONDA_ENABLED             | Enable the use of Conda recipes defined by using the :ref:process-conda directive. (default: `false`, requires version `22.08.0-edge` or later).                                                                       |
 | NXF_DEBUG                     | Defines scripts debugging level: `1` dump task environment variables in the task log file; `2` enables command script execution tracing; `3` enables command wrapper execution tracing.                                |
 | NXF_DEFAULT_DSL               | Defines the DSL version that should be used in not specified otherwise in the script of config file (default: `2`, requires version `22.03.0-edge` or later)                                                           |
 | NXF_DISABLE_JOBS_CANCELLATION | Disables the cancellation of child jobs on workflow execution termination (requires version `21.12.0-edge` or later).                                                                                                  |
+| NXF_ENABLE_SECRETS            | Enable Nextflow secrets features (default: `true`, requires version `21.09.0-edge` or later)                                                                                                                           |
 | NXF_ENABLE_STRICT             | Enable Nextflow *strict* execution mode (default: `false`, requires version `22.05.0-edge` or later)                                                                                                                   |
-| NXF_ENABLE_SECRETS            | Enable Nextflow secrets features (default: `true`, requires version `22.09.2-edge` or later)                                                                                                                           |
 | NXF_EXECUTOR                  | Defines the default process executor e.g. `sge`                                                                                                                                                                        |
 | NXF_GRAB                      | Provides extra runtime dependencies downloaded from a Maven repository service \[DEPRECATED\]                                                                                                                          |
 | NXF_HOME                      | Nextflow home directory (default: `$HOME/.nextflow`).                                                                                                                                                                  |
@@ -919,6 +951,8 @@ The following environment variables control the configuration of the Nextflow ru
 | NXF_SCM_FILE                  | Defines the path location of the SCM config file (requires version `20.10.0` or later).                                                                                                                                |
 | NXF_SINGULARITY_CACHEDIR      | Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.                                                                     |
 | NXF_SINGULARITY_LIBRARYDIR    | Directory where remote Singularity images are retrieved. It should be a directory accessible to all compute nodes (requires: `21.09.0-edge` or later).                                                                 |
+| NXF_SPACK_CACHEDIR            | Directory where Spack environments are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.                                                                            |
+| NXF_SPACK_ENABLED             | Enable the use of Spack recipes defined by using the :ref:process-spack directive. (default: `false`, requires version `23.02.0-edge` or later).                                                                       |
 | NXF_TEMP                      | Directory where temporary files are stored                                                                                                                                                                             |
 | NXF_VER                       | Defines what version of Nextflow to use.                                                                                                                                                                               |
 | NXF_WORK                      | Directory where working files are stored (usually your *scratch* directory)                                                                                                                                            |

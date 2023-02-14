@@ -109,7 +109,7 @@ A pipeline may be composed of processes that execute very different tasks. With 
 To use a language other than Bash, simply start your process script with the corresponding [shebang](<http://en.wikipedia.org/wiki/Shebang_(Unix)>). For example:
 
 ```groovy
-process perlStuff {
+process perlTask {
     """
     #!/usr/bin/perl
 
@@ -117,7 +117,7 @@ process perlStuff {
     """
 }
 
-process pythonStuff {
+process pythonTask {
     """
     #!/usr/bin/python
 
@@ -125,6 +125,11 @@ process pythonStuff {
     y = 'world!'
     print "%s - %s" % (x,y)
     """
+}
+
+workflow {
+    perlTask()
+    pythonTask()
 }
 ```
 
@@ -2047,6 +2052,57 @@ process doMoreThings {
 }
 ```
 
+(process-spack)=
+
+### spack
+
+The `spack` directive allows for the definition of the process dependencies using the [Spack](https://spack.io) package manager.
+
+Nextflow automatically sets up an environment for the given package names listed by in the `spack` directive. For example:
+
+```groovy
+process foo {
+    spack 'bwa@0.7.15'
+
+    '''
+    your_command --here
+    '''
+}
+```
+
+Multiple packages can be specified separating them with a blank space, e.g. `bwa@0.7.15 fastqc@0.11.5`.
+
+The `spack` directive also allows the specification of a Spack environment file path or the path of an existing environment directory. See the {ref}`spack-page` page for further details.
+
+(process-stageinmode)=
+
+### stageInMode
+
+The `stageInMode` directive defines how input files are staged-in to the process work directory. The following values are allowed:
+
+| Value   | Description                                                                                                                        |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| copy    | Input files are staged in the process work directory by creating a copy.                                                           |
+| link    | Input files are staged in the process work directory by creating an (hard) link for each of them.                                  |
+| symlink | Input files are staged in the process work directory by creating a symbolic link with an absolute path for each of them (default). |
+| rellink | Input files are staged in the process work directory by creating a symbolic link with a relative path for each of them.            |
+
+(process-stageoutmode)=
+
+### stageOutMode
+
+The `stageOutMode` directive defines how output files are staged-out from the scratch directory to the process work directory. The following values are allowed:
+
+| Value  | Description                                                                                            |
+| ------ | ------------------------------------------------------------------------------------------------------ |
+| copy   | Output files are copied from the scratch directory to the work directory.                              |
+| move   | Output files are moved from the scratch directory to the work directory.                               |
+| rsync  | Output files are copied from the scratch directory to the work directory by using the `rsync` utility. |
+| rclone | Output files are copied from the scratch directory to the work directory by using the [rclone](https://rclone.org) utility (note: it must be available in your cluster computing nodes, requires version `23.01.0-edge` or later). |
+| fcp    | Output files are copied from the scratch directory to the work directory by using the [fcp](https://github.com/Svetlitski/fcp) utility (note: it must be available in your cluster computing nodes, requires version `23.02.0-edge` or later). |
+
+See also: [scratch](#scratch).
+
 (process-storedir)=
 
 ### storeDir
@@ -2085,33 +2141,6 @@ The `storeDir` directive is meant for long-term process caching and should not b
 :::{note}
 The use of AWS S3 paths is supported, however it requires the installation of the [AWS CLI](https://aws.amazon.com/cli/) (i.e. `aws`) in the target compute node.
 :::
-
-(process-stageinmode)=
-
-### stageInMode
-
-The `stageInMode` directive defines how input files are staged-in to the process work directory. The following values are allowed:
-
-| Value   | Description                                                                                                                        |
-| ------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| copy    | Input files are staged in the process work directory by creating a copy.                                                           |
-| link    | Input files are staged in the process work directory by creating an (hard) link for each of them.                                  |
-| symlink | Input files are staged in the process work directory by creating a symbolic link with an absolute path for each of them (default). |
-| rellink | Input files are staged in the process work directory by creating a symbolic link with a relative path for each of them.            |
-
-(process-stageoutmode)=
-
-### stageOutMode
-
-The `stageOutMode` directive defines how output files are staged-out from the scratch directory to the process work directory. The following values are allowed:
-
-| Value | Description                                                                                            |
-| ----- | ------------------------------------------------------------------------------------------------------ |
-| copy  | Output files are copied from the scratch directory to the work directory.                              |
-| move  | Output files are moved from the scratch directory to the work directory.                               |
-| rsync | Output files are copied from the scratch directory to the work directory by using the `rsync` utility. |
-
-See also: [scratch](#scratch).
 
 (process-tag)=
 

@@ -175,6 +175,10 @@ workflow {
 }
 ```
 
+:::{note}
+Optional params for a process input/output are always prefixed with a comma, except for `stdout`. Because `stdout` does not have an associated name or value like other types, the first param should not be prefixed.
+:::
+
 ## Workflow
 
 ### Workflow definition

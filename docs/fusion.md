@@ -8,10 +8,6 @@ Fusion is a distributed virtual file system for cloud-native data pipeline and o
 
 It bridges the gap between cloud-native storage and data analysis workflow by implementing a thin client that allows any existing application to access object storage using the standard POSIX interface, thus simplifying and speeding up most operations. Currently it supports AWS S3.
 
-:::{warning}
-This is an incubating feature. It may change in future Nextflow releases.
-:::
-
 ## Getting started
 
 ### Requirements
@@ -159,6 +155,21 @@ Having the above configuration in place, you can run your pipeline using the fol
 
 ```bash
 nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR BUCKET>/scratch
+```
+
+## NVMe storage
+
+The Fusion file system implements a lazy download and upload algorithm that runs in the background to transfer files in parallel to and from object storage into a container-local temporary folder. This means that the performance of the temporary folder inside the container (`/tmp` in a default setup) is key to acheiving maximum performance.
+
+The temporary folder is used only as a temporary cache, so the size of the volume can be much lower than the actual needs of your pipeline processes. Fusion has a built-in garbage collector that constantly monitors remaining disk space on the temporary folder and immediately evicts old cached entries when necessary.
+
+The recommended setup to get maximum performance is to mount a NVMe disk as the temporary folder and run the pipeline with the {ref}`scratch <process-scratch>` directive set to `false` to also avoid stage-out transfer time.
+
+Example configuration for using AWS Batch with [NVMe disks](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ssd-instance-store.html) to maximize performance:
+
+```groovy
+aws.batch.volumes = '/path/to/ec2/nvme:/tmp'
+process.scratch = false
 ```
 
 ## More examples
