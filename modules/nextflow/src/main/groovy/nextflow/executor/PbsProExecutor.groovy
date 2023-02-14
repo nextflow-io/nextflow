@@ -17,9 +17,9 @@
 
 package nextflow.executor
 
+
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
-
 /**
  * Implements a executor for PBSPro cluster executor
  *
@@ -70,8 +70,7 @@ class PbsProExecutor extends PbsExecutor {
             res << "mem=${task.config.getMemory().getMega()}mb".toString()
         }
         if( res ) {
-            final opts = task.config.clusterOptions?.toString()
-            if( opts && opts.tokenize(' ').contains('-l') ) {
+            if( matchOptions(task.config.clusterOptions?.toString()) ) {
                 log.warn1 'cpus and memory directives are ignored when clusterOptions contains -l option\ntip: clusterOptions = { "-l select=1:ncpus=${task.cpus}:mem=${task.memory.toMega()}mb:..." }'
             }
             else {

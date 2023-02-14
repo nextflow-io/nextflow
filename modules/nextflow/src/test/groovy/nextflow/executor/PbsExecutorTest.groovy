@@ -288,4 +288,15 @@ class PbsExecutorTest extends Specification {
         executor.queueStatusCommand('xxx').each { assert it instanceof String }
     }
 
+    def 'should match cluster options' () {
+        expect:
+        PbsExecutor.matchOptions('-l foo')
+        PbsExecutor.matchOptions('-x -l foo')
+        PbsExecutor.matchOptions('-x -l foo')
+        and:
+        !PbsExecutor.matchOptions(null)
+        !PbsExecutor.matchOptions('')
+        !PbsExecutor.matchOptions('-x-l foo')
+    }
+
 }
