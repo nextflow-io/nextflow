@@ -69,6 +69,11 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
         return session.bucketDir ?: session.workDir
     }
 
+    boolean isForeignFile(Path path) {
+        if( isFusionEnabled() ) return !(path.scheme in ['s3', 'gs'])
+        return super.isForeignFile(path)
+    }
+
     protected void validateWorkDir() {
         if ( getWorkDir()?.scheme != 'gs' ) {
             session.abort()

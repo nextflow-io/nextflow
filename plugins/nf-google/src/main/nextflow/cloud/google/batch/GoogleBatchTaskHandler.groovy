@@ -16,6 +16,8 @@
 
 package nextflow.cloud.google.batch
 
+import nextflow.cloud.types.CloudMachineInfo
+import nextflow.cloud.types.PriceModel
 
 import java.nio.file.Path
 
@@ -77,6 +79,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * Job state assigned by Google Batch service
      */
     private String jobState
+
+    private CloudMachineInfo machineInfo
 
     private volatile long timestamp
 
@@ -180,7 +184,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         // Fusion configuration
         if( fusionEnabled() && !task.config.getAccelerator() ) {
             if( containerOptions ) containerOptions += ' '
-            containerOptions += '--security-opt apparmor=unconfined --security-opt seccomp=unconfined --device /dev/fuse '
+            containerOptions += '--privileged '
         }
 
         if( containerOptions )
@@ -254,7 +258,13 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
             final cpus = task.config.getCpus()
             final memory = task.config.getMemory() ? task.config.getMemory().toMega().toInteger() : 1024
-            instancePolicy.setMachineType(getMachineType(cpus, memory, client.location))
+            final machineType = getMachineType(cpus, memory, client.location, executor.config.spot)
+            machineInfo = new CloudMachineInfo(
+                    type: machineType,
+                    zone: client.location,
+                    priceModel: executor.config.spot ? PriceModel.spot : PriceModel.standard
+            )
+            instancePolicy.setMachineType(machineType)
         }
 
         allocationPolicy.addInstances(
@@ -385,19 +395,24 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
     }
 
+    protected CloudMachineInfo getMachineInfo() {
+        return machineInfo
+    }
+
     @Override
     TraceRecord getTraceRecord() {
         def result = super.getTraceRecord()
         if( jobId && uid ) {
             result.put('native_id', "$jobId/$uid")
         }
+        result.machineInfo = getMachineInfo()
         return result
     }
 
 
-    private String getMachineType(int cpus, int memoryMB, String location) {
+    private String getMachineType(int cpus, int memoryMB, String location, boolean spot) {
         try {
-            return bestMachineType(cpus, memoryMB, location)
+            return bestMachineType(cpus, memoryMB, location, spot)
         }
         catch (Exception e) {
             log.debug "[GOOGLE BATCH] Cannot select machine type using cloud info. Fallback to custom machine type."

@@ -18,31 +18,31 @@ class GoogleBatchCloudinfoMachineSelector {
 
     private static final jsonParser = new JsonSlurper()
 
-    // Some families CPUs are faster so this is
-    // a cost correction factor
+    // Some families CPUs are faster so this is a cost correction factor
+    // for processes that request more than 2 CPUs or 2GB
     private static final familyCostCorrection = [
-            'n1': 1.0,   // Skylake, Broadwell, Haswell, Sandy Bridge, and Ivy Bridge
-            'n2': 0.85,  // Cascade Lake and Ice Lake
-            'c2': 0.9,   // Cascade Lake
-            'm3': 0.85   // Ice Lake
+            'n1': 1.0,  // Skylake, Broadwell, Haswell, Sandy Bridge, and Ivy Bridge
+            'n2': 0.8,  // Cascade Lake and Ice Lake
+            'c2': 0.9,  // Cascade Lake
+            'm3': 0.8   // Ice Lake
     ]
 
     // Using only Intel with local SSD
-    private static final validFamilies = ['n1', 'n2', 'c2', 'm3']
+    private static final validFamilies = ['n1', 'n2', 'c2']
 
-    static String bestMachineType(int cpus, int memoryMB, String region) {
+    static String bestMachineType(int cpus, int memoryMB, String region, boolean spot) {
         final machineTypes = getAvailableMachineTypes(region)
         final memoryGB = ((memoryMB / 1024) as int) + 1
+        final cores = cpus > 1 ? cpus : 2
 
         // find machines with enough resources and SSD local disk
         final validMachineTypes = machineTypes.findAll {
-                    it.cpusPerVm >= cpus &&
+                    it.cpusPerVm >= cores &&
                     it.memPerVm >= memoryGB &&
                     it.family in validFamilies }.collect()
 
-        // TODO spot vs on-demand
         final sortedByCost = validMachineTypes.sort {
-            familyCostCorrection[it.family] * it.spotPrice
+            (it.cpusPerVm > 2 || it.memPerVm > 2 ? familyCostCorrection[it.family] : 1.0) * (spot ? it.spotPrice : it.onDemandPrice)
         }
 
         return sortedByCost.first().type
