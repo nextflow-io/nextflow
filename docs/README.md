@@ -27,12 +27,17 @@ make clean html
 ```
 
 Alternatively, you can use the Dockerfile to build the docs in a container:
+
 ```bash
 docker build -t nextflow-io/sphinx .
 docker run -v $(pwd):/tmp nextflow-io/sphinx -- make html
 ```
 
-Then open the `_build/html/index.html` file in your browser and verify your changes.
+Then start up a local http server and open `localhost:8080` in your browser to verify the changes:
+
+```bash
+python -m http.server 8080 --directory _build/html/
+```
 
 
 ## License
