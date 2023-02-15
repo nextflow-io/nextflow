@@ -1,0 +1,9 @@
+set -e
+
+echo ''
+$NXF_RUN -c ../../dynamic-trace-filepath.config | tee stdout
+
+session_id=$(grep "DEBUG nextflow.Session - Run name:" .nextflow.log | sed 's/.* //')
+expected="tracedir-${session_id}-foo/trace.txt"
+
+[[ `grep DEBUG .nextflow.log | grep 'Workflow started -- trace file:' | sed 's/.* //'` == *${expected} ]] || false
