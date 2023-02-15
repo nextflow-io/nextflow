@@ -13,6 +13,8 @@ The build dependencies can be installed with `pip`:
 pip install sphinx==5.3.0 myst-parser==0.18.1 sphinx-rtd-theme==1.1.1
 ```
 
+Alternatively, you can use the Dockerfile to build the docs in a container (see below).
+
 
 ## Contributing
 
@@ -22,6 +24,12 @@ Once you have made your changes, run the following command to build the HTML fil
 
 ```bash
 make clean html
+```
+
+Alternatively, you can use the Dockerfile to build the docs in a container:
+```bash
+docker build -t nextflow-io/sphinx .
+docker run -v $(pwd):/tmp nextflow-io/sphinx -- make html
 ```
 
 Then open the `_build/html/index.html` file in your browser and verify your changes.
