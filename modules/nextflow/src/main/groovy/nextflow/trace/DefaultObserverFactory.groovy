@@ -1,8 +1,10 @@
 package nextflow.trace
 
-import java.nio.file.Path
-
+import nextflow.NextflowMeta
 import nextflow.Session
+import nextflow.script.ScriptBinding
+
+import java.nio.file.Path
 
 /**
  * Creates Nextflow observes object
@@ -13,11 +15,15 @@ class DefaultObserverFactory implements TraceObserverFactory {
 
     private Map config
     private Session session
+    private ScriptBinding binding
 
     @Override
     Collection<TraceObserver> create(Session session) {
         this.session = session
         this.config = session.config
+        this.binding = new ScriptBinding(  this.session.binding.getVariables() )
+        binding.setVariable( 'workflow', this.session.workflowMetadata )
+        binding.setVariable( 'nextflow', NextflowMeta.instance )
 
         final result = new ArrayList(10)
         createTraceFileObserver(result)
@@ -42,7 +48,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
      */
     protected void createWebLogObserver(Collection<TraceObserver> result) {
         Boolean isEnabled = config.navigate('weblog.enabled') as Boolean
-        String url = config.navigate('weblog.url') as String
+        String url = this.resolveConfigKey('weblog.url') as String
         if ( isEnabled ) {
             if ( !url ) url = WebLogObserver.DEF_URL
             def observer = new WebLogObserver(url)
@@ -58,7 +64,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = config.navigate('report.file')
+        String fileName = this.resolveConfigKey('report.file')
         def maxTasks = config.navigate('report.maxTasks', ReportObserver.DEF_MAX_TASKS) as int
         if( !fileName ) fileName = ReportObserver.DEF_FILE_NAME
         def report = (fileName as Path).complete()
@@ -76,7 +82,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = config.navigate('timeline.file')
+        String fileName = this.resolveConfigKey('timeline.file')
         if( !fileName ) fileName = TimelineObserver.DEF_FILE_NAME
         def traceFile = (fileName as Path).complete()
         def observer = new TimelineObserver(traceFile)
@@ -89,7 +95,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = config.navigate('dag.file')
+        String fileName = this.resolveConfigKey('dag.file')
         if( !fileName ) fileName = GraphObserver.DEF_FILE_NAME
         def traceFile = (fileName as Path).complete()
         def observer = new GraphObserver(traceFile)
@@ -105,7 +111,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !isEnabled )
             return
 
-        String fileName = config.navigate('trace.file')
+        String fileName = this.resolveConfigKey('trace.file')
         if( !fileName ) fileName = TraceFileObserver.DEF_FILE_NAME
         def traceFile = (fileName as Path).complete()
         def observer = new TraceFileObserver(traceFile)
@@ -116,4 +122,14 @@ class DefaultObserverFactory implements TraceObserverFactory {
         result << observer
     }
 
+    protected String resolveConfigKey(String key) {
+        Object fileName = config.navigate(key)
+
+        if( fileName instanceof Closure ) {
+            final clone = fileName.cloneWith(this.binding)
+            return clone.call()
+        } else {
+            return fileName
+        }
+    }
 }

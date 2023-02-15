@@ -380,16 +380,16 @@ class Session implements ISession {
         this.disableRemoteBinDir = getExecConfigProp(null, 'disableRemoteBinDir', false)
         this.classesDir = FileHelper.createLocalDir()
         this.executorFactory = new ExecutorFactory(Plugins.manager)
-        this.observers = createObservers()
-        this.statsEnabled = observers.any { it.enableMetrics() }
         this.workflowMetadata = new WorkflowMetadata(this, scriptFile)
 
         // configure script params
         binding.setParams( (Map)config.params )
         binding.setArgs( new ScriptRunner.ArgsList(args) )
 
-        cache = CacheFactory.create(uniqueId,runName).open()
+        this.observers = createObservers()
+        this.statsEnabled = observers.any { it.enableMetrics() }
 
+        cache = CacheFactory.create(uniqueId,runName).open()
         return this
     }
 
