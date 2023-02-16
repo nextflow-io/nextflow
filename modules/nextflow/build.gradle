@@ -64,7 +64,7 @@ test {
 }
 
 application {
-    mainClass = 'nextflow.cli.v2.Launcher'
+    mainClass = 'nextflow.cli.v1.Launcher'
 }
 
 run{
