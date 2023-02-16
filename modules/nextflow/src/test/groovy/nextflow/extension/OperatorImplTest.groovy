@@ -19,6 +19,7 @@ package nextflow.extension
 
 import java.nio.file.Paths
 
+import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Channel
 import nextflow.Session
@@ -228,7 +229,7 @@ class OperatorImplTest extends Specification {
         result.val == Channel.STOP
 
         when:
-        result = Channel.value().close().flatMap()
+        result = Channel.empty().flatMap()
         then:
         result.val == Channel.STOP
 
@@ -446,7 +447,7 @@ class OperatorImplTest extends Specification {
         channel.toList().val == [1]
 
         when:
-        channel = Channel.value().close()
+        channel = Channel.empty()
         then:
         channel.toList().val == []
     }
@@ -475,7 +476,7 @@ class OperatorImplTest extends Specification {
         channel.toSortedList().val == [1]
 
         when:
-        channel = Channel.value().close()
+        channel = Channel.empty()
         then:
         channel.toSortedList().val == []
 
@@ -545,7 +546,7 @@ class OperatorImplTest extends Specification {
         result.val == Channel.STOP
 
         when:
-        result = Channel.value().close().flatten()
+        result = Channel.empty().flatten()
         then:
         result.val ==  Channel.STOP
     }
@@ -1040,9 +1041,9 @@ class OperatorImplTest extends Specification {
         result.val == 1
 
         when:
-        result = Channel.value().close().ifEmpty(100)
+        result = Channel.empty().ifEmpty(100)
         then:
-        result instanceof DataflowVariable
+        result instanceof DataflowQueue
         result.val == 100
 
     }

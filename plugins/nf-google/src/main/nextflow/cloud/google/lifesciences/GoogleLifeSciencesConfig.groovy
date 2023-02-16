@@ -76,19 +76,6 @@ class GoogleLifeSciencesConfig implements CloudTransferOptions {
     int maxTransferAttempts = MAX_TRANSFER_ATTEMPTS
     Duration delayBetweenAttempts = DEFAULT_DELAY_BETWEEN_ATTEMPTS
 
-    @Deprecated
-    GoogleLifeSciencesConfig(String project, List<String> zone, List<String> region, Path remoteBinDir = null, boolean preemptible = false) {
-        this.project = project
-        this.zones = zone
-        this.regions = region
-        this.remoteBinDir = remoteBinDir
-        this.preemptible = preemptible
-        // infer location
-        this.location = region ? region.get(0) : null
-        if( !location )
-            throw new IllegalArgumentException("Missing Google cloud location")
-    }
-
     GoogleLifeSciencesConfig() {}
 
     @Memoized

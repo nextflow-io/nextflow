@@ -398,6 +398,4 @@ class Nextflow {
      */
     static Closure<TokenMultiMapDef> multiMapCriteria(Closure<TokenBranchDef> closure) { closure }
 
-    @Deprecated
-    static Closure<TokenMultiMapDef> forkCriteria(Closure<TokenBranchDef> closure) { closure }
 }

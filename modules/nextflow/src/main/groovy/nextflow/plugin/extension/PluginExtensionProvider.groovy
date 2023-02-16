@@ -290,13 +290,4 @@ class PluginExtensionProvider implements ExtensionProvider {
         }
     }
 
-    @Deprecated
-    static void reloadExtensionPoints() {
-        if( !instance )
-            return
-        instance.channelExtensionPoints=null
-        instance.operatorExtensions.clear()
-        instance.install()
-    }
-
 }

@@ -69,7 +69,4 @@ interface SecretsProvider extends ExtensionPoint, Closeable {
      */
     String getSecretsEnv(List<String> secretNames)
 
-    @Deprecated
-    String getSecretsEnv()
-
 }

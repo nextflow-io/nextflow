@@ -394,11 +394,6 @@ class AzFileSystemProvider extends FileSystemProvider {
         path.getFileSystem().provider()
     }
 
-    @Deprecated
-    static private BlobServiceClient storage( Path path ) {
-        ((AzPath)path).getFileSystem().getBlobServiceClient()
-    }
-
     private void checkRoot(Path path) {
         if( path.toString() == '/' )
             throw new UnsupportedOperationException("Operation 'checkRoot' not supported on root path")

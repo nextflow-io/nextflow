@@ -39,7 +39,6 @@ import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.LoggerHelper
 import nextflow.util.ProxyConfig
-import nextflow.util.SpuriousDeps
 import org.eclipse.jgit.api.errors.GitAPIException
 /**
  * Main application entry point. It parses the command line and
@@ -102,17 +101,11 @@ class Launcher {
                 new CmdView(),
                 new CmdHelp(),
                 new CmdSelfUpdate(),
-                new CmdPlugins(),
                 new CmdPlugin()
         ]
 
         if(SecretsLoader.isEnabled())
             allCommands.add(new CmdSecret())
-
-        // legacy command
-        final cmdCloud = SpuriousDeps.cmdCloud()
-        if( cmdCloud )
-            allCommands.add(cmdCloud)
 
         options = new CliOptions()
         jcommander = new JCommander(options)

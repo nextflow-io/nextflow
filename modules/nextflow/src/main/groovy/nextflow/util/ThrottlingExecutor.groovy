@@ -638,31 +638,6 @@ class ThrottlingExecutor extends ThreadPoolExecutor {
      *
      * See {@link ClientProxyThrottler#invokeMethod(java.lang.String, java.lang.Object)}
      *
-     *
-     * @param target
-     * @param name
-     * @param args
-     * @return
-     */
-    @Deprecated
-    Object doInvoke0(final Object target, final String name, final Object args) {
-        assert ((Object[])args).length==1
-
-        final task = new Recoverable() {
-            @Override Object invoke() {
-                // invoke the closure passing the client object
-                ((Closure)((Object[])args)[0]).call(target)
-            }
-        }
-
-        this.submit((Callable)task)
-    }
-
-    /**
-     * Invocation handler used by {@link ClientProxyThrottler}
-     *
-     * See {@link ClientProxyThrottler#invokeMethod(java.lang.String, java.lang.Object)}
-     *
      * @param name The name of the method to execute
      * @param args The arguments of the method
      * @return The method invocation result

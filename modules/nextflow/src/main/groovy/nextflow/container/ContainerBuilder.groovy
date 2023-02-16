@@ -164,13 +164,6 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     String getRemoveCommand() { return null }
 
-    @Deprecated
-    final StringBuilder appendHelpers( StringBuilder wrapper ) {
-        final result = getScriptHelpers()
-        if( result ) wrapper.append(result)
-        return wrapper
-    }
-
     String getScriptHelpers() {
         return null
     }

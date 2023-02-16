@@ -55,7 +55,6 @@ import nextflow.Session
 import nextflow.ast.NextflowDSLImpl
 import nextflow.ast.TaskCmdXform
 import nextflow.ast.TaskTemplateVarsXform
-import nextflow.cloud.CloudSpotTerminationException
 import nextflow.dag.NodeMarker
 import nextflow.exception.FailedGuardException
 import nextflow.exception.MissingFileException
@@ -991,11 +990,8 @@ class TaskProcessor {
             if( error instanceof Error ) throw error
 
             // -- retry without increasing the error counts
-            if( task && (error.cause instanceof ProcessRetryableException || error.cause instanceof CloudSpotTerminationException) ) {
-                if( error.cause instanceof ProcessRetryableException )
+            if( task && (error.cause instanceof ProcessRetryableException) ) {
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
-                else
-                    log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
                 task.failCount+=1
                 final taskCopy = task.makeCopy()
                 session.getExecService().submit {

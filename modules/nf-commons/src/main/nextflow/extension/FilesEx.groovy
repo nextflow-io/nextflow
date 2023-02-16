@@ -1557,18 +1557,6 @@ class FilesEx {
         self.toAbsolutePath().normalize()
     }
 
-    @Deprecated
-    static BasicFileAttributes readAttributes(Path path) {
-        log.warn "Method `readAttributes` is deprecated"
-        try {
-            Files.readAttributes(path,BasicFileAttributes)
-        }
-        catch( IOException e ) {
-            log.trace "Unable to read attributes for file: $path"
-            return null
-        }
-    }
-
     static boolean matches( Path self, String pattern ) {
         FileHelper.getPathMatcherFor("glob:$pattern", self.fileSystem).matches(self)
     }
