@@ -56,13 +56,6 @@ class FileInParam extends BaseInParam implements PathQualifier {
             return this
         }
 
-        // the ability to pass a closure as file name has been replaced by
-        // lazy gstring -- this should be deprecated
-        if( obj instanceof Closure && !NF.dsl2 ) {
-            filePattern = obj
-            return this
-        }
-
         throw new IllegalArgumentException()
     }
 

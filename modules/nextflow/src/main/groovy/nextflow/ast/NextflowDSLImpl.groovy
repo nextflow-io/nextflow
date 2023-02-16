@@ -152,63 +152,6 @@ class NextflowDSLImpl implements ASTTransformation {
             super.visitMethod(node)
         }
 
-        protected Statement makeSetProcessNamesStm() {
-            final names = new ListExpression()
-            for( String it: processNames ) {
-                names.addExpression(new ConstantExpression(it.toString()))
-            }
-
-            // the method list argument
-            final args = new ArgumentListExpression()
-            args.addExpression(names)
-
-            // some magic code
-            // this generates the invocation of the method:
-            //   nextflow.script.ScriptMeta.get(this).setProcessNames(<list of process names>)
-            final scriptMeta = new PropertyExpression( new PropertyExpression(new VariableExpression('nextflow'),'script'), 'ScriptMeta')
-            final thiz = new ArgumentListExpression(); thiz.addExpression( new VariableExpression('this') )
-            final meta = new MethodCallExpression( scriptMeta, 'get', thiz )
-            final call = new MethodCallExpression( meta, 'setDsl1ProcessNames', args)
-            final stm = new ExpressionStatement(call)
-            return stm
-        }
-
-        /**
-         * Add to constructor a method call to inject parsed metadata.
-         * Only needed by DSL1.
-         *
-         * @param node The node representing the class to be invoked
-         */
-        protected void injectMetadata(ClassNode node) {
-            for( ConstructorNode constructor : node.getDeclaredConstructors() ) {
-                def code = constructor.getCode()
-                if( code instanceof BlockStatement ) {
-                    code.addStatement(makeSetProcessNamesStm())
-                }
-                else if( code instanceof ExpressionStatement ) {
-                    def expr = code
-                    def block = new BlockStatement()
-                    block.addStatement(expr)
-                    block.addStatement(makeSetProcessNamesStm())
-                    constructor.setCode(block)
-                }
-                else
-                    throw new IllegalStateException("Invalid constructor expression: $code")
-            }
-        }
-
-        /**
-         * Only needed by DSL1 to inject process names declared in the script
-         *
-         * @param node The node representing the class to be invoked
-         */
-        @Override
-        protected void visitObjectInitializerStatements(ClassNode node) {
-            if( node.getSuperClass().getName() == BaseScript.getName() )
-                injectMetadata(node)
-            super.visitObjectInitializerStatements(node)
-        }
-
         @Override
         void visitMethodCallExpression(MethodCallExpression methodCall) {
             // pre-condition to be verified to apply the transformation
@@ -259,72 +202,50 @@ class NextflowDSLImpl implements ASTTransformation {
         protected void convertIncludeDef(MethodCallExpression call) {
             if( call.methodAsString=='include' && call.arguments instanceof ArgumentListExpression ) {
                 final allArgs = (ArgumentListExpression)call.arguments
-                if( allArgs.size() != 1 ) {
-                    syntaxError(call, "Not a valid include definition -- it must specify the module path")
+                if( allArgs.size() != 1 || allArgs[0] !instanceof ClosureExpression ) {
+                    syntaxError(call, "Invalid include statement -- the correct syntax is `include { ... } from '...'`")
                     return
                 }
 
-                final arg = allArgs[0]
-                final newArgs = new ArgumentListExpression()
-                if( arg instanceof ConstantExpression ) {
-                    newArgs.addExpression( createX(IncludeDef, arg) )
-                }
-                else if( arg instanceof VariableExpression ) {
-                    // the name of the component i.e. process, workflow, etc to import
-                    final component = arg.getName()
-                    // wrap the name in a `TokenVar` type
-                    final token = createX(TokenVar, new ConstantExpression(component))
-                    // create a new `IncludeDef` object
-                    newArgs.addExpression(createX(IncludeDef, token))
-                }
-                else if( arg instanceof CastExpression && arg.getExpression() instanceof VariableExpression) {
-                    def cast = (CastExpression)arg
-                    // the name of the component i.e. process, workflow, etc to import
-                    final component = (cast.expression as VariableExpression).getName()
-                    // wrap the name in a `TokenVar` type
-                    final token = createX(TokenVar, new ConstantExpression(component))
-                    // the alias to give it
-                    final alias = constX(cast.type.name)
-                    newArgs.addExpression( createX(IncludeDef, token, alias) )
-                }
-                else if( arg instanceof ClosureExpression ) {
-                    // multiple modules inclusion 
-                    final block = (BlockStatement)arg.getCode()
-                    final modulesList = new ListExpression()
-                    for( Statement stm : block.statements ) {
-                        if( stm instanceof ExpressionStatement ) {
-                            CastExpression castX
-                            VariableExpression varX
-                            Expression moduleX
-                            if( (varX=isVariableX(stm.expression)) ) {
-                                def name = constX(varX.name)
-                                moduleX = createX(IncludeDef.Module, name)
-                            }
-                            else if( (castX=isCastX(stm.expression)) && (varX=isVariableX(castX.expression)) ) {
-                                def name = constX(varX.name)
-                                final alias = constX(castX.type.name)
-                                moduleX = createX(IncludeDef.Module, name, alias)
-                            }
-                            else {
-                                syntaxError(call, "Not a valid include module name")
-                                return
-                            }
-                            modulesList.addExpression(moduleX)
+                // extract module arguments from closure
+                final arg = (ClosureExpression)allArgs[0]
+                final block = (BlockStatement)arg.code
+                final modulesList = new ListExpression()
+                for( Statement stm : block.statements ) {
+                    if( stm instanceof ExpressionStatement ) {
+                        CastExpression castX
+                        VariableExpression varX
+                        Expression moduleX
+
+                        // extract module name, e.g. `foo`
+                        if( (varX=isVariableX(stm.expression)) ) {
+                            def name = constX(varX.name)
+                            moduleX = createX(IncludeDef.Module, name)
                         }
+                        // extract module name with alias, e.g. `foo as bar`
+                        else if( (castX=isCastX(stm.expression)) && (varX=isVariableX(castX.expression)) ) {
+                            def name = constX(varX.name)
+                            final alias = constX(castX.type.name)
+                            moduleX = createX(IncludeDef.Module, name, alias)
+                        }
+                        // otherwise return an error
                         else {
-                            syntaxError(call, "Not a valid include module name")
+                            syntaxError(call, "Invalid include module name")
                             return
                         }
-
+                        modulesList.addExpression(moduleX)
                     }
-                    newArgs.addExpression( createX(IncludeDef, modulesList) )
+                    else {
+                        syntaxError(call, "Invalid include module name")
+                        return
+                    }
                 }
-                else {
-                    syntaxError(call, "Not a valid include definition -- it must specify the module path as a string")
-                    return
-                }
-                call.setArguments(newArgs)
+
+                // replace include() argument with IncludeDef instance
+                call.setArguments(new ArgumentListExpression( createX(IncludeDef, modulesList) ))
             }
+
+            // skip outer method calls e.g. `from`, `addParams`
             else if( call.objectExpression instanceof MethodCallExpression ) {
                 convertIncludeDef((MethodCallExpression)call.objectExpression)
             }
@@ -563,184 +484,181 @@ class NextflowDSLImpl implements ASTTransformation {
         protected void convertProcessBlock( MethodCallExpression methodCall, SourceUnit unit ) {
             log.trace "Apply task closure transformation to method call: $methodCall"
 
-            final args = methodCall.arguments as ArgumentListExpression
+            final args = (ArgumentListExpression)methodCall.arguments
             final lastArg = args.expressions.size()>0 ? args.getExpression(args.expressions.size()-1) : null
-            final isClosure = lastArg instanceof ClosureExpression
 
-            if( isClosure ) {
-                // the block holding all the statements defined in the process (closure) definition
-                final block = (lastArg as ClosureExpression).code as BlockStatement
+            // the block holding all the statements defined in the process (closure) definition
+            final block = (BlockStatement)((ClosureExpression)lastArg).code
 
-                /*
-                 * iterate over the list of statements to:
-                 * - converts the method after the 'input:' label as input parameters
-                 * - converts the method after the 'output:' label as output parameters
-                 * - collect all the statement after the 'exec:' label
-                 */
-                def source = new StringBuilder()
-                List<Statement> execStatements = []
+            /*
+             * iterate over the list of statements to:
+             * - converts the method after the 'input:' label as input parameters
+             * - converts the method after the 'output:' label as output parameters
+             * - collect all the statement after the 'exec:' label
+             */
+            def source = new StringBuilder()
+            List<Statement> execStatements = []
 
-                List<Statement> whenStatements = []
-                def whenSource = new StringBuilder()
+            List<Statement> whenStatements = []
+            def whenSource = new StringBuilder()
 
-                List<Statement> stubStatements = []
-                def stubSource = new StringBuilder()
+            List<Statement> stubStatements = []
+            def stubSource = new StringBuilder()
 
 
-                def iterator = block.getStatements().iterator()
-                while( iterator.hasNext() ) {
+            def iterator = block.getStatements().iterator()
+            while( iterator.hasNext() ) {
 
-                    // get next statement
-                    Statement stm = iterator.next()
+                // get next statement
+                Statement stm = iterator.next()
 
-                    // keep track of current block label
-                    currentLabel = stm.statementLabel ?: currentLabel
+                // keep track of current block label
+                currentLabel = stm.statementLabel ?: currentLabel
 
-                    switch(currentLabel) {
-                        case 'input':
-                            if( stm instanceof ExpressionStatement ) {
-                                fixLazyGString( stm )
-                                fixStdinStdout( stm )
-                                convertInputMethod( stm.getExpression() )
-                            }
-                            break
+                switch(currentLabel) {
+                    case 'input':
+                        if( stm instanceof ExpressionStatement ) {
+                            fixLazyGString( stm )
+                            fixStdinStdout( stm )
+                            convertInputMethod( stm.getExpression() )
+                        }
+                        break
 
-                        case 'output':
-                            if( stm instanceof ExpressionStatement ) {
-                                fixLazyGString( stm )
-                                fixStdinStdout( stm )
-                                convertOutputMethod( stm.getExpression() )
-                            }
-                            break
+                    case 'output':
+                        if( stm instanceof ExpressionStatement ) {
+                            fixLazyGString( stm )
+                            fixStdinStdout( stm )
+                            convertOutputMethod( stm.getExpression() )
+                        }
+                        break
 
-                        case 'exec':
-                            bodyLabel = currentLabel
+                    case 'exec':
+                        bodyLabel = currentLabel
+                        iterator.remove()
+                        execStatements << stm
+                        readSource(stm,source,unit)
+                        break
+
+                    case 'script':
+                    case 'shell':
+                        bodyLabel = currentLabel
+                        iterator.remove()
+                        execStatements << stm
+                        readSource(stm,source,unit)
+                        break
+
+                    case PROCESS_STUB:
+                        iterator.remove()
+                        stubStatements << stm
+                        readSource(stm,stubSource,unit)
+                        break
+
+                    // capture the statements in a when guard and remove from the current block
+                    case PROCESS_WHEN:
+                        if( iterator.hasNext() ) {
                             iterator.remove()
-                            execStatements << stm
-                            readSource(stm,source,unit)
+                            whenStatements << stm
+                            readSource(stm,whenSource,unit)
+                            break
+                        }
+                        // when entering in this branch means that this is the last statement,
+                        // which is supposed to be the task command
+                        // hence if no previous `when` statement has been processed, a syntax error is returned
+                        else if( !whenStatements ) {
+                            int line = methodCall.lineNumber
+                            int coln = methodCall.columnNumber
+                            unit.addError(new SyntaxException("Invalid process definition -- Empty `when` or missing `script` statement", line, coln))
+                            return
+                        }
+                        else
                             break
 
-                        case 'script':
-                        case 'shell':
-                            bodyLabel = currentLabel
-                            iterator.remove()
-                            execStatements << stm
-                            readSource(stm,source,unit)
-                            break
+                    default:
+                        if(currentLabel) {
+                            def line = stm.getLineNumber()
+                            def coln = stm.getColumnNumber()
+                            unit.addError(new SyntaxException("Invalid process definition -- Unknown keyword `$currentLabel`",line,coln))
+                            return
+                        }
 
-                        case PROCESS_STUB:
-                            iterator.remove()
-                            stubStatements << stm
-                            readSource(stm,stubSource,unit)
-                            break
+                        fixLazyGString(stm)
+                        fixDirectiveWithNegativeValue(stm)  // Fixes #180
+                }
+            }
 
-                        // capture the statements in a when guard and remove from the current block
-                        case PROCESS_WHEN:
-                            if( iterator.hasNext() ) {
-                                iterator.remove()
-                                whenStatements << stm
-                                readSource(stm,whenSource,unit)
-                                break
-                            }
-                            // when entering in this branch means that this is the last statement,
-                            // which is supposed to be the task command
-                            // hence if no previous `when` statement has been processed, a syntax error is returned
-                            else if( !whenStatements ) {
-                                int line = methodCall.lineNumber
-                                int coln = methodCall.columnNumber
-                                unit.addError(new SyntaxException("Invalid process definition -- Empty `when` or missing `script` statement", line, coln))
-                                return
-                            }
-                            else
-                                break
+            /*
+             * add the `when` block if found
+             */
+            if( whenStatements ) {
+                addWhenGuardCall(whenStatements, whenSource, block)
+            }
 
-                        default:
-                            if(currentLabel) {
-                                def line = stm.getLineNumber()
-                                def coln = stm.getColumnNumber()
-                                unit.addError(new SyntaxException("Invalid process definition -- Unknown keyword `$currentLabel`",line,coln))
-                                return
-                            }
+            /*
+             * add try `stub` block if found
+             */
+            if( stubStatements ) {
+                final newBLock = addStubCall(stubStatements, stubSource, block)
+                newBLock.visit(new TaskCmdXformVisitor(unit))
+            }
 
-                            fixLazyGString(stm)
-                            fixDirectiveWithNegativeValue(stm)  // Fixes #180
-                    }
+            /*
+             * wrap all the statements after the 'exec:'  label by a new closure containing them (in a new block)
+             */
+            final len = block.statements.size()
+            boolean done = false
+            if( execStatements ) {
+                // create a new Closure
+                def execBlock = new BlockStatement(execStatements, new VariableScope(block.variableScope))
+                def execClosure = new ClosureExpression( Parameter.EMPTY_ARRAY, execBlock )
+
+                // append the new block to the
+                // set the 'script' flag parameter
+                def wrap = makeScriptWrapper(execClosure, source, bodyLabel, unit)
+                block.addStatement( new ExpressionStatement(wrap) )
+                if( bodyLabel == 'script' )
+                    block.visit(new TaskCmdXformVisitor(unit))
+                done = true
+
+            }
+            // when only the `stub` block is defined add an empty command
+            else if ( !bodyLabel && stubStatements ) {
+                final cmd = 'true'
+                final list = new ArrayList<Statement>(1);
+                list.add( new ExpressionStatement(constX(cmd)) )
+                final dummyBlock = new BlockStatement( list, new VariableScope(block.variableScope))
+                final dummyClosure = new ClosureExpression( Parameter.EMPTY_ARRAY, dummyBlock )
+
+                // append the new block to the
+                // set the 'script' flag parameter
+                final wrap = makeScriptWrapper(dummyClosure, cmd, 'script', unit)
+                block.addStatement( new ExpressionStatement(wrap) )
+                done = true
+            }
+
+            /*
+             * when the last statement is a string script, the 'script:' label can be omitted
+             */
+            else if( len ) {
+                def stm = block.getStatements().get(len-1)
+                readSource(stm,source,unit)
+
+                if ( stm instanceof ReturnStatement  ){
+                    done = wrapExpressionWithClosure(block, stm.getExpression(), len, source, unit)
                 }
 
-                /*
-                 * add the `when` block if found
-                 */
-                if( whenStatements ) {
-                    addWhenGuardCall(whenStatements, whenSource, block)
+                else if ( stm instanceof ExpressionStatement )  {
+                    done = wrapExpressionWithClosure(block, stm.getExpression(), len, source, unit)
                 }
 
-                /*
-                 * add try `stub` block if found
-                 */
-                if( stubStatements ) {
-                    final newBLock = addStubCall(stubStatements, stubSource, block)
-                    newBLock.visit(new TaskCmdXformVisitor(unit))
-                }
+                // apply command variables escape
+                stm.visit(new TaskCmdXformVisitor(unit))
+            }
 
-                /*
-                 * wrap all the statements after the 'exec:'  label by a new closure containing them (in a new block)
-                 */
-                final len = block.statements.size()
-                boolean done = false
-                if( execStatements ) {
-                    // create a new Closure
-                    def execBlock = new BlockStatement(execStatements, new VariableScope(block.variableScope))
-                    def execClosure = new ClosureExpression( Parameter.EMPTY_ARRAY, execBlock )
-
-                    // append the new block to the
-                    // set the 'script' flag parameter
-                    def wrap = makeScriptWrapper(execClosure, source, bodyLabel, unit)
-                    block.addStatement( new ExpressionStatement(wrap) )
-                    if( bodyLabel == 'script' )
-                        block.visit(new TaskCmdXformVisitor(unit))
-                    done = true
-
-                }
-                // when only the `stub` block is defined add an empty command
-                else if ( !bodyLabel && stubStatements ) {
-                    final cmd = 'true'
-                    final list = new ArrayList<Statement>(1);
-                    list.add( new ExpressionStatement(constX(cmd)) )
-                    final dummyBlock = new BlockStatement( list, new VariableScope(block.variableScope))
-                    final dummyClosure = new ClosureExpression( Parameter.EMPTY_ARRAY, dummyBlock )
-
-                    // append the new block to the
-                    // set the 'script' flag parameter
-                    final wrap = makeScriptWrapper(dummyClosure, cmd, 'script', unit)
-                    block.addStatement( new ExpressionStatement(wrap) )
-                    done = true
-                }
-
-                /*
-                 * when the last statement is a string script, the 'script:' label can be omitted
-                 */
-                else if( len ) {
-                    def stm = block.getStatements().get(len-1)
-                    readSource(stm,source,unit)
-
-                    if ( stm instanceof ReturnStatement  ){
-                        done = wrapExpressionWithClosure(block, stm.getExpression(), len, source, unit)
-                    }
-
-                    else if ( stm instanceof ExpressionStatement )  {
-                        done = wrapExpressionWithClosure(block, stm.getExpression(), len, source, unit)
-                    }
-
-                    // apply command variables escape
-                    stm.visit(new TaskCmdXformVisitor(unit))
-                }
-
-                if (!done) {
-                    log.trace "Invalid 'process' definition -- Process must terminate with string expression"
-                    int line = methodCall.lineNumber
-                    int coln = methodCall.columnNumber
-                    unit.addError( new SyntaxException("Invalid process definition -- Make sure the process ends with a script wrapped by quote characters",line,coln))
-                }
+            if (!done) {
+                log.trace "Invalid 'process' definition -- Process must terminate with string expression"
+                int line = methodCall.lineNumber
+                int coln = methodCall.columnNumber
+                unit.addError( new SyntaxException("Invalid process definition -- Make sure the process ends with a script wrapped by quote characters",line,coln))
             }
         }
 
@@ -873,51 +791,10 @@ class NextflowDSLImpl implements ASTTransformation {
         protected void fixStdinStdout( ExpressionStatement stm ) {
 
             // transform the following syntax:
-            //      `stdin from x`  --> stdin() from (x)
-            //      `stdout into x` --> `stdout() into (x)`
+            //      `stdin`  --> `stdin()`
+            //      `stdout` --> `stdout()`
             VariableExpression varX
-            if( stm.expression instanceof PropertyExpression ) {
-                def expr = (PropertyExpression)stm.expression
-                def obj = expr.objectExpression
-                def prop = expr.property as ConstantExpression
-                def target = new VariableExpression(prop.text)
-
-                if( obj instanceof MethodCallExpression ) {
-                    def methodCall = obj as MethodCallExpression
-                    if( 'stdout' == methodCall.getMethodAsString() ) {
-                        def stdout = new MethodCallExpression( new VariableExpression('this'), 'stdout', new ArgumentListExpression()  )
-                        def into = new MethodCallExpression(stdout, 'into', new ArgumentListExpression(target))
-                        // remove replace the old one with the new one
-                        stm.setExpression( into )
-                    }
-                    else if( 'stdin' == methodCall.getMethodAsString() ) {
-                        def stdin = new MethodCallExpression( new VariableExpression('this'), 'stdin', new ArgumentListExpression()  )
-                        def from = new MethodCallExpression(stdin, 'from', new ArgumentListExpression(target))
-                        // remove replace the old one with the new one
-                        stm.setExpression( from )
-                    }
-                }
-            }
-            // transform the following syntax:
-            //      `stdout into (x,y,..)` --> `stdout() into (x,y,..)`
-            else if( stm.expression instanceof MethodCallExpression ) {
-                def methodCall = (MethodCallExpression)stm.expression
-                if( 'stdout' == methodCall.getMethodAsString() ) {
-                    def args = methodCall.getArguments()
-                    if( args instanceof ArgumentListExpression && args.getExpressions() && args.getExpression(0) instanceof MethodCallExpression ) {
-                        def methodCall2 = (MethodCallExpression)args.getExpression(0)
-                        def args2 = methodCall2.getArguments()
-                        if( args2 instanceof ArgumentListExpression && methodCall2.methodAsString == 'into') {
-                            def vars = args2.getExpressions()
-                            def stdout = new MethodCallExpression( new VariableExpression('this'), 'stdout', new ArgumentListExpression()  )
-                            def into = new MethodCallExpression(stdout, 'into', new ArgumentListExpression(vars))
-                            // remove replace the old one with the new one
-                            stm.setExpression( into )
-                        }
-                    }
-                }
-            }
-            else if( (varX=isVariableX(stm.expression)) && (varX.name=='stdin' || varX.name=='stdout') && NF.isDsl2() ) {
+            if( (varX=isVariableX(stm.expression)) && (varX.name=='stdin' || varX.name=='stdout') ) {
                 final name = varX.name=='stdin' ? '_in_stdin' : '_out_stdout'
                 final call = new MethodCallExpression( new VariableExpression('this'), name, new ArgumentListExpression()  )
                 // remove replace the old one with the new one
@@ -938,7 +815,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 def nested = methodCall.objectExpression instanceof MethodCallExpression
                 log.trace "convert > input method: $methodName"
 
-                if( methodName in ['val','env','file','each','set','stdin','path','tuple'] ) {
+                if( methodName in ['val','env','file','each','stdin','path','tuple'] ) {
                     //this methods require a special prefix
                     if( !nested )
                         methodCall.setMethod( new ConstantExpression('_in_' + methodName) )
@@ -1018,7 +895,7 @@ class NextflowDSLImpl implements ASTTransformation {
             def nested = methodCall.objectExpression instanceof MethodCallExpression
             log.trace "convert > output method: $methodName"
 
-            if( methodName in ['val','env','file','set','stdout','path','tuple'] && !nested ) {
+            if( methodName in ['val','env','file','stdout','path','tuple'] && !nested ) {
                 // prefix the method name with the string '_out_'
                 methodCall.setMethod( new ConstantExpression('_out_' + methodName) )
                 fixMethodCall(methodCall)
@@ -1052,7 +929,7 @@ class NextflowDSLImpl implements ASTTransformation {
         protected void fixMethodCall( MethodCallExpression methodCall ) {
             final name = methodCall.methodAsString
 
-            withinTupleMethod = name == '_in_set' || name == '_out_set' || name == '_in_tuple' || name == '_out_tuple'
+            withinTupleMethod = name == '_in_tuple' || name == '_out_tuple'
             withinEachMethod = name == '_in_each'
 
             try {
@@ -1268,10 +1145,10 @@ class NextflowDSLImpl implements ASTTransformation {
 
         /**
          * This method handle the process definition, so that it transform the user entered syntax
-         *    process myName ( named: args, ..  ) { code .. }
+         *    process myName { code .. }
          *
          * into
-         *    process ( [named:args,..], String myName )  { }
+         *    process ( 'myName' )  { }
          *
          * @param methodCall
          * @param unit
@@ -1298,21 +1175,18 @@ class NextflowDSLImpl implements ASTTransformation {
             }
             processNames.add(name)
 
-            // the nested method arguments are the arguments to be passed
-            // to the process definition, plus adding the process *name*
-            // as an extra item in the arguments list
-            def args = nested.getArguments() as ArgumentListExpression
+            // make sure there is a single nested argument, which is a closure
+            def args = (ArgumentListExpression)nested.getArguments()
             log.trace "Process name: $name with args: $args"
 
-            // make sure to add the 'name' after the map item
-            // (which represent the named parameter attributes)
+            if( args.size() != 1 || args[0] !instanceof ClosureExpression ) {
+                syntaxError(methodCall, "Invalid process definition")
+                return
+            }
+
+            // wrap the process name in a string literal and add to the arguments
             list = args.getExpressions()
-            if( list.size()>0 && list[0] instanceof MapExpression ) {
-                list.add(1, new ConstantExpression(name))
-            }
-            else {
-                list.add(0, new ConstantExpression(name))
-            }
+            list.add(0, new ConstantExpression(name))
 
             // set the new list as the new arguments
             methodCall.setArguments( args )

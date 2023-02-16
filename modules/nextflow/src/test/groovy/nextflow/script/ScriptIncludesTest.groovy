@@ -1157,8 +1157,8 @@ class ScriptIncludesTest extends Dsl2Spec {
         def runner = new MockScriptRunner()
         def result = runner.setScript(SCRIPT).execute()
         then:
-        def e = thrown(DeprecationException)
-        e.message == "Unwrapped module inclusion is deprecated -- Replace `include foo from './MODULE/PATH'` with `include { foo } from './MODULE/PATH'`"
+        def e = thrown(ScriptCompilationException)
+        e.message.contains "Invalid include statement -- the correct syntax is `include { ... } from '...'`"
 
     }
 

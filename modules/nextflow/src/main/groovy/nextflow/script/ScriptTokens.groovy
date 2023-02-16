@@ -37,10 +37,10 @@ class TokenVar {
 }
 
 /**
- *  A token used by the DSL to identify a 'file' declaration in a 'set' parameter, for example:
+ *  A token used by the DSL to identify a 'file' declaration in a 'tuple' parameter, for example:
  *      <pre>
  *      input:
- *      set( file('name'), ... )
+ *      tuple( file('name'), ... )
  *      </pre>
  *
  */
@@ -50,10 +50,10 @@ class TokenFileCall {
 }
 
 /**
- *  A token used by the DSL to identify a 'path' declaration in a 'set' parameter, for example:
+ *  A token used by the DSL to identify a 'path' declaration in a 'tuple' parameter, for example:
  *      <pre>
  *      input:
- *      set( path('name'), ... )
+ *      tuple( path('name'), ... )
  *      </pre>
  *
  */
@@ -100,7 +100,7 @@ class TokenStdoutCall { }
  * Token used by the DSL to identify a environment variable declaration, like this
  *     <pre>
  *     input:
- *     set( env(X), ... )
+ *     tuple( env(X), ... )
  *     <pre>
  */
 @ToString
@@ -115,10 +115,10 @@ class TokenEnvCall {
  * This class is used to identify a 'val' when used like in this example:
  * <pre>
  *  input:
- *  set ( val(x), ...  )
+ *  tuple ( val(x), ...  )
  *
  *  output:
- *  set( val(y), ...  )
+ *  tuple( val(y), ...  )
  *
  * </pre>
  *

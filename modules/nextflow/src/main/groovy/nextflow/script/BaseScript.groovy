@@ -91,13 +91,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     protected process( String name, Closure<BodyDef> body ) {
-        if( NF.isDsl2() ) {
-            def process = new ProcessDef(this,body,name)
-            meta.addDefinition(process)
-        }
-        else {
-            throw new UnsupportedOperationException("DSL1 is not supported anymore")
-        }
+        log.info "BaseScript.process ${name}"
+        def process = new ProcessDef(this,body,name)
+        meta.addDefinition(process)
     }
 
     /**
@@ -160,22 +156,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( !entryFlow ) {
             if( meta.getLocalWorkflowNames() )
                 log.warn "No entry workflow specified"
-            if( meta.getLocalProcessNames() ) {
-                final msg = """\
-                        =============================================================================
-                        =                                WARNING                                    =
-                        = You are running this script using DSL2 syntax, however it does not        = 
-                        = contain any 'workflow' definition so there's nothing for Nextflow to run. =
-                        =                                                                           =
-                        = If this script was written using Nextflow DSL1 syntax, please add the     = 
-                        = setting 'nextflow.enable.dsl=1' to the nextflow.config file or use the    =
-                        = command-line option '-dsl1' when running the pipeline.                    =
-                        =                                                                           =
-                        = More details at this link: https://www.nextflow.io/docs/latest/dsl2.html  =
-                        =============================================================================
-                        """.stripIndent()
-                throw new AbortOperationException(msg)
-            }
             return result
         }
 
