@@ -1,10 +1,10 @@
 package nextflow.trace
 
+import java.nio.file.Path
+
 import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.script.ScriptBinding
-
-import java.nio.file.Path
 
 /**
  * Creates Nextflow observes object
