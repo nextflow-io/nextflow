@@ -743,6 +743,10 @@ class ConfigBuilder {
             configContainer(config, 'singularity', runOptions.withSingularity)
         }
 
+        if( runOptions.withApptainer ) {
+            configContainer(config, 'apptainer', runOptions.withApptainer)
+        }
+
         if( runOptions.withCharliecloud ) {
             configContainer(config, 'charliecloud', runOptions.withCharliecloud)
         }

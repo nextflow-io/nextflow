@@ -31,9 +31,9 @@ class AwsBatchExecutorTest extends Specification {
         CONFIG                      | ENV                           | EXPECTED
         [:]                         | [:]                           | false
         [fusion:[enabled: true]]    | [:]                           | true
-        [fusion:[enabled: false]]   | [NXF_FUSION_ENABLED:'true']   | false     // <-- config has priority
-        [:]                         | [NXF_FUSION_ENABLED:'true']   | true
-        [:]                         | [NXF_FUSION_ENABLED:'false']  | false
+        [fusion:[enabled: false]]   | [FUSION_ENABLED:'true']   | false     // <-- config has priority
+        [:]                         | [FUSION_ENABLED:'true']   | true
+        [:]                         | [FUSION_ENABLED:'false']  | false
 
     }
 

@@ -11,6 +11,10 @@ platform that supports a container runtime. Furthermore, the same pipeline can b
 executed with any of the supported container runtimes, depending on which runtimes are available
 in the target compute environment.
 
+.. note::
+  When creating your container image to use with Nextflow make sure it includes Bash (3.x or later) and ``ps`` are installed in your
+  image, along with other tools required for collecting metrics (See the list :ref:`here <trace-required-packages>`). Also, Bash should be available on the path `/bin/bash` and it should be the container entry-point. 
+
 .. _container-charliecloud:
 
 Charliecloud

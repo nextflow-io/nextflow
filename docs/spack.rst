@@ -160,7 +160,7 @@ Building Spack packages for Nextflow pipelines
 
 Spack builds most software package from their source codes, and it does this for a request package
 and for all its required dependencies. As a result, Spack builds can last for long, even several hours.
-This can represent an inconvenience, in that it can significantly lenghten the duration of Nextflow processes.
+This can represent an inconvenience, in that it can significantly lengthen the duration of Nextflow processes.
 Here we briefly discuss two strategies to mitigate this aspect, and render the usage of Spack more effective.
 
 1.  Use a Spack yaml file, and pre-build the environment outside of Nextflow, prior to running the pipeline.

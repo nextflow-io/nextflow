@@ -52,9 +52,6 @@ class FusionScriptLauncherTest extends Specification {
         then:
         result == Path.of('/fusion/http/bar/z.txt')
 
-        expect:
-        fusion.fusionBuckets() == [ 'foo', 'bar' ] as Set
-
     }
 
     def 'should get fusion env' () {
@@ -63,11 +60,13 @@ class FusionScriptLauncherTest extends Specification {
         and:
         def fusion = new FusionScriptLauncher(
                 scheme: 'http',
-                buckets: ['foo'] as Set,
                 remoteWorkDir: XPath.get('http://foo/work'))
 
         expect:
-        fusion.fusionEnv() == [NXF_FUSION_WORK: '/fusion/http/foo/work']
+        fusion.fusionEnv() == [
+                FUSION_WORK: '/fusion/http/foo/work',
+                FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
+        ]
     }
 
     def 'should get header script' () {
