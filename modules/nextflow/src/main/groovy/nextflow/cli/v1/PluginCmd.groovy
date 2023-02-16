@@ -55,7 +55,7 @@ class PluginCmd extends AbstractCmd {
 
         // plugin run command
         else if( args[0].contains(CMD_SEP) ) {
-            PluginImpl.exec(args[0], args[1..-1], launcher.options)
+            PluginImpl.exec(args.pop(), args, launcher.options)
         }
 
         else {
