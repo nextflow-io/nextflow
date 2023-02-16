@@ -59,7 +59,7 @@ trait IHubOptions {
 
     String getHubUser() {
         if( !hubUserCli ) {
-            return hubUserCli
+            return null
         }
 
         def p = hubUserCli.indexOf(':')

@@ -19,6 +19,7 @@ package nextflow.cli.v2
 import java.nio.file.Files
 
 import picocli.CommandLine
+import picocli.CommandLine.HelpCommand
 import spock.lang.Specification
 
 /**
@@ -55,6 +56,30 @@ class LauncherTest extends Specification {
         launcher = parseArgs('--version')
         then:
         assert launcher.options.fullVersion
+
+    }
+
+    def 'should return `help` command' () {
+
+        def launcher
+        def command
+
+        when:
+        launcher = parseArgs('-h')
+        then:
+        assert launcher.options.help
+
+        when:
+        launcher = parseArgs('help')
+        command = getCommand(launcher)
+        then:
+        command instanceof HelpCommand
+
+        when:
+        launcher = parseArgs('help','xxx')
+        command = getCommand(launcher)
+        then:
+        command instanceof HelpCommand
 
     }
 
@@ -153,9 +178,9 @@ class LauncherTest extends Specification {
         given:
         def launcher = new Launcher()
         expect:
-        launcher.makeCli('nextflow', 'run', 'foo.nf') == 'nextflow run foo.nf'
-        launcher.makeCli('nextflow', 'run', 'foo.nf', '*.txt') == "nextflow run foo.nf '*.txt'"
-        launcher.makeCli('/this/that/nextflow run foo.nf', 'run', 'foo.nf', 'a{1,2}.z') == "nextflow run foo.nf 'a{1,2}.z'"
+        launcher.makeCli('nf', 'run', 'foo.nf') == 'nf run foo.nf'
+        launcher.makeCli('nf', 'run', 'foo.nf', '*.txt') == "nf run foo.nf '*.txt'"
+        launcher.makeCli('/this/that/nf run foo.nf', 'run', 'foo.nf', 'a{1,2}.z') == "nf run foo.nf 'a{1,2}.z'"
         launcher.makeCli('/this/that/launch run bar.nf', 'run', 'bar.nf') == '/this/that/launch run bar.nf'
     }
 

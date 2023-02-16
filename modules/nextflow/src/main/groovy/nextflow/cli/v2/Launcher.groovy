@@ -116,15 +116,15 @@ class Launcher extends AbstractCmd {
 
     private String makeCli(String cli, String... args) {
         if( !cli )
-            cli = 'nextflow'
+            cli = 'nf'
         if( !args )
             return cli
         def cmd = ' ' + args[0]
         int p = cli.indexOf(cmd)
         if( p!=-1 )
             cli = cli.substring(0,p)
-        if( cli.endsWith('nextflow') )
-            cli = 'nextflow'
+        if( cli.endsWith('nf') )
+            cli = 'nf'
         cli += ' ' + Escape.cli(args)
         return cli
     }

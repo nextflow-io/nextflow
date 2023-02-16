@@ -53,6 +53,9 @@ class LauncherOptions implements ILauncherOptions {
     @Option(names = ['-d','--dockerize'], arity = '0', description = 'Launch Nextflow via Docker (experimental)')
     boolean dockerize
 
+    @Option(names = ['-h'], description = 'Print this help', usageHelp = true)
+    boolean help
+
     @Option(names = ['--log'], description = 'Set the log file path')
     String logFile
 
