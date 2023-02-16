@@ -19,8 +19,6 @@ package nextflow.cli
 import java.nio.file.Path
 
 import ch.artecat.grengine.Grengine
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
 import com.google.common.hash.HashCode
 import groovy.text.Template
 import groovy.transform.CompileStatic
@@ -32,6 +30,9 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskTemplateEngine
 import nextflow.trace.TraceRecord
 import nextflow.ui.TableBuilder
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
 
 import static nextflow.cli.CmdHelper.fixEqualsOp
 
@@ -42,7 +43,7 @@ import static nextflow.cli.CmdHelper.fixEqualsOp
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Print executions log and runtime info")
+@Command(name = 'log', description = "Print executions log and runtime info")
 class CmdLog extends CmdBase implements CacheBase {
 
     static private List<String> ALL_FIELDS
@@ -58,36 +59,34 @@ class CmdLog extends CmdBase implements CacheBase {
         ALL_FIELDS.sort(true)
     }
 
-    static final public NAME = 'log'
+    @Option(names = ['-s','-sep'], defaultValue = '\\t', description='Character used to separate column values')
+    String sep
 
-    @Parameter(names = ['-s'], description='Character used to separate column values')
-    String sep = '\\t'
-
-    @Parameter(names=['-f','-fields'], description = 'Comma separated list of fields to include in the printed log -- Use the `-l` option to show the list of available fields')
+    @Option(names = ['-f','-fields'], description = 'Comma separated list of fields to include in the printed log -- Use the `-l` option to show the list of available fields')
     String fields
 
-    @Parameter(names = ['-t','-template'], description = 'Text template used to each record in the log ')
+    @Option(names = ['-t','-template'], description = 'Text template used to each record in the log ')
     String templateStr
 
-    @Parameter(names=['-l','-list-fields'], description = 'Show all available fields', arity = 0)
+    @Option(names = ['-l','-list-fields'], arity = '0', description = 'Show all available fields')
     boolean listFields
 
-    @Parameter(names=['-F','-filter'], description = "Filter log entries by a custom expression e.g. process =~ /foo.*/ && status == 'COMPLETED'")
+    @Option(names = ['-F','-filter'], description = "Filter log entries by a custom expression e.g. process =~ /foo.*/ && status == 'COMPLETED'")
     String filterStr
 
-    @Parameter(names='-after', description = 'Show log entries for runs executed after the specified one')
+    @Option(names = ['-after'], description = 'Show log entries for runs executed after the specified one')
     String after
 
-    @Parameter(names='-before', description = 'Show log entries for runs executed before the specified one')
+    @Option(names = ['-before'], description = 'Show log entries for runs executed before the specified one')
     String before
 
-    @Parameter(names='-but', description = 'Show log entries of all runs except the specified one')
+    @Option(names = ['-but'], description = 'Show log entries of all runs except the specified one')
     String but
 
-    @Parameter(names=['-q','-quiet'], description = 'Show only run names', arity = 0)
+    @Option(names = ['-q','-quiet'], arity = '0', description = 'Show only run names')
     boolean quiet
 
-    @Parameter(description = 'Run name or session id')
+    @Parameters(description = 'Session IDs or run names')
     List<String> args
 
     private Script filterScript
@@ -97,10 +96,6 @@ class CmdLog extends CmdBase implements CacheBase {
     private Template templateScript
 
     private Map<HashCode,Boolean> printed = new HashMap<>()
-
-    @Override
-    final String getName() { NAME }
-
 
     void init() {
         CacheBase.super.init()

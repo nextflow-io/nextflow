@@ -17,11 +17,11 @@
 
 package nextflow.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.plugin.Plugins
 import nextflow.ui.console.ConsoleExtension
+import picocli.CommandLine.Command
+import picocli.CommandLine.Parameters
 
 /**
  * Launch the Nextflow Console plugin
@@ -29,25 +29,19 @@ import nextflow.ui.console.ConsoleExtension
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Parameters(commandDescription = "Launch Nextflow interactive console")
+@Command(name = 'console', description = "Launch Nextflow interactive console")
 class CmdConsole extends CmdBase {
 
-    @Parameter(description = 'Nextflow console arguments')
-    List<String> args
+    @Parameters(arity = '0..1', description = 'script filename')
+    String script
 
-    String getName() { 'console' }
-
+    @Override
     void run() {
         Plugins.setup()
         Plugins.start('nf-console')
         final console = Plugins.getExtension(ConsoleExtension)
         if( !console )
             throw new IllegalStateException("Failed to find Nextflow Console extension")
-        // normalise the console args prepending the `console` command itself
-        if( args == null )
-            args = []
-        args.add(0, 'console')
-        // go !
-        console.run(args as String[])
+        console.run(script)
     }
 }

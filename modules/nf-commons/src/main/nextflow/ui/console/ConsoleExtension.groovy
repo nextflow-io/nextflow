@@ -9,6 +9,6 @@ import org.pf4j.ExtensionPoint
  */
 interface ConsoleExtension extends ExtensionPoint {
 
-    void run(String...args)
+    void run(String script)
 
 }

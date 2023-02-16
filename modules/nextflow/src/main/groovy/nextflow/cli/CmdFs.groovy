@@ -16,191 +16,97 @@
  */
 
 package nextflow.cli
+
 import java.nio.charset.Charset
 import java.nio.file.Files
 import java.nio.file.Path
 
-import com.beust.jcommander.Parameter
+import groovy.transform.CompileStatic
 import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FilePatternSplitter
 import nextflow.plugin.Plugins
+import picocli.CommandLine.Command
+import picocli.CommandLine.Parameters
 
 /**
  * Implements `fs` command
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CmdFs extends CmdBase implements UsageAware {
+@CompileStatic
+@Command(
+    name = 'fs',
+    description = 'Perform basic filesystem operations'
+)
+class CmdFs extends CmdBase {
 
-    static final public NAME = 'fs'
-
-    static final List<SubCmd> commands = new ArrayList<>()
-
-    static {
-        commands << new CmdCopy()
-        commands << new CmdMove()
-        commands << new CmdList()
-        commands << new CmdCat()
-        commands << new CmdRemove()
+    enum SubCommand {
+        COPY,
+        MOVE,
+        LIST,
+        CAT,
+        REMOVE
     }
 
-    trait SubCmd {
-        abstract int getArity()
-
-        abstract String getName()
-
-        abstract String getDescription()
-
-        abstract void apply(Path source, Path target)
-
-        String usage() {
-            "Usage: nextflow fs ${name} " + (arity==1 ? "<path>" : "source_file target_file")
-        }
+    @Command(description = 'Copy a file')
+    void copy(
+            @Parameters(paramLabel = '<source>') String source,
+            @Parameters(paramLabel = '<target>') String target) {
+        run0(SubCommand.COPY, [ source, target ])
     }
 
-    static class CmdCopy implements SubCmd {
-
-        @Override
-        int getArity() { 2 }
-
-        @Override
-        String getName() { 'cp' }
-
-        String getDescription() { 'Copy a file' }
-
-        @Override
-        void apply(Path source, Path target) {
-            FilesEx.copyTo(source, target)
-        }
-
+    @Command(description = 'Move a file')
+    void move(
+            @Parameters(paramLabel = '<source>') String source,
+            @Parameters(paramLabel = '<target>') String target) {
+        run0(SubCommand.MOVE, [ source, target ])
     }
 
-    static class CmdMove implements SubCmd {
-
-        @Override
-        int getArity() { 2 }
-
-        @Override
-        String getName() { 'mv' }
-
-        String getDescription() { 'Move a file' }
-
-        @Override
-        void apply(Path source, Path target) {
-            FilesEx.moveTo(source, target)
-        }
-
+    @Command(description = 'List the contents of a folder')
+    void list(
+            @Parameters(paramLabel = '<source>') String source) {
+        run0(SubCommand.LIST, [ source ])
     }
 
-    static class CmdList implements SubCmd {
-
-        @Override
-        int getArity() { 1 }
-
-        String getDescription() { 'List the content of a folder' }
-
-        @Override
-        String getName() { 'ls' }
-
-        @Override
-        void apply(Path source, Path target) {
-            println source.name
-        }
-
+    @Command(description = 'Print a file to stdout')
+    void cat(
+            @Parameters(paramLabel = '<source>') String source) {
+        run0(SubCommand.CAT, [ source ])
     }
 
-    static class CmdCat implements SubCmd {
-
-        @Override
-        int getArity() { 1 }
-
-        @Override
-        String getName() { 'cat' }
-
-        @Override
-        String getDescription() { 'Print a file to the stdout' }
-
-        @Override
-        void apply(Path source, Path target) {
-            String line
-            def reader = Files.newBufferedReader(source, Charset.defaultCharset())
-            while( line = reader.readLine() )
-                println line
-        }
-
+    @Command(description = 'Remove a file')
+    void remove(
+            @Parameters(paramLabel = '<source>') String source) {
+        run0(SubCommand.REMOVE, [ source ])
     }
 
-    static class CmdRemove implements SubCmd {
-
-        @Override
-        int getArity() { 1 }
-
-        @Override
-        String getName() { 'rm' }
-
-        @Override
-        String getDescription() { 'Remove a file' }
-
-        @Override
-        void apply(Path source, Path target) {
-            Files.isDirectory(source) ? FilesEx.deleteDir(source) : FilesEx.delete(source)
-        }
-
-    }
-
-
-    @Parameter
-    List<String> args
-
-    @Override
-    String getName() {
-        return NAME
-    }
-
-    @Override
-    void run() {
-        if( !args ) {
-            usage()
-            return
-        }
-
+    private void run0(SubCommand command, List<String> args) {
         Plugins.setup()
+
         try {
-            run0()
+            switch( command ) {
+                case COPY:
+                    traverse(args[0]) { Path path -> copy0(path, args[1] as Path) }
+                    break
+                case MOVE:
+                    traverse(args[0]) { Path path -> move0(path, args[1] as Path) }
+                    break
+                case LIST:
+                    traverse(args[0]) { Path path -> list0(path) }
+                    break
+                case CAT:
+                    traverse(args[0]) { Path path -> cat0(path) }
+                    break
+                case REMOVE:
+                    traverse(args[0]) { Path path -> remove0(path) }
+                    break
+            }
         }
         finally {
             Plugins.stop()
         }
-    }
-
-    private void run0() {
-        final cmd = findCmd(args[0])
-        if( !cmd ) {
-            throw new AbortOperationException("Unknown file system command: `$cmd`")
-        }
-
-        Path target
-        String source
-        if( cmd.arity==1 ) {
-            if( args.size() < 2 )
-                throw new AbortOperationException(cmd.usage())
-            source = args[1]
-            target = null
-        }
-        else {
-            if( args.size() < 3 )
-                throw new AbortOperationException(cmd.usage())
-            source = args[1]
-            target = args[2] as Path
-        }
-
-        traverse(source) { Path path -> cmd.apply(path, target) }
-    }
-
-    private SubCmd findCmd( String name ) {
-        commands.find { it.name == name }
     }
 
     private void traverse( String source, Closure op ) {
@@ -222,43 +128,29 @@ class CmdFs extends CmdBase implements UsageAware {
             def normalised = splitter.strip(source)
             op.call(FileHelper.asPath(normalised))
         }
-
     }
 
-    /**
-     * Print the command usage help
-     */
-    void usage() {
-        usage(args)
+    private void copy0(Path source, Path target) {
+        FilesEx.copyTo(source, target)
     }
 
-    /**
-     * Print the command usage help
-     *
-     * @param args The arguments as entered by the user
-     */
-    void usage(List<String> args) {
+    private void move0(Path source, Path target) {
+        FilesEx.moveTo(source, target)
+    }
 
-        def result = []
-        if( !args ) {
-            result << 'Usage: nextflow fs <command> [arg]'
-            result << ''
-            result << 'Commands:'
-            commands.each {
-            result << "  ${it.name}\t${it.description}"
-            }
-            result << ''
-            println result.join('\n').toString()
-        }
-        else {
-            def sub = findCmd(args[0])
-            if( sub )
-                println sub.usage()
-            else {
-                throw new AbortOperationException("Unknown cloud sub-command: ${args[0]}")
-            }
-        }
+    private void list0(Path source) {
+        println source.name
+    }
 
+    private void cat0(Path source) {
+        String line
+        def reader = Files.newBufferedReader(source, Charset.defaultCharset())
+        while( line = reader.readLine() )
+            println line
+    }
+
+    private void remove0(Path source) {
+        Files.isDirectory(source) ? FilesEx.deleteDir(source) : FilesEx.delete(source)
     }
 
 }

@@ -16,9 +16,7 @@
  */
 
 package nextflow.cli
-import com.beust.jcommander.DynamicParameter
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.config.ConfigBuilder
@@ -26,44 +24,45 @@ import nextflow.daemon.DaemonLauncher
 import nextflow.plugin.Plugins
 import nextflow.util.ServiceName
 import nextflow.util.ServiceDiscover
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
+import picocli.CommandLine.ParentCommand
 /**
  * CLI-command NODE
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
-@Parameters
+@Command(name = 'node', description = 'Launch Nextflow in daemon mode')
 class CmdNode extends CmdBase {
 
-    static final public NAME = 'node'
+    @ParentCommand
+    private Launcher launcher
 
-    @Override
-    final String getName() { NAME }
+    @Option(names = ['-cluster.'], description = 'Define cluster config options')
+    Map<String,String> clusterOptions
 
-    @DynamicParameter(names ='-cluster.', description='Define cluster config options')
-    Map<String,String> clusterOptions = [:]
-
-    @Parameter(names = ['-bg'], arity = 0, description = 'Start the cluster node daemon in background')
+    @Option(names = ['-bg'], arity = '0', description = 'Start the cluster node daemon in background')
     void setBackground(boolean value) {
         launcher.options.background = value
     }
 
-    @Parameter
-    List<String> provider
+    @Parameters(description = 'Daemon name or class')
+    String name
 
     @Override
     void run() {
         System.setProperty('nxf.node.daemon', 'true')
-        launchDaemon(provider ? provider[0] : null)
+        launchDaemon(name)
     }
-
 
     /**
      * Launch the daemon service
      *
-     * @param config The nextflow configuration map
+     * @param name
      */
-    protected launchDaemon(String name = null) {
+    protected launchDaemon(String name) {
 
         // create the config object
         def config = new ConfigBuilder()

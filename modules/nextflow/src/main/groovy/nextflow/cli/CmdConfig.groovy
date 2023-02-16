@@ -20,8 +20,6 @@ package nextflow.cli
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -30,6 +28,10 @@ import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.util.ConfigHelper
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
+import picocli.CommandLine.ParentCommand
 /**
  *  Prints the pipeline configuration
  *
@@ -37,32 +39,29 @@ import nextflow.util.ConfigHelper
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Print a project configuration")
+@Command(name = 'config', description = "Print a project configuration")
 class CmdConfig extends CmdBase {
 
-    static final public NAME = 'config'
+    @ParentCommand
+    private Launcher launcher
 
-    @Parameter(description = 'project name')
-    List<String> args = []
+    @Parameters(arity = '0..1', description = 'project name')
+    String pipeline
 
-    @Parameter(names=['-a','-show-profiles'], description = 'Show all configuration profiles')
+    @Option(names = ['-a','-show-profiles'], description = 'Show all configuration profiles')
     boolean showAllProfiles
 
-    @Parameter(names=['-profile'], description = 'Choose a configuration profile')
+    @Option(names = ['-profile'], description = 'Choose a configuration profile')
     String profile
 
-    @Parameter(names = '-properties', description = 'Prints config using Java properties notation')
+    @Option(names = ['-properties'], description = 'Prints config using Java properties notation')
     boolean printProperties
 
-    @Parameter(names = '-flat', description = 'Print config using flat notation')
+    @Option(names = ['-flat'], description = 'Print config using flat notation')
     boolean printFlatten
 
-    @Parameter(names = '-sort', description = 'Sort config attributes')
+    @Option(names = ['-sort'], description = 'Sort config attributes')
     boolean sort
-
-
-    @Override
-    String getName() { NAME }
 
     private OutputStream stdout = System.out
 
@@ -70,7 +69,7 @@ class CmdConfig extends CmdBase {
     void run() {
         Plugins.init()
         Path base = null
-        if( args ) base = getBaseDir(args[0])
+        if( pipeline ) base = getBaseDir(pipeline)
         if( !base ) base = Paths.get('.')
 
         if( profile && showAllProfiles ) {

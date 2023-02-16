@@ -24,8 +24,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -39,6 +37,10 @@ import nextflow.file.FileHelper
 import nextflow.plugin.Plugins
 import nextflow.trace.TraceRecord
 import nextflow.util.HistoryFile.Record
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
+import picocli.CommandLine.ParentCommand
 
 /**
  * Implements cache clean up command
@@ -48,46 +50,39 @@ import nextflow.util.HistoryFile.Record
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Clean up project cache and work directories")
+@Command(name = 'clean', description = "Clean up project cache and work directories")
 class CmdClean extends CmdBase implements CacheBase {
 
-    static final public NAME = 'clean'
+    @ParentCommand
+    private Launcher launcher
 
-    @Parameter(names=['-q', '-quiet'], description = 'Do not print names of files removed', arity = 0)
+    @Option(names = ['-q', '-quiet'], arity = '0', description = 'Do not print names of files removed')
     boolean quiet
 
-    @Parameter(names=['-f', '-force'], description = 'Force clean command', arity = 0)
+    @Option(names = ['-f', '-force'], arity = '0', description = 'Force clean command')
     boolean force
 
-    @Parameter(names=['-n', '-dry-run'], description = 'Print names of file to be removed without deleting them' , arity = 0)
+    @Option(names = ['-n', '-dry-run'], arity = '0', description = 'Print names of file to be removed without deleting them')
     boolean dryRun
 
-    @Parameter(names='-after', description = 'Clean up runs executed after the specified one')
+    @Option(names = ['-after'], description = 'Clean up runs executed after the specified one')
     String after
 
-    @Parameter(names='-before', description = 'Clean up runs executed before the specified one')
+    @Option(names = ['-before'], description = 'Clean up runs executed before the specified one')
     String before
 
-    @Parameter(names='-but', description = 'Clean up all runs except the specified one')
+    @Option(names = ['-but'], description = 'Clean up all runs except the specified one')
     String but
 
-    @Parameter(names=['-k', '-keep-logs'], description = 'Removes only temporary files but retains execution log entries and metadata')
+    @Option(names = ['-k', '-keep-logs'], description = 'Removes only temporary files but retains execution log entries and metadata')
     boolean keepLogs
 
-    @Parameter
+    @Parameters(description = 'Session IDs or run names')
     List<String> args
 
     private CacheDB currentCacheDb
 
     private Map<HashCode, Short> dryHash = new HashMap<>()
-
-    /**
-     * @return The name of this command {@code clean}
-     */
-    @Override
-    String getName() {
-        return NAME
-    }
 
     /**
      * Command entry method

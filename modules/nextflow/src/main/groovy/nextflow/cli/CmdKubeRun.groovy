@@ -17,12 +17,13 @@
 
 package nextflow.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.k8s.K8sDriverLauncher
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
 /**
  * Extends `run` command to support Kubernetes deployment
  * 
@@ -30,7 +31,7 @@ import nextflow.k8s.K8sDriverLauncher
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Execute a workflow in a Kubernetes cluster (experimental)")
+@Command(name = 'kuberun', description = "Execute a workflow in a Kubernetes cluster (experimental)")
 class CmdKubeRun extends CmdRun {
 
     static private String POD_NAME = /[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/
@@ -38,36 +39,32 @@ class CmdKubeRun extends CmdRun {
     /**
      * One or more volume claims mounts
      */
-    @Parameter(names = ['-v','-volume-mount'], description = 'Volume claim mounts eg. my-pvc:/mnt/path')
+    @Option(names = ['-v','-volume-mount'], description = 'Volume claim mounts eg. my-pvc:/mnt/path')
     List<String> volMounts
 
-    @Parameter(names = ['-n','-namespace'], description = 'Specify the K8s namespace to use')
+    @Option(names = ['-n','-namespace'], description = 'Specify the K8s namespace to use')
     String namespace
 
-    @Parameter(names = '-head-image', description = 'Specify the container image for the Nextflow driver pod')
+    @Option(names = ['-head-image'], description = 'Specify the container image for the Nextflow driver pod')
     String headImage
 
-    @Parameter(names = '-pod-image', description = 'Alias for -head-image (deprecated)')
+    @Option(names = ['-pod-image'], description = 'Alias for -head-image (deprecated)')
     String podImage
 
-    @Parameter(names = '-head-cpus', description = 'Specify number of CPUs requested for the Nextflow driver pod')
+    @Option(names = ['-head-cpus'], description = 'Specify number of CPUs requested for the Nextflow driver pod')
     int headCpus
 
-    @Parameter(names = '-head-memory', description = 'Specify amount of memory requested for the Nextflow driver pod')
+    @Option(names = ['-head-memory'], description = 'Specify amount of memory requested for the Nextflow driver pod')
     String headMemory
 
-    @Parameter(names = '-head-prescript', description = 'Specify script to be run before nextflow run starts')
+    @Option(names = ['-head-prescript'], description = 'Specify script to be run before nextflow run starts')
     String headPreScript
 
-    @Parameter(names= '-remoteConfig', description = 'Add the specified file from the K8s cluster to configuration set', hidden = true )
+    @Option(names = ['-remoteConfig'], description = 'Add the specified file from the K8s cluster to configuration set', hidden = true )
     List<String> runRemoteConfig
 
-    @Parameter(names=['-remoteProfile'], description = 'Choose a configuration profile in the remoteConfig')
+    @Option(names = ['-remoteProfile'], description = 'Choose a configuration profile in the remoteConfig')
     String remoteProfile
-
-
-    @Override
-    String getName() { 'kuberun' }
 
     @Override
     protected void checkRunName() {
@@ -83,10 +80,6 @@ class CmdKubeRun extends CmdRun {
 
     @Override
     void run() {
-        final scriptArgs = (args?.size()>1 ? args[1..-1] : []) as List<String>
-        final pipeline = stdin ? '-' : ( args ? args[0] : null )
-        if( !pipeline )
-            throw new AbortOperationException("No project name was specified")
         if( hasAnsiLogFlag() )
             log.warn "Ansi logging not supported by kuberun command"
         if( podImage ) {
@@ -95,7 +88,7 @@ class CmdKubeRun extends CmdRun {
         }
         checkRunName()
         final driver = new K8sDriverLauncher(cmd: this, runName: runName, headImage: headImage, background: background(), headCpus: headCpus, headMemory: headMemory, headPreScript: headPreScript) 
-        driver.run(pipeline, scriptArgs)
+        driver.run(pipeline, args)
         final status = driver.shutdown()
         System.exit(status)
     }

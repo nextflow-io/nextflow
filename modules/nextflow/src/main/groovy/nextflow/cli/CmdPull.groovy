@@ -16,13 +16,15 @@
  */
 
 package nextflow.cli
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
 /**
  * CLI sub-command PULL
  *
@@ -30,24 +32,17 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Download or update a project")
+@Command(name = 'pull', description = "Download or update a project")
 class CmdPull extends CmdBase implements HubOptions {
 
-    static final public NAME = 'pull'
+    @Parameters(arity = '0..1', description = 'project name or repository url to pull')
+    String pipeline
 
-    @Parameter(description = 'project name or repository url to pull', arity = 1)
-    List<String> args
-
-    @Parameter(names='-all', description = 'Update all downloaded projects', arity = 0)
+    @Option(names = ['-all'], arity = '0', description = 'Update all downloaded projects')
     boolean all
 
-    @Parameter(names=['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
+    @Option(names = ['-r','-revision'], description = 'Revision of the project to run (either a git branch, tag or commit SHA number)')
     String revision
-
-
-
-    @Override
-    final String getName() { NAME }
 
     /* only for testing purpose */
     protected File root
@@ -55,11 +50,11 @@ class CmdPull extends CmdBase implements HubOptions {
     @Override
     void run() {
 
-        if( !all && !args )
-            throw new AbortOperationException('Missing argument')
+        if( !pipeline && !all )
+            throw new AbortOperationException('Project name or option `-all` is required')
 
-        def list = all ? AssetManager.list() : args.toList()
-        if( !list ) {
+        def pipelines = all ? AssetManager.list() : [pipeline]
+        if( !pipelines ) {
             log.info "(nothing to do)"
             return
         }
@@ -72,7 +67,7 @@ class CmdPull extends CmdBase implements HubOptions {
         // init plugin system
         Plugins.init()
         
-        list.each {
+        pipelines.each {
             log.info "Checking $it ..."
             def manager = new AssetManager(it, this)
 

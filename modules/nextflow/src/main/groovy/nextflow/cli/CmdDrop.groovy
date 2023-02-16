@@ -17,13 +17,14 @@
 
 package nextflow.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
 
 /**
  * CLI sub-command DROP
@@ -32,26 +33,21 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Delete the local copy of a project")
+@Command(name = 'drop', description = "Delete the local copy of a project")
 class CmdDrop extends CmdBase {
 
-    static final public NAME = 'drop'
+    @Parameters(description = 'name of the project to drop')
+    String pipeline
 
-    @Parameter(required=true, description = 'name of the project to drop')
-    List<String> args
-
-    @Parameter(names='-f', description = 'Delete the repository without taking care of local changes')
+    @Option(names = ['-f','-force'], description = 'Delete the repository without taking care of local changes')
     boolean force
-
-    @Override
-    final String getName() { NAME }
 
     @Override
     void run() {
         Plugins.init()
-        def manager = new AssetManager(args[0])
+        def manager = new AssetManager(pipeline)
         if( !manager.localPath.exists() ) {
-            throw new AbortOperationException("No match found for: ${args[0]}")
+            throw new AbortOperationException("No match found for: ${pipeline}")
         }
 
         if( this.force || manager.isClean() ) {

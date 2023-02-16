@@ -22,8 +22,6 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.Paths
 
-import com.beust.jcommander.DynamicParameter
-import com.beust.jcommander.Parameter
 import com.google.common.hash.Hashing
 import groovy.util.logging.Slf4j
 import nextflow.cli.CmdKubeRun
@@ -43,6 +41,7 @@ import nextflow.scm.ProviderConfig
 import nextflow.util.ConfigHelper
 import nextflow.util.Escape
 import org.codehaus.groovy.runtime.MethodClosure
+import picocli.CommandLine.Option
 /**
  * Configure and submit the execution of pod running the Nextflow main application
  *
@@ -389,7 +388,7 @@ class K8sDriverLauncher {
         }
         field.setAccessible(true)
         if( field.get(cmd) ) {
-            def param = field.getAnnotation(Parameter)
+            def param = field.getAnnotation(Option)
             def opt = param.names() ? param.names()[0] : "-$name"
             abort(opt)
         }
@@ -415,18 +414,18 @@ class K8sDriverLauncher {
         field.setAccessible(true)
         def val = field.get(cmd)
         if( ( eval ? eval(val) : val ) ) {
-            def param = field.getAnnotation(Parameter)
+            def param = field.getAnnotation(Option)
             if( param ) {
-                result << "${param.names()[0]} ${Escape.wildcards(String.valueOf(val))}"
-                return
-            }
-
-            param = field.getAnnotation(DynamicParameter)
-            if( param && val instanceof Map ) {
-                val.each { k,v ->
-                    result << "${param.names()[0]}$k ${Escape.wildcards(String.valueOf(v))}"
+                if( val instanceof Map ) {
+                    val.each { k,v ->
+                        result << "${param.names()[0]}$k ${Escape.wildcards(String.valueOf(v))}"
+                    }
+                }
+                else {
+                    result << "${param.names()[0]} ${Escape.wildcards(String.valueOf(val))}"
                 }
             }
+
         }
     }
 

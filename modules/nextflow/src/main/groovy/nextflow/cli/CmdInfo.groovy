@@ -20,8 +20,6 @@ package nextflow.cli
 import java.lang.management.ManagementFactory
 import java.nio.file.spi.FileSystemProvider
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
 import com.sun.management.OperatingSystemMXBean
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
@@ -33,6 +31,9 @@ import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.util.MemoryUnit
 import org.yaml.snakeyaml.Yaml
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
 /**
  * CLI sub-command INFO
  *
@@ -40,44 +41,39 @@ import org.yaml.snakeyaml.Yaml
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Print project and system runtime information")
+@Command(name = 'info', description = "Print project and system runtime information")
 class CmdInfo extends CmdBase {
-
-    static final public NAME = 'info'
 
     private PrintStream out = System.out
 
-    @Parameter(description = 'project name')
-    List<String> args
+    @Parameters(arity = '0..1', description = 'project name')
+    String pipeline
 
-    @Parameter(names='-d',description = 'Show detailed information', arity = 0)
+    @Option(names = ['-d'], arity = '0', description = 'Show detailed information')
     boolean detailed
 
-    @Parameter(names='-dd', hidden = true, arity = 0)
+    @Option(names = ['-dd'], arity = '0', hidden = true)
     boolean moreDetailed
 
-    @Parameter(names='-o', description = 'Output format, either: text (default), json, yaml')
+    @Option(names = ['-o','-output-format'], description = 'Output format, either: text (default), json, yaml')
     String format
 
-    @Parameter(names=['-u','-check-updates'], description = 'Check for remote updates')
+    @Option(names = ['-u','-check-updates'], description = 'Check for remote updates')
     boolean checkForUpdates
-
-    @Override
-    final String getName() { NAME }
 
     @Override
     void run() {
 
         int level = moreDetailed ? 2 : ( detailed ? 1 : 0 )
-        if( !args ) {
+        if( !pipeline ) {
             println getInfo(level)
             return
         }
 
         Plugins.init()
-        final manager = new AssetManager(args[0])
+        final manager = new AssetManager(pipeline)
         if( !manager.isLocal() )
-            throw new AbortOperationException("Unknown project `${args[0]}`")
+            throw new AbortOperationException("Unknown project `${pipeline}`")
 
         if( !format || format == 'text' ) {
             printText(manager,level)

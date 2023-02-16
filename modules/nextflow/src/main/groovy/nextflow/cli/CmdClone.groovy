@@ -16,13 +16,14 @@
  */
 
 package nextflow.cli
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
 /**
  * CLI sub-command clone
  *
@@ -30,31 +31,27 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "Clone a project into a folder")
+@Command(name = 'clone', description = "Clone a project into a folder")
 class CmdClone extends CmdBase implements HubOptions {
 
-    static final public NAME = 'clone'
+    @Parameters(index = '0', description = 'name of the project to clone')
+    String pipeline
 
-    @Parameter(required=true, description = 'name of the project to clone')
-    List<String> args
+    @Parameters(arity = '0..1', description = 'target directory')
+    String targetName
 
-    @Parameter(names='-r', description = 'Revision to clone - It can be a git branch, tag or revision number')
+    @Option(names = ['-r', '-revision'], description = 'Revision to clone - It can be a git branch, tag or revision number')
     String revision
-
-    @Override
-    final String getName() { NAME }
 
     @Override
     void run() {
         // init plugin system
         Plugins.init()
-        // the pipeline name
-        String pipeline = args[0]
         final manager = new AssetManager(pipeline, this)
 
         // the target directory is the second parameter
         // otherwise default the current pipeline name
-        def target = new File(args.size()> 1 ? args[1] : manager.getBaseName())
+        def target = new File(targetName ?: manager.getBaseName())
         if( target.exists() ) {
             if( target.isFile() )
                 throw new AbortOperationException("A file with the same name already exists: $target")

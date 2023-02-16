@@ -18,10 +18,13 @@
 
 package nextflow.cli
 
-import com.beust.jcommander.Parameter
 import groovy.transform.CompileStatic
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
+import picocli.CommandLine.Command
+import picocli.CommandLine.Parameters
+import picocli.CommandLine.ParentCommand
+
 import static nextflow.cli.PluginExecAware.CMD_SEP
 
 /**
@@ -30,34 +33,33 @@ import static nextflow.cli.PluginExecAware.CMD_SEP
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
+@Command(name = 'plugin', description = 'Manage plugins and execute custom plugin commands')
 class CmdPlugin extends CmdBase {
 
-    @Override
-    String getName() {
-        return 'plugin'
-    }
+    @ParentCommand
+    protected Launcher launcher
 
-    @Parameter(hidden = true)
+    @Parameters(index = '0')
+    String command
+
+    @Parameters(index = '1..*')
     List<String> args
 
     @Override
     void run() {
-        if( !args )
-            throw new AbortOperationException("Missing plugin command - usage: nextflow plugin install <pluginId,..>")
         // setup plugins system
         Plugins.setup()
         // check for the plugins install
-        if( args[0] == 'install' ) {
-            if( args.size()!=2 )
-                throw new AbortOperationException("Missing plugin install target - usage: nextflow plugin install <pluginId,..>")
-            Plugins.pull(args[1].tokenize(','))
+        if( command == 'install' ) {
+            if( args.size()!=1 )
+                throw new AbortOperationException("Missing plugin install target - usage: nextflow plugin install [<pluginId>,..]")
+            Plugins.pull(args[0].tokenize(','))
         }
         // plugin run command
-        else if( args[0].contains(CMD_SEP) ) {
-            final head = args.pop()
-            final items = head.tokenize(CMD_SEP)
+        else if( command.contains(CMD_SEP) ) {
+            final items = command.tokenize(CMD_SEP)
             final target = items[0]
-            final cmd = items[1] ? items[1..-1].join(CMD_SEP) : null
+            final targetCmd = items[1] ? items[1..-1].join(CMD_SEP) : null
 
             // push back the command as the first item
             Plugins.start(target)
@@ -66,7 +68,7 @@ class CmdPlugin extends CmdBase {
                 throw new AbortOperationException("Cannot find target plugin: $target")
             final plugin = wrapper.getPlugin()
             if( plugin instanceof PluginExecAware ) {
-                final ret = plugin.exec(getLauncher(), target, cmd, args)
+                final ret = plugin.exec(launcher, target, targetCmd, args)
                 // use explicit exit to invoke the system shutdown hooks
                 System.exit(ret)
             }
@@ -74,7 +76,7 @@ class CmdPlugin extends CmdBase {
                 throw new AbortOperationException("Invalid target plugin: $target")
         }
         else {
-            throw new AbortOperationException("Invalid plugin command: ${args[0]}")
+            throw new AbortOperationException("Invalid plugin command: ${command}")
         }
     }
 

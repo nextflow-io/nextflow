@@ -61,32 +61,13 @@ class CmdSecretTest extends Specification {
         tempDir?.deleteDir()
     }
 
-    def 'should validate #COMMAND doesnt accept #ARGUMENTS' () {
-        when:
-        new CmdSecret(args: [COMMAND] + ARGUMENTS).run()
-
-        then:
-        thrown(AbortOperationException)
-
-        where:
-        COMMAND | ARGUMENTS
-        'list' | ['foo']
-        'get' | ['']
-        'get' | ['a','b']
-        'set' | ['']
-        'set' | ['a']
-        'delete' | ['']
-        'delete' | ['a','b']
-    }
-
-
     def 'should print no secrets info' () {
 
         given:
         secretFile.delete()
 
         when:
-        new CmdSecret(args: ['list']).run()
+        new CmdSecret().list()
         def screen = capture
                 .toString()
                 .readLines()
@@ -102,7 +83,7 @@ class CmdSecretTest extends Specification {
         secretFile.delete()
 
         when:
-        new CmdSecret(args: ['set','foo','bar']).run()
+        new CmdSecret().set('foo','bar')
 
         then:
         secretFile.text.indexOf('"name": "foo"') != -1
@@ -122,7 +103,7 @@ class CmdSecretTest extends Specification {
         secretFile.permissions = 'rw-------'
 
         when:
-        new CmdSecret(args: ['delete', 'foo']).run()
+        new CmdSecret().delete('foo')
 
         then:
         secretFile.text.indexOf('"name": "foo"') == -1

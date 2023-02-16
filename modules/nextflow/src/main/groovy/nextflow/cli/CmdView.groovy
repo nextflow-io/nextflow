@@ -17,13 +17,14 @@
 
 package nextflow.cli
 
-import com.beust.jcommander.Parameter
-import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
+import picocli.CommandLine.Parameters
 
 /**
  * CLI sub-command VIEW -- Print a pipeline script to console
@@ -32,29 +33,24 @@ import nextflow.scm.AssetManager
  */
 @Slf4j
 @CompileStatic
-@Parameters(commandDescription = "View project script file(s)")
+@Command(name = 'view', description = "View project script file(s)")
 class CmdView extends CmdBase {
 
-    static final public NAME = 'view'
+    @Parameters(description = 'project name')
+    String pipeline
 
-    @Override
-    String getName() { NAME }
-
-    @Parameter(description = 'project name', required = true)
-    List<String> args = []
-
-    @Parameter(names = '-q', description = 'Hide header line', arity = 0)
+    @Option(names = ['-q','-quiet'], arity = '0', description = 'Hide header line')
     boolean quiet
 
-    @Parameter(names = '-l', description = 'List repository content', arity = 0)
+    @Option(names = ['-l','-list-all'], arity = '0', description = 'List repository content')
     boolean all
 
     @Override
     void run() {
         Plugins.init()
-        def manager = new AssetManager(args[0])
+        def manager = new AssetManager(pipeline)
         if( !manager.isLocal() )
-            throw new AbortOperationException("Unknown project name `${args[0]}`")
+            throw new AbortOperationException("Unknown project name `${pipeline}`")
 
         if( all ) {
             if( !quiet )

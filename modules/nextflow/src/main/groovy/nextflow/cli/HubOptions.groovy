@@ -17,21 +17,21 @@
 
 package nextflow.cli
 
-import com.beust.jcommander.Parameter
 import groovy.transform.CompileStatic
+import picocli.CommandLine.Option
+
 /**
   * Defines the command line parameters for command that need to interact with a pipeline service hub i.e. GitHub or BitBucket
   *
   * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
   */
-
 @CompileStatic
 trait HubOptions {
 
-    @Parameter(names=['-hub'], description = "Service hub where the project is hosted")
+    @Option(names = ['-hub'], paramLabel = '<hub>', description = "Service hub where the project is hosted")
     String hubProvider
 
-    @Parameter(names='-user', description = 'Private repository user name')
+    @Option(names = ['-user'], paramLabel = '>user>', description = 'Private repository user name')
     String hubUser
 
     /**

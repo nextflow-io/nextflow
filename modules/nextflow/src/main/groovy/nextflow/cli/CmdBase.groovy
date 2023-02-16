@@ -17,23 +17,37 @@
 
 package nextflow.cli
 
-import com.beust.jcommander.Parameter
+import groovy.transform.CompileStatic
+import picocli.CommandLine
+import picocli.CommandLine.Command
+import picocli.CommandLine.Option
 
 /**
  * Implement command shared methods
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-abstract class CmdBase implements Runnable {
+@CompileStatic
+@Command(
+    headerHeading = '%n',
+    abbreviateSynopsis = true,
+    descriptionHeading = '%n',
+    commandListHeading = '%nCommands:%n',
+    requiredOptionMarker = ((char)'*'),
+    parameterListHeading = '%nParameters:%n',
+    optionListHeading = '%nOptions:%n'
+)
+class CmdBase implements Runnable {
 
-    private Launcher launcher
+    @CommandLine.Spec
+    CommandLine.Model.CommandSpec spec
 
-    abstract String getName()
-
-    Launcher getLauncher() { launcher }
-
-    void setLauncher( Launcher value ) { this.launcher = value }
-
-    @Parameter(names=['-h','-help'], description = 'Print the command usage', arity = 0, help = true)
+    @Option(names = ['-h','-help'], arity = '0', description = 'Print the command usage', usageHelp = true)
     boolean help
+
+    @Override
+    void run() {
+        spec.commandLine().usage(System.err)
+    }
+
 }

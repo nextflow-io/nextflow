@@ -17,11 +17,10 @@
 
 package nextflow.cli
 
-import com.beust.jcommander.DynamicParameter
-import com.beust.jcommander.Parameter
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
 import org.fusesource.jansi.Ansi
+import picocli.CommandLine.Option
 
 /**
  * Main application command line options
@@ -34,58 +33,55 @@ class CliOptions {
     /**
      * The packages to debug
      */
-    @Parameter(hidden = true, names='-debug')
+    @Option(hidden = true, names = ['-debug'])
     List<String> debug
 
-    @Parameter(names=['-log'], description = 'Set nextflow log file path')
+    @Option(names = ['-log'], description = 'Set nextflow log file path')
     String logFile
 
-    @Parameter(names=['-c','-config'], description = 'Add the specified file to configuration set')
+    @Option(names = ['-c','-config'], description = 'Add the specified file to configuration set')
     List<String> userConfig
 
-    @Parameter(names=['-config-ignore-includes'], description = 'Disable the parsing of config includes')
+    @Option(names = ['-config-ignore-includes'], description = 'Disable the parsing of config includes')
     boolean ignoreConfigIncludes
 
-    @Parameter(names=['-C'], description = 'Use the specified configuration file(s) overriding any defaults')
+    @Option(names = ['-C'], description = 'Use the specified configuration file(s) overriding any defaults')
     List<String> config
 
     /**
      * the packages to trace
      */
-    @Parameter(names='-trace', description = 'Enable trace level logging for the specified package name - multiple packages can be provided separating them with a comma e.g. \'-trace nextflow,io.seqera\'')
+    @Option(names = ['-trace'], description = 'Enable trace level logging for the specified package name - multiple packages can be provided separating them with a comma e.g. \'-trace nextflow,io.seqera\'')
     List<String> trace
 
     /**
      * Enable syslog appender
      */
-    @Parameter(names = ['-syslog'], description = 'Send logs to syslog server (eg. localhost:514)' )
+    @Option(names = ['-syslog'], arity = '0..1', fallbackValue = 'localhost', description = 'Send logs to syslog server (eg. localhost:514)' )
     String syslog
 
     /**
      * Print out the version number and exit
      */
-    @Parameter(names = ['-v','-version'], description = 'Print the program version')
+    @Option(names = ['-v'], description = 'Print the program version')
     boolean version
 
-    /**
-     * Print out the 'help' and exit
-     */
-    @Parameter(names = ['-h'], description = 'Print this help', help = true)
-    boolean help
+    @Option(names = ['-version'], description = 'Print the program version (full)')
+    boolean fullVersion
 
-    @Parameter(names = ['-q','-quiet'], description = 'Do not print information messages' )
+    @Option(names = ['-q','-quiet'], description = 'Do not print information messages' )
     boolean quiet
 
-    @Parameter(names = ['-bg'], description = 'Execute nextflow in background', arity = 0)
+    @Option(names = ['-bg'], arity = '0', description = 'Execute nextflow in background')
     boolean background
 
-    @DynamicParameter(names = ['-D'], description = 'Set JVM properties' )
-    Map<String,String> jvmOpts = [:]
+    @Option(names = ['-D'], description = 'Set JVM properties' )
+    Map<String,String> jvmOpts
 
-    @Parameter(names = ['-self-update'], description = 'Update nextflow to the latest version', arity = 0, hidden = true)
+    @Option(names = ['-self-update'], arity = '0', description = 'Update nextflow to the latest version', hidden = true)
     boolean selfUpdate
 
-    @Parameter(names = ['-d','-dockerize'], description = 'Launch nextflow via Docker (experimental)', arity = 0)
+    @Option(names = ['-d','-dockerize'], arity = '0', description = 'Launch nextflow via Docker (experimental)')
     boolean dockerize
 
     Boolean ansiLog
