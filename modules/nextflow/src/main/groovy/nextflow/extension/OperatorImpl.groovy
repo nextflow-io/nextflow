@@ -998,7 +998,7 @@ class OperatorImpl {
      * For example:
      *
      * <pre>
-     *     Channel.from(...)
+     *     Channel.of(...)
      *            .tap { newChannelName }
      *            .map { ... }
      *  </pre>

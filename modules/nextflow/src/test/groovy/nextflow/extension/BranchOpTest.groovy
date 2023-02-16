@@ -270,8 +270,8 @@ class BranchOpTest extends Dsl2Spec  {
                 bar: it>=5
             }
 
-            bra1 = Channel.from(1,2,3).branch(criteria)  
-            bra2 = Channel.from(6,7,8).branch(criteria)  
+            bra1 = Channel.of(1,2,3).branch(criteria)  
+            bra2 = Channel.of(6,7,8).branch(criteria)  
             
             bra1.foo.view { "foo:$it" }
             bra2.bar.view { "bar:$it" }

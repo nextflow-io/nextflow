@@ -58,8 +58,8 @@ class CombineOpTest extends Specification {
     def 'should combine channels' () {
 
         given:
-        def left = Channel.from('a','b','c')
-        def right = Channel.from(1,2,3)
+        def left = Channel.of('a','b','c')
+        def right = Channel.of(1,2,3)
         def op = new CombineOp(left, right)
 
         when:
@@ -80,8 +80,8 @@ class CombineOpTest extends Specification {
 
     def 'should combine by a value' () {
         given:
-        def left = Channel.from(['A', 10], ['A', 20], ['B', 30], ['B', 40])
-        def right = Channel.from(['A', 11], ['A', 22], ['B', 33])
+        def left = Channel.of(['A', 10], ['A', 20], ['B', 30], ['B', 40])
+        def right = Channel.of(['A', 11], ['A', 22], ['B', 33])
 
         when:
         def op = new CombineOp(left,right)
@@ -96,7 +96,7 @@ class CombineOpTest extends Specification {
     def 'should combine a channel with a list' () {
 
         given:
-        def left = Channel.from('a','b')
+        def left = Channel.of('a','b')
         def right = [1,2,3,4]
         def op = new CombineOp(left, right)
 
@@ -162,9 +162,9 @@ class CombineOpTest extends Specification {
     def 'should chain combine ops flat default' () {
 
         given:
-        def ch2 = Channel.from('a','b','c')
-        def ch3 = Channel.from('x','y')
-        def ch1 = Channel.from(1,2)
+        def ch2 = Channel.of('a','b','c')
+        def ch3 = Channel.of('x','y')
+        def ch1 = Channel.of(1,2)
 
         when:
         def result = new CombineOp(new CombineOp(ch1, ch2).apply(), ch3).apply()
@@ -191,9 +191,9 @@ class CombineOpTest extends Specification {
     def 'should chain combine ops flat true' () {
 
         given:
-        def ch1 = Channel.from(1,2)
-        def ch2 = Channel.from('a','b','c')
-        def ch3 = Channel.from('x','y')
+        def ch1 = Channel.of(1,2)
+        def ch2 = Channel.of('a','b','c')
+        def ch3 = Channel.of('x','y')
 
         when:
         def result = new CombineOp(new CombineOp(ch1, ch2).apply(), ch3).apply()
@@ -219,7 +219,7 @@ class CombineOpTest extends Specification {
     def 'should combine with tuples' () {
 
         when:
-        def left = Channel.from([1, 'x'], [2,'y'], [3, 'z'])
+        def left = Channel.of([1, 'x'], [2,'y'], [3, 'z'])
         def right = ['alpha','beta','gamma']
 
         def result = new CombineOp(left, right).apply()
@@ -245,7 +245,7 @@ class CombineOpTest extends Specification {
     def 'should combine with map' () {
 
         when:
-        def left = Channel.from([id:1, val:'x'], [id:2,val:'y'], [id:3, val:'z'])
+        def left = Channel.of([id:1, val:'x'], [id:2,val:'y'], [id:3, val:'z'])
         def right = ['alpha','beta','gamma']
         def result = left.combine(right)
         def all = (List) ToListOp.apply(result).val
@@ -271,7 +271,7 @@ class CombineOpTest extends Specification {
     def 'should combine items'() {
 
         when:
-        def left = Channel.from(1,2,3)
+        def left = Channel.of(1,2,3)
         def right = ['a','b']
         def result = left.combine(right).toSortedList().val.iterator()
         then:
@@ -283,8 +283,8 @@ class CombineOpTest extends Specification {
         result.next() == [3, 'b']
 
         when:
-        left = Channel.from(1,2)
-        right = Channel.from('a','b','c')
+        left = Channel.of(1,2)
+        right = Channel.of('a','b','c')
         result = left.combine(right).toSortedList().val.iterator()
         then:
         result.next() == [1, 'a']
@@ -299,9 +299,9 @@ class CombineOpTest extends Specification {
     def 'should chain combine'() {
 
         when:
-        def str1 = Channel.from('a','b','c')
-        def str2 = Channel.from('x','y')
-        def result = Channel.from(1,2).combine(str1).combine(str2).toSortedList().val.iterator()
+        def str1 = Channel.of('a','b','c')
+        def str2 = Channel.of('x','y')
+        def result = Channel.of(1,2).combine(str1).combine(str2).toSortedList().val.iterator()
         then:
         result.next() == [1,'a','x']
         result.next() == [1,'a','y']
@@ -317,9 +317,9 @@ class CombineOpTest extends Specification {
         result.next() == [2,'c','y']
 
         when:
-        str1 = Channel.from('a','b','c')
-        str2 = Channel.from('x','y')
-        result = Channel.from(1,2).combine(str1).combine(str2,flat:false).toSortedList().val.iterator()
+        str1 = Channel.of('a','b','c')
+        str2 = Channel.of('x','y')
+        result = Channel.of(1,2).combine(str1).combine(str2,flat:false).toSortedList().val.iterator()
         then:
         result.next() == [1,'a','x']
         result.next() == [1,'a','y']
@@ -338,8 +338,8 @@ class CombineOpTest extends Specification {
     def 'should combine by first element' () {
 
         given:
-        def left = Channel.from( ['A',1], ['A',2], ['B',1], ['B',2] )
-        def right = Channel.from( ['A',1], ['A',2], ['B',1], ['B',2] )
+        def left = Channel.of( ['A',1], ['A',2], ['B',1], ['B',2] )
+        def right = Channel.of( ['A',1], ['A',2], ['B',1], ['B',2] )
 
         when:
         def op = new CombineOp(left, right)

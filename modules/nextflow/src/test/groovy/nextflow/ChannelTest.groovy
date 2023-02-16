@@ -168,36 +168,6 @@ class ChannelTest extends Specification {
         result.val == Channel.STOP
     }
 
-    def testFrom() {
-        given:
-        DataflowQueue result
-
-        when:
-        result = Channel.from('hola')
-        then:
-        result.val == 'hola'
-        result.val == Channel.STOP
-
-        when:
-        result = Channel.from('alpha','delta')
-        then:
-        result.val == 'alpha'
-        result.val == 'delta'
-        result.val == Channel.STOP
-
-        when:
-        result = Channel.from(['alpha','delta'])
-        then:
-        result.val == 'alpha'
-        result.val == 'delta'
-        result.val == Channel.STOP
-
-        when:
-        result = Channel.from([])
-        then:
-        result.val == Channel.STOP
-    }
-
     def testSingleFile() {
 
         when:

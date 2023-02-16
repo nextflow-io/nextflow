@@ -32,8 +32,8 @@ class ConcatOp2Test extends Dsl2Spec {
 
         when:
         def result = dsl_eval('''
-            c1 = Channel.from(1,2,3)
-            c2 = Channel.from('a','b','c')
+            c1 = Channel.of(1,2,3)
+            c2 = Channel.of('a','b','c')
             c1.concat(c2)
         ''')
         then:
@@ -50,7 +50,7 @@ class ConcatOp2Test extends Dsl2Spec {
         when:
         def result = dsl_eval('''
             ch1 = Channel.value(1)
-            ch2 = Channel.from(2,3)
+            ch2 = Channel.of(2,3)
             ch1.concat(ch2)        
         ''')
         then:

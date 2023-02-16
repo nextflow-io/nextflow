@@ -303,8 +303,8 @@ class DAGTest extends Specification {
         dag.addDataflowBroadcastPair(ch1r, ch1)
         dag.addDataflowBroadcastPair(ch2r, ch2)
 
-        dag.addSourceNode( 'Channel.from', ch1r)
-        dag.addSourceNode( 'Channel.from', ch2r)
+        dag.addSourceNode( 'Channel.of', ch1r)
+        dag.addSourceNode( 'Channel.of', ch2r)
 
         dag.addOperatorNode( 'combine', [ch1r, ch2r], chC )
 

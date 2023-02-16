@@ -168,6 +168,8 @@ class Channel  {
      */
     @Deprecated
     static DataflowWriteChannel from( Collection items ) {
+        log.warn("Channel.from() is deprecated -- use Channel.of() or Channel.fromList() instead")
+
         final result = from0(items)
         NodeMarker.addSourceNode('Channel.from', result)
         return result
@@ -195,6 +197,8 @@ class Channel  {
      */
     @Deprecated
     static DataflowWriteChannel from( Object... items ) {
+        log.warn("Channel.from() is deprecated -- use Channel.of() or Channel.fromList() instead")
+
         checkNoChannels('channel.from', items)
         for( Object it : items ) if(CH.isChannel(it))
             throw new IllegalArgumentException("channel.from argument is already a channel object")
