@@ -136,7 +136,7 @@ google.batch.subnetwork                        Define the name of the subnetwork
 ============================================== =================
 
 .. note::
-  Specifying an instance policy will overwrite the following options: ``cpuPlatform``, ``machineType``, ``preemptible``, and ``spot``.
+  Specifying an instance policy will overwrite the ``machineType`` directive as well as the following options: ``cpuPlatform``, ``preemptible``, and ``spot``.
 
 
 Process definition

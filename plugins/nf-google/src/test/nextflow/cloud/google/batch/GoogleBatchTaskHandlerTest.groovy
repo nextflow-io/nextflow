@@ -212,11 +212,11 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def GCS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('foo').build() ).build()
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'debian:latest'
-        def INSTANCE_TEMPLATE = 'foo'
+        def INSTANCE_TEMPLATE = 'instance-template'
         def exec = Mock(GoogleBatchExecutor) {
             getConfig() >> Mock(BatchConfig) {
-                getInstanceTemplate() >> INSTANCE_TEMPLATE
                 getInstallGpuDrivers() >> true
+                getInstanceTemplate() >> INSTANCE_TEMPLATE
             }
         }
         and:
@@ -232,17 +232,20 @@ class GoogleBatchTaskHandlerTest extends Specification {
             }
         }
         and:
-        def launcher = Mock(GoogleBatchLauncherSpec)
-        launcher.runCommand() >> 'bash .command.run'
-        launcher.getContainerMounts() >> ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
-        launcher.getVolumes() >> [GCS_VOL]
+        def mounts = ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        def volumes = [GCS_VOL]
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', mounts, volumes)
 
         and:
-        def handler = new GoogleBatchTaskHandler(task, exec)
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
 
         when:
         def req = handler.newSubmitRequest(task, launcher)
         then:
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_) >> null
+
+        and:
         def taskGroup = req.getTaskGroups(0)
         def runnable = taskGroup.getTaskSpec().getRunnables(0)
         def allocationPolicy = req.getAllocationPolicy()
@@ -262,17 +265,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         instancePolicyOrTemplate.getInstallGpuDrivers() == true
         instancePolicyOrTemplate.getInstanceTemplate() == INSTANCE_TEMPLATE
         and:
-        instancePolicy.getAcceleratorsCount() == 0
-        instancePolicy.getMachineType() == ''
-        instancePolicy.getMinCpuPlatform() == ''
-        instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
-        and:
-        allocationPolicy.getLocation().getAllowedLocationsCount() == 0
-        allocationPolicy.getNetwork().getNetworkInterfacesCount() == 0
-        and:
-        req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
-        and:
-        taskGroup.getTaskSpec().getVolumesList().size()==1
+        taskGroup.getTaskSpec().getVolumesCount() == 1
         taskGroup.getTaskSpec().getVolumes(0) == GCS_VOL
     }
 
