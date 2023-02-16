@@ -52,10 +52,10 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     @ParentCommand
     private Launcher launcher
 
-    @Parameters(description = 'Project name or repository url')
+    @Parameters(index = '0', description = 'Project name or repository url')
     String pipeline
 
-    @Parameters(description = 'Pipeline script args')
+    @Parameters(index = '1..*', description = 'Pipeline script args')
     List<String> args
 
     @Option(names = ['--ansi-log'], arity = '1', description = 'Use ANSI logging')
@@ -224,54 +224,88 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     @Option(names = ['--with-weblog'], arity = '0..1', fallbackValue = '-', description = 'Send workflow status messages via HTTP to target URL')
     String withWebLog
 
-    @Parameters(description = 'Pipeline parameters')
-    List<String> params
+    private List<String> pipelineArgs = null
 
-    private Map<String,String> paramsMap = null
+    private Map<String,String> pipelineParams = null
 
     /**
-     * Get the pipeline params as a map.
+     * Parse the pipeline args and params from the positional
+     * args parsed by picocli. This method assumes that the first
+     * positional arg that starts with '--' is the first param,
+     * and parses the remaining args as params.
      *
-     * The double-dash ('--') notation is normally used to separate
-     * positional parameters from options. As a result, params will also
-     * contain the positional parameters of the `run` command (i.e. args),
-     * so they must be skipped when constructing the params map.
-     *
-     * This method assumes that params are specified as option-value pairs
-     * separated by a space. The equals-sign ('=') separator is not supported.
+     * NOTE: While the double-dash ('--') notation can be used to
+     * distinguish pipeline params from CLI options, it cannot be
+     * used to distinguish pipeline params from pipeline args.
+     */
+    private void parseArgs() {
+        // parse pipeline args
+        int i = args.findIndexOf { it.startsWith('--') }
+        pipelineArgs = args[0..<i]
+
+        // parse pipeline params
+        pipelineParams = [:]
+
+        if( i == -1 )
+            return
+
+        while( i < args.size() ) {
+            String current = args[i++]
+            if( !current.startsWith('--') ) {
+                throw new IllegalArgumentException("Invalid argument '${current}' -- unable to parse it as a pipeline arg, pipeline param, or CLI option")
+            }
+
+            String key
+            String value
+
+            // parse '--param=value'
+            if( current.contains('=') ) {
+                int split = current.indexOf('=')
+                key = current.substring(2, split)
+                value = current.substring(split+1)
+            }
+
+            // parse '--param value'
+            else if( i < args.size() && !args[i].startsWith('--') ) {
+                key = current.substring(2)
+                value = args[i++]
+            }
+
+            // parse '--param1 --param2 ...' as '--param1 true --param2 ...'
+            else {
+                key = current.substring(2)
+                value = 'true'
+            }
+
+            pipelineParams.put(key, value)
+        }
+
+        log.trace "Parsing pipeline args from CLI: $pipelineArgs"
+        log.trace "Parsing pipeline params from CLI: $pipelineParams"
+    }
+
+    /**
+     * Get the list of pipeline args.
+     */
+    @Override
+    List<String> getArgs() {
+        if( pipelineArgs == null ) {
+            parseArgs()
+        }
+
+        return pipelineArgs
+    }
+
+    /**
+     * Get the map of pipeline params.
      */
     @Override
     Map<String,String> getParams() {
-        if( paramsMap == null ) {
-            paramsMap = [:]
-
-            int i = args.size()
-            while( i < params.size() ) {
-                String current = params[i++]
-
-                String key
-                String value
-                if( current.contains('=') ) {
-                    int split = current.indexOf('=')
-                    key = current.substring(0, split)
-                    value = current.substring(split+1)
-                }
-                else if( i < params.size() && !params[i].startsWith('--') ) {
-                    key = current
-                    value = params[i++]
-                }
-                else {
-                    key = current
-                    value = 'true'
-                }
-
-                paramsMap.put(key, value)
-            }
-
-            log.trace "Parsing params from CLI: $paramsMap"
+        if( pipelineParams == null ) {
+            parseArgs()
         }
 
-        return paramsMap
+        return pipelineParams
     }
 
     @Override

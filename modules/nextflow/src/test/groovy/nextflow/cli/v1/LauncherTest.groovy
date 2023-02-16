@@ -45,7 +45,6 @@ class LauncherTest extends Specification {
         then:
         assert launcher.options.fullVersion
 
-
     }
 
     def 'should return `help` command' () {
@@ -135,9 +134,11 @@ class LauncherTest extends Specification {
         launcher.command.hubProvider == 'github'
 
         when:
-        launcher = new Launcher().parseMainArgs('run', 'script.nf', '--alpha', '0', '--omega', '9')
+        launcher = new Launcher().parseMainArgs('run', 'script.nf', 'arg1', 'arg2', '--alpha', '0', '--omega', '9')
         then:
         launcher.command instanceof RunCmd
+        launcher.command.pipeline == 'script.nf'
+        launcher.command.args == ['arg1', 'arg2']
         launcher.command.params.'alpha' == '0'
         launcher.command.params.'omega' == '9'
 
@@ -357,4 +358,5 @@ class LauncherTest extends Specification {
         String opt4
 
     }
+
 }

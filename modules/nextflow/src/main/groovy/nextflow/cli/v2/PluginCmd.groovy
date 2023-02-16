@@ -41,10 +41,10 @@ class PluginCmd extends AbstractCmd {
     @ParentCommand
     private Launcher launcher
 
-    @Parameters
+    @Parameters(index = '0')
     String command
 
-    @Parameters
+    @Parameters(index = '1..*')
     List<String> args
 
     @Override
