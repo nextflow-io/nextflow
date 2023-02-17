@@ -7,11 +7,11 @@ Fusion file system
 Introduction
 =============
 
-Fusion is a distributed virtual file system for cloud-native data pipeline and optimised for Nextflow workloads.
+Fusion is a distributed virtual file system for cloud-native data pipelines, optimised for Nextflow workloads.
 
-It bridges the gap between cloud-native storage and data analysis workflow by implementing a thin client
+It bridges the gap between cloud-native storage and data analysis workflows by implementing a thin client
 that allows any existing application to access object storage using the standard POSIX interface, thus simplifying
-and speeding up most operations. Currently it supports AWS S3.
+and speeding up most operations. Currently, it supports AWS S3.
 
 Getting started
 ===============
@@ -20,7 +20,7 @@ Requirements
 -------------
 
 Fusion file system is designed to work with containerised workloads, therefore it requires the use of a container
-engine such as Docker or a container native platform for the execution of your pipeline e.g. AWS Batch or Kubernetes.
+engine such as Docker or a container native platform for the execution of your pipeline, e.g. AWS Batch or Kubernetes.
 
 It also requires the use of :ref:`Wave containers<wave-page>` and Nextflow version ``22.10.0`` or later.
 
@@ -64,12 +64,12 @@ Local execution with S3 bucket as work directory
 ------------------------------------------------
 
 Fusion file system allows the use of an S3 bucket as a pipeline work directory with the Nextflow local executor. This
-configuration requires the use of Docker (or similar container engine) for the execution of your pipeline tasks.
+configuration requires the use of Docker (or a similar container engine) for the execution of your pipeline tasks.
 
-The AWS S3 bucket credentials should be made accessible via standard ``AWS_ACCESS_KEY_ID`` and ``AWS_SECRET_ACCESS_KEY``
+The AWS S3 bucket credentials must be made accessible via standard ``AWS_ACCESS_KEY_ID`` and ``AWS_SECRET_ACCESS_KEY``
 environment variables.
 
-The following configuration should be added in your Nextflow configuration file::
+The following configuration must be added to your Nextflow configuration file::
 
     docker {
       enabled = true
@@ -89,7 +89,7 @@ Then you can run your pipeline using the following command::
 
     nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR BUCKET>/scratch
 
-Replace ``<YOUR PIPELINE>`` and ``<YOUR BUCKET>`` with a pipeline script and bucket or your choice, for example::
+Replace ``<YOUR PIPELINE>`` and ``<YOUR BUCKET>`` with a pipeline script and bucket of your choice. For example::
 
     nextflow run https://github.com/nextflow-io/rnaseq-nf -work-dir s3://nextflow-ci/scratch
 
@@ -98,10 +98,10 @@ AWS Batch execution with S3 bucket as work directory
 ----------------------------------------------------
 
 Fusion file system allows the use of an S3 bucket as a pipeline work directory with the AWS Batch executor. The use
-of Fusion makes obsolete the need to create and configure a custom AMI that includes the `aws` command line tool, when
+of Fusion removes the need to create and configure a custom AMI that includes the `aws` command line tool when
 setting up the AWS Batch compute environment.
 
-The configuration for this deployment scenario looks like the following::
+In this deployment scenario, the following configuration must be added to your Nextflow configuration file::
 
     fusion {
       enabled = true
@@ -131,10 +131,10 @@ Kubernetes execution with S3 bucket as work directory
 
 Fusion file system allows the use of an S3 bucket as a pipeline work directory with the Kubernetes executor.
 
-The use of Fusion makes obsolete the need to create and manage and separate persistent volume and shared file system
+The use of Fusion makes removes the need to create and manage a separate persistent volume and shared file system
 in the Kubernetes cluster.
 
-The configuration for this deployment scenario looks like the following::
+In this deployment scenario, the following configuration must be added to your Nextflow configuration file::
 
     wave {
       enabled = true
@@ -162,10 +162,10 @@ The ``k8s.namespace`` represents the Kubernetes namespace where the jobs submitt
 be executed.
 
 The ``k8s.serviceAccount`` represents the Kubernetes service account that should be used to grant the execution
-permission to jobs launched by Nextflow. You can find more details how to configure it as the `following link <https://github.com/seqeralabs/wave-showcase/tree/master/example8>`_.
+permission to jobs launched by Nextflow. See `here <https://github.com/seqeralabs/wave-showcase/tree/master/example8>`_ for more information on configuring the service account.
 
 
-Having the above configuration in place, you can run your pipeline using the following command::
+With the above configuration in place, you can run your pipeline using the following command::
 
     nextflow run <YOUR PIPELINE> -work-dir s3://<YOUR BUCKET>/scratch
 
@@ -174,17 +174,16 @@ NVMe storage
 =============
 
 Fusion file system implements a lazy download and upload algorithm that runs in the background to transfer files
-in parallel to and from object storage into a container local temporal folder. This means that the performance of
-the temporal folder inside the container (``/tmp`` in a default setup) is key to get maximum performance.
+in parallel to and from object storage into a container-local temporal folder. This temporal folder (``/tmp`` in a default setup) is key for achieving maximum performance.
 
 The temporal folder is used only as a temporal cache, so the size of the volume can be much lower than the actual
-needs of your pipeline processes. Fusion has a build-in garbage collector that constantly monitors remaining disk
-space on temporal folder and immediately evicts old cached entries when necessary.
+needs of your pipeline processes. Fusion has a built-in garbage collector that constantly monitors remaining disk
+space in the temporal folder and immediately evicts old cached entries when necessary.
 
-The recommended setup to get maximum performance is to mount a NVMe disk as temporal folder and run the pipeline
-with Nextflow :ref:`scratch <process-scratch>` directive set to ``false`` to also avoid stage-out transfer time.
+The recommended setup for maximum performance is to mount an NVMe disk as the temporal folder and run the pipeline
+with the Nextflow :ref:`scratch <process-scratch>` directive set to ``false``, to avoid stage-out transfer time.
 
-Example extra configuration needed when using AWS Batch with `NVMe disks <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ssd-instance-store.html>`_
+Extra configuration is needed when using AWS Batch with `NVMe disks <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ssd-instance-store.html>`_
 to maximize performance::
 
     aws.batch.volumes = '/path/to/ec2/nvme:/tmp'
@@ -194,5 +193,5 @@ to maximize performance::
 More examples
 =============
 
-Check out the `Wave showcase repository <https://github.com/seqeralabs/wave-showcase>`_ for more examples on how to use
+Check out the `Wave showcase repository <https://github.com/seqeralabs/wave-showcase>`_ for more examples on using the
 Fusion file system.
