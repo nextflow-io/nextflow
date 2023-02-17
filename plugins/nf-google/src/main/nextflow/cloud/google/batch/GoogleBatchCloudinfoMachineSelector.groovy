@@ -47,6 +47,17 @@ class GoogleBatchCloudinfoMachineSelector {
 
     static String bestMachineType(int cpus, int memoryMB, String region, boolean spot, boolean localSSD, List<String> families) {
         final machineTypes = getAvailableMachineTypes(region)
+
+        // Check if a specific machine type was defined
+        if( families.size() == 1 ) {
+            final familyOrType = families.get(0)
+            if( familyOrType.contains("custom-") )
+                return familyOrType
+
+            if (machineTypes.find {it.type == familyOrType })
+                return familyOrType
+        }
+
         final memoryGB = Math.ceil(memoryMB / 1024) as int
 
         // Use only families that can have a local SSD
