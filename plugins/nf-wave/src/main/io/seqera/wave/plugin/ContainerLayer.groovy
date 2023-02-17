@@ -19,16 +19,13 @@ package io.seqera.wave.plugin
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
-import groovy.transform.ToString
 import nextflow.util.CacheHelper
-
 /**
  * Model a container layer meta-info
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Canonical
-@ToString(includeNames = true, includePackage = false)
 @CompileStatic
 class ContainerLayer {
     /**
@@ -71,5 +68,19 @@ class ContainerLayer {
         allMeta.add( gzipSize ?: 0 )
         allMeta.add( tarDigest ?: 'no-tarDigest')
         return CacheHelper.hasher(allMeta).hash().toString()
+    }
+
+    @Override
+    String toString() {
+        final loc = toStringLocation0(location)
+        return "ContainerLayer[location=${loc}; tarDigest=$tarDigest; gzipDigest=$gzipDigest; gzipSize=$gzipSize]"
+    }
+
+    private String toStringLocation0(String location){
+        if( !location || !location.startsWith('data:') )
+            return location
+        return location.length()>25
+                ? location.substring(0,25) + '...'
+                : location
     }
 }
