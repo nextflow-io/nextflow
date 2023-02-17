@@ -48,7 +48,6 @@ class GoogleBatchCloudinfoMachineSelector {
     static String bestMachineType(int cpus, int memoryMB, String region, boolean spot, boolean localSSD, List<String> families) {
         final machineTypes = getAvailableMachineTypes(region)
         final memoryGB = Math.ceil(memoryMB / 1024) as int
-        final cores = cpus > 1 ? cpus : 2
 
         // Use only families that can have a local SSD
         if (!families && localSSD)
@@ -59,7 +58,7 @@ class GoogleBatchCloudinfoMachineSelector {
 
         // find machines with enough resources and SSD local disk
         final validMachineTypes = machineTypes.findAll {
-                    it.cpusPerVm >= cores &&
+                    it.cpusPerVm >= cpus &&
                     it.memPerVm >= memoryGB &&
                     matchMachineType(it.type)
         }.collect()
