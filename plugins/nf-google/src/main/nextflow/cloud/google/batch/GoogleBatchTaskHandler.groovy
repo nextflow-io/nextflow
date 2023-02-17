@@ -396,7 +396,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         return result
     }
 
-    private CloudMachineInfo findBestMachineType(TaskConfig config) {
+    protected CloudMachineInfo findBestMachineType(TaskConfig config) {
         final location = client.location
         final cpus = config.getCpus()
         final memory = config.getMemory() ? config.getMemory().toMega().toInteger() : 1024
