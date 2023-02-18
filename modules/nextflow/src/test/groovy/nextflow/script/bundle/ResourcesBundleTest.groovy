@@ -80,7 +80,7 @@ class ResourcesBundleTest extends Specification {
                 'this/that/ciao.txt' ] as Set
 
         and:
-        bundle.fingerprint() == 'c063b8f42cfd65f4eb8efe7c30c108bc'
+        bundle.fingerprint() == '7404949a73f1707e39f641d9a54261ae'
 
     }
 
@@ -99,19 +99,19 @@ class ResourcesBundleTest extends Specification {
         bundle
         !bundle.hasEntries()
         and:
-        bundle.fingerprint() == 'c8597047abea34f987e6a347dca36823'
+        bundle.fingerprint() == 'c5e75f95b68f5119debd926961ef6abd'
 
         when:
         // changing file permissions, change the fingerprint
         dockerPath.setPermissions(6,0,0)
         then:
-        bundle.fingerprint() == '280d52c24debce950148f4250a34e3ff'
+        bundle.fingerprint() == '7b2200ff24230f76cea22e5eb15b1701'
 
         when:
         // changing the last modified time, change the fingerprint
         dockerPath.setLastModified(LAST_MODIFIED +100)
         then:
-        bundle.fingerprint() == '41bd15592039e3a198bef861800d3cd6'
+        bundle.fingerprint() == '7b2200ff24230f76cea22e5eb15b1701'
         
     }
 

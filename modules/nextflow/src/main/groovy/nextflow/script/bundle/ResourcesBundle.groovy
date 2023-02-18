@@ -165,13 +165,20 @@ class ResourcesBundle {
 
     private List fileMeta(String name, Path file) {
         final attrs = Files.readAttributes(file, BasicFileAttributes)
+        final regular = attrs.isRegularFile()
         final meta = [
                 name,
-                attrs.isRegularFile() ? attrs.size() : 0,
-                attrs.lastModifiedTime().toMillis(),
+                regular ? attrs.size() : 0,
+                regular ? md5(file, attrs) : 0,
                 Integer.toOctalString(file.getPermissionsMode()) ]
         log.trace "Module bundle entry=$meta"
         return meta
+    }
+
+    private String md5(Path path, BasicFileAttributes attrs) {
+        return attrs.size() <= MAX_FILE_SIZE.bytes
+                ? Files.readAllBytes(path).md5()
+                : '0'
     }
 
     String fingerprint() {
