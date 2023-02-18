@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+1.11.4 - 18 Feb 2023
+- Improve aws batch error logging [1eddeea7]
+- Fix serialization of S3 paths with spaces (#3565) [935df949]
+
 1.11.3 - 14 Jan 2023
 - Add `schedulingPriority` option to AWS Batch (#3505) [543ee7b1]
 
