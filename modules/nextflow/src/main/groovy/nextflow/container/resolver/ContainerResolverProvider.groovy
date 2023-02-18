@@ -17,8 +17,8 @@
 
 package nextflow.container.resolver
 
-import nextflow.plugin.Plugins
 
+import nextflow.plugin.Plugins
 /**
  * Load an instance of {@link ContainerResolver}
  *
@@ -26,7 +26,15 @@ import nextflow.plugin.Plugins
  */
 class ContainerResolverProvider {
 
-    static ContainerResolver load() {
+    /**
+     * Load the {@link ContainerResolver} instance via the plugin system.
+     *
+     * Use `synchronized` method to make it thread safe and prevent multiple instances
+     * of the same resolver type
+     *
+     * @return The {@link ContainerResolver} instance
+     */
+    static synchronized ContainerResolver load() {
         final resolvers = Plugins.getPriorityExtensions(ContainerResolver)
         if( !resolvers )
             throw new IllegalStateException("Cannot load ${ContainerResolver.class.simpleName}")
