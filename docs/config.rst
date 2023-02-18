@@ -957,6 +957,7 @@ These are defined alongside other scopes, but the option is assigned as typicall
 Name                Description
 ================== ================
 cleanup             If ``true``, on a successful completion of a run all files in *work* directory are automatically deleted.
+dumpHashes          If ``true``, dump task hash keys in the log file, for debugging purposes.
 ================== ================
 
 .. warning::
