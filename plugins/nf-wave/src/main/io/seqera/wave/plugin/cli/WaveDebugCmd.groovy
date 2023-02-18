@@ -17,10 +17,13 @@
 
 package io.seqera.wave.plugin.cli
 
+import java.nio.file.Path
+
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.exception.AbortOperationException
@@ -31,7 +34,7 @@ import nextflow.util.HistoryFile
 
 import static nextflow.fusion.FusionConfig.FUSION_PATH
 
-import nextflow.util.StringUtils
+import static nextflow.util.StringUtils.*
 
 /**
  * Implement wave container task debug
@@ -56,33 +59,31 @@ class WaveDebugCmd {
 
         final criteria = args.pop()
 
-        if ( isRemotePath(criteria) ) {
-            try {
-                final image = args.pop()
-                runRemoteTask(criteria, image)
-            } catch (NoSuchElementException ignored) {
-                throw new AbortOperationException("Missing container image - usage: nextflow plugin nf-wave:debug-task <remote-task-path> <image>")
-            }
-            return
+        if ( isRemotePath(criteria) && args ) {
+            final image = args.pop()
+            runRemoteTask(criteria, image)
+        }
+        else {
+            runCacheTask(criteria)
         }
 
-        runLocalTask(criteria)
     }
 
     protected runRemoteTask(String workDir, String image) {
-        final cmd = buildWaveRunCmd()
-        if ( image.startsWith("wave.seqera.io") ) {
+        final path = FileHelper.asPath(workDir)
+        final cmd = buildWaveRunCmd(path.scheme)
+        if ( image.startsWith("wave.seqera.io/") ) {
             // Run a waved container
-            cmd.runContainer(image, buildCommand(workDir))
+            cmd.runContainer(image, buildCommand(path))
         }
         else {
             // Wave it before running
-            List<String> args = [image] + buildCommand(workDir)
+            List<String> args = [image] + buildCommand(path)
             cmd.runContainer(args)
         }
     }
 
-    protected runLocalTask(String criteria) {
+    protected runCacheTask(String criteria) {
         HistoryFile history = HistoryFile.DEFAULT
         HistoryFile.Record runRecord
         if( !history.exists() || history.empty() || !(runRecord=history.findByIdOrName('last')[0]) )
@@ -97,7 +98,7 @@ class WaveDebugCmd {
             if( !isRemotePath(trace.workDir) )
                 throw new AbortOperationException("Cannot run non-fusion enabled task - Task work dir: $trace.workDir")
             log.info "Launching debug session for task '${trace.get('name')}' - work directory: ${trace.workDir}"
-            final cmd = buildWaveRunCmd()
+            final cmd = buildWaveRunCmd(getUrlProtocol(trace.workDir))
             cmd.runContainer(trace.get('container')?.toString(), buildCommand(trace.workDir))
         }
         finally {
@@ -106,16 +107,28 @@ class WaveDebugCmd {
     }
 
     protected static List<String> buildCommand(String workDir) {
-        final workDirPath = FileHelper.asPath(workDir)
-        final fusionPath = FusionHelper.toContainerMount(workDirPath, 's3')
+        final workPath = FileHelper.asPath(workDir)
+        return buildCommand(workPath)
+    }
+
+    protected static List<String> buildCommand(Path workPath) {
+        final fusionPath = FusionHelper.toContainerMount(workPath, workPath.scheme)
         return [FUSION_PATH, 'sh', '-c', "\'cd $fusionPath && PS1=\"[fusion] \" exec bash --norc\'".toString()]
     }
 
-    protected WaveRunCmd buildWaveRunCmd() {
-        return new WaveRunCmd(session)
-                .withContainerParams([tty:true, privileged: true])
-                .withEnvironment('AWS_ACCESS_KEY_ID')
-                .withEnvironment('AWS_SECRET_ACCESS_KEY')
+    protected WaveRunCmd buildWaveRunCmd(String scheme) {
+        final result = new WaveRunCmd(session)
+        result.withContainerParams([tty:true, privileged: true])
+        if( scheme=='s3' ) {
+            result.withEnvironment('AWS_ACCESS_KEY_ID')
+            result.withEnvironment('AWS_SECRET_ACCESS_KEY')
+        }
+        else if( scheme=='gs' && SysEnv.containsKey('GOOGLE_APPLICATION_CREDENTIALS') ) {
+            final path = Path.of(SysEnv.get('GOOGLE_APPLICATION_CREDENTIALS'))
+            result.withMounts(List.of(path))
+            result.withEnvironment('GOOGLE_APPLICATION_CREDENTIALS')
+        }
+        return result
     }
 
     protected TraceRecord getOrFindTrace(String criteria) {
@@ -146,7 +159,7 @@ class WaveDebugCmd {
 
     static boolean isRemotePath(String path) {
         if (!path) return false
-        final result = StringUtils.getUrlProtocol(path)
+        final result = getUrlProtocol(path)
         return result!=null && result!='file'
     }
 }
