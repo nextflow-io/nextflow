@@ -16,6 +16,9 @@
 
 package nextflow.cloud.google.batch
 
+import nextflow.cloud.types.CloudMachineInfo
+import nextflow.cloud.types.PriceModel
+import nextflow.processor.TaskConfig
 
 import java.nio.file.Path
 
@@ -41,7 +44,6 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 
-import static GoogleBatchCustomMachineSelector.customMachineTypeUri
 import static nextflow.cloud.google.batch.GoogleBatchCloudinfoMachineSelector.bestMachineType
 
 /**
@@ -77,6 +79,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      * Job state assigned by Google Batch service
      */
     private String jobState
+
+    private CloudMachineInfo machineInfo
 
     private volatile long timestamp
 
@@ -172,15 +176,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         def containerOptions= task.config.getContainerOptions() ?: ''
         // accelerator requires privileged option
         // https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
-        if( task.config.getAccelerator() ) {
+        if( task.config.getAccelerator() || fusionEnabled()) {
             if( containerOptions ) containerOptions += ' '
             containerOptions += '--privileged'
-        }
-
-        // Fusion configuration
-        if( fusionEnabled() && !task.config.getAccelerator() ) {
-            if( containerOptions ) containerOptions += ' '
-            containerOptions += '--security-opt apparmor=unconfined --security-opt seccomp=unconfined --device /dev/fuse '
         }
 
         if( containerOptions )
@@ -229,6 +227,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( task.config.getMachineType() )
             instancePolicy.setMachineType( task.config.getMachineType() )
 
+        machineInfo = findBestMachineType(task.config)
+        if( machineInfo )
+            instancePolicy.setMachineType(machineInfo.type)
+
         if( executor.config.serviceAccountEmail )
             allocationPolicy.setServiceAccount(
                 ServiceAccount.newBuilder()
@@ -250,11 +252,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                     )
                     .setDeviceName("fusion")
             )
-
-
-            final cpus = task.config.getCpus()
-            final memory = task.config.getMemory() ? task.config.getMemory().toMega().toInteger() : 1024
-            instancePolicy.setMachineType(getMachineType(cpus, memory, client.location))
         }
 
         allocationPolicy.addInstances(
@@ -385,25 +382,41 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
     }
 
+    protected CloudMachineInfo getMachineInfo() {
+        return machineInfo
+    }
+
     @Override
     TraceRecord getTraceRecord() {
         def result = super.getTraceRecord()
         if( jobId && uid ) {
             result.put('native_id', "$jobId/$uid")
         }
+        result.machineInfo = getMachineInfo()
         return result
     }
 
+    protected CloudMachineInfo findBestMachineType(TaskConfig config) {
+        final location = client.location
+        final cpus = config.getCpus()
+        final memory = config.getMemory() ? config.getMemory().toMega().toInteger() : 1024
+        final spot = executor.config.spot
+        final useSSD = fusionEnabled()
+        final families = config.getMachineType() ? config.getMachineType().tokenize(',') : []
 
-    private String getMachineType(int cpus, int memoryMB, String location) {
         try {
-            return bestMachineType(cpus, memoryMB, location)
+            return new CloudMachineInfo(
+                    type: bestMachineType(cpus, memory, location, spot, useSSD, families),
+                    zone: location,
+                    priceModel: spot ? PriceModel.spot : PriceModel.standard
+            )
         }
         catch (Exception e) {
-            log.debug "[GOOGLE BATCH] Cannot select machine type using cloud info. Fallback to custom machine type."
+            // Fallback to define custom machine types
+            log.debug "[GOOGLE BATCH] Cannot select machine type using cloud info for task: `$task.name`"
+            return null
         }
 
-        return customMachineTypeUri(GoogleBatchCustomMachineSelector.CpuSeries.N2.getCpuSeries(), cpus, memoryMB)
     }
 
 }
