@@ -30,6 +30,8 @@ class FusionConfig {
     final static public String DEFAULT_FUSION_AMD64_URL = 'https://fusionfs.seqera.io/releases/v2.1-amd64.json'
     final static public String DEFAULT_FUSION_ARM64_URL = 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
 
+    final static public String FUSION_PATH = '/usr/bin/fusion'
+
     final private Boolean enabled
     final private String containerConfigUrl
     final private Boolean exportAwsAccessKeys
