@@ -45,7 +45,7 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 
-import static nextflow.cloud.google.batch.GoogleBatchCloudinfoMachineSelector.bestMachineType
+import static GoogleBatchMachineTypeSelector.bestMachineType
 
 /**
  * Implements a task handler for Google Batch executor
@@ -401,7 +401,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final location = client.location
         final cpus = config.getCpus()
         final memory = config.getMemory() ? config.getMemory().toMega().toInteger() : 1024
-        final spot = executor.config.spot
+        final spot = executor.config.spot ?: executor.config.preemptible
         final useSSD = fusionEnabled()
         final families = config.getMachineType() ? config.getMachineType().tokenize(',') : []
 

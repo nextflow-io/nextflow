@@ -20,14 +20,16 @@ import groovy.json.JsonSlurper
 import groovy.transform.Immutable
 import groovy.transform.Memoized
 
-class GoogleBatchCloudinfoMachineSelector {
+class GoogleBatchMachineTypeSelector {
 
     private static final CLOUD_INFO_API = "https://cloudinfo.seqera.io/api/v1"
 
-    // Some families CPUs are faster so this is a cost correction factor
-    // for processes that request more than 2 CPUs or 2GB
-    // https://cloud.google.com/compute/docs/cpu-platforms
-    private static final familyCostCorrection = [
+    /*
+     * ome families CPUs are faster so this is a cost correction factor
+     * for processes that request more than 2 CPUs or 2GB
+     * https://cloud.google.com/compute/docs/cpu-platforms
+     */
+    private static final FAMILY_COST_CORRECTION = [
             'e2' : 1.0,   // Mix of processors, tend to be similar in performance to N1
 
             // INTEL
@@ -44,10 +46,12 @@ class GoogleBatchCloudinfoMachineSelector {
             'n2d': 1.0,   // AMD EPYC Milan ~2.7 Ghz
     ]
 
-    // Families that will be use as default if Fusion is enabled but no list is provided
-    // https://cloud.google.com/compute/docs/disks#local_ssd_machine_type_restrictions
-    // LAST UPDATE 2023-02-17
-    private static final defaultFamiliesWithSSD = ['n1', 'n2', 'n2d', 'c2', 'c2d', 'm3']
+    /*
+     * Families that will be use as default if Fusion is enabled but no list is provided
+     * https://cloud.google.com/compute/docs/disks#local_ssd_machine_type_restrictions
+     * LAST UPDATE 2023-02-17
+     */
+    private static final DeFAULT_FAMILIES_WITH_SSD = ['n1', 'n2', 'n2d', 'c2', 'c2d', 'm3']
 
     @Immutable
     static class MachineType {
@@ -58,8 +62,6 @@ class GoogleBatchCloudinfoMachineSelector {
         int cpusPerVm
         int memPerVm
     }
-
-    private static final jsonParser = new JsonSlurper()
 
     static String bestMachineType(int cpus, int memoryMB, String region, boolean spot, boolean localSSD, List<String> families) {
         final machineTypes = getAvailableMachineTypes(region)
@@ -78,7 +80,7 @@ class GoogleBatchCloudinfoMachineSelector {
 
         // Use only families that can have a local SSD
         if (!families && localSSD)
-            families = defaultFamiliesWithSSD
+            families = DeFAULT_FAMILIES_WITH_SSD
 
         // All types are valid if no families are defined, otherwise at least it has to start with one of the given values
         final matchMachineType = { t -> !families || families.find{t.startsWith(it)} }
@@ -91,7 +93,7 @@ class GoogleBatchCloudinfoMachineSelector {
         }.collect()
 
         final sortedByCost = validMachineTypes.sort {
-            (it.cpusPerVm > 2 || it.memPerVm > 2 ? familyCostCorrection.get(it.family, 1.0) : 1.0) * (spot ? it.spotPrice : it.onDemandPrice)
+            (it.cpusPerVm > 2 || it.memPerVm > 2 ? FAMILY_COST_CORRECTION.get(it.family, 1.0) : 1.0) * (spot ? it.spotPrice : it.onDemandPrice)
         }
 
         return sortedByCost.first().type
@@ -100,7 +102,7 @@ class GoogleBatchCloudinfoMachineSelector {
     @Memoized
     static List<MachineType> getAvailableMachineTypes(String region) {
         final json = "${CLOUD_INFO_API}/providers/google/services/compute/regions/${region}/products".toURL().text
-        final data = jsonParser.parseText(json)
+        final data = new JsonSlurper().parseText(json)
         data['products'].collect {
             new MachineType(
                     type: it.type,
