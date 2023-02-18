@@ -1,4 +1,4 @@
-FROM amazoncorretto:17.0.4
+FROM amazoncorretto:17.0.6
 RUN yum install -y procps-ng
 
 ENV NXF_HOME=/.nextflow
