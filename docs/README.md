@@ -29,8 +29,8 @@ make clean html
 Alternatively, you can use the Dockerfile to build the docs in a container:
 
 ```bash
-docker build -t nextflow-io/sphinx .
-docker run -v $(pwd):/tmp nextflow-io/sphinx -- make html
+docker build -t nextflow/sphinx:5.3.0 .
+docker run -v $(pwd):/tmp nextflow/sphinx:5.3.0 -- make html
 ```
 
 Then start up a local http server and open `localhost:8080` in your browser to verify the changes:
