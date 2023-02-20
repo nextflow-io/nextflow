@@ -82,9 +82,6 @@ class WaveContainerResolver implements ContainerResolver {
             // then adapt it to singularity format
             return defaultResolver.resolveImage(task, image.target)
         }
-        else if ( engine == 'sarus' ) {
-            return defaultResolver.resolveImage(task, imageName)
-        }
         else
             throw new IllegalArgumentException("Wave does not support '$engine' container engine")
     }
