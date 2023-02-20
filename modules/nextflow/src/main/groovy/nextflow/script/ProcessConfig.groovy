@@ -47,10 +47,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
     static final public List<String> DIRECTIVES = [
             'accelerator',
             'afterScript',
+            'arch',
             'beforeScript',
             'cache',
             'conda',
-            'cpuArch',
             'cpus',
             'container',
             'containerOptions',

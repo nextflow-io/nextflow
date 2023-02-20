@@ -84,7 +84,7 @@ The usual Spack package syntax and naming conventions can be used. The version o
 specified after the package name as shown here ``bwa@0.7.15``.
 
 Spack is able to guess the local CPU microarchitetcture and optimise the build accordingly.
-If you really need to customise this option, the :ref:`process-cpuArch` directive can be used.
+If you really need to customise this option, the :ref:`process-arch` directive can be used.
 
 Read the Spack documentation for more details about `package specifications <https://spack.readthedocs.io/en/latest/basic_usage.html#specs-dependencies>`_.
 
@@ -109,7 +109,7 @@ Here, the ``concretizer`` option is a sensible Spack default for environments.
   This is required by Nextflow to locate executables at pipeline runtime.
 
 As mentioned above, Spack is able to guess the target microarchitecture and optimise the build accordingly.
-If you really need to customise this option, we advise to use the :ref:`process-cpuArch` directive
+If you really need to customise this option, we advise to use the :ref:`process-arch` directive
 rather than the available options for the Spack environment file.
 
 Read the Spack documentation for more details about how to create `environment files <https://spack.readthedocs.io/en/latest/environments.html>`_.
