@@ -342,7 +342,7 @@ class WaveClientTest extends Specification {
         then:
         client.spackRecipeToDockerFile(RECIPE) == '''\
 # Builder image
-FROM spack/ubuntu-jammy:v0.19.0 as builder
+FROM spack/ubuntu-jammy:v0.19.1 as builder
 
 RUN mkdir -p /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
@@ -528,7 +528,7 @@ CMD [ "/bin/bash" ]
         then:
         client.spackFileToDockerFile()== '''\
 # Builder image
-FROM spack/ubuntu-jammy:v0.19.0 as builder
+FROM spack/ubuntu-jammy:v0.19.1 as builder
 COPY spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
@@ -744,7 +744,7 @@ CMD [ "/bin/bash" ]
         then:
         assets.dockerFileContent == '''\
 # Builder image
-FROM spack/ubuntu-jammy:v0.19.0 as builder
+FROM spack/ubuntu-jammy:v0.19.1 as builder
 
 RUN mkdir -p /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
@@ -855,7 +855,7 @@ CMD [ "/bin/bash" ]
         then:
         assets.dockerFileContent == '''\
 # Builder image
-FROM spack/ubuntu-jammy:v0.19.0 as builder
+FROM spack/ubuntu-jammy:v0.19.1 as builder
 COPY spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
