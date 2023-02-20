@@ -52,7 +52,7 @@ class SpackCache {
      */
     private SpackConfig config
 
-    private boolean noChecksum
+    private boolean checksum = true
 
     private Integer parallelBuilds
 
@@ -83,8 +83,8 @@ class SpackCache {
     SpackCache(SpackConfig config) {
         this.config = config
 
-        if( config.noChecksum )
-            noChecksum = config.noChecksum as boolean
+        if( config.checksum )
+            checksum = config.checksum as boolean
 
         if( config.parallelBuilds )
             parallelBuilds = config.parallelBuilds as Integer
@@ -238,7 +238,7 @@ class SpackCache {
 
         log.debug "Checking env using spack: $spackEnv [cache $prefixPath]"
 
-        String opts = noChecksum ? "-n " : ''
+        String opts = checksum ? '' : "-n "
         opts += parallelBuilds ? "-j $parallelBuilds " : ''
         opts += '-y '
 
@@ -264,7 +264,7 @@ class SpackCache {
 
         log.info "Creating env using spack: $spackEnv [cache $prefixPath]"
 
-        String opts = noChecksum ? "-n " : ''
+        String opts = checksum ? '' : "-n "
         opts += parallelBuilds ? "-j $parallelBuilds " : ''
         opts += '-y '
 
