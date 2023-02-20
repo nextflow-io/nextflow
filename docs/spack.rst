@@ -101,11 +101,13 @@ lists the required packages and channels structured using the YAML format. For e
       - star@2.5.4a
       - bwa@0.7.15
     
-      view: true
       concretizer:
         unify: true
 
-Here, the ``view`` and ``concretizer`` options are sensible Spack defaults for environments.
+Here, the ``concretizer`` option is a sensible Spack default for environments.
+
+.. note:: when creating a Spack environment, Nextflow always enables the corresponding Spack view.
+  This is required by Nextflow to locate executables at pipeline runtime.
 
 There are concise ways to specify the target microarchitecture (and eventually other options) within a Spack environment file.
 For instance, the following environment file specifies build optimisation for an AMD Zen3 target microprocessor::
@@ -118,7 +120,6 @@ For instance, the following environment file specifies build optimisation for an
       - star@2.5.4a
       - bwa@0.7.15
     
-      view: true
       concretizer:
         unify: true
 
@@ -169,6 +170,7 @@ Here we briefly discuss two strategies to mitigate this aspect, and render the u
 
     spack env create myenv /path/to/spack.yaml
     spack env activate myenv
+    spack env view enable
     spack concretize -f
     spack install -y
     spack env deactivate
