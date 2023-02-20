@@ -1516,6 +1516,31 @@ only for a specific process e.g. mount a custom path::
 .. warning:: This feature is not supported by the :ref:`k8s-executor` and :ref:`google-lifesciences-executor` executors.
 
 
+.. _process-cpuArch:
+
+cpuArch
+-------
+
+The ``cpuArch`` directive allows you to define the CPU microarchitecture
+to build the software in use by the process' task.
+For example::
+
+    process cpu_task {
+      spack 'blast-plus@2.13.0'
+      cpuArch 'x86_64'
+
+      """
+      blastp -query input_sequence -num_threads ${task.cpus}
+      """
+    }
+
+This directive is currently used by the Spack package manager
+to build architecture-optimised applications, by means of the `spack`_ directive.
+
+See the Spack documentation for more details about
+`support for specific microarchitectures <https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures>`_.
+
+
 .. _process-cpus:
 
 cpus

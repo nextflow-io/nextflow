@@ -50,6 +50,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'beforeScript',
             'cache',
             'conda',
+            'cpuArch',
             'cpus',
             'container',
             'containerOptions',

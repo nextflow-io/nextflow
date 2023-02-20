@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2022, Pawsey Supercomputing Research Centre
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -136,7 +135,7 @@ class SpackCacheTest extends Specification {
         def ENV = 'bwa@1.1.1'
         def PREFIX = Paths.get('/foo/bar')
         and:
-        def cache = Spy(new SpackCache([parallelBuilds: 2, checksum: false]))
+        def cache = Spy(new SpackCache([parallelBuilds: 2, cpuArch: 'foo_arch', checksum: false]))
 
         when:
         def result = cache.createLocalSpackEnv0(ENV,PREFIX)
@@ -144,7 +143,7 @@ class SpackCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "spack env create -d $PREFIX ; spack env activate $PREFIX ; spack add $ENV ; spack concretize -f ; spack install -n -j 2 -y ; spack env deactivate" ) >> null
+        1 * cache.runCommand( "spack env create -d $PREFIX ; spack env activate $PREFIX ; spack add $ENV ; spack config add packages:all:target:[foo_arch] ; spack concretize -f ; spack install -n -j 2 -y ; spack env deactivate" ) >> null
         result == PREFIX
     }
 

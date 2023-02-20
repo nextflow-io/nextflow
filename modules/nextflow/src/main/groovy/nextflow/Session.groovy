@@ -1157,7 +1157,7 @@ class Session implements ISession {
     @Memoized
     SpackConfig getSpackConfig() {
         final cfg = config.spack as Map ?: Collections.emptyMap()
-        return new SpackConfig(cfg, getSystemEnv())
+        return new SpackConfig(cfg, getSystemEnv(), config.cpuArch as String)
     }
 
     /**

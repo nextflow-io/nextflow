@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2022, Pawsey Supercomputing Research Centre
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ class SpackConfigTest extends Specification {
     @Unroll
     def 'should check enabled flag'() {
         given:
-        def spack = new SpackConfig(CONFIG, ENV)
+        def spack = new SpackConfig(CONFIG, ENV, null)
         expect:
         spack.isEnabled() == EXPECTED
 

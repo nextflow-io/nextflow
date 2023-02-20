@@ -27,13 +27,15 @@ import groovy.transform.CompileStatic
 class SpackConfig extends LinkedHashMap {
 
     private Map<String,String> env
+    private String cpuArch
 
     /* required by Kryo deserialization -- do not remove */
     private SpackConfig() { }
 
-    SpackConfig(Map config, Map<String, String> env) {
+    SpackConfig(Map config, Map<String, String> env, String cpuArch) {
         super(config)
         this.env = env
+        this.cpuArch = cpuArch
     }
 
     boolean isEnabled() {

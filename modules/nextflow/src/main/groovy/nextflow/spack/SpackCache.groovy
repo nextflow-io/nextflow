@@ -56,6 +56,8 @@ class SpackCache {
 
     private Integer parallelBuilds
 
+    private String cpuArch
+
     /**
      * Timeout after which the environment creation is aborted
      */
@@ -64,6 +66,8 @@ class SpackCache {
     private Path configCacheDir0
 
     @PackageScope Integer getParallelBuilds() { parallelBuilds }
+
+    @PackageScope String getCpuArch() { cpuArch }
 
     @PackageScope Duration getCreateTimeout() { createTimeout }
 
@@ -88,6 +92,9 @@ class SpackCache {
 
         if( config.parallelBuilds )
             parallelBuilds = config.parallelBuilds as Integer
+
+        if( config.cpuArch )
+            cpuArch = config.cpuArch as String
 
         if( config.createTimeout )
             createTimeout = config.createTimeout as Duration
@@ -273,6 +280,7 @@ class SpackCache {
             cmd =  "spack env create -d ${Escape.path(prefixPath)} ${Escape.path(makeAbsolute(spackEnv))} ; "
             cmd += "spack env activate ${Escape.path(prefixPath)} ; "
             cmd += "spack env view enable ; "
+            if( cpuArch ) cmd += "spack config add packages:all:target:[$cpuArch] ; "
             cmd += "spack concretize -f ; "
             cmd += "spack install ${opts}; "
             cmd += "spack env deactivate"
@@ -282,6 +290,7 @@ class SpackCache {
             cmd =  "spack env create -d ${Escape.path(prefixPath)} ; "
             cmd += "spack env activate ${Escape.path(prefixPath)} ; "
             cmd += "spack add $spackEnv ; "
+            if( cpuArch ) cmd += "spack config add packages:all:target:[$cpuArch] ; "
             cmd += "spack concretize -f ; "
             cmd += "spack install ${opts}; "
             cmd += "spack env deactivate"
