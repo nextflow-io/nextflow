@@ -39,10 +39,6 @@ class FusionScriptLauncherS3Test extends Specification {
         then:
         result == Path.of('/fusion/s3/bar/z.txt')
 
-
-        expect:
-        fusion.fusionBuckets() == [ 'foo', 'bar' ] as Set
-
     }
 
 
@@ -54,7 +50,6 @@ class FusionScriptLauncherS3Test extends Specification {
         and:
         def fusion = new FusionScriptLauncher(
                 scheme: 's3',
-                buckets: ['foo'] as Set,
                 remoteWorkDir: S3PathFactory.parse('s3://foo/work'))
 
         expect:
@@ -75,7 +70,6 @@ class FusionScriptLauncherS3Test extends Specification {
         and:
         def fusion = new FusionScriptLauncher(
                 scheme: 's3',
-                buckets: ['foo'] as Set,
                 remoteWorkDir: S3PathFactory.parse('s3://foo/work'))
 
         expect:
@@ -99,7 +93,6 @@ class FusionScriptLauncherS3Test extends Specification {
         and:
         def fusion = new FusionScriptLauncher(
                 scheme: 's3',
-                buckets: ['foo'] as Set,
                 remoteWorkDir: S3PathFactory.parse('s3://foo/work'))
 
         expect:

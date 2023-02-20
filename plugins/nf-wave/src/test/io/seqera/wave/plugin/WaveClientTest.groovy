@@ -1171,9 +1171,9 @@ CMD [ "/bin/bash" ]
         
         where:
         CONFIG                                      | EXPECTED
-        [:]                                         | 'https://fusionfs.seqera.io/releases/v2.0-amd64.json'
-        [wave:[containerPlatform: 'arm64']]         | 'https://fusionfs.seqera.io/releases/v2.0-arm64.json'
-        [wave:[containerPlatform: 'linux/arm64']]   | 'https://fusionfs.seqera.io/releases/v2.0-arm64.json'
-        [wave:[containerPlatform: 'linux/arm64/v8']]    | 'https://fusionfs.seqera.io/releases/v2.0-arm64.json'
+        [:]                                         | 'https://fusionfs.seqera.io/releases/v2.1-amd64.json'
+        [wave:[containerPlatform: 'arm64']]         | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
+        [wave:[containerPlatform: 'linux/arm64']]   | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
+        [wave:[containerPlatform: 'linux/arm64/v8']]    | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
     }
 }
