@@ -251,8 +251,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         runnable.getContainer().getOptions() == ''
         runnable.getContainer().getVolumesList() == ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
         and:
-        instancePolicyOrTemplate.getInstanceTemplate() == INSTANCE_TEMPLATE
         instancePolicyOrTemplate.getInstallGpuDrivers() == true
+        instancePolicyOrTemplate.getInstanceTemplate() == INSTANCE_TEMPLATE
         and:
         instancePolicy.getAcceleratorsCount() == 0
         instancePolicy.getMachineType() == ''
