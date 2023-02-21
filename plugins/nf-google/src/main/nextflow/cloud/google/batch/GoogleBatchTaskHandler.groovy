@@ -407,7 +407,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         try {
             return new CloudMachineInfo(
-                    type: GoogleBatchCloudinfoMachineSelector.INSTANCE().bestMachineType(cpus, memory, location, spot, useSSD, families),
+                    type: GoogleBatchMachineTypeSelector.INSTANCE().bestMachineType(cpus, memory, location, spot, useSSD, families),
                     zone: location,
                     priceModel: priceModel
             )

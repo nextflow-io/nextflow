@@ -35,9 +35,9 @@ import groovy.transform.Memoized
  * @author Jordi Deu-Pons <jordi@jordeu.net>
  */
 @CompileStatic
-class GoogleBatchCloudinfoMachineSelector {
+class GoogleBatchMachineTypeSelector {
 
-    private static GoogleBatchCloudinfoMachineSelector instance
+    private static GoogleBatchMachineTypeSelector instance
 
     private static final CLOUD_INFO_API = "https://cloudinfo.seqera.io/api/v1"
 
@@ -81,10 +81,10 @@ class GoogleBatchCloudinfoMachineSelector {
         int memPerVm
     }
 
-    static GoogleBatchCloudinfoMachineSelector INSTANCE() {
+    static GoogleBatchMachineTypeSelector INSTANCE() {
         if (instance != null)
             return instance
-        return instance = new GoogleBatchCloudinfoMachineSelector()
+        return instance = new GoogleBatchMachineTypeSelector()
     }
 
     String bestMachineType(int cpus, int memoryMB, String region, boolean spot, boolean localSSD, List<String> families) {
