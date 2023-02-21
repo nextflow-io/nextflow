@@ -37,8 +37,8 @@ class BatchConfig {
     private List<String> allowedLocations
     private MemoryUnit bootDiskSize
     private String cpuPlatform
-    private String instanceTemplate
     private boolean installGpuDrivers
+    private String instanceTemplate
     private boolean spot
     private boolean preemptible
     private boolean usePrivateAddress
