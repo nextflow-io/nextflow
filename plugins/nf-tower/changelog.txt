@@ -1,5 +1,9 @@
 nf-tower changelog
 ===================
+1.5.10 - 21 Feb 2023
+- Log exception when an unexpected  occurs (#3603) [ci fast] [9aeca99f]
+- Bump groovy 3.0.15 [7a3ebc7d]
+
 1.5.9 - 14 Jan 2023
 - Bump groovy 3.0.14 [7c204236]
 
