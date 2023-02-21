@@ -135,6 +135,9 @@ google.batch.serviceAccountEmail               Define the Google service account
 google.batch.subnetwork                        Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL.
 ============================================== =================
 
+.. note::
+  Specifying an instance policy will overwrite the following options: ``cpuPlatform``, ``machineType``, `preemptible``, and ``spot``.
+
 
 Process definition
 ------------------
