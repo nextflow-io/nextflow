@@ -69,7 +69,7 @@ class GoogleBatchMachineTypeSelector {
      * https://cloud.google.com/compute/docs/disks#local_ssd_machine_type_restrictions
      * LAST UPDATE 2023-02-17
      */
-    private static final List<String> DEFAULT_FAMILIES_WITH_SSD = ['n1', 'n2', 'n2d', 'c2', 'c2d', 'm3']
+    private static final List<String> DEFAULT_FAMILIES_WITH_SSD = ['n1-*', 'n2-*', 'n2d-*', 'c2-*', 'c2d-*', 'm3-*']
 
     @Immutable
     static class MachineType {
