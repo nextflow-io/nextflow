@@ -1,6 +1,6 @@
 $NXF_CMD run \
     rnaseq-nf \
-    -profile batch \
+    -profile gcb \
     -with-wave \
     -with-fusion \
     -process.scratch false
