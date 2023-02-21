@@ -44,7 +44,6 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 
-import static nextflow.cloud.google.batch.GoogleBatchCloudinfoMachineSelector.bestMachineType
 
 /**
  * Implements a task handler for Google Batch executor
@@ -80,7 +79,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      */
     private String jobState
 
-    private CloudMachineInfo machineInfo
+    private volatile CloudMachineInfo machineInfo
 
     private volatile long timestamp
 
@@ -403,17 +402,27 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final spot = executor.config.spot
         final useSSD = fusionEnabled()
         final families = config.getMachineType() ? config.getMachineType().tokenize(',') : []
+        final priceModel = spot ? PriceModel.spot : PriceModel.standard
 
         try {
             return new CloudMachineInfo(
-                    type: bestMachineType(cpus, memory, location, spot, useSSD, families),
+                    type: GoogleBatchCloudinfoMachineSelector.INSTANCE().bestMachineType(cpus, memory, location, spot, useSSD, families),
                     zone: location,
-                    priceModel: spot ? PriceModel.spot : PriceModel.standard
+                    priceModel: priceModel
             )
         }
         catch (Exception e) {
-            // Fallback to define custom machine types
-            log.debug "[GOOGLE BATCH] Cannot select machine type using cloud info for task: `$task.name`"
+            log.debug "[GOOGLE BATCH] Cannot select machine type using cloud info for task: `$task.name` | ${e.message}"
+
+            // Check if a specific machine type was provided by the user
+            if( config.getMachineType() && !config.getMachineType().contains(',') && !config.getMachineType().contains('*') )
+                return new CloudMachineInfo(
+                        type: config.getMachineType(),
+                        zone: location,
+                        priceModel: priceModel
+                )
+
+            // Fallback to Google Batch automatically deduce from requested resources
             return null
         }
 
