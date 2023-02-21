@@ -37,13 +37,12 @@ import nextflow.io.BucketParser
 class FusionHelper {
 
     @Memoized
-    static boolean isFusionEnabled(Session session, Map<String,String> sysEnv=SysEnv.get()) {
+    static boolean isFusionEnabled(Session session) {
         def result = session.config.navigate('fusion.enabled')
         if( result == null )
-            result = sysEnv.get('FUSION_ENABLED')
+            result = SysEnv.get('FUSION_ENABLED')
         return result!=null ? result.toString()=='true' : false
     }
-
 
     static String runWithContainer(FusionScriptLauncher launcher, ContainerConfig containerConfig, String containerName, List<String> runCmd) {
         if( !containerName )
@@ -76,7 +75,7 @@ class FusionHelper {
         return containerCmd
     }
 
-    static Path toContainerMount(Path path, String scheme, Set<String> buckets) {
+    static Path toContainerMount(Path path, String scheme) {
         if( path == null )
             return null
 
@@ -86,12 +85,7 @@ class FusionHelper {
             throw new IllegalArgumentException("Unexpected path for Fusion script launcher: ${path.toUriString()}")
 
         final result = "/fusion/$p.scheme/${p.bucket}${p.path}"
-        buckets.add(p.bucket)
         return Path.of(result)
-    }
-
-    static Path toContainerMount(Path path, String scheme) {
-        return toContainerMount(path, scheme, new HashSet<String>(1))
     }
 
 }

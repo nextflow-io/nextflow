@@ -1,5 +1,23 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.10.7 - 18 Feb 2023
+- Fix plugin install version [895e4f34]
+- Fix unique fingerprint for wave bundle resources [7c55aa37]
+- Fix race condition on wave requests [7f76d19b]
+- Fix serialization of S3 paths with spaces (#3565) [935df949]
+- Improve aws batch error logging [1eddeea7]
+- Improve wave logging [94415914]
+- Increase Wave token duration to 30 mins [8d5fbefe]
+- Update fusion docs [b24ee138]
+- Bump nf-wave@0.5.4 [f466b266]
+- Bump nf-amazon@1.11.4 [d5f6c125]
+
+22.10.6 - 24 Jan 2023
+- backport: Add refresh token to wave request [47a7408b]
+- backport:Add tower endpoint to wave [fe24b422]
+- backport:Fix Wave layer invalid checksum due to not closed stream [20df6400]
+- Bump nf-wave@0.5.3 [c1ec759f]
+
 23.01.0-edge - 14 Jan 2023 
 - Add support for rclone as stageOutMode option [fde2ac27]
 - Add queueGlobalStatus config setting [ci fast] [f3339541]
