@@ -37,7 +37,7 @@ import groovy.transform.Memoized
 @CompileStatic
 class GoogleBatchMachineTypeSelector {
 
-    private static GoogleBatchMachineTypeSelector instance
+    static GoogleBatchMachineTypeSelector INSTANCE = new GoogleBatchMachineTypeSelector()
 
     private static final CLOUD_INFO_API = "https://cloudinfo.seqera.io/api/v1"
 
@@ -81,12 +81,6 @@ class GoogleBatchMachineTypeSelector {
         int memPerVm
     }
 
-    static GoogleBatchMachineTypeSelector INSTANCE() {
-        if (instance != null)
-            return instance
-        return instance = new GoogleBatchMachineTypeSelector()
-    }
-
     String bestMachineType(int cpus, int memoryMB, String region, boolean spot, boolean localSSD, List<String> families) {
         final machineTypes = getAvailableMachineTypes(region)
         if (families == null)
@@ -109,7 +103,7 @@ class GoogleBatchMachineTypeSelector {
             families = DEFAULT_FAMILIES_WITH_SSD
 
         // All types are valid if no families are defined, otherwise at least it has to start with one of the given values
-        final matchMachineType = (String t) -> !families || families.find { matchType(it, t) }
+        final matchMachineType = {String t -> !families || families.find { matchType(it, t) }}
 
         // find machines with enough resources and SSD local disk
         final validMachineTypes = machineTypes.findAll {

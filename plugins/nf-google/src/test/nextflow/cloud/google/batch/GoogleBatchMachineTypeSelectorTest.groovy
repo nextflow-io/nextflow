@@ -63,7 +63,7 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
 
     def 'should parse Seqera cloud info API'() {
         when:
-        GoogleBatchMachineTypeSelector.INSTANCE().getAvailableMachineTypes("europe-west2")
+        GoogleBatchMachineTypeSelector.INSTANCE.getAvailableMachineTypes("europe-west2")
 
         then:
         noExceptionThrown()
