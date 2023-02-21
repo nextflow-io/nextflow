@@ -51,8 +51,8 @@ class BatchConfig {
     List<String> getAllowedLocations() { allowedLocations }
     MemoryUnit getBootDiskSize() { bootDiskSize }
     String getCpuPlatform() { cpuPlatform }
-    String getInstanceTemplate() { instanceTemplate }
     boolean getInstallGpuDrivers() { installGpuDrivers }
+    String getInstanceTemplate() { instanceTemplate }
     boolean getPreemptible() { preemptible }
     boolean getSpot() { spot }
     boolean getUsePrivateAddress() { usePrivateAddress }
