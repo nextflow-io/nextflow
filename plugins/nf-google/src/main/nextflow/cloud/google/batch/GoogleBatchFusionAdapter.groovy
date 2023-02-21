@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,11 @@
 
 package nextflow.cloud.google.batch
 
-import com.google.cloud.batch.v1.GCS
+
 import com.google.cloud.batch.v1.Volume
 import groovy.transform.CompileStatic
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionScriptLauncher
-
 /**
  * A mere adapter for {@link GoogleBatchLauncherSpec} for fusion
  * launch
