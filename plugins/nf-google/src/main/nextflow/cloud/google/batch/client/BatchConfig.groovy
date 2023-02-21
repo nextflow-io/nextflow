@@ -67,8 +67,8 @@ class BatchConfig {
         result.allowedLocations = session.config.navigate('google.batch.allowedLocations', List.of()) as List<String>
         result.bootDiskSize = session.config.navigate('google.batch.bootDiskSize') as MemoryUnit
         result.cpuPlatform = session.config.navigate('google.batch.cpuPlatform')
+        result.installGpuDrivers = session.config.navigate('google.batch.installGpuDrivers',false)
         result.instanceTemplate = session.config.navigate('google.batch.instanceTemplate')
-        result.instanceTemplate = session.config.navigate('google.batch.installGpuDrivers',false)
         result.spot = session.config.navigate('google.batch.spot',false)
         result.preemptible = session.config.navigate('google.batch.preemptible',false)
         result.usePrivateAddress = session.config.navigate('google.batch.usePrivateAddress',false)
