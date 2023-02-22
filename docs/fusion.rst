@@ -11,7 +11,7 @@ Fusion is a distributed virtual file system for cloud-native data pipelines, opt
 
 It bridges the gap between cloud-native storage and data analysis workflows by implementing a thin client
 that allows any existing application to access object storage using the standard POSIX interface, thus simplifying
-and speeding up most operations. Currently, it supports AWS S3.
+and speeding up most operations. Currently, it supports AWS S3 and Google Storage.
 
 Getting started
 ===============
@@ -22,7 +22,8 @@ Requirements
 Fusion file system is designed to work with containerised workloads, therefore it requires the use of a container
 engine such as Docker or a container native platform for the execution of your pipeline, e.g. AWS Batch or Kubernetes.
 
-It also requires the use of :ref:`Wave containers<wave-page>` and Nextflow version ``22.10.0`` or later.
+It also requires the use of :ref:`Wave containers<wave-page>` and Nextflow version ``22.10.0`` or later. The support
+for Google storage requires Nextflow ``23.02.0-edge`` or later.
 
 AWS S3 configuration
 --------------------
