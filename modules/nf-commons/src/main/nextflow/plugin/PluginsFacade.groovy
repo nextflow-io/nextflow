@@ -153,11 +153,11 @@ class PluginsFacade implements PluginStateListener {
             return env.NXF_PLUGINS_DEFAULT!='false'
         }
         else if( env.containsKey('NXF_HOME') ) {
-            log.trace "Detected NXF_HOME - Using plugins defaults"
+            log.trace "Detected NXF_HOME - Using plugin defaults"
             return true
         }
         else {
-            log.trace "Disabling plugins defaults"
+            log.trace "Disabling plugin defaults"
             return false
         }
     }
@@ -187,7 +187,7 @@ class PluginsFacade implements PluginStateListener {
 
     void init(boolean embedded=false) {
         if( manager )
-            throw new IllegalArgumentException("Plugin system was already setup")
+            throw new IllegalArgumentException("Plugin system already setup")
 
         log.debug "Setting up plugin manager > mode=${mode}; embedded=$embedded; plugins-dir=$root; core-plugins: ${defaultPlugins.toSortedString()}"
         // make sure plugins dir exists
@@ -205,7 +205,7 @@ class PluginsFacade implements PluginStateListener {
 
     void init(Path root, String mode, CustomPluginManager pluginManager) {
         if( manager )
-            throw new IllegalArgumentException("Plugin system was already setup")
+            throw new IllegalArgumentException("Plugin system already setup")
         this.root = root
         this.mode = mode
         // setup plugin manager
@@ -228,7 +228,7 @@ class PluginsFacade implements PluginStateListener {
 
     void load(Map config) {
         if( !manager )
-            throw new IllegalArgumentException("Plugin system has not been initialised yet")
+            throw new IllegalArgumentException("Plugin system has not been initialized")
         start(pluginsRequirement(config))
     }
 
@@ -255,7 +255,7 @@ class PluginsFacade implements PluginStateListener {
             // this should oly be used to load system extensions
             // i.e. included in the app class path not provided by
             // a plugin extension
-            log.debug "Using Default plugins manager"
+            log.debug "Using Default plugin manager"
             return defaultManager().getExtensions(type)
         }
     }
@@ -312,7 +312,7 @@ class PluginsFacade implements PluginStateListener {
 
     void start( String pluginId ) {
         if( isSelfContained() && defaultPlugins.hasPlugin(pluginId) ) {
-            log.debug "Plugin 'start' is not required in self-contained mode -- ignoring it for plugin: $pluginId"
+            log.debug "Plugin 'start' is not required in self-contained mode -- ignoring for plugin: $pluginId"
             return
         }
 
@@ -321,7 +321,7 @@ class PluginsFacade implements PluginStateListener {
 
     void start(PluginSpec plugin) {
         if( isSelfContained() && defaultPlugins.hasPlugin(plugin.id) ) {
-            log.debug "Plugin 'start' is not required in self-contained mode -- ignoring it for plugin: $plugin.id"
+            log.debug "Plugin 'start' is not required in self-contained mode -- ignoring for plugin: $plugin.id"
             return
         }
 
@@ -351,7 +351,7 @@ class PluginsFacade implements PluginStateListener {
         def specs = parseConf(config)
         if( isSelfContained() && specs ) {
             // custom plugins are not allowed for nextflow self-contained package
-            log.warn "Nextflow self-contained distribution only allows core plugins -- User config plugins will be ignored: ${specs.join(',')}"
+            log.warn "Nextflow self-contained distribution allows only core plugins -- User config plugins will be ignored: ${specs.join(',')}"
             return Collections.emptyList()
         }
         if( specs ) {
@@ -441,14 +441,14 @@ class PluginsFacade implements PluginStateListener {
     }
 
     /**
-     * Merge two list of plugins requirement
+     * Merge two lists of plugin requirements
      *
      * @param configPlugins
      *      The list of plugins specified via the configuration file. This has higher priority
      * @param defaultPlugins
      *      The list of plugins specified via the environment
      * @return
-     *      The list of plugins resulting from merging the twos
+     *      The list of plugins resulting from merging the two lists
      */
     protected List<PluginSpec> mergePluginSpecs(List<PluginSpec> configPlugins, List<PluginSpec> defaultPlugins) {
         final map = new LinkedHashMap<String,PluginSpec>(10)
@@ -457,7 +457,7 @@ class PluginsFacade implements PluginStateListener {
             map.put(plugin.id, plugin)
         }
         // add the plugin in the 'defaultPlugins' argument
-        // when the map contains already the plugin,
+        // if the map already contains the plugin,
         // override it only if it does not specify a version
         for( PluginSpec plugin : defaultPlugins ) {
             if( !map[plugin.id] || !map[plugin.id].version ) {

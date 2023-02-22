@@ -23,7 +23,9 @@ Contents:
    cli
    container
    wave
+   fusion
    conda
+   spack
    aws
    amazons3
    azure

@@ -53,3 +53,13 @@ process io_write_200mega {
   read.pl file2.txt
   """
 }
+
+workflow {
+  stress_1cpu
+  stress_2cpu
+  stress_100mega
+  stress_200mega
+  stress_300mega
+  io_write_100mega
+  io_write_200mega
+}

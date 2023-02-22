@@ -48,6 +48,8 @@ class TaskBean implements Serializable, Cloneable {
 
     Path condaEnv
 
+    Path spackEnv
+
     List<String> moduleNames
 
     Path workDir
@@ -62,7 +64,7 @@ class TaskBean implements Serializable, Cloneable {
 
     String containerCpuset
 
-    Float containerCpus
+    Integer containerCpus
 
     MemoryUnit containerMemory
 
@@ -124,6 +126,7 @@ class TaskBean implements Serializable, Cloneable {
         this.environment = task.getEnvironment()
 
         this.condaEnv = task.getCondaEnv()
+        this.spackEnv = task.getSpackEnv()
         this.moduleNames = task.config.getModule()
         this.shell = task.config.getShell() ?: BashWrapperBuilder.BASH
         this.script = task.getScript()

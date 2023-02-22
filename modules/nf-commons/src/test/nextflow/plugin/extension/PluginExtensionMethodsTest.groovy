@@ -17,6 +17,8 @@
 
 package nextflow.plugin.extension
 
+import nextflow.plugin.hello.HelloExtension
+
 import java.nio.file.Path
 
 import nextflow.Channel
@@ -221,6 +223,17 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         "include { sayHello } from 'plugin/nf-test-plugin-hello'; channel.of( sayHello('es') )" | 'hola'
         "include { sayHello as hi } from 'plugin/nf-test-plugin-hello'; channel.of( hi() )"     | 'hi'
 
+    }
+
+    def 'should call init plugin in custom functions'() {
+        when:
+        def result = dsl_eval("""
+            include { sayHello } from 'plugin/nf-test-plugin-hello' 
+            sayHello()
+        """)
+
+        then:
+        true
     }
 
     def 'should throw function not found'() {

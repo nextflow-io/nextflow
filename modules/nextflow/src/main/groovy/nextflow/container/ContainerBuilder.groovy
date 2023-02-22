@@ -39,8 +39,12 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
             return new PodmanBuilder(containerImage)
         if( engine == 'singularity' )
             return new SingularityBuilder(containerImage)
+        if( engine == 'apptainer' )
+            return new ApptainerBuilder(containerImage)
         if( engine == 'udocker' )
             return new UdockerBuilder(containerImage)
+        if( engine == 'sarus' )
+            return new SarusBuilder(containerImage)
         if( engine == 'shifter' )
             return new ShifterBuilder(containerImage)
         if( engine == 'charliecloud' )
@@ -57,7 +61,7 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
 
     protected List<String> engineOptions = []
 
-    protected Float cpus
+    protected Integer cpus
 
     protected String cpuset
 
@@ -83,16 +87,18 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
     String getImage() { image }
 
     V addRunOptions(String str) {
-        runOptions.add(str)
+        if( str )
+            runOptions.add(str)
         return (V)this
     }
 
     V addEngineOptions(String str) {
-        engineOptions.add(str)
+        if( str )
+            engineOptions.add(str)
         return (V)this
     }
 
-    V setCpus(Float value) {
+    V setCpus(Integer value) {
         this.cpus = value
         return (V)this
     }

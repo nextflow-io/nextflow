@@ -22,7 +22,7 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.executor.Executor
-import nextflow.executor.fusion.FusionHelper
+import nextflow.fusion.FusionHelper
 import nextflow.k8s.client.K8sClient
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -75,6 +75,11 @@ class K8sExecutor extends Executor {
      */
     boolean isContainerNative() {
         return true
+    }
+
+    @Override
+    String containerConfigEngine() {
+        return 'docker'
     }
 
     /**

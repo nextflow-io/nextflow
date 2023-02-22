@@ -102,6 +102,12 @@ class PublishDir {
      */
     private contentType
 
+    /**
+     * The storage class to be used for the target file.
+     * Currently only supported by AWS S3.
+     */
+    private String storageClass
+
     private PathMatcher matcher
 
     private FileSystem sourceFileSystem
@@ -196,6 +202,9 @@ class PublishDir {
             result.contentType = params.contentType
         else if( params.contentType )
             result.contentType = params.contentType as String
+
+        if( params.storageClass )
+            result.storageClass = params.storageClass as String
 
         return result
     }
@@ -312,6 +321,10 @@ class PublishDir {
                     : this.contentType.toString()
             destination.setContentType(type)
         }
+        // storage class
+        if( storageClass && destination instanceof TagAwareFile ) {
+            destination.setStorageClass(storageClass)
+        }
 
         if( inProcess ) {
             safeProcessFile(source, destination)
@@ -379,7 +392,7 @@ class PublishDir {
             processFileImpl(source, destination)
         }
 
-        notifyFilePublish(destination)
+        notifyFilePublish(destination, source)
     }
 
     private String real0(Path p) {
@@ -506,10 +519,10 @@ class PublishDir {
         }
     }
 
-    protected void notifyFilePublish(Path destination) {
+    protected void notifyFilePublish(Path destination, Path source=null) {
         final sess = Global.session
         if (sess instanceof Session) {
-            sess.notifyFilePublish(destination)
+            sess.notifyFilePublish(destination, source)
         }
     }
 

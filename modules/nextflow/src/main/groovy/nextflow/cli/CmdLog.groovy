@@ -18,7 +18,7 @@
 package nextflow.cli
 import java.nio.file.Path
 
-import ch.grengine.Grengine
+import ch.artecat.grengine.Grengine
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import com.google.common.hash.HashCode
@@ -61,7 +61,7 @@ class CmdLog extends CmdBase implements CacheBase {
     static final public NAME = 'log'
 
     @Parameter(names = ['-s'], description='Character used to separate column values')
-    String sep = '\t'
+    String sep = '\\t'
 
     @Parameter(names=['-f','-fields'], description = 'Comma separated list of fields to include in the printed log -- Use the `-l` option to show the list of available fields')
     String fields
@@ -87,7 +87,7 @@ class CmdLog extends CmdBase implements CacheBase {
     @Parameter(names=['-q','-quiet'], description = 'Show only run names', arity = 0)
     boolean quiet
 
-    @Parameter
+    @Parameter(description = 'Run name or session id')
     List<String> args
 
     private Script filterScript

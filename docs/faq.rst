@@ -94,7 +94,7 @@ and ``datasetFile``):
 In our example above would now have the folder ``broccoli`` in the results directory which would
 contain the file ``broccoli.aln``.
 
-If the input file has multiple extensions (e.g. ``brocolli.tar.gz``), you will want to use
+If the input file has multiple extensions (e.g. ``broccoli.tar.gz``), you will want to use
 ``file.simpleName`` instead, to strip all of them.
 
 

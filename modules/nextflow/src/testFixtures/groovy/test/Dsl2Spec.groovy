@@ -17,11 +17,15 @@
 
 package test
 
-
 import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
+import nextflow.Global
+import nextflow.NF
 import nextflow.NextflowMeta
+import nextflow.processor.TaskProcessor
+import nextflow.script.ScriptMeta
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -31,6 +35,13 @@ class Dsl2Spec extends BaseSpec {
 
     def setupSpec() { NextflowMeta.instance.enableDsl2() }
     def cleanupSpec() { NextflowMeta.instance.disableDsl2() }
+
+    def setup() {
+        TaskProcessor.reset()
+        ScriptMeta.reset()
+        Global.reset()
+        NF.init()
+    }
 
     def dsl_eval(String str) {
         new MockScriptRunner().setScript(str).execute()

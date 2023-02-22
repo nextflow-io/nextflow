@@ -17,12 +17,12 @@
 
 package nextflow.config
 
+import ch.artecat.grengine.Grengine
 import groovy.transform.Memoized
 
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
-import ch.grengine.Grengine
 import nextflow.file.FileHelper
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer

@@ -160,6 +160,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = ['-with-wave'], hidden = true)
     String withWave
 
+    @Parameter(names = ['-with-fusion'], hidden = true)
+    String withFusion
+
     @Parameter(names = ['-with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
     String withWebLog
 
@@ -177,6 +180,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Parameter(names = '-with-singularity', description = 'Enable process execution in a Singularity container')
     def withSingularity
+
+    @Parameter(names = '-with-apptainer', description = 'Enable process execution in a Apptainer container')
+    def withApptainer
 
     @Parameter(names = '-with-podman', description = 'Enable process execution in a Podman container')
     def withPodman
@@ -224,6 +230,12 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Parameter(names=['-without-conda'], description = 'Disable the use of Conda environments')
     Boolean withoutConda
+
+    @Parameter(names=['-with-spack'], description = 'Use the specified Spack environment package or file (must end with .yaml suffix)')
+    String withSpack
+
+    @Parameter(names=['-without-spack'], description = 'Disable the use of Spack environments')
+    Boolean withoutSpack
 
     @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
     boolean offline = System.getenv('NXF_OFFLINE')=='true'
@@ -284,6 +296,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
         if( withConda && withoutConda )
             throw new AbortOperationException("Command line options `-with-conda` and `-without-conda` cannot be specified at the same time")
+
+        if( withSpack && withoutSpack )
+            throw new AbortOperationException("Command line options `-with-spack` and `-without-spack` cannot be specified at the same time")
 
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")

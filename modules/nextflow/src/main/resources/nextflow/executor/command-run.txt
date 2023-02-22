@@ -91,6 +91,14 @@ nxf_fs_rsync() {
   rsync -rRl $1 $2
 }
 
+nxf_fs_rclone() {
+  rclone copyto $1 $2/$1
+}
+
+nxf_fs_fcp() {
+  fcp $1 $2/$1
+}
+
 on_exit() {
     exit_status=${nxf_main_ret:=$?}
     printf $exit_status {{exit_file}}
@@ -137,6 +145,7 @@ nxf_main() {
     {{before_script}}
     {{module_load}}
     {{conda_activate}}
+    {{spack_activate}}
     set -u
     {{task_env}}
     {{secrets_env}}

@@ -19,7 +19,10 @@ package nextflow.executor.fusion
 
 import java.nio.file.Path
 
+import nextflow.Global
+import nextflow.Session
 import nextflow.file.http.XPath
+import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskBean
 import spock.lang.Specification
 /**
@@ -30,6 +33,8 @@ class FusionScriptLauncherTest extends Specification {
 
     def 'should get container mount' () {
         given:
+        Global.session = Mock(Session) { getConfig() >> [:] }
+        and:
         def fusion = new FusionScriptLauncher(scheme: 'http')
 
         when:
@@ -47,21 +52,21 @@ class FusionScriptLauncherTest extends Specification {
         then:
         result == Path.of('/fusion/http/bar/z.txt')
 
-        expect:
-        fusion.fusionBuckets() == [ 'foo', 'bar' ] as Set
-
     }
 
     def 'should get fusion env' () {
         given:
+        Global.config = [:]
+        and:
         def fusion = new FusionScriptLauncher(
                 scheme: 'http',
-                buckets: ['foo'] as Set,
                 remoteWorkDir: XPath.get('http://foo/work'))
 
         expect:
-        fusion.fusionEnv() == [NXF_FUSION_BUCKETS: 'http://foo',
-                               NXF_FUSION_WORK: '/fusion/http/foo/work']
+        fusion.fusionEnv() == [
+                FUSION_WORK: '/fusion/http/foo/work',
+                FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
+        ]
     }
 
     def 'should get header script' () {
