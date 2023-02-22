@@ -34,6 +34,7 @@ import picocli.CommandLine
 import picocli.CommandLine.ArgGroup
 import picocli.CommandLine.Command
 import picocli.CommandLine.HelpCommand
+import picocli.CommandLine.IExecutionExceptionHandler
 import picocli.CommandLine.Option
 import picocli.CommandLine.ParseResult
 
@@ -158,7 +159,7 @@ class Launcher extends AbstractCmd {
     private String dumpThreads() {
 
         def buffer = new StringBuffer()
-        Map<Thread, StackTraceElement[]> m = Thread.getAllStackTraces();
+        Map<Thread, StackTraceElement[]> m = Thread.getAllStackTraces()
         for(Map.Entry<Thread,  StackTraceElement[]> e : m.entrySet()) {
             buffer.append('\n').append(e.getKey().toString()).append('\n')
             for (StackTraceElement s : e.getValue()) {
@@ -167,6 +168,17 @@ class Launcher extends AbstractCmd {
         }
 
         return buffer.toString()
+    }
+
+    static class ExecutionExceptionHandler implements IExecutionExceptionHandler {
+        int handleExecutionException(Exception ex, CommandLine cmd, ParseResult parseResult) {
+            // bold red error message
+            cmd.getErr().println(cmd.getColorScheme().errorText(ex.getMessage()))
+
+            return cmd.getExitCodeExceptionMapper() != null
+                ? cmd.getExitCodeExceptionMapper().getExitCode(ex)
+                : cmd.getCommandSpec().exitCodeOnExecutionException()
+        }
     }
 
     /**
@@ -180,6 +192,7 @@ class Launcher extends AbstractCmd {
             def launcher = new Launcher()
             def cmd = new CommandLine(launcher)
                 .setExecutionStrategy(launcher::executionStrategy)
+                .setExecutionExceptionHandler(new ExecutionExceptionHandler())
 
             // add secrets command if enabled
             if( SecretsLoader.isEnabled() )

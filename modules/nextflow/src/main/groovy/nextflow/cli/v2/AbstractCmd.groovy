@@ -19,6 +19,7 @@ package nextflow.cli.v2
 import groovy.transform.CompileStatic
 import picocli.CommandLine
 import picocli.CommandLine.Command
+import picocli.CommandLine.Option
 
 /**
  * Base class for CLI v2 commands
@@ -28,7 +29,6 @@ import picocli.CommandLine.Command
 @CompileStatic
 @Command(
     headerHeading = '%n',
-    mixinStandardHelpOptions = true,
     abbreviateSynopsis = true,
     descriptionHeading = '%n',
     commandListHeading = '%nCommands:%n',
@@ -40,6 +40,9 @@ class AbstractCmd implements Runnable {
 
     @CommandLine.Spec
     CommandLine.Model.CommandSpec spec
+
+    @Option(names = ['-h','--help'], description = 'Print this help', usageHelp = true)
+    boolean help
 
     @Override
     void run() {}

@@ -30,12 +30,12 @@ abstract class AbstractCmd implements Runnable {
 
     private Launcher launcher
 
+    @Parameter(names = ['-h','-help'], arity = 0, description = 'Print the command usage', help = true)
+    boolean help
+
     abstract String getName()
 
     Launcher getLauncher() { launcher }
 
     void setLauncher( Launcher value ) { this.launcher = value }
-
-    @Parameter(names = ['-h','-help'], arity = 0, description = 'Print the command usage', help = true)
-    boolean help
 }

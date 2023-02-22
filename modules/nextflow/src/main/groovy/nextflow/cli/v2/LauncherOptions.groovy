@@ -35,28 +35,25 @@ class LauncherOptions implements ILauncherOptions {
     @Option(names = ['--bg'], arity = '0', description = 'Execute nextflow in background')
     boolean background
 
-    @Option(names = ['-C'], description = 'Use the specified configuration file(s), ignoring any defaults')
+    @Option(names = ['-C'], split = ',', description = 'Use the specified configuration file(s), overriding any defaults')
     List<String> config
 
-    @Option(names = ['-c','--config'], description = 'Add the specified file to configuration set')
+    @Option(names = ['-c','--config'], split = ',', paramLabel = '<config>', description = 'Add the specified file to configuration set')
     List<String> userConfig
 
     @Option(names = ['--config-ignore-includes'], description = 'Disable the parsing of config includes')
     boolean ignoreConfigIncludes
 
-    @Option(names = ['-D'], description = 'Set JVM properties')
+    @Option(names = ['-D'], paramLabel = '<name>=<value>', description = 'Set JVM properties')
     Map<String,String> jvmOpts
 
-    @Option(names = ['--debug'], description = 'Enable DEBUG level logging for the specified package name -- multiple packages can be provided as a comma-separated list (e.g. \'-debug nextflow,io.seqera\')', hidden = true)
+    @Option(names = ['--debug'], split = ',', paramLabel = '<package>', description = 'Enable DEBUG level logging for the specified package name', hidden = true)
     List<String> debug
 
     @Option(names = ['-d','--dockerize'], arity = '0', description = 'Launch Nextflow via Docker (experimental)')
     boolean dockerize
 
-    @Option(names = ['-h'], description = 'Print this help', usageHelp = true)
-    boolean help
-
-    @Option(names = ['--log'], description = 'Set the log file path')
+    @Option(names = ['--log'], paramLabel = '<file>', description = 'Set the log file path')
     String logFile
 
     @Option(names = ['-q','--quiet'], description = 'Do not print information messages')
@@ -65,10 +62,10 @@ class LauncherOptions implements ILauncherOptions {
     @Option(names = ['--self-update'], arity = '0', description = 'Update Nextflow to the latest version', hidden = true)
     boolean selfUpdate
 
-    @Option(names = ['--syslog'], arity = '0..1', fallbackValue = 'localhost', description = 'Send logs to syslog server (e.g. localhost:514)')
+    @Option(names = ['--syslog'], arity = '0..1', fallbackValue = 'localhost', paramLabel = '<url>', description = 'Send logs to syslog server (e.g. localhost:514)')
     String syslog
 
-    @Option(names = ['--trace'], description = 'Enable TRACE level logging for the specified package name -- multiple packages can be provided as a comma-separated list (e.g. \'-trace nextflow,io.seqera\')')
+    @Option(names = ['--trace'], split = ',', paramLabel = '<package>', description = 'Enable TRACE level logging for the specified package name')
     List<String> trace
 
     @Option(names = ['-v'], description = 'Print the version number and exit')

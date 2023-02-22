@@ -55,7 +55,7 @@ class LogCmd extends AbstractCmd implements LogImpl.Options {
     @Parameter(names = ['-s','-separator'], description = 'Character used to separate column values')
     String separator = '\\t'
 
-    @Parameter(names = ['-t','-template'], description = 'Text template used to each record in the log ')
+    @Parameter(names = ['-t','-template'], description = 'Text template used to print each record in the log ')
     String templateStr
 
     @Parameter(description = 'Session IDs or run names')

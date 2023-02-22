@@ -60,13 +60,13 @@ trait CacheBase {
             throw new AbortOperationException("It looks like no pipeline was executed in this folder (or execution history is empty)")
 
         if( after && before )
-            throw new AbortOperationException("Options `after` and `before` cannot be used in the same command")
+            throw new AbortOperationException("Options `after` and `before` cannot be used together")
 
         if( after && but )
-            throw new AbortOperationException("Options `after` and `but` cannot be used in the same command")
+            throw new AbortOperationException("Options `after` and `but` cannot be used together")
 
         if( before && but )
-            throw new AbortOperationException("Options `before` and `but` cannot be used in the same command")
+            throw new AbortOperationException("Options `before` and `but` cannot be used together")
 
     }
 

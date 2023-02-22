@@ -37,7 +37,7 @@ class CloneCmd extends AbstractCmd implements CloneImpl.Options, HubOptions {
     @Parameters(index = '0', description = 'name of the project to clone')
     String pipeline
 
-    @Parameters(arity = '0..1', description = 'target directory')
+    @Parameters(arity = '0..1', paramLabel = '<target>', description = 'target directory')
     String targetName
 
     @Option(names = ['-r','--revision'], description = 'Revision to clone - It can be a git branch, tag or revision number')

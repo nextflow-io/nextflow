@@ -34,19 +34,19 @@ import picocli.CommandLine.Parameters
 )
 class LogCmd extends AbstractCmd implements LogImpl.Options {
 
-    @Option(names = ['--after'], description = 'Show log entries for runs executed after the specified one')
+    @Option(names = ['--after'], paramLabel = '<name>|<id>', description = 'Show log entries for runs executed after the specified one')
     String after
 
-    @Option(names = ['--before'], description = 'Show log entries for runs executed before the specified one')
+    @Option(names = ['--before'], paramLabel = '<name>|<id>', description = 'Show log entries for runs executed before the specified one')
     String before
 
-    @Option(names = ['--but'], description = 'Show log entries of all runs except the specified one')
+    @Option(names = ['--but'], paramLabel = '<name>|<id>', description = 'Show log entries of all runs except the specified one')
     String but
 
     @Option(names = ['-f','--fields'], description = 'Comma separated list of fields to include in the printed log -- Use the `-l` option to show the list of available fields')
     String fields
 
-    @Option(names = ['-F','--filter'], description = "Filter log entries by a custom expression e.g. process =~ /foo.*/ && status == 'COMPLETED'")
+    @Option(names = ['-F','--filter'], paramLabel = '<expr>', description = "Filter log entries by a custom expression e.g. process =~ /foo.*/ && status == 'COMPLETED'")
     String filterStr
 
     @Option(names = ['-l','--list-fields'], arity = '0', description = 'Show all available fields')
@@ -58,7 +58,7 @@ class LogCmd extends AbstractCmd implements LogImpl.Options {
     @Option(names = ['-s','--separator'], description = 'Character used to separate column values')
     String separator = '\\t'
 
-    @Option(names = ['-t','--template'], description = 'Text template used to each record in the log ')
+    @Option(names = ['-t','--template'], paramLabel = '<template>', description = 'Text template used to print each record in the log ')
     String templateStr
 
     @Parameters(description = 'Session IDs or run names')

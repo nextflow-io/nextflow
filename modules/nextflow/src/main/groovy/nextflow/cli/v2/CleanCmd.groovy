@@ -39,13 +39,13 @@ class CleanCmd extends AbstractCmd implements CleanImpl.Options {
     @ParentCommand
     private Launcher launcher
 
-    @Option(names = ['--after'], description = 'Clean up runs executed after the specified one')
+    @Option(names = ['--after'], paramLabel = '<name>|<id>', description = 'Clean up runs executed after the specified one')
     String after
 
-    @Option(names = ['--before'], description = 'Clean up runs executed before the specified one')
+    @Option(names = ['--before'], paramLabel = '<name>|<id>', description = 'Clean up runs executed before the specified one')
     String before
 
-    @Option(names = ['--but'], description = 'Clean up all runs except the specified one')
+    @Option(names = ['--but'], paramLabel = '<name>|<id>', description = 'Clean up all runs except the specified one')
     String but
 
     @Option(names = ['-n', '--dry-run'], arity = '0', description = 'Print names of file to be removed without deleting them')
