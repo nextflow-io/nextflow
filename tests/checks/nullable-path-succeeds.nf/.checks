@@ -5,7 +5,7 @@ set +e
 #
 echo ''
 $NXF_RUN 
-[[ $? == 0 ]] && exit 1
+[[ $? == 0 ]] || false
 
 
 #
@@ -13,6 +13,4 @@ $NXF_RUN
 #
 echo ''
 $NXF_RUN -resume 
-[[ $? == 0 ]] && exit 1
-
-exit 0
+[[ $? == 0 ]] || false
