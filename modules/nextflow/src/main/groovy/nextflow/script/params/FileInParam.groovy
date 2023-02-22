@@ -33,9 +33,9 @@ class FileInParam extends BaseInParam implements PathQualifier {
 
     protected filePattern
 
-    private boolean pathQualifier
-
     private boolean nullable
+
+    private boolean pathQualifier
 
     @Override String getTypeName() { pathQualifier ? 'path' : 'file' }
 
@@ -123,6 +123,15 @@ class FileInParam extends BaseInParam implements PathQualifier {
             return value
     }
 
+    FileInParam setNullable(boolean value) {
+        this.nullable = value
+        return this
+    }
+
+    boolean isNullable() {
+        return nullable
+    }
+
     @Override
     FileInParam setPathQualifier(boolean flag) {
         pathQualifier = flag
@@ -156,12 +165,4 @@ class FileInParam extends BaseInParam implements PathQualifier {
         return this
     }
 
-    FileInParam setNullable(boolean value) {
-        this.nullable = value
-        return this
-    }
-
-    boolean isNullable() {
-        return nullable
-    }
 }

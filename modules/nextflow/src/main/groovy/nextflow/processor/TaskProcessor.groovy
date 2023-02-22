@@ -16,8 +16,6 @@
  */
 package nextflow.processor
 
-import nextflow.util.NullablePath
-
 import static nextflow.processor.ErrorStrategy.*
 
 import java.lang.reflect.InvocationTargetException
@@ -106,6 +104,7 @@ import nextflow.util.CacheHelper
 import nextflow.util.CollectionHelper
 import nextflow.util.LockManager
 import nextflow.util.LoggerHelper
+import nextflow.util.NullPath
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 /**
@@ -1507,8 +1506,8 @@ class TaskProcessor {
                 def path = param.glob ? splitter.strip(filePattern) : filePattern
                 def file = workDir.resolve(path)
                 def exists = param.followLinks ? file.exists() : file.exists(LinkOption.NOFOLLOW_LINKS)
-                if( !exists && param.nullable){
-                    file = new NullablePath(path)
+                if( !exists && param.nullable ) {
+                    file = new NullPath(path)
                     exists = true
                 }
                 if( exists )
@@ -1727,7 +1726,7 @@ class TaskProcessor {
 
     protected Path normalizeToPath( obj, boolean nullable=false ) {
 
-        if( obj instanceof NullablePath && !nullable)
+        if( obj instanceof NullPath && !nullable )
             throw new ProcessUnrecoverableException("Path value cannot be null")
 
         if( obj instanceof Path )
@@ -1752,8 +1751,7 @@ class TaskProcessor {
         throw new ProcessUnrecoverableException("Not a valid path value: '$str'")
     }
 
-    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, FilePorter.Batch batch,
-                                                      boolean nullable=false ) {
+    protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath, FilePorter.Batch batch, boolean nullable=false ) {
 
         Collection allItems = obj instanceof Collection ? obj : [obj]
         def len = allItems.size()

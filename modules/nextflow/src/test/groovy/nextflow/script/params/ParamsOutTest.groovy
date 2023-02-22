@@ -1151,8 +1151,7 @@ class ParamsOutTest extends Specification {
                 separatorChar: '#',
                 glob: false,
                 optional: false,
-                includeInputs: false,
-                nullable: true      
+                includeInputs: false
                 
               path y, 
                 maxDepth:5,
@@ -1162,7 +1161,8 @@ class ParamsOutTest extends Specification {
                 separatorChar: ':',
                 glob: true,
                 optional: true,
-                includeInputs: true
+                includeInputs: true,
+                nullable: true
 
               return ''
             }
@@ -1182,7 +1182,7 @@ class ParamsOutTest extends Specification {
         !out0.getGlob()
         !out0.getOptional()
         !out0.getIncludeInputs()
-        out0.isNullable()
+        !out0.isNullable()
 
         and:
         out1.getMaxDepth() == 5
@@ -1193,7 +1193,7 @@ class ParamsOutTest extends Specification {
         out1.getGlob()
         out1.getOptional()
         out1.getIncludeInputs()
-        !out1.isNullable()
+        out1.isNullable()
     }
 
     def 'should set file options' () {
