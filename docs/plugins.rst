@@ -69,7 +69,7 @@ For example::
         .selectFromTable(sql, db: "test", emitColumns:true)
         .sqlInsert(into:"BAR", columns:'id', db:"test")
 
-The above snippet includes the operators ``sqlInsert` and ``fromQuery`` from the
+The above snippet includes the operators ``sqlInsert`` and ``fromQuery`` from the
 `nf-sqldb <https://github.com/nextflow-io/nf-sqldb>`_ plugin. The latter will be accessible using
 the ``selectFromTable`` alias in the script.
 
