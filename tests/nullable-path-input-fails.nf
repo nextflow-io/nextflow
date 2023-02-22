@@ -4,14 +4,14 @@ process foo {
   input:
     val id
   output:
-    path('output.txt', nullable: true)
+    tuple val(id), path('output.txt', nullable: true)
   exec:
     println id
 }
 
 process bar {
   input:
-    path(file)
+    tuple val(id), path(file)
   output:
     val file
   exec:

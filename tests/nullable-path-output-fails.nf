@@ -4,7 +4,7 @@ process foo {
   input:
     val id
   output:
-    path('output.txt')
+    tuple val(id), path('output.txt')
   exec:
     println 'hi'
 }
