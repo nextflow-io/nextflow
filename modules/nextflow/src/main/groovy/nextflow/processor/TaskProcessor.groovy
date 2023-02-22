@@ -1975,7 +1975,7 @@ class TaskProcessor {
             final param = entry.getKey()
             final val = entry.getValue()
             final fileParam = param as FileInParam
-            final normalized = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), batch)
+            final normalized = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), batch, fileParam.isNullable())
             final resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
             ctx.put( param.name, singleItemOrList(resolved, task.type) )
             count += resolved.size()
