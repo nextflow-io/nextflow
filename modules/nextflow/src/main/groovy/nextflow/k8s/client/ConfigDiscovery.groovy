@@ -170,21 +170,22 @@ class ConfigDiscovery {
         namespace ?= 'default'
         serviceAccount ?= 'default'
 
-        final cmd = "kubectl --context $context -n ${namespace} get secret `kubectl --context $context -n ${namespace} get serviceaccount ${serviceAccount} -o jsonpath='{.secrets[0].name}'` -o jsonpath='{.data.token}'"
-        final proc = new ProcessBuilder('bash','-o','pipefail','-c', cmd).redirectErrorStream(true).start()
+        final cmd = "kubectl --context $context -n ${namespace} get secret -o=jsonpath='{.items[?(@.metadata.annotations.kubernetes\\.io/service-account\\.name==\"$serviceAccount\")].data.token}'"
+        final proc = new ProcessBuilder('bash','-o','pipefail','-c', cmd).start()
         final status = proc.waitFor()
-        if( status==0 ) {
+        final text = proc.inputStream?.text
+        if( status==0 && text ) {
             try {
-                return new String(proc.text.trim().decodeBase64())
+                return new String(text.trim().decodeBase64())
             }
             catch( Exception e ) {
-                log.warn "Unable to read K8s cluster auth token -- cause: ${e.message}"
+                log.warn "Unable to decode K8s cluster auth token '$text' -- cause: ${e.message}"
             }
         }
         else {
-            final msg = proc.text
-            final cause = msg ? "-- cause:\n${msg.indent('  ')}" : ''
-            log.debug "[K8s] unable to fetch auth token ${cause}"
+            final cause = proc.errorStream?.text ?: text
+            final msg = cause ? "\n- cmd  : $cmd\n- exit : $status\n- cause:\n${cause.indent('  ')}" : ''
+            log.warn "[K8s] unable to fetch auth token ${msg}"
         }
         return null
     }
