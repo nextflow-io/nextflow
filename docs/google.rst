@@ -126,8 +126,7 @@ google.enableRequesterPaysBuckets              When ``true`` uses the configured
 google.batch.allowedLocations                  Define the set of allowed locations for VMs to be provisioned. See `Google documentation <https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy>`_ for details (default: no restriction. Requires version ``22.12.0-edge`` or later).
 google.batch.bootDiskSize                      Set the size of the virtual machine boot disk, e.g ``50.GB`` (default: none).
 google.batch.cpuPlatform                       Set the minimum CPU Platform, e.g. ``'Intel Skylake'``. See `Specifying a minimum CPU Platform for VM instances <https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications>`_ (default: none).
-google.batch.installGpuDrivers                 When ``true`` install the GPU drivers to the VM (default: ``false``, only needed when specifying an instance template. Requires version ``23.03.0.edge`` or later).
-google.batch.instanceTemplate                  Specify an instance template with which to create VMs (default: none. Requires version ``23.03.0.edge`` or later).
+google.batch.installGpuDrivers                 When ``true`` install the GPU drivers to the VM (default: ``false``, only needed when using an instance template. Requires version ``23.03.0.edge`` or later).
 google.batch.spot                              When ``true`` enables the usage of *spot* virtual machines or ``false`` otherwise (default: ``false``).
 google.batch.usePrivateAddress                 When ``true`` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: ``false``).
 google.batch.network                           Set network name to attach the VM's network interface to. The value will be prefixed with global/networks/ unless it contains a /, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used.
@@ -135,28 +134,28 @@ google.batch.serviceAccountEmail               Define the Google service account
 google.batch.subnetwork                        Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL.
 ============================================== =================
 
-.. note::
-  Specifying an instance template will overwrite the ``accelerator`` and ``machineType`` directives, as well as the following
-  Google Batch options: ``cpuPlatform``, ``preemptible``, and ``spot``. To use GPUs with instance types, you must set ``installGpuDrivers``
-  to ``true``, and the instance template must specify a GPU-enabled machine type.
-
-.. note::
-  Instance templates cannot be used with Fusion.
-
 
 Process definition
 ------------------
-Processes can be defined as usual and by default the ``cpus`` and ``memory`` directives are used to find the cheapest machine
-type available at current location that fits the requested resources. If ``memory`` is not specified, 1GB of memory is allocated per cpu.
 
-The process ``machineType`` directive can be a list of patterns separated by comma. The pattern can contain a `*` to match
-any number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
+Processes can be defined as usual. By default, the ``cpus`` and ``memory`` directives are used to find the cheapest machine
+type that is available at the current location and that fits the requested resources. If ``memory`` is not specified, 1GB of memory is allocated per CPU.
 
-Alternatively it can also be used to define a specific predefined Google Compute Platform `machine type <https://cloud.google.com/compute/docs/machine-types>`_
-or a custom machine type.
+The ``machineType`` process directive can be specified in any of the following ways:
 
-When Fusion is enabled, by default, only machine types that allow to attach local SSD disks will be used. If you specify your own
-machine type or machine series they should allow to attach local SSD disks, otherwise the job scheduling will fail.
+* A comma-separated list of patterns. The pattern can contain a ``*`` to match any number of characters
+  and ``?`` to match any single character. Examples of valid patterns: ``c2-*``, ``m?-standard*``, ``n*``.
+
+* A predefined Google Compute Platform `machine type <https://cloud.google.com/compute/docs/machine-types>`_ or `custom machine type <https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type>`_.
+
+* An `instance template <https://cloud.google.com/compute/docs/instance-templates>`_, specified as ``template://<instance-template>``. Using an instance template
+  will overwrite the ``accelerator`` directive, as well as the following Google Batch options: ``cpuPlatform``, ``preemptible``, and ``spot``. To use an instance template
+  with GPUs, you must also set the ``google.batch.installGpuDrivers`` config option to ``true``. To use an instance template with Fusion, the instance template must include
+  a ``local-ssd`` disk with at least 375 GB. Requires version ``23.03.0.edge`` or later.
+
+When Fusion is enabled, by default, only machine types that are able to attach local SSD disks will be used. If you specify your own
+machine type or machine series, they should be able to attach local SSD disks, otherwise the job scheduling will fail. Fusion cannot be
+used with instance templates.
 
 Examples::
 

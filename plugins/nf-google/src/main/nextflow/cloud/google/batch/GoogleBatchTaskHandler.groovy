@@ -224,8 +224,14 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( executor.config.cpuPlatform )
             instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
 
-        if( task.config.getMachineType() )
-            instancePolicy.setMachineType( task.config.getMachineType() )
+        def machineType = task.config.getMachineType()
+        def instanceTemplate = null
+        if( machineType ) {
+            if( machineType.startsWith('template://') )
+                instanceTemplate = machineType.minus('template://')
+            else
+                instancePolicy.setMachineType( machineType )
+        }
 
         machineInfo = findBestMachineType(task.config)
         if( machineInfo )
@@ -254,21 +260,16 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             )
         }
 
-        if( executor.config.getInstanceTemplate() ) {
-            if( fusionEnabled() )
-                throw new IllegalArgumentException('Fusion cannot be used with instance templates in Google Batch')
-
-            allocationPolicy.addInstances(
-                instancePolicyOrTemplate
-                    .setInstallGpuDrivers( executor.config.getInstallGpuDrivers() )
-                    .setInstanceTemplate( executor.config.getInstanceTemplate() )
-            )
+        if( instanceTemplate ) {
+            instancePolicyOrTemplate
+                .setInstallGpuDrivers( executor.config.getInstallGpuDrivers() )
+                .setInstanceTemplate( instanceTemplate )
         } else {
-            allocationPolicy.addInstances(
-                instancePolicyOrTemplate
-                    .setPolicy(instancePolicy)
-            )
+            instancePolicyOrTemplate
+                .setPolicy( instancePolicy )
         }
+
+        allocationPolicy.addInstances(instancePolicyOrTemplate)
 
         // network policy
         final networkInterface = AllocationPolicy.NetworkInterface.newBuilder()

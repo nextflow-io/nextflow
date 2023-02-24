@@ -216,7 +216,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def exec = Mock(GoogleBatchExecutor) {
             getConfig() >> Mock(BatchConfig) {
                 getInstallGpuDrivers() >> true
-                getInstanceTemplate() >> INSTANCE_TEMPLATE
             }
         }
         and:
@@ -228,6 +227,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
             getContainer() >> CONTAINER_IMAGE
             getConfig() >> Mock(TaskConfig) {
                 getCpus() >> 2
+                getMachineType() >> "template://${INSTANCE_TEMPLATE}"
                 getResourceLabels() >> [:]
             }
         }
