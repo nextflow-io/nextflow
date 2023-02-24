@@ -1780,19 +1780,20 @@ transpose
 The ``transpose`` operator transforms a channel in such a way that the emitted items are the result of a transposition
 of all tuple elements in each item. For example::
 
-    Channel.of(
-        ['a', ['p', 'q'], ['u','v']],
-        ['b', ['s', 't'], ['x','y']]
+    Channel
+        .of(
+            ['SRR493366', [file('/my/data/SRR493366_1.fastq'), file('/my/data/SRR493366_2.fastq')]],
+            ['SRR493367', [file('/my/data/SRR493367_1.fastq'), file('/my/data/SRR493367_2.fastq')]]
         )
         .transpose()
         .view()
 
 The above snippet prints::
 
-    [a, p, u]
-    [a, q, v]
-    [b, s, x]
-    [b, t, y]
+    [SRR493366, /my/data/SRR493366_1.fastq]
+    [SRR493366, /my/data/SRR493366_2.fastq]
+    [SRR493367, /my/data/SRR493367_1.fastq]
+    [SRR493367, /my/data/SRR493367_2.fastq]
 
 Available parameters:
 
