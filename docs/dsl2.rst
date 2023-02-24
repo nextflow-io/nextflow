@@ -366,7 +366,7 @@ For example::
     }
 
 The above snippet includes a process with name ``foo`` defined in the module script in the main
-execution context. This way, `foo`` can be invoked in the ``workflow`` scope.
+execution context. This way, ``foo`` can be invoked in the ``workflow`` scope.
 
 Nextflow implicitly looks for the script file ``./some/module.nf`` resolving the path
 against the *including* script location.

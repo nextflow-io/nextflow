@@ -1,8 +1,17 @@
 /*
- * Copyright (c) 2020-2021. Seqera Labs, S.L.
+ * Copyright 2023, Seqera Labs.
  *
- * All Rights reserved
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.cloud.google.batch
@@ -32,4 +41,12 @@ interface GoogleBatchLauncherSpec {
      * @return A string representing the command to be executed by the containerised task
      */
     String runCommand()
+
+    default List<String> launchCommand() {
+        return ['/bin/bash','-o','pipefail','-c', runCommand() ]
+    }
+
+    default Map<String,String> getEnvironment() {
+        return Map.of()
+    }
 }

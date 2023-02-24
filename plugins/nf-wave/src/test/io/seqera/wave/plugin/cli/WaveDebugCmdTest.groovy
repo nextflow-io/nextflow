@@ -15,23 +15,33 @@
  *
  */
 
-package io.seqera.wave.plugin.config
+package io.seqera.wave.plugin.cli
+
+import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
- * Conda build options
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CondaOpts {
+class WaveDebugCmdTest extends Specification {
 
-    final public String DEFAULT_MAMBA_IMAGE = 'mambaorg/micromamba:1.3.1'
-
-    final String mambaImage
-    final List<String> commands
-
-    CondaOpts(Map opts) {
-        this.mambaImage = opts.mambaImage ?: DEFAULT_MAMBA_IMAGE
-        this.commands = opts.commands as List<String>
+    @Unroll
+    def 'should check remote path' () {
+        expect:
+        WaveDebugCmd.isRemotePath(PATH) == EXPECTED
+        where:
+        PATH                | EXPECTED
+        null                | false
+        'foo'               | false
+        '/some/file'        | false
+        and:
+        's3://foo/bar'      | true
+        'gs://foo/bar'      | true
+        and:
+        'file:/foo/bar'     | false
+        'file://foo/bar'    | false
+        'file:///foo/bar'   | false
     }
 
 }

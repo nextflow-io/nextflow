@@ -298,7 +298,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaRecipeToDockerFile(RECIPE) == '''\
-                FROM mambaorg/micromamba:1.2.0
+                FROM mambaorg/micromamba:1.3.1
                 RUN \\
                    micromamba install -y -n base -c conda-forge -c defaults \\
                    bwa=0.7.15 salmon=1.1.1 \\
@@ -317,7 +317,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaRecipeToDockerFile(RECIPE) == '''\
-                FROM mambaorg/micromamba:1.2.0
+                FROM mambaorg/micromamba:1.3.1
                 RUN \\
                    micromamba install -y -n base -c foo -c bar \\
                    bwa=0.7.15 salmon=1.1.1 \\
@@ -344,6 +344,26 @@ class WaveClientTest extends Specification {
                 '''.stripIndent()
     }
 
+
+    def 'should create dockerfile content with remote conda lock' () {
+        given:
+        def CONDA_OPTS = [mambaImage:'my-base:123', commands: ['USER my-user', 'RUN apt-get update -y && apt-get install -y procps']]
+        def session = Mock(Session) { getConfig() >> [wave:[build:[conda:CONDA_OPTS]]]}
+        def RECIPE = 'https://foo.com/some/conda-lock.yml'
+        when:
+        def client = new WaveClient(session)
+        then:
+        client.condaRecipeToDockerFile(RECIPE) == '''\
+                FROM my-base:123
+                RUN \\
+                   micromamba install -y -n base -c conda-forge -c defaults \\
+                   -f https://foo.com/some/conda-lock.yml \\
+                   && micromamba clean -a -y
+                USER my-user
+                RUN apt-get update -y && apt-get install -y procps
+                '''.stripIndent()
+    }
+
     def 'should create dockerfile content from conda file' () {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
@@ -351,7 +371,7 @@ class WaveClientTest extends Specification {
         def client = new WaveClient(session)
         then:
         client.condaFileToDockerFile()== '''\
-                FROM mambaorg/micromamba:1.2.0
+                FROM mambaorg/micromamba:1.3.1
                 COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                 RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                     micromamba clean -a -y
@@ -485,7 +505,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:1.2.0
+                    FROM mambaorg/micromamba:1.3.1
                     RUN \\
                        micromamba install -y -n base -c conda-forge -c defaults \\
                        salmon=1.2.3 \\
@@ -513,7 +533,7 @@ class WaveClientTest extends Specification {
         def assets = client.resolveAssets(task, null)
         then:
         assets.dockerFileContent == '''\
-                    FROM mambaorg/micromamba:1.2.0
+                    FROM mambaorg/micromamba:1.3.1
                     COPY --chown=$MAMBA_USER:$MAMBA_USER conda.yml /tmp/conda.yml
                     RUN micromamba install -y -n base -f /tmp/conda.yml && \\
                         micromamba clean -a -y
@@ -756,9 +776,22 @@ class WaveClientTest extends Specification {
         
         where:
         CONFIG                                      | EXPECTED
-        [:]                                         | 'https://fusionfs.seqera.io/releases/v2.0-amd64.json'
-        [wave:[containerPlatform: 'arm64']]         | 'https://fusionfs.seqera.io/releases/v2.0-arm64.json'
-        [wave:[containerPlatform: 'linux/arm64']]   | 'https://fusionfs.seqera.io/releases/v2.0-arm64.json'
-        [wave:[containerPlatform: 'linux/arm64/v8']]    | 'https://fusionfs.seqera.io/releases/v2.0-arm64.json'
+        [:]                                         | 'https://fusionfs.seqera.io/releases/v2.1-amd64.json'
+        [wave:[containerPlatform: 'arm64']]         | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
+        [wave:[containerPlatform: 'linux/arm64']]   | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
+        [wave:[containerPlatform: 'linux/arm64/v8']]    | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
+    }
+
+    def 'should check is local conda file' () {
+        expect:
+        WaveClient.isCondaLocalFile(CONTENT) == EXPECTED
+
+        where:
+        CONTENT             | EXPECTED
+        'foo'               | false
+        'foo.yml'           | true
+        'foo.txt'           | true
+        'foo\nbar.yml'      | false
+        'http://foo.com'    | false
     }
 }
