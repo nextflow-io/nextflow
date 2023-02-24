@@ -895,6 +895,49 @@ It outputs::
 See also: :ref:`channel-types`.
 
 
+Inputs with default values
+--------------------------
+
+.. note::
+  This feature requires Nextflow version 23.03.0-edge or later.
+
+Process inputs can be defined with a default value, so that they don't have to be
+specified when calling the process. Default values can be useful for process inputs
+that aren't always used. For example::
+
+    process foo {
+      input:
+        val metadata
+        path ('star/*'), defaultValue: []
+        path ('hisat2/*'), defaultValue: []
+        path ('salmon/*'), defaultValue: []
+      output:
+        stdout
+      script:
+        """
+        echo 'metadata: ${metadata}'
+        [[ -d star ]] && ls star || echo 'skipping star directory'
+        [[ -d hisat2 ]] && ls hisat2 || echo 'skipping hisat2 directory'
+        [[ -d salmon ]] && ls salmon || echo 'skipping salmon directory'
+        """
+    }
+
+    workflow {
+        metadata = Channel.of('foo')
+        foo(metadata) | view
+    }
+
+There are a few important caveats to keep in mind when using default values::
+
+* Inputs with a default value must be declared after inputs without a default value.
+
+* If you provide a value for an input, then you must also provide values for all inputs
+  that precede it, even if those inputs have default values. In the example above, if you
+  wanted to provide a value for the ``salmon`` input, you would have to provide values for
+  the ``star`` and ``hisat2`` inputs as well, regardless of whether you use the default
+  values for those inputs.
+
+
 Outputs
 =======
 

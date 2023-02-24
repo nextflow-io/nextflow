@@ -170,14 +170,24 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
         // get params 
         final params = ChannelOut.spread(args)
+
         // sanity check
-        if( params.size() != declaredInputs.size() )
+        if( params.size() > declaredInputs.size() )
             throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), params.size()))
 
         // set input channels
         for( int i=0; i<params.size(); i++ ) {
-            final inParam = (declaredInputs[i] as BaseInParam)
+            final inParam = (BaseInParam)declaredInputs[i]
             inParam.setFrom(params[i])
+            inParam.init()
+        }
+
+        for( int i=params.size(); i<declaredInputs.size(); i++ ) {
+            final inParam = (BaseInParam)declaredInputs[i]
+            if( inParam.defaultValue == null )
+                throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), params.size()))
+
+            inParam.setFrom(CH.value(inParam.defaultValue))
             inParam.init()
         }
 

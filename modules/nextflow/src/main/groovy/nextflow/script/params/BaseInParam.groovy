@@ -42,6 +42,8 @@ abstract class BaseInParam extends BaseParam implements InParam {
 
     protected owner
 
+    protected defaultValue
+
     /**
      * The channel to which the input value is bound
      */
@@ -150,6 +152,18 @@ abstract class BaseInParam extends BaseParam implements InParam {
             return '__$' + this.toString()
 
         throw new IllegalArgumentException("Invalid process input definition")
+    }
+
+    /**
+     * @return The parameter default value
+     */
+    Object getDefaultValue() {
+        return defaultValue
+    }
+
+    BaseInParam setDefaultValue(Object value) {
+        this.defaultValue = value
+        return this
     }
 
     BaseInParam bind( Object obj ) {
