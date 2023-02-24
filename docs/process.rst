@@ -1265,6 +1265,11 @@ In this example, the process is normally expected to produce an ``output.txt`` f
 cases where the file is legitimately missing, the process does not fail. The output channel will
 only contain values for those processes that produce ``output.txt``.
 
+.. note::
+    Path outputs can also be defined as ``nullable``. Whereas an ``optional`` path will emit nothing
+    if the output file does not exist, a ``nullable`` path will emit a "null" path that can trigger
+    downstream computations, such as a process that has a ``nullable`` path input.
+
 
 When
 ====
