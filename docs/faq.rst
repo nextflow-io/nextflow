@@ -10,8 +10,8 @@ How do I process multiple input files in parallel?
 Q: *I have a collection of input files (e.g. carrots.fa, onions.fa, broccoli.fa). How can I specify that a process is performed on each input file in a parallel manner?*
 
 A: The idea here is to create a ``channel`` that will trigger a process
-execution for each of your files. First define a parameter that specifies where
-the input files are:
+execution for each of your files. First define at the top of your script file
+a parameter that specifies where the input files are:
 
 ::
 
@@ -23,25 +23,34 @@ Each of the files in the data directory can be made into a channel with:
 
     vegetable_datasets = Channel.fromPath(params.input)
 
-From here, each time the variable ``vegetable_datasets`` is called as an
-input to a process, the process will be performed on each of the files
-in the vegetable datasets. For example, each input file may contain a
-collection of unaligned sequences. We can specify a process to align
-them as follows:
+This should be placed within the workflow block. From here, each time
+the variable ``vegetable_datasets`` is called as an input to a process,
+the process will be performed on each of the files in the vegetable datasets.
+For example, each input file may contain a collection of unaligned sequences.
+We can specify a process to align them as follows:
 
 ::
 
     process clustalw2_align {
         input:
-        file vegetable_fasta from vegetable_datasets
+        path vegetable_fasta
 
         output:
-        file "${vegetable_fasta.baseName}.aln" into vegetable_alns
+        path "${vegetable_fasta.baseName}.aln"
 
         script:
         """
         clustalw2 -INFILE=${vegetable_fasta}
         """
+    }
+
+And the workflow block with the logic as follows:
+
+::
+
+    workflow {
+        vegetable_datasets = Channel.fromPath(params.input)
+        vegetable_alns = clustalw2_align(vegetable_datasets)
     }
 
 This would result in the alignment of the three vegetable fasta files
@@ -55,11 +64,13 @@ How do I get a unique ID based on the file name?
 
 *Q: How do I get a unique identifier based on a dataset file names (e.g. broccoli from broccoli.fa) and have the results going to a specific folder (e.g. results/broccoli/)?*
 
-A: First we can specify a results directory as shown below:
+A: First we can specify a results directory as shown below, at the top of your
+script file (along with the parameter definition for input files):
 
 ::
 
     results_path = $PWD/results
+    params.input = "data/*.fa"
 
 The best way to manage this is to have the channel emit a tuple
 containing both the file base name (``broccoli``) and the full file path
@@ -68,10 +79,10 @@ containing both the file base name (``broccoli``) and the full file path
 ::
 
     datasets = Channel
-                    .fromPath(params.input)
-                    .map { file -> tuple(file.baseName, file) }
+        .fromPath(params.input)
+        .map { file -> tuple(file.baseName, file) }
 
-And in the process we can then reference these variables (``datasetID``
+In the process we can then reference these variables (``datasetID``
 and ``datasetFile``):
 
 ::
@@ -80,10 +91,10 @@ and ``datasetFile``):
         publishDir "$results_path/$datasetID"
 
         input:
-        set datasetID, file(datasetFile) from datasets
+        tuple val(datasetID), path(datasetFile)
 
         output:
-        set datasetID, file("${datasetID}.aln") into aligned_files
+        tuple val(datasetID), path("${datasetID}.aln")
 
         script:
         """
@@ -91,71 +102,22 @@ and ``datasetFile``):
         """
     }
 
-In our example above would now have the folder ``broccoli`` in the results directory which would
-contain the file ``broccoli.aln``.
-
-If the input file has multiple extensions (e.g. ``broccoli.tar.gz``), you will want to use
-``file.simpleName`` instead, to strip all of them.
-
-
-How do I use the same channel multiple times?
----------------------------------------------
-
-*Q: Can a channel be used in two input statements? For example, I want carrots.fa to be aligned by both ClustalW and T-Coffee.*
-
-
-A: A channel can be consumed only by one process or operator (except if channel only ever contains one item). You must
-duplicate a channel before calling it as an input in different processes.
-First we create the channel emitting the input files:
+With the logic written in the workflow block, as follows:
 
 ::
 
-    vegetable_datasets = Channel.fromPath(params.input)
-
-Next we can split it into two channels by using the :ref:`operator-into` operator:
-
-::
-
-    vegetable_datasets.into { datasets_clustalw; datasets_tcoffee }
-
-Then we can define a process for aligning the datasets with *ClustalW*:
-
-::
-
-    process clustalw2_align {
-        input:
-        file vegetable_fasta from datasets_clustalw
-
-        output:
-        file "${vegetable_fasta.baseName}.aln" into clustalw_alns
-
-        script:
-        """
-        clustalw2 -INFILE=${vegetable_fasta}
-        """
+    workflow {
+        datasets = Channel
+            .fromPath(params.input)
+            .map { file -> tuple(file.baseName, file) }
+        aligned_files = clustalw2_align(datasets)
     }
 
-And a process for aligning the datasets with *T-Coffee*:
+In our example above, there would now be the folder ``broccoli`` in the results
+directory which would contain the file ``broccoli.aln``.
 
-::
-
-    process tcoffee_align {
-        input:
-        file vegetable_fasta from datasets_tcoffee
-
-        output:
-        file "${vegetable_fasta.baseName}.aln" into tcoffee_alns
-
-        script:
-        """
-        t_coffee ${vegetable_fasta}
-        """
-    }
-
-The upside of splitting the channels is that given our three unaligned
-fasta files (``broccoli.fa``, ``onion.fa`` and ``carrots.fa``) six
-alignment processes (three x ClustalW) + (three x T-Coffee) will be
-executed as parallel processes.
+If the input file has multiple extensions (e.g. ``broccoli.tar.gz``), you will
+want to use ``file.simpleName`` instead, to strip all of them.
 
 
 How do I invoke custom scripts and tools?
@@ -166,24 +128,23 @@ How do I invoke custom scripts and tools?
 A: Nextflow will automatically add the directory ``bin`` into the ``PATH``
 environmental variable. So therefore any executable in the ``bin``
 folder of a Nextflow pipeline can be called without the need to
-reference the full path.
+reference the full path, as long as it has execution permissions (`chmod +x`).
 
-For example, we may wish to reformat our *ClustalW* alignments from
-Question 3 into *PHYLIP* format. We will use the handy tool
-``esl-reformat`` for this task.
+For example, we may wish to reformat our *ClustalW* alignments into
+*PHYLIP* format. We will use the handy tool ``esl-reformat`` for this task.
 
-First we place copy (or create a symlink to) the ``esl-reformat``
+First we place a copy (or create a symlink) of the ``esl-reformat``
 executable to the project's bin folder. From above we see the *ClustalW*
-alignments are in the channel ``clustalw_alns``:
+alignments are in the channel ``aligned_files``:
 
 ::
 
     process phylip_reformat {
         input:
-        file clustalw_alignment from clustalw_alns
+        path clustalw_alignment
 
         output:
-        file "${clustalw_alignment.baseName}.phy" to clustalw_phylips
+        path "${clustalw_alignment.baseName}.phy"
 
         script:
         """
@@ -191,25 +152,15 @@ alignments are in the channel ``clustalw_alns``:
         """
     }
 
-
-    process generate_bootstrap_replicates {
-        input:
-        file clustalw_phylip from clustalw_phylips
-
-        output:
-        file "${clustalw_alignment.baseName}.phy" to clustalw_phylips
-
-        script:
-        """
-        esl-reformat phylip ${clustalw_alignment} ${clustalw_alignment.baseName}.phy
-        """
+    workflow {
+        clustalw_phylips = phylip_reformat(aligned_files)
     }
 
 How do I iterate over a process n times?
 -----------------------------------------
 
-To perform a process *n* times, we can specify the input to be
-``each x from y..z``. For example:
+To perform a process *n* times, we can use the ``each`` process directive.
+For example:
 
 ::
 
@@ -219,11 +170,11 @@ To perform a process *n* times, we can specify the input to be
         publishDir "$results_path/$datasetID/bootstrapsReplicateTrees"
 
         input:
-        each x from 1..bootstrapReplicates
-        set val(datasetID), file(ClustalwPhylips)
+        each x
+        tuple val(datasetID), path(ClustalwPhylips)
 
         output:
-        file "bootstrapTree_${x}.nwk" into bootstrapReplicateTrees
+        path "bootstrapTree_${x}.nwk"
 
         script:
         // Generate Bootstrap Trees
@@ -233,17 +184,30 @@ To perform a process *n* times, we can specify the input to be
         """
     }
 
+    workflow {
+        Channel
+            .of(1..bootstrapReplicates)
+            .set { x }
+        datasets = Channel
+            .fromPath(params.input)
+            .map { file -> tuple(file.baseName, file) }
+        clustalw2_align(x, datasets)
+
+    }
+
 
 How do I iterate over nth files from within a process?
 ------------------------------------------------------
 
 *Q: For example, I have 100 files emitted by a channel. I wish to perform one process where I iterate over each file inside the process.*
 
-A: The idea here to transform a channel emitting multiple items into a channel
-that will collect all files into a list object and produce that list as a single emission. We do this using the ``collect()`` operator. The process script would then be able to iterate over
-the files by using a simple for-loop.
+A: The idea here is to transform a channel emitting multiple items into a
+channel that will collect all files into a list object and produce that list
+as a single emission. We do this using the ``collect()`` operator. The process
+script would then be able to iterate over the files by using a simple for-loop.
 
-This is also useful if all the items of a channel are required to be in the work directory.
+This is also useful if all the items of a channel are required to be in the
+work directory.
 
 ::
 
@@ -251,10 +215,10 @@ This is also useful if all the items of a channel are required to be in the work
         publishDir "$results_path/$datasetID/concatenate"
 
         input:
-        file bootstrapTreeList from bootstrapReplicateTrees.collect()
+        path bootstrapTreeList
 
         output:
-        file "concatenatedBootstrapTrees.nwk"
+        path "concatenatedBootstrapTrees.nwk"
 
         // Concatenate Bootstrap Trees
         script:
@@ -266,12 +230,19 @@ This is also useful if all the items of a channel are required to be in the work
         """
     }
 
+    workflow {
+        concatenateBootstrapReplicates(bootstrapReplicateTrees.collect())
+    }
+
 How do I use a specific version of Nextflow?
 ------------------------------------------------------
 
 *Q: I need to specify a version of Nextflow to use, or I need to pull a snapshot release.*
 
-A: Sometimes it is necessary to use a different version of Nextflow for a specific feature or testing purposes. Nextflow is able to automatically pull versions when the ``NXF_VER`` environment variable is defined on the commandline.
+A: Sometimes it is necessary to use a different version of Nextflow for a
+specific feature or testing purposes. Nextflow is able to automatically pull
+versions when the ``NXF_VER`` environment variable is defined on the
+command line.
 
 ::
 
