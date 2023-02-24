@@ -126,8 +126,8 @@ google.enableRequesterPaysBuckets              When ``true`` uses the configured
 google.batch.allowedLocations                  Define the set of allowed locations for VMs to be provisioned. See `Google documentation <https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy>`_ for details (default: no restriction. Requires version ``22.12.0-edge`` or later).
 google.batch.bootDiskSize                      Set the size of the virtual machine boot disk, e.g ``50.GB`` (default: none).
 google.batch.cpuPlatform                       Set the minimum CPU Platform, e.g. ``'Intel Skylake'``. See `Specifying a minimum CPU Platform for VM instances <https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications>`_ (default: none).
-google.batch.installGpuDrivers                 When ``true`` install the GPU drivers to the VM (default: ``false``, only needed when specifying an instance template).
-google.batch.instanceTemplate                  Specify an instance template with which to create VMs (default: none).
+google.batch.installGpuDrivers                 When ``true`` install the GPU drivers to the VM (default: ``false``, only needed when specifying an instance template. Requires version ``23.03.0.edge`` or later).
+google.batch.instanceTemplate                  Specify an instance template with which to create VMs (default: none. Requires version ``23.03.0.edge`` or later).
 google.batch.spot                              When ``true`` enables the usage of *spot* virtual machines or ``false`` otherwise (default: ``false``).
 google.batch.usePrivateAddress                 When ``true`` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: ``false``).
 google.batch.network                           Set network name to attach the VM's network interface to. The value will be prefixed with global/networks/ unless it contains a /, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used.
@@ -136,7 +136,12 @@ google.batch.subnetwork                        Define the name of the subnetwork
 ============================================== =================
 
 .. note::
-  Specifying an instance policy will overwrite the ``machineType`` directive as well as the following options: ``cpuPlatform``, ``preemptible``, and ``spot``.
+  Specifying an instance template will overwrite the ``accelerator`` and ``machineType`` directives, as well as the following
+  Google Batch options: ``cpuPlatform``, ``preemptible``, and ``spot``. To use GPUs with instance types, you must set ``installGpuDrivers``
+  to ``true``, and the instance template must specify a GPU-enabled machine type.
+
+.. note::
+  Instance templates cannot be used with Fusion.
 
 
 Process definition

@@ -255,6 +255,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         if( executor.config.getInstanceTemplate() ) {
+            if( fusionEnabled() )
+                throw new IllegalArgumentException('Fusion cannot be used with instance templates in Google Batch')
+
             allocationPolicy.addInstances(
                 instancePolicyOrTemplate
                     .setInstallGpuDrivers( executor.config.getInstallGpuDrivers() )
