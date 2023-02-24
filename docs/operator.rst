@@ -808,31 +808,38 @@ In other words, the operator transforms a sequence of tuple like *(K, V, W, ..)*
 For example::
 
     Channel
-        .of( [1,'A'], [1,'B'], [2,'C'], [3, 'B'], [1,'C'], [2, 'A'], [3, 'D'] )
+        .of(
+            ['SRR493366', file('/my/data/SRR493366_1.fastq')],
+            ['SRR493366', file('/my/data/SRR493366_2.fastq')],
+            ['SRR493367', file('/my/data/SRR493367_1.fastq')],
+            ['SRR493367', file('/my/data/SRR493367_2.fastq')]
+        )
         .groupTuple()
         .view()
 
 It prints::
 
-    [1, [A, B, C]]
-    [2, [C, A]]
-    [3, [B, D]]
+    [SRR493366, [/my/data/SRR493366_1.fastq, /my/data/SRR493366_2.fastq]]
+    [SRR493367, [/my/data/SRR493367_1.fastq, /my/data/SRR493367_2.fastq]]
 
 By default the first entry in the tuple is used as grouping key. A different key can be chosen by using the
 ``by`` parameter and specifying the index of the entry to be used as key (the index is zero-based). For example,
 grouping by the second value in each tuple::
 
     Channel
-        .of( [1,'A'], [1,'B'], [2,'C'], [3, 'B'], [1,'C'], [2, 'A'], [3, 'D'] )
+        .of(
+            [file('/my/data/SRR493366_1.fastq'), 'SRR493366'],
+            [file('/my/data/SRR493366_2.fastq'), 'SRR493366'],
+            [file('/my/data/SRR493367_1.fastq'), 'SRR493367'],
+            [file('/my/data/SRR493367_2.fastq'), 'SRR493367']
+        )
         .groupTuple(by: 1)
         .view()
 
 The result is::
 
-    [[1, 2], A]
-    [[1, 3], B]
-    [[2, 1], C]
-    [[3], D]
+    [[/my/data/SRR493366_1.fastq, /my/data/SRR493366_2.fastq], SRR493366]
+    [[/my/data/SRR493367_1.fastq, /my/data/SRR493367_2.fastq], SRR493367]
 
 Available parameters:
 
