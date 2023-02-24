@@ -193,7 +193,7 @@ class ConfigImplTest extends Specification {
         // command definition 
         def options = Mock(ConfigImpl.Options) {
             launcherOptions >> new LauncherOptions(config: [CONFIG.toString()])
-            args >> [ '.' ]
+            pipeline >> '.'
         }
         def cmd = new ConfigImpl(options: options, stdout: buffer)
 
@@ -245,7 +245,7 @@ class ConfigImplTest extends Specification {
         // command definition
         def options = Mock(ConfigImpl.Options) {
             launcherOptions >> new LauncherOptions(config: [CONFIG.toString()])
-            args >> [ '.' ]
+            pipeline >> '.'
         }
         def cmd = new ConfigImpl(options: options, stdout: buffer)
 
@@ -285,7 +285,7 @@ class ConfigImplTest extends Specification {
         given:
         def buffer = new ByteArrayOutputStream()
         def options = Mock(ConfigImpl.Options) {
-            args >> ['https://github.com/nextflow-io/hello']
+            pipeline >> 'https://github.com/nextflow-io/hello'
             showAllProfiles >> true
             launcherOptions >> Mock(LauncherOptions)
         }
@@ -332,7 +332,7 @@ class ConfigImplTest extends Specification {
         def options = Mock(ConfigImpl.Options) {
             showAllProfiles >> true
             launcherOptions >> new LauncherOptions(config: [CONFIG.toString()])
-            args >> ['.']
+            pipeline >> '.'
         }
         def cmd = new ConfigImpl(options: options, stdout: buffer)
 

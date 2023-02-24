@@ -36,7 +36,8 @@ class CloneImplTest extends Specification {
         def dir = Files.createTempDirectory('test')
         def options = Mock(CloneImpl.Options) {
             hubUser >> accessToken
-            args >> ['nextflow-io/hello', dir.toFile().toString()]
+            pipeline >> 'nextflow-io/hello'
+            targetName >> dir.toFile().toString()
         }
         def cmd = new CloneImpl(options)
 

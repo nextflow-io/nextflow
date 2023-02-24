@@ -67,7 +67,7 @@ class LauncherTest extends Specification {
         when:
         launcher = parseArgs('-h')
         then:
-        assert launcher.options.help
+        assert launcher.help
 
         when:
         launcher = parseArgs('help')

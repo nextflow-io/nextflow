@@ -59,7 +59,7 @@ class InfoImplTest extends Specification {
         when:
         def buffer = new ByteArrayOutputStream()
         def screen = buffer.toString()
-        def options = Mock(InfoImpl.Options) { args >> ['hello'] }
+        def options = Mock(InfoImpl.Options) { pipeline >> 'hello' }
         def cmd = new InfoImpl(options: options, out: new PrintStream(buffer))
 
         cmd.run()
@@ -79,7 +79,7 @@ class InfoImplTest extends Specification {
         def buffer = new ByteArrayOutputStream()
         def screen = buffer.toString()
         def json = (Map)new JsonSlurper().parseText(screen)
-        def options = Mock(InfoImpl.Options) { args >> ['hello'] ; format >> 'json' }
+        def options = Mock(InfoImpl.Options) { pipeline >> 'hello' ; format >> 'json' }
         def cmd = new InfoImpl(options: options, out: new PrintStream(buffer))
 
         cmd.run()
@@ -105,7 +105,7 @@ class InfoImplTest extends Specification {
         def buffer = new ByteArrayOutputStream()
         def screen = buffer.toString()
         def json = (Map)new Yaml().load(screen)
-        def options = Mock(InfoImpl.Options) { args >> ['hello'] ; format >> 'yaml' }
+        def options = Mock(InfoImpl.Options) { pipeline >> 'hello' ; format >> 'yaml' }
         def cmd = new InfoImpl(options: options, out: new PrintStream(buffer))
 
         cmd.run()

@@ -41,7 +41,7 @@ class PullImplTest extends Specification {
         def accessToken = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
         def dir = Files.createTempDirectory('test')
         def options = Mock(PullImpl.Options) {
-            args >> ['nextflow-io/hello']
+            pipeline >> 'nextflow-io/hello'
             hubUser >> accessToken
         }
         def cmd = new PullImpl(options: options, root: dir.toFile())
