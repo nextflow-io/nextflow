@@ -1252,11 +1252,11 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
       "beta": "foo"
     }
 
-  Is equivalent to this command in CLI::
+  Is equivalent to the following command line::
 
     $ nextflow run main.nf --alpha 1 --beta foo
 
-  The parameters specified with this mechanism are merged with the resolved configuration (base configuration and profiles). The values provided via a params file overwrite those of the same name in the Nextflow configuration file.
+  The parameters which are specified through this mechanism are merged with the resolved configuration (base configuration and profiles). The values provided via params file overwrites the ones with the same name in the Nextflow configuration file.
 
 --------------------
 self-update
@@ -1295,7 +1295,7 @@ Update Nextflow. ::
 view
 --------------------
 
-View a project's script file(s).
+View a projects script file(s).
 
 **Usage**
 
@@ -1305,8 +1305,8 @@ View a project's script file(s).
 
 **Description**
 
-The ``view`` command is used to inspect the pipelines that are already stored in the global nextflow cache.
-For downloading a pipeline into the global cache ``~/.nextflow/assets``, refer to the ``pull`` command.
+The ``view`` command is used to inspect the pipelines which are already stored in the global nextflow cache.
+For downloading a pipeline into the global cache ``~/.nextflow/assets``, please refer to the ``pull`` command.
 
 **Options**
 
@@ -1345,7 +1345,7 @@ Viewing the contents of a downloaded pipeline. ::
       Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
     }
 
-List the folder structure of the downloaded pipeline. ::
+Listing the folder structure of the downloaded pipeline. ::
 
     $ nextflow view -l nextflow-io/hello
 
@@ -1360,7 +1360,7 @@ List the folder structure of the downloaded pipeline. ::
     .travis.yml
     main.nf
 
-View the contents of a downloaded pipeline without omitting the header. ::
+Viewing the contents of a downloaded pipeline without omitting the header. ::
 
     $ nextflow view -q nextflow-io/hello
 
@@ -1388,9 +1388,9 @@ View the contents of a downloaded pipeline without omitting the header. ::
 Pipeline parameters
 ====================
 
-Pipeline scripts can use an arbitrary number of parameters that can be overridden, either
+Pipeline script can use an arbitrary number of parameters that can be overridden either
 using the command line or the Nextflow configuration file. Any script parameter can be specified
-on the command line, prefixing the parameter name with double dash characters, e.g.::
+on the command line prefixing the parameter name with double dash characters e.g.::
 
     nextflow run <my script> --foo Hello
 
@@ -1398,11 +1398,11 @@ Then, the parameter can be accessed in the pipeline script using the ``params.fo
 
 .. note::
   When the parameter name is formatted using ``camelCase``, a second parameter
-  is created with the same value using ``kebab-case``, and vice versa.
+  is created with the same value using ``kebab-case``, and the other way around.
 
 .. warning::
   When a command line parameter includes one or more glob characters, i.e. wildcards like ``*`` or ``?``,
-  the parameter value must to be enclosed in quotes to prevent Bash expansion and preserve
+  the parameter value needs to be enclosed in quotes to prevent Bash expansion and preserve
   the glob characters. For example::
 
         nextflow run <my script> --files "*.fasta"
