@@ -68,4 +68,26 @@ class WaveContainerResolverTest extends Specification {
         and:
         result == SINGULARITY_CONTAINER
     }
+
+    def 'should validate container name' () {
+        when:
+        WaveContainerResolver.validateContainerRepo('ubuntu')
+        then:
+        noExceptionThrown()
+
+        when:
+        WaveContainerResolver.validateContainerRepo('ubuntu:latest')
+        then:
+        noExceptionThrown()
+
+        when:
+        WaveContainerResolver.validateContainerRepo('quay.io/wtsicgp/nanoseq:3.3.0')
+        then:
+        noExceptionThrown()
+
+        when:
+        WaveContainerResolver.validateContainerRepo('docker://quay.io/wtsicgp/nanoseq:3.3.0')
+        then:
+        thrown(IllegalArgumentException)
+    }
 }
