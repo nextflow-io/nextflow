@@ -110,7 +110,7 @@ class PluginUpdater extends UpdateManager {
     void pullPlugins(List<String> plugins) {
         pullOnly=true
         try {
-            final specs = plugins.collect(it -> PluginSpec.parse(it))
+            final specs = plugins.collect(it -> PluginSpec.parse(it,defaultPlugins))
             for( PluginSpec spec : specs ) {
                 pullPlugin0(spec.id, spec.version)
             }
