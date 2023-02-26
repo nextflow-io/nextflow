@@ -1,5 +1,15 @@
 NEXTFLOW CHANGE-LOG
 ===================
+23.02.1-edge - 26 Feb 2023
+- Add Fusion logs and tags config [09192078]
+- Add support for NXF_DEBUG to K8s task handler [ci fast] [828583dc]
+- Add support for Mamba HTTP based lock files [ci fast] [7fe88c84]
+- Add container name validation [c3b6d9ab]
+- Add Fusion for Google storage docs [34fcfe06]
+- Improve K8s auth token discovery [ci fast] [44f8cc07]
+- Bump nf-wave@0.7.2 [1c697ab5]
+- Bump amazoncorretto:17.0.6 [a33a6f47]
+
 23.02.0-edge - 21 Feb 2023
 - Add Fusion support for Google Batch (#3577) [d5fbab4f]
 - Add Header provider to Google Batch client [20979929]
