@@ -22,6 +22,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.exception.NodeTerminationException
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.file.http.XPath
@@ -274,6 +275,56 @@ class K8sTaskHandlerTest extends Specification {
                     ]
         ]
 
+    }
+
+    def 'should create a pod with debug options' () {
+        given:
+        SysEnv.push([NXF_DEBUG:'true'])
+        and:
+        def WORK_DIR = Paths.get('/some/work/dir')
+        def config = Mock(TaskConfig)
+        def task = Mock(TaskRun)
+        def client = Mock(K8sClient)
+        def builder = Mock(K8sWrapperBuilder)
+        def handler = Spy(new K8sTaskHandler(builder: builder, client:client))
+        Map result
+
+        when:
+        result = handler.newSubmitRequest(task)
+        then:
+        _ * handler.fusionEnabled() >> false
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> false
+        1 * handler.getPodOptions() >> new PodOptions()
+        1 * handler.getSyntheticPodName(task) >> 'nf-123'
+        1 * handler.getLabels(task) >> [:]
+        1 * handler.getAnnotations() >> [:]
+        1 * handler.getContainerMounts() >> []
+        1 * task.getContainer() >> 'debian:latest'
+        1 * task.getWorkDir() >> WORK_DIR
+        1 * task.getConfig() >> config
+        1 * config.getCpus() >> 0
+        1 * config.getMemory() >> null
+        1 * client.getConfig() >> new ClientConfig()
+        result == [ apiVersion: 'v1',
+                    kind: 'Pod',
+                    metadata: [
+                            name:'nf-123',
+                            namespace:'default'
+                    ],
+                    spec: [
+                            restartPolicy:'Never',
+                            containers:[
+                                    [name:'nf-123',
+                                     image:'debian:latest',
+                                     args:['/bin/bash', '-ue','/some/work/dir/.command.run'],
+                                     env:[[name:'NXF_DEBUG', value:'true']] ]
+                            ]
+                    ]
+        ]
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should create a pod with specified client configs' () {
