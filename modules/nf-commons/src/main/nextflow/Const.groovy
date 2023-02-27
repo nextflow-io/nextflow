@@ -53,17 +53,17 @@ class Const {
     /**
      * The application version
      */
-    static public final String APP_VER = "23.01.0-edge"
+    static public final String APP_VER = "23.02.1-edge"
 
     /**
      * The app build time as linux/unix timestamp
      */
-    static public final long APP_TIMESTAMP = 1675173462928
+    static public final long APP_TIMESTAMP = 1677436983659
 
     /**
      * The app build number
      */
-    static public final int APP_BUILDNUM = 5835
+    static public final int APP_BUILDNUM = 5845
 
     /**
      * The app build time string relative to UTC timezone

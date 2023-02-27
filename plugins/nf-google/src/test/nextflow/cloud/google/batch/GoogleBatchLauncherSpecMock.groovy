@@ -15,23 +15,39 @@
  *
  */
 
-package io.seqera.wave.plugin.config
+package nextflow.cloud.google.batch
+
+import com.google.cloud.batch.v1.Volume
+import groovy.transform.Canonical
 
 /**
- * Conda build options
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CondaOpts {
+@Canonical
+class GoogleBatchLauncherSpecMock implements GoogleBatchLauncherSpec {
 
-    final public String DEFAULT_MAMBA_IMAGE = 'mambaorg/micromamba:1.3.1'
+    String runCommand
+    List<String> containerMounts = List.of()
+    List<Volume> volumes = List.of()
+    Map<String,String> environment = Map.of()
 
-    final String mambaImage
-    final List<String> commands
-
-    CondaOpts(Map opts) {
-        this.mambaImage = opts.mambaImage ?: DEFAULT_MAMBA_IMAGE
-        this.commands = opts.commands as List<String>
+    @Override
+    List<String> getContainerMounts() {
+        return containerMounts
     }
 
+    @Override
+    List<Volume> getVolumes() {
+        return volumes
+    }
+
+    @Override
+    String runCommand() {
+        return runCommand
+    }
+
+    Map<String,String> getEnvironment() {
+        return environment
+    }
 }

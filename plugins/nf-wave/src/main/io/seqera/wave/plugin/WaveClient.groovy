@@ -34,7 +34,6 @@ import com.google.gson.reflect.TypeToken
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
-import nextflow.fusion.FusionConfig
 import io.seqera.wave.plugin.config.TowerConfig
 import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.exception.BadResponseException
@@ -43,6 +42,7 @@ import io.seqera.wave.plugin.packer.Packer
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.resolver.ContainerInfo
+import nextflow.fusion.FusionConfig
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
 import org.slf4j.Logger
@@ -326,7 +326,7 @@ class WaveClient {
                 throw new IllegalArgumentException("Unexpected conda and dockerfile conflict")
 
             // map the recipe to a dockerfile
-            if( isCondaFile(attrs.conda) ) {
+            if( isCondaLocalFile(attrs.conda) ) {
                 condaFile = Path.of(attrs.conda)
                 dockerScript = condaFileToDockerFile()
             }
@@ -413,20 +413,25 @@ class WaveClient {
     }
 
     protected String condaRecipeToDockerFile(String recipe) {
-        def channelsOpts = condaChannels.collect(it -> "-c $it").join(' ')
-        def result = """\
+        final channelsOpts = condaChannels.collect(it -> "-c $it").join(' ')
+        final target = recipe.startsWith('http://') || recipe.startsWith('https://')
+                    ? "-f $recipe"
+                    : recipe
+        final result = """\
         FROM ${config.condaOpts().mambaImage}
         RUN \\
            micromamba install -y -n base $channelsOpts \\
-           $recipe \\
+           $target \\
            && micromamba clean -a -y
         """.stripIndent()
 
         return addCommands(result)
     }
 
-    protected boolean isCondaFile(String value) {
+    static protected boolean isCondaLocalFile(String value) {
         if( value.contains('\n') )
+            return false
+        if( value.startsWith('http://') || value.startsWith('https://') )
             return false
         return value.endsWith('.yaml') || value.endsWith('.yml') || value.endsWith('.txt')
     }

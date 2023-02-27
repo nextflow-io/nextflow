@@ -70,4 +70,35 @@ class FusionConfigTest extends Specification {
         [exportAwsAccessKeys: true]     | true
     }
 
+    @Unroll
+    def 'should configure log level and output' () {
+        given:
+        def opts = new FusionConfig(OPTS)
+        expect:
+        opts.logLevel() == LEVEL
+        opts.logOutput() == OUTPUT
+
+        where:
+        OPTS                            | LEVEL     | OUTPUT
+        [:]                             | null      | null
+        [logLevel: 'trace']             | 'trace'   | null
+        [logOutput: 'stdout']           | null      | 'stdout'
+    }
+
+    @Unroll
+    def 'should configure tags' () {
+        given:
+        def opts = new FusionConfig(OPTS)
+        expect:
+        opts.tagsEnabled() == ENABLED
+        opts.tagsPattern() == PATTERN
+
+        where:
+        OPTS                    | ENABLED   | PATTERN
+        [:]                     | true      | FusionConfig.DEFAULT_TAGS
+        [tags:true]             | true      | FusionConfig.DEFAULT_TAGS
+        [tags:false]            | false     | null
+        [tags:'[*.txt](x=1)']   | true      | '[*.txt](x=1)'
+
+    }
 }

@@ -136,19 +136,30 @@ google.batch.subnetwork                        Define the name of the subnetwork
 
 Process definition
 ------------------
-Processes can be defined as usual and by default the ``cpus`` and ``memory`` directives are used to instantiate a custom
-machine type with the specified compute resources.  If ``memory`` is not specified, 1GB of memory is allocated per cpu.
+Processes can be defined as usual and by default the ``cpus`` and ``memory`` directives are used to find the cheapest machine
+type available at current location that fits the requested resources. If ``memory`` is not specified, 1GB of memory is allocated per cpu.
 
-The process ``machineType`` directive may optionally be used to specify a predefined Google Compute Platform `machine type <https://cloud.google.com/compute/docs/machine-types>`_
-If specified, this value overrides the ``cpus`` and ``memory`` directives.
-If the ``cpus`` and ``memory`` directives are used, the values must comply with the allowed custom machine type `specifications <https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#specifications>`_ .  Extended memory is not directly supported, however high memory or cpu predefined
-instances may be utilized using the ``machineType`` directive
+As of version ``23.02.0-edge``, the process ``machineType`` directive can be a list of patterns separated by comma. The pattern can contain a ``*`` to match
+any number of characters and ``?`` to match any single character. Examples of valid patterns: ``c2-*``, ```m?-standard*``, ```n*``.
+
+Alternatively it can also be used to define a specific predefined Google Compute Platform `machine type <https://cloud.google.com/compute/docs/machine-types>`_
+or a custom machine type.
 
 Examples::
 
-    process custom_resources_task {
+    process automatic_resources_task {
         cpus 8
         memory '40 GB'
+
+        """
+        <Your script here>
+        """
+    }
+
+    process allowing_some_series {
+        cpus 8
+        memory '20 GB'
+        machineType 'n2-*,c2-*,m3-*'
 
         """
         <Your script here>
@@ -162,7 +173,6 @@ Examples::
         <Your script here>
         """
     }
-
 
 Pipeline execution
 ------------------
@@ -201,6 +211,30 @@ if the virtual machine was terminated preemptively::
         errorStrategy = { task.exitStatus==14 ? 'retry' : 'terminate' }
         maxRetries = 5
     }
+
+Fusion file system
+------------------
+
+As of version ``23.02.0-edge``, Google Batch executor supports the use of :ref:`fusion-page`.
+
+Fusion allows the use of Google Storage as a virtual distributed file system, optimising the data transfer
+and speeding up most job I/O operations.
+
+To enable the use of Fusion file system in your pipeline, add the following snippet in your Nextflow configuration file::
+
+    fusion.enabled = true
+    wave.enabled = true
+    process.scratch = false
+    tower.accessToken = '<YOUR ACCESS TOKEN>'
+
+The `Tower <https://cloud.tower.nf>`_ access token is optional, but it enables higher API rate limits for the
+:ref:`wave-page` service required by Fusion.
+
+.. tip::
+  When Fusion is enabled, by default, only machine types that allow to attach local SSD disks will be used. If you specify your own
+  machine type or machine series they should allow to attach local SSD disks, otherwise the job scheduling will fail.
+
+
 
 Supported directives
 --------------------
