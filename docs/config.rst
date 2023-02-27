@@ -123,6 +123,7 @@ connectionTimeout           The amount of time to wait (in milliseconds) when in
 endpoint                    The AWS S3 API entry point e.g. `s3-us-west-1.amazonaws.com`.
 glacierAutoRetrieval        Enable auto retrieval of S3 objects stored with Glacier class store (EXPERIMENTAL. default: ``false``, requires version ``22.12.0-edge`` or later).
 glacierExpirationDays       The time, in days, between when an object is restored to the bucket and when it expires (EXPERIMENTAL. default: ``7``, requires version ``22.12.0-edge`` or later).
+glacierRetrievalTier        The retrieval tier to use when restoring objects from Glacier, one of [``Expedited``, ``Standard``, ``Bulk``] (EXPERIMENTAL. requires version ``23.03.0-edge`` or later).
 maxConnections              The maximum number of allowed open HTTP connections.
 maxErrorRetry               The maximum number of retry attempts for failed retryable requests.
 protocol                    The protocol (i.e. HTTP or HTTPS) to use when connecting to AWS.

@@ -76,6 +76,7 @@ import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.CopyPartRequest;
 import com.amazonaws.services.s3.model.CopyPartResult;
 import com.amazonaws.services.s3.model.GetObjectTaggingRequest;
+import com.amazonaws.services.s3.model.GlacierJobParameters;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
@@ -138,6 +139,8 @@ public class AmazonS3Client {
 	private boolean glacierAutoRetrieval;
 
 	private int glacierExpirationDays = 7;
+
+	private String glacierRetrievalTier;
 
 	public AmazonS3Client(AmazonS3 client) {
 		this.client = client;
@@ -365,6 +368,11 @@ public class AmazonS3Client {
 		catch( NumberFormatException e ) {
 			log.warn("Not a valid AWS S3 glacierExpirationDays: `{}` -- Using default", days);
 		}
+	}
+
+	public void setGlacierRetrievalTier(String tier) {
+		this.glacierRetrievalTier = tier;
+		log.debug("Setting S3 glacierRetrievalTier={}", glacierRetrievalTier);
 	}
 
 	public AmazonS3 getClient() {
@@ -596,7 +604,19 @@ public class AmazonS3Client {
 		final long _5_mins = 5 * 60 * 1_000;
 
 		try {
-			client.restoreObjectV2(new RestoreObjectRequest(bucketName, key, glacierExpirationDays));
+			RestoreObjectRequest request = new RestoreObjectRequest(bucketName, key);
+
+			String storageClass = client.getObjectMetadata(bucketName, key).getStorageClass();
+			if( storageClass != "INTELLIGENT_TIERING" )
+				request.setExpirationInDays(glacierExpirationDays);
+
+			if( glacierRetrievalTier != null )
+				request.setGlacierJobParameters(
+					new GlacierJobParameters()
+						.withTier(glacierRetrievalTier)
+				);
+
+			client.restoreObjectV2(request);
 		}
 		catch (AmazonS3Exception e) {
 			if( e.getMessage().contains("RestoreAlreadyInProgress") ) {
