@@ -17,6 +17,7 @@
 
 package nextflow.fusion
 
+
 import nextflow.Global
 import nextflow.SysEnv
 import nextflow.plugin.Plugins
@@ -35,6 +36,14 @@ class FusionEnvProvider {
             final env = it.getEnvironment(scheme,config)
             if( env ) result.putAll(env)
         }
+        // tags setting
+        if( config.tagsEnabled() )
+            result.FUSION_TAGS = config.tagsPattern()
+        // logs setting
+        if( config.logOutput() )
+            result.FUSION_LOG_OUTPUT = config.logOutput()
+        if( config.logLevel() )
+            result.FUSION_LOG_LEVEL = config.logLevel()
         return result
     }
 }

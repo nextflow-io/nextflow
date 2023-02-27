@@ -344,6 +344,26 @@ class WaveClientTest extends Specification {
                 '''.stripIndent()
     }
 
+
+    def 'should create dockerfile content with remote conda lock' () {
+        given:
+        def CONDA_OPTS = [mambaImage:'my-base:123', commands: ['USER my-user', 'RUN apt-get update -y && apt-get install -y procps']]
+        def session = Mock(Session) { getConfig() >> [wave:[build:[conda:CONDA_OPTS]]]}
+        def RECIPE = 'https://foo.com/some/conda-lock.yml'
+        when:
+        def client = new WaveClient(session)
+        then:
+        client.condaRecipeToDockerFile(RECIPE) == '''\
+                FROM my-base:123
+                RUN \\
+                   micromamba install -y -n base -c conda-forge -c defaults \\
+                   -f https://foo.com/some/conda-lock.yml \\
+                   && micromamba clean -a -y
+                USER my-user
+                RUN apt-get update -y && apt-get install -y procps
+                '''.stripIndent()
+    }
+
     def 'should create dockerfile content from conda file' () {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
@@ -760,5 +780,18 @@ class WaveClientTest extends Specification {
         [wave:[containerPlatform: 'arm64']]         | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
         [wave:[containerPlatform: 'linux/arm64']]   | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
         [wave:[containerPlatform: 'linux/arm64/v8']]    | 'https://fusionfs.seqera.io/releases/v2.1-arm64.json'
+    }
+
+    def 'should check is local conda file' () {
+        expect:
+        WaveClient.isCondaLocalFile(CONTENT) == EXPECTED
+
+        where:
+        CONTENT             | EXPECTED
+        'foo'               | false
+        'foo.yml'           | true
+        'foo.txt'           | true
+        'foo\nbar.yml'      | false
+        'http://foo.com'    | false
     }
 }
