@@ -809,18 +809,22 @@ For example::
 
     Channel
         .of(
-            ['SRR493366', file('/my/data/SRR493366_1.fastq')],
-            ['SRR493366', file('/my/data/SRR493366_2.fastq')],
-            ['SRR493367', file('/my/data/SRR493367_1.fastq')],
-            ['SRR493367', file('/my/data/SRR493367_2.fastq')]
+            [1, 'A'],
+            [1, 'B'],
+            [2, 'C'],
+            [3, 'B'],
+            [1, 'C'],
+            [2, 'A'],
+            [3, 'D']
         )
         .groupTuple()
         .view()
 
 It prints::
 
-    [SRR493366, [/my/data/SRR493366_1.fastq, /my/data/SRR493366_2.fastq]]
-    [SRR493367, [/my/data/SRR493367_1.fastq, /my/data/SRR493367_2.fastq]]
+    [1, [A, B, C]]
+    [2, [C, A]]
+    [3, [B, D]]
 
 By default the first entry in the tuple is used as grouping key. A different key can be chosen by using the
 ``by`` parameter and specifying the index of the entry to be used as key (the index is zero-based). For example,
@@ -828,18 +832,23 @@ grouping by the second value in each tuple::
 
     Channel
         .of(
-            [file('/my/data/SRR493366_1.fastq'), 'SRR493366'],
-            [file('/my/data/SRR493366_2.fastq'), 'SRR493366'],
-            [file('/my/data/SRR493367_1.fastq'), 'SRR493367'],
-            [file('/my/data/SRR493367_2.fastq'), 'SRR493367']
+            [1, 'A'],
+            [1, 'B'],
+            [2, 'C'],
+            [3, 'B'],
+            [1, 'C'],
+            [2, 'A'],
+            [3, 'D']
         )
         .groupTuple(by: 1)
         .view()
 
 The result is::
 
-    [[/my/data/SRR493366_1.fastq, /my/data/SRR493366_2.fastq], SRR493366]
-    [[/my/data/SRR493367_1.fastq, /my/data/SRR493367_2.fastq], SRR493367]
+    [[1, 2], A]
+    [[1, 3], B]
+    [[2, 1], C]
+    [[3], D]
 
 Available parameters:
 
@@ -1782,18 +1791,22 @@ of all tuple elements in each item. For example::
 
     Channel
         .of(
-            ['SRR493366', [file('/my/data/SRR493366_1.fastq'), file('/my/data/SRR493366_2.fastq')]],
-            ['SRR493367', [file('/my/data/SRR493367_1.fastq'), file('/my/data/SRR493367_2.fastq')]]
+            [1, ['A', 'B', 'C']],
+            [2, ['C', 'A']],
+            [3, ['B', 'D']]
         )
         .transpose()
         .view()
 
 The above snippet prints::
 
-    [SRR493366, /my/data/SRR493366_1.fastq]
-    [SRR493366, /my/data/SRR493366_2.fastq]
-    [SRR493367, /my/data/SRR493367_1.fastq]
-    [SRR493367, /my/data/SRR493367_2.fastq]
+    [1, A]
+    [1, B]
+    [1, C]
+    [2, C]
+    [2, A]
+    [3, B]
+    [3, D]
 
 Available parameters:
 
