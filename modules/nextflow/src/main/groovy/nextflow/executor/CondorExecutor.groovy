@@ -16,9 +16,11 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 
 import groovy.transform.InheritConstructors
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskRun
 /**
  * HTCondor executor
@@ -90,7 +92,9 @@ class CondorExecutor extends AbstractGridExecutor {
 
     @Override
     List<String> getSubmitCommandLine(TaskRun task, Path scriptFile) {
-        return ['condor_submit', '--terse', CMD_CONDOR]
+        return pipeLauncherScript()
+                ? List.of('condor_submit', '-terse')
+                : List.of('condor_submit', '-terse', CMD_CONDOR)
     }
 
     @Override
@@ -147,6 +151,15 @@ class CondorExecutor extends AbstractGridExecutor {
         return result
     }
 
+    @Override
+    protected boolean pipeLauncherScript() {
+        return isFusionEnabled()
+    }
+
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
+    }
 
     @InheritConstructors
     static class CondorWrapperBuilder extends BashWrapperBuilder {

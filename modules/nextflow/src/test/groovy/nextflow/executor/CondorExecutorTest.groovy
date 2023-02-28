@@ -16,6 +16,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Files
 
 import nextflow.Session
@@ -25,6 +26,8 @@ import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -131,14 +134,23 @@ class CondorExecutorTest extends Specification {
 
     }
 
-
+    @Unroll
     def 'should return launch command line' () {
 
         given:
-        def executor = [:] as CondorExecutor
+        def session = Mock(Session) { getConfig() >> [:] }
+        def exec = Spy(CondorExecutor) { getSession() >> session }
 
-        expect:
-        executor.getSubmitCommandLine( Mock(TaskRun), null) == ['condor_submit', '--terse', '.command.condor']
+        when:
+        def result = exec.getSubmitCommandLine(Mock(TaskRun), null)
+        then:
+        exec.pipeLauncherScript() >> PIPE
+        result == EXPECTED
+
+        where:
+        PIPE      | EXPECTED
+        false     | ['condor_submit', '-terse', '.command.condor']
+        true      | ['condor_submit', '-terse']
 
     }
 
