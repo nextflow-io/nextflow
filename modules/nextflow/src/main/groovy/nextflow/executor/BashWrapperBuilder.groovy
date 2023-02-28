@@ -464,6 +464,10 @@ class BashWrapperBuilder {
             result += "${remove} &>/dev/null || true"
             result += '\n'
         }
+        if ( System.getenv('NXF_DISABLE_FS_SYNC') != "true" ) {
+            result += 'sync || true'
+            result += '\n'
+        }
         return result
     }
 

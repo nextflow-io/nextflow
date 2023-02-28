@@ -160,4 +160,13 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
     }
 
+    String getCleanupCmd(String scratch) {
+        String result = ''
+        if ( System.getenv('NXF_DISABLE_FS_SYNC') != "true" ) {
+            result += 'sync || true'
+            result += '\n'
+        }
+        return result
+    }
+
 }
