@@ -17,6 +17,8 @@
 
 package nextflow.cloud.google.batch
 
+import nextflow.SysEnv
+
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -162,7 +164,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
 
     String getCleanupCmd(String scratch) {
         String result = ''
-        if ( System.getenv('NXF_DISABLE_FS_SYNC') != "true" ) {
+        if ( SysEnv.get( 'NXF_DISABLE_FS_SYNC' ) != "true" ) {
             result += 'sync || true'
             result += '\n'
         }

@@ -17,6 +17,8 @@
 
 package nextflow.executor
 
+import nextflow.SysEnv
+
 import java.nio.file.FileSystemException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -464,7 +466,7 @@ class BashWrapperBuilder {
             result += "${remove} &>/dev/null || true"
             result += '\n'
         }
-        if ( System.getenv('NXF_DISABLE_FS_SYNC') != "true" ) {
+        if ( SysEnv.get( 'NXF_DISABLE_FS_SYNC' ) != "true" ) {
             result += 'sync || true'
             result += '\n'
         }
