@@ -216,7 +216,7 @@ class BashWrapperBuilderTest extends Specification {
         builder.env == ['FOO','BAR']
         builder.workDir == Paths.get('/my/work/dir')
         builder.mounts == [ Paths.get('/my/bin') ]
-        
+
     }
 
     def 'should add resolved inputs'() {
@@ -659,14 +659,14 @@ class BashWrapperBuilderTest extends Specification {
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
-        binding.cleanup_cmd == ''
+        binding.cleanup_cmd == 'sync || true\n'
         binding.containsKey('cleanup_cmd')
 
 
         when:
         binding = newBashWrapperBuilder(scratch: true).makeBinding()
         then:
-        binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\n'
+        binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\nsync || true\n'
     }
 
     def 'should create wrapper with docker' () {
@@ -678,7 +678,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
-        binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
+        binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\nsync || true\n'
         binding.kill_cmd == 'docker kill $NXF_BOXID'
     }
 
@@ -692,7 +692,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
-        binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
+        binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\nsync || true\n'
         binding.kill_cmd == 'docker kill $NXF_BOXID'
         and:
         binding.container_env == '''\
@@ -713,7 +713,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
-        binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
+        binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\nsync || true\n'
         binding.kill_cmd == 'docker kill $NXF_BOXID'
     }
 
@@ -727,7 +727,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
-        binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
+        binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\nsync || true\n'
         binding.kill_cmd == 'docker kill $NXF_BOXID'
         and:
         binding.container_env == '''\
@@ -748,7 +748,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'sudo docker run -i -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
-        binding.cleanup_cmd == 'sudo docker rm $NXF_BOXID &>/dev/null || true\n'
+        binding.cleanup_cmd == 'sudo docker rm $NXF_BOXID &>/dev/null || true\nsync || true\n'
         binding.kill_cmd == 'sudo docker kill $NXF_BOXID'
     }
 
@@ -761,7 +761,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID ubuntu /bin/bash -ue /work/dir/.command.sh'
-        binding.cleanup_cmd == ""
+        binding.cleanup_cmd == "sync || true\n"
         binding.kill_cmd == null
         binding.containsKey('kill_cmd')
     }
@@ -775,7 +775,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'docker run -i -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID ubuntu /bin/bash -ue /work/dir/.command.sh'
-        binding.cleanup_cmd == ""
+        binding.cleanup_cmd == "sync || true\n"
         binding.kill_cmd == 'docker kill -s SIGXXX $NXF_BOXID'
         binding.containsKey('kill_cmd')
     }
@@ -790,7 +790,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'docker run -i -v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v /work/dir:/work/dir -w "\$PWD" --name \$NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
-        binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
+        binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\nsync || true\n'
         binding.kill_cmd == 'docker kill $NXF_BOXID'
     }
 
@@ -809,6 +809,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.cleanup_cmd == '''\
                 (sudo -n true && sudo rm -rf "$NXF_SCRATCH" || rm -rf "$NXF_SCRATCH")&>/dev/null || true
                 sudo docker rm $NXF_BOXID &>/dev/null || true
+                sync || true
                 '''.stripIndent()
     }
 
@@ -823,7 +824,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.launch_cmd == 'docker run -i -v /work/dir:/work/dir -w "$PWD" -v /foo:/bar --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.kill_cmd == 'docker kill $NXF_BOXID'
-        binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
+        binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\nsync || true\n'
     }
 
     def 'should create wrapper with sarus'() {
@@ -838,7 +839,7 @@ class BashWrapperBuilderTest extends Specification {
         sarus pull busybox 1>&2
         sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" busybox /bin/bash -ue /work/dir/.command.sh
         '''.stripIndent().rightTrim()
-        binding.cleanup_cmd == ""
+        binding.cleanup_cmd == "sync || true\n"
         binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
     }
 
@@ -855,7 +856,7 @@ class BashWrapperBuilderTest extends Specification {
         sarus pull busybox 1>&2
         sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" busybox /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
         '''.stripIndent().rightTrim()
-        binding.cleanup_cmd == ""
+        binding.cleanup_cmd == "sync || true\n"
         binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
         and:
         binding.container_env == '''\
@@ -880,7 +881,7 @@ class BashWrapperBuilderTest extends Specification {
         sarus pull busybox 1>&2
         sarus run --mount=type=bind,source=/folder\\ with\\ blanks,destination=/folder\\ with\\ blanks --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" busybox /bin/bash -ue /work/dir/.command.sh
         '''.stripIndent().rightTrim()
-        binding.cleanup_cmd == ""
+        binding.cleanup_cmd == "sync || true\n"
         binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
     }
 
@@ -897,7 +898,7 @@ class BashWrapperBuilderTest extends Specification {
         sarus pull busybox 1>&2
         sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" --mount=type=bind,source=/foo,destination=/bar busybox /bin/bash -ue /work/dir/.command.sh
         '''.stripIndent().rightTrim()
-        binding.cleanup_cmd == ""
+        binding.cleanup_cmd == "sync || true\n"
         binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
     }
 
@@ -920,7 +921,7 @@ class BashWrapperBuilderTest extends Specification {
         done
         shifter --image docker://ubuntu:latest /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
         '''.stripIndent().rightTrim()
-        binding.cleanup_cmd == ""
+        binding.cleanup_cmd == "sync || true\n"
         binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
 
     }
@@ -935,7 +936,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
-        binding.cleanup_cmd == ""
+        binding.cleanup_cmd == "sync || true\n"
         binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
     }
 
@@ -949,7 +950,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
-        binding.cleanup_cmd == ""
+        binding.cleanup_cmd == "sync || true\n"
         binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
     }
 
@@ -1044,7 +1045,7 @@ class BashWrapperBuilderTest extends Specification {
             echo FOO=${FOO[@]} > .command.env
             echo BAR=${BAR[@]} >> .command.env
             '''
-            .stripIndent()
+                .stripIndent()
 
     }
 
@@ -1073,7 +1074,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.stage_cmd == 'nxf_stage'
         binding.unstage_cmd == 'nxf_unstage'
-        
+
     }
 
 
@@ -1086,7 +1087,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'podman run -i -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
-        binding.cleanup_cmd == 'podman rm $NXF_BOXID &>/dev/null || true\n'
+        binding.cleanup_cmd == 'podman rm $NXF_BOXID &>/dev/null || true\nsync || true\n'
         binding.kill_cmd == 'podman kill $NXF_BOXID'
     }
 
@@ -1099,7 +1100,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'podman run -i -v /work/dir:/work/dir -w "$PWD" --entrypoint /bin/bash --name $NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
-        binding.cleanup_cmd == 'podman rm $NXF_BOXID &>/dev/null || true\n'
+        binding.cleanup_cmd == 'podman rm $NXF_BOXID &>/dev/null || true\nsync || true\n'
         binding.kill_cmd == 'podman kill $NXF_BOXID'
     }
 
@@ -1113,7 +1114,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'podman run -i -v /work/dir:/work/dir -v "$PWD":"$PWD" -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
-        binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\npodman rm $NXF_BOXID &>/dev/null || true\n'
+        binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\npodman rm $NXF_BOXID &>/dev/null || true\nsync || true\n'
         binding.kill_cmd == 'podman kill $NXF_BOXID'
     }
 }

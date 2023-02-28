@@ -17,6 +17,8 @@
 
 package nextflow.cloud.google.lifesciences
 
+import nextflow.SysEnv
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -58,7 +60,14 @@ class GoogleLifeSciencesScriptLauncher extends BashWrapperBuilder {
     }
 
     @Override
-    String getCleanupCmd(String scratch) { null }
+    String getCleanupCmd(String scratch) {
+        String result = ''
+        if ( SysEnv.get( 'NXF_DISABLE_FS_SYNC' ) != "true" ) {
+            result += 'sync || true'
+            result += '\n'
+        }
+        return result
+    }
 
     @Override
     protected String getStageCommand() { null }
