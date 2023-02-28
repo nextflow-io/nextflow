@@ -35,10 +35,13 @@ class FusionConfig {
     final private Boolean enabled
     final private String containerConfigUrl
     final private Boolean exportAwsAccessKeys
+    final private Boolean exportAzAccessKeys
 
     boolean enabled() { enabled }
 
     boolean exportAwsAccessKeys() { exportAwsAccessKeys }
+
+    boolean exportAzAccessKeys() { exportAzAccessKeys }
 
     URL containerConfigUrl() {
         this.containerConfigUrl ? new URL(this.containerConfigUrl) : null
@@ -47,6 +50,8 @@ class FusionConfig {
     FusionConfig(Map opts, Map<String,String> env=System.getenv()) {
         this.enabled = opts.enabled
         this.exportAwsAccessKeys = opts.exportAwsAccessKeys
+        this.exportAzAccessKeys = opts.exportAzAccessKeys
+
         this.containerConfigUrl = opts.containerConfigUrl?.toString() ?: env.get('FUSION_CONTAINER_CONFIG_URL')
         if( containerConfigUrl && !validProtocol(containerConfigUrl))
             throw new IllegalArgumentException("Fusion container config URL should start with 'http:' or 'https:' protocol prefix - offending value: $containerConfigUrl")

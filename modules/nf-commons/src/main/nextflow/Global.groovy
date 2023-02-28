@@ -165,6 +165,17 @@ class Global {
 
     }
 
+    static List<String> getAzCredentials(Map env, Map config) {
+
+        String a
+
+        if( env && (a=env.AZURE_STORAGE_ACCOUNT_KEY) )  {
+            log.debug "Using AZ credentials defined by environment variables AZURE_STORAGE_ACCOUNT_KEY"
+            return [a]
+        }
+        return null
+    }
+
     static String getAwsRegion(Map env=null, Map config=null) {
         if( env==null ) env = SysEnv.get()
         if( config==null ) config = this.config
@@ -200,8 +211,16 @@ class Global {
         getAwsCredentials(env, config)
     }
 
+    static List<String> getAzCredentials(Map env) {
+        getAzCredentials(env, config)
+    }
+
     static List<String> getAwsCredentials() {
         getAwsCredentials(SysEnv.get(), config)
+    }
+
+    static List<String> getAzCredentials() {
+        getAzCredentials(SysEnv.get(), config)
     }
 
     static Map<String,?> getAwsClientConfig() {
