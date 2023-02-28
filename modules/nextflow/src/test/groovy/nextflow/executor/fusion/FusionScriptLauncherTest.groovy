@@ -69,6 +69,37 @@ class FusionScriptLauncherTest extends Specification {
         ]
     }
 
+    def 'should get fusion logs env' () {
+        given:
+        Global.config = [fusion: [logLevel:'debug', logOutput:'stdout', tags: false]]
+        and:
+        def fusion = new FusionScriptLauncher(
+                scheme: 'http',
+                remoteWorkDir: XPath.get('http://foo/work'))
+
+        expect:
+        fusion.fusionEnv() == [
+                FUSION_WORK: '/fusion/http/foo/work',
+                FUSION_LOG_LEVEL: 'debug',
+                FUSION_LOG_OUTPUT: 'stdout'
+        ]
+    }
+
+    def 'should get fusion with custom tags' () {
+        given:
+        Global.config = [fusion: [tags: 'custom-tags-pattern-here']]
+        and:
+        def fusion = new FusionScriptLauncher(
+                scheme: 'http',
+                remoteWorkDir: XPath.get('http://foo/work'))
+
+        expect:
+        fusion.fusionEnv() == [
+                FUSION_WORK: '/fusion/http/foo/work',
+                FUSION_TAGS: 'custom-tags-pattern-here'
+        ]
+    }
+
     def 'should get header script' () {
         given:
         def fusion = new FusionScriptLauncher(scheme: 's3')

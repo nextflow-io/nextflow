@@ -1,5 +1,5 @@
 nf-amazon@1.15.0
-nf-wave@0.7.1
+nf-wave@0.7.2
 nf-console@1.0.5
 nf-google@1.7.0
 nf-azure@0.15.1
