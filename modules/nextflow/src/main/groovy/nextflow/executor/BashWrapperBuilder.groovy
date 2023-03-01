@@ -17,6 +17,8 @@
 
 package nextflow.executor
 
+import nextflow.SysEnv
+
 import java.nio.file.FileSystemException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -225,6 +227,7 @@ class BashWrapperBuilder {
         }
 
         binding.cleanup_cmd = getCleanupCmd(changeDir)
+        binding.sync_cmd = getSyncCmd()
         binding.scratch_cmd = ( changeDir ?: "NXF_SCRATCH=''" )
 
         binding.exit_file = exitFile(exitedFile)
@@ -471,6 +474,13 @@ class BashWrapperBuilder {
         def result = getCleanupCmd(scratch)
         result += 'exit $exit_status'
         result.readLines().join('\n  ')
+    }
+
+    String getSyncCmd() {
+        if ( SysEnv.get( 'NXF_DISABLE_FS_SYNC' ) != "true" ) {
+            return 'sync || true'
+        }
+        return null
     }
 
     @PackageScope
