@@ -738,6 +738,7 @@ class WaveClientTest extends Specification {
             assert (it[0] as SubmitContainerTokenRequest).towerAccessToken == 'foo'
             assert (it[0] as SubmitContainerTokenRequest).towerRefreshToken == 'xyz'
             assert (it[0] as SubmitContainerTokenRequest).towerEndpoint == 'http://foo.com'
+            assert (it[0] as SubmitContainerTokenRequest).workflowId == '1234'
         }
 
         cleanup:

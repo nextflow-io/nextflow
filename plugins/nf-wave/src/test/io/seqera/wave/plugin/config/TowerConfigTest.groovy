@@ -42,6 +42,7 @@ class TowerConfigTest extends Specification {
         then:
         config.accessToken == 'foo'
         config.workspaceId == 123
+        config.workflowId == null
 
         when:
         env =  [TOWER_ACCESS_TOKEN:'foo', TOWER_WORKSPACE_ID: '123']
@@ -49,6 +50,7 @@ class TowerConfigTest extends Specification {
         then:
         config.accessToken == 'bar'
         config.workspaceId == 789
+        config.workflowId == null
 
         when:
         env =  [TOWER_ACCESS_TOKEN:'foo', TOWER_WORKSPACE_ID: '123']
@@ -56,6 +58,7 @@ class TowerConfigTest extends Specification {
         then:
         config.accessToken == null
         config.workspaceId == 789
+        config.workflowId == null
 
         // when TOWER_WORKFLOW_ID is defined env has priority
         when:
@@ -64,6 +67,7 @@ class TowerConfigTest extends Specification {
         then:
         config.accessToken == 'foo'
         config.workspaceId == 123
+        config.workflowId == 'xyz'
     }
 
     def 'should get refresh token' () {
