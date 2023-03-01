@@ -17,23 +17,31 @@
 
 package io.seqera.wave.plugin.config
 
+import spock.lang.Specification
+
 /**
- * Conda build options
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class CondaOpts {
+class CondaOptsTest extends Specification {
 
-    final public static String DEFAULT_MAMBA_IMAGE = 'mambaorg/micromamba:1.3.1'
+    def 'check conda options' () {
+        when:
+        def opts = new CondaOpts([:])
+        then:
+        opts.mambaImage == CondaOpts.DEFAULT_MAMBA_IMAGE
+        !opts.basePackages
+        !opts.commands
 
-    final String mambaImage
-    final List<String> commands
-    final String basePackages
-
-    CondaOpts(Map opts) {
-        this.mambaImage = opts.mambaImage ?: DEFAULT_MAMBA_IMAGE
-        this.commands = opts.commands as List<String>
-        this.basePackages = opts.basePackages
+        when:
+        opts = new CondaOpts([
+                mambaImage:'foo:latest',
+                commands: ['this','that'],
+                basePackages: 'some::more-package'
+        ])
+        then:
+        opts.mambaImage == 'foo:latest'
+        opts.basePackages == 'some::more-package'
+        opts.commands == ['this','that']
     }
-
 }
