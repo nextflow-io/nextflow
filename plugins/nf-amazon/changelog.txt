@@ -1,5 +1,15 @@
 nf-amazon changelog
 ===================
+1.15.0 - 21 Feb 2023
+- Improve AWS batch error logging [8f4884c1]
+- Remove deprecated buckets field [0a355ac3]
+- Add support for fusion tags (#3609) [ci fast] [8385ec22]
+- Add nextflow tags to AWS Batch job def [b465ac52]
+- Use Fusion as launcher (#3584) [34a27733]
+- Bump FUSION_ prefix variables [ci fast] [a7282d64]
+- Fix serialization of S3 paths with spaces (#3565) [ce487624]
+- Bump groovy 3.0.15 [7a3ebc7d]
+
 1.14.0 - 14 Jan 2023
 - Add `schedulingPriority` option to AWS Batch (use with `shareIdentifier`) (#3505) [06960bb2]
 - Fix FilePorter concurrency issue (#3511) [11ccfa26]
