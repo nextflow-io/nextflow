@@ -227,6 +227,7 @@ class BashWrapperBuilder {
         }
 
         binding.cleanup_cmd = getCleanupCmd(changeDir)
+        binding.sync_cmd = getSyncCmd()
         binding.scratch_cmd = ( changeDir ?: "NXF_SCRATCH=''" )
 
         binding.exit_file = exitFile(exitedFile)
@@ -466,10 +467,6 @@ class BashWrapperBuilder {
             result += "${remove} &>/dev/null || true"
             result += '\n'
         }
-        if ( SysEnv.get( 'NXF_DISABLE_FS_SYNC' ) != "true" ) {
-            result += 'sync || true'
-            result += '\n'
-        }
         return result
     }
 
@@ -477,6 +474,13 @@ class BashWrapperBuilder {
         def result = getCleanupCmd(scratch)
         result += 'exit $exit_status'
         result.readLines().join('\n  ')
+    }
+
+    String getSyncCmd() {
+        if ( SysEnv.get( 'NXF_DISABLE_FS_SYNC' ) != "true" ) {
+            return 'sync || true'
+        }
+        return null
     }
 
     @PackageScope

@@ -179,7 +179,7 @@ class AwsBatchScriptLauncherTest extends Specification {
                 script: 'echo Hello world!' ] as TaskBean, opts) .makeBinding()
 
         then:
-        binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\nsync || true\n'
+        binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\n'
     }
 
     def 'test bash wrapper with outputs and stats'() {
