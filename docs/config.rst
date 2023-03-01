@@ -844,6 +844,33 @@ registry            The registry from where Docker images are pulled. It should 
 Read :ref:`container-singularity` page to learn more about how to use Singularity containers with Nextflow.
 
 
+.. _config-apptainer:
+
+ Scope `apptainer`
+ -------------------
+
+ The ``apptainer`` configuration scope controls how `Apptainer <https://apptainer.org>`_ containers are executed
+ by Nextflow.
+
+ The following settings are available:
+
+ ================== ================
+ Name                Description
+ ================== ================
+ enabled             Turn this flag to ``true`` to enable Apptainer execution (default: ``false``).
+ engineOptions       This attribute can be used to provide any option supported by the Apptainer engine i.e. ``apptainer [OPTIONS]``.
+ envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+ runOptions          This attribute can be used to provide any extra command line options supported by the ``apptainer exec``.
+ noHttps             Turn this flag to ``true`` to pull the Apptainer image with http protocol (default: ``false``).
+ autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Apptainer installation (default: ``false``).
+ cacheDir            The directory where remote Apptainer images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+ pullTimeout         The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: ``20 min``).
+ registry            The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
+ ================== ================
+
+ Read :ref:`container-apptainer` page to learn more about how to use Apptainer containers with Nextflow.
+
+
 .. _config-timeline:
 
 Scope `timeline`
