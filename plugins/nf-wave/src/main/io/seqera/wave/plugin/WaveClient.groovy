@@ -154,6 +154,7 @@ class WaveClient {
         req.towerRefreshToken = tower.refreshToken
         req.towerWorkspaceId = tower.workspaceId
         req.towerEndpoint = tower.endpoint
+        req.workflowId = tower.workflowId
         return sendRequest(req)
     }
 
@@ -164,7 +165,8 @@ class WaveClient {
                 containerConfig: containerConfig,
                 towerAccessToken: tower.accessToken,
                 towerWorkspaceId: tower.workspaceId,
-                towerEndpoint: tower.endpoint )
+                towerEndpoint: tower.endpoint,
+                workflowId: tower.workflowId)
         return sendRequest(request)
     }
 

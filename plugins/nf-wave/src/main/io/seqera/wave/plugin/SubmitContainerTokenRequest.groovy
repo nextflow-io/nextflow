@@ -52,6 +52,11 @@ class SubmitContainerTokenRequest {
     String towerEndpoint
 
     /**
+     * The ID of the executed container
+     */
+    String workflowId
+
+    /**
      * Container image to be pulled
      */
     String containerImage
