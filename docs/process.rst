@@ -582,10 +582,10 @@ will output::
 
 The target input file name may contain the ``*`` and ``?`` wildcards, which can be used
 to control the name of staged files. The following table shows how the wildcards are
-replaced depending on the cardinality of the received input collection.
+replaced depending on the arity of the received input collection.
 
 ============ ============== ==================================================
-Cardinality   Name pattern   Staged file names
+Arity        Name pattern   Staged file names
 ============ ============== ==================================================
  any         ``*``           named as the source file
  1           ``file*.ext``   ``file.ext``
@@ -649,6 +649,26 @@ with the current execution context.
   An example of when you may have to deal with that is when you have many input files in a task,
   and some of these files may have the same filename. In this case, a solution would be to use
   the option ``stageAs``.
+
+
+Input file arity
+----------------
+
+.. note::
+  This feature requires Nextflow version 23.04.0 or later.
+
+The *arity* of a ``path`` input is the number of files that it is expected to contain. The arity can be a
+number or a range. Here are some examples::
+
+    input:
+        path('one.txt', arity: '1')         // exactly one file is expected
+        path('pair_*.txt', arity: '2')      // exactly two files are expected
+        path('many_*.txt', arity: '1..*')   // one or more files are expected
+        path('optional.txt', arity: '0..1') // zero or one file is expected
+
+When a task is created, Nextflow will check whether the received files for each path input match the
+declared arity, and fail if they do not. The default arity is ``'1..*'``.
+
 
 Input type ``env``
 ------------------
@@ -1143,6 +1163,28 @@ on the actual value of the ``species`` input.
 
   To sum up, the use of output files with static names over dynamic ones is preferable whenever possible,
   because it will result in simpler and more portable code.
+
+
+Output file arity
+-----------------
+
+.. note::
+  This feature requires Nextflow version 23.04.0 or later.
+
+The *arity* of a ``path`` output is the number of files that it is expected to contain. The arity can be a
+number or a range. Here are some examples::
+
+    output:
+        path('one.txt', arity: '1')         // exactly one file is expected
+        path('pair_*.txt', arity: '2')      // exactly two files are expected
+        path('many_*.txt', arity: '1..*')   // one or more files are expected
+        path('optional.txt', arity: '0..1') // zero or one file is expected (equivalent to optional: true)
+
+When a task completes, Nextflow will check whether the produced files for each path output match the
+declared arity, and fail if they do not.
+
+The default arity is ``'1..*'``, or ``'0..*'`` if the output is declared optional. If you declare an
+output as optional and also give it an arity, the optional flag will be ignored.
 
 
 .. _process-env:

@@ -34,7 +34,7 @@ import nextflow.util.BlankSeparatedList
  */
 @Slf4j
 @InheritConstructors
-class FileOutParam extends BaseOutParam implements OutParam, OptionalParam, PathQualifier {
+class FileOutParam extends BaseOutParam implements OutParam, ArityParam, OptionalParam, PathQualifier {
 
     /**
      * ONLY FOR TESTING DO NOT USE
@@ -260,6 +260,17 @@ class FileOutParam extends BaseOutParam implements OutParam, OptionalParam, Path
      */
     String getName() {
         return nameObj ? super.getName() : null
+    }
+
+    /**
+     * Override to initialize arity with default value based on optional.
+     */
+    @Override
+    Range getArity() {
+        if( ArityParam.super.getArity() == null )
+            ArityParam.super.setArity( optional ? '0..*' : '1..*' )
+
+        ArityParam.super.getArity()
     }
 
     @Override

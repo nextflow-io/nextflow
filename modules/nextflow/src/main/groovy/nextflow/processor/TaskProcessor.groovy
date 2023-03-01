@@ -1565,7 +1565,7 @@ class TaskProcessor {
             if( result )
                 allFiles.addAll(result)
 
-            else if( !param.optional ) {
+            else if( param.arity.min > 0 ) {
                 def msg = "Missing output file(s) `$filePattern` expected by process `${safeTaskName(task)}`"
                 if( inputsRemovedFlag )
                     msg += " (note: input files are not included in the default matching set)"
@@ -1573,7 +1573,10 @@ class TaskProcessor {
             }
         }
 
-        task.setOutput( param, allFiles.size()==1 ? allFiles[0] : allFiles )
+        if( !param.arity.contains(allFiles.size()) )
+            throw new IllegalArgumentException("Incorrect number of output files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${allFiles.size()}")
+
+        task.setOutput( param, param.arity.isSingle() ? allFiles[0] : allFiles )
 
     }
 
@@ -1816,10 +1819,10 @@ class TaskProcessor {
         return files
     }
 
-    protected singleItemOrList( List<FileHolder> items, ScriptType type ) {
+    protected singleItemOrList( List<FileHolder> items, boolean isSingle, ScriptType type ) {
         assert items != null
 
-        if( items.size() == 1 ) {
+        if( isSingle ) {
             return makePath(items[0],type)
         }
 
@@ -2017,17 +2020,22 @@ class TaskProcessor {
             final param = entry.getKey()
             final val = entry.getValue()
             final fileParam = param as FileInParam
-            final normalized = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), batch)
-            final resolved = expandWildcards( fileParam.getFilePattern(ctx), normalized )
-            ctx.put( param.name, singleItemOrList(resolved, task.type) )
-            count += resolved.size()
-            for( FileHolder item : resolved ) {
+
+            def files = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), batch)
+            files = expandWildcards( fileParam.getFilePattern(ctx), files )
+
+            if( !param.arity.contains(files.size()) )
+                throw new IllegalArgumentException("Incorrect number of input files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${files.size()}")
+
+            ctx.put( param.name, singleItemOrList(files, param.arity.isSingle(), task.type) )
+            count += files.size()
+            for( FileHolder item : files ) {
                 Integer num = allNames.getOrCreate(item.stageName, 0) +1
                 allNames.put(item.stageName,num)
             }
 
             // add the value to the task instance context
-            task.setInput(param, resolved)
+            task.setInput(param, files)
         }
 
         // -- set the delegate map as context in the task config

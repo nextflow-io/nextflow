@@ -29,7 +29,7 @@ import nextflow.script.TokenVar
  */
 @Slf4j
 @InheritConstructors
-class FileInParam extends BaseInParam implements PathQualifier {
+class FileInParam extends BaseInParam implements ArityParam, PathQualifier {
 
     protected filePattern
 
@@ -119,6 +119,17 @@ class FileInParam extends BaseInParam implements PathQualifier {
 
         else
             return value
+    }
+
+    /**
+     * Override to initialize arity with default value.
+     */
+    @Override
+    Range getArity() {
+        if( ArityParam.super.getArity() == null )
+            ArityParam.super.setArity('1..*')
+
+        ArityParam.super.getArity()
     }
 
     @Override
