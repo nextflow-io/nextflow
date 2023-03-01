@@ -45,6 +45,7 @@ import nextflow.container.resolver.ContainerInfo
 import nextflow.fusion.FusionConfig
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.util.MustacheTemplateEngine
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -393,12 +394,17 @@ class WaveClient {
     }
 
     protected String condaFileToDockerFile() {
-        def result = """\
-        FROM ${config.condaOpts().mambaImage}
+        final template = """\
+        FROM {{base_image}}
         COPY --chown=\$MAMBA_USER:\$MAMBA_USER conda.yml /tmp/conda.yml
         RUN micromamba install -y -n base -f /tmp/conda.yml && \\
+            {{base_packages}}
             micromamba clean -a -y
         """.stripIndent()
+        final image = config.condaOpts().mambaImage
+        final basePackage =  config.condaOpts().basePackages ? "micromamba install -y -n base ${config.condaOpts().basePackages} && \\".toString() : null
+        final binding = ['base_image': image, 'base_packages': basePackage]
+        final result = new MustacheTemplateEngine().render(template, binding)
 
         return addCommands(result)
     }
@@ -413,18 +419,23 @@ class WaveClient {
     }
 
     protected String condaRecipeToDockerFile(String recipe) {
-        final channelsOpts = condaChannels.collect(it -> "-c $it").join(' ')
-        final target = recipe.startsWith('http://') || recipe.startsWith('https://')
-                    ? "-f $recipe"
-                    : recipe
-        final result = """\
-        FROM ${config.condaOpts().mambaImage}
+        final template = """\
+        FROM {{base_image}}
         RUN \\
-           micromamba install -y -n base $channelsOpts \\
-           $target \\
-           && micromamba clean -a -y
+            micromamba install -y -n base {{channel_opts}} \\
+            {{target}} \\
+            {{base_packages}}
+            && micromamba clean -a -y
         """.stripIndent()
 
+        final channelsOpts = condaChannels.collect(it -> "-c $it").join(' ')
+        final image = config.condaOpts().mambaImage
+        final target = recipe.startsWith('http://') || recipe.startsWith('https://')
+                ? "-f $recipe".toString()
+                : recipe
+        final basePackage =  config.condaOpts().basePackages ? "&& micromamba install -y -n base ${config.condaOpts().basePackages} \\".toString() : null
+        final binding = [base_image: image, channel_opts: channelsOpts, target:target, base_packages: basePackage]
+        final result = new MustacheTemplateEngine().render(template, binding)
         return addCommands(result)
     }
 
