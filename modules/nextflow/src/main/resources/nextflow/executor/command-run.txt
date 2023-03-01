@@ -107,6 +107,7 @@ on_exit() {
     [[ "$tee2" ]] && kill $tee2 2>/dev/null
     [[ "$ctmp" ]] && rm -rf $ctmp || true
     {{cleanup_cmd}}
+    {{sync_cmd}}
     exit $exit_status
 }
 

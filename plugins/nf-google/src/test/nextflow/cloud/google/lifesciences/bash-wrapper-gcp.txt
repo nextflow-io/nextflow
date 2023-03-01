@@ -170,6 +170,7 @@ on_exit() {
     [[ "$tee1" ]] && kill $tee1 2>/dev/null
     [[ "$tee2" ]] && kill $tee2 2>/dev/null
     [[ "$ctmp" ]] && rm -rf $ctmp || true
+    {{sync_cmd}}
     exit $exit_status
 }
 
