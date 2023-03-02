@@ -516,8 +516,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
     /// input parameters
 
-    InParam _in_val( obj ) {
-        new ValueInParam(this).bind(obj)
+    InParam _in_val( Map opts=null, Object obj ) {
+        new ValueInParam(this)
+                .setOptions(opts)
+                .bind(obj)
     }
 
     InParam _in_file( obj ) {

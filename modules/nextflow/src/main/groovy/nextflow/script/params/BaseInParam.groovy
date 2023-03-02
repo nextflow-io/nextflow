@@ -27,6 +27,7 @@ import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.script.ProcessConfig
 import nextflow.script.TokenVar
+import nextflow.util.ConfigHelper
 /**
  * Model a process generic input parameter
  *
@@ -46,6 +47,8 @@ abstract class BaseInParam extends BaseParam implements InParam {
      * The channel to which the input value is bound
      */
     private inChannel
+
+    String channelTakeName
 
     /**
      * @return The input channel instance used by this parameter to receive the process inputs
@@ -234,6 +237,21 @@ abstract class BaseInParam extends BaseParam implements InParam {
         }
 
         return value
+    }
+
+    BaseInParam setTake( value ) {
+        if( isNestedParam() )
+            throw new IllegalArgumentException("Input `take` option is not allowed in tuple components")
+        if( !value )
+            throw new IllegalArgumentException("Missing input `take` name")
+        if( !ConfigHelper.isValidIdentifier(value) ) {
+            final msg = "Input take '$value' is not a valid name -- Make sure it starts with an alphabetic or underscore character and it does not contain any blank, dot or other special characters"
+            if( NF.strictMode )
+                throw new IllegalArgumentException(msg)
+            log.warn(msg)
+        }
+        this.channelTakeName = value
+        return this
     }
 
 }

@@ -158,26 +158,46 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
 
     String getType() { 'process' }
 
-    private String missMatchErrMessage(String name, int expected, int actual) {
-        final ch = expected > 1 ? "channels" : "channel"
-        return "Process `$name` declares ${expected} input ${ch} but ${actual} were specified"
-    }
-
     @Override
     Object run(Object[] args) {
         // initialise process config
         initialize()
 
-        // get params 
-        final params = ChannelOut.spread(args)
-        // sanity check
-        if( params.size() != declaredInputs.size() )
-            throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), params.size()))
+        // separate named args and positional args
+        def namedArgs = [:]
+        def indexArgs = ChannelOut.spread(args)
+        if( !indexArgs.isEmpty() && indexArgs[0] instanceof Map )
+            namedArgs = indexArgs.remove(0) as Map
 
-        // set input channels
-        for( int i=0; i<params.size(); i++ ) {
-            final inParam = (declaredInputs[i] as BaseInParam)
-            inParam.setFrom(params[i])
+        log.debug("named args: ${namedArgs}, positional args: ${indexArgs}")
+
+        // set named args
+        def names = namedArgs.keySet().collect()
+        def remainingInputs = []
+
+        for( def input : declaredInputs ) {
+            final inParam = (BaseInParam)input
+            final name = inParam.channelTakeName ?: inParam.name
+
+            if( name && namedArgs.containsKey(name) ) {
+                inParam.setFrom(namedArgs[name])
+                inParam.init()
+                names.remove(name)
+            }
+            else
+                remainingInputs << inParam
+        }
+
+        if( !names.isEmpty() )
+            throw new ScriptRuntimeException("Process `$name` was invoked with invalid named arguments: ${names.join(', ')}")
+
+        // set positional args
+        if( indexArgs.size() != remainingInputs.size() )
+            throw new ScriptRuntimeException("Process `$name` was invoked with ${indexArgs.size()} positional argument(s) but ${remainingInputs.size()} were expected")
+
+        for( int i = 0; i < indexArgs.size(); i++ ) {
+            final inParam = (BaseInParam)remainingInputs[i]
+            inParam.setFrom(indexArgs[i])
             inParam.init()
         }
 

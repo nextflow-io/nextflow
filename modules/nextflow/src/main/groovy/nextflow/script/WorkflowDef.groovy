@@ -125,16 +125,41 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
 
     protected void collectInputs(Binding context, Object[] args) {
-        final params = ChannelOut.spread(args)
-        if( params.size() != declaredInputs.size() ) {
-            final prefix = name ? "Workflow `$name`" : "Main workflow"
-            throw new IllegalArgumentException("$prefix declares ${declaredInputs.size()} input channels but ${params.size()} were given")
+        // separate named args and positional args
+        def namedArgs = [:]
+        def indexArgs = ChannelOut.spread(args)
+        if( !indexArgs.isEmpty() && indexArgs[0] instanceof Map )
+            namedArgs = indexArgs.remove(0) as Map
+
+        log.debug("named args: ${namedArgs}, positional args: ${indexArgs}")
+
+        // set named args
+        def names = namedArgs.keySet().collect()
+        def remainingInputs = new ArrayList<String>()
+
+        for( String name : declaredInputs ) {
+            if( name && namedArgs.containsKey(name) ) {
+                context.setProperty( name, namedArgs[name] )
+                names.remove(name)
+            }
+            else
+                remainingInputs << name
         }
 
-        // attach declared inputs with the invocation arguments
-        for( int i=0; i< declaredInputs.size(); i++ ) {
-            final name = declaredInputs[i]
-            context.setProperty( name, params[i] )
+        if( !names.isEmpty() ) {
+            final prefix = name ? "Workflow `$name`" : "Main workflow"
+            throw new IllegalArgumentException("$prefix was invoked with invalid named arguments: ${names.join(', ')}")
+        }
+
+        // set positional args
+        if( indexArgs.size() != remainingInputs.size() ) {
+            final prefix = name ? "Workflow `$name`" : "Main workflow"
+            throw new IllegalArgumentException("$prefix was invoked with ${indexArgs.size()} positional argument(s) but ${remainingInputs.size()} were expected")
+        }
+
+        for( int i = 0; i < indexArgs.size(); i++ ) {
+            final name = remainingInputs[i]
+            context.setProperty( name, indexArgs[i] )
         }
     }
 
