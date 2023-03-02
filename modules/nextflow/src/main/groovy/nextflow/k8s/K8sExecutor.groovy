@@ -46,7 +46,6 @@ class K8sExecutor extends Executor {
      */
     protected K8sClient client
 
-    @PackageScope
     protected K8sClient getClient() {
         client
     }
@@ -55,12 +54,10 @@ class K8sExecutor extends Executor {
      * @return The `k8s` configuration scope in the nextflow configuration object
      */
     @Memoized
-    @PackageScope
     protected K8sConfig getK8sConfig() {
         new K8sConfig( (Map<String,Object>)session.config.k8s )
     }
 
-    @PackageScope
     protected K8sClient getClient( ClientConfig clientConfig ) {
         return new K8sClient( clientConfig )
     }
