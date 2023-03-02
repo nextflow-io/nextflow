@@ -672,7 +672,7 @@ class K8sClient {
         final isError = code >= 400
         final stream = isError ? conn.getErrorStream() : conn.getInputStream()
         if( isError )
-            throw new K8sResponseException("Request $method $path returned an error code=$code", stream)
+            throw new K8sResponseException( "Request $method $path returned an error code=$code", stream, code )
         return new K8sResponseApi(code, stream)
     }
 

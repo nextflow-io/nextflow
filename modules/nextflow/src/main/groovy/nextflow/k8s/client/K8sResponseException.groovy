@@ -31,18 +31,22 @@ class K8sResponseException extends Exception {
 
     K8sResponseJson response
 
-    K8sResponseException(K8sResponseJson response) {
+    private final Integer errorCode
+
+    K8sResponseException(K8sResponseJson response, Integer errorCode = null) {
         super(msg0(response))
         this.response = response
+        this.errorCode = errorCode
     }
 
-    K8sResponseException(String message, K8sResponseJson response) {
+    K8sResponseException(String message, K8sResponseJson response, Integer errorCode = null ) {
         super(msg1(message,response))
         this.response = response
+        this.errorCode = errorCode
     }
 
-    K8sResponseException(String message, InputStream response) {
-        this(message, new K8sResponseJson(fetch(response)))
+    K8sResponseException(String message, InputStream response, Integer errorCode = null ) {
+        this(message, new K8sResponseJson(fetch(response)), errorCode)
     }
 
     static private String msg1( String msg, K8sResponseJson resp ) {
@@ -79,6 +83,10 @@ class K8sResponseException extends Exception {
             log.debug "Unable to fetch response text -- Cause: ${e.message ?: e}"
             return null
         }
+    }
+
+    int getErrorCode(){
+        errorCode
     }
 
 }
