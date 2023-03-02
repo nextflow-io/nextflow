@@ -19,7 +19,6 @@ package nextflow.k8s
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
-import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.executor.Executor
 import nextflow.fusion.FusionHelper
@@ -58,7 +57,7 @@ class K8sExecutor extends Executor {
         new K8sConfig( (Map<String,Object>)session.config.k8s )
     }
 
-    protected K8sClient getClient( ClientConfig clientConfig ) {
+    protected K8sClient createClient( ClientConfig clientConfig ) {
         return new K8sClient( clientConfig )
     }
 
@@ -70,7 +69,7 @@ class K8sExecutor extends Executor {
         super.register()
         final k8sConfig = getK8sConfig()
         final clientConfig = k8sConfig.getClient()
-        this.client = getClient( clientConfig )
+        this.client = createClient( clientConfig )
         log.debug "[K8s] config=$k8sConfig; API client config=$clientConfig"
     }
 
