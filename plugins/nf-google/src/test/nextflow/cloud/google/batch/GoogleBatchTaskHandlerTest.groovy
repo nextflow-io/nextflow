@@ -87,14 +87,14 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
-        runnable.getContainer().getOptions() == ''
+        !runnable.getContainer().getOptions()
         runnable.getContainer().getVolumesList() == ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
         and:
-        instancePolicyOrTemplate.getInstanceTemplate() == ''
+        !instancePolicyOrTemplate.getInstanceTemplate()
         and:
         instancePolicy.getAcceleratorsCount() == 0
-        instancePolicy.getMachineType() == ''
-        instancePolicy.getMinCpuPlatform() == ''
+        !instancePolicy.getMachineType()
+        !instancePolicy.getMinCpuPlatform()
         instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
         and:
         allocationPolicy.getLocation().getAllowedLocationsCount() == 0
@@ -259,7 +259,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
-        runnable.getContainer().getOptions() == ''
+        !runnable.getContainer().getOptions()
         runnable.getContainer().getVolumesList() == ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
         and:
         instancePolicyOrTemplate.getInstallGpuDrivers() == true
@@ -347,8 +347,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         runnable.getEnvironment().getVariablesMap() == env
         and:
         instancePolicy.getAcceleratorsCount() == 0
-        instancePolicy.getMachineType() == ''
-        instancePolicy.getMinCpuPlatform() == ''
+        !instancePolicy.getMachineType()
+        !instancePolicy.getMinCpuPlatform()
         instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
         and:
         allocationPolicy.getLocation().getAllowedLocationsCount() == 0

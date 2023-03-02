@@ -199,74 +199,75 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             )
             .addAllVolumes( launcher.getVolumes() )
 
-        // instance policy
+        // allocation policy
         final allocationPolicy = AllocationPolicy.newBuilder()
         final instancePolicyOrTemplate = AllocationPolicy.InstancePolicyOrTemplate.newBuilder()
-        final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
-        if( executor.config.getAllowedLocations() )
+        if( executor.config.allowedLocations )
             allocationPolicy.setLocation(
                 AllocationPolicy.LocationPolicy.newBuilder()
-                    .addAllAllowedLocations( executor.config.getAllowedLocations() )
+                    .addAllAllowedLocations( executor.config.allowedLocations )
             )
-
-        if( task.config.getAccelerator() ) {
-            final accelerator = AllocationPolicy.Accelerator.newBuilder()
-                .setCount( task.config.getAccelerator().getRequest() )
-
-            if( task.config.getAccelerator().getType() )
-                accelerator.setType( task.config.getAccelerator().getType() )
-
-            instancePolicy.addAccelerators(accelerator)
-            instancePolicyOrTemplate.setInstallGpuDrivers(true)
-        }
-
-        if( executor.config.cpuPlatform )
-            instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
-
-        def machineType = task.config.getMachineType()
-        def instanceTemplate = null
-        if( machineType ) {
-            if( machineType.startsWith('template://') )
-                instanceTemplate = machineType.minus('template://')
-            else
-                instancePolicy.setMachineType( machineType )
-        }
-
-        machineInfo = findBestMachineType(task.config)
-        if( machineInfo )
-            instancePolicy.setMachineType(machineInfo.type)
 
         if( executor.config.serviceAccountEmail )
             allocationPolicy.setServiceAccount(
                 ServiceAccount.newBuilder()
-                    .setEmail(executor.config.serviceAccountEmail)
+                    .setEmail( executor.config.serviceAccountEmail )
             )
 
-        if( executor.config.preemptible )
-            instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.PREEMPTIBLE )
+        allocationPolicy.putAllLabels( task.config.getResourceLabels() )
 
-        if( executor.config.spot )
-            instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.SPOT )
-
-        // Fusion configuration
-        if( fusionEnabled() ) {
-            instancePolicy.addDisks(AllocationPolicy.AttachedDisk.newBuilder()
-                    .setNewDisk(AllocationPolicy.Disk.newBuilder()
-                            .setType("local-ssd")
-                            .setSizeGb(375)
-                    )
-                    .setDeviceName("fusion")
-            )
-        }
-
-        if( instanceTemplate ) {
+        // use instance template if specified
+        final machineType = task.config.getMachineType()
+        if( machineType && machineType.startsWith('template://') ) {
             instancePolicyOrTemplate
                 .setInstallGpuDrivers( executor.config.getInstallGpuDrivers() )
-                .setInstanceTemplate( instanceTemplate )
-        } else {
-            instancePolicyOrTemplate
-                .setPolicy( instancePolicy )
+                .setInstanceTemplate( machineType.minus('template://') )
+        }
+
+        // otherwise create instance policy
+        else {
+            final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
+
+            if( task.config.getAccelerator() ) {
+                final accelerator = AllocationPolicy.Accelerator.newBuilder()
+                    .setCount( task.config.getAccelerator().getRequest() )
+
+                if( task.config.getAccelerator().getType() )
+                    accelerator.setType( task.config.getAccelerator().getType() )
+
+                instancePolicy.addAccelerators(accelerator)
+                instancePolicyOrTemplate.setInstallGpuDrivers(true)
+            }
+
+            if( executor.config.cpuPlatform )
+                instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
+
+            if( machineType )
+                instancePolicy.setMachineType( machineType )
+
+            machineInfo = findBestMachineType(task.config)
+            if( machineInfo )
+                instancePolicy.setMachineType(machineInfo.type)
+
+            if( executor.config.preemptible )
+                instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.PREEMPTIBLE )
+
+            if( executor.config.spot )
+                instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.SPOT )
+
+            if( fusionEnabled() )
+                instancePolicy.addDisks(
+                    AllocationPolicy.AttachedDisk.newBuilder()
+                        .setNewDisk(
+                            AllocationPolicy.Disk.newBuilder()
+                                .setType('local-ssd')
+                                .setSizeGb(375)
+                        )
+                        .setDeviceName('fusion')
+                )
+
+            instancePolicyOrTemplate.setPolicy( instancePolicy )
         }
 
         allocationPolicy.addInstances(instancePolicyOrTemplate)
@@ -293,8 +294,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 AllocationPolicy.NetworkPolicy.newBuilder()
                     .addNetworkInterfaces(networkInterface)
             )
-
-        allocationPolicy.putAllLabels(task.config.getResourceLabels())
 
         // create the job
         return Job.newBuilder()
