@@ -133,6 +133,7 @@ wave.build.repository                           The container repository where i
 wave.build.cacheRepository                      The container repository used to cache image layers built by the Wave service (note: the corresponding credentials need to be provided in your Nextflow Tower account).
 wave.conda.mambaImage                           The Mamba container image is used to build the Conda-based container. This is expected to be the `micromamba-docker <https://github.com/mamba-org/micromamba-docker>`_ image.
 wave.conda.commands                             One or more commands to be added to the Dockerfile used to build a Conda-based image.
+wave.conda.basePackages                         One or more Conda packages that should always added in the resulting container e.g. ``conda-forge::procps-ng``.
 wave.strategy                                   The strategy to be used when resolving ambiguous Wave container requirements (default: ``'container,dockerfile,conda'``)
 ============================================== =================
 
