@@ -144,7 +144,7 @@ type that is available at the current location and that fits the requested resou
 The ``machineType`` process directive can be specified in any of the following ways:
 
 * A comma-separated list of patterns. The pattern can contain a ``*`` to match any number of characters
-  and ``?`` to match any single character. Examples of valid patterns: ``c2-*``, ``m?-standard*``, ``n*``. Requires  version ``23.02.0-edge`` or later.
+  and ``?`` to match any single character. Examples of valid patterns: ``c2-*``, ``m?-standard*``, ``n*`` (requires  version ``23.02.0-edge`` or later).
 
 * A predefined Google Compute Platform `machine type <https://cloud.google.com/compute/docs/machine-types>`_ or `custom machine type <https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type>`_.
 
