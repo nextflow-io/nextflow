@@ -62,7 +62,7 @@ trait ArityParam {
         }
 
         boolean isSingle() {
-            min == 1 && max == 1
+            max == 1
         }
 
         @Override
