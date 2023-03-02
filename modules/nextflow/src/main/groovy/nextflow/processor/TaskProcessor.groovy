@@ -1576,7 +1576,7 @@ class TaskProcessor {
         if( !param.arity.contains(allFiles.size()) )
             throw new IllegalArgumentException("Incorrect number of output files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${allFiles.size()}")
 
-        task.setOutput( param, param.arity.isSingle() ? allFiles[0] : allFiles )
+        task.setOutput( param, allFiles.size()==1 && param.arity.isSingle() ? allFiles[0] : allFiles )
 
     }
 
@@ -1819,10 +1819,10 @@ class TaskProcessor {
         return files
     }
 
-    protected singleItemOrList( List<FileHolder> items, boolean isSingle, ScriptType type ) {
+    protected singleItemOrList( List<FileHolder> items, boolean single, ScriptType type ) {
         assert items != null
 
-        if( isSingle ) {
+        if( items.size() == 1 && single ) {
             return makePath(items[0],type)
         }
 

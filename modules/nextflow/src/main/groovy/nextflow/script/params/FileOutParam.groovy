@@ -268,7 +268,11 @@ class FileOutParam extends BaseOutParam implements OutParam, ArityParam, Optiona
     @Override
     Range getArity() {
         if( ArityParam.super.getArity() == null )
-            ArityParam.super.setArity( optional ? '0..*' : '1..*' )
+            ArityParam.super.setArity(
+                filePattern?.contains('*') || filePattern?.contains('?')
+                    ? optional ? '0..*' : '1..*'
+                    : optional ? '0..1' : '1'
+            )
 
         ArityParam.super.getArity()
     }

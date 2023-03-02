@@ -186,13 +186,19 @@ class TaskProcessorTest extends Specification {
 
         when:
         def list = [ FileHolder.get(path1, 'x_file_1') ]
-        def result = processor.singleItemOrList(list, ScriptType.SCRIPTLET)
+        def result = processor.singleItemOrList(list, true, ScriptType.SCRIPTLET)
         then:
         result.toString() == 'x_file_1'
 
         when:
+        list = [ FileHolder.get(path1, 'x_file_1') ]
+        result = processor.singleItemOrList(list, false, ScriptType.SCRIPTLET)
+        then:
+        result*.toString() == ['x_file_1']
+
+        when:
         list = [ FileHolder.get(path1, 'x_file_1'), FileHolder.get(path2, 'x_file_2'), FileHolder.get(path3, 'x_file_3') ]
-        result = processor.singleItemOrList(list, ScriptType.SCRIPTLET)
+        result = processor.singleItemOrList(list, false, ScriptType.SCRIPTLET)
         then:
         result*.toString() == [ 'x_file_1',  'x_file_2',  'x_file_3']
 
