@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.LongAdder
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
-import ch.grengine.Grengine
+import ch.artecat.grengine.Grengine
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -102,6 +102,7 @@ import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
 import nextflow.util.LockManager
 import nextflow.util.LoggerHelper
+import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 /**
@@ -132,6 +133,10 @@ class TaskProcessor {
         final value = System.getenv("NXF_ENABLE_CACHE_INVALIDATION_ON_TASK_DIRECTIVE_CHANGE")
         return value==null || value =='true'
     }
+
+    @TestOnly private static volatile TaskProcessor currentProcessor0
+
+    @TestOnly static TaskProcessor currentProcessor() { currentProcessor0 }
 
     /**
      * Keeps track of the task instance executed by the current thread
@@ -254,6 +259,13 @@ class TaskProcessor {
         return config
     }
 
+    @TestOnly
+    static void reset() {
+        processCount=0
+        errorShown.set(false)
+        currentProcessor0 = null
+    }
+
     /*
      * Initialise the process ID
      *
@@ -263,6 +275,7 @@ class TaskProcessor {
     {
         id = ++processCount
         grengine = session && session.classLoader ? new Grengine(session.classLoader, compilerConfig()) : new Grengine(compilerConfig())
+        currentProcessor0 = this
     }
 
     /* for testing purpose - do not remove */
@@ -948,6 +961,7 @@ class TaskProcessor {
     final protected boolean handleException( Throwable error, TaskRun task = null ) {
         log.trace "Handling error: $error -- task: $task"
         def fault = resumeOrDie(task, error)
+        log.trace "Task fault (2): $fault"
 
         if (fault instanceof TaskFault) {
             session.fault(fault)
@@ -968,7 +982,7 @@ class TaskProcessor {
      */
     @PackageScope
     final synchronized resumeOrDie( TaskRun task, Throwable error ) {
-        log.debug "Handling unexpected condition for\n  task: name=${safeTaskName(task)}; work-dir=${task.workDirStr}\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
+        log.debug "Handling unexpected condition for\n  task: name=${safeTaskName(task)}; work-dir=${task?.workDirStr}\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
         ErrorStrategy errorStrategy = TERMINATE
         final message = []
@@ -1030,6 +1044,7 @@ class TaskProcessor {
 
             // -- make sure the error is showed only the very first time across all processes
             if( errorShown.getAndSet(true) || session.aborted ) {
+                log.trace "Task errorShown=${errorShown.get()}; aborted=${session.aborted}"
                 return errorStrategy
             }
 
@@ -1262,7 +1277,7 @@ class TaskProcessor {
         final fail = e instanceof InvocationTargetException ? e.targetException : e
 
         if( fail instanceof NoSuchFileException ) {
-            return "No such file: $fail.message"
+            return "No such file or directory: $fail.message"
         }
         if( fail instanceof MissingPropertyException ) {
             def name = fail.property ?: LoggerHelper.getDetailMessage(fail)
@@ -1482,12 +1497,20 @@ class TaskProcessor {
         final env = workDir.resolve(TaskRun.CMD_ENV).text
         final result = new HashMap(50)
         for(String line : env.readLines() ) {
-            def (k,v) = line.tokenize('=')
+            def (k,v) = tokenize0(line)
+            if (!k) continue
             result.put(k,v)
         }
         return result
     }
 
+    private List<String> tokenize0(String line) {
+        int p=line.indexOf('=')
+        return p==-1
+                ? List.of(line,'')
+                : List.of(line.substring(0,p), line.substring(p+1))
+    }
+    
     /**
      * Collects the process 'std output'
      *
@@ -2070,6 +2093,11 @@ class TaskProcessor {
             keys.add(conda)
         }
 
+        final spack = task.getSpackEnv()
+        if( spack ) {
+            keys.add(spack)
+        }
+
         if( session.stubRun ) {
             keys.add('stub-run')
         }
@@ -2211,6 +2239,7 @@ class TaskProcessor {
         }
         catch ( Throwable error ) {
             fault = resumeOrDie(task, error)
+            log.trace "Task fault (3): $fault"
         }
 
         // -- finalize the task

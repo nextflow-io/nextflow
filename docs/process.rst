@@ -141,7 +141,7 @@ To use a language other than Bash, simply start your process script with the cor
         """
     }
 
-    process pythonStuff {
+    process pythonTask {
         """
         #!/usr/bin/python
 
@@ -149,6 +149,11 @@ To use a language other than Bash, simply start your process script with the cor
         y = 'world!'
         print "%s - %s" % (x,y)
         """
+    }
+
+    workflow {
+        perlTask()
+        pythonTask()
     }
 
 .. tip::
@@ -1023,6 +1028,33 @@ Name                Description
 ``includeInputs``   When ``true`` any input files matching an output file glob pattern are included.
 ================== =====================
 
+The parenthesis are optional for input and output qualifiers, but when you want to set an additional option and there
+is more than one input or output qualifier, you must use parenthesis so that Nextflow knows what qualifier you're
+referring to.
+
+One example with a single output qualifier::
+
+    process foo {
+      output:
+      path 'result.txt', hidden: true
+
+      '''
+      echo 'another new line' >> result.txt
+      '''
+    }
+
+Another example with multiple output qualifiers::
+
+    process foo {
+      output:
+      tuple path('last_result.txt'), path('result.txt', hidden: true)
+
+      '''
+      echo 'another new line' >> result.txt
+      echo 'another new line' > last_result.txt
+      '''
+    }
+
 
 Multiple output files
 ---------------------
@@ -1402,8 +1434,33 @@ Multiple packages can be specified separating them with a blank space eg. ``bwa=
 The name of the channel from where a specific package needs to be downloaded can be specified using the usual
 Conda notation i.e. prefixing the package with the channel name as shown here ``bioconda::bwa=0.7.15``.
 
-The ``conda`` directory also allows the specification of a Conda environment file
+The ``conda`` directive also allows the specification of a Conda environment file
 path or the path of an existing environment directory. See the :ref:`conda-page` page for further details.
+
+
+.. _process-spack:
+
+spack
+-----
+
+The ``spack`` directive allows for the definition of the process dependencies using the `Spack <https://spack.io>`_
+package manager.
+
+Nextflow automatically sets up an environment for the given package names listed by in the ``spack`` directive.
+For example::
+
+  process foo {
+    spack 'bwa@0.7.15'
+
+    '''
+    your_command --here
+    '''
+  }
+
+Multiple packages can be specified separating them with a blank space eg. ``bwa@0.7.15 fastqc@0.11.5``.
+
+The ``spack`` directive also allows the specification of a Spack environment file
+path or the path of an existing environment directory. See the :ref:`spack-page` page for further details.
 
 
 .. _process-container:
@@ -2029,7 +2086,8 @@ saveAs          A closure which, given the name of the file being published, ret
                 This is useful when the process has multiple output files, but you want to publish only some of them.
 enabled         Enable or disable the publish rule depending on the boolean value specified (default: ``true``).
 failOnError     When ``true`` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: ``false``)
-contentType     Allow specifying the media content type of the published file a.k.a. `MIME type <https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types>`_. If the boolean value ``true`` is specified the content type is inferred from the file extension (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Default: ``false``, requires `22.10.0`` or later).
+contentType     Allow specifying the media content type of the published file a.k.a. `MIME type <https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types>`_. If the boolean value ``true`` is specified the content type is inferred from the file extension (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Default: ``false``, requires ``22.10.0`` or later).
+storageClass    Allow specifying the *storage class* to be used for the published file (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Requires version ``22.12.0-edge`` or later).
 tags            Allow the association of arbitrary tags with the published file e.g. ``tags: [FOO: 'Hello world']`` (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Requires version ``21.12.0-edge`` or later).
 =============== =================
 
@@ -2257,6 +2315,8 @@ Value   Description
 copy    Output files are copied from the scratch directory to the work directory.
 move    Output files are moved from the scratch directory to the work directory.
 rsync   Output files are copied from the scratch directory to the work directory by using the ``rsync`` utility.
+rclone  Output files are copied from the scratch directory to the work directory by using the `rclone <https://rclone.org>`_ utility (note: it must be available in your cluster computing nodes, requires version ``23.01.0-edge`` or later).
+fcp     Output files are copied from the scratch directory to the work directory by using the `fcp <https://github.com/Svetlitski/fcp>`_ utility (note: it must be available in your cluster computing nodes, requires version ``23.02.0-edge`` or later).
 ======= ==================
 
 See also: `scratch`_.

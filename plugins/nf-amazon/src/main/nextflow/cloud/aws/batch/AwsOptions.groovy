@@ -19,6 +19,7 @@ package nextflow.cloud.aws.batch
 
 import java.nio.file.Path
 
+import com.amazonaws.services.s3.model.CannedAccessControlList
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
@@ -27,6 +28,8 @@ import nextflow.Session
 import nextflow.cloud.CloudTransferOptions
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
+
+import static nextflow.cloud.aws.util.AwsHelper.parseS3Acl
 
 /**
  * Helper class wrapping AWS config options required for Batch job executions
@@ -92,6 +95,16 @@ class AwsOptions implements CloudTransferOptions {
     String shareIdentifier
 
     /**
+     * The scheduling priority for all tasks when using fair-share scheduling (0 to 9999)
+     */
+    Integer schedulingPriority
+
+    /**
+     * S3 access control list
+     */
+    CannedAccessControlList s3Acl
+
+    /**
      * @return A list of volume mounts using the docker cli convention ie. `/some/path` or `/some/path:/container/path` or `/some/path:/container/path:ro`
      */
     List<String> getVolumes() { volumes != null ? Collections.unmodifiableList(volumes) : Collections.<String>emptyList() }
@@ -106,6 +119,7 @@ class AwsOptions implements CloudTransferOptions {
 
     AwsOptions(Session session) {
         cliPath = getCliPath0(session)
+        s3Acl = parseS3Acl(session.config.navigate('aws.client.s3Acl') as String)
         debug = session.config.navigate('aws.client.debug') as Boolean
         storageClass = session.config.navigate('aws.client.uploadStorageClass') as String
         storageKmsKeyId = session.config.navigate('aws.client.storageKmsKeyId') as String
@@ -121,6 +135,7 @@ class AwsOptions implements CloudTransferOptions {
         fetchInstanceType = session.config.navigate('aws.batch.fetchInstanceType')
         retryMode = session.config.navigate('aws.batch.retryMode', 'standard')
         shareIdentifier = session.config.navigate('aws.batch.shareIdentifier')
+        schedulingPriority = session.config.navigate('aws.batch.schedulingPriority', 0) as Integer
         if( retryMode == 'built-in' )
             retryMode = null // this force falling back on NF built-in retry mode instead of delegating to AWS CLI tool
         if( retryMode && retryMode !in VALID_RETRY_MODES )

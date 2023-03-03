@@ -15,12 +15,11 @@
  *
  */
 
-package io.seqera.wave.plugin
+package nextflow.fusion
 
-import io.seqera.wave.plugin.config.FusionConfig
+
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -46,16 +45,60 @@ class FusionConfigTest extends Specification {
         when:
         def opts = new FusionConfig(OPTS, ENV)
         then:
-        opts.containerConfigUrl() == new URL(EXPECTED)
+        opts.containerConfigUrl() == (EXPECTED ? new URL(EXPECTED) : null)
 
         where:
         OPTS                                    | ENV           | EXPECTED
-        [:]                                     | [:]           | FusionConfig.DEFAULT_FUSION_URL
+        [:]                                     | [:]           | null
         [containerConfigUrl:'http://foo.com']   | [:]           | 'http://foo.com'
+        [containerConfigUrl:'https://bar.com']  | [:]           | 'https://bar.com'
+        [containerConfigUrl:'file:///some/file']| [:]           | 'file:///some/file'
         [:]                                     | [FUSION_CONTAINER_CONFIG_URL:'http://bar.com']           | 'http://bar.com'
         [containerConfigUrl:'http://foo.com']   | [FUSION_CONTAINER_CONFIG_URL:'http://bar.com']           | 'http://foo.com'
 
     }
 
+    @Unroll
+    def 'should get export aws key' () {
+        expect:
+        new FusionConfig(OPTS).exportAwsAccessKeys() == EXPECTED
 
+        where:
+        OPTS                            | EXPECTED
+        [:]                             | false
+        [exportAwsAccessKeys: false]    | false
+        [exportAwsAccessKeys: true]     | true
+    }
+
+    @Unroll
+    def 'should configure log level and output' () {
+        given:
+        def opts = new FusionConfig(OPTS)
+        expect:
+        opts.logLevel() == LEVEL
+        opts.logOutput() == OUTPUT
+
+        where:
+        OPTS                            | LEVEL     | OUTPUT
+        [:]                             | null      | null
+        [logLevel: 'trace']             | 'trace'   | null
+        [logOutput: 'stdout']           | null      | 'stdout'
+    }
+
+    @Unroll
+    def 'should configure tags' () {
+        given:
+        def opts = new FusionConfig(OPTS)
+        expect:
+        opts.tagsEnabled() == ENABLED
+        opts.tagsPattern() == PATTERN
+
+        where:
+        OPTS                    | ENABLED   | PATTERN
+        [:]                     | true      | FusionConfig.DEFAULT_TAGS
+        [tags:true]             | true      | FusionConfig.DEFAULT_TAGS
+        [tags:false]            | false     | null
+        [tags:'[*.txt](x=1)']   | true      | '[*.txt](x=1)'
+
+    }
 }

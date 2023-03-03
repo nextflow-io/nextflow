@@ -355,31 +355,62 @@ class SessionTest extends Specification {
     @Unroll
     def 'should return engine type' () {
         given:
-        def session =  new Session([(engine): config])
+        def session =  new Session([(ENGINE): CONFIG])
 
         expect:
-        session.containerConfig == config as ContainerConfig
+        session.containerConfig == CONFIG as ContainerConfig
         session.containerConfig.enabled
-        session.containerConfig.engine == engine
+        session.containerConfig.engine == ENGINE
 
         where:
-        engine         | config
+        ENGINE         | CONFIG
         'docker'       | [enabled: true, x:'alpha', y: 'beta']
         'docker'       | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
         'podman'       | [enabled: true, x:'alpha', y: 'beta']
         'podman'       | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
         'udocker'      | [enabled: true, x:'alpha', y: 'beta']
+        'sarus'        | [enabled: true, x:'delta', y: 'gamma']
         'shifter'      | [enabled: true, x:'delta', y: 'gamma']
         'singularity'  | [enabled: true, x:'delta', y: 'gamma']
         'charliecloud' | [enabled: true, x:'delta', y: 'gamma']
     }
 
+    def 'should get config for specific engine' () {
+        given:
+        def config = [docker:[registry:'docker.io'], podman: [registry:'quay.io']]
+        def session = new Session(config)
+
+        expect:
+        session.getContainerConfig(null) == new ContainerConfig(engine:'docker', registry:'docker.io')
+        and:
+        session.getContainerConfig('docker') == new ContainerConfig(engine:'docker', registry:'docker.io')
+        and:
+        session.getContainerConfig('podman') == new ContainerConfig(engine:'podman', registry:'quay.io')
+        and:
+        session.getContainerConfig('sarus') == new ContainerConfig(engine:'sarus')
+    }
+
     @Unroll
-    def 'should get config config' () {
+    def 'should get config for conda environments' () {
         given:
         def session =  Spy(new Session([conda: CONFIG]))
         expect:
         session.condaConfig.isEnabled() == EXPECTED
+        
+        where:
+        EXPECTED    | CONFIG            | ENV
+        false       | [:]               | [:]
+        false       | [enabled: false]  | [:]
+        true        | [enabled: true]   | [:]
+
+    }
+
+    @Unroll
+    def 'should get config for spack environments' () {
+        given:
+        def session =  Spy(new Session([spack: CONFIG]))
+        expect:
+        session.spackConfig.isEnabled() == EXPECTED
         
         where:
         EXPECTED    | CONFIG            | ENV

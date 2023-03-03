@@ -17,9 +17,9 @@
 
 package nextflow.executor
 
+
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
-
 /**
  * Implements a executor for PBSPro cluster executor
  *
@@ -70,7 +70,12 @@ class PbsProExecutor extends PbsExecutor {
             res << "mem=${task.config.getMemory().getMega()}mb".toString()
         }
         if( res ) {
-            result << '-l' << "select=1:${res.join(':')}".toString()
+            if( matchOptions(task.config.clusterOptions?.toString()) ) {
+                log.warn1 'cpus and memory directives are ignored when clusterOptions contains -l option\ntip: clusterOptions = { "-l select=1:ncpus=${task.cpus}:mem=${task.memory.toMega()}mb:..." }'
+            }
+            else {
+                result << '-l' << "select=1:${res.join(':')}".toString()
+            }
         }
 
         // max task duration
@@ -88,9 +93,9 @@ class PbsProExecutor extends PbsExecutor {
         if( queue ) {
             cmd += queue
         } else {
-            cmd += '$( qstat -B | egrep -v \'(^Server|^---)\' | awk -v ORS=\' \' \'{print \"@\"\$1}\' )'
+            cmd += '$( qstat -B | grep -E -v \'(^Server|^---)\' | awk -v ORS=\' \' \'{print \"@\"\$1}\' )'
         }
-        return ['bash','-c', "set -o pipefail; $cmd | { egrep '(Job Id:|job_state =)' || true; }".toString()]
+        return ['bash','-c', "set -o pipefail; $cmd | { grep -E '(Job Id:|job_state =)' || true; }".toString()]
     }
 
     // see https://www.pbsworks.com/pdfs/PBSRefGuide18.2.pdf

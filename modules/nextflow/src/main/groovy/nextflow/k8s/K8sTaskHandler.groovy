@@ -25,11 +25,12 @@ import java.time.format.DateTimeFormatter
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.container.DockerBuilder
 import nextflow.exception.NodeTerminationException
 import nextflow.exception.ProcessSubmitException
 import nextflow.executor.BashWrapperBuilder
-import nextflow.executor.fusion.FusionAwareTask
+import nextflow.fusion.FusionAwareTask
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
 import nextflow.k8s.model.PodEnv
@@ -220,6 +221,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         if( fixOwnership() )
             builder.withEnv(PodEnv.value('NXF_OWNER', getOwner()))
 
+        if( SysEnv.containsKey('NXF_DEBUG') )
+            builder.withEnv(PodEnv.value('NXF_DEBUG', SysEnv.get('NXF_DEBUG')))
+        
         // add computing resources
         final cpus = taskCfg.getCpus()
         final mem = taskCfg.getMemory()

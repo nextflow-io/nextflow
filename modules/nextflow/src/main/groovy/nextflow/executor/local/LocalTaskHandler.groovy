@@ -26,8 +26,8 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessException
 import nextflow.executor.BashWrapperBuilder
-import nextflow.executor.fusion.FusionAwareTask
-import nextflow.executor.fusion.FusionHelper
+import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -146,16 +146,16 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     protected ProcessBuilder fusionProcessBuilder() {
         final submit = fusionSubmitCli()
         final launcher = fusionLauncher()
-        final config = session.containerConfig
+        final config = task.getContainerConfig()
         final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), submit)
-        log.debug "Launch cmd line: ${cmd.join(' ')}"
+        log.debug "Launch cmd line: ${cmd}"
 
         final logPath = Files.createTempFile('nf-task','.log')
 
         return new ProcessBuilder()
                 .redirectErrorStream(true)
                 .redirectOutput(logPath.toFile())
-                .command(cmd)
+                .command(List.of('sh','-c', cmd))
     }
 
     protected ProcessBuilder createLaunchProcessBuilder() {

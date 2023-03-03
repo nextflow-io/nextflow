@@ -15,16 +15,15 @@
  *
  */
 
-package nextflow.executor.fusion
+package nextflow.fusion
 
-import static nextflow.executor.fusion.FusionHelper.*
+
+import static nextflow.fusion.FusionHelper.*
 
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import nextflow.Global
 import nextflow.executor.BashWrapperBuilder
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
@@ -40,13 +39,10 @@ class FusionScriptLauncher extends BashWrapperBuilder {
 
     private String scheme
     private Path remoteWorkDir
-    private Set<String> buckets = new HashSet<>()
     private Map<String,String> env
 
     /* ONLY FOR TESTING - DO NOT USE */
-    protected FusionScriptLauncher() {
-        this.buckets = new HashSet<>()
-    }
+    protected FusionScriptLauncher() { }
 
     static FusionScriptLauncher create(TaskBean bean, String scheme) {
 
@@ -55,12 +51,12 @@ class FusionScriptLauncher extends BashWrapperBuilder {
 
         // map bean work and target dirs to container mount
         // this needed to create the command launcher using container local file paths
-        bean.workDir = toContainerMount(bean.workDir, scheme, buckets)
-        bean.targetDir = toContainerMount(bean.targetDir, scheme, buckets)
+        bean.workDir = toContainerMount(bean.workDir, scheme)
+        bean.targetDir = toContainerMount(bean.targetDir, scheme)
 
         // remap input files to container mounted paths
         for( Map.Entry<String,Path> entry : new HashMap<>(bean.inputFiles).entrySet() ) {
-            bean.inputFiles.put( entry.key, toContainerMount(entry.value, scheme, buckets) )
+            bean.inputFiles.put( entry.key, toContainerMount(entry.value, scheme) )
         }
 
         // make it change to the task work dir
@@ -77,7 +73,6 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         // keep track the google storage work dir
         this.scheme = scheme
         this.remoteWorkDir = remoteWorkDir
-        this.buckets = buckets
     }
 
     static protected String headerScript(TaskBean bean) {
@@ -85,28 +80,17 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     }
 
     Path toContainerMount(Path path) {
-        toContainerMount(path,scheme,buckets)
-    }
-
-    Set<String> fusionBuckets() {
-        return buckets
+        toContainerMount(path,scheme)
     }
 
     Map<String,String> fusionEnv() {
         if( env==null ) {
-            final buckets = fusionBuckets().collect(it->"$scheme://$it").join(',')
             final work = toContainerMount(remoteWorkDir).toString()
             final result = new LinkedHashMap(10)
-            result.NXF_FUSION_WORK = work
-            result.NXF_FUSION_BUCKETS = buckets
-            final endpoint = Global.getAwsS3Endpoint()
-            final creds = exportAwsAccessKeys() ? Global.getAwsCredentials() : Collections.<String>emptyList()
-            if( creds ) {
-                result.AWS_ACCESS_KEY_ID = creds[0]
-                result.AWS_SECRET_ACCESS_KEY = creds[1]
-            }
-            if( endpoint )
-                result.AWS_S3_ENDPOINT = endpoint
+            result.FUSION_WORK = work
+            // foreign env
+            final provider = new FusionEnvProvider()
+            result.putAll(provider.getEnvironment(scheme))
             env = result
         }
         return env
@@ -127,12 +111,4 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
     }
 
-    boolean exportAwsAccessKeys() {
-        exportAwsAccessKeys0()
-    }
-
-    @Memoized
-    protected boolean exportAwsAccessKeys0() {
-        return Global.config?.navigate('fusion.exportAwsAccessKeys', false)
-    }
 }

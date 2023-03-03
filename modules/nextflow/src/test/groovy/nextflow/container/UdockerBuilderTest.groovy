@@ -108,7 +108,7 @@ class UdockerBuilderTest extends Specification {
         def result = builder.build().getRunCommand()
         then:
         result == '''
-            ((udocker.py images | egrep -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
+            ((udocker.py images | grep -E -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
             [[ $? != 0 ]] && echo "Udocker failed while pulling container \\`ubuntu:latest\\`" >&2 && exit 1
             udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "ubuntu:latest")
             '''
@@ -125,7 +125,7 @@ class UdockerBuilderTest extends Specification {
         def result = builder.build().getRunCommand('bwa --this --that')
         then:
         result == '''
-            ((udocker.py images | egrep -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
+            ((udocker.py images | grep -E -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
             [[ $? != 0 ]] && echo "Udocker failed while pulling container \\`ubuntu:latest\\`" >&2 && exit 1
             udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "ubuntu:latest") bwa --this --that
             '''
@@ -140,7 +140,7 @@ class UdockerBuilderTest extends Specification {
         result = builder.build().getRunCommand('bwa --this --that')
         then:
         result == '''
-            ((udocker.py images | egrep -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
+            ((udocker.py images | grep -E -o "^ubuntu:latest\\s") || udocker.py pull "ubuntu:latest")>/dev/null
             [[ $? != 0 ]] && echo "Udocker failed while pulling container \\`ubuntu:latest\\`" >&2 && exit 1
             udocker.py run --rm -v "$PWD":"$PWD" -w "$PWD" --bindhome $(udocker.py create "ubuntu:latest") /bin/bash -c "bwa --this --that"
             '''

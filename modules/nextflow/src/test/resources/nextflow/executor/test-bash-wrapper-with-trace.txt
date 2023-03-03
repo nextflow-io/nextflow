@@ -15,12 +15,12 @@ nxf_tree() {
 
     pstat() {
         local x_pid=$1
-        local STATUS=$(2> /dev/null < /proc/$1/status egrep 'Vm|ctxt')
+        local STATUS=$(2> /dev/null < /proc/$1/status grep -E 'Vm|ctxt')
 
         if [ $? = 0 ]; then
         local  x_vsz=$(echo "$STATUS" | grep VmSize | awk '{print $2}' || echo -n '0')
         local  x_rss=$(echo "$STATUS" | grep VmRSS | awk '{print $2}' || echo -n '0')
-        local x_peak=$(echo "$STATUS" | egrep 'VmPeak|VmHWM' | sed 's/^.*:\s*//' | sed 's/[\sa-zA-Z]*$//' | tr '\n' ' ' || echo -n '0 0')
+        local x_peak=$(echo "$STATUS" | grep -E 'VmPeak|VmHWM' | sed 's/^.*:\s*//' | sed 's/[\sa-zA-Z]*$//' | tr '\n' ' ' || echo -n '0 0')
         local x_pmem=$(awk -v rss=$x_rss -v mem_tot=$mem_tot 'BEGIN {printf "%.0f", rss/mem_tot*100*10}' || echo -n '0')
         local vol_ctxt=$(echo "$STATUS" | grep '\bvoluntary_ctxt_switches' | awk '{print $2}' || echo -n '0')
         local inv_ctxt=$(echo "$STATUS" | grep '\bnonvoluntary_ctxt_switches' | awk '{print $2}' || echo -n '0')
@@ -255,6 +255,14 @@ nxf_fs_rsync() {
   rsync -rRl $1 $2
 }
 
+nxf_fs_rclone() {
+  rclone copyto $1 $2/$1
+}
+
+nxf_fs_fcp() {
+  fcp $1 $2/$1
+}
+
 on_exit() {
     exit_status=${nxf_main_ret:=$?}
     printf $exit_status > {{folder}}/.exitcode
@@ -262,6 +270,7 @@ on_exit() {
     [[ "$tee1" ]] && kill $tee1 2>/dev/null
     [[ "$tee2" ]] && kill $tee2 2>/dev/null
     [[ "$ctmp" ]] && rm -rf $ctmp || true
+    sync || true
     exit $exit_status
 }
 

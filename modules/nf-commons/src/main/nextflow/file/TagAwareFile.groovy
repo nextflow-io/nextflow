@@ -28,4 +28,5 @@ interface TagAwareFile {
 
     void setContentType(String type)
 
+    void setStorageClass(String storageClass)
 }
