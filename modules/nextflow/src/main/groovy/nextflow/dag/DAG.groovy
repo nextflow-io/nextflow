@@ -417,10 +417,6 @@ class DAG {
             indexOf(this)
         }
 
-        int getId() {
-            getOrder()
-        }
-
         /**
          * @return The unique name for this node
          */
