@@ -219,6 +219,18 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         // use instance template if specified
         final machineType = task.config.getMachineType()
         if( machineType && machineType.startsWith('template://') ) {
+            if( task.config.getAccelerator() )
+                log.warn1 'Process directive `accelerator` ignored because an instance template was specified'
+
+            if( executor.config.cpuPlatform )
+                log.warn1 'Config option `google.batch.cpuPlatform` ignored because an instance template was specified'
+
+            if( executor.config.preemptible )
+                log.warn1 'Config option `google.batch.premptible` ignored because an instance template was specified'
+
+            if( executor.config.spot )
+                log.warn1 'Config option `google.batch.spot` ignored because an instance template was specified'
+
             instancePolicyOrTemplate
                 .setInstallGpuDrivers( executor.config.getInstallGpuDrivers() )
                 .setInstanceTemplate( machineType.minus('template://') )
