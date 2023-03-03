@@ -381,6 +381,8 @@ class DAG {
     @ToString(includeNames = true, includes = 'label,type', includePackage=false)
     class Vertex {
 
+        static private AtomicLong nextID = new AtomicLong()
+
         /**
          * The vertex label
          */
@@ -397,6 +399,11 @@ class DAG {
         List<DataflowProcessor> operators
 
         TaskProcessor process
+
+        /**
+         * unique Id
+         */
+        final long id = nextID.getAndIncrement()
 
         /**
          * Create a DAG vertex instance
@@ -437,7 +444,7 @@ class DAG {
     @MapConstructor
     class Edge {
 
-        static private AtomicLong nextID = new AtomicLong();
+        static private AtomicLong nextID = new AtomicLong()
 
         /**
          * The Dataflow channel that originated this graph edge
