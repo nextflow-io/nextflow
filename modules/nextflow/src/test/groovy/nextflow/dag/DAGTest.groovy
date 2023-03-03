@@ -56,6 +56,7 @@ class DAGTest extends Specification {
         v2.order == 1
         v2.name == 'p1'
         v2.type == DAG.Type.OPERATOR
+        v1.id != v2.id
     }
 
 
@@ -112,6 +113,8 @@ class DAGTest extends Specification {
 
         v2.label == 'Process 2'
         v2.order == 1
+
+        v1.id != v2.id
 
         dag.edges.size() == 3
 
