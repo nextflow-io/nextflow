@@ -22,6 +22,7 @@ import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.cloud.types.CloudMachineInfo
 import nextflow.executor.Executor
 import nextflow.executor.res.AcceleratorResource
 import nextflow.processor.TaskBean
@@ -145,7 +146,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getContainerOptions() >> CONTAINER_OPTS
                 getCpus() >> CPUS
                 getDisk() >> DISK
-                getMachineType() >> MACHINE_TYPE
                 getMemory() >> MEM
                 getTime() >> TIMEOUT
                 getResourceLabels() >> [foo: 'bar']
@@ -162,7 +162,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def req = handler.newSubmitRequest(task, launcher)
         then:
         handler.fusionEnabled() >> false
-        handler.findBestMachineType(_) >> null
+        handler.findBestMachineType(_) >> Mock(CloudMachineInfo) { type >> MACHINE_TYPE }
 
         and:
         def taskGroup = req.getTaskGroups(0)
@@ -250,7 +250,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def runnable = taskGroup.getTaskSpec().getRunnables(0)
         def allocationPolicy = req.getAllocationPolicy()
         def instancePolicyOrTemplate = allocationPolicy.getInstances(0)
-        def instancePolicy = allocationPolicy.getInstances(0).getPolicy()
         and:
         taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == 0
         taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == 2_000

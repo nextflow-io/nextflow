@@ -17,10 +17,6 @@
 
 package nextflow.cloud.google.batch
 
-import nextflow.cloud.types.CloudMachineInfo
-import nextflow.cloud.types.PriceModel
-import nextflow.processor.TaskConfig
-
 import java.nio.file.Path
 
 import com.google.cloud.batch.v1.AllocationPolicy
@@ -37,9 +33,12 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
+import nextflow.cloud.types.CloudMachineInfo
+import nextflow.cloud.types.PriceModel
 import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -167,16 +166,16 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final accel = task.config.getAccelerator()
         // add nvidia specific driver paths
         // see https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
-        if(  accel && accel.type.toLowerCase().startsWith('nvidia-') ) {
+        if( accel && accel.type.toLowerCase().startsWith('nvidia-') ) {
             container
                 .addVolumes('/var/lib/nvidia/lib64:/usr/local/nvidia/lib64')
                 .addVolumes('/var/lib/nvidia/bin:/usr/local/nvidia/bin')
         }
 
-        def containerOptions= task.config.getContainerOptions() ?: ''
+        def containerOptions = task.config.getContainerOptions() ?: ''
         // accelerator requires privileged option
         // https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
-        if( task.config.getAccelerator() || fusionEnabled()) {
+        if( task.config.getAccelerator() || fusionEnabled() ) {
             if( containerOptions ) containerOptions += ' '
             containerOptions += '--privileged'
         }
@@ -242,9 +241,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
             if( executor.config.cpuPlatform )
                 instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
-
-            if( machineType )
-                instancePolicy.setMachineType( machineType )
 
             machineInfo = findBestMachineType(task.config)
             if( machineInfo )
