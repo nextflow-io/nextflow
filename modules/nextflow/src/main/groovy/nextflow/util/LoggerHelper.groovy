@@ -465,10 +465,10 @@ class LoggerHelper {
             buffer.append("No such field: ${normalize(fail.message)}")
         }
         else if( fail instanceof NoSuchFileException ) {
-            buffer.append("No such file: ${normalize(fail.message)}")
+            buffer.append("No such file or directory: ${normalize(fail.message)}")
         }
         else if( fail instanceof FileAlreadyExistsException ) {
-            buffer.append("File already exist: $fail.message")
+            buffer.append("File or directory already exists: $fail.message")
         }
         else if( fail instanceof ClassNotFoundException ) {
             buffer.append("Class not found: ${normalize(fail.message)}")

@@ -31,7 +31,7 @@ class SecretsLoaderTest extends Specification {
         given:
         SysEnv.push([:])
         expect:
-        SecretsLoader.isEnabled()
+        new SecretsLoader().isEnabled()
         cleanup:
         SysEnv.pop()
     }
@@ -42,7 +42,7 @@ class SecretsLoaderTest extends Specification {
         SysEnv.push(NXF_ENABLE_SECRETS: "$ENV")
 
         when:
-        boolean enabled = SecretsLoader.isEnabled()
+        boolean enabled = new SecretsLoader().isEnabled()
         then:
         enabled == RESULT
 

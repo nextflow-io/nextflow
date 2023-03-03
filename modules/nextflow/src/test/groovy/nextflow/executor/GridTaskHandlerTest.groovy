@@ -17,12 +17,18 @@
 
 package nextflow.executor
 
+import java.nio.file.Path
 import java.nio.file.Paths
 
+import nextflow.container.ContainerConfig
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessNonZeroExitStatusException
+import nextflow.file.FileHelper
+import nextflow.processor.TaskBean
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
+import test.TestHelper
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -36,11 +42,11 @@ class GridTaskHandlerTest extends Specification {
         when:
         def predicate = handler.retryCondition("Socket timed out")
         then:
-        predicate.test(new ProcessNonZeroExitStatusException('Error', 'Socket timed out', 1, []))
+        predicate.test(new ProcessNonZeroExitStatusException('Error', 'Socket timed out', 1, null))
         and:
-        predicate.test(new ProcessNonZeroExitStatusException('Error', 'error\nBatch job submission failed\nSocket timed out on send/recv operation', 1, [] ))
+        predicate.test(new ProcessNonZeroExitStatusException('Error', 'error\nBatch job submission failed\nSocket timed out on send/recv operation', 1, null))
         and:
-        !predicate.test(new ProcessNonZeroExitStatusException('Error', 'OK', 0, []))
+        !predicate.test(new ProcessNonZeroExitStatusException('Error', 'OK', 0, null))
 
     }
 
@@ -54,11 +60,12 @@ class GridTaskHandlerTest extends Specification {
         handler.submit()
 
         then:
-        handler.safeExecute( _ )  >> { throw new ProcessNonZeroExitStatusException("Submit failed", "The limit is invalid", 10, ['qsub', 'foo']) }
+        handler.safeExecute( _ )  >> { throw new ProcessNonZeroExitStatusException("Submit failed", "The limit is invalid", 10, 'qsub foo') }
         and:
         exec.createBashWrapperBuilder(task) >> Mock(BashWrapperBuilder)
         exec.pipeLauncherScript() >> false
         and:
+        handler.fusionEnabled() >> false
         handler.createProcessBuilder() >> GroovyMock(ProcessBuilder)
         and:
         thrown(ProcessFailedException)
@@ -66,5 +73,72 @@ class GridTaskHandlerTest extends Specification {
         task.stdout ==  "The limit is invalid"
         task.exitStatus == 10
 
+    }
+
+    def 'should replace log file with /dev/null' () {
+        given:
+        def WORK_DIR = Path.of('/some/dir')
+        and:
+        def task = Mock(TaskRun) {
+            getWorkDir() >> WORK_DIR
+        }
+        def exec = Mock(AbstractGridExecutor)
+        def handler = Spy(new GridTaskHandler(task, exec))
+
+        when:
+        def result = handler.submitDirective(task)
+        
+        then:
+        1 * exec.getHeaders(task) >> "#FOO this\n#BAR that\n#OUT file=${WORK_DIR}/.command.log\n"
+        and:
+        result == """\
+            #FOO this
+            #BAR that
+            #OUT file=/dev/null
+            """.stripIndent()
+    }
+
+    def 'should get stdin fusion script' () {
+        given:
+        def WORK_DIR = FileHelper.asPath('http://foo.com/some/dir')
+        def logFile = TestHelper.createInMemTempFile('log')
+        and:
+        def task = Mock(TaskRun) {
+            getWorkDir() >> WORK_DIR
+            getLogFile() >> logFile
+            getContainer() >> 'ubuntu:latest'
+            getProcessor() >> Mock(TaskProcessor)
+            getContainerConfig() >> Mock(ContainerConfig) { getEngine()>>'docker' }
+            toTaskBean() >> Mock(TaskBean) { getWorkDir()>>WORK_DIR; getInputFiles()>>[:] }
+        }
+        def exec = Mock(AbstractGridExecutor)
+        def handler = Spy(new GridTaskHandler(task, exec))
+
+        when:
+        def result = handler.fusionStdinWrapper()
+        then:
+        handler.fusionEnabled() >> true
+        exec.getHeaders(task) >> '#$ directive=one\n'
+        and:
+        result == '''\
+                #!/bin/bash
+                #$ directive=one
+                docker run -i -e "FUSION_WORK=/fusion/http/foo.com/some/dir" -e "FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)" ubuntu:latest /usr/bin/fusion bash '/fusion/http/foo.com/some/dir/.command.run'
+                '''.stripIndent(true)
+    }
+
+    def 'should create launch command' () {
+        given:
+        def exec = Spy(GridTaskHandler)
+
+        expect:
+        exec.launchCmd0(new ProcessBuilder().command(['qsub', '/some/file']), null) == 'qsub /some/file'
+        and:
+        exec.launchCmd0(new ProcessBuilder().command(['qsub']), 'docker run /some/file') ==
+                '''\
+                cat << 'LAUNCH_COMMAND_EOF' | qsub
+                docker run /some/file
+                LAUNCH_COMMAND_EOF
+                '''.stripIndent()
     }
 }
