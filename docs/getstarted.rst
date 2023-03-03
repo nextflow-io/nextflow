@@ -17,6 +17,20 @@ the sharing of tasks input/output files.
 
 Nextflow can also be run on Windows through `WSL <https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux>`_.
 
+.. tip::
+    We recommend that you install Java through `SDKMAN! <https://sdkman.io/>`_, and that you use the latest
+    LTS version of Corretto or Temurin. See `this website <https://whichjdk.com/>`_ for more information. While
+    other Java distros may work at first or even most of the time, many users have experienced issues that are
+    difficult to debug and are usually resolved by using one of the recommended distros.
+
+    To install Corretto 17::
+
+        sdk install java 17.0.6-amzn
+
+    To install Temurin 17::
+
+        sdk install java 17.0.6-tem
+
 
 .. _getstarted-install:
 
@@ -115,6 +129,10 @@ Copy the following example into your favourite text editor and save it to a file
       splitLetters | flatten | convertToUpper | view { it.trim() }
     }
 
+.. note:: 
+  This script requires Nextflow ``22.10.0`` or later version. Make sure your are not using an older 
+  release.
+
 This script defines two processes. The first splits a string into 6-character chunks, writing each one to a file with the prefix ``chunk_``,
 and the second receives these files and transforms their contents to uppercase letters.
 The resulting strings are emitted on the ``result`` channel and the final output is printed by the
@@ -126,7 +144,7 @@ Execute the script by entering the following command in your terminal::
 
 It will output something similar to the text shown below::
 
-    N E X T F L O W  ~  version 19.04.0
+    N E X T F L O W  ~  version 22.10.0
     executor >  local (3)
     [69/c8ea4a] process > splitLetters   [100%] 1 of 1 ✔
     [84/c8b7f1] process > convertToUpper [100%] 2 of 2 ✔
@@ -180,7 +198,7 @@ Then save the file with the same name, and execute it by adding the ``-resume`` 
 
 It will print output similar to this::
 
-    N E X T F L O W  ~  version 19.04.0
+    N E X T F L O W  ~  version 22.10.0
     executor >  local (2)
     [69/c8ea4a] process > splitLetters   [100%] 1 of 1, cached: 1 ✔
     [d0/e94f07] process > convertToUpper [100%] 2 of 2 ✔
@@ -212,7 +230,7 @@ string parameter, as shown below::
 The string specified on the command line will override the default value of the parameter. The output
 will look like this::
 
-    N E X T F L O W  ~  version 19.04.0
+    N E X T F L O W  ~  version 22.10.0
     executor >  local (4)
     [8b/16e7d7] process > splitLetters   [100%] 1 of 1 ✔
     [eb/729772] process > convertToUpper [100%] 3 of 3 ✔

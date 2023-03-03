@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit
 import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
 import com.amazonaws.services.ecs.model.AccessDeniedException
+import com.amazonaws.services.logs.model.ResourceNotFoundException
 import com.upplication.s3fs.S3Path
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -54,8 +55,6 @@ import org.pf4j.ExtensionPoint
 @ServiceName('awsbatch')
 @CompileStatic
 class AwsBatchExecutor extends Executor implements ExtensionPoint {
-
-    private Map<String,String> sysEnv = System.getenv()
 
     /**
      * Proxy to throttle AWS batch client requests
@@ -254,7 +253,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
 
     @Override
     boolean isFusionEnabled() {
-        return FusionHelper.isFusionEnabled(session, sysEnv)
+        return FusionHelper.isFusionEnabled(session)
     }
 
     protected void logRateLimitChange(RateUnit rate) {
@@ -285,10 +284,13 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         try {
             return helper.getTaskLogStream(jobId)
         }
+        catch (ResourceNotFoundException e) {
+            log.debug "Unable to find AWS Cloudwatch logs for Batch Job id=$jobId - ${e.message}"
+        }
         catch (Exception e) {
             log.debug "Unable to retrieve AWS Cloudwatch logs for Batch Job id=$jobId | ${e.message}", e
-            return null
         }
+        return null
     }
 
     @Override

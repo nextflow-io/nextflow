@@ -16,12 +16,12 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
+import java.util.regex.Pattern
 
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
-import nextflow.util.Escape
-
 /**
  * Implements a executor for PBS/Torque cluster
  *
@@ -29,6 +29,8 @@ import nextflow.util.Escape
  */
 @Slf4j
 class PbsExecutor extends AbstractGridExecutor {
+
+    private static Pattern OPTS_REGEX = ~/(?:^|\s)-l.+/
 
     /**
      * Gets the directives to submit the specified task to the cluster for execution
@@ -49,8 +51,14 @@ class PbsExecutor extends AbstractGridExecutor {
             result << '-q'  << (String)task.config.queue
         }
 
+        // task cpus
         if( task.config.cpus > 1 ) {
-            result << '-l' << "nodes=1:ppn=${task.config.cpus}"
+            if( matchOptions(task.config.clusterOptions?.toString()) ) {
+                log.warn1 'cpus directive is ignored when clusterOptions contains -l option\ntip: clusterOptions = { "-l nodes=1:ppn=${task.cpus}:..." }'
+            }
+            else {
+                result << '-l' << "nodes=1:ppn=${task.config.cpus}"
+            }
         }
 
         // max task duration
@@ -70,13 +78,6 @@ class PbsExecutor extends AbstractGridExecutor {
             result << task.config.clusterOptions.toString() << ''
         }
 
-        return result
-    }
-
-    @Override
-    String getHeaders( TaskRun task ) {
-        String result = super.getHeaders(task)
-        result += "NXF_CHDIR=${Escape.path(task.workDir)}\n"
         return result
     }
 
@@ -169,4 +170,7 @@ class PbsExecutor extends AbstractGridExecutor {
         return p!=-1 ? line.substring(p+prefix.size()).trim() : null
     }
 
+    static protected boolean matchOptions(String value) {
+        value ? OPTS_REGEX.matcher(value).find() : null
+    }
 }

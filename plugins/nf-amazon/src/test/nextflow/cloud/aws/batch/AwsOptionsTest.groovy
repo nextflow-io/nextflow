@@ -19,6 +19,7 @@ package nextflow.cloud.aws.batch
 
 import java.nio.file.Paths
 
+import com.amazonaws.services.s3.model.CannedAccessControlList
 import nextflow.Session
 import nextflow.exception.ProcessUnrecoverableException
 import spock.lang.Specification
@@ -260,4 +261,24 @@ class AwsOptionsTest extends Specification {
         [aws:[batch:[cliPath: ['s5cmd', '--foo']]]]             | null          | ['s5cmd', '--foo']
         [aws:[batch:[cliPath: ['/some/path/s5cmd', '--foo']]]]  | null          | ['/some/path/s5cmd', '--foo']
     }
+    
+    def 'should parse s3 acl' ( ) {
+        when:
+        def opts = new AwsOptions(new Session(aws:[client:[s3Acl: 'PublicRead']]))
+        then:
+        opts.getS3Acl() == CannedAccessControlList.PublicRead
+
+
+        when:
+        opts = new AwsOptions(new Session(aws:[client:[s3Acl: 'public-read']]))
+        then:
+        opts.getS3Acl() == CannedAccessControlList.PublicRead
+
+
+        when:
+        opts = new AwsOptions(new Session(aws:[client:[s3Acl: 'unknown']]))
+        then:
+        thrown(IllegalArgumentException)
+    }
+
 }

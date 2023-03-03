@@ -17,7 +17,6 @@
 
 package io.seqera.wave.plugin
 
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
