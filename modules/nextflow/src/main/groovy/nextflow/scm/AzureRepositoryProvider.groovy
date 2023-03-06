@@ -30,6 +30,8 @@ import groovy.transform.Memoized
 @CompileStatic
 final class AzureRepositoryProvider extends RepositoryProvider {
 
+    private static final COMMIT_REGEX = ~/[a-zA-Z0-9]{40}/
+
     private String user
     private String repo
     private String continuationToken
@@ -74,8 +76,12 @@ final class AzureRepositoryProvider extends RepositoryProvider {
                 '$format':'json',
                 'path':path
         ] as Map<String,Object>
-        if( revision )
+        if( revision ) {
             queryParams['versionDescriptor.version']=revision
+
+            if( COMMIT_REGEX.matcher(revision).matches() )
+                queryParams['versionDescriptor.versionType'] = 'commit'
+        }
         def queryString = queryParams.collect({ "$it.key=$it.value"}).join('&')
         def result = "$endpointUrl/items?$queryString"
         result
