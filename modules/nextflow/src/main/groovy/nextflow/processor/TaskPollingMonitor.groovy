@@ -109,7 +109,7 @@ class TaskPollingMonitor implements TaskMonitor {
     /**
      * Define rate limit for task submission
      */
-    private RateLimiter submitRateLimit
+    protected RateLimiter submitRateLimit
 
     /**
      * Create the task polling monitor with the provided named parameters object.
