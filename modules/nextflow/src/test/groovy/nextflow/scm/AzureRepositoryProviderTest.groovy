@@ -202,4 +202,21 @@ class AzureRepositoryProviderTest extends Specification {
         then:
         result=='hello\n'
     }
+
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('NXF_AZURE_REPOS_TOKEN')})
+    def 'should infer revision type for commit revision'() {
+        given:
+        def token = System.getenv('NXF_AZURE_REPOS_TOKEN')
+        def config = new ProviderConfig('azurerepos').setAuth(token)
+
+        when:
+        // uses repo at
+        //  https://pditommaso.visualstudio.com/nf-azure-repo/_git/nf-azure-repo
+        def repo = new AzureRepositoryProvider('pditommaso/nf-azure-repo', config)
+        repo.revision = 'cc0ca18640a5c995231e22d91f1527d5155d024b'
+        def result = repo.readText('file-on-dev.txt')
+        then:
+        result=='hello\n'
+    }
 }
