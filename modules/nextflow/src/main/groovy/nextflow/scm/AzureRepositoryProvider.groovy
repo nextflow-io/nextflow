@@ -17,6 +17,8 @@
 
 package nextflow.scm
 
+import java.util.regex.Pattern
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -30,7 +32,7 @@ import groovy.transform.Memoized
 @CompileStatic
 final class AzureRepositoryProvider extends RepositoryProvider {
 
-    private static final COMMIT_REGEX = ~/[a-zA-Z0-9]{40}/
+    private static final Pattern COMMIT_REGEX = ~/[a-zA-Z0-9]{40}/
 
     private String user
     private String repo
