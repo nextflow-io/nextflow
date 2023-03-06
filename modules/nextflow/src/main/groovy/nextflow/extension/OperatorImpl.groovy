@@ -1230,4 +1230,10 @@ class OperatorImpl {
                 .getOutput()
     }
 
+    void publish(DataflowReadChannel source, Map opts = [:], String path = '.') {
+        if( path )
+            opts.path = path
+        new PublishOp(source, opts).apply()
+    }
+
 }

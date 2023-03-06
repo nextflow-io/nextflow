@@ -1244,6 +1244,27 @@ that can be passed as an argument to one or more ``multiMap`` operations, as sho
     due to the parallel and asynchronous nature of Nextflow pipelines.
 
 
+.. _operator-publish:
+
+publish
+-------
+
+.. note::
+  This feature requires Nextflow version ``23.03.0-edge`` or later.
+
+The ``publish`` operator allows you to publish files from a channel as workflow outputs. It has the
+same interface as the ``publishDir`` process directive. The advantage of the ``publish`` operator
+is that it can be used in a workflow to publish files from an arbitrary channel, whereas the
+``publishDir`` can only be applied to process outputs.
+
+::
+    Channel
+        .fromPath('inputs/*.fastq')
+        .publish('outputs', mode: 'copy')
+
+See the :ref:`process-publishDir` section for the list of available options.
+
+
 .. _operator-randomsample:
 
 randomSample

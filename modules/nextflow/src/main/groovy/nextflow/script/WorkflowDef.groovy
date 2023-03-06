@@ -235,23 +235,4 @@ class WorkflowParamsResolver {
         else
             throw new MissingMethodException(name, WorkflowDef, args)
     }
-
-    private Map argsToMap(Object args) {
-        if( args && args.getClass().isArray() ) {
-            if( ((Object[])args)[0] instanceof Map ) {
-                def map = (Map)((Object[])args)[0]
-                return new HashMap(map)
-            }
-        }
-        Collections.emptyMap()
-    }
-
-    private Map argToPublishOpts(Object args) {
-        final opts = argsToMap(args)
-        if( opts.containsKey('saveAs')) {
-            log.warn "Workflow publish does not support `saveAs` option"
-            opts.remove('saveAs')
-        }
-        return opts
-    }
 }
