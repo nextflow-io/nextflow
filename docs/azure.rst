@@ -418,6 +418,7 @@ azure.batch.pools.<name>.scaleInterval          Specify the interval at which to
 azure.batch.pools.<name>.schedulePolicy         Specify the scheduling policy for the pool identified with ``<name>``. It can be either ``spread`` or ``pack`` (default: ``spread``).
 azure.batch.pools.<name>.privileged             Enable the task to run with elevated access. Ignored if `runAs` is set (default: ``false``).
 azure.batch.pools.<name>.runAs                  Specify the username under which the task is run. The user must already exist on each node of the pool.
+azure.batch.pools.<name>.virtualNetwork         Specify the subnet ID of a virtual network in which to create the pool (requires version ``23.03.0-edge`` or later).
 azure.registry.server                           Specify the container registry from which to pull the Docker images (default: ``docker.io``, requires ``nf-azure@0.9.8``).
 azure.registry.userName                         Specify the username to connect to a private container registry (requires ``nf-azure@0.9.8``).
 azure.registry.password                         Specify the password to connect to a private container registry (requires ``nf-azure@0.9.8``).
