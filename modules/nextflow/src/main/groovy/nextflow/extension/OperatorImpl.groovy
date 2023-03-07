@@ -226,9 +226,12 @@ class OperatorImpl {
         return result
     }
 
-    DataflowWriteChannel groupTuple( final DataflowReadChannel source, final Map params=null ) {
-        def result = new GroupTupleOp(params, source).apply()
-        return result
+    DataflowWriteChannel groupMap( DataflowReadChannel source, Map params=null ) {
+        new GroupMapOp(params, source).apply()
+    }
+
+    DataflowWriteChannel groupTuple( DataflowReadChannel source, Map params=null ) {
+        new GroupTupleOp(params, source).apply()
     }
 
     /**

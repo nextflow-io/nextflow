@@ -18,10 +18,8 @@
 package nextflow.extension
 
 import nextflow.Channel
-
-import spock.lang.Specification
-
 import nextflow.Session
+import spock.lang.Specification
 
 /**
  *
@@ -101,8 +99,7 @@ class GroupTupleOpTest extends Specification {
         0       | []
     }
 
-
-    def 'should group items using dyn group size' () {
+    def 'should group items using dynamic group size' () {
         given:
         def k1 = new GroupKey("k1", 2)
         def k2 = new GroupKey('k2', 3)
@@ -129,7 +126,6 @@ class GroupTupleOpTest extends Specification {
         result.val == [k1, ['d', 'c'] ]
         result.val == [k2, ['x', 'y', 'z'] ]
         result.val == Channel.STOP
-
 
         when:
         result = tuples.channel().groupTuple(remainder: true)

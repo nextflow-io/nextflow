@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,43 +24,38 @@ import nextflow.util.ArrayBag
 import nextflow.util.CacheHelper
 import nextflow.util.CheckHelper
 /**
- * Implements {@link OperatorImpl#groupTuple} operator logic
+ * Implements {@link OperatorImpl#groupMap} operator logic
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
-class GroupTupleOp extends AbstractGroupOp {
+class GroupMapOp extends AbstractGroupOp {
 
     private List indices
 
-    private Map<List,List> groups = [:]
+    private Map<List,Map> groups = [:]
 
-    GroupTupleOp(Map params, DataflowReadChannel source) {
+    GroupMapOp(Map params, DataflowReadChannel source) {
 
         super(params, source)
 
-        CheckHelper.checkParams('groupTuple', params, PARAM_TYPES + [ by: [Integer, List] ])
+        CheckHelper.checkParams('groupMap', params, PARAM_TYPES + [ by: [String, List] ])
 
         indices = getIndices(params?.by)
     }
 
-    GroupTupleOp setTarget(DataflowWriteChannel target) {
-        this.@target = target
-        return this
-    }
-
-    static private List<Integer> getIndices( by ) {
+    static private List<String> getIndices( by ) {
 
         if( by == null )
-            return [0]
+            throw new IllegalArgumentException("The `by` option is required for `groupMap` operator: '${by}'")
 
         if( by instanceof List )
-            return by as List<Integer>
+            return by
 
-        if( by instanceof Integer || by.toString().isInteger() )
-            return [by as Integer]
+        if( by instanceof String )
+            return [by]
 
-        throw new IllegalArgumentException("Not a valid `by` index for `groupTuple` operator: '${by}' -- It must be an integer value or a list of integers")
+        throw new IllegalArgumentException("Not a valid `by` index for `groupMap` operator: '${by}' -- It must be a string or a list of strings")
     }
 
     @Override
@@ -74,27 +68,26 @@ class GroupTupleOp extends AbstractGroupOp {
      *
      * @param item
      */
-    private void onNext(List item) {
+    private void onNext(Map item) {
 
         // get the grouping key
-        final key = item[indices]
-        final len = item.size()
+        final key = indices.collect { k -> item[k] }
 
         // get the group for the specified key
         // or create it if it does not exist
-        final List group = groups.getOrCreate(key) {
-            def result = new ArrayList(len)
-            for( int i=0; i<len; i++ )
-                result[i] = (i in indices ? item[i] : new ArrayBag())
+        final Map group = groups.getOrCreate(key) {
+            def result = new HashMap(item.size())
+            for( String k : item.keySet() )
+                result[k] = (k in indices ? item[k] : new ArrayBag())
             return result
         }
 
         // append the values in the item
         int count = -1
-        for( int i=0; i<len; i++ ) {
-            if( i !in indices ) {
-                def list = (List)group[i]
-                list.add( item[i] )
+        for( String k : item.keySet() ) {
+            if( k !in indices ) {
+                def list = (List)group[k]
+                list.add( item[k] )
                 count = list.size()
             }
         }
@@ -121,21 +114,20 @@ class GroupTupleOp extends AbstractGroupOp {
      * @param group
      * @param size
      */
-    private void bindGroup( List group, int size ) {
+    private void bindGroup( Map group, int size ) {
 
-        def item = new ArrayList(group)
+        def item = new HashMap(group)
 
         if( !remainder && size > 0 ) {
             // make sure the group contains 'size' elements
-            List list = group.find { it instanceof List }
-            if( list.size() != size ) {
+            List list = group.values().find { it instanceof List }
+            if( list.size() != size )
                 return
-            }
         }
 
         // sort the grouped entries
         if( comparator )
-            for( def entry : item )
+            for( def entry : item.values() )
                 if( entry instanceof List )
                     Collections.sort((List)entry, comparator)
 

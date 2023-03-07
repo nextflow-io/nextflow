@@ -794,13 +794,44 @@ according to these rules:
 * For any other value, the value itself is used as a key.
 
 
+.. _operator-groupmap:
+
+groupMap
+----------
+
+The ``groupMap`` operator collects maps of values emitted by the source channel, grouping together the
+elements that share the same key, and emitting a new map object for each distinct key collected. It is
+nearly identical to the ``groupTuple`` operator, except that it operates on maps instead of tuples. As such,
+the ``by`` parameter should specify string keys instead of integer indices.
+
+For example::
+
+    Channel.of(
+            [group: 1, name: 'A'],
+            [group: 1, name: 'B'],
+            [group: 2, name: 'C'],
+            [group: 3, name: 'B'],
+            [group: 1, name: 'C'],
+            [group: 2, name: 'A'],
+            [group: 3, name: 'D']
+        )
+        .groupMap(by: 'group')
+        .view()
+
+It prints::
+
+    [group: 1, name: [A, B, C]]
+    [group: 2, name: [C, A]]
+    [group: 3, name: [B, D]]
+
+
 .. _operator-grouptuple:
 
 groupTuple
 ----------
 
-The ``groupTuple`` operator collects tuples (or lists) of values emitted by the source channel grouping together the
-elements that share the same key. Finally it emits a new tuple object for each distinct key collected.
+The ``groupTuple`` operator collects tuples (or lists) of values emitted by the source channel, grouping together the
+elements that share the same key, and emitting a new tuple object for each distinct key collected.
 
 In other words, the operator transforms a sequence of tuple like *(K, V, W, ..)* into a new channel emitting a sequence of
 *(K, list(V), list(W), ..)*
