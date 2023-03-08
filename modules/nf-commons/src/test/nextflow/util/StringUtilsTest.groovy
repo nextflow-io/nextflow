@@ -86,12 +86,12 @@ class StringUtilsTest extends Specification {
         [foo:'Hello']                           | [foo:'Hello']
         [foo: [bar: 'World']]                   | [foo: [bar: 'World']]
         [foo: [password:'hola', token:'hi']]    | [foo: [password:'****', token:'****']]
-        [foo: [password:'12345678']]            | [foo: [password:'123****']]
+        [foo: [password:'1234567890']]          | [foo: [password:'123****']]
         [foo: [customPassword:'hola']]          | [foo: [customPassword:'****']]
         [foo: [towerLicense:'hola']]            | [foo: [towerLicense:'****']]
         [url: 'redis://host:port']              | [url: 'redis://host:port']
-        [url: 'redis://secret@host:port']       | [url: 'redis://sec****@host:port']
-        [url: 'ftp://secret@host:port/x/y']     | [url: 'ftp://sec****@host:port/x/y']
+        [url: 'redis://secret@host:port']       | [url: 'redis://****@host:port']
+        [url: 'ftp://secretlong@host:port/x/y'] | [url: 'ftp://sec****@host:port/x/y']
     }
 
     @Unroll
@@ -117,9 +117,9 @@ class StringUtilsTest extends Specification {
         where:
         SECRET          | EXPECTED
         'hi'            | '****'
-        'Hello'         | 'Hel****'
-        'World'         | 'Wor****'
-        '12345678'      | '123****'
+        'Hello'         | '****'
+        'World'         | '****'
+        '1234567890'    | '123****'
         'hola'          | '****'
         null            | '(null)'
         ''              | '(empty)'
@@ -134,7 +134,7 @@ class StringUtilsTest extends Specification {
         SECRET                  | EXPECTED
         'hi'                    | 'hi'
         'http://foo/bar'        | 'http://foo/bar'
-        'http://secret@foo/bar' | 'http://sec****@foo/bar'
+        'http://secret@foo/bar' | 'http://****@foo/bar'
     }
 
     def 'should check ipv6' () {

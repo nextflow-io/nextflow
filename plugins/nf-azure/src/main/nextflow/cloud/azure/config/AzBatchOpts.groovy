@@ -23,6 +23,8 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import nextflow.cloud.CloudTransferOptions
 import nextflow.util.Duration
+import nextflow.util.StringUtils
+
 /**
  * Model Azure Batch pool config settings
  *
@@ -88,7 +90,7 @@ class AzBatchOpts implements CloudTransferOptions {
     }
 
     String toString() {
-        "endpoint=$endpoint; account-name=$accountName; account-key=${accountKey?.redact()}"
+        "endpoint=$endpoint; account-name=$accountName; account-key=${StringUtils.redact(accountKey)}"
     }
 
     private List<String> endpointParts() {

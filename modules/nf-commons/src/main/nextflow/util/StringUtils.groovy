@@ -98,7 +98,7 @@ class StringUtils {
         if( !value )
             return '(empty)'
         final str = value.toString()
-        return str.length()>=5 ? str[0..2] + '****' : '****'
+        return str.length()>=10 ? str[0..2] + '****' : '****'
     }
 
     static String redactUrlPassword(value) {

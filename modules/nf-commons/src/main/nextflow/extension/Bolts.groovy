@@ -893,6 +893,7 @@ class Bolts {
         }
     }
 
+    @Deprecated
     static redact(String self, int max=5, String suffix='...') {
         if( !self )
             return self

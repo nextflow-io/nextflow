@@ -41,7 +41,7 @@ class ProxyConfig {
         def result = protocol ? "protocol=$protocol; host=$host" : "host=$host"
         if( port ) result += "; port=$port"
         if( username ) result += "; username=$username"
-        if( password ) result += "; password=${password.redact()}"
+        if( password ) result += "; password=${StringUtils.redact(password)}"
         return "ProxyConfig[$result]"
     }
 
