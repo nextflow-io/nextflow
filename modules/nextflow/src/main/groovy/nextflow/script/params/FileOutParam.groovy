@@ -262,21 +262,6 @@ class FileOutParam extends BaseOutParam implements OutParam, ArityParam, Optiona
         return nameObj ? super.getName() : null
     }
 
-    /**
-     * Override to initialize arity with default value based on optional.
-     */
-    @Override
-    Range getArity() {
-        if( ArityParam.super.getArity() == null )
-            ArityParam.super.setArity(
-                filePattern?.contains('*') || filePattern?.contains('?')
-                    ? optional ? '0..*' : '1..*'
-                    : optional ? '0..1' : '1'
-            )
-
-        ArityParam.super.getArity()
-    }
-
     @Override
     FileOutParam setPathQualifier(boolean flag) {
         pathQualifier = flag

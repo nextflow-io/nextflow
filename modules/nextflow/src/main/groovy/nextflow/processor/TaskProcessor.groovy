@@ -1565,7 +1565,7 @@ class TaskProcessor {
             if( result )
                 allFiles.addAll(result)
 
-            else if( param.arity.min > 0 ) {
+            else if( !param.optional && (!param.arity || param.arity.min > 0) ) {
                 def msg = "Missing output file(s) `$filePattern` expected by process `${safeTaskName(task)}`"
                 if( inputsRemovedFlag )
                     msg += " (note: input files are not included in the default matching set)"
@@ -1573,10 +1573,10 @@ class TaskProcessor {
             }
         }
 
-        if( !param.arity.contains(allFiles.size()) )
+        if( param.arity && !param.arity.contains(allFiles.size()) )
             throw new IllegalArgumentException("Incorrect number of output files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${allFiles.size()}")
 
-        task.setOutput( param, allFiles.size()==1 && param.arity.isSingle() ? allFiles[0] : allFiles )
+        task.setOutput( param, allFiles.size()==1 && (!param.arity || param.arity.isSingle()) ? allFiles[0] : allFiles )
 
     }
 
@@ -2024,10 +2024,10 @@ class TaskProcessor {
             def files = normalizeInputToFiles(val, count, fileParam.isPathQualifier(), batch)
             files = expandWildcards( fileParam.getFilePattern(ctx), files )
 
-            if( !param.arity.contains(files.size()) )
+            if( param.arity && !param.arity.contains(files.size()) )
                 throw new IllegalArgumentException("Incorrect number of input files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${files.size()}")
 
-            ctx.put( param.name, singleItemOrList(files, param.arity.isSingle(), task.type) )
+            ctx.put( param.name, singleItemOrList(files, !param.arity || param.arity.isSingle(), task.type) )
             count += files.size()
             for( FileHolder item : files ) {
                 Integer num = allNames.getOrCreate(item.stageName, 0) +1

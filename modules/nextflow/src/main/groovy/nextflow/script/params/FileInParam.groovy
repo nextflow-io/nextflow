@@ -121,21 +121,6 @@ class FileInParam extends BaseInParam implements ArityParam, PathQualifier {
             return value
     }
 
-    /**
-     * Override to initialize arity with default value.
-     */
-    @Override
-    Range getArity() {
-        if( ArityParam.super.getArity() == null )
-            ArityParam.super.setArity(
-                filePattern?.contains('*') || filePattern?.contains('?')
-                    ? '1..*'
-                    : '1'
-            )
-
-        ArityParam.super.getArity()
-    }
-
     @Override
     FileInParam setPathQualifier(boolean flag) {
         pathQualifier = flag
