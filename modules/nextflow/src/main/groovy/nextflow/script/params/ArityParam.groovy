@@ -16,36 +16,41 @@
 
 package nextflow.script.params
 
+import groovy.transform.CompileStatic
 
 /**
  * Implements an arity option for process inputs and outputs.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@CompileStatic
 trait ArityParam {
 
-    private Range arity = null
+    Range arity
 
-    def setArity(String arity) {
-        if( arity.isInteger() ) {
-            def n = arity.toInteger()
+    Range getArity() { arity }
+
+    def setArity(String value) {
+        if( value.isInteger() ) {
+            def n = value.toInteger()
             this.arity = new Range(n, n)
+            return this
         }
-        else if( arity.contains('..') && arity.tokenize('..').size() == 2 ) {
-            def (min, max) = arity.tokenize('..')
-            this.arity = new Range(
-                min == '*' ? 0 : min.toInteger(),
-                max == '*' ? Integer.MAX_VALUE : max.toInteger()
-            )
-        }
-        else {
-            throw new IllegalArgumentException("Output path arity should be a number (e.g. '1') or range (e.g. '1..*')")
-        }
-        return this
-    }
 
-    Range getArity() {
-        arity
+        def tokens = value.tokenize('..')
+        if( tokens.size() == 2 ) {
+            def min = tokens[0]
+            def max = tokens[1]
+            if( min.isInteger() && (max == '*' || max.isInteger()) ) {
+                this.arity = new Range(
+                    min.toInteger(),
+                    max == '*' ? Integer.MAX_VALUE : max.toInteger()
+                )
+                return this
+            }
+        }
+
+        throw new IllegalArgumentException("Path arity should be a number (e.g. '1') or a range (e.g. '1..*')")
     }
 
     static class Range {
