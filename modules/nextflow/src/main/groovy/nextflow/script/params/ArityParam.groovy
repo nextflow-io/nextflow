@@ -72,7 +72,9 @@ trait ArityParam {
 
         @Override
         String toString() {
-            "${min}..${max == Integer.MAX_VALUE ? '*' : max}".toString()
+            min == max
+                ? min.toString()
+                : "${min}..${max == Integer.MAX_VALUE ? '*' : max}".toString()
         }
     }
 

@@ -24,11 +24,15 @@ import spock.lang.Unroll
  */
 class ArityParamTest extends Specification {
 
+    static class DefaultArityParam implements ArityParam {
+        DefaultArityParam() {}
+    }
+
     @Unroll
-    def 'should set arity' () {
+    def testArity () {
 
         when:
-        def param = [:] as ArityParam
+        def param = new DefaultArityParam()
         param.setArity(VALUE)
         then:
         param.arity.min == MIN
@@ -39,6 +43,23 @@ class ArityParamTest extends Specification {
         '1'    | 1   | 1
         '0..1' | 0   | 1
         '1..*' | 1   | Integer.MAX_VALUE
+    }
+
+    @Unroll
+    def testArityRange () {
+
+        when:
+        def range = new ArityParam.Range(MIN, MAX)
+        then:
+        range.contains(2) == TWO
+        range.isSingle() == SINGLE
+        range.toString() == STRING
+
+        where:
+        MIN | MAX               | TWO   | SINGLE | STRING
+        1   | 1                 | false | true   | '1'
+        0   | 1                 | false | true   | '0..1'
+        1   | Integer.MAX_VALUE | true  | false  | '1..*'
     }
 
 }
