@@ -73,25 +73,29 @@ class TokenPathCall {
 }
 
 /**
- * An object of this class replace the {@code stdin} token in input map declaration. For example:
+ * An object of this class replaces the {@code stdin} token in an input map or tuple declaration. For example:
  * <pre>
  * input:
- *   map( stdin, .. ) from x
+ *   map( stdin: stdin, .. )
+ *   tuple( stdin, .. )
  * </pre>
  *
  * @see nextflow.ast.NextflowDSLImpl
+ * @see nextflow.script.params.MapInParam#bind(java.lang.Map)
  * @see nextflow.script.params.TupleInParam#bind(java.lang.Object[])
  */
 class TokenStdinCall { }
 
 /**
- * An object of this class replace the {@code stdout} token in input map declaration. For example:
+ * An object of this class replaces the {@code stdout} token in an output map or tuple declaration. For example:
  * <pre>
- * input:
- *   map( stdout, .. ) into x
+ * output:
+ *   map( stdout: stdout, .. )
+ *   tuple( stdout, .. )
  * </pre>
  *
  * @see nextflow.ast.NextflowDSLImpl
+ * @see nextflow.script.params.MapOutParam#bind(java.lang.Map)
  * @see nextflow.script.params.TupleOutParam#bind(java.lang.Object[])
  */
 class TokenStdoutCall { }

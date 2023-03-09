@@ -38,7 +38,7 @@ interface InParam extends Cloneable {
 
     short index
 
-    short mapIndex
+    short innerIndex
 
     def decodeInputs( List values )
 

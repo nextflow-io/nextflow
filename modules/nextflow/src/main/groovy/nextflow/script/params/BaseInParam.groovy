@@ -210,13 +210,13 @@ abstract class BaseInParam extends BaseParam implements InParam {
         final UNDEF = -1 as short
         def value = inputs[index]
 
-        if( mapIndex == UNDEF || owner instanceof EachInParam )
+        if( innerIndex == UNDEF || owner instanceof EachInParam )
             return value
 
-        if( mapIndex != UNDEF ) {
+        if( innerIndex != UNDEF ) {
             def result
             if( value instanceof Map ) {
-                result = value.values()
+                result = ((MapInParam)owner).extractValues((Map)value)
             }
             else if( value instanceof Collection ) {
                 result = value
@@ -226,7 +226,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
             }
 
             try {
-                return result[mapIndex]
+                return result[innerIndex]
             }
             catch( IndexOutOfBoundsException e ) {
                 throw new ProcessException(e)

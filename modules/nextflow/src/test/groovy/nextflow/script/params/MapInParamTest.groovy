@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,31 +16,31 @@
 
 package nextflow.script.params
 
-import static test.TestParser.*
+import static test.TestParser.parseAndReturnProcess
 
 import test.Dsl2Spec
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
-class TupleInParamTest extends Dsl2Spec {
+class MapInParamTest extends Dsl2Spec {
 
-    def 'should create input tuples'() {
+    def 'should create input maps'() {
         setup:
         def text = '''
             x = 'Hola mundo'
 
             process hola {
               input:
-              tuple val(p) 
-              tuple val(p), val(q) 
-              tuple val(v), path('file_name.fa') 
-              tuple val(p), path('file_name.txt'), '-' 
-              tuple val(p), path(z, stageAs: 'file*')
-              
+              map( p: val(p) )
+              map( p: val(p), q: val(q) )
+              map( v: val(v), fa: path('file_name.fa') )
+              map( v: val(v), txt: path('file_name.txt'), stdin: '-' )
+              map( p: val(p), z: path(z, stageAs: 'file*') )
+
               /foo/
             }
-            
+
             workflow {
               hola(x, x, 'str', 'ciao', x)
             }
@@ -49,13 +48,15 @@ class TupleInParamTest extends Dsl2Spec {
 
         when:
         def process = parseAndReturnProcess(text)
-        TupleInParam in1 = process.config.getInputs().get(0)
-        TupleInParam in2 = process.config.getInputs().get(1)
-        TupleInParam in3 = process.config.getInputs().get(2)
-        TupleInParam in4 = process.config.getInputs().get(3)
-        TupleInParam in5 = process.config.getInputs().get(4)
+        MapInParam in1 = process.config.getInputs().get(0)
+        MapInParam in2 = process.config.getInputs().get(1)
+        MapInParam in3 = process.config.getInputs().get(2)
+        MapInParam in4 = process.config.getInputs().get(3)
+        MapInParam in5 = process.config.getInputs().get(4)
 
         then:
+        process.config.getInputs().size() == 5
+
         in1.inner.size() == 1
         in1.inner.get(0) instanceof ValueInParam
         in1.inner.get(0).index == 0
@@ -88,7 +89,7 @@ class TupleInParamTest extends Dsl2Spec {
         and:
         in4.inner.size() == 3
         in4.inner.get(0) instanceof ValueInParam
-        in4.inner.get(0).name == 'p'
+        in4.inner.get(0).name == 'v'
         in4.inner.get(0).index == 3
         in4.inner.get(0).innerIndex == 0
         in4.inner.get(1) instanceof FileInParam
@@ -113,54 +114,5 @@ class TupleInParamTest extends Dsl2Spec {
         in5.inner.get(1).innerIndex == 1
 
     }
-
-    def 'should create tuple with gstring'() {
-
-        setup:
-        def text = '''
-            q = 'the file content'
-
-            process hola {
-              input:
-              tuple( file('name_$x') ) 
-              tuple( file("${x}_name.${str}") )
-              tuple( file("hola_${x}") ) 
-              tuple file( { "${x}_name.txt" } ) 
-
-              /foo/
-            }
-            
-            workflow {
-              hola(q, q, q, q)
-            }
-            '''
-
-        when:
-        def process = parseAndReturnProcess(text)
-        TupleInParam in0 = process.config.getInputs().get(0)
-        TupleInParam in1 = process.config.getInputs().get(1)
-        TupleInParam in2 = process.config.getInputs().get(2)
-        TupleInParam in3 = process.config.getInputs().get(3)
-        def ctx = [x:'the_file', str: 'fastq']
-
-        then:
-        in0.inChannel.val == 'the file content'
-        in0.inner[0] instanceof FileInParam
-        (in0.inner[0] as FileInParam).name == 'name_$x'
-        (in0.inner[0] as FileInParam).getFilePattern(ctx) == 'name_$x'
-
-        in1.inner[0] instanceof FileInParam
-        (in1.inner[0] as FileInParam).name == '__$fileinparam<1:0>'
-        (in1.inner[0] as FileInParam).getFilePattern(ctx) == 'the_file_name.fastq'
-
-        in2.inner[0] instanceof FileInParam
-        (in2.inner[0] as FileInParam).name == '__$fileinparam<2:0>'
-        (in2.inner[0] as FileInParam).getFilePattern(ctx) == 'hola_the_file'
-
-        in3.inner[0] instanceof FileInParam
-        (in3.inner[0] as FileInParam).name == '__$fileinparam<3:0>'
-        (in3.inner[0] as FileInParam).getFilePattern(ctx) == 'the_file_name.txt'
-    }
-
 
 }

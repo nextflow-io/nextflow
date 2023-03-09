@@ -36,6 +36,8 @@ import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.InParam
 import nextflow.script.params.InputsList
+import nextflow.script.params.MapInParam
+import nextflow.script.params.MapOutParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.OutputsList
 import nextflow.script.params.TupleInParam
@@ -244,6 +246,7 @@ class DAG {
     }
 
     private String inputName0(InParam param) {
+        if( param instanceof MapInParam ) return null
         if( param instanceof TupleInParam ) return null
         if( param instanceof EachInParam ) return null
         return param.name
@@ -257,10 +260,16 @@ class DAG {
                 break
             final it = p.getOutChannel()
             if( it!=null )
-                result << new ChannelHandler(channel: it, label: p instanceof TupleOutParam ? null : p.name)
+                result << new ChannelHandler(channel: it, label: outputName0(p))
         }
 
         return result
+    }
+
+    private String outputName0(OutParam param) {
+        if( param instanceof MapOutParam ) return null
+        if( param instanceof TupleOutParam ) return null
+        return param.name
     }
 
     private List<ChannelHandler> normalizeChannels( entry ) {

@@ -535,6 +535,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         new EachInParam(this).bind(obj)
     }
 
+    InParam _in_map( Map obj ) {
+        new MapInParam(this).bind(obj)
+    }
+
     InParam _in_set( Object... obj ) {
         final msg = "Input of type `set` is deprecated -- Use `tuple` instead"
         if( NF.isDsl2() ) throw new DeprecationException(msg)
@@ -603,6 +607,12 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
                     .setOptions(opts)
                     .bind(obj)
         }
+    }
+
+    OutParam _out_map( Map opts=null, Map obj ) {
+        new MapOutParam(this)
+                .setOptions(opts)
+                .bind(obj)
     }
 
     OutParam _out_set( Object... obj ) {

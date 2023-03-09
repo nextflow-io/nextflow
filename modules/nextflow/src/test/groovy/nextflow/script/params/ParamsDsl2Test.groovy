@@ -197,4 +197,53 @@ class ParamsDsl2Test extends Dsl2Spec {
         out_tuple.inner[1] instanceof FileOutParam
 
     }
+
+    def 'should allow unqualified map stdin and stdout' () {
+
+        given:
+        new Session()
+        and:
+        def config = new CompilerConfiguration()
+        config.setScriptBaseClass(BaseScript.class.name)
+        config.addCompilationCustomizers( new ASTTransformationCustomizer(NextflowDSL))
+
+        def SCRIPT = '''
+            process beta {
+                input:
+                map( stdin: stdin, x: val(x) )
+                output:
+                map( stdout: stdout, z: path('z') )
+
+                /echo foo/
+            }
+        
+            workflow { true } 
+            '''
+
+        when:
+        def binding = new ScriptBinding().setSession(Mock(Session))
+        def script = (BaseScript)new GroovyShell(binding,config).parse(SCRIPT); script.run()
+        and:
+        def process = ScriptMeta.get(script).getProcess('beta'); process.initialize()
+
+        then:
+        def inputs = process.processConfig.getInputs()
+        def outputs = process.processConfig.getOutputs()
+        and:
+        inputs.size() == 1
+        and:
+        def in_map = (MapInParam) inputs.get(0)
+        and:
+        in_map.inner.size() == 2
+        in_map.inner[0] instanceof StdInParam
+        in_map.inner[1] instanceof ValueInParam
+
+        and:
+        def out_map = (MapOutParam) outputs.get(0)
+        and:
+        out_map.inner.size() == 2
+        out_map.inner[0] instanceof StdOutParam
+        out_map.inner[1] instanceof FileOutParam
+
+    }
 }

@@ -88,6 +88,8 @@ import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
 import nextflow.script.params.InParam
+import nextflow.script.params.MapInParam
+import nextflow.script.params.MapOutParam
 import nextflow.script.params.MissingParam
 import nextflow.script.params.OptionalParam
 import nextflow.script.params.OutParam
@@ -397,15 +399,23 @@ class TaskProcessor {
         if ( !taskBody )
             throw new IllegalStateException("Missing task body for process `$name`")
 
-        // -- check that input set defines at least two elements
-        def invalidInputSet = config.getInputs().find { it instanceof TupleInParam && it.inner.size()<2 }
-        if( invalidInputSet )
-            checkWarn "Input `set` must define at least two component -- Check process `$name`"
+        // -- check that input/output map defines at least two elements
+        def invalidInputMap = config.getInputs().find { it instanceof MapInParam && it.inner.size()<2 }
+        if( invalidInputMap )
+            checkWarn "Input `map` must define at least two elements -- Check process `$name`"
 
-        // -- check that output set defines at least two elements
-        def invalidOutputSet = config.getOutputs().find { it instanceof TupleOutParam && it.inner.size()<2 }
-        if( invalidOutputSet )
-            checkWarn "Output `set` must define at least two component -- Check process `$name`"
+        def invalidOutputMap = config.getOutputs().find { it instanceof MapOutParam && it.inner.size()<2 }
+        if( invalidOutputMap )
+            checkWarn "Output `map` must define at least two elements -- Check process `$name`"
+
+        // -- check that input/output tuple defines at least two elements
+        def invalidInputTuple = config.getInputs().find { it instanceof TupleInParam && it.inner.size()<2 }
+        if( invalidInputTuple )
+            checkWarn "Input `tuple` must define at least two elements -- Check process `$name`"
+
+        def invalidOutputTuple = config.getOutputs().find { it instanceof TupleOutParam && it.inner.size()<2 }
+        if( invalidOutputTuple )
+            checkWarn "Output `tuple` must define at least two elements -- Check process `$name`"
 
         /**
          * Verify if this process run only one time
@@ -588,8 +598,11 @@ class TaskProcessor {
         // -- set the task instance as the current in this thread
         currentTask.set(task)
 
-        // -- validate input lengths
-        validateInputSets(values)
+        // -- validate input maps
+        validateInputMaps(values)
+
+        // -- validate input tuples
+        validateInputTuples(values)
 
         // -- map the inputs to a map and use to delegate closure values interpolation
         final secondPass = [:]
@@ -619,21 +632,36 @@ class TaskProcessor {
     }
 
     @Memoized
-    private List<TupleInParam> getDeclaredInputSet() {
+    private List<MapInParam> getDeclaredInputMaps() {
+        getConfig().getInputs().ofType(MapInParam)
+    }
+
+    protected void validateInputMaps( List values ) {
+        for( param : getDeclaredInputMaps() ) {
+            final entry = values[param.index]
+            final expected = param.inner.size()
+            final actual = entry instanceof Map ? entry.size() : 1
+
+            if( actual != expected ) {
+                final msg = "Input map does not match cardinality declared by process `$name` -- offending value: $entry"
+                checkWarn(msg, [firstOnly: true, cacheKey: this])
+            }
+        }
+    }
+
+    @Memoized
+    private List<TupleInParam> getDeclaredInputTuples() {
         getConfig().getInputs().ofType(TupleInParam)
     }
 
-    protected void validateInputSets( List values ) {
-
-        def declaredSets = getDeclaredInputSet()
-        for( int i=0; i<declaredSets.size(); i++ ) {
-            final param = declaredSets[i]
+    protected void validateInputTuples( List values ) {
+        for( param : getDeclaredInputTuples() ) {
             final entry = values[param.index]
             final expected = param.inner.size()
             final actual = entry instanceof Collection ? entry.size() : (entry instanceof Map ? entry.size() : 1)
 
             if( actual != expected ) {
-                final msg = "Input tuple does not match input set cardinality declared by process `$name` -- offending value: $entry"
+                final msg = "Input tuple does not match cardinality declared by process `$name` -- offending value: $entry"
                 checkWarn(msg, [firstOnly: true, cacheKey: this])
             }
         }
@@ -723,8 +751,10 @@ class TaskProcessor {
          * initialize the inputs/outputs for this task instance
          */
         config.getInputs().each { InParam param ->
-            if( param instanceof TupleInParam )
-                param.inner.each { task.setInput(it)  }
+            if( param instanceof MapInParam )
+                param.inner.each { task.setInput(it) }
+            else if( param instanceof TupleInParam )
+                param.inner.each { task.setInput(it) }
             else if( param instanceof EachInParam )
                 task.setInput(param.inner)
             else
@@ -732,9 +762,10 @@ class TaskProcessor {
         }
 
         config.getOutputs().each { OutParam param ->
-            if( param instanceof TupleOutParam ) {
+            if( param instanceof MapOutParam )
                 param.inner.each { task.setOutput(it) }
-            }
+            else if( param instanceof TupleOutParam )
+                param.inner.each { task.setOutput(it) }
             else
                 task.setOutput(param)
         }
@@ -1431,7 +1462,9 @@ class TaskProcessor {
 
     protected void bindOutParam( OutParam param, List values ) {
         log.trace "<$name> Binding param $param with $values"
-        final x = values.size() == 1 ? values[0] : values
+        final x = param instanceof MapOutParam
+            ? ((MapOutParam)param).makeMap(values)
+            : values.size() == 1 ? values[0] : values
         final ch = param.getOutChannel()
         if( ch != null ) {
             ch.bind(x)
