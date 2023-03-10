@@ -422,6 +422,7 @@ else
       launcher+=(--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/java.util.regex=ALL-UNNAMED)
       [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
       launcher+=("${cmd_tail[@]}")
     else
