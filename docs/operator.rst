@@ -808,7 +808,15 @@ In other words, the operator transforms a sequence of tuple like *(K, V, W, ..)*
 For example::
 
     Channel
-        .of( [1,'A'], [1,'B'], [2,'C'], [3, 'B'], [1,'C'], [2, 'A'], [3, 'D'] )
+        .of(
+            [1, 'A'],
+            [1, 'B'],
+            [2, 'C'],
+            [3, 'B'],
+            [1, 'C'],
+            [2, 'A'],
+            [3, 'D']
+        )
         .groupTuple()
         .view()
 
@@ -823,7 +831,15 @@ By default the first entry in the tuple is used as grouping key. A different key
 grouping by the second value in each tuple::
 
     Channel
-        .of( [1,'A'], [1,'B'], [2,'C'], [3, 'B'], [1,'C'], [2, 'A'], [3, 'D'] )
+        .of(
+            [1, 'A'],
+            [1, 'B'],
+            [2, 'C'],
+            [3, 'B'],
+            [1, 'C'],
+            [2, 'A'],
+            [3, 'D']
+        )
         .groupTuple(by: 1)
         .view()
 
@@ -1773,19 +1789,24 @@ transpose
 The ``transpose`` operator transforms a channel in such a way that the emitted items are the result of a transposition
 of all tuple elements in each item. For example::
 
-    Channel.of(
-        ['a', ['p', 'q'], ['u','v']],
-        ['b', ['s', 't'], ['x','y']]
+    Channel
+        .of(
+            [1, ['A', 'B', 'C']],
+            [2, ['C', 'A']],
+            [3, ['B', 'D']]
         )
         .transpose()
         .view()
 
 The above snippet prints::
 
-    [a, p, u]
-    [a, q, v]
-    [b, s, x]
-    [b, t, y]
+    [1, A]
+    [1, B]
+    [1, C]
+    [2, C]
+    [2, A]
+    [3, B]
+    [3, D]
 
 Available parameters:
 
