@@ -151,7 +151,7 @@ the Nextflow configuration file::
 
 The first repository is used to store the built container images. The second one is used to store the individual image layers for caching purposes.
 
-The repository access keys need to be provided as Tower credentials (see
+The repository access keys must be provided as Tower credentials (see
 `Authenticate private repositories`_ above).
 
 
