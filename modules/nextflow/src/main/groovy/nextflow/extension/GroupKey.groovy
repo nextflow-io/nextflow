@@ -31,7 +31,7 @@ import org.codehaus.groovy.runtime.InvokerHelper
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class GroupKey implements CacheFunnel {
+class GroupKey implements CacheFunnel, Cloneable {
 
     private final Object target
 
