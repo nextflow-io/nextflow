@@ -100,6 +100,7 @@ import nextflow.script.params.ValueOutParam
 import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.CacheHelper
+import nextflow.util.Escape
 import nextflow.util.LockManager
 import nextflow.util.LoggerHelper
 import nextflow.util.TestOnly
@@ -1961,7 +1962,7 @@ class TaskProcessor {
             }
             else {
                 // escape both wrapping double quotes and the dollar var placeholder
-                script << /export $name="${value.replace('$','\\$')}"/
+                script << /export $name="${Escape.variable(value)}"/
             }
         }
         script << ''

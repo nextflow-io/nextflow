@@ -95,4 +95,24 @@ class EscapeTest extends Specification {
         'foo\f'     | 'foo\\f'
         'foo\r'     | 'foo\\r'
     }
+
+    def 'should escape special char' () {
+        expect:
+        Escape.variable(STR) == EXPECT
+        where:
+        STR         | EXPECT
+        'foo'       | 'foo'
+        'foo[x]bar' | 'foo[x]bar'
+        'foo '      | 'foo '
+        'foo:bar'   | 'foo:bar'
+        'foo!bar'   | 'foo!bar'
+        'foo[!x]bar'| 'foo[!x]bar'
+        and:
+        '$foo'      | '\\$foo'
+        'foo|bar'   | 'foo\\|bar'
+        'foo`bar'   | 'foo\\`bar'
+        'foo&bar'   | 'foo\\&bar'
+        'foo(x)bar' | 'foo\\(x\\)bar'
+        'foo<x>bar' | 'foo\\<x\\>bar'
+    }
 }

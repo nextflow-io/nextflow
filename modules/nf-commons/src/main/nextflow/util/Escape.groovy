@@ -32,6 +32,8 @@ class Escape {
 
     private static List<String> SPECIAL_CHARS = ["'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':']
 
+    private static List<String> VAR_CHARS = ['$', "'", '"', '(', ')', '\\', '&', '|', '<', '>', '`']
+
     private static List<String> WILDCARDS = ["*", "?", "{", "}", "[", "]", "'", '"', ' ', '(', ')', '\\', '!', '&', '|', '<', '>', '`', ':']
 
     private static String replace(List<String> special, String str, boolean doNotEscapeComplement=false) {
@@ -103,5 +105,9 @@ class Escape {
                 .replaceAll('\r',/\\r/)
                 .replaceAll('\f',/\\f/)
 
+    }
+
+    static String variable(String val) {
+        replace(VAR_CHARS, val, false)
     }
 }
