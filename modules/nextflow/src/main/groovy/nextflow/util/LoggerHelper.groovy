@@ -442,7 +442,7 @@ class LoggerHelper {
     static protected void appendFormattedMessage( StringBuilder buffer, ILoggingEvent event, Throwable fail, Session session) {
         final className = session?.script?.getClass()?.getName()
         final message = event.getFormattedMessage()
-        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || ScriptRuntimeException
+        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || fail instanceof ScriptRuntimeException
         final normalize = { String str -> str ?. replace("${className}.", '')}
         List error = fail ? findErrorLine(fail) : null
 
