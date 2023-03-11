@@ -779,9 +779,12 @@ class TaskProcessorTest extends Specification {
                 .stripIndent().leftTrim()
 
         when:
-        env = TaskProcessor.bashEnvironmentScript([PATH: 'foo:$PATH'], true)
+        env = TaskProcessor.bashEnvironmentScript([PATH: 'foo:$PATH', HOLA: 'one|two'], true)
         then:
-        env.trim() == 'export PATH="foo:\\$PATH"'
+        env == '''\
+            export PATH="foo:\\$PATH"
+            export HOLA="one\\|two"
+            '''.stripIndent()
         env.charAt(env.size()-1) == '\n' as char
 
         when:
