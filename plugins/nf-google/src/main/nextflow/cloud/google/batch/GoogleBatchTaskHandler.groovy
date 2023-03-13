@@ -37,6 +37,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionScriptLauncher
@@ -158,6 +159,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             computeResource.setBootDiskMib( disk.getMega() )
 
         // container
+        if( !task.container )
+            throw new ProcessUnrecoverableException("Container image is required for Google Batch tasks")
+
         final cmd = launcher.launchCommand()
         final container = Runnable.Container.newBuilder()
             .setImageUri( task.container )
