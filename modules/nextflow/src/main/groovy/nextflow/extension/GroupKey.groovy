@@ -53,6 +53,8 @@ class GroupKey implements CacheFunnel, Cloneable {
 
     int getGroupSize() { size }
 
+    Object getGroupTarget() { target }
+
     /**
      * Delegate any method invocation to the target key object
      *
