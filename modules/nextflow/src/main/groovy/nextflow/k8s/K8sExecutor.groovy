@@ -19,10 +19,10 @@ package nextflow.k8s
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.executor.Executor
 import nextflow.fusion.FusionHelper
-import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
@@ -43,7 +43,7 @@ class K8sExecutor extends Executor {
     /**
      * The Kubernetes HTTP client
      */
-    protected K8sClient client
+    private K8sClient client
 
     protected K8sClient getClient() {
         client
@@ -57,10 +57,6 @@ class K8sExecutor extends Executor {
         new K8sConfig( (Map<String,Object>)session.config.k8s )
     }
 
-    protected K8sClient createClient( ClientConfig clientConfig ) {
-        return new K8sClient( clientConfig )
-    }
-
     /**
      * Initialise the executor setting-up the kubernetes client configuration
      */
@@ -69,7 +65,7 @@ class K8sExecutor extends Executor {
         super.register()
         final k8sConfig = getK8sConfig()
         final clientConfig = k8sConfig.getClient()
-        this.client = createClient( clientConfig )
+        this.client = new K8sClient(clientConfig)
         log.debug "[K8s] config=$k8sConfig; API client config=$clientConfig"
     }
 
