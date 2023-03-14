@@ -15,43 +15,33 @@
  *
  */
 
-package com.upplication.s3fs.experiment
+package io.seqera.wave.plugin.config
 
-import com.upplication.s3fs.experiment.AtomicBigInteger
 import spock.lang.Specification
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class AtomicBigIntegerTest extends Specification {
+class CondaOptsTest extends Specification {
 
-    def 'should increment and get' ( ) {
-        given:
-        def acc = new AtomicBigInteger()
+    def 'check conda options' () {
+        when:
+        def opts = new CondaOpts([:])
+        then:
+        opts.mambaImage == CondaOpts.DEFAULT_MAMBA_IMAGE
+        !opts.basePackages
+        !opts.commands
 
-        expect:
-        and:
-        acc.incrementAndGet() == 1
-        acc.incrementAndGet() == 2
-        and:
-        acc.getAndIncrement() == 2
-        acc.getAndIncrement() == 3
-        and:
-        acc.get() == 4
-
+        when:
+        opts = new CondaOpts([
+                mambaImage:'foo:latest',
+                commands: ['this','that'],
+                basePackages: 'some::more-package'
+        ])
+        then:
+        opts.mambaImage == 'foo:latest'
+        opts.basePackages == 'some::more-package'
+        opts.commands == ['this','that']
     }
-
-    def 'should increment one and get' ( ) {
-        given:
-        def acc = new AtomicBigInteger()
-
-        expect:
-        and:
-        acc.getAndIncrement(1) == 0
-        and:
-        acc.get() == 1
-
-    }
-
 }

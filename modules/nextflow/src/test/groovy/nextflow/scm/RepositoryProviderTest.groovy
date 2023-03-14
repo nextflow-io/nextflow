@@ -80,8 +80,8 @@ class RepositoryProviderTest extends Specification {
         when:
         result = provider.getAuthObfuscated()
         then:
-        provider.getUser() >> 'foo123'
-        provider.getPassword() >> 'bar456'
+        provider.getUser() >> 'foo1234567890'
+        provider.getPassword() >> 'bar4567890'
         and:
         result == 'foo****:bar****'
 

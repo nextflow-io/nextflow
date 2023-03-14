@@ -1574,7 +1574,7 @@ workflow {
 }
 ```
 
-The above example produces the following output:
+The above example produces:
 
 ```
 [1, A]
