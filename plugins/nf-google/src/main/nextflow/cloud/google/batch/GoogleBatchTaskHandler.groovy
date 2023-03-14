@@ -160,7 +160,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         // container
         if( !task.container )
-            throw new ProcessUnrecoverableException("Container image is required for Google Batch tasks")
+            throw new ProcessUnrecoverableException("Process `${task.lazyName()}` failed because the container image was not specified")
 
         final cmd = launcher.launchCommand()
         final container = Runnable.Container.newBuilder()
