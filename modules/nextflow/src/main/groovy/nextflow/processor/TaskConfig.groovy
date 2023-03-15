@@ -136,7 +136,11 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     def get( String key ) {
-        if( cache.containsKey(key) )
+        return get(key, false)
+    }
+
+    def get( String key, boolean ignoreCache ) {
+        if( !ignoreCache && cache.containsKey(key) )
             return cache.get(key)
 
         def result
@@ -151,7 +155,8 @@ class TaskConfig extends LazyMap implements Cloneable {
         else
             result = super.get(key)
 
-        cache.put(key,result)
+        if (!ignoreCache)
+            cache.put(key,result)
         return result
     }
 
@@ -222,7 +227,7 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     ErrorStrategy getErrorStrategy() {
-        final strategy = get('errorStrategy')
+        final strategy = get('errorStrategy', true)
         if( strategy instanceof CharSequence )
             return strategy.toString().toUpperCase() as ErrorStrategy
 
