@@ -15,27 +15,39 @@
  *
  */
 
-package com.upplication.s3fs.experiment
+package nextflow.cloud.google.batch
 
-import com.upplication.s3fs.experiment.TransferRateMeter
-import org.junit.Ignore
-import spock.lang.Specification
+import com.google.cloud.batch.v1.Volume
+import groovy.transform.Canonical
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Ignore
-class TransferRateMeterTest extends Specification {
+@Canonical
+class GoogleBatchLauncherSpecMock implements GoogleBatchLauncherSpec {
 
-    def 'should compute rate' () {
-        given:
-        def meter = new TransferRateMeter()
+    String runCommand
+    List<String> containerMounts = List.of()
+    List<Volume> volumes = List.of()
+    Map<String,String> environment = Map.of()
 
-        when:
-        def t = Thread.start { 100.times { index -> sleep 100; meter.inc(10_000) } }
-        t.join()
-        then:
-        noExceptionThrown()
+    @Override
+    List<String> getContainerMounts() {
+        return containerMounts
+    }
 
+    @Override
+    List<Volume> getVolumes() {
+        return volumes
+    }
+
+    @Override
+    String runCommand() {
+        return runCommand
+    }
+
+    Map<String,String> getEnvironment() {
+        return environment
     }
 }

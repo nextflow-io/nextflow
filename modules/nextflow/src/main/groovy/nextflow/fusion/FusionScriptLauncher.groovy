@@ -39,13 +39,10 @@ class FusionScriptLauncher extends BashWrapperBuilder {
 
     private String scheme
     private Path remoteWorkDir
-    private Set<String> buckets = new HashSet<>()
     private Map<String,String> env
 
     /* ONLY FOR TESTING - DO NOT USE */
-    protected FusionScriptLauncher() {
-        this.buckets = new HashSet<>()
-    }
+    protected FusionScriptLauncher() { }
 
     static FusionScriptLauncher create(TaskBean bean, String scheme) {
 
@@ -54,12 +51,12 @@ class FusionScriptLauncher extends BashWrapperBuilder {
 
         // map bean work and target dirs to container mount
         // this needed to create the command launcher using container local file paths
-        bean.workDir = toContainerMount(bean.workDir, scheme, buckets)
-        bean.targetDir = toContainerMount(bean.targetDir, scheme, buckets)
+        bean.workDir = toContainerMount(bean.workDir, scheme)
+        bean.targetDir = toContainerMount(bean.targetDir, scheme)
 
         // remap input files to container mounted paths
         for( Map.Entry<String,Path> entry : new HashMap<>(bean.inputFiles).entrySet() ) {
-            bean.inputFiles.put( entry.key, toContainerMount(entry.value, scheme, buckets) )
+            bean.inputFiles.put( entry.key, toContainerMount(entry.value, scheme) )
         }
 
         // make it change to the task work dir
@@ -76,7 +73,6 @@ class FusionScriptLauncher extends BashWrapperBuilder {
         // keep track the google storage work dir
         this.scheme = scheme
         this.remoteWorkDir = remoteWorkDir
-        this.buckets = buckets
     }
 
     static protected String headerScript(TaskBean bean) {
@@ -84,11 +80,7 @@ class FusionScriptLauncher extends BashWrapperBuilder {
     }
 
     Path toContainerMount(Path path) {
-        toContainerMount(path,scheme,buckets)
-    }
-
-    Set<String> fusionBuckets() {
-        return buckets
+        toContainerMount(path,scheme)
     }
 
     Map<String,String> fusionEnv() {
@@ -96,7 +88,6 @@ class FusionScriptLauncher extends BashWrapperBuilder {
             final work = toContainerMount(remoteWorkDir).toString()
             final result = new LinkedHashMap(10)
             result.FUSION_WORK = work
-            result.FUSION_TAGS="[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
             // foreign env
             final provider = new FusionEnvProvider()
             result.putAll(provider.getEnvironment(scheme))

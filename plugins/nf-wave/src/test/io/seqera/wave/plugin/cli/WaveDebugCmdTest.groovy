@@ -15,43 +15,33 @@
  *
  */
 
-package com.upplication.s3fs.experiment
+package io.seqera.wave.plugin.cli
 
-import com.upplication.s3fs.experiment.AtomicBigInteger
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class AtomicBigIntegerTest extends Specification {
+class WaveDebugCmdTest extends Specification {
 
-    def 'should increment and get' ( ) {
-        given:
-        def acc = new AtomicBigInteger()
-
+    @Unroll
+    def 'should check remote path' () {
         expect:
+        WaveDebugCmd.isRemotePath(PATH) == EXPECTED
+        where:
+        PATH                | EXPECTED
+        null                | false
+        'foo'               | false
+        '/some/file'        | false
         and:
-        acc.incrementAndGet() == 1
-        acc.incrementAndGet() == 2
+        's3://foo/bar'      | true
+        'gs://foo/bar'      | true
         and:
-        acc.getAndIncrement() == 2
-        acc.getAndIncrement() == 3
-        and:
-        acc.get() == 4
-
-    }
-
-    def 'should increment one and get' ( ) {
-        given:
-        def acc = new AtomicBigInteger()
-
-        expect:
-        and:
-        acc.getAndIncrement(1) == 0
-        and:
-        acc.get() == 1
-
+        'file:/foo/bar'     | false
+        'file://foo/bar'    | false
+        'file:///foo/bar'   | false
     }
 
 }

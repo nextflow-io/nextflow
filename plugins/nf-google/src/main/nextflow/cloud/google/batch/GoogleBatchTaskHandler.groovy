@@ -1,4 +1,5 @@
 /*
+ * Copyright 2023, Seqera Labs
  * Copyright 2022, Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,10 +17,15 @@
 
 package nextflow.cloud.google.batch
 
+import nextflow.cloud.types.CloudMachineInfo
+import nextflow.cloud.types.PriceModel
+import nextflow.processor.TaskConfig
+
 import java.nio.file.Path
 
 import com.google.cloud.batch.v1.AllocationPolicy
 import com.google.cloud.batch.v1.ComputeResource
+import com.google.cloud.batch.v1.Environment
 import com.google.cloud.batch.v1.Job
 import com.google.cloud.batch.v1.LogsPolicy
 import com.google.cloud.batch.v1.Runnable
@@ -31,11 +37,16 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
+import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
+
+
 /**
  * Implements a task handler for Google Batch executor
  * 
@@ -43,7 +54,7 @@ import nextflow.trace.TraceRecord
  */
 @Slf4j
 @CompileStatic
-class GoogleBatchTaskHandler extends TaskHandler {
+class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private GoogleBatchExecutor executor
 
@@ -70,6 +81,8 @@ class GoogleBatchTaskHandler extends TaskHandler {
      */
     private String jobState
 
+    private volatile CloudMachineInfo machineInfo
+
     private volatile long timestamp
 
     GoogleBatchTaskHandler(TaskRun task, GoogleBatchExecutor executor) {
@@ -84,14 +97,27 @@ class GoogleBatchTaskHandler extends TaskHandler {
     }
 
     protected BashWrapperBuilder createTaskWrapper() {
-        final taskBean = task.toTaskBean()
-        return new GoogleBatchScriptLauncher(taskBean, executor.remoteBinDir)
+        if( fusionEnabled() ) {
+            return fusionLauncher()
+        }
+        else {
+            final taskBean = task.toTaskBean()
+            return new GoogleBatchScriptLauncher(taskBean, executor.remoteBinDir)
+        }
     }
 
     /*
      * Only for testing -- do not use
      */
     protected GoogleBatchTaskHandler() {}
+
+    protected GoogleBatchLauncherSpec spec0(BashWrapperBuilder launcher) {
+        if( launcher instanceof GoogleBatchScriptLauncher )
+            return launcher
+        if( launcher instanceof FusionScriptLauncher )
+            return new GoogleBatchFusionAdapter(this, launcher)
+        throw new IllegalArgumentException("Unexpected Google Batch launcher type: ${launcher?.getClass()?.getName()}")
+    }
 
     @Override
     void submit() {
@@ -104,7 +130,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
         /*
          * create submit request
          */
-        final req = newSubmitRequest(task, launcher as GoogleBatchLauncherSpec)
+        final req = newSubmitRequest(task, spec0(launcher))
         log.trace "[GOOGLE BATCH] new job request > $req"
         final resp = client.submitJob(jobId, req)
         this.uid = resp.getUid()
@@ -133,10 +159,13 @@ class GoogleBatchTaskHandler extends TaskHandler {
             computeResource.setBootDiskMib( disk.getMega() )
 
         // container
-        final cmd = launcher.runCommand()
+        if( !task.container )
+            throw new ProcessUnrecoverableException("Process `${task.lazyName()}` failed because the container image was not specified")
+
+        final cmd = launcher.launchCommand()
         final container = Runnable.Container.newBuilder()
             .setImageUri( task.container )
-            .addAllCommands( ['/bin/bash','-o','pipefail','-c', cmd] )
+            .addAllCommands( cmd )
             .addAllVolumes( launcher.getContainerMounts() )
 
         final accel = task.config.getAccelerator()
@@ -151,7 +180,7 @@ class GoogleBatchTaskHandler extends TaskHandler {
         def containerOptions= task.config.getContainerOptions() ?: ''
         // accelerator requires privileged option
         // https://cloud.google.com/batch/docs/create-run-job#create-job-gpu
-        if( task.config.getAccelerator() ) {
+        if( task.config.getAccelerator() || fusionEnabled()) {
             if( containerOptions ) containerOptions += ' '
             containerOptions += '--privileged'
         }
@@ -160,11 +189,17 @@ class GoogleBatchTaskHandler extends TaskHandler {
             container.setOptions( containerOptions )
 
         // task spec
+        final env = Environment
+                .newBuilder()
+                .putAllVariables( launcher.getEnvironment() )
+                .build()
+
         taskSpec
             .setComputeResource(computeResource)
             .addRunnables(
                 Runnable.newBuilder()
                     .setContainer(container)
+                    .setEnvironment(env)
             )
             .addAllVolumes( launcher.getVolumes() )
 
@@ -196,6 +231,10 @@ class GoogleBatchTaskHandler extends TaskHandler {
         if( task.config.getMachineType() )
             instancePolicy.setMachineType( task.config.getMachineType() )
 
+        machineInfo = findBestMachineType(task.config)
+        if( machineInfo )
+            instancePolicy.setMachineType(machineInfo.type)
+
         if( executor.config.serviceAccountEmail )
             allocationPolicy.setServiceAccount(
                 ServiceAccount.newBuilder()
@@ -207,6 +246,17 @@ class GoogleBatchTaskHandler extends TaskHandler {
 
         if( executor.config.spot )
             instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.SPOT )
+
+        // Fusion configuration
+        if( fusionEnabled() ) {
+            instancePolicy.addDisks(AllocationPolicy.AttachedDisk.newBuilder()
+                    .setNewDisk(AllocationPolicy.Disk.newBuilder()
+                            .setType("local-ssd")
+                            .setSizeGb(375)
+                    )
+                    .setDeviceName("fusion")
+            )
+        }
 
         allocationPolicy.addInstances(
             instancePolicyOrTemplate
@@ -336,13 +386,51 @@ class GoogleBatchTaskHandler extends TaskHandler {
         }
     }
 
+    protected CloudMachineInfo getMachineInfo() {
+        return machineInfo
+    }
+
     @Override
     TraceRecord getTraceRecord() {
         def result = super.getTraceRecord()
         if( jobId && uid ) {
             result.put('native_id', "$jobId/$uid")
         }
+        result.machineInfo = getMachineInfo()
         return result
+    }
+
+    protected CloudMachineInfo findBestMachineType(TaskConfig config) {
+        final location = client.location
+        final cpus = config.getCpus()
+        final memory = config.getMemory() ? config.getMemory().toMega().toInteger() : 1024
+        final spot = executor.config.spot ?: executor.config.preemptible
+        final useSSD = fusionEnabled()
+        final families = config.getMachineType() ? config.getMachineType().tokenize(',') : []
+        final priceModel = spot ? PriceModel.spot : PriceModel.standard
+
+        try {
+            return new CloudMachineInfo(
+                    type: GoogleBatchMachineTypeSelector.INSTANCE.bestMachineType(cpus, memory, location, spot, useSSD, families),
+                    zone: location,
+                    priceModel: priceModel
+            )
+        }
+        catch (Exception e) {
+            log.debug "[GOOGLE BATCH] Cannot select machine type using cloud info for task: `$task.name` | ${e.message}"
+
+            // Check if a specific machine type was provided by the user
+            if( config.getMachineType() && !config.getMachineType().contains(',') && !config.getMachineType().contains('*') )
+                return new CloudMachineInfo(
+                        type: config.getMachineType(),
+                        zone: location,
+                        priceModel: priceModel
+                )
+
+            // Fallback to Google Batch automatically deduce from requested resources
+            return null
+        }
+
     }
 
 }

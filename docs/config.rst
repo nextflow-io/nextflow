@@ -123,6 +123,7 @@ connectionTimeout           The amount of time to wait (in milliseconds) when in
 endpoint                    The AWS S3 API entry point e.g. `s3-us-west-1.amazonaws.com`.
 glacierAutoRetrieval        Enable auto retrieval of S3 objects stored with Glacier class store (EXPERIMENTAL. default: ``false``, requires version ``22.12.0-edge`` or later).
 glacierExpirationDays       The time, in days, between when an object is restored to the bucket and when it expires (EXPERIMENTAL. default: ``7``, requires version ``22.12.0-edge`` or later).
+glacierRetrievalTier        The retrieval tier to use when restoring objects from Glacier, one of [``Expedited``, ``Standard``, ``Bulk``] (EXPERIMENTAL. requires version ``23.03.0-edge`` or later).
 maxConnections              The maximum number of allowed open HTTP connections.
 maxErrorRetry               The maximum number of retry attempts for failed retryable requests.
 protocol                    The protocol (i.e. HTTP or HTTPS) to use when connecting to AWS.
@@ -370,9 +371,9 @@ The ``executor`` configuration scope allows you to set the optional executor set
 Name                  Description
 ===================== =====================
 name                  The name of the executor to be used (default: ``local``).
-queueSize             The number of tasks the executor will handle in a parallel manner (default: ``100``).
+queueSize             The number of tasks the executor will handle in a parallel manner. Default varies for each executor (see below).
 submitRateLimit       Determines the max rate of job submission per time unit, for example ``'10sec'`` (10 jobs per second) or ``'50/2min'`` (50 jobs every 2 minutes) (default: unlimited).
-pollInterval          Determines how often to check for process termination. Default varies for each executor.
+pollInterval          Determines how often to check for process termination. Default varies for each executor (see below).
 dumpInterval          Determines how often to log the executor status (default: ``5min``).
 queueGlobalStatus     Determines how job status is retrieved. When ``false`` only the queue associated with the job execution is queried. When ``true`` the job status is queried globally i.e. irrespective of the submission queue (default: ``false``, requires version ``23.01.0-edge`` or later).
 queueStatInterval     Determines how often to fetch the queue status from the scheduler (default: ``1min``). Used only by grid executors.
@@ -389,6 +390,19 @@ retry.jitter          Jitter value when retrying failed job submissions (default
 retry.maxAttempts     Max attempts when retrying failed job submissions (default: ``3``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
 retry.reason          Regex pattern that when verified cause a failed submit operation to be re-tried (default: ``Socket timed out``). NOTE: used only by grid executors (requires ``22.03.0-edge`` or later).
 ===================== =====================
+
+Some executor settings have different default values depending on the executor.
+
+===================== =============== ==================
+Executor              ``queueSize``   ``pollInterval``
+===================== =============== ==================
+AWS Batch             ``1000``        ``10s``
+Azure Batch           ``1000``        ``10s``
+Google Batch          ``1000``        ``10s``
+Grid Executors        ``100``         ``5s``
+Kubernetes            ``100``         ``5s``
+Local                 N/A             ``100ms``
+===================== =============== ==================
 
 The executor settings can be defined as shown below::
 
@@ -830,6 +844,33 @@ registry            The registry from where Docker images are pulled. It should 
 Read :ref:`container-singularity` page to learn more about how to use Singularity containers with Nextflow.
 
 
+.. _config-apptainer:
+
+ Scope `apptainer`
+ -------------------
+
+ The ``apptainer`` configuration scope controls how `Apptainer <https://apptainer.org>`_ containers are executed
+ by Nextflow.
+
+ The following settings are available:
+
+ ================== ================
+ Name                Description
+ ================== ================
+ enabled             Turn this flag to ``true`` to enable Apptainer execution (default: ``false``).
+ engineOptions       This attribute can be used to provide any option supported by the Apptainer engine i.e. ``apptainer [OPTIONS]``.
+ envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+ runOptions          This attribute can be used to provide any extra command line options supported by the ``apptainer exec``.
+ noHttps             Turn this flag to ``true`` to pull the Apptainer image with http protocol (default: ``false``).
+ autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Apptainer installation (default: ``false``).
+ cacheDir            The directory where remote Apptainer images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+ pullTimeout         The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: ``20 min``).
+ registry            The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
+ ================== ================
+
+ Read :ref:`container-apptainer` page to learn more about how to use Apptainer containers with Nextflow.
+
+
 .. _config-timeline:
 
 Scope `timeline`
@@ -944,6 +985,7 @@ These are defined alongside other scopes, but the option is assigned as typicall
 Name                Description
 ================== ================
 cleanup             If ``true``, on a successful completion of a run all files in *work* directory are automatically deleted.
+dumpHashes          If ``true``, dump task hash keys in the log file, for debugging purposes.
 ================== ================
 
 .. warning::
@@ -1035,7 +1077,7 @@ NXF_DEBUG                       Defines scripts debugging level: ``1`` dump task
 NXF_DEFAULT_DSL                 Defines the DSL version that should be used in not specified otherwise in the script of config file (default: ``2``, requires version ``22.03.0-edge`` or later)
 NXF_DISABLE_JOBS_CANCELLATION   Disables the cancellation of child jobs on workflow execution termination (requires version ``21.12.0-edge`` or later).
 NXF_ENABLE_STRICT               Enable Nextflow *strict* execution mode (default: ``false``, requires version ``22.05.0-edge`` or later)
-NXF_ENABLE_SECRETS              Enable Nextflow secrets features (default: ``true``, requires version ``22.09.2-edge`` or later)
+NXF_ENABLE_SECRETS              Enable Nextflow secrets features (default: ``true``, requires version ``21.09.0-edge`` or later)
 NXF_EXECUTOR                    Defines the default process executor e.g. `sge`
 NXF_GRAB                        Provides extra runtime dependencies downloaded from a Maven repository service [DEPRECATED]
 NXF_HOME                        Nextflow home directory (default: ``$HOME/.nextflow``).

@@ -46,6 +46,11 @@ import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.extension.FilesEx
 import sun.net.www.protocol.ftp.FtpURLConnection
+
+import static XFileSystemConfig.*
+
+import static nextflow.file.http.XFileSystemConfig.config
+
 /**
  * Implements a read-only JSR-203 compliant file system provider for http/ftp protocols
  *
@@ -59,37 +64,6 @@ abstract class XFileSystemProvider extends FileSystemProvider {
 
     private Map<URI, FileSystem> fileSystemMap = new LinkedHashMap<>(20)
 
-    static final public String  DEFAULT_RETRY_CODES = '404,410'
-
-    static final public int MAX_REDIRECT_HOPS = 5
-
-    static final public int DEFAULT_BACK_OFF_BASE = 3
-
-    static final public int DEFAULT_BACK_OFF_DELAY = 250
-
-    static final public int DEFAULT_MAX_ATTEMPTS = 3
-
-    private int maxAttempts = DEFAULT_MAX_ATTEMPTS
-
-    private int backOffBase = DEFAULT_BACK_OFF_BASE
-
-    private int backOffDelay = DEFAULT_BACK_OFF_DELAY
-
-    private List<Integer> retryCodes
-
-    private Map<String,String> env = SysEnv.get();
-
-    {
-        maxAttempts = config('NXF_HTTPFS_MAX_ATTEMPTS', DEFAULT_MAX_ATTEMPTS) as Integer
-        backOffBase = config('NXF_HTTPFS_BACKOFF_BASE', DEFAULT_BACK_OFF_BASE) as Integer
-        backOffDelay = config('NXF_HTTPFS_DELAY', DEFAULT_BACK_OFF_DELAY) as Integer
-        retryCodes = config('NXF_HTTPFS_RETRY_CODES', DEFAULT_RETRY_CODES).tokenize(',').collect( val -> val as Integer )
-    }
-
-    protected int maxAttempts() { maxAttempts }
-    protected int backOffBase() { backOffBase }
-    protected int backOffDelay() { backOffDelay }
-    protected List<Integer> retryCodes() { retryCodes }
 
     protected static String config(String name, def defValue) {
         return SysEnv.containsKey(name) ? SysEnv.get(name) : defValue.toString()
@@ -224,8 +198,8 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             log.debug "Remote redirect URL: $newPath"
             return toConnection0(newPath, attempt+1)
         }
-        else if( conn instanceof HttpURLConnection && conn.getResponseCode() in retryCodes && attempt < maxAttempts ) {
-            final delay = (Math.pow(backOffBase, attempt) as long) * backOffDelay
+        else if( conn instanceof HttpURLConnection && conn.getResponseCode() in config().retryCodes() && attempt < config().maxAttempts() ) {
+            final delay = (Math.pow(config().backOffBase(), attempt) as long) * config().backOffDelay()
             log.debug "Got HTTP error=${conn.getResponseCode()} waiting for ${delay}ms (attempt=${attempt+1})"
             Thread.sleep(delay)
             return toConnection0(url, attempt+1)
