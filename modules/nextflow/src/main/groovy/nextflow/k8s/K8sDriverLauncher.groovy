@@ -127,6 +127,11 @@ class K8sDriverLauncher {
     private List<String> args
 
     /**
+     * Plugins to run the workflow
+     */
+    private String plugins
+
+    /**
      * Launcher entry point. Set-up the environment and create a pod that run the Nextflow
      * application (which in turns executed each task as a pod)
      *
@@ -355,6 +360,12 @@ class K8sDriverLauncher {
             k8s.workDir = cmd.workDir
         else if( !k8s.isSet('workDir') && config.workDir )
             k8s.workDir = config.workDir
+
+        if ( plugins ) {
+            LinkedList<String> plugins = config.plugins ?: []
+            plugins.addAll( this.plugins.tokenize(',') )
+            config.plugins = plugins
+        }
 
         // -- some cleanup
         if( !k8s.pod )

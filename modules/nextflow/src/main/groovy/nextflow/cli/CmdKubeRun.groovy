@@ -94,7 +94,7 @@ class CmdKubeRun extends CmdRun {
             headImage = podImage
         }
         checkRunName()
-        final driver = new K8sDriverLauncher(cmd: this, runName: runName, headImage: headImage, background: background(), headCpus: headCpus, headMemory: headMemory, headPreScript: headPreScript) 
+        final driver = new K8sDriverLauncher(cmd: this, runName: runName, headImage: headImage, background: background(), headCpus: headCpus, headMemory: headMemory, headPreScript: headPreScript, plugins: plugins)
         driver.run(pipeline, scriptArgs)
         final status = driver.shutdown()
         System.exit(status)
