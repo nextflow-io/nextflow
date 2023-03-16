@@ -562,6 +562,17 @@ class K8sDriverLauncherTest extends Specification {
 
     }
 
+    def 'should add the plugin into the config' () {
+        given:
+        def cmd = new CmdKubeRun()
+        cmd.launcher = new Launcher(options: new CliOptions())
+
+        when:
+        def l = new K8sDriverLauncher(cmd: cmd, plugins: 'nf-cws@1.0.0', runName: 'bar')
+        then:
+        l.makeConfig( "/bar").get('plugins') == [ 'nf-cws@1.0.0' ]
+    }
+
     def 'should make config - deprecated' () {
 
         given:
