@@ -363,7 +363,7 @@ class K8sDriverLauncher {
 
         if ( plugins ) {
             LinkedList<String> plugins = config.plugins ?: []
-            plugins.addAll(this.plugins.tokenize(','))
+            plugins.addAll( this.plugins.tokenize(',') )
             config.plugins = plugins
         }
 
