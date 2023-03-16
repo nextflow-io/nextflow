@@ -361,9 +361,11 @@ class K8sDriverLauncher {
         else if( !k8s.isSet('workDir') && config.workDir )
             k8s.workDir = config.workDir
 
-        LinkedList<String> plugins = config.plugins ?: []
-        plugins.addAll(this.plugins.tokenize(','))
-        config.plugins = plugins
+        if ( plugins ) {
+            LinkedList<String> plugins = config.plugins ?: []
+            plugins.addAll(this.plugins.tokenize(','))
+            config.plugins = plugins
+        }
 
         // -- some cleanup
         if( !k8s.pod )
