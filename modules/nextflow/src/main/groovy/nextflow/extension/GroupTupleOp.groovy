@@ -105,8 +105,12 @@ class GroupTupleOp {
 
         int count=-1
         for( int i=0; i<len; i++ ) {                    // append the values in the tuple
-            if( ! (i in indices) ) {
+            if( i !in indices ) {
                 def list = (items[i] as List)
+                if( list==null ) {
+                    list = new ArrayBag()
+                    items.add(i, list)
+                }
                 list.add( tuple[i] )
                 count=list.size()
             }
