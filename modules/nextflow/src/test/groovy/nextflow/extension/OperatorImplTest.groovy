@@ -35,8 +35,6 @@ class OperatorImplTest extends Specification {
         new Session()
     }
 
-
-
     def testFilter() {
 
         when:
@@ -1007,6 +1005,68 @@ class OperatorImplTest extends Specification {
         result.val == [ 3, ['q'], file1 ]
         result.val == Channel.STOP
 
+    }
+
+    def testGroupTupleWithNotMatchingCardinality() {
+
+        when:
+        def result = Channel
+                .of([1,'a'],
+                    [1,'b'],
+                    [2,'x'],
+                    [3,'p'],
+                    [1,'c','d'],
+                    [2,'y'],
+                    [3,'q'])
+                .groupTuple()
+
+        then:
+        result.val == [1, ['a', 'b', 'c'], ['d'] ]
+        result.val == [2, ['x', 'y'] ]
+        result.val == [3, ['p', 'q'] ]
+        result.val == Channel.STOP
+
+    }
+
+    def testGroupTupleWithNotMatchingCardinalityAndFixedSize() {
+
+        when:
+        def result = Channel
+                .of([1,'a'],
+                    [1,'b'],
+                    [2,'x'],
+                    [3,'p'],
+                    [1,'c','d'],
+                    [2,'y'],
+                    [3,'q'])
+                .groupTuple(size:2)
+
+        then:
+        result.val == [1, ['a', 'b'] ]
+        result.val == [2, ['x', 'y'] ]
+        result.val == [3, ['p', 'q'] ]
+        result.val == Channel.STOP
+    }
+
+    def testGroupTupleWithNotMatchingCardinalityAndFixedSizeAndRemainder() {
+
+        when:
+        def result = Channel
+                .of([1,'a'],
+                    [1,'b'],
+                    [2,'x'],
+                    [3,'p'],
+                    [1,'c','d'],
+                    [2, 'y'],
+                    [3, 'q'])
+                .groupTuple(size:2, remainder: true)
+
+        then:
+        result.val == [1, ['a', 'b'] ]
+        result.val == [2, ['x', 'y'] ]
+        result.val == [3, ['p', 'q'] ]
+        result.val == [1, ['c'], ['d']]
+        result.val == Channel.STOP
     }
 
     def testChannelIfEmpty() {
