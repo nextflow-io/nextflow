@@ -1,5 +1,10 @@
 nf-wave changelog
 ==================
+0.8.0 - 19 Mar 2023
+- Add workflowId to wave request [025ff9d0]
+- Add basePackages option to Wave config [7e827810]
+- Bump groovy 3.0.16 [d3ff5dcb]
+
 0.7.0 - 14 Jan 2022
 - Improve container native executor configuration [03126371]
 - Prevent redirection on Wave client [124cfb3e]
