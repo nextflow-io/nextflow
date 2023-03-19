@@ -31,9 +31,10 @@ import nextflow.cloud.google.batch.client.BatchConfig
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-class BatchLogging {
+class BatchLogging implements Closeable {
     private LoggingOptions opts
     private String projectId
+    private volatile Logging logging0
 
     /** only for testing - do not use */
     protected BatchLogging() {
@@ -68,17 +69,15 @@ class BatchLogging {
     @PackageScope List<String> fetchLogs(String uid) {
         final stdout = new StringBuilder()
         final stderr = new StringBuilder()
-        try(Logging logging = opts.getService()) {
-            // use logging here
-            final filter = "resource.type=generic_task AND logName=\"projects/${projectId}/logs/batch_task_logs\" AND labels.job_uid=$uid"
-            final entries = logging.listLogEntries(
-                    Logging.EntryListOption.filter(filter),
-                    Logging.EntryListOption.pageSize(1000) )
+        // use logging here
+        final filter = "resource.type=generic_task AND logName=\"projects/${projectId}/logs/batch_task_logs\" AND labels.job_uid=$uid"
+        final entries = loggingService().listLogEntries(
+                Logging.EntryListOption.filter(filter),
+                Logging.EntryListOption.pageSize(1000) )
 
-            final page = entries.getValues()
-            for (LogEntry logEntry : page.iterator()) {
-                parseOutput(logEntry, stdout, stderr)
-            }
+        final page = entries.getValues()
+        for (LogEntry logEntry : page.iterator()) {
+            parseOutput(logEntry, stdout, stderr)
         }
         return [ stdout.toString(), stderr.toString() ]
     }
@@ -89,6 +88,25 @@ class BatchLogging {
             stderr.append(output)
         } else {
             stdout.append(output)
+        }
+    }
+
+    synchronized protected loggingService() {
+        if( logging0==null ) {
+            logging0 = opts.getService()
+        }
+        return logging0
+    }
+
+    @Override
+    void close() throws IOException {
+        if( logging0==null )
+            return
+        try {
+            logging0.close()
+        }
+        catch (Exception e) {
+            log.debug "Unexpected error closing Google Logging service", e
         }
     }
 }
