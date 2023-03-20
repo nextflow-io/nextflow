@@ -1,6 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -91,6 +90,10 @@ public class S3Path implements Path, TagAwareFile {
 	private S3ObjectSummary objectSummary;
 
 	private Map<String,String> tags;
+
+	private String contentType;
+
+	private String storageClass;
 
 	/**
 	 * path must be a string of the form "/{bucket}", "/{bucket}/{key}" or just
@@ -548,6 +551,16 @@ public class S3Path implements Path, TagAwareFile {
 		this.tags = tags;
 	}
 
+	@Override
+	public void setContentType(String type) {
+		this.contentType = type;
+	}
+
+	@Override
+	public void setStorageClass(String storageClass) {
+		this.storageClass = storageClass;
+	}
+
 	public List<Tag> getTagsList() {
 		// nothing found, just return
 		if( tags==null )
@@ -558,6 +571,14 @@ public class S3Path implements Path, TagAwareFile {
 			result.add( new Tag(entry.getKey(), entry.getValue()) );
 		}
 		return result;
+	}
+
+	public String getContentType() {
+		return contentType;
+	}
+
+	public String getStorageClass() {
+		return storageClass;
 	}
 
 	// ~ helpers methods

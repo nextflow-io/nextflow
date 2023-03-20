@@ -96,6 +96,7 @@ The following batch schedulers are supported:
 * `Univa grid engine <http://www.univa.com/>`_
 * `Platform LSF <http://www.ibm.com/systems/technicalcomputing/platformcomputing/products/lsf/>`_
 * `Linux SLURM <https://computing.llnl.gov/linux/slurm/>`_
+* `Flux Framework <https://flux-framework.org/>`_
 * `PBS Works <http://www.pbsworks.com/gridengine/>`_
 * `Torque <http://www.adaptivecomputing.com/products/open-source/torque/>`_
 * `HTCondor <https://research.cs.wisc.edu/htcondor/>`_
@@ -133,15 +134,15 @@ Read the :ref:`script-page` section to learn about the Nextflow scripting langua
 Configuration options
 ---------------------
 
-Pipeline configuration properties are defined in a file named ``nextflow.config`` in the pipeline execution directory. 
+Pipeline configuration properties are defined in a file named ``nextflow.config`` in the pipeline execution directory.
 
-This file can be used to define which executor to use, the process's environment variables, pipeline parameters etc. 
+This file can be used to define which executor to use, the process's environment variables, pipeline parameters etc.
 
 A basic configuration file might look like this::
 
-	process { 
+	process {
 	  executor='sge'
-	  queue = 'cn-el6' 
+	  queue = 'cn-el6'
 	}
 
 

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -171,7 +170,8 @@ class CharliecloudCache {
             return localPath
         }
 
-        final file = new File("${localPath.parent.parent.parent}/.${localPath.name}.lock")
+        // final file = new File("${localPath.parent.parent.parent}/.${localPath.name}.lock")
+        final file = new File("${localPath.parent.parent.parent}/.ch-pulling.lock")
         final wait = "Another Nextflow instance is pulling the image $imageUrl with Charliecloud -- please wait until the download completes"
         final err =  "Unable to acquire exclusive lock after $pullTimeout on file: $file"
 

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +23,6 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.executor.Executor
 import nextflow.util.Escape
 /**
  * Helper class to normalise a container image name depending
@@ -43,11 +41,8 @@ class ContainerHandler {
 
     private Path baseDir
 
-    private Executor executor
-
-    ContainerHandler(Map containerConfig, Executor executor=null) {
+    ContainerHandler(Map containerConfig) {
         this(containerConfig, CWD)
-        this.executor = executor
     }
 
     ContainerHandler(Map containerConfig, Path dir) {
@@ -60,11 +55,6 @@ class ContainerHandler {
     Path getBaseDir() { baseDir }
 
     String normalizeImageName(String imageName) {
-        // when the executor is container native, it's assumed
-        // the use of docker plain image name format
-        if( executor?.isContainerNative() ) {
-            return normalizeDockerImageName(imageName)
-        }
         final engine = config.getEngine()
         if( engine == 'shifter' ) {
             return normalizeShifterImageName(imageName)
@@ -77,8 +67,17 @@ class ContainerHandler {
             if( !config.isEnabled() || !normalizedImageName )
                 return normalizedImageName
             final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
-            
+
             final result = requiresCaching ? createSingularityCache(this.config, normalizedImageName) : normalizedImageName
+            return Escape.path(result)
+        }
+        if( engine == 'apptainer' ) {
+            final normalizedImageName = normalizeApptainerImageName(imageName)
+            if( !config.isEnabled() || !normalizedImageName )
+                return normalizedImageName
+            final requiresCaching = normalizedImageName =~ IMAGE_URL_PREFIX
+
+            final result = requiresCaching ? createApptainerCache(this.config, normalizedImageName) : normalizedImageName
             return Escape.path(result)
         }
         if( engine == 'charliecloud' ) {
@@ -95,6 +94,11 @@ class ContainerHandler {
     @PackageScope
     String createSingularityCache(Map config, String imageName) {
         new SingularityCache(new ContainerConfig(config)) .getCachePathFor(imageName) .toString()
+    }
+
+    @PackageScope
+    String createApptainerCache(Map config, String imageName) {
+        new ApptainerCache(new ContainerConfig(config)) .getCachePathFor(imageName) .toString()
     }
 
     @PackageScope
@@ -136,7 +140,7 @@ class ContainerHandler {
      * @return Image name in Docker canonical format
      */
      @PackageScope
-     String normalizeDockerImageName( String imageName) {
+     String normalizeDockerImageName(String imageName) {
 
         if( !imageName )
             return null
@@ -154,7 +158,7 @@ class ContainerHandler {
         return reg + imageName
     }
 
-     static boolean isAbsoluteDockerName(String image) {
+    static boolean isAbsoluteDockerName(String image) {
         def p = image.indexOf('/')
         if( p==-1 )
             return false
@@ -219,7 +223,43 @@ class ContainerHandler {
 
         // in all other case it's supposed to be the name of an image in the docker hub
         // prefix it with the `docker://` pseudo protocol used by singularity to download it
-        return "docker://${img}"
+        return "docker://${normalizeDockerImageName(img)}"
     }
 
+    /**
+     * Normalize Apptainer image name resolving the absolute path or
+     * adding `docker://` prefix when required
+     *
+     * @param imageName The container image name
+     * @return Image name in Apptainer canonical format
+     */
+     @PackageScope
+     String normalizeApptainerImageName(String img) {
+        if( !img )
+            return null
+
+        // when starts with `/` it's an absolute image file path, just return it
+        if( img.startsWith("/") )
+            return img
+
+         // when starts with `file://` it's an image file path, resolve it against the current path
+        if (img.startsWith("file://")) {
+             return baseDir.resolve(img.substring(7)).toString()
+        }
+
+        // check if matches a protocol scheme such as `docker://xxx`
+        if( img =~ IMAGE_URL_PREFIX ) {
+            return img
+        }
+
+        // if it's the path of an existing image file return it
+        def imagePath = baseDir.resolve(img)
+        if( imagePath.exists() ) {
+            return imagePath.toString()
+        }
+
+        // in all other case it's supposed to be the name of an image in the docker hub
+        // prefix it with the `docker://` pseudo protocol used by apptainer to download it
+        return "docker://${normalizeDockerImageName(img)}"
+    }
 }

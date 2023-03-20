@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +16,7 @@
 
 package nextflow.trace
 
-import java.nio.charset.Charset
+
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -40,7 +39,7 @@ import nextflow.script.WorkflowMetadata
 @CompileStatic
 class ReportObserver implements TraceObserver {
 
-    static final public String DEF_FILE_NAME = 'report.html'
+    static final public String DEF_FILE_NAME = "report-${TraceHelper.launchTimestampFmt()}.html"
 
     static final public int DEF_MAX_TASKS = 10_000
 
@@ -71,7 +70,7 @@ class ReportObserver implements TraceObserver {
     private ResourcesAggregator aggregator
 
     /**
-     * Overwrite existing trace file instead of rolling it
+     * Overwrite existing trace file (required in some cases, as rolling filename has been deprecated)
      */
     boolean overwrite
 
@@ -280,13 +279,7 @@ class ReportObserver implements TraceObserver {
         if( parent )
             Files.createDirectories(parent)
 
-        if( overwrite )
-            Files.deleteIfExists(reportFile)
-        else
-            // roll the any trace files that may exist
-            reportFile.rollFile()
-
-        def writer = Files.newBufferedWriter(reportFile, Charset.defaultCharset())
+        def writer = TraceHelper.newFileWriter(reportFile, overwrite, 'Report')
         writer.withWriter { w -> w << html_output }
         writer.close()
     }

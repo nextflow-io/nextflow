@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,22 +20,21 @@ package nextflow.cloud.google.batch.logging
 import com.google.cloud.logging.LogEntry
 import com.google.cloud.logging.Logging
 import com.google.cloud.logging.LoggingOptions
+import com.google.cloud.logging.Severity
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchConfig
 /**
  * Batch logging client
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class BatchLogging {
-
-    private static final String STDOUT = 'STDOUT:  '
-    private static final String STDERR = 'STDERR:  '
-
-    private String mode = STDOUT
+@Slf4j
+class BatchLogging implements Closeable {
     private LoggingOptions opts
     private String projectId
+    private volatile Logging logging0
 
     /** only for testing - do not use */
     protected BatchLogging() {
@@ -45,57 +43,70 @@ class BatchLogging {
 
     BatchLogging(BatchConfig config) {
         final creds = config.googleOpts.credentials
-        this.opts = LoggingOptions .newBuilder() .setCredentials(creds) .build()
         this.projectId = config.googleOpts.projectId
+        this.opts = LoggingOptions .newBuilder() .setCredentials(creds) .setProjectId(this.projectId) .build()
     }
 
     String stdout(String jobId) {
-        return fetchLogs(jobId)[0]
+        return safeLogs(jobId,0)
     }
 
     String stderr(String jobId) {
-        return fetchLogs(jobId)[1]
+        return safeLogs(jobId,1)
     }
 
-    @PackageScope String currentMode() { mode }
+    protected String safeLogs(String jobId, int index) {
+        try {
+            return fetchLogs(jobId)[index]
+        }
+        catch (Exception e) {
+            log.warn("Cannot read logs for Batch job '$jobId' - cause: ${e.message}", e)
+            return null
+        }
+    }
 
     @Memoized(maxCacheSize = 1000)
     @PackageScope List<String> fetchLogs(String uid) {
-        try(Logging logging = opts.getService()) {
-            // use logging here
-            final filter = "resource.type=generic_task AND logName=projects/${projectId}/logs/batch_task_logs AND labels.job_uid=$uid"
-            final entries = logging.listLogEntries(
-                    Logging.EntryListOption.filter(filter),
-                    Logging.EntryListOption.pageSize(1000) )
+        final stdout = new StringBuilder()
+        final stderr = new StringBuilder()
+        // use logging here
+        final filter = "resource.type=generic_task AND logName=\"projects/${projectId}/logs/batch_task_logs\" AND labels.job_uid=$uid"
+        final entries = loggingService().listLogEntries(
+                Logging.EntryListOption.filter(filter),
+                Logging.EntryListOption.pageSize(1000) )
 
-            final stdout = new StringBuilder()
-            final stderr = new StringBuilder()
-            final page = entries.getValues()
-            for (LogEntry logEntry : page.iterator()) {
-                final output = logEntry.payload.data.toString()
-                parseOutput(output, stdout, stderr)
-            }
-
-            return [ stdout.toString(), stderr.toString() ]
+        final page = entries.getValues()
+        for (LogEntry logEntry : page.iterator()) {
+            parseOutput(logEntry, stdout, stderr)
         }
+        return [ stdout.toString(), stderr.toString() ]
     }
 
-    protected void parseOutput(String output, StringBuilder stdout, StringBuilder stderr) {
-        // check stderr
-        def p = output.indexOf(STDERR)
-        if( p>=0 ) {
-            mode = STDERR
-            output = output.substring(p+STDERR.size())
-        }
-        else if( (p = output.indexOf(STDOUT))>=0 )  {
-            mode = STDOUT
-            output = output.substring(p+STDOUT.size())
-        }
-        // now append the result
-        if( mode==STDOUT )
-            stdout.append(output)
-        else
+    protected void parseOutput(LogEntry logEntry, StringBuilder stdout, StringBuilder stderr) {
+        final output = logEntry.payload.data.toString()
+        if (logEntry.severity == Severity.ERROR) {
             stderr.append(output)
+        } else {
+            stdout.append(output)
+        }
     }
 
+    synchronized protected loggingService() {
+        if( logging0==null ) {
+            logging0 = opts.getService()
+        }
+        return logging0
+    }
+
+    @Override
+    void close() throws IOException {
+        if( logging0==null )
+            return
+        try {
+            logging0.close()
+        }
+        catch (Exception e) {
+            log.debug "Unexpected error closing Google Logging service", e
+        }
+    }
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -426,6 +425,31 @@ class FileHelper {
      */
     static boolean getWorkDirIsNFS() {
         isPathNFS(Global.session.workDir)
+    }
+
+    /**
+     * @return
+     *      {@code true} when the current session working directory is a symlink path
+     *      {@code false otherwise}
+     */
+    static boolean getWorkDirIsSymlink() {
+        isPathSymlink(Global.session.workDir)
+    }
+
+    @Memoized
+    static boolean isPathSymlink(Path path) {
+        if( path.fileSystem!=FileSystems.default )
+            return false
+        try {
+            return path != path.toRealPath()
+        }
+        catch (NoSuchFileException e) {
+            return false
+        }
+        catch (IOException e) {
+            log.debug "Unable to determine symlink status for path: $path - cause: ${e.message}"
+            return false
+        }
     }
 
     /**
@@ -1026,8 +1050,8 @@ class FileHelper {
         try {
             Files.readAttributes(path,BasicFileAttributes,options)
         }
-        catch( IOException e ) {
-            log.trace "Unable to read attributes for file: $path"
+        catch( IOException|UnsupportedOperationException|SecurityException e ) {
+            log.trace "Unable to read attributes for file: $path - cause: ${e.message}"
             return null
         }
     }

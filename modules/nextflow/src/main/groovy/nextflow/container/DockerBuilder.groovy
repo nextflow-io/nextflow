@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +48,10 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private String mountFlags0
 
+    private String device
+
+    private String capAdd
+
     DockerBuilder( String name ) {
         this.image = name
     }
@@ -96,6 +99,12 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         if( params.containsKey('privileged') )
             this.privileged = params.privileged?.toString() == 'true'
 
+        if( params.containsKey('device') )
+            this.device = params.device
+
+        if( params.containsKey('capAdd') )
+            this.capAdd = params.capAdd
+
         return this
     }
 
@@ -120,7 +129,7 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
         result << 'run -i '
 
         if( cpus && !legacy )
-            result << "--cpus ${String.format(Locale.ROOT, "%.1f", cpus)} "
+            result << "--cpu-shares ${cpus * 1024} "
 
         if( cpuset ) {
             if( legacy )
@@ -156,6 +165,12 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         if( privileged )
             result << '--privileged '
+
+        if( device )
+            result << '--device ' << device << ' '
+
+        if( capAdd )
+            result << '--cap-add ' << capAdd << ' '
 
         // the name is after the user option so it has precedence over any options provided by the user
         if( name )

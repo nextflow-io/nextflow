@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +20,7 @@ import java.nio.file.Files
 import nextflow.cache.CacheDB
 import nextflow.cache.DefaultCacheStore
 import nextflow.executor.CachedTaskHandler
+import nextflow.plugin.Plugins
 import nextflow.script.ProcessConfig
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskProcessor
@@ -38,6 +38,10 @@ import test.OutputCapture
  */
 class CmdLogTest extends Specification {
 
+    def cleanup() {
+        Plugins.stop()
+    }
+    
     /*
      * Read more http://mrhaki.blogspot.com.es/2015/02/spocklight-capture-and-assert-system.html
      */
@@ -104,6 +108,7 @@ class CmdLogTest extends Specification {
                 // remove the log part
                 .findResults { line -> !line.contains('DEBUG') ? line : null }
                 .findResults { line -> !line.contains('INFO') ? line : null }
+                .findResults { line -> !line.contains('plugin') ? line : null }
                 .join('\n')
         then:
         stdout.readLines().size() == 3

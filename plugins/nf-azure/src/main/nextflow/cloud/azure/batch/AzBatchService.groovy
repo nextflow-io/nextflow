@@ -16,6 +16,9 @@
 
 package nextflow.cloud.azure.batch
 
+import com.microsoft.azure.batch.auth.BatchApplicationTokenCredentials
+import com.microsoft.azure.batch.auth.BatchCredentials
+
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
@@ -37,6 +40,7 @@ import com.microsoft.azure.batch.protocol.models.ContainerRegistry
 import com.microsoft.azure.batch.protocol.models.ElevationLevel
 import com.microsoft.azure.batch.protocol.models.ImageInformation
 import com.microsoft.azure.batch.protocol.models.MountConfiguration
+import com.microsoft.azure.batch.protocol.models.NetworkConfiguration
 import com.microsoft.azure.batch.protocol.models.OutputFile
 import com.microsoft.azure.batch.protocol.models.OutputFileBlobContainerDestination
 import com.microsoft.azure.batch.protocol.models.OutputFileDestination
@@ -254,19 +258,54 @@ class AzBatchService implements Closeable {
         result.setScale(0, RoundingMode.UP).intValue()
     }
 
+
+    protected createBatchCredentialsWithKey() {
+        log.debug "[AZURE BATCH] Creating Azure Batch client using shared key creddentials"
+
+        if (config.batch().endpoint || config.batch().accountKey || config.batch().accountName) {
+            // Create batch client
+            if (!config.batch().endpoint)
+                throw new IllegalArgumentException("Missing Azure Batch endpoint -- Specify it in the nextflow.config file using the setting 'azure.batch.endpoint'")
+            if (!config.batch().accountName)
+                throw new IllegalArgumentException("Missing Azure Batch account name -- Specify it in the nextflow.config file using the setting 'azure.batch.accountName'")
+            if (!config.batch().accountKey)
+                throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKet'")
+
+            return new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey)
+
+        }
+    }
+
+    protected createBatchCredentialsWithServicePrincipal() {
+        log.debug "[AZURE BATCH] Creating Azure Batch client using Service Principal credentials"
+
+        final batchEndpoint = "https://batch.core.windows.net/";
+        final authenticationEndpoint = "https://login.microsoftonline.com/";
+
+        def servicePrincipalBasedCred = new BatchApplicationTokenCredentials(
+                config.batch().endpoint,
+                config.activeDirectory().servicePrincipalId,
+                config.activeDirectory().servicePrincipalSecret,
+                config.activeDirectory().tenantId,
+                batchEndpoint,
+                authenticationEndpoint
+        )
+
+        return servicePrincipalBasedCred
+    }
+
     protected BatchClient createBatchClient() {
         log.debug "[AZURE BATCH] Executor options=${config.batch()}"
-        // Create batch client
-        if( !config.batch().endpoint )
-            throw new IllegalArgumentException("Missing Azure Batch endpoint -- Specify it in the nextflow.config file using the setting 'azure.batch.endpoint'")
-        if( !config.batch().accountName )
-            throw new IllegalArgumentException("Missing Azure Batch account name -- Specify it in the nextflow.config file using the setting 'azure.batch.accountName'")
-        if( !config.batch().accountKey )
-            throw new IllegalArgumentException("Missing Azure Batch account key -- Specify it in the nextflow.config file using the setting 'azure.batch.accountKet'")
 
-        final cred = new BatchSharedKeyCredentials(config.batch().endpoint, config.batch().accountName, config.batch().accountKey)
-        final client = BatchClient.open(cred)
+        def cred = config.activeDirectory().isConfigured()
+                ? createBatchCredentialsWithServicePrincipal()
+                : createBatchCredentialsWithKey()
+
+        // Create batch client
+        def client = BatchClient.open(cred as BatchCredentials)
+
         Global.onCleanup((it)->client.protocolLayer().restClient().close())
+
         return client
     }
 
@@ -625,7 +664,6 @@ class AzBatchService implements Closeable {
                 .withCommandLine('bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/" ')
                 .withResourceFiles(resourceFiles)
 
-
         final poolParams = new PoolAddParameter()
                 .withId(spec.poolId)
                 .withVirtualMachineConfiguration(poolVmConfig(spec.opts))
@@ -635,6 +673,10 @@ class AzBatchService implements Closeable {
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
                 .withStartTask(poolStartTask)
+
+        // virtual network
+        if( spec.opts.virtualNetwork )
+            poolParams.withNetworkConfiguration( new NetworkConfiguration().withSubnetId(spec.opts.virtualNetwork) )
 
         // scheduling policy
         if( spec.opts.schedulePolicy ) {

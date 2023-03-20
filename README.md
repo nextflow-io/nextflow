@@ -1,7 +1,7 @@
 ![Nextflow logo](https://github.com/nextflow-io/trademark/blob/master/nextflow2014_no-bg.png)
 
 *"Dataflow variables are spectacularly expressive in concurrent programming"*
-<br>[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.145.7873)
+<br>[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](https://dl.acm.org/doi/abs/10.1145/72551.72552)
 
 
 ![Nextflow CI](https://github.com/nextflow-io/nextflow/workflows/Nextflow%20CI/badge.svg)
@@ -16,7 +16,7 @@ Quick overview
 Nextflow is a bioinformatics workflow manager that enables the development of portable and reproducible workflows.
 It supports deploying workflows on a variety of execution platforms including local, HPC schedulers, AWS Batch,
 Google Cloud Life Sciences, and Kubernetes. Additionally, it provides support for manage your workflow dependencies
-through built-in support for Conda, Docker, Singularity, and Modules.
+through built-in support for Conda, Spack, Docker, Podman, Singularity, Modules, and more.
 
 ## Contents
 - [Rationale](#rationale)
@@ -24,7 +24,8 @@ through built-in support for Conda, Docker, Singularity, and Modules.
 - [Documentation](#documentation)
 - [Tool Management](#tool-management)
   - [Conda environments](#conda-environments)
-  - [Docker and Singularity](#containers)
+  - [Spack environments](#spack-environments)
+  - [Docker, Podman and Singularity](#containers)
   - [Environment Modules](#environment-modules)
 - [HPC Schedulers](#hpc-schedulers)
   - [SGE](#hpc-schedulers)
@@ -32,12 +33,13 @@ through built-in support for Conda, Docker, Singularity, and Modules.
   - [LSF](#hpc-schedulers)
   - [SLURM](#hpc-schedulers)
   - [PBS/Torque](#hpc-schedulers)
+  - [HyperQueue (experimental)](#hpc-schedulers)
   - [HTCondor (experimental)](#hpc-schedulers)
+  - [Moab](#hpc-schedulers)
 - [Cloud Support](#cloud-support)
   - [AWS Batch](#cloud-support)
-  - [AWS EC2](#cloud-support)
-  - [Google Cloud](#cloud-support)
-  - [Google Genomics Pipelines](#cloud-support)
+  - [Google Cloud Batch](#cloud-support)
+  - [Google Life Sciences](#cloud-support)
   - [Kubernetes](#cloud-support)
 - [Community](#community)
 - [Build from source](#build-from-source)
@@ -104,8 +106,10 @@ Currently the following clusters are supported:
   + [LSF](https://www.nextflow.io/docs/latest/executor.html#lsf)
   + [SLURM](https://www.nextflow.io/docs/latest/executor.html#slurm)
   + [PBS/Torque](https://www.nextflow.io/docs/latest/executor.html#pbs-torque)
+  + [Flux](https://www.nextflow.io/docs/latest/executor.html#flux)
+  + [HyperQueue (beta)](https://www.nextflow.io/docs/latest/executor.html#hyperqueue)
   + [HTCondor (beta)](https://www.nextflow.io/docs/latest/executor.html#htcondor)
-  + [Moab (beta)](https://www.nextflow.io/docs/latest/executor.html#moab)
+  + [Moab](https://www.nextflow.io/docs/latest/executor.html#moab)
 
 For example to submit the execution to a SGE cluster create a file named `nextflow.config`, in the directory
 where the pipeline is going to be launched, with the following content:
@@ -131,6 +135,7 @@ Additionally, *Nextflow* can run workflows on either on-prem or managed cloud Ku
 Currently supported cloud platforms:
   + [AWS Batch](https://www.nextflow.io/docs/latest/awscloud.html#aws-batch)
   + [Azure Batch](https://azure.microsoft.com/en-us/services/batch/)
+  + [Google Cloud Batch](https://cloud.google.com/batch)
   + [Google Cloud Life Sciences](https://cloud.google.com/life-sciences)
   + [Kubernetes](https://www.nextflow.io/docs/latest/kubernetes.html)
 
@@ -159,6 +164,12 @@ Conda environments
 ------------------
 
 [Conda environments](https://www.nextflow.io/docs/latest/conda.html) provide another option for managing software packages in your workflow. 
+
+
+Spack environments
+------------------
+
+Spack environments provide an option to build software packages from source using Spack, a popular package manager within the HPC community.
 
 
 Environment Modules

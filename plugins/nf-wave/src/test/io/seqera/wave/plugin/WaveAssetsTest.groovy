@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ class WaveAssetsTest extends Specification {
         def BUNDLE = Mock(ResourcesBundle) { fingerprint() >> '12345' }
         
         expect:
-        new WaveAssets(IMAGE).hashKey() == CacheHelper.hasher([IMAGE]).hash().toString()
+        new WaveAssets(IMAGE).fingerprint() == CacheHelper.hasher([IMAGE]).hash().toString()
 //        new WaveAssets(IMAGE,BUNDLE).hashKey() == CacheHelper.hasher([IMAGE, BUNDLE]).hash().toString()
 
     }

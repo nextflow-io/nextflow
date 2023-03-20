@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,6 +64,25 @@ class RepositoryProviderTest extends Specification {
         then:
         1 * config.setUser('pditommaso')
         1 * config.setPassword('secret1')
+
+    }
+
+    def 'should hide creds' () {
+        given:
+        def provider = Spy(RepositoryProvider)
+
+        when:
+        def result = provider.getAuthObfuscated()
+        then:
+        result == '-:-'
+
+        when:
+        result = provider.getAuthObfuscated()
+        then:
+        provider.getUser() >> 'foo1234567890'
+        provider.getPassword() >> 'bar4567890'
+        and:
+        result == 'foo****:bar****'
 
     }
 }

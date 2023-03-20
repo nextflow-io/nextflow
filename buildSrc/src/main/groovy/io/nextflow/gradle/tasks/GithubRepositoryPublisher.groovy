@@ -14,8 +14,8 @@ import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
 /**
- * This task traverse a S3 plugins repo and creates
- * and updates plugins repository index. Finally push
+ * This task traverses an S3 plugins repo and creates
+ * and updates the plugins repository index. Then pushes
  * the updated index to the Github repository.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -31,7 +31,7 @@ class GithubRepositoryPublisher extends DefaultTask {
     @Input String indexUrl
 
     /**
-     * The auth access token to post to access Github plugins repo
+     * The auth access token to access the Github plugins repo
      */
     @Input String githubToken
 
@@ -72,15 +72,15 @@ class GithubRepositoryPublisher extends DefaultTask {
             }
             else {
                 for (PluginRelease rel : pluginReleases) {
-                    // check if this version already exist in the index
+                    // check if this version already exists in the index
                     final index = indexEntry.releases.findIndexOf { PluginRelease it -> it.version == rel.version }
                     final indexRel = index!=-1 ? indexEntry.releases[index] : null as PluginRelease
 
-                    // if not exists, add to the index
+                    // if not, add to the index
                     if( !indexRel ) {
                         indexEntry.releases << rel
                     }
-                    // otherwise verify the checksum matches
+                    // otherwise, verify the checksum matches
                     else if( indexRel.sha512sum != rel.sha512sum ) {
                         if( overwrite ) {
                             indexEntry.releases[index] = rel
@@ -113,10 +113,10 @@ class GithubRepositoryPublisher extends DefaultTask {
 
 
     /*
-     * Traverse a S3 bucket and return a map given all releases for each
+     * Traverse an S3 bucket and return a map with all releases for each
      * plugin id
      *
-     * @return The map holding the plugin releases for each plugin id
+     * @return The map that contains the plugin releases for each plugin id
      */
     Map<String,List<PluginRelease>> listPlugins() {
         Map<String,List<PluginRelease>> result = [:]
@@ -152,7 +152,7 @@ class GithubRepositoryPublisher extends DefaultTask {
         final metaFile = "${repo}-${version}-meta.json"
         final json = client.getReleaseAsset(version, metaFile)?.text
         if( !json )
-            throw new GradleException("Can't load plugin release metafile $metaFile")
+            throw new GradleException("Failed to load plugin release metafile $metaFile")
         return new Gson().fromJson(json, PluginRelease)
     }
 
