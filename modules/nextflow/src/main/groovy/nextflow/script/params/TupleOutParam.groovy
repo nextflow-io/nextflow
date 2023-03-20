@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +31,6 @@ import nextflow.script.TokenVar
  */
 @InheritConstructors
 class TupleOutParam extends BaseOutParam implements OptionalParam {
-
-    enum CombineMode implements OutParam.Mode { combine }
 
     protected List<BaseOutParam> inner = new ArrayList<>(10)
 
@@ -105,18 +102,4 @@ class TupleOutParam extends BaseOutParam implements OptionalParam {
         }
     }
 
-    TupleOutParam mode(def value ) {
-
-        def str = value instanceof String ? value : ( value instanceof TokenVar ? value.name : null )
-        if( str ) {
-            try {
-                this.mode = CombineMode.valueOf(str)
-            }
-            catch( Exception e ) {
-                super.mode(value)
-            }
-        }
-
-        return this
-    }
 }

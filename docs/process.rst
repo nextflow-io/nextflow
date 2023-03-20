@@ -63,6 +63,20 @@ scripts with multiple commands spanning multiple lines. For example::
       """
     }
 
+.. tip::
+  By default, the script block is executed with the `Bash options <https://tldp.org/LDP/abs/html/options.html>`_ ``set -ue``.
+  The user can add custom options directly to the process definition as shown below::
+
+    process doMoreThings {
+      shell '/bin/bash', '-euo', 'pipefail'
+      
+      """
+      blastp -db $db -query query.fa -outfmt 6 > blast_result
+      cat blast_result | head -n 10 | cut -f 2 > top_hits
+      blastdbcmd -db $db -entry_batch top_hits > sequences
+      """
+    }
+
 As explained in the script tutorial section, strings can be defined using single-quotes
 or double-quotes, and multi-line strings are defined by three single-quote or three double-quote characters.
 
@@ -127,7 +141,7 @@ To use a language other than Bash, simply start your process script with the cor
         """
     }
 
-    process pythonStuff {
+    process pythonTask {
         """
         #!/usr/bin/python
 
@@ -135,6 +149,11 @@ To use a language other than Bash, simply start your process script with the cor
         y = 'world!'
         print "%s - %s" % (x,y)
         """
+    }
+
+    workflow {
+        perlTask()
+        pythonTask()
     }
 
 .. tip::
@@ -264,7 +283,7 @@ In the above example, ``$USER`` is treated as a Bash variable, while ``!{str}`` 
     - Shell script definitions require the use of single-quote ``'`` delimited strings. When using double-quote ``"``
       delimited strings, dollar variables are interpreted as Nextflow variables as usual. See :ref:`string-interpolation`.
 
-    - Variables prefixed with ``!`` must always be enclosed in curly brackets, i.e. ``!{str}`` is a valid 
+    - Variables prefixed with ``!`` must always be enclosed in curly brackets, i.e. ``!{str}`` is a valid
       variable whereas ``!str`` is ignored.
 
     - Shell scripts support the use of the :ref:`process-template` mechanism. The same rules are applied to the variables
@@ -631,6 +650,10 @@ with the current execution context.
   In most cases, you won't need to use dynamic file names, because each task is executed in its
   own directory, and input files are automatically staged into this directory by Nextflow.
   This behavior guarantees that input files with the same name won't overwrite each other.
+  
+  An example of when you may have to deal with that is when you have many input files in a task,
+  and some of these files may have the same filename. In this case, a solution would be to use
+  the option ``stageAs``.
 
 Dynamic input multiple file names
 ------------------------
@@ -650,11 +673,6 @@ Therefore, you can access the sourceObj and storePath of each input file.::
       """
 
   }
-
-
-Input of type 'path'
---------------------
-
 
 Input type ``env``
 ------------------
@@ -769,7 +787,7 @@ each time a new value is received. For example::
 
   workflow {
     sequences = Channel.fromPath('*.fa')
-    methods = ['regular', 'expresso', 'psicoffee']
+    methods = ['regular', 'espresso', 'psicoffee']
 
     alignSequences(sequences, methods)
   }
@@ -794,14 +812,14 @@ Input repeaters can be applied to files as well. For example::
 
     workflow {
       sequences = Channel.fromPath('*.fa')
-      methods = ['regular', 'expresso']
+      methods = ['regular', 'espresso']
       libraries = [ file('PQ001.lib'), file('PQ002.lib'), file('PQ003.lib') ]
 
       alignSequences(sequences, methods, libraries)
     }
 
 In the above example, each sequence input file emitted by the ``sequences`` channel triggers six alignment tasks,
-three with the ``regular`` method against each library file, and three with the ``expresso`` method.
+three with the ``regular`` method against each library file, and three with the ``espresso`` method.
 
 .. note::
   When multiple repeaters are defined, the process is executed for each *combination* of them.
@@ -1029,6 +1047,33 @@ Name                Description
 ``includeInputs``   When ``true`` any input files matching an output file glob pattern are included.
 ================== =====================
 
+The parenthesis are optional for input and output qualifiers, but when you want to set an additional option and there
+is more than one input or output qualifier, you must use parenthesis so that Nextflow knows what qualifier you're
+referring to.
+
+One example with a single output qualifier::
+
+    process foo {
+      output:
+      path 'result.txt', hidden: true
+
+      '''
+      echo 'another new line' >> result.txt
+      '''
+    }
+
+Another example with multiple output qualifiers::
+
+    process foo {
+      output:
+      tuple path('last_result.txt'), path('result.txt', hidden: true)
+
+      '''
+      echo 'another new line' >> result.txt
+      echo 'another new line' > last_result.txt
+      '''
+    }
+
 
 Multiple output files
 ---------------------
@@ -1072,7 +1117,7 @@ Some caveats on glob pattern behavior:
   resulting output channel, these files may still be transferred from the task scratch directory
   to the original task work directory. Therefore, to avoid unnecessary file copies, avoid using
   loose wildcards when defining output files, e.g. ``path '*'``. Instead, use a prefix or a suffix
-  to restrict the set of matching files to only the expected ones, e.g. ``path 'prefix_*.sorted.bam'``. 
+  to restrict the set of matching files to only the expected ones, e.g. ``path 'prefix_*.sorted.bam'``.
 
 Read more about glob syntax at the following link `What is a glob?`_
 
@@ -1115,7 +1160,12 @@ on the actual value of the ``species`` input.
   Also, metadata can be associated with outputs by using the :ref:`tuple output <process-out-tuple>` qualifier, instead of
   including them in the output file name.
 
-  To sum up, the use of output files with static names over dynamic ones is preferable whenever possible, 
+  One example in which you'd need to manage the naming of output files is when you use the ``publishDir`` directive
+  to have output files also in a specific path of your choice. If two tasks have the same filename for their output and you want them
+  to be in the same path specified by ``publishDir``, the last task to finish will overwrite the output of the task that finished before.
+  You can dynamically change that by adding the ``saveAs`` option to your ``publishDir`` directive.
+
+  To sum up, the use of output files with static names over dynamic ones is preferable whenever possible,
   because it will result in simpler and more portable code.
 
 
@@ -1220,7 +1270,7 @@ process if the declared output is not produced::
 
 In this example, the process is normally expected to produce an ``output.txt`` file, but in the
 cases where the file is legitimately missing, the process does not fail. The output channel will
-only contain values for those processes that produce ``output.txt``. 
+only contain values for those processes that produce ``output.txt``.
 
 
 When
@@ -1305,7 +1355,7 @@ afterScript
 The ``afterScript`` directive allows you to execute a custom (Bash) snippet immediately *after* the main process has run.
 This may be useful to clean up your staging area.
 
-.. note:: When combined with the :ref:`container directive <process-container>`, the ``afterScript`` will be 
+.. note:: When combined with the :ref:`container directive <process-container>`, the ``afterScript`` will be
    executed outside the specified container. In other words, the ``afterScript`` is always executed in the host environment.
 
 
@@ -1327,7 +1377,7 @@ For example::
       """
     }
 
-.. note:: When combined with the :ref:`container directive <process-container>`, the ``beforeScript`` will be 
+.. note:: When combined with the :ref:`container directive <process-container>`, the ``beforeScript`` will be
    executed outside the specified container. In other words, the ``beforeScript`` is always executed in the host environment.
 
 
@@ -1346,7 +1396,7 @@ to identify univocally the outputs produced by the process execution.
 
 
 The cache is enabled by default, you can disable it for a specific process by setting the ``cache``
-directive to ``false``. For example:: 
+directive to ``false``. For example::
 
   process noCacheThis {
     cache false
@@ -1403,8 +1453,33 @@ Multiple packages can be specified separating them with a blank space eg. ``bwa=
 The name of the channel from where a specific package needs to be downloaded can be specified using the usual
 Conda notation i.e. prefixing the package with the channel name as shown here ``bioconda::bwa=0.7.15``.
 
-The ``conda`` directory also allows the specification of a Conda environment file
+The ``conda`` directive also allows the specification of a Conda environment file
 path or the path of an existing environment directory. See the :ref:`conda-page` page for further details.
+
+
+.. _process-spack:
+
+spack
+-----
+
+The ``spack`` directive allows for the definition of the process dependencies using the `Spack <https://spack.io>`_
+package manager.
+
+Nextflow automatically sets up an environment for the given package names listed by in the ``spack`` directive.
+For example::
+
+  process foo {
+    spack 'bwa@0.7.15'
+
+    '''
+    your_command --here
+    '''
+  }
+
+Multiple packages can be specified separating them with a blank space eg. ``bwa@0.7.15 fastqc@0.11.5``.
+
+The ``spack`` directive also allows the specification of a Spack environment file
+path or the path of an existing environment directory. See the :ref:`spack-page` page for further details.
 
 
 .. _process-container:
@@ -1676,6 +1751,38 @@ This can be defined in the ``nextflow.config`` file as shown below::
     process.ext.version = '2.5.3'
 
 
+.. _process-fair:
+
+fair
+----
+
+When using the ``fair`` directive, the sequence of the outputs of a process is guaranteed
+to match the sequence of the input values. For example::
+
+    process foo {
+      fair true
+      input:
+        val x
+      output:
+        tuple val(task.index), val(x)
+
+      script:
+        """
+        sleep \$((RANDOM % 3))
+        """
+    }
+
+    workflow {
+       channel.of('A','B','C','D') | foo | view
+    }
+
+The above example produces::
+
+    [1, A]
+    [2, B]
+    [3, C]
+    [4, D]
+
 .. _process-label:
 
 label
@@ -1700,22 +1807,10 @@ process using the ``label`` directive more than one time.
 
 Labels are useful to organise workflow processes in separate groups which can be referenced
 in the configuration file to select and configure subset of processes having similar computing requirements.
-
 See the :ref:`config-process-selectors` documentation for details.
 
-The ``label`` directive can be also expressed as a `Map<key-value>` or a `key=value` sentence:
+See also: `resourceLabels`_
 
-  process bigTask {
-    label "region=eu-west-1"
-    label organization: 'MyOrganization'
-    label department: 'a department', group: 'a group'
-
-    '''
-    <task script>
-    '''
-  }
-
-These labels will be used to tag the process when pipeline is running in AWS, Google or K8s
 
 .. _process-machineType:
 
@@ -1736,7 +1831,7 @@ This directive is optional and if specified overrides the cpus and memory direct
     }
 
 .. note:: This feature requires Nextflow 19.07.0 or later.
-    
+
 See also: `cpus`_ and `memory`_.
 
 
@@ -1756,7 +1851,7 @@ By default this directive is disabled, you can set it as shown in the example be
       echo 'do this as that .. '
       """
     }
-    
+
 .. note:: This setting considers the **total** errors accumulated for a given process, across all instances. If you want
   to control the number of times a process **instance** (aka task) can fail, use ``maxRetries``.
 
@@ -1930,8 +2025,10 @@ The ``pod`` directive allows the definition of the following options:
 ``env: <E>, fieldPath: <V>``                      Defines an environment variable with name ``E`` and whose value is given by the ``V`` `field path <https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/>`_.
 ``env: <E>, config: <C/K>``                       Defines an environment variable with name ``E`` and whose value is given by the entry associated to the key with name ``K`` in the `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name ``C``.
 ``env: <E>, secret: <S/K>``                       Defines an environment variable with name ``E`` and whose value is given by the entry associated to the key with name ``K`` in the `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name ``S``.
-``config: <C/K>, mountPath: </absolute/path>``    The content of the `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name ``C`` with key ``K`` is made available to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the ``ConfigMap`` entries are exposed in that path.
-``secret: <S/K>, mountPath: </absolute/path>``    The content of the `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name ``S`` with key ``K`` is made available to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the ``Secret`` entries are exposed in that path.
+``config: <C/K>, mountPath: </absolute/path>``    Mounts a `ConfigMap <https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/>`_ with name ``C`` with key ``K``to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the ``ConfigMap`` entries are exposed in that path.
+``csi: <V>, mountPath: </absolute/path>``         Mounts a `CSI ephemeral volume <https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes>`_ with config ``V``to the path ``/absolute/path`` (requires ``22.11.0-edge`` or later).
+``emptyDir: <V>, mountPath: </absolute/path>``    Mounts an `emptyDir <https://kubernetes.io/docs/concepts/storage/volumes/#emptydir>`_ with configuration ``V`` to the path ``/absolute/path`` (requires ``22.11.0-edge`` or later).
+``secret: <S/K>, mountPath: </absolute/path>``    Mounts a `Secret <https://kubernetes.io/docs/concepts/configuration/secret/>`_ with name ``S`` with key ``K``to the path ``/absolute/path``. When the key component is omitted the path is interpreted as a directory and all the ``Secret`` entries are exposed in that path.
 ``volumeClaim: <V>, mountPath: </absolute/path>`` Mounts a `Persistent volume claim <https://kubernetes.io/docs/concepts/storage/persistent-volumes/>`_ with name ``V`` to the specified path location. Use the optional ``subPath`` parameter to mount a directory inside the referenced volume instead of its root. The volume may be mounted with `readOnly: true`, but is read/write by default.
 ``imagePullPolicy: <V>``                          Specifies the strategy to be used to pull the container image e.g. ``imagePullPolicy: 'Always'``.
 ``imagePullSecret: <V>``                          Specifies the secret name to access a private container image registry. See `Kubernetes documentation <https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod>`_ for details.
@@ -2007,8 +2104,10 @@ saveAs          A closure which, given the name of the file being published, ret
                 Return the value ``null`` from the closure to *not* publish a file.
                 This is useful when the process has multiple output files, but you want to publish only some of them.
 enabled         Enable or disable the publish rule depending on the boolean value specified (default: ``true``).
-tags            Allow to associate tags with the target file e.g. ``tag: [FOO: 'Hello world']`` (EXPERIMENTAL, currently only supported by files stored on AWS S3, requires version ``21.12.0-edge`` or later).
 failOnError     When ``true`` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: ``false``)
+contentType     Allow specifying the media content type of the published file a.k.a. `MIME type <https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types>`_. If the boolean value ``true`` is specified the content type is inferred from the file extension (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Default: ``false``, requires ``22.10.0`` or later).
+storageClass    Allow specifying the *storage class* to be used for the published file (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Requires version ``22.12.0-edge`` or later).
+tags            Allow the association of arbitrary tags with the published file e.g. ``tags: [FOO: 'Hello world']`` (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Requires version ``21.12.0-edge`` or later).
 =============== =================
 
 Table of publish modes:
@@ -2020,7 +2119,7 @@ symlink         Creates an absolute `symbolic link` in the published directory f
 rellink         Creates a relative `symbolic link` in the published directory for each process output file.
 link            Creates a `hard link` in the published directory for each process output file.
 copy            Copies the output files into the published directory.
-copyNoFollow    Copies the output files into the published directory without following symlinks ie. copies the links themselves. 
+copyNoFollow    Copies the output files into the published directory without following symlinks ie. copies the links themselves.
 move            Moves the output files into the published directory. **Note**: this is only supposed to be used for a `terminating` process i.e. a process whose output is not consumed by any other downstream process.
 =============== =================
 
@@ -2075,6 +2174,32 @@ Multiple queues can be specified by separating their names with a comma for exam
 
 .. note:: This directive is only used by certain executors. Refer to the
   :ref:`executor-page` page to see which executors support this directive.
+
+
+.. _process-resourcelabels:
+
+resourceLabels
+--------------
+
+The ``resourceLabels`` directive allows you to specify custom name-value pairs
+that Nextflow applies to the computing resource used to carry out the process execution.
+Resource labels can be specified using the syntax shown below::
+
+  process my_task {
+    resourceLabels region: 'some-region', user: 'some-username'
+
+    '''
+    <task script>
+    '''
+  }
+
+The limits and the syntax of the corresponding cloud provider should be taken into consideration when using resource labels.
+
+.. note::
+  Resource labels are currently only supported by the :ref:`awsbatch-executor`,
+  :ref:`google-lifesciences-executor`, Google Cloud Batch and :ref:`k8s-executor` executors.
+
+See also `label`_.
 
 
 .. _process-scratch:
@@ -2209,6 +2334,8 @@ Value   Description
 copy    Output files are copied from the scratch directory to the work directory.
 move    Output files are moved from the scratch directory to the work directory.
 rsync   Output files are copied from the scratch directory to the work directory by using the ``rsync`` utility.
+rclone  Output files are copied from the scratch directory to the work directory by using the `rclone <https://rclone.org>`_ utility (note: it must be available in your cluster computing nodes, requires version ``23.01.0-edge`` or later).
+fcp     Output files are copied from the scratch directory to the work directory by using the `fcp <https://github.com/Svetlitski/fcp>`_ utility (note: it must be available in your cluster computing nodes, requires version ``23.02.0-edge`` or later).
 ======= ==================
 
 See also: `scratch`_.
@@ -2345,8 +2472,8 @@ All directives can be assigned a dynamic value except the following:
 Dynamic computing resources
 ---------------------------
 
-It's a very common scenario that different instances of the same process may have very different needs in terms of computing resources. 
-In such situations requesting, for example, an amount of memory too low will cause some tasks to fail. 
+It's a very common scenario that different instances of the same process may have very different needs in terms of computing resources.
+In such situations requesting, for example, an amount of memory too low will cause some tasks to fail.
 Instead, using a higher limit that fits all the tasks in your execution could significantly decrease the execution priority of your jobs.
 
 The `Dynamic directives`_ evaluation feature can be used to modify the amount of computing resources requested in case

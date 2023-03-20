@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,9 +37,24 @@ class SubmitContainerTokenRequest {
     String towerAccessToken
 
     /**
+     * Tower refresh token
+     */
+    String towerRefreshToken
+
+    /**
      * Tower workspace id
      */
     Long towerWorkspaceId
+
+    /**
+     * Tower endpoint
+     */
+    String towerEndpoint
+
+    /**
+     * The ID of the executed container
+     */
+    String workflowId
 
     /**
      * Container image to be pulled
@@ -61,9 +76,29 @@ class SubmitContainerTokenRequest {
      */
     String condaFile
 
+    /**
+     * The request container platform
+     */
     String containerPlatform
 
+    /**
+     * The target repository where the built container needs to be stored
+     */
     String buildRepository
 
+    /**
+     * The container repository to cache build layers
+     */
     String cacheRepository
+
+    /**
+     * Request
+     */
+    String timestamp
+
+    /**
+     * Request unique fingerprint
+     */
+    String fingerprint
+
 }

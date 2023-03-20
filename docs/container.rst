@@ -11,6 +11,10 @@ platform that supports a container runtime. Furthermore, the same pipeline can b
 executed with any of the supported container runtimes, depending on which runtimes are available
 in the target compute environment.
 
+.. note::
+  When creating your container image to use with Nextflow make sure it includes Bash (3.x or later) and ``ps`` are installed in your
+  image, along with other tools required for collecting metrics (See the list :ref:`here <trace-required-packages>`). Also, Bash should be available on the path `/bin/bash` and it should be the container entry-point. 
+
 .. _container-charliecloud:
 
 Charliecloud
@@ -85,7 +89,7 @@ to the Charliecloud container format::
 
     process.container = 'https://quay.io/biocontainers/multiqc:1.3--py35_2'
     charliecloud.enabled = true
- 
+
 Whereas this would pull from Docker Hub::
 
     process.container = 'nextflow/examples:latest'
@@ -112,7 +116,7 @@ in the ``nextflow.config`` file as shown below::
 
 Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
 
-Advanced settings 
+Advanced settings
 -----------------
 
 Charliecloud advanced configuration settings are described in :ref:`config-charliecloud` section in the Nextflow
@@ -172,9 +176,10 @@ your pipeline execution.
 Multiple containers
 -------------------
 
-It is possible to specify a different Docker image for each process definition in your pipeline script. Let's
-suppose you have two processes named ``foo`` and ``bar``. You can specify two different Docker images for them
-in the Nextflow script as shown below::
+It is possible to specify a different Docker image for each process definition in your pipeline script. However, this
+can't be done with ``-with-docker`` command line option, since it doesn't support process selectors in the ``nextflow.config`` file, and doesn't
+check for the ``container`` process directive in the pipeline script file. Let's suppose you have two processes named ``foo``
+and ``bar``. You can specify two different Docker images for them in the Nextflow script as shown below::
 
     process foo {
       container 'image_name_1'
@@ -209,6 +214,10 @@ Alternatively, the same containers definitions can be provided by using the ``ne
 
 
 Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
+
+After running your pipeline, you can easily check what container image each process used with the following command::
+
+    nextflow log last -f name,container
 
 Advanced settings
 -----------------
@@ -309,10 +318,69 @@ Alternatively, the same containers definitions can be provided by using the ``ne
 
 Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
 
-Advanced settings 
+Advanced settings
 -----------------
 
 Podman advanced configuration settings are described in :ref:`config-podman` section in the Nextflow configuration page.
+
+
+.. _container-sarus:
+
+Sarus
+=======
+
+`Sarus <https://sarus.readthedocs.io>`_ is an alternative container runtime to
+Docker. Sarus works by converting Docker images to a common format that can then be
+distributed and launched on HPC systems. The user interface to Sarus enables a user to select an image
+from `Docker Hub <https://hub.docker.com/>`_ and then submit jobs which run entirely within the container.
+
+Prerequisites
+-------------
+
+You need Sarus installed in your execution environment,
+i.e: your personal computer or a distributed cluster, depending
+on where you want to run your pipeline.
+
+.. note:: This feature requires Sarus version 1.5.1 (or later) and Nextflow 22.12.0-edge (or later).
+
+Images
+------
+
+Sarus converts a docker image to squashfs layers which are distributed and launched in the cluster. For more information on
+how to build Sarus images see the `official documentation <https://sarus.readthedocs.io/en/stable/user/user_guide.html#develop-the-docker-image>`_.
+
+How it works
+------------
+
+The integration for Sarus, at this time, requires you to set up the following parameters in your config file::
+
+  process.container = "dockerhub_user/image_name:image_tag"
+  sarus.enabled = true
+
+and it will always try to search the Docker Hub registry for the images.
+
+.. note:: if you do not specify an image tag, the ``latest`` tag will be fetched by default.
+
+Multiple containers
+-------------------
+
+It is possible to specify a different Sarus image for each process definition in your pipeline script. For example,
+let's suppose you have two processes named ``foo`` and ``bar``. You can specify two different Sarus images
+specifying them in the ``nextflow.config`` file as shown below::
+
+    process {
+        withName:foo {
+            container = 'image_name_1'
+        }
+        withName:bar {
+            container = 'image_name_2'
+        }
+    }
+    sarus {
+        enabled = true
+    }
+
+Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
 
 
 .. _container-shifter:
@@ -328,8 +396,8 @@ from `Docker Hub <https://hub.docker.com/>`_ and then submit jobs which run enti
 Prerequisites
 -------------
 
-You need Shifter and Shifter image gateway installed in your execution environment, i.e: your personal computed or the
-entry node of a distributed cluster. In the case of the distributed cluster case, you should have Shifter installed on
+You need Shifter and Shifter image gateway installed in your execution environment, i.e: your personal computer or the
+entry node of a distributed cluster. In the case of the distributed cluster, you should have Shifter installed on
 all of the compute nodes and the ``shifterimg`` command should also be available and Shifter properly setup to access the
 Image gateway, for more information see the `official documentation <https://github.com/NERSC/shifter/tree/master/doc>`_.
 
@@ -455,7 +523,7 @@ Multiple containers
 
 It is possible to specify a different Singularity image for each process definition in your pipeline script. For example,
 let's suppose you have two processes named ``foo`` and ``bar``. You can specify two different Singularity images
-specifing them in the ``nextflow.config`` file as shown below::
+specifying them in the ``nextflow.config`` file as shown below::
 
     process {
         withName:foo {
@@ -527,7 +595,7 @@ latter overrides the former).
 .. warning::
     When using a compute cluster, the Singularity cache directory must reside in a shared filesystem accessible to all compute nodes.
 
-.. danger:: 
+.. danger::
     When pulling Docker images, Singularity may be unable to determine the container size if the image was
     stored using an old Docker format, resulting in a pipeline execution error. See the Singularity documentation for details.
 
@@ -536,3 +604,153 @@ Advanced settings
 
 Singularity advanced configuration settings are described in :ref:`config-singularity` section in the Nextflow
 configuration page.
+
+
+ Apptainer
+ ===========
+
+ `Apptainer <https://apptainer.org>`_ is an alternative container runtime to Docker and an open source fork of Singularity. The main advantages
+ of Apptainer are that it can be used without root privileges and it doesn't require a separate daemon process.
+ These, along with other features such as support for autofs mounts, makes Apptainer better suited to the requirements of HPC workloads. Apptainer is able to use existing Docker images and can pull from Docker
+ registries.
+
+ Prerequisites
+ -------------
+
+ You will need Apptainer installed on your execution environment e.g. your computer or a distributed cluster, depending
+ on where you want to run your pipeline.
+
+ Images
+ ------
+
+ Apptainer makes use of a container image file, which physically contains the container. Refer to the `Apptainer
+ documentation <https://apptainer.org/docs>`_ to learn how create Apptainer images.
+
+ Apptainer allows paths that do not currently exist within the container to be created
+ and mounted dynamically by specifying them on the command line. However this feature is only supported on hosts
+ that support the `Overlay file system <https://en.wikipedia.org/wiki/OverlayFS>`_ and is not enabled by default.
+
+ .. note::
+     Nextflow expects that data paths are defined system wide, and your Apptainer images need to be created having the
+     mount paths defined in the container file system.
+
+ If your Apptainer installation support the `user bind control` feature,
+ enable the Nextflow support for that by defining the ``apptainer.autoMounts = true`` setting in the Nextflow
+ configuration file.
+
+ How it works
+ ------------
+
+ The integration for Apptainer follows the same execution model implemented for Docker. You won't need to modify your
+ Nextflow script in order to run it with Apptainer. Simply specify the Apptainer image
+ file from where the containers are started by using the ``-with-apptainer`` command line option. For example::
+
+   nextflow run <your script> -with-apptainer [apptainer image file]
+
+ Every time your script launches a process execution, Nextflow will run it into a Apptainer container created by using the
+ specified image. In practice Nextflow will automatically wrap your processes and launch them by running the
+ ``apptainer exec`` command with the image you have provided.
+
+ .. note::
+     A Apptainer image can contain any tool or piece of software you may need to carry out a process execution.
+     Moreover, the container is run in such a way that the process result files are created in the host file system, thus
+     it behaves in a completely transparent manner without requiring extra steps or affecting the flow in your pipeline.
+
+ If you want to avoid entering the Apptainer image as a command line parameter, you can define it in the Nextflow
+ configuration file. For example you can add the following lines in the ``nextflow.config`` file::
+
+     process.container = '/path/to/apptainer.img'
+     apptainer.enabled = true
+
+ In the above example replace ``/path/to/apptainer.img`` with any Apptainer image of your choice.
+
+ Read the :ref:`config-page` page to learn more about the ``nextflow.config`` file and how to use it to configure
+ your pipeline execution.
+
+ .. note::
+     Unlike Docker, Nextflow does not automatically mount host paths in the container when using Apptainer.
+     It expects that the paths are configure and mounted system wide by the Apptainer runtime. If your Apptainer installation
+     allows user defined bind points, read the :ref:`Apptainer configuration <config-apptainer>` section to learn
+     how to enable Nextflow auto mounts.
+
+ .. warning::
+     When a process input is a *symbolic link* file, make sure the linked file is stored in a host folder that is
+     accessible from a bind path defined in your Apptainer installation. Otherwise the process execution will fail
+     because the launched container won't be able to access the linked file.
+
+ Multiple containers
+ -------------------
+
+ It is possible to specify a different Apptainer image for each process definition in your pipeline script. For example,
+ let's suppose you have two processes named ``foo`` and ``bar``. You can specify two different Apptainer images
+ specifying them in the ``nextflow.config`` file as shown below::
+
+     process {
+         withName:foo {
+             container = 'image_name_1'
+         }
+         withName:bar {
+             container = 'image_name_2'
+         }
+     }
+     apptainer {
+         enabled = true
+     }
+
+
+ Read the :ref:`Process scope <config-process>` section to learn more about processes configuration.
+
+ Apptainer & Docker Hub
+ ------------------------
+
+ Nextflow is able to transparently pull remote container images stored in any Docker compatible registry.
+
+ By default when a container name is specified, Nextflow checks if an image file with that name exists in the local file
+ system. If that image file exists, it's used to execute the container. If a matching file does not exist,
+ Nextflow automatically tries to pull an image with the specified name from the Docker Hub.
+
+ If you want Nextflow to check only for local file images, prefix the container name with the ``file://`` pseudo-protocol.
+ For example::
+
+     process.container = 'file:///path/to/apptainer.img'
+     apptainer.enabled = true
+
+ .. warning::
+     Use three ``/`` slashes to specify an **absolute** file path, otherwise the path will be interpreted as
+     relative to the workflow launch directory.
+
+ To pull images from the Apptainer Hub or a third party Docker registry simply prefix the image name
+ with the ``shub://``, ``docker://`` or ``docker-daemon://`` pseudo-protocol as required by the Apptainer tool. For example::
+
+     process.container = 'docker://quay.io/biocontainers/multiqc:1.3--py35_2'
+     apptainer.enabled = true
+
+ You do not need to specify ``docker://`` to pull from a Docker repository.
+ Nextflow will automatically prepend it to your image name when Apptainer is enabled.
+ Additionally, the Docker engine will not work with containers specified as ``docker://``.
+
+ .. note::
+     This feature requires the ``apptainer`` tool to be installed
+     where the workflow execution is launched (as opposed to the compute nodes).
+
+ Nextflow caches those images in the ``apptainer`` directory in the pipeline work directory by default. However it is
+ suggested to provide a centralised cache directory by using either the ``NXF_APPTAINER_CACHEDIR`` environment variable
+ or the ``apptainer.cacheDir`` setting in the Nextflow config file.
+
+ As of version ``21.09.0-edge``, when looking for a Apptainer image file, Nextflow first checks the *library* directory,
+ and if the image file is not found, the *cache* directory is used as usual. The library directory can be defined either using
+ the ``NXF_APPTAINER_LIBRARYDIR`` environment variable or the ``apptainer.libraryDir`` configuration setting (the
+ latter overrides the former).
+
+ .. warning::
+     When using a compute cluster, the Apptainer cache directory must reside in a shared filesystem accessible to all compute nodes.
+
+ .. danger::
+     When pulling Docker images, Apptainer may be unable to determine the container size if the image was
+     stored using an old Docker format, resulting in a pipeline execution error. See the Apptainer documentation for details.
+
+ Advanced settings
+ -----------------
+
+ Apptainer advanced configuration settings are described in :ref:`config-apptainer` section in the Nextflow
+ configuration page.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,8 @@ import nextflow.plugin.Plugins
 import nextflow.script.ChannelOut
 import nextflow.script.FunctionDef
 import nextflow.script.ScriptMeta
+import nextflow.util.TestOnly
+
 /**
  * Manage channel extensions and dispatch method invocations
  * to target class implementing the extension logic
@@ -73,6 +75,7 @@ class PluginExtensionProvider implements ExtensionProvider {
         return instance = new PluginExtensionProvider().install()
     }
 
+    @TestOnly
     static void reset() {
         instance = null
     }
@@ -153,6 +156,8 @@ class PluginExtensionProvider implements ExtensionProvider {
                 throw new IllegalStateException("Extension '$realName' it isn't defined by plugin ${pluginId}")
             }
         }
+        // initialise the plugin session
+        ext.checkInit((Session)Global.session)
         return instance = this
     }
 

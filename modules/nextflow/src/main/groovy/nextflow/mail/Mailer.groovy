@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +38,7 @@ import nextflow.util.Duration
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.parser.Parser
-import org.jsoup.safety.Whitelist
+import org.jsoup.safety.Safelist
 /**
  * This class implements the send mail functionality
  *
@@ -396,7 +395,7 @@ class Mailer {
         document.select("br").append("\\n");
         document.select("p").prepend("\\n");
         String s = document.html().replaceAll("\\\\n", "\n");
-        def result = Jsoup.clean(s, "", Whitelist.none(), new Document.OutputSettings().prettyPrint(false));
+        def result = Jsoup.clean(s, "", Safelist.none(), new Document.OutputSettings().prettyPrint(false));
         Parser.unescapeEntities(result, false)
     }
 

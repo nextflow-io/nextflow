@@ -1,6 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  * Copyright 2022, CEA-CNRGH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -147,7 +146,7 @@ class BridgeExecutor extends AbstractGridExecutor {
     /*
      *  Maps job status to nextflow status
      */
-    static private Map STATUS_MAP = [
+    static private Map<String,QueueStatus> STATUS_MAP = [
             'pending': QueueStatus.PENDING, 
             'running': QueueStatus.RUNNING,
             'done': QueueStatus.DONE, 
@@ -160,7 +159,7 @@ class BridgeExecutor extends AbstractGridExecutor {
     @Override
     protected Map<String, QueueStatus> parseQueueStatus(String text) {
 
-        def result = [:]
+        final result = new LinkedHashMap<String, QueueStatus>()
         if( !text) 
             return result
 

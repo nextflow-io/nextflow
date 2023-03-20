@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022, Seqera Labs.
+ * Copyright 2013-2023, Seqera Labs
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -74,19 +74,9 @@ class TowerFactory implements TraceObserverFactory {
     }
 
     protected XAuthProvider provider(String endpoint, String accessToken) {
-        assert !endpoint.endsWith('/'), "Tower endpoint URL should end with a `/` character"
-        final pattern = ~/(?i)^$endpoint\/.*$/
-        new XAuthProvider() {
-            @Override
-            boolean authorize(URLConnection conn) {
-                final req = conn.getURL().toString()
-                if( pattern.matcher(req).matches() && !conn.getRequestProperty('Authorization') ) {
-                    log.trace "Authorizing request connection to: $req"
-                    conn.setRequestProperty('Authorization', "Bearer $accessToken")
-                    return true
-                }
-                return false
-            }
-        }
+        if (endpoint.endsWith('/'))
+            throw new IllegalArgumentException("Tower endpoint URL should not end with a `/` character -- offending value: $endpoint")
+        final refreshToken = env.get('TOWER_REFRESH_TOKEN')
+        return new TowerXAuth(endpoint, accessToken, refreshToken)
     }
 }

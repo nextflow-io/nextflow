@@ -271,6 +271,11 @@ Create a ``github`` entry in the `SCM configuration file`_ specifying your user 
     GitHub requires the use of a personal access token (PAT) in place of a password when accessing APIs.
     Learn more about PAT and how to create it at `this link <https://docs.github.com/en/github/authenticating-to-github/keeping-your-account-and-data-secure/creating-a-personal-access-token>`_.
 
+.. tip::
+    As of version 23.01.0-edge, Nextflow automatically uses the environment variable ``GITHUB_TOKEN`` to authenticate
+    the access to GitHub repository if no credentials are provided via the ``scm`` file. This is useful especially when
+    accessing pipeline code from a GitHub action. Read more about the token authentication in the
+    `GitHub documentation <https://docs.github.com/en/actions/security-guides/automatic-token-authentication>`_.
 
 GitLab credentials
 -------------------
@@ -368,7 +373,7 @@ Then the pipeline can be accessed with Nextflow as shown below::
 
 
 In the above example replace ``my-repo`` with your own repository. Note also that AWS CodeCommit has different
-URLs depending the region in which you are working. 
+URLs depending the region in which you are working.
 
 .. note::
     The support for protocols other than HTTPS is not available at this time.

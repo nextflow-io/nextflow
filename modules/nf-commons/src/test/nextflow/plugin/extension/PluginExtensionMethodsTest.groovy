@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
  */
 
 package nextflow.plugin.extension
+
+import nextflow.plugin.hello.HelloExtension
 
 import java.nio.file.Path
 
@@ -221,6 +223,17 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         "include { sayHello } from 'plugin/nf-test-plugin-hello'; channel.of( sayHello('es') )" | 'hola'
         "include { sayHello as hi } from 'plugin/nf-test-plugin-hello'; channel.of( hi() )"     | 'hi'
 
+    }
+
+    def 'should call init plugin in custom functions'() {
+        when:
+        def result = dsl_eval("""
+            include { sayHello } from 'plugin/nf-test-plugin-hello' 
+            sayHello()
+        """)
+
+        then:
+        true
     }
 
     def 'should throw function not found'() {

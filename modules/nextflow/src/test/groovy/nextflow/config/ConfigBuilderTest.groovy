@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +26,7 @@ import nextflow.cli.CmdRun
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
+import nextflow.trace.TraceHelper
 import nextflow.trace.WebLogObserver
 import nextflow.util.ConfigHelper
 import spock.lang.Ignore
@@ -38,6 +38,9 @@ import spock.lang.Unroll
  */
 class ConfigBuilderTest extends Specification {
 
+    def setup() {
+        TraceHelper.testTimestampFmt = '20221001'
+    }
 
     def 'build config object' () {
 
@@ -191,7 +194,7 @@ class ConfigBuilderTest extends Specification {
         file?.delete()
     }
 
-    def 'CLI params should override the ones defined in the config file (2)' () {
+    def 'CLI params should override the ones defined in the config file [2]' () {
         setup:
         def file = Files.createTempFile('test',null)
         file.text = '''
@@ -825,7 +828,7 @@ class ConfigBuilderTest extends Specification {
         then: // command line should override the config file
         config.trace instanceof Map
         config.trace.enabled
-        config.trace.file == 'trace.txt'
+        config.trace.file == 'trace-20221001.txt'
     }
 
     def 'should set session report options' () {
@@ -881,7 +884,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.report instanceof Map
         config.report.enabled
-        config.report.file == 'report.html'
+        config.report.file == 'report-20221001.html'
     }
 
 
@@ -938,7 +941,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.dag instanceof Map
         config.dag.enabled
-        config.dag.file == 'dag.dot'
+        config.dag.file == 'dag-20221001.dot'
     }
 
     def 'should set session weblog options' () {
@@ -1057,7 +1060,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.timeline instanceof Map
         config.timeline.enabled
-        config.timeline.file == 'timeline.html'
+        config.timeline.file == 'timeline-20221001.html'
     }
 
     def 'should set tower options' () {
@@ -1151,7 +1154,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.wave instanceof Map
         config.wave.enabled
-        config.wave.endpoint == 'https://default.host'
+        config.wave.endpoint == 'https://wave.seqera.io'
     }
 
     def 'should enable conda env' () {
@@ -1220,6 +1223,74 @@ class ConfigBuilderTest extends Specification {
         then:
         !config.conda.enabled
         !config.process.conda
+    }
+
+    def 'should enable spack env' () {
+
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        !config.spack
+
+        when:
+        config = new ConfigObject()
+        config.spack.createOptions = 'something'
+        builder.configRunOptions(config, env, new CmdRun())
+        then:
+        config.spack instanceof Map
+        !config.spack.enabled
+        config.spack.createOptions == 'something'
+
+        when:
+        config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withSpack: 'my-recipe.yaml'))
+        then:
+        config.spack instanceof Map
+        config.spack.enabled
+        config.process.spack == 'my-recipe.yaml'
+
+        when:
+        config = new ConfigObject()
+        config.spack.enabled = true
+        builder.configRunOptions(config, env, new CmdRun(withSpack: 'my-recipe.yaml'))
+        then:
+        config.spack instanceof Map
+        config.spack.enabled
+        config.process.spack == 'my-recipe.yaml'
+
+        when:
+        config = new ConfigObject()
+        config.process.spack = 'my-recipe.yaml'
+        builder.configRunOptions(config, env, new CmdRun(withSpack: '-'))
+        then:
+        config.spack instanceof Map
+        config.spack.enabled
+        config.process.spack == 'my-recipe.yaml'
+    }
+
+    def 'should disable spack env' () {
+        given:
+        def file = Files.createTempFile('test','config')
+        file.deleteOnExit()
+        file.text =
+                '''
+                spack {
+                    enabled = true
+                }
+                '''
+
+        when:
+        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        def run = new CmdRun(withoutSpack: true)
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        then:
+        !config.spack.enabled
+        !config.process.spack
     }
 
     def 'SHOULD SET `RESUME` OPTION'() {
@@ -1525,6 +1596,15 @@ class ConfigBuilderTest extends Specification {
 
     }
 
+    def 'should run with spack' () {
+
+        when:
+        def config = new ConfigBuilder().setCmdRun(new CmdRun(withSpack: '/some/path/env.yaml')).build()
+        then:
+        config.process.spack == '/some/path/env.yaml'
+
+    }
+
     def 'should warn about missing attribute' () {
 
         given:
@@ -1656,6 +1736,32 @@ class ConfigBuilderTest extends Specification {
         then:
         config.notification.enabled == true
         config.notification.to == 'yo@nextflow.com'
+    }
+
+    def 'should configure fusion' () {
+
+        given:
+        Map config
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun()).build()
+        then:
+        !config.fusion
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: true)).build()
+        then:
+        config.fusion.enabled == true
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: false)).build()
+        then:
+        config.fusion == [enabled: false]
+
+        when:
+        config = new ConfigBuilder().setCmdRun(new CmdRun(withFusion: true)).build()
+        then:
+        config.fusion == [enabled: true]
     }
 
     def 'should configure stub run mode' () {
@@ -1940,7 +2046,7 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should access top params from profile (2)' () {
+    def 'should access top params from profile [2]' () {
         given:
         def folder = Files.createTempDirectory('test')
         def file1 = folder.resolve('file1.conf')

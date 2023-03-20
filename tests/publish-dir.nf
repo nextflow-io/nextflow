@@ -1,7 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.enable.dsl=1
 
-input = Channel.from('alpha','beta','delta')
 
 process align {
     publishDir 'data', mode: 'copy'
 
     input:
-    val(x) from input
+    val(x)
 
     output:
-    file("*.bam") into bam
-    file("${x}.bai") into bai
+    path("*.bam")
+    path("${x}.bai")
 
     """
     echo ${x} > ${x}.bam
@@ -35,24 +32,22 @@ process align {
     """
 }
 
-process combine {
+process my_combine {
     publishDir 'data'
     publishDir 'more/data', mode: 'copy'
 
     input:
-    file(bamfile) from bam.toSortedList { it.name }
-    file(baifile) from bai.toSortedList { it.name }
+    path(bamfile)
+    path(baifile)
 
     output:
-    file 'result.txt' into result
+    path 'result.txt'
 
     """
     cat $bamfile > result.txt
     cat $baifile >> result.txt
     """
 }
-
-result.subscribe { println it.text }
 
 process foo {
   publishDir 'data', mode: 'link'
@@ -65,4 +60,16 @@ process foo {
   touch xxx/B
   touch xxx/C
   '''
+}
+
+workflow {
+  def input = Channel.of('alpha','beta','delta')
+  align(input)
+
+  def bam = align.out[0].toSortedList { it.name }
+  def bai = align.out[1].toSortedList { it.name }
+  my_combine( bam, bai )
+  my_combine.out.view{ it.text }
+
+  foo()
 }

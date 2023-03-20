@@ -5,8 +5,11 @@ Secrets
 *******
 
 
-As of version ``21.09.0-edge``, Nextflow adds the built-in support for pipeline secrets to allow users to handle
+As of version ``22.10.0``, Nextflow adds the built-in support for pipeline secrets to allow users to handle
 and manage sensitive information for pipeline execution in a safe manner.
+
+.. note::
+  A preview implementation of this feature has been available as for Nextflow version ``21.09.0-edge``.
 
 How it works
 ============
@@ -30,7 +33,7 @@ Operation               Description
 ===================== =====================
 ``list``                List secrets available in the current store e.g. ``nextflow secrets list``.
 ``get``                 Allows retrieving a secret value e.g. ``nextflow secrets get FOO``.
-``set``                 Allows creating creating a new secret or overriding an existing one e.g. ``nextflow secrets set FOO "Hello world"``
+``set``                 Allows creating a new secret or overriding an existing one e.g. ``nextflow secrets set FOO "Hello world"``
 ``delete``              Allows deleting an existing secret e.g. ``nextflow secrets delete FOO``.
 ===================== =====================
 
@@ -48,7 +51,7 @@ The above snippet access the secrets ``MY_ACCESS_KEY`` and ``MY_SECRET_KEY`` pre
 the corresponding AWS credentials settings.
 
 .. warning::
-    Secrets **cannot** be assigned to pipeline parameters. 
+    Secrets **cannot** be assigned to pipeline parameters.
 
 
 Process secrets

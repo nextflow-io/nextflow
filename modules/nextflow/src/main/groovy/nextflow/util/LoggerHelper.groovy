@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -206,6 +205,11 @@ class LoggerHelper {
         final AWS = 'com.amazonaws'
         if( !debugConf.contains(AWS) && !traceConf.contains(AWS)) {
             createLogger(AWS, Level.WARN)
+        }
+        // -- patch jgit warn
+        final JGIT = 'org.eclipse.jgit.util.FS'
+        if( !debugConf.contains(JGIT) && !traceConf.contains(JGIT)) {
+            createLogger(JGIT, Level.ERROR)
         }
 
         // -- debug packages specified by the user
@@ -437,7 +441,7 @@ class LoggerHelper {
     static protected void appendFormattedMessage( StringBuilder buffer, ILoggingEvent event, Throwable fail, Session session) {
         final className = session?.script?.getClass()?.getName()
         final message = event.getFormattedMessage()
-        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || ScriptRuntimeException
+        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || fail instanceof ScriptRuntimeException
         final normalize = { String str -> str ?. replace("${className}.", '')}
         List error = fail ? findErrorLine(fail) : null
 
@@ -458,10 +462,10 @@ class LoggerHelper {
             buffer.append("No such field: ${normalize(fail.message)}")
         }
         else if( fail instanceof NoSuchFileException ) {
-            buffer.append("No such file: ${normalize(fail.message)}")
+            buffer.append("No such file or directory: ${normalize(fail.message)}")
         }
         else if( fail instanceof FileAlreadyExistsException ) {
-            buffer.append("File already exist: $fail.message")
+            buffer.append("File or directory already exists: $fail.message")
         }
         else if( fail instanceof ClassNotFoundException ) {
             buffer.append("Class not found: ${normalize(fail.message)}")
