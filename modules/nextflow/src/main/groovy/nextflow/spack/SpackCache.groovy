@@ -56,8 +56,6 @@ class SpackCache {
 
     private Integer parallelBuilds
 
-    private String arch
-
     /**
      * Timeout after which the environment creation is aborted
      */
@@ -66,8 +64,6 @@ class SpackCache {
     private Path configCacheDir0
 
     @PackageScope Integer getParallelBuilds() { parallelBuilds }
-
-    @PackageScope String getArch() { arch }
 
     @PackageScope Duration getCreateTimeout() { createTimeout }
 
@@ -92,9 +88,6 @@ class SpackCache {
 
         if( config.parallelBuilds )
             parallelBuilds = config.parallelBuilds as Integer
-
-        if( config.arch )
-            arch = config.arch as String
 
         if( config.createTimeout )
             createTimeout = config.createTimeout as Duration
@@ -152,7 +145,7 @@ class SpackCache {
      * @return the spack unique prefix {@link Path} where the env is created
      */
     @PackageScope
-    Path spackPrefixPath(String spackEnv) {
+    Path spackPrefixPath(String spackEnv, String arch) {
         assert spackEnv
 
         String content
@@ -192,6 +185,8 @@ class SpackCache {
             content = spackEnv
         }
 
+        //if( arch ) content += arch
+
         final hash = CacheHelper.hasher(content).hash().toString()
         getCacheDir().resolve("$name-$hash")
     }
@@ -203,8 +198,8 @@ class SpackCache {
      * @return the spack environment prefix {@link Path}
      */
     @PackageScope
-    Path createLocalSpackEnv(String spackEnv) {
-        final prefixPath = spackPrefixPath(spackEnv)
+    Path createLocalSpackEnv(String spackEnv, String arch) {
+        final prefixPath = spackPrefixPath(spackEnv, arch)
 
         final file = new File("${prefixPath.parent}/.${prefixPath.name}.lock")
         final wait = "Another Nextflow instance is creating the spack environment $spackEnv -- please wait till it completes"
@@ -226,7 +221,7 @@ class SpackCache {
         }
 
         try {
-            mutex .lock { createLocalSpackEnv0(spackEnv, prefixPath) }
+            mutex .lock { createLocalSpackEnv0(spackEnv, prefixPath, arch) }
         }
         finally {
             file.delete()
@@ -267,7 +262,7 @@ class SpackCache {
     }
 
     @PackageScope
-    Path createLocalSpackEnv0(String spackEnv, Path prefixPath) {
+    Path createLocalSpackEnv0(String spackEnv, Path prefixPath, String arch) {
 
         log.info "Creating env using spack: $spackEnv [cache $prefixPath]"
 
@@ -342,7 +337,7 @@ class SpackCache {
      *      The {@link DataflowVariable} which hold (and pull) the local image file
      */
     @PackageScope
-    DataflowVariable<Path> getLazyImagePath(String spackEnv) {
+    DataflowVariable<Path> getLazyImagePath(String spackEnv, String arch) {
 
         if( spackEnv in spackPrefixPaths ) {
             log.trace "spack found local environment `$spackEnv`"
@@ -352,7 +347,7 @@ class SpackCache {
         synchronized (spackPrefixPaths) {
             def result = spackPrefixPaths[spackEnv]
             if( result == null ) {
-                result = new LazyDataflowVariable<Path>({ createLocalSpackEnv(spackEnv) })
+                result = new LazyDataflowVariable<Path>({ createLocalSpackEnv(spackEnv, arch) })
                 spackPrefixPaths[spackEnv] = result
             }
             else {
@@ -371,8 +366,8 @@ class SpackCache {
      * @param spackEnv The spack environment string
      * @return the local environment path prefix {@link Path}
      */
-    Path getCachePathFor(String spackEnv) {
-        def promise = getLazyImagePath(spackEnv)
+    Path getCachePathFor(String spackEnv, String arch) {
+        def promise = getLazyImagePath(spackEnv, arch)
         def result = promise.getVal()
         if( promise.isError() )
             throw new IllegalStateException(promise.getError())

@@ -378,6 +378,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         return get('container')
     }
 
+    def getArch() {
+        return get('arch')
+    }
+
     /**
      * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values
      */
