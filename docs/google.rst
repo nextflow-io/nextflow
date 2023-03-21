@@ -151,7 +151,8 @@ The ``machineType`` process directive can be specified in any of the following w
 * An `instance template <https://cloud.google.com/compute/docs/instance-templates>`_, specified as ``template://<instance-template>``. Using an instance template
   will overwrite the ``accelerator`` directive, as well as the following Google Batch options: ``cpuPlatform``, ``preemptible``, and ``spot``. To use an instance template
   with GPUs, you must also set the ``google.batch.installGpuDrivers`` config option to ``true``. To use an instance template with Fusion, the instance template must include
-  a ``local-ssd`` disk named ``fusion`` with at least 375 GB. Requires version ``23.03.0.edge`` or later.
+  a ``local-ssd`` disk named ``fusion`` with 375 GB. See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks/local-ssd) for more details about local SSDs.
+  Requires version ``23.03.0.edge`` or later.
 
 When Fusion is enabled, by default, only machine types that are able to attach local SSD disks will be used. If you specify your own
 machine type or machine series, they should be able to attach local SSD disks, otherwise the job scheduling will fail. Fusion cannot be
