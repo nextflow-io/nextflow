@@ -275,7 +275,7 @@ task dockerImage(type: Exec) {
  * Build a docker container image with the current snapshot
  * DO NOT CALL IT DIRECTLY! Use the `make dockerPack` command instead
  */
-task dockerPack(type: Exec, dependsOn: ['pack']) {
+task dockerPack(type: Exec, dependsOn: ['packOne']) {
 
     def source = new File("$releaseDir/nextflow-$version-one.jar")
     def target = new File("$buildDir/docker/.nextflow/framework/$version/")
@@ -284,14 +284,13 @@ task dockerPack(type: Exec, dependsOn: ['pack']) {
     dockerBase.mkdirs()
     def dockerFile = new File("$buildDir/docker/Dockerfile")
     dockerFile.text = """
-    FROM openjdk:8-jre-alpine
+    FROM amazoncorretto:17-alpine-jdk
     RUN apk update && apk add bash && apk add coreutils && apk add curl
     COPY .nextflow /.nextflow
     COPY nextflow /usr/local/bin/nextflow
     COPY entry.sh /usr/local/bin/entry.sh
     COPY dist/docker /usr/local/bin/docker
     ENV NXF_HOME=/.nextflow
-    ENV NXF_OPTS='-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap'
     RUN touch /.nextflow/dockerized && rm -rf /.nextflow/launch-classpath
     RUN chmod +x /usr/local/bin/nextflow /usr/local/bin/entry.sh
     RUN nextflow info

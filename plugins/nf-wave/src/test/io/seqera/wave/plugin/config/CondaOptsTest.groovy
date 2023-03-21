@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,27 +15,33 @@
  *
  */
 
-package com.upplication.s3fs.experiment
+package io.seqera.wave.plugin.config
 
-import com.upplication.s3fs.experiment.TransferRateMeter
-import org.junit.Ignore
 import spock.lang.Specification
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Ignore
-class TransferRateMeterTest extends Specification {
+class CondaOptsTest extends Specification {
 
-    def 'should compute rate' () {
-        given:
-        def meter = new TransferRateMeter()
+    def 'check conda options' () {
+        when:
+        def opts = new CondaOpts([:])
+        then:
+        opts.mambaImage == CondaOpts.DEFAULT_MAMBA_IMAGE
+        !opts.basePackages
+        !opts.commands
 
         when:
-        def t = Thread.start { 100.times { index -> sleep 100; meter.inc(10_000) } }
-        t.join()
+        opts = new CondaOpts([
+                mambaImage:'foo:latest',
+                commands: ['this','that'],
+                basePackages: 'some::more-package'
+        ])
         then:
-        noExceptionThrown()
-
+        opts.mambaImage == 'foo:latest'
+        opts.basePackages == 'some::more-package'
+        opts.commands == ['this','that']
     }
 }
