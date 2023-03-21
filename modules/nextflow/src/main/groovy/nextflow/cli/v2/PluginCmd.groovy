@@ -45,7 +45,7 @@ class PluginCmd extends AbstractCmd {
     String command
 
     @Parameters(index = '1..*')
-    List<String> args
+    List<String> args = []
 
     @Override
     void run() {

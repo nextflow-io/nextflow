@@ -56,7 +56,7 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     String pipeline
 
     @Parameters(index = '1..*', description = 'Pipeline script args')
-    List<String> args
+    List<String> args = []
 
     @Option(names = ['--ansi-log'], arity = '1', paramLabel = 'true|false', description = 'Use ANSI logging')
     void setAnsiLog(boolean value) {
@@ -75,7 +75,7 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     Boolean cacheable
 
     @Option(names = ['--cluster.'], arity = '0..1', fallbackValue = 'true', description = 'Set cluster options', hidden = true)
-    Map<String,String> clusterOptions
+    Map<String,String> clusterOptions = [:]
 
     @Option(names = ['-c','--config'], split = ',', hidden = true)
     List<String> runConfig
@@ -99,10 +99,10 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     String entryName
 
     @Option(names = ['-e.','--env.'], paramLabel = '<name>=<value>', description = 'Add the specified variable to execution environment')
-    Map<String,String> env
+    Map<String,String> env = [:]
 
     @Option(names = ['--executor.'], arity = '0..1', fallbackValue = 'true', paramLabel = '<name>[=<value>]', description = 'Set executor options', hidden = true)
-    Map<String,String> executorOptions
+    Map<String,String> executorOptions = [:]
 
     @Option(names = ['-E','--export-sys-env'], description = 'Export the current system environment')
     boolean exportSysEnv
@@ -138,7 +138,7 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     boolean preview
 
     @Option(names = ['--process.'], arity = '0..1', fallbackValue = 'true', paramLabel = '<name>[=<value>]', description = 'Set process options' )
-    Map<String,String> processOptions
+    Map<String,String> processOptions = [:]
 
     @Option(names = ['--profile'], description = 'Use a configuration profile')
     String profile
@@ -241,7 +241,7 @@ class RunCmd extends AbstractCmd implements RunImpl.Options, HubOptions {
     private void parseArgs() {
         // parse pipeline args
         int i = args.findIndexOf { it.startsWith('--') }
-        pipelineArgs = args[0..<i]
+        pipelineArgs = i == -1 ? args : args[0..<i]
 
         // parse pipeline params
         pipelineParams = [:]

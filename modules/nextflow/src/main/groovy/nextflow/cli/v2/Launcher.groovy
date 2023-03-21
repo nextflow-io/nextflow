@@ -70,7 +70,7 @@ import picocli.CommandLine.ParseResult
 )
 class Launcher extends AbstractCmd {
 
-    @ArgGroup
+    @ArgGroup(validate = false)
     private LauncherOptions options
 
     private String cliString

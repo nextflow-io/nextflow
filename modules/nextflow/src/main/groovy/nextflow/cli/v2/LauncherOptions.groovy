@@ -45,7 +45,7 @@ class LauncherOptions implements ILauncherOptions {
     boolean ignoreConfigIncludes
 
     @Option(names = ['-D'], paramLabel = '<name>=<value>', description = 'Set JVM properties')
-    Map<String,String> jvmOpts
+    Map<String,String> jvmOpts = [:]
 
     @Option(names = ['--debug'], split = ',', paramLabel = '<package>', description = 'Enable DEBUG level logging for the specified package name', hidden = true)
     List<String> debug

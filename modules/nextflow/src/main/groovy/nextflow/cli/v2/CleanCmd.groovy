@@ -61,7 +61,7 @@ class CleanCmd extends AbstractCmd implements CleanImpl.Options {
     boolean quiet
 
     @Parameters(description = 'Session IDs or run names')
-    List<String> args
+    List<String> args = []
 
     @Override
     ILauncherOptions getLauncherOptions() {

@@ -62,7 +62,7 @@ class LogCmd extends AbstractCmd implements LogImpl.Options {
     String templateStr
 
     @Parameters(description = 'Session IDs or run names')
-    List<String> args
+    List<String> args = []
 
     @Override
     void run() {
