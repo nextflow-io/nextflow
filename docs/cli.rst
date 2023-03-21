@@ -1129,6 +1129,8 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -entry                    |             | Entry workflow name to be executed.                                            |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
+| -executor.                | {}          | Set executor options. Syntax ``-executor.key=value``                           |
++---------------------------+-------------+--------------------------------------------------------------------------------+
 | -h, -help                 | false       | Print the command usage.                                                       |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -hub                      | github      | Service hub where the project is hosted. Options: ``gitlab`` or ``bitbucket``  |
@@ -1145,6 +1147,8 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 | -offline                  | false       | Do not check for remote project updates.                                       |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -params-file              |             | Load script parameters from a JSON/YAML file.                                  |
++---------------------------+-------------+--------------------------------------------------------------------------------+
+| -ps, -pool-size           |             | Maximum number of threads in the execution pool.                               |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -plugins                  |             | Comma separated list of plugin ids to be applied in the pipeline execution.    |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
@@ -1220,9 +1224,16 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 
     $ nextflow run main.nf -with-report
 
-- Invoke the nextflow pipeline execution with a custom queue size. By default, the value of **queue-size** is the same as the number of available CPUs. ::
+- Execute a pipeline with a custom queue size. By default, the default queue size is the number of available CPUs. ::
 
     $ nextflow run nextflow-io/hello -qs 4
+
+- Execute a pipeline locally with more concurrent tasks than the number of available CPUs. ::
+
+    $ nextflow run main.nf -executor.cpus 100 -ps 100 -qs 100
+
+  This setup is useful when the pipeline has many small tasks that can be run concurrently on a few CPUs. It is useful only for the local executor -- for other executors,
+  you should design your processes to produce fewer large tasks rather than many small tasks.
 
 - Execute the pipeline with DSL-2 syntax. ::
 

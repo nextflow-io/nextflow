@@ -92,7 +92,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-resume'], description = 'Execute the script using the cached results, useful to continue executions that was stopped by an error')
     String resume
 
-    @Parameter(names=['-ps','-pool-size'], description = 'Number of threads in the execution pool', hidden = true)
+    @Parameter(names=['-ps','-pool-size'], description = 'Number of threads in the execution pool')
     Integer poolSize
 
     @Parameter(names=['-pi','-poll-interval'], description = 'Executor poll interval (duration string ending with ms|s|m)', converter = DurationConverter, hidden = true)
@@ -128,7 +128,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = ['-E'], description = 'Exports all current system environment')
     boolean exportSysEnv
 
-    @DynamicParameter(names = ['-executor.'], description = 'Set executor options', hidden = true )
+    @DynamicParameter(names = ['-executor.'], description = 'Set executor options' )
     Map<String,String> executorOptions = [:]
 
     @Parameter(description = 'Project name or repository url')
