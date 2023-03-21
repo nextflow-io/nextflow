@@ -1,0 +1,36 @@
+site_name: Nextflow Developer Docs
+repo_name: nextflow-io/nextflow
+repo_url: https://github.com/nextflow-io/nextflow
+
+theme:
+  name: material
+  favicon: https://www.nextflow.io/img/favicon.png
+  features:
+    - navigation.sections
+  logo: https://www.nextflow.io/img/favicon.png
+  palette:
+    scheme: default
+    primary: black
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - 'Home': 'index.md'
+  - 'Packages':
+    - 'nextflow': 'nextflow.md'
+    - 'nextflow.ast': 'nextflow.ast.md'
+    - 'nextflow.cli': 'nextflow.cli.md'
+    - 'nextflow.config': 'nextflow.config.md'
+    - 'nextflow.executor': 'nextflow.executor.md'
+    - 'nextflow.k8s': 'nextflow.k8s.md'
+    - 'nextflow.processor': 'nextflow.processor.md'
+    - 'nextflow.script': 'nextflow.script.md'
+    - 'nextflow.trace': 'nextflow.trace.md'

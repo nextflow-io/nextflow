@@ -10,7 +10,8 @@ classDiagram
     }
     ScriptRunner --* ScriptFile
     ScriptRunner --* Session
-    ScriptRunner --> BaseScript : execute
+    ScriptRunner --> ScriptParser : execute
+    ScriptParser --> BaseScript : parse
 
     class ScriptFile {
         source : Path
@@ -18,7 +19,7 @@ classDiagram
         repository : String
         revisionInfo : AssetManager.RevisionInfo
         localPath : Path
-        projectName : String 
+        projectName : String
     }
 
     Session --* BaseScript
@@ -32,7 +33,7 @@ classDiagram
         entryName : String
     }
 
-    %% IncludeDef --> BaseScript : load0
+    IncludeDef --> BaseScript : load0
 
     class BaseScript {
         meta : ScriptMeta

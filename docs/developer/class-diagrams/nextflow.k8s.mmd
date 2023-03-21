@@ -2,6 +2,15 @@ classDiagram
     %%
     %% nextflow.k8s
     %%
+    Executor <|-- K8sExecutor
+    TaskHandler <|-- K8sTaskHandler
+    BashWrapperBuilder <|-- K8sWrapperBuilder
+
+    K8sExecutor --> TaskPollingMonitor : init
+    K8sExecutor --> K8sTaskHandler : submit
+    K8sExecutor --* K8sClient
+    K8sTaskHandler --> K8sWrapperBuilder : submit
+
     CmdKubeRun --> K8sDriverLauncher : run
 
     class K8sDriverLauncher {
@@ -46,11 +55,3 @@ classDiagram
         tolerations : List~Map~
         volumeClaims : Collection~PodVolumeClaim~
     }
-
-    Executor <|-- K8sExecutor
-    %% TaskHandler <|-- K8sTaskHandler
-    %% BashWrapperBuilder <|-- K8sWrapperBuilder
-
-    K8sExecutor --> TaskPollingMonitor : init
-    K8sExecutor --> K8sTaskHandler : submit
-    K8sTaskHandler --> K8sWrapperBuilder : submit

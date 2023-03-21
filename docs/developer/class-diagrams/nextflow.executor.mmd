@@ -2,7 +2,7 @@ classDiagram
     %%
     %% nextflow.executor
     %%
-    %% ProcessDef --> Executor : run
+    ProcessDef --> Executor : run
     %% ExecutorFactory --> Executor : getExecutor
 
     TaskProcessor --* Executor

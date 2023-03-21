@@ -2,6 +2,14 @@ classDiagram
     %%
     %% nextflow.trace
     %%
+    %% TraceObserver <|-- AnsiLogObserver
+    %% TraceObserver <|-- GraphObserver
+    %% TraceObserver <|-- ReportObserver
+    %% TraceObserver <|-- TimelineObserver
+    %% TraceObserver <|-- TraceFileObserver
+    %% TraceObserver <|-- WebLogObserver
+    %% TraceObserver <|-- WorkflowStatsObserver
+
     Session --> AnsiLogObserver : init
     Session --> GraphObserver : init
     Session --> ReportObserver : init
