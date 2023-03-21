@@ -193,6 +193,7 @@ class Launcher extends AbstractCmd {
             def cmd = new CommandLine(launcher)
                 .setExecutionStrategy(launcher::executionStrategy)
                 .setExecutionExceptionHandler(new ExecutionExceptionHandler())
+                .setAllowSubcommandsAsOptionParameters(true)
 
             // add secrets command if enabled
             if( SecretsLoader.isEnabled() )
