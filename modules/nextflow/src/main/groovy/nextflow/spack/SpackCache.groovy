@@ -185,7 +185,7 @@ class SpackCache {
             content = spackEnv
         }
 
-        //if( arch ) content += arch
+        if( arch ) content += arch
 
         final hash = CacheHelper.hasher(content).hash().toString()
         getCacheDir().resolve("$name-$hash")
@@ -339,19 +339,38 @@ class SpackCache {
     @PackageScope
     DataflowVariable<Path> getLazyImagePath(String spackEnv, String arch) {
 
+        def spackEnvArch
+
+        if ( arch ) {
+            spackEnvArch = spackEnv + "_" + arch
+        }
+        else {
+            spackEnvArch = spackEnv
+        }
+
         if( spackEnv in spackPrefixPaths ) {
-            log.trace "spack found local environment `$spackEnv`"
-            return spackPrefixPaths[spackEnv]
+            if( arch ) {
+                log.trace "spack found local environment `$spackEnv` for arch `$arch`"
+            }
+            else {
+                log.trace "spack found local environment `$spackEnv`"
+            }
+            return spackPrefixPaths[spackEnvArch]
         }
 
         synchronized (spackPrefixPaths) {
-            def result = spackPrefixPaths[spackEnv]
+            def result = spackPrefixPaths[spackEnvArch]
             if( result == null ) {
                 result = new LazyDataflowVariable<Path>({ createLocalSpackEnv(spackEnv, arch) })
-                spackPrefixPaths[spackEnv] = result
+                spackPrefixPaths[spackEnvArch] = result
             }
             else {
-                log.trace "spack found local cache for environment `$spackEnv` (2)"
+                if( arch ) {
+                    log.trace "spack found local cache for environment `$spackEnv` (2) for arch `$arch`"
+                }
+                else {
+                    log.trace "spack found local cache for environment `$spackEnv` (2)"
+                }
             }
             return result
         }
