@@ -29,7 +29,7 @@ class SpackConfigTest extends Specification {
     @Unroll
     def 'should check enabled flag'() {
         given:
-        def spack = new SpackConfig(CONFIG, ENV, null)
+        def spack = new SpackConfig(CONFIG, ENV)
         expect:
         spack.isEnabled() == EXPECTED
 

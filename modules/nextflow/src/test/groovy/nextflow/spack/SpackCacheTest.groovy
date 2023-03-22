@@ -45,7 +45,7 @@ class SpackCacheTest extends Specification {
         def BASE = Paths.get('/spack/envs')
 
         when:
-        def prefix = cache.spackPrefixPath(ENV)
+        def prefix = cache.spackPrefixPath(ENV,null)
         then:
         1 * cache.isYamlFilePath(ENV)
         1 * cache.getCacheDir() >> BASE
@@ -71,7 +71,7 @@ class SpackCacheTest extends Specification {
             .stripIndent(true)  // https://issues.apache.org/jira/browse/GROOVY-9423
 
         when:
-        def prefix = cache.spackPrefixPath(ENV.toString())
+        def prefix = cache.spackPrefixPath(ENV.toString(),null)
         then:
         1 * cache.isYamlFilePath(ENV.toString())
         1 * cache.getCacheDir() >> BASE
@@ -90,7 +90,7 @@ class SpackCacheTest extends Specification {
         def ENV = folder.toString()
 
         when:
-        def prefix = cache.spackPrefixPath(ENV)
+        def prefix = cache.spackPrefixPath(ENV,null)
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.getCacheDir()
@@ -111,17 +111,17 @@ class SpackCacheTest extends Specification {
 
         when:
         // the prefix directory exists ==> no spack command is executed
-        def result = cache.createLocalSpackEnv(ENV)
+        def result = cache.createLocalSpackEnv(ENV,null)
 
         then:
-        1 * cache.spackPrefixPath(ENV) >> PREFIX
+        1 * cache.spackPrefixPath(ENV,null) >> PREFIX
         0 * cache.isYamlFilePath(ENV)
         1 * cache.runCommand( "spack env activate $PREFIX ; spack install -y ; spack env deactivate" ) >> null
         result == PREFIX
 
         when:
         PREFIX.deleteDir()
-        result = cache.createLocalSpackEnv0(ENV,PREFIX)
+        result = cache.createLocalSpackEnv0(ENV,PREFIX,null)
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
@@ -134,16 +134,17 @@ class SpackCacheTest extends Specification {
         given:
         def ENV = 'bwa@1.1.1'
         def PREFIX = Paths.get('/foo/bar')
+        def ARCH = 'foo_arch'
         and:
-        def cache = Spy(new SpackCache([parallelBuilds: 2, arch: 'foo_arch', checksum: false]))
+        def cache = Spy(new SpackCache([parallelBuilds: 2, checksum: false]))
 
         when:
-        def result = cache.createLocalSpackEnv0(ENV,PREFIX)
+        def result = cache.createLocalSpackEnv0(ENV,PREFIX,ARCH)
 
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "spack env create -d $PREFIX ; spack env activate $PREFIX ; spack add $ENV ; spack config add packages:all:target:[foo_arch] ; spack concretize -f ; spack install -n -j 2 -y ; spack env deactivate" ) >> null
+        1 * cache.runCommand( "spack env create -d $PREFIX ; spack env activate $PREFIX ; spack add $ENV ; spack config add packages:all:target:[$ARCH] ; spack concretize -f ; spack install -n -j 2 -y ; spack env deactivate" ) >> null
         result == PREFIX
     }
 
@@ -155,7 +156,7 @@ class SpackCacheTest extends Specification {
         def cache = Spy(SpackCache)
 
         when:
-        def result = cache.createLocalSpackEnv0(ENV, PREFIX)
+        def result = cache.createLocalSpackEnv0(ENV,PREFIX,null)
 
         then:
         1 * cache.isYamlFilePath(ENV)
