@@ -123,6 +123,7 @@ connectionTimeout           The amount of time to wait (in milliseconds) when in
 endpoint                    The AWS S3 API entry point e.g. `s3-us-west-1.amazonaws.com`.
 glacierAutoRetrieval        Enable auto retrieval of S3 objects stored with Glacier class store (EXPERIMENTAL. default: ``false``, requires version ``22.12.0-edge`` or later).
 glacierExpirationDays       The time, in days, between when an object is restored to the bucket and when it expires (EXPERIMENTAL. default: ``7``, requires version ``22.12.0-edge`` or later).
+glacierRetrievalTier        The retrieval tier to use when restoring objects from Glacier, one of [``Expedited``, ``Standard``, ``Bulk``] (EXPERIMENTAL. requires version ``23.03.0-edge`` or later).
 maxConnections              The maximum number of allowed open HTTP connections.
 maxErrorRetry               The maximum number of retry attempts for failed retryable requests.
 protocol                    The protocol (i.e. HTTP or HTTPS) to use when connecting to AWS.
@@ -841,6 +842,33 @@ registry            The registry from where Docker images are pulled. It should 
 ================== ================
 
 Read :ref:`container-singularity` page to learn more about how to use Singularity containers with Nextflow.
+
+
+.. _config-apptainer:
+
+ Scope `apptainer`
+ -------------------
+
+ The ``apptainer`` configuration scope controls how `Apptainer <https://apptainer.org>`_ containers are executed
+ by Nextflow.
+
+ The following settings are available:
+
+ ================== ================
+ Name                Description
+ ================== ================
+ enabled             Turn this flag to ``true`` to enable Apptainer execution (default: ``false``).
+ engineOptions       This attribute can be used to provide any option supported by the Apptainer engine i.e. ``apptainer [OPTIONS]``.
+ envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+ runOptions          This attribute can be used to provide any extra command line options supported by the ``apptainer exec``.
+ noHttps             Turn this flag to ``true`` to pull the Apptainer image with http protocol (default: ``false``).
+ autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Apptainer installation (default: ``false``).
+ cacheDir            The directory where remote Apptainer images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+ pullTimeout         The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: ``20 min``).
+ registry            The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
+ ================== ================
+
+ Read :ref:`container-apptainer` page to learn more about how to use Apptainer containers with Nextflow.
 
 
 .. _config-timeline:

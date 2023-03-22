@@ -99,6 +99,17 @@ To add data to or modify a map, the syntax is similar to adding values to list::
     scores["Pete"] = 3
     scores["Cedric"] = 120
 
+You can also use the ``+`` operator to add two maps together::
+
+    new_scores = scores + ["Pete": 3, "Cedric": 120]
+
+When adding two maps, the first map is copied and then appended with the keys from the second map. Any conflicting keys
+are overwritten by the second map.
+
+.. tip::
+    Appending an "update" map is a safer way to modify maps in Nextflow, specifically when passing maps through channels.
+    This way, any references to the original map elsewhere in the pipeline won't be modified.
+
 Learn more about maps:
 
 * `Groovy Maps tutorial <http://groovy-lang.org/groovy-dev-kit.html#Collections-Maps>`_

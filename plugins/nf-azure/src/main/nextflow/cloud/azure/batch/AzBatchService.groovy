@@ -40,6 +40,7 @@ import com.microsoft.azure.batch.protocol.models.ContainerRegistry
 import com.microsoft.azure.batch.protocol.models.ElevationLevel
 import com.microsoft.azure.batch.protocol.models.ImageInformation
 import com.microsoft.azure.batch.protocol.models.MountConfiguration
+import com.microsoft.azure.batch.protocol.models.NetworkConfiguration
 import com.microsoft.azure.batch.protocol.models.OutputFile
 import com.microsoft.azure.batch.protocol.models.OutputFileBlobContainerDestination
 import com.microsoft.azure.batch.protocol.models.OutputFileDestination
@@ -663,7 +664,6 @@ class AzBatchService implements Closeable {
                 .withCommandLine('bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/" ')
                 .withResourceFiles(resourceFiles)
 
-
         final poolParams = new PoolAddParameter()
                 .withId(spec.poolId)
                 .withVirtualMachineConfiguration(poolVmConfig(spec.opts))
@@ -673,6 +673,10 @@ class AzBatchService implements Closeable {
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
                 .withStartTask(poolStartTask)
+
+        // virtual network
+        if( spec.opts.virtualNetwork )
+            poolParams.withNetworkConfiguration( new NetworkConfiguration().withSubnetId(spec.opts.virtualNetwork) )
 
         // scheduling policy
         if( spec.opts.schedulePolicy ) {

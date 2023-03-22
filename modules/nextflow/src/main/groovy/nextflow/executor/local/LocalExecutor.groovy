@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,8 +41,6 @@ import nextflow.script.ScriptType
 @SupportedScriptTypes( [ScriptType.SCRIPTLET, ScriptType.GROOVY] )
 class LocalExecutor extends Executor {
 
-    private Map<String,String> sysEnv = System.getenv()
-
     @Override
     protected TaskMonitor createTaskMonitor() {
         return LocalPollingMonitor.create(session, name)
@@ -77,7 +75,7 @@ class LocalExecutor extends Executor {
 
     @Override
     boolean isFusionEnabled() {
-        return FusionHelper.isFusionEnabled(session, sysEnv)
+        return FusionHelper.isFusionEnabled(session)
     }
 }
 
