@@ -49,7 +49,7 @@ class GsBashLib extends BashFunLib<GsBashLib> {
         """
         # google storage helper
         gs_opts=('-q' '-m' '-o' 'GSUtil:parallel_thread_count=$parallelThreadCount' '-o' 'GSUtil:sliced_object_download_max_components=$downloadMaxComponents')
-        """.stripIndent()
+        """.stripIndent(true)
     }
 
     protected makeLib() {

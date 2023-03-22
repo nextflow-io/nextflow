@@ -88,7 +88,7 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         String result = ( remoteBinDir ? """\
             nxf_az_download '${AzHelper.toHttpUrl(remoteBinDir)}' \$PWD/.nextflow-bin
             chmod +x \$PWD/.nextflow-bin/* || true
-            """.stripIndent() : '' )
+            """.stripIndent(true) : '' )
 
         result += 'downloads=(true)\n'
         result += super.getStageInputFilesScript(inputFiles) + '\n'

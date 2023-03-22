@@ -94,7 +94,7 @@ class FluxExecutor extends AbstractGridExecutor {
             // Split by space
             for (String item : task.config.clusterOptions.toString().tokenize(' ')) {
                 if ( item ) {
-                    result << item.stripIndent().trim()
+                    result << item.stripIndent(true).trim()
                 }
             }
         }

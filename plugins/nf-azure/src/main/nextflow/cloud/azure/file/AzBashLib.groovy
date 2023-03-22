@@ -51,7 +51,7 @@ class AzBashLib extends BashFunLib<AzBashLib> {
         # custom env variables used for azcopy opts
         export AZCOPY_BLOCK_SIZE_MB=${blockSize}
         export AZCOPY_BLOCK_BLOB_TIER=${blobTier}
-        """.stripIndent()
+        """.stripIndent(true)
     }
 
 
@@ -91,7 +91,7 @@ class AzBashLib extends BashFunLib<AzBashLib> {
                 }
             }
         }
-        '''.stripIndent()
+        '''.stripIndent(true)
     }
 
     String render() {

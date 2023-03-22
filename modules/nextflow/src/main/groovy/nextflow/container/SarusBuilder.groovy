@@ -86,7 +86,7 @@ class SarusBuilder extends ContainerBuilder<SarusBuilder> {
         def run = super.getRunCommand()
         def result = """\
         sarus pull $image 1>&2
-        """.stripIndent()
+        """.stripIndent(true)
         result += run
         return result
     }

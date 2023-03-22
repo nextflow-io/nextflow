@@ -739,7 +739,7 @@ class AzBatchService implements Closeable {
             // For first interval deploy 1 node, for other intervals scale up/down as per tasks.
             $TargetDedicatedNodes = lifespan < interval ? {{vmCount}} : targetPoolSize;
             $NodeDeallocationOption = taskcompletion;
-            '''.stripIndent()
+            '''.stripIndent(true)
 
         final scaleFormula = opts.scaleFormula ?: DEFAULT_FORMULA
         final vars = new HashMap<String, String>()

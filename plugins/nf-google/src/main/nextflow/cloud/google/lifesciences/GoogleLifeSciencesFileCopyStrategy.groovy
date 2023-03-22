@@ -125,7 +125,7 @@ class GoogleLifeSciencesFileCopyStrategy extends SimpleFileCopyStrategy {
         done
         unset IFS
         nxf_parallel "\${uploads[@]}"
-        """.stripIndent()
+        """.stripIndent(true)
     }
 
 

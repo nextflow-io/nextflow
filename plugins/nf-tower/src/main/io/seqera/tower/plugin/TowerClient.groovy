@@ -281,7 +281,7 @@ class TowerClient implements TraceObserver {
                 - endpoint    : $urlTraceCreate
                 - status code : $resp.code
                 - response msg: $resp.cause
-                """.stripIndent()
+                """.stripIndent(true)
             throw new AbortOperationException(resp.message)
         }
         final ret = parseTowerResponse(resp)
@@ -354,7 +354,7 @@ class TowerClient implements TraceObserver {
                 - endpoint    : $urlTraceBegin
                 - status code : $resp.code
                 - response msg: $resp.cause
-                """.stripIndent()
+                """.stripIndent(true)
             throw new AbortOperationException(resp.message)
         }
 
@@ -727,7 +727,7 @@ class TowerClient implements TraceObserver {
                 Failed to send message to ${endpoint} -- received 
                 - status code : $resp.code
                 - response msg: $resp.message
-                """.stripIndent()
+                """.stripIndent(true)
             // append separately otherwise formatting get broken
             msg += "- error cause : ${cause ?: '-'}"
             log.warn(msg)
@@ -746,7 +746,7 @@ class TowerClient implements TraceObserver {
                 - endpoint url: $endpoint
                 - status code : $resp.code
                 - response msg: ${resp.message} 
-                """.stripIndent()
+                """.stripIndent(true)
         // append separately otherwise formatting get broken
         msg += "- error cause : ${cause ?: '-'}"
         throw new Exception(msg)
