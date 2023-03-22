@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,13 +37,12 @@ import nextflow.io.BucketParser
 class FusionHelper {
 
     @Memoized
-    static boolean isFusionEnabled(Session session, Map<String,String> sysEnv=SysEnv.get()) {
+    static boolean isFusionEnabled(Session session) {
         def result = session.config.navigate('fusion.enabled')
         if( result == null )
-            result = sysEnv.get('FUSION_ENABLED')
+            result = SysEnv.get('FUSION_ENABLED')
         return result!=null ? result.toString()=='true' : false
     }
-
 
     static String runWithContainer(FusionScriptLauncher launcher, ContainerConfig containerConfig, String containerName, List<String> runCmd) {
         if( !containerName )

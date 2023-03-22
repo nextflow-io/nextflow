@@ -1737,8 +1737,8 @@ This can be defined in the ``nextflow.config`` file as shown below::
 fair
 ----
 
-When using the ``fair`` directive the sequence of the outputs of a process executions is guaranteed
-to match the sequence of the input values irrespective. For example::
+When using the ``fair`` directive, the sequence of the outputs of a process is guaranteed
+to match the sequence of the input values. For example::
 
     process foo {
       fair true
@@ -1757,7 +1757,7 @@ to match the sequence of the input values irrespective. For example::
        channel.of('A','B','C','D') | foo | view
     }
 
-The above example produces the following output::
+The above example produces::
 
     [1, A]
     [2, B]
@@ -2086,7 +2086,7 @@ saveAs          A closure which, given the name of the file being published, ret
                 This is useful when the process has multiple output files, but you want to publish only some of them.
 enabled         Enable or disable the publish rule depending on the boolean value specified (default: ``true``).
 failOnError     When ``true`` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: ``false``)
-contentType     Allow specifying the media content type of the published file a.k.a. `MIME type <https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types>`_. If the boolean value ``true`` is specified the content type is inferred from the file extension (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Default: ``false``, requires `22.10.0`` or later).
+contentType     Allow specifying the media content type of the published file a.k.a. `MIME type <https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types>`_. If the boolean value ``true`` is specified the content type is inferred from the file extension (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Default: ``false``, requires ``22.10.0`` or later).
 storageClass    Allow specifying the *storage class* to be used for the published file (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Requires version ``22.12.0-edge`` or later).
 tags            Allow the association of arbitrary tags with the published file e.g. ``tags: [FOO: 'Hello world']`` (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Requires version ``21.12.0-edge`` or later).
 =============== =================

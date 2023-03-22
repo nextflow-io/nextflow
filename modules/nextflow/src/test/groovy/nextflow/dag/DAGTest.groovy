@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,6 +55,7 @@ class DAGTest extends Specification {
         v2.order == 1
         v2.name == 'p1'
         v2.type == DAG.Type.OPERATOR
+        v1.id != v2.id
     }
 
 
@@ -112,6 +112,8 @@ class DAGTest extends Specification {
 
         v2.label == 'Process 2'
         v2.order == 1
+
+        v1.id != v2.id
 
         dag.edges.size() == 3
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -88,7 +88,6 @@ class FusionScriptLauncher extends BashWrapperBuilder {
             final work = toContainerMount(remoteWorkDir).toString()
             final result = new LinkedHashMap(10)
             result.FUSION_WORK = work
-            result.FUSION_TAGS="[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
             // foreign env
             final provider = new FusionEnvProvider()
             result.putAll(provider.getEnvironment(scheme))

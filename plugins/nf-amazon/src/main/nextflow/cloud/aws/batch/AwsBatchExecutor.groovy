@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,8 +54,6 @@ import org.pf4j.ExtensionPoint
 @ServiceName('awsbatch')
 @CompileStatic
 class AwsBatchExecutor extends Executor implements ExtensionPoint {
-
-    private Map<String,String> sysEnv = System.getenv()
 
     /**
      * Proxy to throttle AWS batch client requests
@@ -255,7 +252,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
 
     @Override
     boolean isFusionEnabled() {
-        return FusionHelper.isFusionEnabled(session, sysEnv)
+        return FusionHelper.isFusionEnabled(session)
     }
 
     protected void logRateLimitChange(RateUnit rate) {
