@@ -3,14 +3,15 @@ classDiagram
     %% nextflow.cloud.azure
     %%
     Executor <|-- AzBatchExecutor
-    %% TaskHandler <|-- AzBatchTaskHandler
-    %% BashWrapperBuilder <|-- AzBatchScriptLauncher
+    TaskHandler <|-- AzBatchTaskHandler
+    BashWrapperBuilder <|-- AzBatchScriptLauncher
 
     AzBatchExecutor --* AzConfig
+    AzBatchExecutor --> AzBatchService : register
 
     AzBatchExecutor --> TaskPollingMonitor : init
     AzBatchExecutor --> AzBatchTaskHandler : submit
     AzBatchTaskHandler --> AzBatchScriptLauncher : submit
 
-    %% SimpleFileCopyStrategy <|-- AzFileCopyStrategy
+    SimpleFileCopyStrategy <|-- AzFileCopyStrategy
     AzBatchScriptLauncher --* AzFileCopyStrategy

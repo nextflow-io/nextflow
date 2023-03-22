@@ -3,8 +3,8 @@ classDiagram
     %% nextflow.cloud.google
     %%
     Executor <|-- GoogleBatchExecutor
-    %% TaskHandler <|-- GoogleBatchTaskHandler
-    %% BashWrapperBuilder <|-- GoogleBatchScriptLauncher
+    TaskHandler <|-- GoogleBatchTaskHandler
+    BashWrapperBuilder <|-- GoogleBatchScriptLauncher
 
     GoogleBatchExecutor --* BatchConfig
 

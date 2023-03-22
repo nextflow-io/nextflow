@@ -24,7 +24,7 @@ markdown_extensions:
 
 nav:
   - 'Home': 'index.md'
-  - 'Packages':
+  - 'nextflow':
     - 'nextflow': 'nextflow.md'
     - 'nextflow.ast': 'nextflow.ast.md'
     - 'nextflow.cli': 'nextflow.cli.md'
@@ -34,3 +34,10 @@ nav:
     - 'nextflow.processor': 'nextflow.processor.md'
     - 'nextflow.script': 'nextflow.script.md'
     - 'nextflow.trace': 'nextflow.trace.md'
+  - 'nf-amazon':
+    - 'com.upplication.s3fs': 'com.upplication.s3fs.md'
+    - 'nextflow.cloud.aws': 'nextflow.cloud.aws.md'
+  - 'nf-azure':
+    - 'nextflow.cloud.azure': 'nextflow.cloud.azure.md'
+  - 'nf-google':
+    - 'nextflow.cloud.google': 'nextflow.cloud.google.md'

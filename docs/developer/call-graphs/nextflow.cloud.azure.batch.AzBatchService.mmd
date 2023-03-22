@@ -1,0 +1,56 @@
+flowchart LR
+    %%
+    %% nextflow.cloud.azure.batch.AzBatchService
+    %%
+    deleteTask
+
+    getTask
+
+    machineInfo
+
+    submitTask --> getOrCreatePool
+    submitTask --> getOrCreateJob
+    submitTask --> runTask
+
+    getOrCreatePool --> specForTask
+    getOrCreatePool --> getPool
+    getOrCreatePool --> createPool
+    getOrCreatePool --> checkPool
+
+    specForTask --> checkPoolId
+    specForTask --> specFromPoolConfig
+    specForTask --> specFromAutoPool
+
+    specFromPoolConfig --> getPool
+    specFromPoolConfig --> getVmType
+
+    specFromAutoPool --> guessBestVm
+
+    guessBestVm --> findBestVm
+
+    findBestVm --> listAllVms
+    findBestVm --> matchType
+    findBestVm --> computeScore
+    findBestVm --> getVmType
+
+    getVmType --> listAllVms
+
+    createPool --> poolVmConfig
+
+    poolVmConfig --> getImage
+
+    getOrCreateJob --> makeJobId
+
+    runTask --> computeSlots
+    runTask --> userIdentity
+    runTask --> resourceFileUrls
+    runTask --> outputFileUrls
+
+    computeSlots --> memSlots
+
+    outputFileUrls --> destFile
+
+    terminate
+
+    close --> cleanupJobs
+    close --> cleanupPools

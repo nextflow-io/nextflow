@@ -3,8 +3,8 @@ classDiagram
     %% nextflow.cloud.aws
     %%
     Executor <|-- AwsBatchExecutor
-    %% TaskHandler <|-- AwsBatchTaskHandler
-    %% BashWrapperBuilder <|-- AwsBatchScriptLauncher
+    TaskHandler <|-- AwsBatchTaskHandler
+    BashWrapperBuilder <|-- AwsBatchScriptLauncher
 
     AwsBatchExecutor --* AwsOptions
 
@@ -12,5 +12,5 @@ classDiagram
     AwsBatchExecutor --> AwsBatchTaskHandler : submit
     AwsBatchTaskHandler --> AwsBatchScriptLauncher : submit
 
-    %% SimpleFileCopyStrategy <|-- AwsBatchFileCopyStrategy
+    SimpleFileCopyStrategy <|-- AwsBatchFileCopyStrategy
     AwsBatchScriptLauncher --* AwsBatchFileCopyStrategy
