@@ -112,7 +112,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
                 $cli s3 cp --only-show-errors "\$source" "\$target"
             fi
         }
-        """.stripIndent()
+        """.stripIndent(true)
     }
 
     String render() {
