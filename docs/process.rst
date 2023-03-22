@@ -1345,7 +1345,7 @@ This may be useful to clean up your staging area.
 arch
 ----
 
-The ``arch`` directive allows you to define the CPU microarchitecture
+The ``arch`` directive allows you to define the CPU architecture
 to build the software in use by the process' task.
 For example::
 
@@ -1360,6 +1360,7 @@ For example::
 
 This directive is currently used by the Spack package manager
 to build architecture-optimised applications, by means of the `spack`_ directive.
+Examples of accepted architecture strings include `x86_64`, `icelake`, `zen3` and `aarch64`.
 
 See the Spack documentation for more details about
 `support for specific microarchitectures <https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures>`_.
