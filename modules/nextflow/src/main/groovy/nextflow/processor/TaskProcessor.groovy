@@ -2069,11 +2069,6 @@ class TaskProcessor {
         if( task.isContainerEnabled() )
             keys << task.getContainerFingerprint()
 
-        final arch = task.getConfig().getArch()
-        if( arch ) {
-            keys.add(arch)
-        }
-
         // add all the input name-value pairs to the key generator
         for( Map.Entry<InParam,Object> it : task.inputs ) {
             keys.add( it.key.name )
@@ -2104,8 +2099,14 @@ class TaskProcessor {
         }
 
         final spack = task.getSpackEnv()
+        final arch = task.getConfig().getArch()
+
         if( spack ) {
             keys.add(spack)
+
+            if( arch ) {
+                keys.add(arch)
+            }
         }
 
         if( session.stubRun ) {
