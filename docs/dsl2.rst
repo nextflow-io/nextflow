@@ -546,6 +546,9 @@ has several module components, and all them use templates, the project could gro
                 |─P6-template.sh
                 └─P7-template.sh
 
+
+.. _module-binaries:
+
 Module binaries
 -----------------
 

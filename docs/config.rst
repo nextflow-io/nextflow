@@ -846,29 +846,29 @@ Read :ref:`container-singularity` page to learn more about how to use Singularit
 
 .. _config-apptainer:
 
- Scope `apptainer`
- -------------------
+Scope `apptainer`
+-------------------
 
- The ``apptainer`` configuration scope controls how `Apptainer <https://apptainer.org>`_ containers are executed
- by Nextflow.
+The ``apptainer`` configuration scope controls how `Apptainer <https://apptainer.org>`_ containers are executed
+by Nextflow.
 
- The following settings are available:
+The following settings are available:
 
- ================== ================
- Name                Description
- ================== ================
- enabled             Turn this flag to ``true`` to enable Apptainer execution (default: ``false``).
- engineOptions       This attribute can be used to provide any option supported by the Apptainer engine i.e. ``apptainer [OPTIONS]``.
- envWhitelist        Comma separated list of environment variable names to be included in the container environment.
- runOptions          This attribute can be used to provide any extra command line options supported by the ``apptainer exec``.
- noHttps             Turn this flag to ``true`` to pull the Apptainer image with http protocol (default: ``false``).
- autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Apptainer installation (default: ``false``).
- cacheDir            The directory where remote Apptainer images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
- pullTimeout         The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: ``20 min``).
- registry            The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
- ================== ================
+================== ================
+Name                Description
+================== ================
+enabled             Turn this flag to ``true`` to enable Apptainer execution (default: ``false``).
+engineOptions       This attribute can be used to provide any option supported by the Apptainer engine i.e. ``apptainer [OPTIONS]``.
+envWhitelist        Comma separated list of environment variable names to be included in the container environment.
+runOptions          This attribute can be used to provide any extra command line options supported by the ``apptainer exec``.
+noHttps             Turn this flag to ``true`` to pull the Apptainer image with http protocol (default: ``false``).
+autoMounts          When ``true`` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Apptainer installation (default: ``false``).
+cacheDir            The directory where remote Apptainer images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+pullTimeout         The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: ``20 min``).
+registry            The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. ``http://``.
+================== ================
 
- Read :ref:`container-apptainer` page to learn more about how to use Apptainer containers with Nextflow.
+Read :ref:`container-apptainer` page to learn more about how to use Apptainer containers with Nextflow.
 
 
 .. _config-timeline:
@@ -917,7 +917,7 @@ brackets, as shown below::
     }
 
 .. tip::
-  Your ``accessToken`` can be obtained from your Tower instance in the `Tokens page <https://tower.nf/tokens>`.
+  Your ``accessToken`` can be obtained from your Tower instance in the `Tokens page <https://tower.nf/tokens>`_.
 
 .. tip::
   The Tower workspace ID can also be specified using the environment variable ``TOWER_WORKSPACE_ID`` (config file has priority over the environment variable).
@@ -1103,3 +1103,64 @@ HTTPS_PROXY                     Defines the HTTPS proxy server. As of version ``
 FTP_PROXY                       Defines the FTP proxy server. Proxy authentication is supported providing the credentials in the proxy URL e.g. ``ftp://user:password@proxy-host.com:port``. FTP proxy support requires version ``21.06.0-edge`` or later.
 NO_PROXY                        Defines one or more host names that should not use the proxy server. Separate multiple names using a comma character.
 =============================== ================
+
+
+.. _config-feature-flags:
+
+Feature flags
+=============
+
+Some features can be enabled using the ``nextflow.enable`` and ``nextflow.preview`` flags. These flags are specified in the pipeline script rather than the configuration file,
+and they are generally used to introduce experimental or other opt-in features.
+
+``nextflow.enable.configProcessNamesValidation``
+------------------------------------------------
+
+When ``true``, prints a warning for every ``withName:`` process selector that doesn't match a process in the pipeline (default: ``true``).
+
+``nextflow.enable.dsl``
+-----------------------
+
+Defines the DSL version to use (``1`` or ``2``).
+
+.. note::
+    Since Nextflow version ``22.03.0-edge``, DSL2 is the default DSL version.
+
+.. note::
+    Since Nextflow version ``22.12.0-edge``, DSL1 is no longer supported.
+
+``nextflow.enable.moduleBinaries``
+----------------------------------
+
+When ``true``, enables the use of modules with binary scripts. See :ref:`module-binaries` for more information.
+
+``nextflow.enable.strict``
+--------------------------
+
+.. note::
+    Requires Nextflow version ``22.05.0-edge`` or later.
+
+When ``true``, the pipeline is executed in "strict" mode, which introduces the following rules:
+
+- When reading a params file, Nextflow will fail if a dynamic param value references an undefined variable
+- When merging params from a config file with params from the command line, Nextflow will fail if a param is specified from both sources but with different types
+- When using the ``join`` operator, the ``failOnDuplicate`` option is ``true`` by default
+- When using the ``join`` operator, the ``failOnMismatch`` option is ``true`` by default (unless ``remainder`` is also ``true``)
+- When using the ``publishDir`` process directive, the ``failOnError`` option is ``true`` by default
+- In a process definition, Nextflow will fail if an input or output tuple has only one element
+- In a process definition, Nextflow will fail if an output emit name is not a valid identifier (i.e. it should match the pattern ``/[A-Za-z_][A-Za-z0-9_]*/``)
+- During a process execution, Nextflow will fail if a received input tuple does not have the same number of elements as was declared
+- During a process execution, Nextflow will fail if the ``storeDir`` directive is used with non-file outputs
+- Nextflow will fail if a pipeline param is referenced before it is defined
+- Nextflow will fail if multiple functions and/or processes with the same name are defined in a module script
+
+``nextflow.preview.recursion``
+------------------------------
+
+.. note::
+    Requires Nextflow version ``21.11.0-edge`` or later.
+
+.. warning::
+    This feature is experimental and may change in a future release.
+
+When ``true``, enables process and workflow recursion. See `this GitHub discussion <https://github.com/nextflow-io/nextflow/discussions/2521>`_ for more information.
