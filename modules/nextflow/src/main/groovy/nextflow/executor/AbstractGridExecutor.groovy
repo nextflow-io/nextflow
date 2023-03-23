@@ -226,7 +226,7 @@ abstract class AbstractGridExecutor extends Executor {
                 - exit status : $ret
                 - output      :
                 """
-                .stripIndent()
+                .stripIndent(true)
         m += proc.text.indent('  ')
         log.debug(m)
     }
@@ -289,7 +289,7 @@ abstract class AbstractGridExecutor extends Executor {
                 - cmd executed: ${cmd.join(' ')}
                 - exit status : $exit
                 - output      :
-                """.stripIndent()
+                """.stripIndent(true)
                 m += result.indent('  ')
                 log.warn1(m, firstOnly: true)
                 return null
