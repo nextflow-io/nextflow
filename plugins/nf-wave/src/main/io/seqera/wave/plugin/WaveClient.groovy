@@ -451,15 +451,13 @@ class WaveClient {
         def result = """\
 # Builder image
 FROM ${config.spackOpts().builderImage} as builder
-COPY spack.yaml /tmp/spack.yaml
+COPY spack.yml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: ${config.spackOpts().cFlags}\\n      cxxflags: ${config.spackOpts().cxxFlags}\\n      fflags: ${config.spackOpts().fFlags};' \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed '/^spack:/a  \\ \\ include: [/opt/spack-env/compilers.yaml]\\
-  concretizer:\\
-    unify: true' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
+&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]\\n\\  concretizer:\\n\\    unify: true' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
 &&  echo -e "\\
   packages: \\n\\
     all: \\n\\
