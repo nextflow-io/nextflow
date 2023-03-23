@@ -1,8 +1,8 @@
 .. _script-page:
 
-******************
-Nextflow scripting
-******************
+*******
+Scripts
+*******
 
 The Nextflow scripting language is an extension of the Groovy programming language.
 Groovy is a powerful programming language for the Java virtual machine. The Nextflow
