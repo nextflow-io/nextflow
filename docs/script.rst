@@ -237,9 +237,8 @@ For example::
 The above snippet defines two simple functions, that can be invoked in the workflow script as ``foo()``, which
 returns ``'Hello world'``, and ``bar(10,20)``, which returns the sum of two parameters (``30`` in this case).
 
-.. note:: Functions implicitly return the result of the last evaluated statement.
-
-The keyword ``return`` can be used to explicitly exit from a function and return the specified value. For example::
+Functions implicitly return the result of the last statement. Additionally, the ``return`` keyword can be used to
+explicitly exit from a function and return the specified value. For example::
 
     def fib( x ) {
         if( x <= 1 )

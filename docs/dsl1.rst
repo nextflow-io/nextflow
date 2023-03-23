@@ -59,8 +59,37 @@ into a ``workflow`` definition. Additionally, you must call each process explici
 passing any input channels as arguments (instead of ``from ...``) and receiving any output channels
 as return values (instead of ``into ...``).
 
-Refer to the :ref:`workflow-page` page to learn how to define a workflow, as well as the original
-:ref:`getstarted-first` example to see the resulting DSL2 version.
+Refer to the :ref:`workflow-page` page to learn how to define a workflow. The DSL2 version of the above
+script is duplicated here for your convenience ::
+
+    params.str = 'Hello world!'
+
+    process splitLetters {
+
+        output:
+        path 'chunk_*'
+
+        """
+        printf '${params.str}' | split -b 6 - chunk_
+        """
+    }
+
+    process convertToUpper {
+
+        input:
+        path x
+
+        output:
+        stdout
+
+        """
+        cat $x | tr '[a-z]' '[A-Z]'
+        """
+    }
+
+    workflow {
+        splitLetters | flatten | convertToUpper | view { it.trim() }
+    }
 
 
 Channel forking
@@ -124,9 +153,9 @@ Processes
         tuple X, 'some-file.bam'
 
         script:
-        '''
+        """
         your_command --in $X some-file.sam > some-file.bam
-        '''
+        """
     }
 
   Use::
@@ -138,9 +167,9 @@ Processes
         tuple val(X), path('some-file.bam')
 
         script:
-        '''
+        """
         your_command --in $X some-file.sam > some-file.bam
-        '''
+        """
     }
 
 

@@ -4,15 +4,13 @@
 Modules
 *******
 
+In Nextflow, a **module** is a script that may contain functions, processes, and workflows
+(collectively referred to as *components*). A module can be included in other modules or
+pipeline scripts and even shared across workflows.
+
 .. note::
     Modules were introduced in DSL2. If you are still using DSL1, see the :ref:`dsl1-page` page to
     learn how to migrate your Nextflow pipelines to DSL2.
-
-In Nextflow, a **module** is a script that may contain functions, processes, and workflows. A module
-can be included in other modules or pipeline scripts and even shared across workflows.
-
-.. note::
-    Functions, processes, and workflows are collectively referred to as *components*.
 
 
 Module inclusion
@@ -139,8 +137,7 @@ The above snippet prints::
 .. tip::
     It is best to define all pipeline parameters *before* any ``include`` statements.
 
-The ``addParams`` option can be used to pass parameters to the module without affecting the including
-scope.
+The ``addParams`` option can be used to pass parameters to the module without adding them to the including scope.
 
 ::
 
@@ -157,8 +154,8 @@ The above snippet prints::
 
     Ciao Mundo
 
-Alternatively, the ``params`` option allows you to pass parameters to module without affecting the including
-scope, *and* without inheriting any parameters from the including scope.
+Alternatively, the ``params`` option can be used to pass parameters to module without adding them
+to the including scope, *and* without inheriting any parameters from the including scope.
 
 ::
 
@@ -264,4 +261,4 @@ the Linux execute permissions.
 
 .. note::
     This feature requires the use of a local or shared file system for the pipeline work directory, or
-    :ref:`wave-page` when using container-native executors.
+    :ref:`wave-page` when using cloud-based executors.

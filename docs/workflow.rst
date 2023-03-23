@@ -4,10 +4,6 @@
 Workflows
 *********
 
-.. note::
-    Workflows were introduced in DSL2. If you are still using DSL1, see the :ref:`dsl1-page` page to
-    learn how to migrate your Nextflow pipelines to DSL2.
-
 In Nextflow, a **workflow** is a composition of processes and dataflow logic (i.e. channels and operators).
 
 The workflow definition starts with the keyword ``workflow``, followed by an optional name, and finally the workflow body
@@ -38,8 +34,12 @@ The syntax of a workflow is defined as follows::
 
     }
 
-.. note::
+.. tip::
     The ``main:`` label can be omitted if there are no ``take:`` or ``emit:`` blocks.
+
+.. note::
+    Workflows were introduced in DSL2. If you are still using DSL1, see the :ref:`dsl1-page` page to
+    learn how to migrate your Nextflow pipelines to DSL2.
 
 
 Invoking processes
@@ -78,9 +78,7 @@ input channels like function arguments. For example::
     }
 
 .. warning::
-    A process can be invoked only once in the same workflow. See :ref:`module-aliases` for
-    a workaround.
-
+    A process can be only be invoked once in a single workflow, unless using :ref:`module-aliases`.
 
 Process composition
 -------------------
