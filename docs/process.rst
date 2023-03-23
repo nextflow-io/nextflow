@@ -7,7 +7,7 @@ Processes
 In Nextflow, a **process** is the basic processing primitive to execute a user script.
 
 The process definition starts with the keyword ``process``, followed by process name and finally the process body
-delimited by curly brackets. The process body must contain a string which represents the command or, more generally,
+delimited by curly braces. The process body must contain a string which represents the command or, more generally,
 a script that is executed by it. A basic process looks like the following example::
 
   process sayHello {

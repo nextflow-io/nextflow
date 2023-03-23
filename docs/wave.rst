@@ -65,7 +65,7 @@ Build module containers
 
 Wave can build and provision container images on-demand for your Nextflow pipelines.
 
-To enable this feature, add the Dockerfile of the container to be built in the :ref:`module directory <dsl2-module-directory>`
+To enable this feature, add the Dockerfile of the container to be built in the :ref:`module directory <module-directory>`
 where the pipeline process is defined. When Wave is enabled, it automatically uses the Dockerfile to build the required container,
 upload to the registry, and use the container to carry out the tasks defined in the module.
 

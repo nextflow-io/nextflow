@@ -17,9 +17,10 @@ Contents:
    process
    channel
    operator
+   workflow
+   module
    executor
    config
-   dsl2
    cli
    container
    wave
@@ -39,3 +40,4 @@ Contents:
    mail
    plugins
    secrets
+   dsl1
