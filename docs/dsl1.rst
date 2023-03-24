@@ -5,7 +5,7 @@ Migrating from DSL 1
 ********************
 
 In Nextflow version ``22.03.0-edge``, DSL2 became the default DSL version. In version ``22.12.0-edge``,
-DSL1 support was removed, and this documentation was updated to use DSL2 by default. Users who are still
+DSL1 support was removed, and the Nextflow documentation was updated to use DSL2 by default. Users who are still
 using DSL1 should migrate their pipelines to DSL2 in order to use the latest versions of Nextflow. This page
 describes the differences between DSL1 and DSL2, and how to migrate to DSL2.
 
@@ -55,7 +55,7 @@ using ``from`` and ``into``. Here is the :ref:`getstarted-first` example written
     result.view { it.trim() }
 
 To migrate this code to DSL2, you need to move all of your channel logic throughout the script
-into a (nameless) ``workflow`` definition. Additionally, you must call each process explicitly,
+into a ``workflow`` definition. Additionally, you must call each process explicitly,
 passing any input channels as arguments (instead of ``from ...``) and receiving any output channels
 as return values (instead of ``into ...``).
 
@@ -71,7 +71,7 @@ be forked using the ``into`` operator.
 
 In DSL2, channels are automatically forked when connecting two or more consumers.
 
-For example::
+For example, this would not work in DSL1 but is not a problem in DSL2::
 
     channel
         .from('Hello','Hola','Ciao')
@@ -168,7 +168,9 @@ Operators
 DSL2 Preview
 ------------
 
-* The ``nextflow.preview.dsl=2`` feature flag is no longer needed.
+An early preview of DSL2 was available in 2020. Note that some of that early DSL2 syntax has since changed.
+
+* The ``nextflow.preview.dsl=2`` (and ``nextflow.enable.dsl=1``) feature flags are no longer needed.
 * Anonymous and unwrapped includes are no longer supported. Use an explicit module inclusion instead.
 
   For example::

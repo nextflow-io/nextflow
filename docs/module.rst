@@ -83,7 +83,7 @@ Module aliases
 --------------
 
 When including a module component, it's possible to specify an *alias* with the ``as`` keyword.
-Aliasing allows you to include and invoke components with the same name, by assigning them different
+Aliasing allows you to avoid module name clashes, by assigning them different
 names in the including context. For example::
 
     include { foo } from './some/module'
