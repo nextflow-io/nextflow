@@ -1341,7 +1341,7 @@ of a chain of operator transformations, thus resulting in a more fluent and read
 subscribe
 ---------
 
-The ``subscribe`` method allows you to execute a user defined function each time a new value is emitted by the source channel.
+The ``subscribe`` operator allows you to execute a user defined function each time a new value is emitted by the source channel.
 
 The emitted value is passed implicitly to the specified function. For example::
 
@@ -1376,7 +1376,7 @@ specifying the expected value type, as shown in the following example::
     Got: beta; len: 4
     Got: lambda; len: 6
 
-The ``subscribe`` method may accept one or more of the following event handlers:
+The ``subscribe`` operator may accept one or more of the following event handlers:
 
 * ``onNext``: function that is invoked whenever the channel emits a value.
   Equivalent to using the ``subscribe`` with a plain closure as described in the examples above.
