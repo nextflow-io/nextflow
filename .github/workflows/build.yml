@@ -86,6 +86,13 @@ jobs:
           echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
         env:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
+      - name: Setup Java ${{ matrix.java_version }}
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{matrix.java_version}}
+          distribution: 'adopt'
+          architecture: x64
+          cache: gradle
       - name: Run tests
         run: |
           cat $HOME/.nextflow/scm
