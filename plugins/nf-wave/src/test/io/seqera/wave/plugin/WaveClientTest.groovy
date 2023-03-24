@@ -256,7 +256,7 @@ class WaveClientTest extends Specification {
         def folder = Files.createTempDirectory('test')
         and:
         def DOCKERFILE = 'from foo:latest'
-        def SPACKFILE = folder.resolve('spack.yaml'); SPACKFILE.text = 'some spack recipe here'
+        def SPACKFILE = folder.resolve('spack.yml'); SPACKFILE.text = 'some spack recipe here'
         and:
         def session = Mock(Session) { getConfig() >> [:]}
         def wave = new WaveClient(session)
@@ -378,7 +378,7 @@ spack: \\n\\
   config: \\n\\
     install_tree: /opt/software \\n\\
   view: /opt/view \\n\\
-" > /opt/spack-env/spack.yaml
+" > /opt/spack-env/spack.yml
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
@@ -503,7 +503,7 @@ spack: \\n\\
   config: \\n\\
     install_tree: /opt/software \\n\\
   view: /opt/view \\n\\
-" > /opt/spack-env/spack.yaml
+" > /opt/spack-env/spack.yml
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast -n && spack gc -y
@@ -582,15 +582,13 @@ CMD [ "/bin/bash" ]
         client.spackFileToDockerFile()== '''\
 # Builder image
 FROM spack/ubuntu-jammy:v0.19.1 as builder
-COPY spack.yaml /tmp/spack.yaml
+COPY spack.yml /tmp/spack.yml
 
 RUN mkdir -p /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed '/^spack:/a  \\ \\ include: [/opt/spack-env/compilers.yaml]\\
-  concretizer:\\
-    unify: true' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
+&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]\\n\\  concretizer:\\n\\    unify: true' /tmp/spack.yml > /opt/spack-env/spack.yml \\
 &&  echo -e "\\
   packages: \\n\\
     all: \\n\\
@@ -598,7 +596,7 @@ RUN mkdir -p /opt/spack-env \\
   config: \\n\\
     install_tree: /opt/software \\n\\
   view: /opt/view \\n\\
-" >> /opt/spack-env/spack.yaml
+" >> /opt/spack-env/spack.yml
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
@@ -815,7 +813,7 @@ spack: \\n\\
   config: \\n\\
     install_tree: /opt/software \\n\\
   view: /opt/view \\n\\
-" > /opt/spack-env/spack.yaml
+" > /opt/spack-env/spack.yml
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
@@ -896,7 +894,7 @@ CMD [ "/bin/bash" ]
     def 'should create asset with spack file' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def spackFile = folder.resolve('spack.yaml'); spackFile.text = 'the-spack-recipe-here'
+        def spackFile = folder.resolve('spack.yml'); spackFile.text = 'the-spack-recipe-here'
         and:
         def session = Mock(Session) { getConfig() >> [:]}
         def task = Mock(TaskRun) {getConfig() >> [spack:spackFile.toString()] }
@@ -909,15 +907,13 @@ CMD [ "/bin/bash" ]
         assets.dockerFileContent == '''\
 # Builder image
 FROM spack/ubuntu-jammy:v0.19.1 as builder
-COPY spack.yaml /tmp/spack.yaml
+COPY spack.yml /tmp/spack.yml
 
 RUN mkdir -p /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: -O3\\n      cxxflags: -O3\\n      fflags: -O3;' \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed '/^spack:/a  \\ \\ include: [/opt/spack-env/compilers.yaml]\\
-  concretizer:\\
-    unify: true' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
+&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]\\n\\  concretizer:\\n\\    unify: true' /tmp/spack.yml > /opt/spack-env/spack.yml \\
 &&  echo -e "\\
   packages: \\n\\
     all: \\n\\
@@ -925,7 +921,7 @@ RUN mkdir -p /opt/spack-env \\
   config: \\n\\
     install_tree: /opt/software \\n\\
   view: /opt/view \\n\\
-" >> /opt/spack-env/spack.yaml
+" >> /opt/spack-env/spack.yml
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast && spack gc -y
