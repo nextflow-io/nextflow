@@ -157,7 +157,7 @@ Here we briefly discuss two strategies to mitigate this aspect, and render the u
     Building packages outside of the Nextflow pipeline will work since Spack always installs packages in its own directories,
     and only creates symbolic links in the environment. This sequence of commands will do the trick in most cases::
 
-    spack env create myenv /path/to/spack.yaml
+    spack env create myenv /path/to/spack.yml
     spack env activate myenv
     spack env view enable
     spack concretize -f
