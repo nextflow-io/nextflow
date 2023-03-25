@@ -560,6 +560,10 @@ In order to append a string value to a file without erasing existing content, yo
 
   myFile.append('Add this line\n')
 
+Or use the `left shift` operator, a more idiomatic way to append text content to a file::
+
+  myFile << 'Add a line more\n'
+
 Binary data can managed in the same way, just using the file property ``bytes`` instead of ``text``. Thus, the following
 example reads the file and returns its content as a byte array::
 
@@ -668,7 +672,7 @@ first file's content into the second file, replacing all ``U`` characters with `
         targetFile.withWriter { target ->
             String line
             while( line=source.readLine() ) {
-                target.append(line.replaceAll('U','X'))
+                target << line.replaceAll('U','X')
             }
         }
     }
