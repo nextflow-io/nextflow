@@ -134,7 +134,7 @@ class SpackCache {
 
     @PackageScope
     boolean isYamlFilePath(String str) {
-        (str.endsWith('.yml') || str.endsWith('.yaml')) && !str.contains('\n')
+        str.endsWith('.yaml') && !str.contains('\n')
     }
 
 
