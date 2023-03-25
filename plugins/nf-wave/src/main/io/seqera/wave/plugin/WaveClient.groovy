@@ -451,13 +451,13 @@ class WaveClient {
         def result = """\
 # Builder image
 FROM ${config.spackOpts().builderImage} as builder
-COPY spack.yml /tmp/spack.yml
+COPY spack.yml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
          -e 's;^ *flags: *{};    flags:\\n      cflags: ${config.spackOpts().cFlags}\\n      cxxflags: ${config.spackOpts().cxxFlags}\\n      fflags: ${config.spackOpts().fFlags};' \\
          /root/.spack/linux/compilers.yaml > /opt/spack-env/compilers.yaml \\
-&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]\\n\\  concretizer:\\n\\    unify: true' /tmp/spack.yml > /opt/spack-env/spack.yml \\
+&&  sed '/^spack:/a\\  include: [/opt/spack-env/compilers.yaml]\\n\\  concretizer:\\n\\    unify: true' /tmp/spack.yaml > /opt/spack-env/spack.yaml \\
 &&  echo -e "\\
   packages: \\n\\
     all: \\n\\
@@ -465,7 +465,7 @@ RUN mkdir -p /opt/spack-env \\
   config: \\n\\
     install_tree: /opt/software \\n\\
   view: /opt/view \\n\\
-" >> /opt/spack-env/spack.yml
+" >> /opt/spack-env/spack.yaml
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast ${noChecksumString}&& spack gc -y
@@ -573,7 +573,7 @@ spack: \\n\\
   config: \\n\\
     install_tree: /opt/software \\n\\
   view: /opt/view \\n\\
-" > /opt/spack-env/spack.yml
+" > /opt/spack-env/spack.yaml
 
 # Install packages, clean afterwards
 RUN cd /opt/spack-env && spack env activate . && spack install --fail-fast ${noChecksumString}&& spack gc -y
