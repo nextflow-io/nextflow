@@ -630,7 +630,7 @@ CMD [ "/bin/bash" ]
     protected boolean isSpackFile(String value) {
         if( value.contains('\n') )
             return false
-        return value.endsWith('.yaml') || value.endsWith('.yml')
+        return value.endsWith('.yaml')
     }
 
     protected boolean refreshJwtToken0(String refresh) {
