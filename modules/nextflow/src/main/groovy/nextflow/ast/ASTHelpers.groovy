@@ -29,6 +29,7 @@ import org.codehaus.groovy.ast.expr.DeclarationExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
+import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.ast.expr.TupleExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
@@ -93,8 +94,16 @@ class ASTHelpers {
         new DeclarationExpression(left, GeneralUtils.ASSIGN, right)
     }
 
+    static PropertyExpression isPropertyX(Expression expr) {
+        return expr instanceof PropertyExpression ? expr : null
+    }
+
     static MethodCallExpression isMethodCallX(Expression expr) {
         return expr instanceof MethodCallExpression ? expr : null
+    }
+
+    static ConstantExpression isConstantX(Expression expr) {
+        return expr instanceof ConstantExpression ? expr : null
     }
 
     static VariableExpression isVariableX(Expression expr) {

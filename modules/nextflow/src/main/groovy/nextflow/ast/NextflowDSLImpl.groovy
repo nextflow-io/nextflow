@@ -295,6 +295,9 @@ class NextflowDSLImpl implements ASTTransformation {
                             CastExpression castX
                             VariableExpression varX
                             Expression moduleX
+                            PropertyExpression propertyX
+                            MethodCallExpression methodCallX
+                            ConstantExpression constantX
                             if( (varX=isVariableX(stm.expression)) ) {
                                 def name = constX(varX.name)
                                 moduleX = createX(IncludeDef.Module, name)
@@ -302,6 +305,11 @@ class NextflowDSLImpl implements ASTTransformation {
                             else if( (castX=isCastX(stm.expression)) && (varX=isVariableX(castX.expression)) ) {
                                 def name = constX(varX.name)
                                 final alias = constX(castX.type.name)
+                                moduleX = createX(IncludeDef.Module, name, alias)
+                            }
+                            else if ( (propertyX=isPropertyX(stm.expression)) && (methodCallX=isMethodCallX(propertyX.getObjectExpression())) ) {
+                                def name = methodCallX.getMethod()
+                                final alias = propertyX.getProperty()
                                 moduleX = createX(IncludeDef.Module, name, alias)
                             }
                             else {
