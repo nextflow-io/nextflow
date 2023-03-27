@@ -5,7 +5,7 @@ Operators
 *********
 
 Nextflow **operators** are methods that allow you to manipulate channels. Every operator,
-with the exception of :ref:`operator-set`, produces one or more new channels, allowing you to
+with the exception of :ref:`operator-set` and :ref:`operator-subscribe`, produces one or more new channels, allowing you to
 chain operators to fit your needs.
 
 This page is a comprehensive reference for all Nextflow operators. However, if you are new
@@ -1600,6 +1600,71 @@ keepHeader  Parses the first line as header and prepends it to each emitted chun
 
 .. tip::
   You can also use ``countLines`` to count the number of lines in the text file(s).
+
+
+.. _operator-subscribe:
+
+subscribe
+---------
+
+The ``subscribe`` operator allows you to execute a user defined function each time a new value is emitted by the source channel.
+
+The emitted value is passed implicitly to the specified function. For example::
+
+    // define a channel emitting three values
+    source = Channel.of( 'alpha', 'beta', 'delta' )
+
+    // subscribe a function to the channel printing the emitted values
+    source.subscribe {  println "Got: $it"  }
+
+::
+
+    Got: alpha
+    Got: beta
+    Got: delta
+
+.. note::
+  In Groovy, the language on which Nextflow is based, the user defined function is called a **closure**.
+  Read the :ref:`script-closure` section to learn more about closures.
+
+If needed the closure parameter can be defined explicitly, using a name other than ``it`` and, optionally,
+specifying the expected value type, as shown in the following example::
+
+    Channel
+        .of( 'alpha', 'beta', 'lambda' )
+        .subscribe { String str ->
+            println "Got: ${str}; len: ${str.size()}"
+        }
+
+::
+
+    Got: alpha; len: 5
+    Got: beta; len: 4
+    Got: lambda; len: 6
+
+The ``subscribe`` operator may accept one or more of the following event handlers:
+
+* ``onNext``: function that is invoked whenever the channel emits a value.
+  Equivalent to using the ``subscribe`` with a plain closure as described in the examples above.
+
+* ``onComplete``: function that is invoked after the last value is emitted by the channel.
+
+* ``onError``: function that it is invoked when an exception is raised while handling the
+  ``onNext`` event. It will not make further calls to ``onNext`` or ``onComplete``.
+  The ``onError`` method takes as its parameter the ``Throwable`` that caused the error.
+
+For example::
+
+    Channel
+        .of( 1, 2, 3 )
+        .subscribe onNext: { println it }, onComplete: { println 'Done' }
+
+::
+
+    1
+    2
+    3
+    Done
 
 
 .. _operator-sum:
