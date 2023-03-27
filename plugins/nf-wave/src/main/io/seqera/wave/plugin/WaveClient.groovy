@@ -451,7 +451,7 @@ class WaveClient {
         def result = """\
 # Builder image
 FROM ${config.spackOpts().builderImage} as builder
-COPY spack.yml /tmp/spack.yaml
+COPY spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\

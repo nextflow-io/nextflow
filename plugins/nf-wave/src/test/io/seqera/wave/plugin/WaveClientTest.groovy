@@ -582,7 +582,7 @@ CMD [ "/bin/bash" ]
         client.spackFileToDockerFile()== '''\
 # Builder image
 FROM spack/ubuntu-jammy:v0.19.1 as builder
-COPY spack.yml /tmp/spack.yaml
+COPY spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
@@ -907,7 +907,7 @@ CMD [ "/bin/bash" ]
         assets.dockerFileContent == '''\
 # Builder image
 FROM spack/ubuntu-jammy:v0.19.1 as builder
-COPY spack.yml /tmp/spack.yaml
+COPY spack.yaml /tmp/spack.yaml
 
 RUN mkdir -p /opt/spack-env \\
 &&  sed -e 's;compilers:;compilers::;' \\
