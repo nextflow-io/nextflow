@@ -217,6 +217,7 @@ nxf_trace_linux() {
 }
 
 nxf_trace() {
+    trap on_term TERM INT
     local trace_file=.command.trace
     touch $trace_file
     if [[ $(uname) = Darwin ]]; then
