@@ -17,10 +17,13 @@
 
 package nextflow.processor
 
+import java.nio.file.Paths
 import java.util.concurrent.atomic.LongAdder
 
+import com.google.common.hash.HashCode
 import nextflow.Session
 import nextflow.executor.Executor
+import nextflow.script.params.FileOutParam
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -134,6 +137,29 @@ class TaskHandlerTest extends Specification {
         then:
         handler.getTraceRecord().status == 'ABORTED'
 
+    }
+
+    def 'should write meta file' () {
+
+        given:
+        def folder = File.createTempDir()
+        def outputFile = new File(folder, 'bar.txt') ; outputFile.text = 'bar'
+        def task = Mock(TaskRun) {
+            hash >> HashCode.fromString("aabbccddeeff00112233445566778899")
+            workDir >> folder.toPath()
+            getInputFilesMap() >> [ 'foo.txt': Paths.get('/tmp/00/112233445566778899aabbccddeeff/foo.txt') ]
+            getOutputsByType(FileOutParam) >> [ 'bar.txt': outputFile.toPath() ]
+        }
+        def handler = [:] as TaskHandler
+        handler.task = task
+
+        when:
+        handler.writeMetaFile()
+        then:
+        task.workDir.resolve(TaskRun.CMD_META).text == """{"hash":"aabbccddeeff00112233445566778899","inputs":[{"name":"foo.txt","path":"/tmp/00/112233445566778899aabbccddeeff/foo.txt","predecessor":"00112233445566778899aabbccddeeff"}],"outputs":[{"name":"bar.txt","path":"${folder}/bar.txt","size":3,"checksum":"37b51d194a7513e45b56f6524f2d51f2"}]}"""
+
+        cleanup:
+        folder.delete()
     }
 
     LongAdder _adder(Integer x) {

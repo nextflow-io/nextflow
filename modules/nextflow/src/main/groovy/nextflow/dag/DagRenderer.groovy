@@ -24,10 +24,19 @@ import java.nio.file.Path
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Mike Smoot <mes@aescon.com>
  */
-interface DagRenderer {
+trait DagRenderer {
 
     /**
-     * Render the dag to the specified file.
+     * Render an abstract (process/operator) DAG.
      */
-    void renderDocument(DAG dag, Path file);
+    void renderAbstractGraph(DAG dag, Path file) {
+        throw new UnsupportedOperationException("Abstract graph rendering is not supported for this file format")
+    }
+
+    /**
+     * Render a concrete (task) DAG.
+     */
+    void renderConcreteGraph(ConcreteDAG dag, Path file) {
+        throw new UnsupportedOperationException("Concrete graph rendering is not supported for this file format")
+    }
 }

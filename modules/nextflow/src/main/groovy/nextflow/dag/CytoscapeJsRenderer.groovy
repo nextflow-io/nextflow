@@ -29,7 +29,7 @@ import java.nio.file.Path
 class CytoscapeJsRenderer implements DagRenderer {
 
     @Override
-    void renderDocument(DAG dag, Path file) {
+    void renderAbstractGraph(DAG dag, Path file) {
         file.text = renderNetwork(dag)
     }
 

@@ -543,6 +543,7 @@ class TaskRun implements Cloneable {
     static final public String CMD_RUN = '.command.run'
     static final public String CMD_TRACE = '.command.trace'
     static final public String CMD_ENV = '.command.env'
+    static final public String CMD_META = '.command.meta.json'
 
 
     String toString( ) {

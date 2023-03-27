@@ -27,11 +27,7 @@ import java.nio.file.Path
 class MermaidRenderer implements DagRenderer {
 
     @Override
-    void renderDocument(DAG dag, Path file) {
-        file.text = renderNetwork(dag)
-    }
-
-    String renderNetwork(DAG dag) {
+    void renderAbstractGraph(DAG dag, Path file) {
         def lines = []
         lines << "flowchart TD"
 
@@ -45,7 +41,7 @@ class MermaidRenderer implements DagRenderer {
 
         lines << ""
 
-        return lines.join('\n')
+        file.text = lines.join('\n')
     }
 
     private String renderVertex(DAG.Vertex vertex) {
@@ -75,5 +71,26 @@ class MermaidRenderer implements DagRenderer {
         String label = edge.label ? "|${edge.label}|" : ""
 
         return "${edge.from.name} -->${label} ${edge.to.name}"
+    }
+
+    @Override
+    void renderConcreteGraph(ConcreteDAG graph, Path file) {
+        def lines = []
+        lines << "flowchart TD"
+
+        graph.nodes.values().each { node ->
+            lines << "    ${node.getSlug()}[\"${node.label}\"]"
+
+            node.predecessors.each { key ->
+                final pred = graph.nodes[key]
+
+                if( pred )
+                    lines << "    ${pred.getSlug()} --> ${node.getSlug()}"
+            }
+        }
+
+        lines << ""
+
+        file.text = lines.join('\n')
     }
 }

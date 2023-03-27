@@ -254,6 +254,7 @@ Name                Description
 enabled             When ``true`` turns on the generation of the DAG file (default: ``false``).
 file                Graph file name (default: ``dag-<timestamp>.dot``).
 overwrite           When ``true`` overwrites any existing DAG file with the same name.
+type                Can be ``abstract`` to render the abstract DAG or ``concrete`` to render the concrete (task) DAG (default: ``abstract``).
 ================== ================
 
 The above options can be used by prefixing them with the ``dag`` scope or surrounding them by curly

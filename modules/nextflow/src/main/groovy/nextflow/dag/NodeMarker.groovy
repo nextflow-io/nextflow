@@ -22,6 +22,7 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Global
 import nextflow.Session
 import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
 import nextflow.script.params.InputsList
 import nextflow.script.params.OutputsList
 /**
@@ -41,7 +42,7 @@ class NodeMarker {
     static private Session getSession() { Global.session as Session }
 
     /**
-     *  Creates a new vertex in the DAG representing a computing `process`
+     * Creates a vertex in the abstract DAG representing a computing `process`
      *
      * @param label The label associated to the process
      * @param inputs The list of inputs entering in the process
@@ -53,7 +54,7 @@ class NodeMarker {
     }
 
     /**
-     * Creates a new DAG vertex representing a dataflow operator
+     * Creates a vertex in the abstract DAG representing a dataflow operator
      *
      * @param label The operator label
      * @param inputs The operator input(s). It can be either a single channel or a list of channels.
@@ -67,7 +68,7 @@ class NodeMarker {
     }
 
     /**
-     * Creates a vertex in the DAG representing a dataflow channel source.
+     * Creates a vertex in the abstract DAG representing a dataflow channel source.
      *
      * @param label The node description
      * @param source Either a dataflow channel or a list of channel.
@@ -86,6 +87,17 @@ class NodeMarker {
     static void addDataflowBroadcastPair(readChannel, broadcastChannel)  {
         if( session && session.dag && !session.aborted )
             session.dag.addDataflowBroadcastPair(readChannel, broadcastChannel)
+    }
+
+    /**
+     * Creates a vertex in the concrete DAG representing a task
+     *
+     * @param task
+     * @param hash
+     */
+    static void addTaskNode( TaskRun task, String hash ) {
+        if( session?.concreteDAG && !session.aborted )
+            session.concreteDAG.addTaskNode( task, hash )
     }
 
 }

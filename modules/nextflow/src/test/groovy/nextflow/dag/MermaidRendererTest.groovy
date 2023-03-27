@@ -47,7 +47,7 @@ class MermaidRendererTest extends Specification {
         dag.normalize()
 
         when:
-        new MermaidRenderer().renderDocument(dag, file)
+        new MermaidRenderer().renderAbstractGraph(dag, file)
         then:
         file.text ==
             '''
