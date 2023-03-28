@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,43 +15,36 @@
  *
  */
 
-package com.upplication.s3fs.experiment
+package nextflow.processor
 
-import com.upplication.s3fs.experiment.AtomicBigInteger
 import spock.lang.Specification
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class AtomicBigIntegerTest extends Specification {
+class ErrorStrategyTest extends Specification {
 
-    def 'should increment and get' ( ) {
-        given:
-        def acc = new AtomicBigInteger()
+    def "should check if it's a valid error strategy" () {
 
         expect:
-        and:
-        acc.incrementAndGet() == 1
-        acc.incrementAndGet() == 2
-        and:
-        acc.getAndIncrement() == 2
-        acc.getAndIncrement() == 3
-        and:
-        acc.get() == 4
+        ErrorStrategy.isValid(NAME) == EXPECTED
 
-    }
-
-    def 'should increment one and get' ( ) {
-        given:
-        def acc = new AtomicBigInteger()
-
-        expect:
+        where:
+        NAME            | EXPECTED
+        null            | false
+        ''              | false
+        'foo'           | false
         and:
-        acc.getAndIncrement(1) == 0
+        'terminate'     | true
+        'ignore'        | true
+        'retry'         | true
+        'finish'        | true
         and:
-        acc.get() == 1
-
+        'TERMINATE'     | true
+        'IGNORE'        | true
+        'RETRY'         | true
+        'FINISH'        | true
     }
 
 }

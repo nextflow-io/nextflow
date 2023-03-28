@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +17,11 @@
 package nextflow.k8s
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.exception.NodeTerminationException
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.file.http.XPath
@@ -273,6 +274,56 @@ class K8sTaskHandlerTest extends Specification {
                     ]
         ]
 
+    }
+
+    def 'should create a pod with debug options' () {
+        given:
+        SysEnv.push([NXF_DEBUG:'true'])
+        and:
+        def WORK_DIR = Paths.get('/some/work/dir')
+        def config = Mock(TaskConfig)
+        def task = Mock(TaskRun)
+        def client = Mock(K8sClient)
+        def builder = Mock(K8sWrapperBuilder)
+        def handler = Spy(new K8sTaskHandler(builder: builder, client:client))
+        Map result
+
+        when:
+        result = handler.newSubmitRequest(task)
+        then:
+        _ * handler.fusionEnabled() >> false
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> false
+        1 * handler.getPodOptions() >> new PodOptions()
+        1 * handler.getSyntheticPodName(task) >> 'nf-123'
+        1 * handler.getLabels(task) >> [:]
+        1 * handler.getAnnotations() >> [:]
+        1 * handler.getContainerMounts() >> []
+        1 * task.getContainer() >> 'debian:latest'
+        1 * task.getWorkDir() >> WORK_DIR
+        1 * task.getConfig() >> config
+        1 * config.getCpus() >> 0
+        1 * config.getMemory() >> null
+        1 * client.getConfig() >> new ClientConfig()
+        result == [ apiVersion: 'v1',
+                    kind: 'Pod',
+                    metadata: [
+                            name:'nf-123',
+                            namespace:'default'
+                    ],
+                    spec: [
+                            restartPolicy:'Never',
+                            containers:[
+                                    [name:'nf-123',
+                                     image:'debian:latest',
+                                     args:['/bin/bash', '-ue','/some/work/dir/.command.run'],
+                                     env:[[name:'NXF_DEBUG', value:'true']] ]
+                            ]
+                    ]
+        ]
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should create a pod with specified client configs' () {
@@ -954,11 +1005,11 @@ class K8sTaskHandlerTest extends Specification {
         when:
         opts = handler.getPodOptions()
         then:
-        1 * k8sConfig.getPodOptions() >> new PodOptions([[env: 'NXF_FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
+        1 * k8sConfig.getPodOptions() >> new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
         and:
         1 * taskConfig.getPodOptions() >> new PodOptions([:])
         and: 
-        opts == new PodOptions([[env: 'NXF_FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
+        opts == new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
     }
 
     def 'should update startTimeMillis and completeTimeMillis with terminated state' () {
@@ -1020,17 +1071,19 @@ class K8sTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
+        def launcher = Mock(FusionScriptLauncher)
         def handler = Spy(new K8sTaskHandler(builder:builder, client: client))
         Map result
 
         when:
         result = handler.newSubmitRequest(task)
         then:
+        launcher.fusionEnv() >> [FUSION_BUCKETS: 'this,that']
+        launcher.toContainerMount(WORK_DIR.resolve('.command.run')) >> Path.of('/fusion/http/work/dir/.command.run')
+        and:
         handler.getTask() >> task
         handler.fusionEnabled() >> true
-        handler.fusionLauncher() >> Mock(FusionScriptLauncher) {
-            fusionEnv() >> [NXF_FUSION_BUCKETS: 'this,that']
-        }
+        handler.fusionLauncher() >> launcher
         and:
         task.getContainer() >> 'debian:latest'
         task.getWorkDir() >> WORK_DIR
@@ -1058,9 +1111,9 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-123',
                                      image:'debian:latest',
-                                     args:['bash', '-o', 'pipefail', '-c', 'trap "{ ret=$?; cp .command.log null||true; exit $ret; }" EXIT; bash null 2>&1 | tee .command.log'],
+                                     args:['/usr/bin/fusion', 'bash', '/fusion/http/work/dir/.command.run'],
                                      securityContext:[privileged:true],
-                                     env:[[name:'NXF_FUSION_BUCKETS', value:'this,that']]]
+                                     env:[[name:'FUSION_BUCKETS', value:'this,that']]]
                             ]
                     ]
         ]
@@ -1079,6 +1132,6 @@ class K8sTaskHandlerTest extends Specification {
         when:
         def result =  handler.getSubmitCommand(Mock(TaskRun))
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; cp .command.log /fusion/http/foo/work/dir/.command.log||true; exit $ret; }" EXIT; bash /fusion/http/foo/work/dir/.command.run 2>&1 | tee .command.log'
+        result.join(' ') == '/usr/bin/fusion bash /fusion/http/foo/work/dir/.command.run'
     }
 }

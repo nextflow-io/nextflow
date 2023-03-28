@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,7 +98,7 @@ class StringUtils {
         if( !value )
             return '(empty)'
         final str = value.toString()
-        return str.length()>=5 ? str[0..2] + '****' : '****'
+        return str.length()>=10 ? str[0..2] + '****' : '****'
     }
 
     static String redactUrlPassword(value) {

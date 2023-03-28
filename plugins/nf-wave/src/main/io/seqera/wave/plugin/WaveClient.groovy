@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,6 @@ import com.google.gson.reflect.TypeToken
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
-import nextflow.fusion.FusionConfig
 import io.seqera.wave.plugin.config.TowerConfig
 import io.seqera.wave.plugin.config.WaveConfig
 import io.seqera.wave.plugin.exception.BadResponseException
@@ -43,8 +42,10 @@ import io.seqera.wave.plugin.packer.Packer
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.resolver.ContainerInfo
+import nextflow.fusion.FusionConfig
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.util.MustacheTemplateEngine
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -153,6 +154,7 @@ class WaveClient {
         req.towerRefreshToken = tower.refreshToken
         req.towerWorkspaceId = tower.workspaceId
         req.towerEndpoint = tower.endpoint
+        req.workflowId = tower.workflowId
         return sendRequest(req)
     }
 
@@ -163,7 +165,8 @@ class WaveClient {
                 containerConfig: containerConfig,
                 towerAccessToken: tower.accessToken,
                 towerWorkspaceId: tower.workspaceId,
-                towerEndpoint: tower.endpoint )
+                towerEndpoint: tower.endpoint,
+                workflowId: tower.workflowId)
         return sendRequest(request)
     }
 
@@ -206,7 +209,7 @@ class WaveClient {
                     return sendRequest0(request, attempt+1)
                 }
                 else
-                    throw new UnauthorizedException("Unauthorised [401] - Verify you have provided a valid access token")
+                    throw new UnauthorizedException("Unauthorized [401] - Verify you have provided a valid access token")
             }
             else
                 throw new BadResponseException("Wave invalid response: [${resp.statusCode()}] ${resp.body()}")
@@ -326,7 +329,7 @@ class WaveClient {
                 throw new IllegalArgumentException("Unexpected conda and dockerfile conflict")
 
             // map the recipe to a dockerfile
-            if( isCondaFile(attrs.conda) ) {
+            if( isCondaLocalFile(attrs.conda) ) {
                 condaFile = Path.of(attrs.conda)
                 dockerScript = condaFileToDockerFile()
             }
@@ -393,12 +396,17 @@ class WaveClient {
     }
 
     protected String condaFileToDockerFile() {
-        def result = """\
-        FROM ${config.condaOpts().mambaImage}
+        final template = """\
+        FROM {{base_image}}
         COPY --chown=\$MAMBA_USER:\$MAMBA_USER conda.yml /tmp/conda.yml
         RUN micromamba install -y -n base -f /tmp/conda.yml && \\
+            {{base_packages}}
             micromamba clean -a -y
-        """.stripIndent()
+        """.stripIndent(true)
+        final image = config.condaOpts().mambaImage
+        final basePackage =  config.condaOpts().basePackages ? "micromamba install -y -n base ${config.condaOpts().basePackages} && \\".toString() : null
+        final binding = ['base_image': image, 'base_packages': basePackage]
+        final result = new MustacheTemplateEngine().render(template, binding)
 
         return addCommands(result)
     }
@@ -413,20 +421,30 @@ class WaveClient {
     }
 
     protected String condaRecipeToDockerFile(String recipe) {
-        def channelsOpts = condaChannels.collect(it -> "-c $it").join(' ')
-        def result = """\
-        FROM ${config.condaOpts().mambaImage}
+        final template = """\
+        FROM {{base_image}}
         RUN \\
-           micromamba install -y -n base $channelsOpts \\
-           $recipe \\
-           && micromamba clean -a -y
-        """.stripIndent()
+            micromamba install -y -n base {{channel_opts}} \\
+            {{target}} \\
+            {{base_packages}}
+            && micromamba clean -a -y
+        """.stripIndent(true)
 
+        final channelsOpts = condaChannels.collect(it -> "-c $it").join(' ')
+        final image = config.condaOpts().mambaImage
+        final target = recipe.startsWith('http://') || recipe.startsWith('https://')
+                ? "-f $recipe".toString()
+                : recipe
+        final basePackage =  config.condaOpts().basePackages ? "&& micromamba install -y -n base ${config.condaOpts().basePackages} \\".toString() : null
+        final binding = [base_image: image, channel_opts: channelsOpts, target:target, base_packages: basePackage]
+        final result = new MustacheTemplateEngine().render(template, binding)
         return addCommands(result)
     }
 
-    protected boolean isCondaFile(String value) {
+    static protected boolean isCondaLocalFile(String value) {
         if( value.contains('\n') )
+            return false
+        if( value.startsWith('http://') || value.startsWith('https://') )
             return false
         return value.endsWith('.yaml') || value.endsWith('.yml') || value.endsWith('.txt')
     }
