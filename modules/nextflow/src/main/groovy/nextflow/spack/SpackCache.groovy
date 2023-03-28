@@ -343,20 +343,12 @@ class SpackCache {
 
         def spackEnvArch
 
-        if ( arch ) {
-            spackEnvArch = spackEnv + "_" + arch
-        }
-        else {
-            spackEnvArch = spackEnv
-        }
+        spackEnvArch = arch ? spackEnv + "_" + arch : spackEnv
 
         if( spackEnv in spackPrefixPaths ) {
-            if( arch ) {
-                log.trace "spack found local environment `$spackEnv` for arch `$arch`"
-            }
-            else {
-                log.trace "spack found local environment `$spackEnv`"
-            }
+            def msg = "spack found local environment `$spackEnv`"
+            if( arch ) msg += " and arch `$arch`"
+            log.trace "$msg"
             return spackPrefixPaths[spackEnvArch]
         }
 
@@ -367,12 +359,9 @@ class SpackCache {
                 spackPrefixPaths[spackEnvArch] = result
             }
             else {
-                if( arch ) {
-                    log.trace "spack found local cache for environment `$spackEnv` (2) for arch `$arch`"
-                }
-                else {
-                    log.trace "spack found local cache for environment `$spackEnv` (2)"
-                }
+                def msg = "spack found local cache for environment `$spackEnv` (2)"
+                if( arch ) msg += " and arch `$arch`"
+                log.trace "$msg"
             }
             return result
         }
