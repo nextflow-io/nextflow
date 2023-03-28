@@ -56,6 +56,7 @@ import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessException
+import nextflow.exception.PlainExceptionMessage
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.OpCall
 import nextflow.file.FileHelper
@@ -491,6 +492,9 @@ class LoggerHelper {
         else {
             buffer.append("Unexpected error")
         }
+        if( fail instanceof PlainExceptionMessage )
+            return
+
         buffer.append(CoreConstants.LINE_SEPARATOR)
         buffer.append(CoreConstants.LINE_SEPARATOR)
 
