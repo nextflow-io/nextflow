@@ -93,7 +93,7 @@ class DefaultObserverFactory implements TraceObserverFactory {
         if( !fileName ) fileName = GraphObserver.DEF_FILE_NAME
         def traceFile = (fileName as Path).complete()
         def observer = new GraphObserver(traceFile)
-        config.navigate('dag.type') { observer.dagType = it ?: 'abstract' }
+        config.navigate('dag.type') { observer.type = it ?: 'abstract' }
         config.navigate('dag.overwrite')  { observer.overwrite = it }
         result << observer
     }

@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.LongAdder
 import com.google.common.hash.HashCode
 import nextflow.Session
 import nextflow.executor.Executor
-import nextflow.script.params.FileOutParam
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -145,10 +144,10 @@ class TaskHandlerTest extends Specification {
         def folder = File.createTempDir()
         def outputFile = new File(folder, 'bar.txt') ; outputFile.text = 'bar'
         def task = Mock(TaskRun) {
-            hash >> HashCode.fromString("aabbccddeeff00112233445566778899")
+            hash >> HashCode.fromString('aabbccddeeff00112233445566778899')
             workDir >> folder.toPath()
             getInputFilesMap() >> [ 'foo.txt': Paths.get('/tmp/00/112233445566778899aabbccddeeff/foo.txt') ]
-            getOutputsByType(FileOutParam) >> [ 'bar.txt': outputFile.toPath() ]
+            getOutputsByType(_) >> [ 'bar.txt': outputFile.toPath() ]
         }
         def handler = [:] as TaskHandler
         handler.task = task

@@ -22,7 +22,6 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Global
 import nextflow.Session
 import nextflow.processor.TaskProcessor
-import nextflow.processor.TaskRun
 import nextflow.script.params.InputsList
 import nextflow.script.params.OutputsList
 /**
@@ -87,17 +86,6 @@ class NodeMarker {
     static void addDataflowBroadcastPair(readChannel, broadcastChannel)  {
         if( session && session.dag && !session.aborted )
             session.dag.addDataflowBroadcastPair(readChannel, broadcastChannel)
-    }
-
-    /**
-     * Creates a vertex in the concrete DAG representing a task
-     *
-     * @param task
-     * @param hash
-     */
-    static void addTaskNode( TaskRun task, String hash ) {
-        if( session?.concreteDAG && !session.aborted )
-            session.concreteDAG.addTaskNode( task, hash )
     }
 
 }

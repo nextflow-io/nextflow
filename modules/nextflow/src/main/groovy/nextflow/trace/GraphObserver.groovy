@@ -85,6 +85,22 @@ class GraphObserver implements TraceObserver {
     }
 
     @Override
+    void onProcessSubmit(TaskHandler handler, TraceRecord trace) {
+        concreteDag.addTask( handler.task )
+    }
+
+    @Override
+    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
+        concreteDag.addTaskOutputs( handler.task )
+    }
+
+    @Override
+    void onProcessCached(TaskHandler handler, TraceRecord trace) {
+        concreteDag.addTask( handler.task )
+        concreteDag.addTaskOutputs( handler.task )
+    }
+
+    @Override
     void onFlowComplete() {
         if( type == 'abstract' ) {
             // -- normalise the DAG

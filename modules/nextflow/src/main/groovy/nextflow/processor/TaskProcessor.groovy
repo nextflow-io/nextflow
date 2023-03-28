@@ -756,11 +756,8 @@ class TaskProcessor {
 
                 log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
                 def cached = shouldTryCache && exists && checkCachedOutput(task.clone(), resumeDir, hash, entry)
-                if( cached ) {
-                    // add cached task to the task graph
-                    NodeMarker.addTaskNode(task, hash.toString())
+                if( cached )
                     break
-                }
             }
             catch (Throwable t) {
                 log.warn1("[${safeTaskName(task)}] Unable to resume cached task -- See log file for details", causedBy: t)
@@ -782,9 +779,6 @@ class TaskProcessor {
             finally {
                 lock.release()
             }
-
-            // add submitted task to the task graph
-            NodeMarker.addTaskNode(task, hash.toString())
 
             // submit task for execution
             submitTask( task, hash, workDir )

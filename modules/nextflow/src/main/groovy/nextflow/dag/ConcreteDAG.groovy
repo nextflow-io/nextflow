@@ -23,6 +23,7 @@ import groovy.transform.MapConstructor
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskRun
+import nextflow.script.params.FileOutParam
 /**
  * Model the conrete (task) graph of a pipeline execution.
  *
@@ -31,46 +32,74 @@ import nextflow.processor.TaskRun
 @Slf4j
 class ConcreteDAG {
 
-    Map<String,Node> nodes = new HashMap<>(100)
+    Map<String,Task> nodes = new HashMap<>(100)
 
     /**
-     * Create a new node for a task
+     * Add a task to the graph
      *
      * @param task
-     * @param hash
      */
-    synchronized void addTaskNode( TaskRun task, String hash ) {
+    synchronized void addTask( TaskRun task ) {
+        final hash = task.hash.toString()
         final label = "[${hash.substring(0,2)}/${hash.substring(2,8)}] ${task.name}"
-        final preds = task.getInputFilesMap().values()
-            .collect { p -> getPredecessorHash(p) }
-            .findAll { h -> h != null }
+        final inputs = task.getInputFilesMap()
+            .collect { name, path ->
+                new Input(name: name, path: path, predecessor: getPredecessorHash(path))
+            }
 
-        nodes[hash] = new Node(
+        nodes[hash] = new Task(
             index: nodes.size(),
             label: label,
-            predecessors: preds
+            inputs: inputs
         )
     }
 
     static public String getPredecessorHash(Path path) {
-        final pattern = Pattern.compile('.*/([a-z0-9]{2}/[a-z0-9]{30})')
+        final pattern = Pattern.compile('.*/([0-9a-f]{2}/[0-9a-f]{30})')
         final matcher = pattern.matcher(path.toString())
 
         matcher.find() ? matcher.group(1).replace('/', '') : null
     }
 
+    /**
+     * Add a task's outputs to the graph
+     *
+     * @param task
+     */
+    synchronized void addTaskOutputs( TaskRun task ) {
+        final hash = task.hash.toString()
+        final outputs = task.getOutputsByType(FileOutParam)
+            .values()
+            .flatten()
+            .collect { path ->
+                new Output(name: path.name, path: path)
+            }
+
+        nodes[hash].outputs = outputs
+    }
+
     @MapConstructor
     @ToString(includeNames = true, includes = 'label', includePackage=false)
-    protected class Node {
-
+    static protected class Task {
         int index
-
         String label
-
-        List<String> predecessors
+        List<Input> inputs
+        List<Output> outputs
 
         String getSlug() { "t${index}" }
+    }
 
+    @MapConstructor
+    static protected class Input {
+        String name
+        Path path
+        String predecessor
+    }
+
+    @MapConstructor
+    static protected class Output {
+        String name
+        Path path
     }
 
 }

@@ -75,17 +75,41 @@ class MermaidRenderer implements DagRenderer {
 
     @Override
     void renderConcreteGraph(ConcreteDAG graph, Path file) {
+        def renderedOutputs = [] as Set<Path>
+        def numInputs = 0
+        def numOutputs = 0
+
         def lines = []
         lines << "flowchart TD"
 
-        graph.nodes.values().each { node ->
-            lines << "    ${node.getSlug()}[\"${node.label}\"]"
+        // render tasks and task inputs
+        graph.nodes.values().each { task ->
+            // render task node
+            lines << "    ${task.getSlug()}[\"${task.label}\"]"
 
-            node.predecessors.each { key ->
-                final pred = graph.nodes[key]
+            task.inputs.each { input ->
+                // render task input from predecessor
+                if( input.predecessor != null ) {
+                    final pred = graph.nodes[input.predecessor]
+                    lines << "    ${pred.getSlug()} -->|${input.name}| ${task.getSlug()}"
+                    renderedOutputs << input.path
+                }
 
-                if( pred )
-                    lines << "    ${pred.getSlug()} --> ${node.getSlug()}"
+                // render task input from source node
+                else {
+                    numInputs += 1
+                    lines << "    i${numInputs}(( )) -->|${input.name}| ${task.getSlug()}"
+                }
+            }
+        }
+
+        // render task outputs with sink nodes
+        graph.nodes.values().each { task ->
+            task.outputs.each { output ->
+                if( output.path !in renderedOutputs ) {
+                    numOutputs += 1
+                    lines << "    ${task.getSlug()} -->|${output.name}| o${numOutputs}(( ))"
+                }
             }
         }
 
