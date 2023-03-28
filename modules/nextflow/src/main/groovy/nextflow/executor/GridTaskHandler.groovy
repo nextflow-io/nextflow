@@ -149,7 +149,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
                          - attempt : ${event.attemptCount}
                          - command : ${failure.command}
                          - reason  : ${failure.reason}
-                        """.stripIndent()
+                        """.stripIndent(true)
                     log.warn msg
 
                 } else {

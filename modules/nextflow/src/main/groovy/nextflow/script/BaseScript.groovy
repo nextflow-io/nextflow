@@ -172,7 +172,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
                         =                                                                           =
                         = More details at this link: https://www.nextflow.io/docs/latest/dsl2.html  =
                         =============================================================================
-                        """.stripIndent()
+                        """.stripIndent(true)
                 throw new AbortOperationException(msg)
             }
             return result
