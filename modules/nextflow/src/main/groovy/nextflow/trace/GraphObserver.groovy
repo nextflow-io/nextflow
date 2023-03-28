@@ -47,7 +47,7 @@ class GraphObserver implements TraceObserver {
 
     private Path file
 
-    private String type
+    private String type = 'abstract'
 
     private DAG abstractDag
 

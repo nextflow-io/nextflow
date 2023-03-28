@@ -36,7 +36,7 @@ import test.TestHelper
  */
 class GraphObserverTest extends Specification {
 
-    DAG test_dag
+    DAG dag
 
     def setup() {
         new Session()
@@ -46,28 +46,28 @@ class GraphObserverTest extends Specification {
         def ch2 = new DataflowQueue()
         def ch3 = new DataflowQueue()
 
-        test_dag = new DAG()
+        dag = new DAG()
 
-        test_dag.addVertex(
+        dag.addVertex(
                 DAG.Type.ORIGIN,
                 'Source',
                 null,
                 [ new DAG.ChannelHandler(channel: src, label: 'src') ] )
 
-        test_dag.addVertex(
+        dag.addVertex(
                 DAG.Type.PROCESS,
                 'Process 1',
                 [ new DAG.ChannelHandler(channel: src, label: 'Source') ],
                 [ new DAG.ChannelHandler(channel: ch1, label: 'Channel 1') ] )
 
-        test_dag.addVertex(
+        dag.addVertex(
                 DAG.Type.OPERATOR,
                 'Filter',
                 [ new DAG.ChannelHandler(channel: ch1, label: 'Channel 1') ],
                 [ new DAG.ChannelHandler(channel: ch2, label: 'Channel 2') ] )
 
 
-        test_dag.addVertex(
+        dag.addVertex(
                 DAG.Type.PROCESS,
                 'Process 2',
                 [ new DAG.ChannelHandler(channel: ch2, label: 'Channel 2') ],
@@ -79,7 +79,7 @@ class GraphObserverTest extends Specification {
         given:
         def file = Files.createTempFile('nxf_','.dot')
         def gr = new GraphObserver(file)
-        gr.dag = test_dag
+        gr.abstractDag = dag
 
         when:
         gr.onFlowComplete()
@@ -106,7 +106,7 @@ class GraphObserverTest extends Specification {
         given:
         def file = Files.createTempFile('nxf-','.html')
         def gr = new GraphObserver(file)
-        gr.dag = test_dag
+        gr.abstractDag = dag
 
         when:
         gr.onFlowComplete()
@@ -134,7 +134,7 @@ class GraphObserverTest extends Specification {
         given:
         def file = Files.createTempFile('nxf-','.svg')
         def gr = new GraphObserver(file)
-        gr.dag = test_dag
+        gr.abstractDag = dag
 
         when:
         gr.onFlowComplete()
@@ -152,7 +152,7 @@ class GraphObserverTest extends Specification {
         given:
         def file = Files.createTempFile('nxf-','.png')
         def gr = new GraphObserver(file)
-        gr.dag = test_dag
+        gr.abstractDag = dag
 
         when:
         gr.onFlowComplete()
@@ -169,7 +169,7 @@ class GraphObserverTest extends Specification {
         given:
         def file = Files.createTempFile('nxf-','.pdf')
         def gr = new GraphObserver(file)
-        gr.dag = test_dag
+        gr.abstractDag = dag
 
         when:
         gr.onFlowComplete()
@@ -186,7 +186,7 @@ class GraphObserverTest extends Specification {
         def folder = Files.createTempDirectory('test')
         def file = folder.resolve('nope')
         def gr = new GraphObserver(file)
-        gr.dag = test_dag
+        gr.abstractDag = dag
 
         when:
         gr.onFlowComplete()
@@ -217,34 +217,34 @@ class GraphObserverTest extends Specification {
         then:
         observer.name == 'hello-world'
         observer.format == 'dot'
-        observer.createRender() instanceof DotRenderer
+        observer.createRenderer() instanceof DotRenderer
 
         when:
         observer = new GraphObserver(Paths.get('/path/to/TheGraph.html'))
         then:
         observer.name == 'TheGraph'
         observer.format == 'html'
-        observer.createRender() instanceof CytoscapeHtmlRenderer
+        observer.createRenderer() instanceof CytoscapeHtmlRenderer
 
         when:
         observer = new GraphObserver(Paths.get('/path/to/TheGraph.mmd'))
         then:
         observer.name == 'TheGraph'
         observer.format == 'mmd'
-        observer.createRender() instanceof MermaidRenderer
+        observer.createRenderer() instanceof MermaidRenderer
 
         when:
         observer = new GraphObserver(Paths.get('/path/to/TheGraph.SVG'))
         then:
         observer.name == 'TheGraph'
         observer.format == 'svg'
-        observer.createRender() instanceof GraphvizRenderer
+        observer.createRenderer() instanceof GraphvizRenderer
 
         when:
         observer = new GraphObserver(Paths.get('/path/to/anonymous'))
         then:
         observer.name == 'anonymous'
         observer.format == 'dot'
-        observer.createRender() instanceof DotRenderer
+        observer.createRenderer() instanceof DotRenderer
     }
 }
