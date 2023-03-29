@@ -46,6 +46,8 @@ class AzFileAttributes implements BasicFileAttributes {
 
     private String objectId
 
+    private String etag
+
     static AzFileAttributes root() {
         new AzFileAttributes(size: 0, objectId: '/', directory: true)
     }
@@ -60,6 +62,7 @@ class AzFileAttributes implements BasicFileAttributes {
         updateTime = time(props.getLastModified())
         directory = client.blobName.endsWith('/')
         size = props.getBlobSize()
+        etag = props.getETag()
     }
 
     AzFileAttributes(String containerName, BlobItem item) {
@@ -69,6 +72,7 @@ class AzFileAttributes implements BasicFileAttributes {
             creationTime = time(item.properties.getCreationTime())
             updateTime = time(item.properties.getLastModified())
             size = item.properties.getContentLength()
+            etag = item.properties.getETag()
         }
     }
 
@@ -142,6 +146,10 @@ class AzFileAttributes implements BasicFileAttributes {
     @Override
     Object fileKey() {
         return objectId
+    }
+
+    String getETag() {
+        return etag
     }
 
     @Override

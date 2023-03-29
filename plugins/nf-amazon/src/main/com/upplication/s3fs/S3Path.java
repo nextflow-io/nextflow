@@ -66,13 +66,14 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import nextflow.file.ETagAwareFile;
 import nextflow.file.TagAwareFile;
 import static com.google.common.collect.Iterables.concat;
 import static com.google.common.collect.Iterables.filter;
 import static com.google.common.collect.Iterables.transform;
 import static java.lang.String.format;
 
-public class S3Path implements Path, TagAwareFile {
+public class S3Path implements Path, ETagAwareFile, TagAwareFile {
 	
 	public static final String PATH_SEPARATOR = "/";
 	/**
@@ -569,6 +570,14 @@ public class S3Path implements Path, TagAwareFile {
 
 	public String getContentType() {
 		return contentType;
+	}
+
+	@Override
+	public String getETag() {
+		return fileSystem
+				.getClient()
+				.getObjectMetadata(getBucket(), getKey())
+				.getETag();
 	}
 
 	// ~ helpers methods

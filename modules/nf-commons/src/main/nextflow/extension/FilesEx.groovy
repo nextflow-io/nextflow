@@ -35,6 +35,7 @@ import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileTime
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
+import java.security.DigestInputStream
 import java.security.MessageDigest
 
 import groovy.transform.CompileStatic
@@ -42,6 +43,7 @@ import groovy.transform.PackageScope
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.FromString
 import groovy.util.logging.Slf4j
+import nextflow.file.ETagAwareFile
 import nextflow.file.FileHelper
 import nextflow.file.FileSystemPathFactory
 import nextflow.io.ByteBufferBackedInputStream
@@ -1603,9 +1605,18 @@ class FilesEx {
     }
 
     static String getChecksum(Path path) {
-        final data = Files.readAllBytes(path)
-        final hash = MessageDigest.getInstance("MD5").digest(data)
+        if( Files.isDirectory(path) )
+            return null
 
-        new BigInteger(1, hash).toString(16)
+        if( path instanceof ETagAwareFile )
+            return ((ETagAwareFile)path).getETag()
+
+        final md = MessageDigest.getInstance('MD5')
+        final is = Files.newInputStream(path)
+        final dis = new DigestInputStream(is, md)
+
+        while( dis.read() != -1 ) {}
+
+        new BigInteger(1, md.digest()).toString(16)
     }
 }

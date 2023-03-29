@@ -19,6 +19,7 @@ package nextflow.processor
 
 import static nextflow.processor.TaskStatus.*
 
+import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 
 import groovy.json.JsonBuilder
@@ -229,13 +230,11 @@ abstract class TaskHandler {
                 ]
             },
             outputs: task.getOutputsByType(FileOutParam).values().flatten().collect { path ->
-                final file = path.toFile()
-
                 [
                     name: path.name,
                     path: path.toString(),
-                    size: file.size(),
-                    checksum: file.isFile() ? FilesEx.getChecksum(path) : null
+                    size: Files.size(path),
+                    checksum: FilesEx.getChecksum(path)
                 ]
             }
         ]
