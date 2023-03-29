@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +26,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.extension.FilesEx
 import nextflow.io.SkipLinesInputStream
 import nextflow.util.CacheHelper
@@ -237,7 +237,8 @@ abstract class FileCollector implements Closeable {
 
         // verify if a cached list exists
         final hash = makeHash()?.toString()
-        Path temp = hash ? FileHelper.getLocalTempPath().resolve("${hash}.collect-file") : null
+
+        final Path temp = hash ? Global.session.workDir.resolve('collect-file').resolve(hash) : null
 
         // try to retrieve cached files
         List<Path> items = null
@@ -250,7 +251,11 @@ abstract class FileCollector implements Closeable {
             items = saveTo0(target)
             // save the list of collected files
             if( cacheable && temp ) {
-                cacheCollectedFile(items, temp)
+                if( FilesEx.mkdirs(temp.parent) ) {
+                    cacheCollectedFile(items, temp)
+                } else {
+                    throw new IOException("Unable to create temporary directory: ${temp.toUriString()} -- Make sure a file with the same name doesn't already exist and you have write permissions")
+                }
             }
         }
 
@@ -289,14 +294,14 @@ abstract class FileCollector implements Closeable {
             List<Path> items = (List<Path>)KryoHelper.deserialize(temp)
             def notFound = items.find { Path p -> !p.exists() }
             if( notFound ) throw new NoSuchFileException("Missing cached file: $notFound")
-            log.debug "Retrieved cached collect-files from: ${temp} -- cached files: ${items}"
+            log.debug "Retrieved cached collect-files from: ${temp.toUriString()}"
             return items
         }
         catch( NoSuchFileException e ) {
             log.debug "Missed collect-file cache -- cause: ${e}"
         }
         catch( Exception e ) {
-            log.debug "Unable retrieve cached collect-files from: ${temp}", e
+            log.debug "Unable retrieve cached collect-files from: ${temp.toUriString()}", e
             temp.delete()
         }
         return null

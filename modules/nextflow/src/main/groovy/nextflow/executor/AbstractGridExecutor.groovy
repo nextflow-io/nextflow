@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +15,7 @@
  */
 
 package nextflow.executor
+
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -76,8 +76,14 @@ abstract class AbstractGridExecutor extends Executor {
         // creates the wrapper script
         final builder = new BashWrapperBuilder(task)
         // job directives headers
-        builder.headerScript = getHeaders(task)
+        builder.headerScript = getHeaderScript(task)
         return builder
+    }
+
+    protected String getHeaderScript(TaskRun task) {
+        def result = getHeaders(task)
+        result += "NXF_CHDIR=${Escape.path(task.workDir)}\n"
+        return result
     }
 
     /**
@@ -220,7 +226,7 @@ abstract class AbstractGridExecutor extends Executor {
                 - exit status : $ret
                 - output      :
                 """
-                .stripIndent()
+                .stripIndent(true)
         m += proc.text.indent('  ')
         log.debug(m)
     }
@@ -283,7 +289,7 @@ abstract class AbstractGridExecutor extends Executor {
                 - cmd executed: ${cmd.join(' ')}
                 - exit status : $exit
                 - output      :
-                """.stripIndent()
+                """.stripIndent(true)
                 m += result.indent('  ')
                 log.warn1(m, firstOnly: true)
                 return null
@@ -297,6 +303,11 @@ abstract class AbstractGridExecutor extends Executor {
     }
 
     Map<String,QueueStatus> getQueueStatus(queue) {
+        final global = session.getExecConfigProp(name, 'queueGlobalStatus',false)
+        if( global ) {
+            log.debug1("Executor '$name' fetching queue global status")
+            queue = null
+        }
         Map<String,QueueStatus> status = Throttle.cache("${name}_${queue}", queueInterval) {
             final result = getQueueStatus0(queue)
             log.trace "[${name.toUpperCase()}] queue ${queue?"($queue) ":''}status >\n" + dumpQueueStatus(result)
@@ -339,7 +350,7 @@ abstract class AbstractGridExecutor extends Executor {
      */
     protected abstract Map<String,QueueStatus> parseQueueStatus( String text )
 
-    boolean checkStartedStatus(jobId, queueName ) {
+    boolean checkStartedStatus(jobId, queueName) {
         assert jobId
 
         // -- fetch the queue status
@@ -387,6 +398,14 @@ abstract class AbstractGridExecutor extends Executor {
     protected String quote(Path path) {
         def str = Escape.path(path)
         path.toString() != str ? "\"$str\"" : str
+    }
+
+    @Override
+    boolean isContainerNative() {
+        // when fusion is enabled it behaves as a native container environment
+        // because the command wrapper script should not manage the container execution.
+        // Instead, it is the command wrapper script that is launched run within a container process.
+        return isFusionEnabled()
     }
 }
 

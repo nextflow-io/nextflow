@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2022, Seqera Labs.
+ * Copyright 2013-2023, Seqera Labs
  *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -281,7 +281,7 @@ class TowerClient implements TraceObserver {
                 - endpoint    : $urlTraceCreate
                 - status code : $resp.code
                 - response msg: $resp.cause
-                """.stripIndent()
+                """.stripIndent(true)
             throw new AbortOperationException(resp.message)
         }
         final ret = parseTowerResponse(resp)
@@ -354,7 +354,7 @@ class TowerClient implements TraceObserver {
                 - endpoint    : $urlTraceBegin
                 - status code : $resp.code
                 - response msg: $resp.cause
-                """.stripIndent()
+                """.stripIndent(true)
             throw new AbortOperationException(resp.message)
         }
 
@@ -550,7 +550,7 @@ class TowerClient implements TraceObserver {
                     continue
                 }
                 else {
-                    log.trace("Got error $code - refreshTries=$refreshTries - currentRefresh=$currentRefresh")
+                    log.trace("Got HTTP code $code - refreshTries=$refreshTries - currentRefresh=$currentRefresh", e)
                 }
 
                 String msg
@@ -727,7 +727,7 @@ class TowerClient implements TraceObserver {
                 Failed to send message to ${endpoint} -- received 
                 - status code : $resp.code
                 - response msg: $resp.message
-                """.stripIndent()
+                """.stripIndent(true)
             // append separately otherwise formatting get broken
             msg += "- error cause : ${cause ?: '-'}"
             log.warn(msg)
@@ -746,7 +746,7 @@ class TowerClient implements TraceObserver {
                 - endpoint url: $endpoint
                 - status code : $resp.code
                 - response msg: ${resp.message} 
-                """.stripIndent()
+                """.stripIndent(true)
         // append separately otherwise formatting get broken
         msg += "- error cause : ${cause ?: '-'}"
         throw new Exception(msg)

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -102,6 +101,12 @@ class PublishDir {
      */
     private contentType
 
+    /**
+     * The storage class to be used for the target file.
+     * Currently only supported by AWS S3.
+     */
+    private String storageClass
+
     private PathMatcher matcher
 
     private FileSystem sourceFileSystem
@@ -196,6 +201,9 @@ class PublishDir {
             result.contentType = params.contentType
         else if( params.contentType )
             result.contentType = params.contentType as String
+
+        if( params.storageClass )
+            result.storageClass = params.storageClass as String
 
         return result
     }
@@ -311,6 +319,10 @@ class PublishDir {
                     ? Files.probeContentType(source)
                     : this.contentType.toString()
             destination.setContentType(type)
+        }
+        // storage class
+        if( storageClass && destination instanceof TagAwareFile ) {
+            destination.setStorageClass(storageClass)
         }
 
         if( inProcess ) {

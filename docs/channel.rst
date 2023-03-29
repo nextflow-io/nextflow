@@ -88,19 +88,6 @@ Channels may be created explicitly using the following channel factory methods.
   methods can be specified either as ``channel.of()`` or ``Channel.of()``, and so on.
 
 
-.. _channel-create:
-
-create
-------
-
-.. warning::
-    The ``create`` method is no longer available in DSL2 syntax.
-
-Creates a new channel, as shown below::
-
-    channelObj = Channel.create()
-
-
 .. _channel-empty:
 
 empty
@@ -471,104 +458,6 @@ You can specify more than one of these events by using a comma separated string 
     to close the channel when a certain condition is met (e.g. receiving a file named ``DONE``).
 
 See also: `fromPath`_ factory method.
-
-
-Channel methods
-===============
-
-.. _channel-bind1:
-
-bind
-----
-
-.. warning::
-    The ``bind`` method is no longer available in DSL2 syntax.
-
-Channel objects provide a `bind( )` method which is the basic operation to send a message over the channel.
-For example::
-
-    myChannel = Channel.create()
-    myChannel.bind( 'Hello world' )
-
-
-.. _channel-bind2:
-
-operator <<
------------
-
-.. warning::
-    The ``<<`` operator is no longer available in DSL2 syntax.
-
-The operator ``<<`` is just a syntax sugar for the ``bind`` method. Thus, the following example produces
-an identical result as the previous one::
-
-    myChannel = Channel.create()
-    myChannel << 'Hello world'
-
-
-.. _channel-subscribe:
-
-subscribe
----------
-
-The ``subscribe`` method allows you to execute a user defined function each time a new value is emitted by the source channel.
-
-The emitted value is passed implicitly to the specified function. For example::
-
-    // define a channel emitting three values
-    source = Channel.of( 'alpha', 'beta', 'delta' )
-
-    // subscribe a function to the channel printing the emitted values
-    source.subscribe {  println "Got: $it"  }
-
-::
-
-    Got: alpha
-    Got: beta
-    Got: delta
-
-.. note::
-  In Groovy, the language on which Nextflow is based, the user defined function is called a **closure**.
-  Read the :ref:`script-closure` section to learn more about closures.
-
-If needed the closure parameter can be defined explicitly, using a name other than ``it`` and, optionally,
-specifying the expected value type, as shown in the following example::
-
-    Channel
-        .of( 'alpha', 'beta', 'lambda' )
-        .subscribe { String str ->
-            println "Got: ${str}; len: ${str.size()}"
-        }
-
-::
-
-    Got: alpha; len: 5
-    Got: beta; len: 4
-    Got: lambda; len: 6
-
-The ``subscribe`` method may accept one or more of the following event handlers:
-
-* ``onNext``: function that is invoked whenever the channel emits a value.
-  Equivalent to using the ``subscribe`` with a plain closure as described in the examples above.
-
-* ``onComplete``: function that is invoked after the last value is emitted by the channel.
-
-* ``onError``: function that it is invoked when an exception is raised while handling the
-  ``onNext`` event. It will not make further calls to ``onNext`` or ``onComplete``.
-  The ``onError`` method takes as its parameter the ``Throwable`` that caused the error.
-
-For example::
-
-    Channel
-        .of( 1, 2, 3 )
-        .subscribe onNext: { println it }, onComplete: { println 'Done' }
-
-::
-
-    1
-    2
-    3
-    Done
 
 
 .. _glob: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob

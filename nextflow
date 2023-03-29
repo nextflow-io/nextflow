@@ -16,7 +16,7 @@
 #  limitations under the License.
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'22.11.0-edge'}
+NXF_VER=${NXF_VER:-'23.03.0-edge'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -422,6 +422,7 @@ else
       launcher+=(--add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
+      launcher+=(--add-opens=java.base/java.util.regex=ALL-UNNAMED)
       [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
       launcher+=("${cmd_tail[@]}")
     else

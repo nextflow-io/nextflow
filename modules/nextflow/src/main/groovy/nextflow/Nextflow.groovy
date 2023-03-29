@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,14 +21,11 @@ import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
-import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
-import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.ast.OpXform
 import nextflow.ast.OpXformImpl
-import nextflow.exception.ProcessUnrecoverableException
 import nextflow.exception.StopSplitIterationException
-import nextflow.extension.CH
+import nextflow.exception.WorkflowScriptErrorException
 import nextflow.extension.GroupKey
 import nextflow.extension.OperatorImpl
 import nextflow.file.FileHelper
@@ -60,49 +56,6 @@ class Nextflow {
 
     private static final Random random = new Random()
 
-    /**
-     * Create a {@code DataflowVariable} binding it to the specified value
-     *
-     * @param obj
-     * @return
-     */
-    @Deprecated
-    static <T> DataflowVariable<T> variable( T obj = null ) {
-        if( NF.dsl2 ) throw new DeprecationException("Method `variable` is not available any more")
-        obj != null ? CH.value(obj) : CH.value()
-    }
-
-    /**
-     * Create a {@code DataflowQueue} populating with the specified values
-     * <p>
-     * This 'queue' data structure can be viewed as a point-to-point (1 to 1, many to 1) communication channel.
-     * It allows one or more producers send messages to one reader.
-     *
-     * @param values
-     * @return
-     */
-    @Deprecated
-    static DataflowQueue channel( Collection values = null ) {
-        if( NF.dsl2 ) throw new DeprecationException("Method `channel` is not available any more")
-        def result = CH.queue()
-        if( values != null )
-            CH.emitAndClose(result, values)
-        return result
-    }
-
-    /**
-     * Create a {@code DataflowQueue} populating with a single value
-     * <p>
-     * This 'queue' data structure can be viewed as a point-to-point (1 to 1, many to 1) communication channel.
-     * It allows one or more producers send messages to one reader.
-     *
-     * @param item
-     * @return
-     */
-    @Deprecated
-    static DataflowQueue channel( Object... items ) {
-        return channel(items as List)
-    }
 
     static private fileNamePattern( FilePatternSplitter splitter, Map opts, FileSystem fs ) {
 
@@ -121,7 +74,7 @@ class Nextflow {
             FileHelper.visitFiles(opts, fs.getPath(folder), pattern) { Path it -> result.add(it) }
         }
         catch (NoSuchFileException e) {
-            log.debug "No such file: $folder -- Skipping visit"
+            log.debug "No such file or directory: $folder -- Skipping visit"
         }
         return result
 
@@ -259,7 +212,7 @@ class Nextflow {
      * @param message An optional error message
      */
     static void error( String message = null ) {
-        throw message ? new ProcessUnrecoverableException(message) : new ProcessUnrecoverableException()
+        throw message ? new WorkflowScriptErrorException(message) : new WorkflowScriptErrorException()
     }
 
     /**

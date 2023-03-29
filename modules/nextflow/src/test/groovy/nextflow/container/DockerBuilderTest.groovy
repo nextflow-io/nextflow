@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -187,6 +186,11 @@ class DockerBuilderTest extends Specification {
                 .build()
                 .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --privileged fedora'
 
+        new DockerBuilder('fedora')
+                .params(device: '/dev/fuse')
+                .params(capAdd: 'SYS_ADMIN')
+                .build()
+                .runCommand == 'docker run -i -v "$PWD":"$PWD" -w "$PWD" --device /dev/fuse --cap-add SYS_ADMIN fedora'
     }
 
     def 'test add mount'() {

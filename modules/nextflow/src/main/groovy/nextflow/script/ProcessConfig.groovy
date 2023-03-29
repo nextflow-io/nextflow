@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,6 +60,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'errorStrategy',
             'executor',
             'ext',
+            'fair',
             'machineType',
             'queue',
             'label',
@@ -74,6 +74,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'publishDir',
             'scratch',
             'shell',
+            'spack',
             'storeDir',
             'tag',
             'time',
@@ -738,6 +739,19 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         (List<String>) configProperties.get('label') ?: Collections.<String>emptyList()
     }
 
+    boolean getFair() {
+        final value = configProperties.get('fair')
+        if( value == null )
+            return false
+        if( value instanceof Boolean )
+            return value
+
+        if( value instanceof Closure )
+            throw new IllegalArgumentException("Process directive `fair` cannot be declared in a dynamic manner with a closure")
+        else
+            throw new IllegalArgumentException("Unexpected value for directive `fair` -- offending value: $value")
+    }
+
     ProcessConfig secret(String name) {
         if( !name )
             return this
@@ -798,6 +812,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      *      The {@link ProcessConfig} instance itself.
      */
     ProcessConfig errorStrategy( strategy ) {
+        if( strategy instanceof CharSequence && !ErrorStrategy.isValid(strategy) ) {
+            throw new IllegalArgumentException("Unknown error strategy '${strategy}' ― Available strategies are: ${ErrorStrategy.values().join(',').toLowerCase()}")
+        }
+
         configProperties.put('errorStrategy', strategy)
         return this
     }

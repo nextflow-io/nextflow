@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,8 +84,84 @@ class GlobalTest extends Specification {
             aws_session_token = zzz
             '''
 
+        expect:
         Global.getAwsCredentials0([AWS_PROFILE: 'foo'], null, [file]) == ['xxx','yyy']
         Global.getAwsCredentials0([AWS_DEFAULT_PROFILE: 'bar'], null, [file]) == ['xxx','yyy','zzz']
+
+        cleanup:
+        file?.delete()
+
+    }
+
+    def testGetAwsRegion() {
+        expect:
+        Global.getAwsRegion([:], [:]) == null
+        and:
+        Global.getAwsRegion([:], [aws:[region:'eu-west-2']]) == 'eu-west-2'
+        and:
+        // config has priority 
+        Global.getAwsRegion([AWS_DEFAULT_REGION: 'us-central-1'], [aws:[region:'eu-west-2']]) == 'eu-west-2'
+        
+        and:
+        Global.getAwsRegion([AWS_DEFAULT_REGION: 'us-central-1'], [:]) == 'us-central-1'
+    }
+
+    def testGetAwsRegionFromAwsFile() {
+        given:
+        def file = Files.createTempFile('test','test')
+        file.text = '''
+            [default]
+            aws_access_key_id = aaa
+            aws_secret_access_key = bbbb
+            region = reg-something
+            
+            [foo]
+            aws_access_key_id = xxx
+            aws_secret_access_key = yyy
+            region = reg-foo
+
+            [bar]
+            aws_access_key_id = xxx
+            aws_secret_access_key = yyy
+            aws_session_token = zzz
+            '''
+       
+        expect:
+        Global.getAwsRegion0([AWS_DEFAULT_REGION: 'us-central-1'], [:], file) == 'us-central-1'
+
+        and:
+        Global.getAwsRegion0([:], [:], file) == 'reg-something'
+
+        and:
+        Global.getAwsRegion0([:], [aws:[profile: 'foo']], file) == 'reg-foo'
+
+        cleanup:
+        file?.delete()
+    }
+
+
+    def testAwsCredentialsWithFileAndProfileInTheConfig() {
+
+        given:
+        def file = Files.createTempFile('test','test')
+        file.text = '''
+            [default]
+            aws_access_key_id = aaa
+            aws_secret_access_key = bbbb
+            
+            [foo]
+            aws_access_key_id = xxx
+            aws_secret_access_key = yyy
+
+            [bar]
+            aws_access_key_id = xxx
+            aws_secret_access_key = yyy
+            aws_session_token = zzz
+            '''
+
+        Global.getAwsCredentials0([:], [aws:[profile:'foo']], [file]) == ['xxx','yyy']
+        Global.getAwsCredentials0([AWS_DEFAULT_PROFILE: 'bar'], [aws:[profile:'foo']], [file]) == ['xxx','yyy','zzz']
+        Global.getAwsCredentials0([:], [:], [file]) == ['aaa','bbbb']
 
         cleanup:
         file?.delete()

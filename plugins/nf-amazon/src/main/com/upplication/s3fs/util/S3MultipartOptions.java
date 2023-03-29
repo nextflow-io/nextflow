@@ -1,6 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +29,7 @@ public class S3MultipartOptions {
 
     private static final Logger log = LoggerFactory.getLogger(S3MultipartOptions.class);
 
-    public static final int DEFAULT_CHUNK_SIZE = 100 << 20;  // 100 MB
+    public static final int DEFAULT_CHUNK_SIZE = 100 << 20;  // 100 MiB
 
     public static final int DEFAULT_BUFFER_SIZE = 10485760;
 
@@ -71,7 +70,7 @@ public class S3MultipartOptions {
     private long retrySleep;
 
 
-    /**
+    /*
      * initialize default values
      */
     {
@@ -97,16 +96,6 @@ public class S3MultipartOptions {
     }
 
     public int getChunkSize() {
-        return chunkSize;
-    }
-
-    public int getChunkSize( long objectSize ) {
-        final int MAX_PARTS = 10_000;
-        long numOfParts = objectSize / chunkSize;
-        if( numOfParts > MAX_PARTS ) {
-            chunkSize = (int) objectSize / MAX_PARTS;
-        }
-
         return chunkSize;
     }
 
