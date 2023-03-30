@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,28 +88,34 @@ class ContainerHandlerTest extends Specification {
     def 'test normalize singularity image #image' () {
 
         given:
-        def n = new ContainerHandler([:], Paths.get('/root/dir'))
+        def n = new ContainerHandler([registry: registry], Paths.get('/root/dir'))
 
         expect:
         n.normalizeSingularityImageName(image) == expected
 
         where:
-        image                      | expected
-        null                       | null
-        ''                         | null
-        '/abs/path/bar.img'        | '/abs/path/bar.img'
-        'file:///abs/path/bar.img' | '/abs/path/bar.img'
-        'file://foo/bar.img'       | '/root/dir/foo/bar.img'
-        'docker://library/busybox' | 'docker://library/busybox'
-        'shub://busybox'           | 'shub://busybox'
-        'foo://busybox'            | 'foo://busybox'
-        'foo'                      | 'docker://foo'
-        'foo:2.0'                  | 'docker://foo:2.0'
-        'foo.img'                  | 'docker://foo.img'
-        'quay.io/busybox'          | 'docker://quay.io/busybox'
-        'library://library/default/debian:7'    | 'library://library/default/debian:7'
-        'http://reg.io/v1/alpine:latest'        | 'http://reg.io/v1/alpine:latest'
-        'https://reg.io/v1/alpine:latest'       | 'https://reg.io/v1/alpine:latest'
+        image                      | registry   | expected
+        null                       | null       | null
+        ''                         | null       | null
+        '/abs/path/bar.img'        | null       | '/abs/path/bar.img'
+        'file:///abs/path/bar.img' | null       | '/abs/path/bar.img'
+        'file://foo/bar.img'       | null       | '/root/dir/foo/bar.img'
+        'docker://library/busybox' | null       | 'docker://library/busybox'
+        'shub://busybox'           | null       | 'shub://busybox'
+        'foo://busybox'            | null       | 'foo://busybox'
+        'foo'                      | null       | 'docker://foo'
+        'foo:2.0'                  | null       | 'docker://foo:2.0'
+        'foo.img'                  | null       | 'docker://foo.img'
+        'quay.io/busybox'          | null       | 'docker://quay.io/busybox'
+        'library://library/default/debian:7'    | null       | 'library://library/default/debian:7'
+        'http://reg.io/v1/alpine:latest'        | null       | 'http://reg.io/v1/alpine:latest'
+        'https://reg.io/v1/alpine:latest'       | null       | 'https://reg.io/v1/alpine:latest'
+        and:
+        '/abs/path/bar.img'        | 'my.reg'  | '/abs/path/bar.img'
+        'quay.io/busybox'          | 'my.reg'  | 'docker://quay.io/busybox'
+        'foo'                      | 'my.reg'  | 'docker://my.reg/foo'
+        'foo:2.0'                  | 'my.reg'  | 'docker://my.reg/foo:2.0'
+        'foo.img'                  | 'my.reg'  | 'docker://my.reg/foo.img'
     }
 
     def 'test singularity relative path exists' () {
@@ -184,26 +189,16 @@ class ContainerHandlerTest extends Specification {
         given:
         def EXECUTOR  = Mock(Executor)
         def IMAGE = 'foo:latest'
-        def handler = Spy(new ContainerHandler([engine: 'shifter', enabled: true], EXECUTOR))
+        def handler = Spy(new ContainerHandler([engine: 'shifter', enabled: true]))
 
         when:
         def result = handler.normalizeImageName(IMAGE)
         then:
-        1 * EXECUTOR.isContainerNative() >> false
         1 * handler.normalizeShifterImageName(IMAGE) >> 'shifter://image'
         0 * handler.normalizeDockerImageName(IMAGE) >> null
         and:
         result == 'shifter://image'
-
-        when:
-        result = handler.normalizeImageName(IMAGE)
-        then:
-        1 * EXECUTOR.isContainerNative() >> true
-        0 * handler.normalizeShifterImageName(IMAGE) >> null
-        1 * handler.normalizeDockerImageName(IMAGE) >> 'docker://image'
-        and:
-        result == 'docker://image'
-
+            
     }
     @Unroll
     def 'test normalize method for singularity' () {
@@ -276,22 +271,4 @@ class ContainerHandlerTest extends Specification {
         '/some/container.img'   | '/some/container.img' | 0     | '/some/container.img'
     }
 
-
-    def 'should proxy image name' () {
-        given:
-        def PROXY = 'foo.io'
-
-        when:
-        def result = ContainerHandler.proxyReg(PROXY, IMAGE)
-        then:
-        result == EXPECTED
-        and:
-        ContainerHandler.resolve(result) == RESOLVED
-
-        where:
-        IMAGE                       | EXPECTED                                          | RESOLVED
-        'busybox'                   | 'foo.io/tw/nruwe4tboj4q/busybox'                  | 'library/busybox'
-        'quay.io/busybox:v1'        | 'foo.io/tw/of2wc6jonfxs63djmjzgc4tz/busybox:v1'   | 'quay.io/library/busybox:v1'
-        'quay.io/this/that:latest'  | 'foo.io/tw/of2wc6jonfxs65dinfzq/that:latest'      | 'quay.io/this/that:latest'
-    }
 }

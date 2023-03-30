@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +55,7 @@ trait CacheBase {
         }
 
         if( !history.exists() || history.empty() )
-            throw new AbortOperationException("It looks no pipeline was executed in this folder (or execution history is empty)")
+            throw new AbortOperationException("It looks like no pipeline was executed in this folder (or execution history is empty)")
 
         if( after && before )
             throw new AbortOperationException("Options `after` and `before` cannot be used in the same command")
@@ -91,7 +90,7 @@ trait CacheBase {
         if( !args )
             return history.findByIdOrName('last')
 
-        def result = []
+        List<Record> result = []
         for( String name : args ) {
             result.addAll(history.findByIdOrName(name))
         }

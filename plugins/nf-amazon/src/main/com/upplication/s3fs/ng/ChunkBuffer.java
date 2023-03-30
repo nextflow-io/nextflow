@@ -1,6 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +25,7 @@ import java.nio.ByteBuffer;
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Deprecated
 public class ChunkBuffer implements Comparable<ChunkBuffer> {
 
     private static final int BUFFER_SIZE = 8192;

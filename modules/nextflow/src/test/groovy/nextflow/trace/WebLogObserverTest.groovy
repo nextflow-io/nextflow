@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  * Copyright 2018, University of Tübingen, Quantitative Biology Center (QBiC)
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
@@ -116,6 +116,6 @@ class WebLogObserverTest extends Specification {
         observer.checkUrl('ftp://localhost')
         then:
         def e = thrown(IllegalArgumentException)
-        e.message == 'Only http or https are supported protocols -- The given URL was: ftp://localhost'
+        e.message == 'Only http and https are supported -- The given URL was: ftp://localhost'
     }
 }

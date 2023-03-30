@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +21,7 @@ import java.nio.file.Paths
 import java.util.regex.Pattern
 
 import groovy.util.logging.Slf4j
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskRun
 /**
  * Processor for LSF resource manager
@@ -129,7 +129,6 @@ class LsfExecutor extends AbstractGridExecutor {
 
     protected String getHeaderToken() { '#BSUB' }
 
-
     /**
      * Parse the string returned by the {@code bsub} command and extract the job ID string
      *
@@ -155,7 +154,7 @@ class LsfExecutor extends AbstractGridExecutor {
 
     @Override
     protected List<String> queueStatusCommand( queue ) {
-        // note: use the `-w` option to avoid that the printed jobid maybe truncated when exceed 7 digits
+        // note: use the `-w` option to avoid that the printed jobid may be truncated when exceed 7 digits
         // see https://www.ibm.com/support/knowledgecenter/en/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_jobid_disp_length.5.html
         final result = ['bjobs', '-w']
 
@@ -297,4 +296,8 @@ class LsfExecutor extends AbstractGridExecutor {
         perTaskReserve = session.getExecConfigProp(name, 'perTaskReserve', perTaskReserve)
     }
 
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
+    }
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +17,7 @@
 package nextflow.processor
 
 import java.util.concurrent.Callable
+import java.util.concurrent.Semaphore
 
 import com.google.common.util.concurrent.RateLimiter
 import groovy.transform.CompileStatic
@@ -33,7 +33,8 @@ import nextflow.util.ThrottlingExecutor
 class ParallelPollingMonitor extends TaskPollingMonitor {
 
     private ThrottlingExecutor submitter
-
+    private Semaphore semaphore
+    
     /**
      * Create the task polling monitor with the provided named parameters object.
      * <p>
@@ -49,6 +50,12 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
     ParallelPollingMonitor(ThrottlingExecutor executor, Map params) {
         super(params)
         this.submitter = executor
+        this.semaphore = capacity>0 ? new Semaphore(capacity) : null
+    }
+
+    @Override
+    protected boolean canSubmit(TaskHandler handler) {
+        return super.canSubmit(handler) && semaphore.tryAcquire()
     }
 
     protected RateLimiter createSubmitRateLimit() {
@@ -86,4 +93,9 @@ class ParallelPollingMonitor extends TaskPollingMonitor {
         submitter.submit(wrapper)
     }
 
+    @Override
+    boolean evict(TaskHandler handler) {
+        semaphore.release()
+        return super.evict(handler)
+    }
 }

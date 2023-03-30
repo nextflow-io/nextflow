@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1254,7 +1253,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 unit.addError( new SyntaxException("Identifier `$name` is reserved for internal use", node.lineNumber, node.columnNumber+8) )
                 return true
             }
-            if( name in functionNames || name in workflowNames || name in processNames ) {
+            if( name in workflowNames || name in processNames ) {
                 unit.addError( new SyntaxException("Identifier `$name` is already used by another definition", node.lineNumber, node.columnNumber+8) )
                 return true
             }

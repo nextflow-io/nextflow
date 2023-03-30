@@ -41,7 +41,7 @@ Alternatively, plugins can be required using the ``-plugins`` command line optio
     nextflow run <PIPELINE NAME> -plugins nf-hello@0.1.0
 
 Multiple plugins can be specified by separating them with a comma.
-When specifiying plugins via the command line, any plugin declarations in the Nextflow config file are ignored.
+When specifying plugins via the command line, any plugin declarations in the Nextflow config file are ignored.
 
 
 Index
@@ -69,7 +69,7 @@ For example::
         .selectFromTable(sql, db: "test", emitColumns:true)
         .sqlInsert(into:"BAR", columns:'id', db:"test")
 
-The above snippet includes the operators ``sqlInsert` and ``fromQuery`` from the
+The above snippet includes the operators ``sqlInsert`` and ``fromQuery`` from the
 `nf-sqldb <https://github.com/nextflow-io/nf-sqldb>`_ plugin. The latter will be accessible using
 the ``selectFromTable`` alias in the script.
 
@@ -77,4 +77,27 @@ the ``selectFromTable`` alias in the script.
     The prefix ``plugin/`` must precede the plugin name in the include ``from`` statement.
 
 
+Import custom functions from plugin
+===================================
+
+In the same way, as of version `22.09.x`, a plugin can export custom functions.
+
+For example, a plugin can export a util function to reverse a String::
+
+     @nextflow.plugin.extension.Function
+     String reverseString( String origin ){
+          origin.reverse()
+     }
+
+And this function can be used by the pipeline::
+
+    include { reverseString } from 'plugin/my-plugin'
+
+    channel.of( reverseString('hi') )
+
+The above snippet includes a function from the plugin and allows the channel to call it directly.
+
+In the same way as operators, functions can be aliased::
+
+    include { reverseString as anotherReverseMethod } from 'plugin/my-plugin'
 

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -143,6 +142,16 @@ abstract class TaskHandler {
         return this.status.toString()
     }
 
+    TraceRecord safeTraceRecord() {
+        try {
+            return getTraceRecord()
+        }
+        catch (Exception e) {
+                log.debug "Unable to get task trace record -- cause: ${e.message}", e
+            return null
+        }
+    }
+    
     /**
      * @return An {@link TraceRecord} instance holding task runtime information
      */
@@ -158,10 +167,10 @@ abstract class TaskHandler {
         record.process = task.processor.getName()
         record.tag = task.config.tag
         record.module = task.config.module
-        record.container = task.container
+        record.container = task.getContainer()
         record.attempt = task.config.attempt
 
-        record.script = task.getScript()
+        record.script = task.getTraceScript()
         record.scratch = task.getScratch()
         record.workdir = task.getWorkDirStr()
         record.queue = task.config.queue
@@ -232,6 +241,5 @@ abstract class TaskHandler {
     final void decProcessForks() {
         task.processor.forksCount?.decrement()
     }
-
 
 }

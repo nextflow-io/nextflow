@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +53,9 @@ abstract class Executor {
 
     TaskMonitor getMonitor() { monitor }
 
-    protected String getDisplayName() { name }
+    protected String getDisplayName() {
+        return fusionEnabled ? "$name (fusion enabled)" : name
+    }
 
     /**
      * Allows to post-initialize the executor
@@ -115,7 +116,7 @@ abstract class Executor {
 
     @Memoized
     Path getStageDir() {
-        return getWorkDir().resolve('stage')
+        return getWorkDir().resolve("stage-${getSession().uniqueId}")
     }
 
     boolean isForeignFile(Path path) {
@@ -133,7 +134,7 @@ abstract class Executor {
             path = path.resolve(name)
 
         if( !path.exists() && create && !path.mkdirs() )
-            throw new IOException("Unable to create folder: $path -- Check file system permission" )
+            throw new IOException("Unable to create directory: $path -- Check file system permission" )
 
         return path
     }
@@ -162,9 +163,30 @@ abstract class Executor {
     }
 
     /**
+     * Determines which container engine settings in the nextflow config file
+     * will be used by this executor e.g. {@code 'docker'}, {@code 'singularity'}, etc.
+     *
+     * When {@code null} is returned the setting for the current engine marked as 'enabled' will be used.
+     *
+     * @return
+     *      {@code docker} when {#link #isContainerNative} is {@code true} and {@code null} otherwise
+     *
+     */
+    String containerConfigEngine() {
+        return null
+    }
+
+    /**
      * @return {@code true} whenever the secrets handling is managed by the executing platform itself
      */
     boolean isSecretNative() {
+        return false
+    }
+
+    /**
+     * @return {@code true} when the executor uses fusion file system 
+     */
+    boolean isFusionEnabled() {
         return false
     }
 

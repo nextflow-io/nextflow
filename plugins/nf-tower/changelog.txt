@@ -1,5 +1,39 @@
 nf-tower changelog
 ===================
+1.5.10 - 21 Feb 2023
+- Log exception when an unexpected  occurs (#3603) [ci fast] [9aeca99f]
+- Bump groovy 3.0.15 [7a3ebc7d]
+
+1.5.9 - 14 Jan 2023
+- Bump groovy 3.0.14 [7c204236]
+
+1.5.8 - 13 Dec 2022
+- Fix tower plugin min nextflow requirement [1713a1cd]
+- Fix TowerArchiver resolve envar paths relative to baseDir (#3438) [ci skip] [46af18e5]
+- Bump nf-tower@1.5.8 [652d0880]
+
+1.5.7 - 29 Nov 2022
+- Fix tower plugin min nextflow requirement [103dbf74]
+
+1.5.6 - 13 Nov 2022
+- Fix refresh token for tower served resources [9dec2b66] #3366
+
+1.5.5 - 3 Oct 2022
+- Fix hanging test [44c04874] <Paolo Di Tommaso>
+
+1.5.2 - 1 Sep 2022
+- Update copyright info [bc16aceb]
+- Fix typos in log messages [76a87c72]
+
+1.5.1 - 11 Aug 2022
+- Improve cache manager [0091afc5]
+
+1.5.0 - 1 Aug 2022
+- Add simple wave plugin cli commands [8888b866]
+- Add support for archive dir to tower plugin [c234681a]
+- Add support tower cache backup/restore [bc2f9d13]
+- Prevent nextflow config to break tower launch [e059a724]
+
 1.4.0 - 6 Feb 2022
 - Add support for Tower reports #2523 [de3d76349]
 

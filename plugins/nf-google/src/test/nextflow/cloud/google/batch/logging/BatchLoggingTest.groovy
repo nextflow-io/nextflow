@@ -1,6 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +19,18 @@ package nextflow.cloud.google.batch.logging
 
 import java.util.concurrent.TimeUnit
 
+import com.google.cloud.batch.v1.Job
+import com.google.cloud.batch.v1.LogsPolicy
+import com.google.cloud.batch.v1.Runnable
+import com.google.cloud.batch.v1.TaskGroup
+import com.google.cloud.batch.v1.TaskSpec
+import com.google.cloud.logging.LogEntry
+import com.google.cloud.logging.Payload.StringPayload
+import com.google.cloud.logging.Severity
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
-import nextflow.cloud.google.batch.logging.BatchLogging
-import nextflow.cloud.google.batch.model.BatchJob
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
@@ -39,51 +44,45 @@ class BatchLoggingTest extends Specification {
 
     def 'should parse stdout and stderr' () {
         given:
-        def OUT_TEXT = '  Task action/STARTUP/0/0/group0/0, STDOUT:  No user sessions are running outdated binaries.\n'
-        def ERR_TEXT = '  Task action/STARTUP/0/0/group0/0, STDERR:  Oops something has failed. We are sorry.\n'
+        def OUT_ENTRY1 = LogEntry.newBuilder(StringPayload.of('No user sessions are running outdated binaries.\n')).setSeverity(Severity.INFO).build()
+        def OUT_ENTRY2 = LogEntry.newBuilder(StringPayload.of('Hello world')).setSeverity(Severity.INFO).build()
+        def ERR_ENTRY1 = LogEntry.newBuilder(StringPayload.of('Oops something has failed. We are sorry.\n')).setSeverity(Severity.ERROR).build()
+        def ERR_ENTRY2 = LogEntry.newBuilder(StringPayload.of('blah blah')).setSeverity(Severity.ERROR).build()
         and:
         def client = new BatchLogging()
 
         when:
-        def stdout = new StringBuilder();
+        def stdout = new StringBuilder()
         def stderr = new StringBuilder()
         and:
-        client.parseOutput(OUT_TEXT, stdout, stderr)
+        client.parseOutput(OUT_ENTRY1, stdout, stderr)
         then:
         stdout.toString() == 'No user sessions are running outdated binaries.\n'
         and:
         stderr.toString() == ''
-        and:
-        client.currentMode() == 'STDOUT:  '
 
         when:
-        client.parseOutput(ERR_TEXT, stdout, stderr)
+        client.parseOutput(ERR_ENTRY1, stdout, stderr)
         then:
         stderr.toString() == 'Oops something has failed. We are sorry.\n'
-        and:
-        client.currentMode() == 'STDERR:  '
 
         when:
-        client.parseOutput('blah blah', stdout, stderr)
+        client.parseOutput(ERR_ENTRY2, stdout, stderr)
         then:
         // the message is appended to the stderr because not prefix is provided
         stderr.toString() == 'Oops something has failed. We are sorry.\nblah blah'
         and:
         // no change to the stdout
         stdout.toString() == 'No user sessions are running outdated binaries.\n'
-        and:
-        client.currentMode() == 'STDERR:  '
 
         when:
-        client.parseOutput('STDOUT:  Hello world', stdout, stderr)
+        client.parseOutput(OUT_ENTRY2, stdout, stderr)
         then:
         // the message is added to the stdout
         stdout.toString() == 'No user sessions are running outdated binaries.\nHello world'
         and:
         // no change to the stderr
         stderr.toString() == 'Oops something has failed. We are sorry.\nblah blah'
-        and:
-        client.currentMode() == 'STDOUT:  '
 
     }
 
@@ -99,11 +98,31 @@ class BatchLoggingTest extends Specification {
         def logClient = new BatchLogging(config)
 
         when:
-        def cmd = ['-c','echo Hello world! && echo "Oops something went wrong" >&2']
-        def req = BatchJob.create(imageUri: 'quay.io/nextflow/bash', command: cmd)
+        def imageUri = 'quay.io/nextflow/bash'
+        def cmd = ['/bin/bash','-c','echo "Hello world!" && echo "Oops something went wrong" >&2']
+        def req = Job.newBuilder()
+            .addTaskGroups(
+                TaskGroup.newBuilder()
+                    .setTaskSpec(
+                        TaskSpec.newBuilder()
+                            .addRunnables(
+                                Runnable.newBuilder()
+                                    .setContainer(
+                                        Runnable.Container.newBuilder()
+                                            .setImageUri(imageUri)
+                                            .addAllCommands(cmd)
+                                    )
+                            )
+                    )
+            )
+            .setLogsPolicy(
+                LogsPolicy.newBuilder()
+                    .setDestination(LogsPolicy.Destination.CLOUD_LOGGING)
+            )
+            .build()
         def jobId = 'nf-test-' + System.currentTimeMillis()
         def resp = batchClient.submitJob(jobId, req)
-        def uid = resp.get('uid') as String
+        def uid = resp.getUid()
         log.debug "Test job uid=$uid"
         then:
         uid
@@ -126,6 +145,6 @@ class BatchLoggingTest extends Specification {
         then:
         stdout.contains('Hello world!')
         stderr.contains('Oops something went wrong')
-
     }
+
 }

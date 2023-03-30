@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ package nextflow.cache
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.SimpleType
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
 import nextflow.processor.TaskContext
@@ -83,7 +85,7 @@ class CacheDB implements Closeable {
 
         final record = (List)KryoHelper.deserialize(payload)
         TraceRecord trace = TraceRecord.deserialize( (byte[])record[0] )
-        TaskContext ctx = record[1]!=null ? TaskContext.deserialize(processor, (byte[])record[1]) : null
+        TaskContext ctx = record[1]!=null && processor!=null ? TaskContext.deserialize(processor, (byte[])record[1]) : null
 
         return new TaskEntry(trace,ctx)
     }
@@ -219,6 +221,38 @@ class CacheDB implements Closeable {
         }
 
         return this
+    }
+
+    TraceRecord getTraceRecord( HashCode hashCode ) {
+        final result = getTaskEntry(hashCode, null)
+        return result ? result.trace : null
+    }
+
+    TraceRecord findTraceRecord( @ClosureParams(value = SimpleType.class, options = "nextflow.trace.TraceRecord") Closure<Boolean> criteria ) {
+
+        final itr = store.iterateIndex()
+        while( itr.hasNext() ) {
+            final index = itr.next()
+
+            final payload = store.getEntry(index.key)
+            if( !payload ) {
+                log.trace "Unable to retrieve cache record for key: ${-> index.key}"
+                continue
+            }
+
+            final record = (List<byte[]>)KryoHelper.deserialize(payload)
+            TraceRecord trace = TraceRecord.deserialize(record[0])
+            trace.setCached(index.cached)
+
+            final len=criteria.maximumNumberOfParameters
+            if( len!=1 ) {
+                throw new IllegalArgumentException("Invalid criteria signature -- Too many parameters")
+            }
+            if( criteria.call(trace) )
+                return trace
+        }
+        // no matches
+        return null
     }
 
     /**

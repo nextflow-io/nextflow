@@ -74,9 +74,8 @@ class TowerReportsTest extends Specification {
         """.stripIndent()
 
         and: 'a tower reports instance'
-        def session = Spy(Session)
-        session.workDir >> launchDir.toPath()
-        def reports = Spy(new TowerReports(session))
+        def session = new Session()
+        TowerReports reports = Spy(TowerReports, constructorArgs: [session])
         reports.launchDir >> launchDir.toPath()
 
         and: 'some reports'
@@ -100,7 +99,6 @@ class TowerReportsTest extends Specification {
                 "multiqc_report.html\t${repo1.toPath().toUriString()}\t4\tMultiQC HTML report\t\n" +
                 "deseq2.plots.pdf\t${repo2.toPath().toUriString()}\t3\tAll samples STAR Salmon DESeq2 QC PDF plots\tapplication/pdf\n" +
                 "*.merged.gene_counts.tsv\t${repo3.toPath().toUriString()}\t3\tAll samples STAR Salmon merged gene raw counts\t\n"
-
 
     }
 

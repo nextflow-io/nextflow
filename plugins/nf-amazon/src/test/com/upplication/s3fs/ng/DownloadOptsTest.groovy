@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ class DownloadOptsTest extends Specification {
         opts.queueMaxSize() == 10_000
         opts.bufferMaxSize() == MemoryUnit.of('1 GB')
         opts.chunkSize() == 10 * 1024 * 1024
-        opts.parallelEnabled()
+        !opts.parallelEnabled()
         opts.maxDelayMillis() == Duration.of('90s').toMillis()
         opts.maxAttempts() == 5
     }

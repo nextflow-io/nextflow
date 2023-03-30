@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +42,7 @@ abstract class BindableDef extends ComponentDef {
         final fqName = prefix ? prefix+SCOPE_SEP+name : name
         if( this instanceof ProcessDef && !invocations.add(fqName) ) {
             log.debug "Bindable invocations=$invocations"
-            final msg = "Process '$name' has been already used -- If you need to reuse the same component include it with a different name or include in a different workflow context"
+            final msg = "Process '$name' has been already used -- If you need to reuse the same component, include it with a different name or include it in a different workflow context"
             throw new DuplicateProcessInvocation(msg)
         }
 

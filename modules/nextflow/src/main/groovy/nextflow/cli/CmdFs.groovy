@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -178,7 +177,7 @@ class CmdFs extends CmdBase implements UsageAware {
     private void run0() {
         final cmd = findCmd(args[0])
         if( !cmd ) {
-            throw new AbortOperationException("Unknow file system command: `$cmd`")
+            throw new AbortOperationException("Unknown file system command: `$cmd`")
         }
 
         Path target

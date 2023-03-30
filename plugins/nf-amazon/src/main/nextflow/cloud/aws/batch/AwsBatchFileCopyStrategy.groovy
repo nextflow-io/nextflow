@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,7 +70,7 @@ class AwsBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         // when a remote bin directory is provide managed it properly
         if( opts.remoteBinDir ) {
             result << "${opts.getAwsCli()} s3 cp --recursive --only-show-errors s3:/${opts.remoteBinDir} \$PWD/nextflow-bin\n"
-            result << "chmod +x \$PWD/nextflow-bin/*\n"
+            result << "chmod +x \$PWD/nextflow-bin/* || true\n"
             result << "export PATH=\$PWD/nextflow-bin:\$PATH\n"
         }
         // finally render the environment

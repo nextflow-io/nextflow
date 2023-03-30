@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +30,7 @@ class AwsBatchScriptLauncher extends BashWrapperBuilder {
     AwsBatchScriptLauncher(TaskBean bean, AwsOptions opts ) {
         super(bean, new AwsBatchFileCopyStrategy(bean,opts))
         // enable the copying of output file to the S3 work dir
-        if( !scratch )
+        if( scratch==null )
             scratch = true
         // include task script as an input to force its staging in the container work directory
         bean.inputFiles[TaskRun.CMD_SCRIPT] = bean.workDir.resolve(TaskRun.CMD_SCRIPT)

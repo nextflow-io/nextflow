@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -666,7 +665,7 @@ class LsfExecutorTest extends Specification {
     def 'should parse complex config file' () {
         given:
         def executor = Spy(LsfExecutor)
-        def file = new File('src/test/groovy/nextflow/executor/lsf.conf')
+        def file = new File('src/test/resources/nextflow/executor/lsf.conf')
         assert file.exists(), 'Cannot find LSF config test file'
 
         when:

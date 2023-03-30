@@ -99,6 +99,17 @@ To add data to or modify a map, the syntax is similar to adding values to list::
     scores["Pete"] = 3
     scores["Cedric"] = 120
 
+You can also use the ``+`` operator to add two maps together::
+
+    new_scores = scores + ["Pete": 3, "Cedric": 120]
+
+When adding two maps, the first map is copied and then appended with the keys from the second map. Any conflicting keys
+are overwritten by the second map.
+
+.. tip::
+    Appending an "update" map is a safer way to modify maps in Nextflow, specifically when passing maps through channels.
+    This way, any references to the original map elsewhere in the pipeline won't be modified.
+
 Learn more about maps:
 
 * `Groovy Maps tutorial <http://groovy-lang.org/groovy-dev-kit.html#Collections-Maps>`_
@@ -221,7 +232,7 @@ Name            Description
 ``launchDir``   The directory where the workflow is run (requires version ``20.04.0`` or later).
 ``moduleDir``   The directory where a module script is located for DSL2 modules or the same as ``projectDir`` for a non-module script (requires version ``20.04.0`` or later).
 ``nextflow``    Dictionary like object representing nextflow runtime information (see :ref:`metadata-nextflow`).
-``params``      Dictionary like object holding workflow parameters specifing in the config file or as command line options.
+``params``      Dictionary like object holding workflow parameters specifying in the config file or as command line options.
 ``projectDir``  The directory where the main script is located (requires version ``20.04.0`` or later).
 ``workDir``     The directory where tasks temporary files are created.
 ``workflow``    Dictionary like object representing workflow runtime information (see :ref:`metadata-workflow`).
@@ -251,11 +262,11 @@ The following variables are implicitly defined in the ``task`` object of each pr
 Name            Description
 =============== ========================
 ``attempt``     The current task attempt
-``hash``        The task unique hash Id
+``hash``        The task unique hash Id. NOTE: This is only available for processes that run native code via ``exec:``.
 ``index``       The task index (corresponds to ``task_id`` in the execution trace)
-``name``        The current task name
+``name``        The current task name. NOTE: This is only available for processes that run native code via ``exec:``.
 ``process``     The current process name
-``workDir``     The task unique directory. NOTE: This is only available for processes that run native code via the ``exec:`` statement. 
+``workDir``     The task unique directory. NOTE: This is only available for processes that run native code via ``exec:``.
 =============== ========================
 
 The ``task`` object also contains the values of all process directives for the given task,
@@ -456,6 +467,9 @@ Remove the first number with its trailing whitespace from a string::
 Files and I/O
 ==============
 
+Opening files
+-------------
+
 To access and work with files, use the ``file`` method, which returns a file system object
 given a file path string::
 
@@ -491,10 +505,35 @@ followLinks     When ``true`` follows symbolic links during directory tree trave
 checkIfExists   When ``true`` throws an exception of the specified path do not exist in the file system (default: ``false``)
 =============== ===================
 
+.. note::
+  Nextflow also provides a ``files()`` method, which is identical to ``file()`` except that it always
+  returns a list, whereas ``file()`` only returns a list if it matches multiple files.
+
 .. tip::
   If you are a Java geek, you might be interested to know that the ``file`` method returns a
   `Path <http://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html>`_ object, which allows
   you to use the same methods you would use in a Java program.
+
+.. warning::
+ When a file reference is created using a URL path and it's converted to a string the protocol schema is not included in the resulting string.
+
+You can check this behavior with the code below::
+
+  def ref = file('s3://some-bucket/foo.txt')
+  assert ref.toString() == '/some-bucket/foo.txt'
+  assert "$ref" == '/some-bucket/foo.txt'
+
+To have the file including the schema the method ``toUriString`` should be used instead::
+
+  assert ref.toUriString() == 's3://some-bucket/foo.txt'
+
+Also, instead of composing paths through string interpolation, the ``.resolve`` method or the ``/`` operator
+should be used instead::
+
+  def dir = file('s3://bucket/some/data/path')
+  def sample = "$dir/sample.bam"                // don't do this
+  def sample1 = dir.resolve('sample.bam')
+  def sample2 = dir / 'sample.bam'              // the operator `/` can be used to compose paths
 
 See also: :ref:`Channel.fromPath <channel-path>`.
 
@@ -856,7 +895,7 @@ lastModified        Returns the file last modified timestamp i.e. a long as Linu
 
 For example, the following line prints a file name and size::
 
-  println "File ${myFile.getName() size: ${myFile.size()}"
+  println "File ${myFile.getName()} size: ${myFile.size()}"
 
 .. tip::
     The invocation of any method name starting with the ``get`` prefix can be shortcut by

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,7 +82,7 @@ class FileInParam extends BaseInParam implements PathQualifier {
     @Override
     BaseInParam bind( obj ) {
         if( pathQualifier && obj instanceof Map )
-            throw new IllegalArgumentException("Input `path` does not allow such argument: ${obj.entrySet().collect{"${it.key}:${it.value}"}.join(',')}")
+            throw new IllegalArgumentException("Input `path` does not allow such arguments: ${obj.entrySet().collect{"${it.key}:${it.value}"}.join(',')}")
         super.bind(obj)
         return this
     }

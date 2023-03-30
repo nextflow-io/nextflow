@@ -40,15 +40,13 @@ class GoogleBatchScriptLauncherTest extends Specification{
         and:
         launcher.getContainerMounts() == [MOUNTS] 
         where:
-        BUCKET  | PATH          | PARENT    | EXPECTED                          | MOUNTS
-        'foo'   | '/'           | false     | Paths.get('/mnt/foo')             | '/mnt/foo:/mnt/foo:rw'
-        'foo'   | '/some/dir'   | false     | Paths.get('/mnt/foo/some/dir')    | '/mnt/foo/some/dir:/mnt/foo/some/dir:rw'
-        'foo'   | '/some/dir'   | true      | Paths.get('/mnt/foo/some/dir')    | '/mnt/foo/some:/mnt/foo/some:rw'
-
+        BUCKET  | PATH          | PARENT    | EXPECTED                              | MOUNTS
+        'foo'   | '/'           | false     | Paths.get('/mnt/disks/foo')           | '/mnt/disks/foo:/mnt/disks/foo:rw'
+        'foo'   | '/some/dir'   | false     | Paths.get('/mnt/disks/foo/some/dir')  | '/mnt/disks/foo/some/dir:/mnt/disks/foo/some/dir:rw'
+        'foo'   | '/some/dir'   | true      | Paths.get('/mnt/disks/foo/some/dir')  | '/mnt/disks/foo/some:/mnt/disks/foo/some:rw'
     }
 
-
-    def 'should compute vol mounts' () {
+    def 'should compute volume mounts' () {
         given:
         def launcher = new GoogleBatchScriptLauncher()
         def PATH1 = CloudStorageFileSystem.forBucket('alpha').getPath('/data/sample1.bam')
@@ -56,27 +54,27 @@ class GoogleBatchScriptLauncherTest extends Specification{
         def PATH3 = CloudStorageFileSystem.forBucket('omega').getPath('/data/sample3.bam')
 
         expect:
-        launcher.toContainerMount(PATH1) == Paths.get('/mnt/alpha/data/sample1.bam')
-        launcher.toContainerMount(PATH2) == Paths.get('/mnt/alpha/data/sample2.bam')
-        launcher.toContainerMount(PATH3) == Paths.get('/mnt/omega/data/sample3.bam')
-        and:
-        launcher.taskVolumes.size() == 2
-        and:
-        def vol0 = launcher.taskVolumes.get(0)
-        vol0.gcs == [remotePath:'alpha']
-        vol0.mountPath == '/mnt/alpha'
-        vol0.mountOptions == ['-o rw,allow_other', '-implicit-dirs']
-        and:
-        def vol1 = launcher.taskVolumes.get(1)
-        vol1.gcs == [remotePath:'omega']
-        vol1.mountPath == '/mnt/omega'
-        vol1.mountOptions == ['-o rw,allow_other', '-implicit-dirs']
+        launcher.toContainerMount(PATH1) == Paths.get('/mnt/disks/alpha/data/sample1.bam')
+        launcher.toContainerMount(PATH2) == Paths.get('/mnt/disks/alpha/data/sample2.bam')
+        launcher.toContainerMount(PATH3) == Paths.get('/mnt/disks/omega/data/sample3.bam')
 
         and:
-        launcher.containerMounts.size() == 2
+        def containerMounts = launcher.getContainerMounts()
         and:
-        launcher.containerMounts[0] == '/mnt/alpha/data:/mnt/alpha/data:rw'
-        launcher.containerMounts[1] == '/mnt/omega/data/sample3.bam:/mnt/omega/data/sample3.bam:rw'
+        containerMounts.size() == 2
+        containerMounts[0] == '/mnt/disks/alpha/data:/mnt/disks/alpha/data:rw'
+        containerMounts[1] == '/mnt/disks/omega/data/sample3.bam:/mnt/disks/omega/data/sample3.bam:rw'
+
+        and:
+        def volumes = launcher.getVolumes()
+        and:
+        volumes.size() == 2
+        volumes[0].getGcs().getRemotePath() == 'alpha'
+        volumes[0].getMountPath() == '/mnt/disks/alpha'
+        volumes[0].getMountOptionsList() == ['-o rw,allow_other', '-implicit-dirs']
+        volumes[1].getGcs().getRemotePath() == 'omega'
+        volumes[1].getMountPath() == '/mnt/disks/omega'
+        volumes[1].getMountOptionsList() == ['-o rw,allow_other', '-implicit-dirs']
     }
 
 }

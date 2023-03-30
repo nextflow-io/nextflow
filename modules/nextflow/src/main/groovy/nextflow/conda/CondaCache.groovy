@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,6 +65,8 @@ class CondaCache {
 
     private Path configCacheDir0
 
+    private List<String> channels = Collections.emptyList()
+
     @PackageScope String getCreateOptions() { createOptions }
 
     @PackageScope Duration getCreateTimeout() { createTimeout }
@@ -73,6 +74,8 @@ class CondaCache {
     @PackageScope Map<String,String> getEnv() { System.getenv() }
 
     @PackageScope Path getConfigCacheDir0() { configCacheDir0 }
+
+    @PackageScope List<String> getChannels() { channels }
 
     @PackageScope String getBinaryName() {
         if (useMamba)
@@ -82,7 +85,7 @@ class CondaCache {
         return "conda"
     }
 
-    /** Only for debugging purpose - do not use */
+    /** Only for testing purpose - do not use */
     @PackageScope
     CondaCache() {}
 
@@ -111,7 +114,9 @@ class CondaCache {
 
         if( config.useMicromamba )
             useMicromamba = config.useMicromamba as boolean
-        
+
+        if( config.getChannels() )
+            channels = config.getChannels()
     }
 
     /**
@@ -140,7 +145,7 @@ class CondaCache {
         }
 
         if( !cacheDir.exists() && !cacheDir.mkdirs() ) {
-            throw new IOException("Failed to create Conda cache directory: $cacheDir -- Make sure a file with the same does not exist and you have write permission")
+            throw new IOException("Failed to create Conda cache directory: $cacheDir -- Make sure a file with the same name does not exist and you have write permission")
         }
 
         return cacheDir
@@ -172,8 +177,12 @@ class CondaCache {
 
         String content
         String name = 'env'
+        // check if it's a remote uri
+        if( isYamlUriPath(condaEnv) ) {
+            content = condaEnv
+        }
         // check if it's a YAML file
-        if( isYamlFilePath(condaEnv) ) {
+        else if( isYamlFilePath(condaEnv) ) {
             try {
                 final path = condaEnv as Path
                 content = path.text
@@ -207,7 +216,7 @@ class CondaCache {
         else if( condaEnv.contains('/') ) {
             final prefix = condaEnv as Path
             if( !prefix.isDirectory() )
-                throw new IllegalArgumentException("Conda prefix path does not exist or it's not a directory: $prefix")
+                throw new IllegalArgumentException("Conda prefix path does not exist or is not a directory: $prefix")
             if( prefix.fileSystem != FileSystems.default )
                 throw new IllegalArgumentException("Conda prefix path must be a POSIX file path: $prefix")
 
@@ -258,6 +267,10 @@ class CondaCache {
         Paths.get(envFile).toAbsolutePath()
     }
 
+    @PackageScope boolean isYamlUriPath(String env) {
+        env.startsWith('http://') || env.startsWith('https://')
+    }
+
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
 
@@ -270,15 +283,16 @@ class CondaCache {
 
         def cmd
         if( isYamlFilePath(condaEnv) ) {
-            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+            final target = isYamlUriPath(condaEnv) ? condaEnv : Escape.path(makeAbsolute(condaEnv))
+            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${target}"
         }
         else if( isTextFilePath(condaEnv) ) {
-
             cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
 
         else {
-            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} $condaEnv"
+            final channelsOpt = channels.collect(it -> "-c $it ").join('')
+            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} ${channelsOpt}$condaEnv"
         }
 
         try {
@@ -297,7 +311,7 @@ class CondaCache {
     int runCommand( String cmd ) {
         log.trace """${binaryName} create
                      command: $cmd
-                     timeout: $createTimeout""".stripIndent()
+                     timeout: $createTimeout""".stripIndent(true)
 
         final max = createTimeout.toMillis()
         final builder = new ProcessBuilder(['bash','-c',cmd])

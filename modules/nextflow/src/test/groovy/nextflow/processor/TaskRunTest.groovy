@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +19,11 @@ package nextflow.processor
 import java.nio.file.Files
 import java.nio.file.Paths
 
-import ch.grengine.Grengine
+import ch.artecat.grengine.Grengine
 import nextflow.Session
 import nextflow.ast.TaskCmdXform
 import nextflow.container.ContainerConfig
+import nextflow.container.resolver.ContainerInfo
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
@@ -302,6 +302,7 @@ class TaskRunTest extends Specification {
         when:
         task.config = [container:'foo/bar']
         task.processor.getSession() >> sess
+        task.processor.getExecutor() >> Mock(Executor) { containerConfigEngine()>>null }
         then:
         task.getContainer() == expected
 
@@ -319,10 +320,8 @@ class TaskRunTest extends Specification {
         task.processor = Mock(TaskProcessor)
         task.config = new TaskConfig( [container: 'busybox'] )
         task.processor.getSession() >> new Session([(engine): config])
-
-        expect:
+        task.processor.getExecutor() >> Mock(Executor) { containerConfigEngine()>>null }
         task.container == contnr
-        task.containerConfig == config as ContainerConfig
         task.containerConfig.enabled
         task.containerConfig.engine == engine
 
@@ -331,18 +330,19 @@ class TaskRunTest extends Specification {
         'docker'    | 'busybox'                 | [enabled: true, x:'alpha', y: 'beta']
         'docker'    | 'd.reg/busybox'           | [enabled: true, x:'alpha', y: 'beta', registry: 'd.reg']
         'udocker'   | 'busybox:latest'          | [enabled: true, x:'alpha', y: 'beta']
+        'sarus'     | 'busybox'                 | [enabled: true, x:'delta', y: 'gamma']
         'shifter'   | 'docker:busybox:latest'   | [enabled: true, x:'delta', y: 'gamma']
     }
 
     def 'should return container image name' () {
-
         given:
         def task = Spy(TaskRun)
         task.processor = Mock(TaskProcessor)
-
-        when:
+        and:
         task.script = 'bwa-mem --this'
         task.config = new TaskConfig([container: CONTAINER])
+
+        when:
         def image = task.getContainer()
         then:
         task.getContainerConfig() >> [docker:[enabled: true]]
@@ -356,6 +356,18 @@ class TaskRunTest extends Specification {
 
     }
 
+    def 'should return container fingerprint' () {
+        given:
+        def HASH = '12345'
+        def task = Spy(TaskRun)
+
+        when:
+        def result = task.getContainerFingerprint()
+        then:
+        task.getContainerInfo0() >> new ContainerInfo('a','b',HASH)
+        and:
+        result == '12345'
+    }
 
 
     def 'should render template and set task attributes'() {
@@ -485,7 +497,7 @@ class TaskRunTest extends Specification {
         then:
         task.script == '$BASH_VAR >interpolated value<'
         task.source == '$BASH_VAR #{nxf_var}'
-
+        task.traceScript == '$BASH_VAR >interpolated value<'
     }
 
     def 'should resolve a task template file' () {
@@ -510,7 +522,7 @@ class TaskRunTest extends Specification {
         task.script == 'echo Ciao mondo'
         task.source == 'echo ${say_hello}'
         task.template == file
-
+        task.traceScript == 'template($file)'
     }
 
     def 'should resolve a shell template file, ignore BASH variables and parse !{xxx} ones' () {
@@ -535,7 +547,7 @@ class TaskRunTest extends Specification {
         task.script == 'echo $HOME ~ Foo bar'
         task.source == 'echo $HOME ~ !{user_name}'
         task.template == file
-
+        task.traceScript == 'template($file)'
     }
 
     def 'should resolve a shell template file, ignore BASH variables and parse #{xxx} ones' () {
@@ -561,7 +573,7 @@ class TaskRunTest extends Specification {
         task.script == 'echo $HOME ~ Foo bar'
         task.source == 'echo $HOME ~ #{user_name}'
         task.template == file
-
+        task.traceScript == 'template($file)'
     }
 
     def 'should check container native flag' () {
@@ -572,64 +584,53 @@ class TaskRunTest extends Specification {
         task.processor = Mock(TaskProcessor)
 
         when:
-        def result = task.isContainerNative()
+        def isNative = task.isContainerNative()
         then:
         1 * task.processor.getExecutor() >> executor
-        result == false
+        !isNative
 
         when:
-        result = task.isContainerNative()
+        isNative = task.isContainerNative()
         then:
         1 * task.processor.getExecutor() >> executor
         1 * executor.isContainerNative() >> true
-        result == true
+        isNative
     }
 
     def 'should check container enabled flag' () {
 
         given:
-        def task = Spy(TaskRun);
+        def task = Spy(TaskRun)
 
         when:
         def enabled = task.isContainerEnabled()
         then:
-        1 * task.getConfig() >> new TaskConfig()
+        1 * task.getContainerConfig() >> new ContainerConfig([enabled: false])
+        0 * task.getContainer() >> null
         !enabled
 
         when:
         enabled = task.isContainerEnabled()
         then:
         // NO container image is specified => NOT enable even if `enabled` flag is set to true
-        _ * task.getConfig() >> new TaskConfig()
+        _ * task.getContainer() >> null
         _ * task.getContainerConfig() >> new ContainerConfig([enabled: true])
-        _ * task.isContainerNative() >> false
         !enabled
 
         when:
         enabled = task.isContainerEnabled()
         then:
         // container is specified, not enabled
-        _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
+        _ * task.getContainer() >> 'foo/bar'
         _ * task.getContainerConfig() >> new ContainerConfig([:])
-        _ * task.isContainerNative() >> false
         !enabled
 
         when:
         enabled = task.isContainerEnabled()
         then:
-        // container is specified AND native executor (eg kubernetes) => enabled
-        _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
-        _ * task.getContainerConfig() >> new ContainerConfig([:])
-        _ * task.isContainerNative() >> true
-        enabled
-
-        when:
-        enabled = task.isContainerEnabled()
-        then:
         // container is specified AND enabled => enabled
-        _ * task.getConfig() >> new TaskConfig(container:'foo/bar')
+        _ * task.getContainer() >> 'foo/bar'
         _ * task.getContainerConfig() >> new ContainerConfig([enabled: true])
-        _ * task.isContainerNative() >> false
         enabled
 
     }
@@ -825,5 +826,48 @@ class TaskRunTest extends Specification {
         then:
         task.script == 'echo Hello world'
         task.source == 'command source'
+    }
+
+    def 'should get container config' () {
+        given:
+        def session = Mock(Session)
+        def executor = Mock(Executor) { getSession()>>session }
+        def processor = Mock(TaskProcessor) { getExecutor()>>executor; getSession()>>session }
+        def task = Spy(TaskRun) { getProcessor()>>processor }
+
+        when:
+        def config = task.getContainerConfig()
+        then:
+        1 * executor.containerConfigEngine() >> null
+        1 * executor.isContainerNative() >> false
+        and:
+        session.getContainerConfig(null) >> null
+        and:
+        config == new ContainerConfig(engine:'docker')
+
+
+        when:
+        config = task.getContainerConfig()
+        then:
+        1 * executor.containerConfigEngine() >> null
+        1 * executor.isContainerNative() >> false
+        and:
+        session.getContainerConfig(null) >> new ContainerConfig(engine:'podman', registry:'xyz')
+        and:
+        config == new ContainerConfig(engine:'podman', registry:'xyz')
+
+
+        when:
+        config = task.getContainerConfig()
+        then:
+        // a container native is returned
+        1 * executor.containerConfigEngine() >> 'foo'
+        1 * executor.isContainerNative() >> true
+        and:
+        // the engine 'foo' is passed as argument
+        session.getContainerConfig('foo') >> new ContainerConfig(engine:'foo')
+        and:
+        // the engine is enabled by default
+        config == new ContainerConfig(engine:'foo', enabled: true)   // <-- 'foo' engine is enabled
     }
 }

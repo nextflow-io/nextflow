@@ -308,13 +308,13 @@ Together, these settings determine the Operating System and version installed on
 By default, Nextflow creates CentOS 8-based pool nodes, but this behavior can be customised in the pool configuration.
 Below the configurations for image reference/SKU combinations to select two popular systems.
 
-* Ubuntu 20.04::
+* Ubuntu 20.04 (default)::
 
 	azure.batch.pools.<name>.sku = "batch.node.ubuntu 20.04"
 	azure.batch.pools.<name>.offer = "ubuntu-server-container"
 	azure.batch.pools.<name>.publisher = "microsoft-azure-batch"
 
-* CentOS 8 (default)::
+* CentOS 8::
 
 	azure.batch.pools.<name>.sku = "batch.node.centos 8"
 	azure.batch.pools.<name>.offer = "centos-container"
@@ -345,6 +345,42 @@ Public images from other registries are still pulled (if requested by a Task) wh
   specified via the :ref:`container <process-container>` directive using the format: ``[server]/[your-organization]/[your-image]:[tag]``.
   Read more about image fully qualified image names in the `Docker documentation <https://docs.docker.com/engine/reference/commandline/pull/#pull-from-a-different-registry>`_.
 
+Active Directory Authentication
+===============================
+
+As of version ``22.11.0-edge``, `Service Principal <https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal>`_ credentials can optionally be used instead of Shared Keys for Azure Batch and Storage accounts. 
+
+The Service Principal should have the at least the following role assignments :
+
+1. Contributor
+
+2. Storage Blob Data Reader
+
+3. Storage Blob Data Contributor
+
+.. note::
+  To assign the necessary roles to the Service Principal refer to the `official Azure documentation <https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments-portal?tabs=current>`_.
+
+The credentials for Service Principal can be specified as follows::
+
+    azure {
+        activeDirectory {
+            servicePrincipalId = '<YOUR SERVICE PRINCIPAL CLIENT ID>'
+            servicePrincipalSecret = '<YOUR SERVICE PRINCIPAL CLIENT SECRET>'
+            tenantId = '<YOUR TENANT ID>'
+          }
+
+        storage {
+            accountName = '<YOUR STORAGE ACCOUNT NAME>'
+          }
+
+        batch {
+            accountName = '<YOUR BATCH ACCOUNT NAME>'
+            location = '<YOUR BATCH ACCOUNT LOCATION>'
+          }
+    }
+
+
 Advanced settings
 ==================
 
@@ -353,10 +389,13 @@ The following configuration options are available:
 ============================================== =================
 Name                                           Description
 ============================================== =================
+azure.activeDirectory.servicePrincipalId        The service principal client ID
+azure.activeDirectory.servicePrincipalSecret    The service principal client secret
+azure.activeDirectory.tenantId                  The Azure tenant ID
 azure.storage.accountName                       The blob storage account name
 azure.storage.accountKey                        The blob storage account key
 azure.storage.sasToken                          The blob storage shared access signature token. This can be provided as an alternative to the ``accountKey`` setting.
-azure.storage.tokenDuration                     The duration of the shared access signature token created by Nextflow when the ``sasToken`` option is *not* specified (default: ``12h``).
+azure.storage.tokenDuration                     The duration of the shared access signature token created by Nextflow when the ``sasToken`` option is *not* specified (default: ``48h``).
 azure.batch.accountName                         The batch service account name.
 azure.batch.accountKey                          The batch service account key.
 azure.batch.endpoint                            The batch service endpoint e.g. ``https://nfbatch1.westeurope.batch.azure.com``.
@@ -374,12 +413,18 @@ azure.batch.pools.<name>.vmCount                Specify the number of virtual ma
 azure.batch.pools.<name>.maxVmCount             Specify the max of virtual machine when using auto scale option.
 azure.batch.pools.<name>.autoScale              Enable autoscaling feature for the pool identified with ``<name>``.
 azure.batch.pools.<name>.fileShareRootPath      If mounting File Shares, this is the internal root mounting point. Must be ``/mnt/resource/batch/tasks/fsmounts`` for CentOS nodes or ``/mnt/batch/tasks/fsmounts`` for Ubuntu nodes (default is for CentOS, requires ``nf-azure@0.11.0``).
+azure.batch.pools.<name>.mountOptions           Specify the mount options for mounting the file shares (defaults are `-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp` , requires ``nf-azure@0.11.0``).
 azure.batch.pools.<name>.scaleFormula           Specify the scale formula for the pool identified with ``<name>``. See Azure Batch `scaling documentation <https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling>`_ for details.
 azure.batch.pools.<name>.scaleInterval          Specify the interval at which to automatically adjust the Pool size according to the autoscale formula. The minimum and maximum value are 5 minutes and 168 hours respectively (default: `10 mins`).
 azure.batch.pools.<name>.schedulePolicy         Specify the scheduling policy for the pool identified with ``<name>``. It can be either ``spread`` or ``pack`` (default: ``spread``).
 azure.batch.pools.<name>.privileged             Enable the task to run with elevated access. Ignored if `runAs` is set (default: ``false``).
 azure.batch.pools.<name>.runAs                  Specify the username under which the task is run. The user must already exist on each node of the pool.
+azure.batch.pools.<name>.virtualNetwork         Specify the subnet ID of a virtual network in which to create the pool (requires version ``23.03.0-edge`` or later).
 azure.registry.server                           Specify the container registry from which to pull the Docker images (default: ``docker.io``, requires ``nf-azure@0.9.8``).
 azure.registry.userName                         Specify the username to connect to a private container registry (requires ``nf-azure@0.9.8``).
 azure.registry.password                         Specify the password to connect to a private container registry (requires ``nf-azure@0.9.8``).
+azure.retryPolicy.delay                         Delay when retrying failed API requests (default: ``500ms``).
+azure.retryPolicy.maxDelay                      Max delay when retrying failed API requests (default: ``60s``).
+azure.retryPolicy.jitter                        Jitter value when retrying failed API requests (default: ``0.25``).
+azure.retryPolicy.maxAttempts                   Max attempts when retrying failed API requests (default: ``10``).
 ============================================== =================
