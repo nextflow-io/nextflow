@@ -34,7 +34,6 @@ import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileTime
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
-import java.security.DigestInputStream
 import java.security.MessageDigest
 
 import groovy.transform.CompileStatic
@@ -1610,11 +1609,13 @@ class FilesEx {
         if( path instanceof ETagAwareFile )
             return ((ETagAwareFile)path).getETag()
 
-        final md = MessageDigest.getInstance('MD5')
         final is = Files.newInputStream(path)
-        final dis = new DigestInputStream(is, md)
+        final md = MessageDigest.getInstance('MD5')
+        final buf = new byte[16 << 10]
 
-        while( dis.read() != -1 ) {}
+        int len
+        while( (len=is.read(buf)) != -1 )
+            md.update(buf, 0, len)
 
         new BigInteger(1, md.digest()).toString(16)
     }
