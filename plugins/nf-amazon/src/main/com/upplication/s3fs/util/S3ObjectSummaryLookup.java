@@ -1,6 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -129,7 +128,7 @@ public class S3ObjectSummaryLookup {
                 break;
         }
 
-        throw new NoSuchFileException("s3://" + s3Path.getBucket() + "/" + s3Path.toString());
+        throw new NoSuchFileException("s3://" + s3Path.getBucket() + "/" + s3Path.getKey());
     }
 
     private boolean matchName(String fileName, S3ObjectSummary summary) {

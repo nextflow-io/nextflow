@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +16,7 @@
 
 package nextflow.cli
 
+import nextflow.plugin.Plugins
 import spock.lang.IgnoreIf
 
 import java.nio.file.Files
@@ -27,6 +27,10 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CmdConfigTest extends Specification {
+
+    def cleanup() {
+        Plugins.stop()
+    }
 
     def 'should default notation' () {
 
@@ -292,4 +296,45 @@ class CmdConfigTest extends Specification {
             .stripIndent()
     }
 
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    def 'should resolve profiles into profiles config' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def CONFIG = folder.resolve('nextflow.config')
+
+        CONFIG.text = '''
+            params {
+               foo = 'baz'
+            }
+            
+            profiles {
+               test {
+                  params {
+                    foo = 'foo'
+                  }
+                  profiles {                      
+                      debug {
+                        cleanup = false
+                      }                    
+                  }
+               }
+            }        
+        '''
+
+        def buffer = new ByteArrayOutputStream()
+        // command definition
+        def cmd = new CmdConfig(showAllProfiles: true)
+        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
+        cmd.stdout = buffer
+        cmd.args = ['.']
+
+        when:
+        cmd.run()
+        def result = new ConfigSlurper().parse(buffer.toString())
+
+        then:
+        result.params.foo == 'baz'
+        result.profiles.test.params.foo == 'foo'
+        result.profiles.debug.cleanup == false
+    }
 }

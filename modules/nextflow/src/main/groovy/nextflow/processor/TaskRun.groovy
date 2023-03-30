@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +16,7 @@
 
 package nextflow.processor
 
-
+import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -27,9 +26,9 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.conda.CondaCache
-import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
-import nextflow.container.ContainerHandler
+import nextflow.container.resolver.ContainerInfo
+import nextflow.container.resolver.ContainerResolverProvider
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessTemplateException
 import nextflow.exception.ProcessUnrecoverableException
@@ -38,6 +37,7 @@ import nextflow.file.FileHolder
 import nextflow.script.BodyDef
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
+import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
@@ -46,6 +46,7 @@ import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.StdInParam
 import nextflow.script.params.ValueOutParam
+import nextflow.spack.SpackCache
 /**
  * Models a task instance
  *
@@ -63,7 +64,7 @@ class TaskRun implements Cloneable {
     /**
      * Task index within its execution group
      */
-    def index
+    Integer index
 
     /**
      * Task name
@@ -232,7 +233,7 @@ class TaskRun implements Cloneable {
     }
 
     List<String> dumpLogFile(int n = 50) {
-        if( !workDir )
+        if( !workDir || workDir.fileSystem!=FileSystems.default )
             return Collections.<String>emptyList()
         try {
             return dumpObject(workDir.resolve(CMD_LOG),n)
@@ -324,6 +325,8 @@ class TaskRun implements Cloneable {
 
     TaskProcessor.RunType runType = TaskProcessor.RunType.SUBMIT
 
+    BodyDef body
+
     TaskRun clone() {
         final taskClone = (TaskRun)super.clone()
         taskClone.context = context.clone()
@@ -342,6 +345,14 @@ class TaskRun implements Cloneable {
         return copy
     }
 
+    String lazyName() {
+        if( name )
+            return name
+        // fallback on the current task index, however do not set the 'name' attribute
+        // so it has a chance to recover the 'sampleId' at next invocation
+        return processor.singleton ? processor.name : "$processor.name ($index)"
+    }
+
     String getName() {
         if( name )
             return name
@@ -351,15 +362,16 @@ class TaskRun implements Cloneable {
             try {
                 // -- look-up the 'sampleId' property, and if everything is fine
                 //    cache this value in the 'name' attribute
-                return name = "$baseName (${config.tag})"
+                return name = "$baseName (${String.valueOf(config.tag).trim()})"
             }
             catch( IllegalStateException e ) {
                 log.debug "Cannot access `tag` property for task: $baseName ($index)"
             }
+            catch( Exception e ) {
+                log.debug "Unable to evaluate `tag` property for task: $baseName ($index)", e
+            }
 
-        // fallback on the current task index, however do not set the 'name' attribute
-        // so it has a chance to recover the 'sampleId' at next invocation
-        return processor.singleton ? baseName : "$baseName ($index)"
+        return lazyName()
     }
 
     String getScript() {
@@ -370,6 +382,13 @@ class TaskRun implements Cloneable {
             return script?.toString()
         }
     }
+
+    String getTraceScript() {
+        return template!=null && body.source
+            ? body.source
+            : getScript()
+    }
+
 
     /**
      * Check whenever there are values to be cached
@@ -562,61 +581,92 @@ class TaskRun implements Cloneable {
 
     @Memoized
     Path getCondaEnv() {
-        if( !config.conda )
+        if( !config.conda || !processor.session.getCondaConfig().isEnabled() )
             return null
 
-        final cfg = processor.session.config.conda as Map ?: Collections.emptyMap()
-        final cache = new CondaCache(new CondaConfig(cfg))
+        final cache = new CondaCache(processor.session.getCondaConfig())
         cache.getCachePathFor(config.conda as String)
+    }
+
+    @Memoized
+    Path getSpackEnv() {
+        if( !config.spack || !processor.session.getSpackConfig().isEnabled() )
+            return null
+
+        final cache = new SpackCache(processor.session.getSpackConfig())
+        cache.getCachePathFor(config.spack as String)
+    }
+
+    @Memoized
+    protected ContainerInfo getContainerInfo0() {
+        // fetch the container image from the config
+        def configImage = config.getContainer()
+        // the boolean `false` literal can be provided
+        // to signal the absence of the container
+        if( configImage == false )
+            return null
+        if( !configImage )
+            configImage = null
+
+        final res = ContainerResolverProvider.load()
+        final info = res.resolveImage(this, configImage as String)
+        return info
     }
 
     /**
      * The name of a docker container where the task is supposed to run when provided
      */
     String getContainer() {
-        // set the docker container to be used
-        String imageName
-        if( !config.container ) {
-            return null
-        }
-        else {
-            imageName = config.container as String
-        }
+        final info = getContainerInfo0()
+        return info?.target
+    }
 
-        final cfg = getContainerConfig()
-        final handler = new ContainerHandler(cfg)
-        final result = handler.normalizeImageName(imageName)
+    String getContainerFingerprint() {
+        final info = getContainerInfo0()
+        return info?.hashKey
+    }
 
-        final proxy = System.getenv('NXF_PROXY_REG')
-        return proxy ? ContainerHandler.proxyReg(proxy, result) : result
+    ResourcesBundle getModuleBundle() {
+        return this.getProcessor().getModuleBundle()
     }
 
     /**
      * @return The {@link ContainerConfig} object associated to this task
      */
     ContainerConfig getContainerConfig() {
-        processor.getSession().getContainerConfig()
+        // get the container engine expected to be used by this executor
+        final sess = this.getProcessor().getSession()
+        final exe = this.getProcessor().getExecutor()
+        final eng = exe.containerConfigEngine()
+        // when 'eng' is null the setting for the current engine marked as 'enabled' will be used
+        final result
+                = sess.getContainerConfig(eng)
+                ?: new ContainerConfig(engine:'docker')
+        // if a configuration is found is expected to enabled by default
+        if( exe.isContainerNative() ) {
+            result.setEnabled(true)
+        }
+        return result
     }
-
 
     /**
      * @return {@true} when the process must run within a container and the docker engine is enabled
      */
     boolean isDockerEnabled() {
-        def config = getContainerConfig()
+        final config = getContainerConfig()
         return config && config.engine == 'docker' && config.enabled
     }
 
     boolean isContainerNative() {
-        processor.executor?.isContainerNative() ?: false
+        return processor.executor?.isContainerNative() ?: false
     }
 
     boolean isContainerEnabled() {
-        getConfig().container && (getContainerConfig().enabled || isContainerNative())
+        return getContainerConfig().isEnabled() && getContainer()!=null
     }
 
     boolean isSecretNative() {
-        processor.executor?.isSecretNative() ?: false
+        return processor.executor?.isSecretNative() ?: false
     }
 
     boolean isSuccess( status = exitStatus ) {
@@ -648,6 +698,7 @@ class TaskRun implements Cloneable {
         this.code.setResolveStrategy(Closure.DELEGATE_ONLY)
 
         // -- set the task source
+        this.body = body
         // note: this may be overwritten when a template file is used
         this.source = body.source
 
@@ -658,7 +709,7 @@ class TaskRun implements Cloneable {
         // when the task is implemented by a script string
         // Invoke the closure which returns the script with all the variables replaced with the actual values
         try {
-            def result = code.call()
+            final result = code.call()
             if ( result instanceof Path ) {
                 script = renderTemplate(result, body.isShell)
             }
@@ -715,7 +766,7 @@ class TaskRun implements Cloneable {
             // keep track of template file
             this.template = template
             // parse the template
-            final engine = new TaskTemplateEngine(processor.grengine)
+            final engine = new TaskTemplateEngine(processor.@grengine)
             if( shell ) {
                 engine.setPlaceholder(placeholderChar())
             }
@@ -738,7 +789,7 @@ class TaskRun implements Cloneable {
 
     final protected String renderScript( script ) {
 
-        final engine = new TaskTemplateEngine(processor.grengine)
+        final engine = new TaskTemplateEngine(processor.@grengine)
                 .setPlaceholder(placeholderChar())
                 .setEnableShortNotation(false)
                 .eval(script.toString(), context)

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +16,7 @@
 
 package nextflow.trace
 
-import java.nio.charset.Charset
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
@@ -39,7 +38,7 @@ import nextflow.processor.TaskProcessor
 @CompileStatic
 class TraceFileObserver implements TraceObserver {
 
-    public static final String DEF_FILE_NAME = 'trace.txt'
+    public static final String DEF_FILE_NAME = "trace-${TraceHelper.launchTimestampFmt()}.txt"
 
     /**
      * The list of fields included in the trace report
@@ -70,7 +69,7 @@ class TraceFileObserver implements TraceObserver {
     String separator = '\t'
 
     /**
-     * Overwrite existing trace file instead of rolling it
+     * Overwrite existing trace file (required in some cases, as rolling filename has been deprecated)
      */
     boolean overwrite
 
@@ -196,21 +195,15 @@ class TraceFileObserver implements TraceObserver {
      */
     @Override
     void onFlowCreate(Session session) {
-        log.debug "Flow starting -- trace file: $tracePath"
+        log.debug "Workflow started -- trace file: ${tracePath.toUriString()}"
 
         // make sure parent path exists
         def parent = tracePath.getParent()
         if( parent )
             Files.createDirectories(parent)
 
-        if( overwrite )
-            Files.deleteIfExists(tracePath)
-        else
-            // roll the any trace files that may exist
-            tracePath.rollFile()
-
         // create a new trace file
-        traceFile = new PrintWriter(Files.newBufferedWriter(tracePath, Charset.defaultCharset()))
+        traceFile = new PrintWriter(TraceHelper.newFileWriter(tracePath,overwrite, 'Trace'))
 
         // launch the agent
         writer = new Agent<PrintWriter>(traceFile)
@@ -222,7 +215,8 @@ class TraceFileObserver implements TraceObserver {
      */
     @Override
     void onFlowComplete() {
-        log.debug "Flow completing -- flushing trace file"
+        log.debug "Workflow completed -- saving trace file"
+
         // wait for termination and flush the agent content
         writer.await()
 
@@ -265,7 +259,7 @@ class TraceFileObserver implements TraceObserver {
     void onProcessComplete(TaskHandler handler, TraceRecord trace) {
         final taskId = handler.task.id
         if( !trace ) {
-            log.debug "Profile warn: Unable to find record for task_run with id: ${taskId}"
+            log.debug "[WARN] Unable to find record for task run with id: ${taskId}"
             return
         }
 

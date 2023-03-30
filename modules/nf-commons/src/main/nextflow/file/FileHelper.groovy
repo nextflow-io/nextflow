@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -214,7 +213,7 @@ class FileHelper {
                 continue
             }
             if( !FilesEx.mkdirs(result) ) {
-                throw new IOException("Unable to create temporary part: $result -- Verify file system access permissions or if a file having the same name exists")
+                throw new IOException("Unable to create temporary directory: $result -- Make sure a file with the same name doesn't already exist and you have write permissions")
             }
 
             return result.toAbsolutePath()
@@ -250,9 +249,9 @@ class FileHelper {
         if( !str )
             throw new IllegalArgumentException("Path string cannot be empty")
         if( str != Bolts.leftTrim(str) )
-            throw new IllegalArgumentException("Path string cannot start with blank or a special characters -- Offending path: '${Escape.blanks(str)}'")
+            throw new IllegalArgumentException("Path string cannot start with a blank or special characters -- Offending path: '${Escape.blanks(str)}'")
         if( str != Bolts.rightTrim(str) )
-            throw new IllegalArgumentException("Path string cannot ends with blank or a special characters -- Offending path: '${Escape.blanks(str)}'")
+            throw new IllegalArgumentException("Path string cannot ends with a blank or special characters -- Offending path: '${Escape.blanks(str)}'")
 
         if( !str.contains(':/') ) {
             return Paths.get(str)
@@ -376,7 +375,7 @@ class FileHelper {
     static FileSystem getWorkDirFileSystem() {
         def result = Global.session?.workDir?.getFileSystem()
         if( !result ) {
-            log.warn "Session working file system not defined -- fallback on JVM default file system"
+            log.warn "Session working directory file system not defined -- fallback on JVM default file system"
             result = FileSystems.getDefault()
         }
         result
@@ -426,6 +425,31 @@ class FileHelper {
      */
     static boolean getWorkDirIsNFS() {
         isPathNFS(Global.session.workDir)
+    }
+
+    /**
+     * @return
+     *      {@code true} when the current session working directory is a symlink path
+     *      {@code false otherwise}
+     */
+    static boolean getWorkDirIsSymlink() {
+        isPathSymlink(Global.session.workDir)
+    }
+
+    @Memoized
+    static boolean isPathSymlink(Path path) {
+        if( path.fileSystem!=FileSystems.default )
+            return false
+        try {
+            return path != path.toRealPath()
+        }
+        catch (NoSuchFileException e) {
+            return false
+        }
+        catch (IOException e) {
+            log.debug "Unable to determine symlink status for path: $path - cause: ${e.message}"
+            return false
+        }
     }
 
     /**
@@ -923,20 +947,28 @@ class FileHelper {
     static Path copyPath(Path source, Path target, CopyOption... options)
             throws IOException
     {
-        FileSystemProvider provider = source.fileSystem.provider()
-        if (target.fileSystem.provider().is(provider)) {
+        final FileSystemProvider sourceProvider = source.fileSystem.provider()
+        final FileSystemProvider targetProvider = target.fileSystem.provider()
+        if (targetProvider.is(sourceProvider)) {
             final linkOpts = options.contains(LinkOption.NOFOLLOW_LINKS) ? NO_FOLLOW_LINKS : FOLLOW_LINKS
             // same provider
             if( Files.isDirectory(source, linkOpts) ) {
                 CopyMoveHelper.copyDirectory(source, target, options)
             }
             else {
-                provider.copy(source, target, options);
+                sourceProvider.copy(source, target, options);
             }
         }
         else {
-            // different providers
-            CopyMoveHelper.copyToForeignTarget(source, target, options);
+            if( sourceProvider instanceof FileSystemTransferAware && sourceProvider.canDownload(source, target)){
+                sourceProvider.download(source, target, options)
+            }
+            else if( targetProvider instanceof FileSystemTransferAware && targetProvider.canUpload(source, target)) {
+                targetProvider.upload(source, target, options)
+            }
+            else {
+                CopyMoveHelper.copyToForeignTarget(source, target, options)
+            }
         }
         return target;
     }
@@ -1018,8 +1050,8 @@ class FileHelper {
         try {
             Files.readAttributes(path,BasicFileAttributes,options)
         }
-        catch( IOException e ) {
-            log.trace "Unable to read attributes for file: $path"
+        catch( IOException|UnsupportedOperationException|SecurityException e ) {
+            log.trace "Unable to read attributes for file: $path - cause: ${e.message}"
             return null
         }
     }
@@ -1030,10 +1062,10 @@ class FileHelper {
         final checkIfExists = opts?.checkIfExists as boolean
         final followLinks = opts?.followLinks == false ? [LinkOption.NOFOLLOW_LINKS] : Collections.emptyList()
         if( !checkIfExists || FilesEx.exists(result, followLinks as LinkOption[]) ) {
-            return result
+            return opts?.relative ? path : result
         }
 
-        throw new NoSuchFileException(FilesEx.toUriString(result))
+        throw new NoSuchFileException(opts?.relative ? path.toString() : FilesEx.toUriString(result))
     }
 
 

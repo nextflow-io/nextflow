@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +41,43 @@ class ContainerConfigTest extends Specification {
         'A ,, B,C ' | ['A','B','C']
         ['X','Y']   | ['X','Y']
 
+    }
+
+    def 'should validate legacy entry point' () {
+
+        when:
+        def cfg = new ContainerConfig(OPTS, ENV)
+        then:
+        cfg.entrypointOverride() == EXPECTED
+        
+        where:
+        OPTS                            | ENV          | EXPECTED
+        [:]                             | [:]          | false
+        [entrypointOverride: false]     | [:]          | false
+        [entrypointOverride: true]      | [:]          | true
+        and:
+        [:]                             | [NXF_CONTAINER_ENTRYPOINT_OVERRIDE: 'true']  | true
+        [entrypointOverride: false]     | [NXF_CONTAINER_ENTRYPOINT_OVERRIDE: 'true']  | false
+
+    }
+
+    def 'should get fusion options' () {
+        when:
+        def cfg = new ContainerConfig(OPTS)
+
+        then:
+        cfg.fusionOptions() == EXPECTED
+        
+        where:
+        OPTS                                            | EXPECTED
+        [:]                                             | null
+        [engine:'docker']                               | '--rm --privileged'
+        [engine:'podman']                               | '--rm --privileged'
+        and:
+        [engine:'docker', fusionOptions:'--cap-add foo']| '--cap-add foo'
+        [engine:'podman', fusionOptions:'--cap-add bar']| '--cap-add bar'
+        and:
+        [engine:'sarus', fusionOptions:'--other']       | '--other'
     }
 
 }

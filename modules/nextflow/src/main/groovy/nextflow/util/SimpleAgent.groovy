@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,7 +96,7 @@ class SimpleAgent<T> {
                     throw new IllegalArgumentException("Invalid agent event object: $ev [${ev.getClass().getName()}]")
             }
             catch (InterruptedException e) {
-                log.debug "Got an interrupeted exception while polling agent event | ${e.message ?: e}"
+                log.debug "Got an interrupted exception while polling agent event | ${e.message ?: e}"
                 break
             }
             catch(Throwable e) {

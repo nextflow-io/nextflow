@@ -65,6 +65,8 @@ class AzPoolOpts implements CacheFunnel {
     String userName
     String password
 
+    String virtualNetwork
+
     AzPoolOpts() {
         this(Collections.emptyMap())
     }
@@ -86,6 +88,7 @@ class AzPoolOpts implements CacheFunnel {
         this.registry = opts.registry
         this.userName = opts.userName
         this.password = opts.password
+        this.virtualNetwork = opts.virtualNetwork
     }
 
     @Override
@@ -104,10 +107,11 @@ class AzPoolOpts implements CacheFunnel {
         hasher.putBoolean(autoScale)
         hasher.putUnencodedChars(scaleFormula ?: '')
         hasher.putUnencodedChars(schedulePolicy ?: '')
+        hasher.putUnencodedChars(virtualNetwork ?: '')
         return hasher
     }
 
-    def buildFileShareRootPath() {
+    String buildFileShareRootPath() {
         if (this.sku ==~ /.*centos.*/)
             return "/mnt/resource/batch/tasks/fsmounts"
         else if (this.sku ==~ /.*ubuntu.*/)

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +18,7 @@ package nextflow.cloud.aws.batch
 
 import java.nio.file.Paths
 
+import com.amazonaws.services.s3.model.CannedAccessControlList
 import nextflow.Session
 import nextflow.exception.ProcessUnrecoverableException
 import spock.lang.Specification
@@ -239,6 +239,25 @@ class AwsOptionsTest extends Specification {
         opts.addVolume(Paths.get('/other/dir'))
         then:
         opts.volumes == ['/some/dir', '/other/dir']
+    }
+
+    def 'should parse s3 acl' ( ) {
+        when:
+        def opts = new AwsOptions(new Session(aws:[client:[s3Acl: 'PublicRead']]))
+        then:
+        opts.getS3Acl() == CannedAccessControlList.PublicRead
+
+
+        when:
+        opts = new AwsOptions(new Session(aws:[client:[s3Acl: 'public-read']]))
+        then:
+        opts.getS3Acl() == CannedAccessControlList.PublicRead
+
+
+        when:
+        opts = new AwsOptions(new Session(aws:[client:[s3Acl: 'unknown']]))
+        then:
+        thrown(IllegalArgumentException)
     }
 
 }

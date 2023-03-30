@@ -1,5 +1,39 @@
-nf-amazon changelog
+nf-azure changelog
 ===================
+0.16.0 - 19 Mar 2023
+- Add azure batch pool virtualNetwork option (#3723) [e3917b8e]
+- Update Azure VM sizes (#3751) [1d06e9a6]
+- Increase pwd obfuscation min length [ci fast] [ba23d036]
+- Bump groovy 3.0.16 [d3ff5dcb]
+
+0.15.1 - 14 Jan 2023
+- Improve container native executor configuration [03126371]
+- Minor logging change [646776a8]
+- Bump groovy 3.0.14 [7c204236]
+
+0.15.0 - 23 Nov 2022
+- Allow identity based authentication on Azure Batch (#3132) [a08611be]
+- Add Azure SAS token validation [e2244b48]
+
+0.14.1 - 10 Sep 2022
+- Fix Azure NPE on missing pool opts [d5c0aabd]
+- Fix shutdown/cleanup hooks invocation [f4185070
+
+0.14.0 - 7 Sep 2022
+- Fix thread pool race condition on shutdown [8d2b0587]
+- Update Azure vm types [80f5fbe4]
+
+0.13.5 - 1 Sep 2022
+- Get rid of remote bin dir [6cfb51e7]
+- Fix typos in log messages [76a87c72]
+- Improve Az Batch err handling and testing [85d31e8d]
+
+0.13.4 - 1 Aug 2022
+- Add retry when Azure submit fails with OperationTimedOut [6a3f9742]
+
+0.13.3 - 13 Jul 2022
+- Fix escape unstage outputs with double quotes #2912 #2904 #2790 [49ff02a6]
+
 0.13.2 - 15 May 2022
 - Update default SKU for Azure Batch 'batch.node.ubuntu 20.04' [be60fc14]
 

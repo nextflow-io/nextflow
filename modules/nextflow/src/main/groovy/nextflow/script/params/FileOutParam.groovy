@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,7 +94,7 @@ class FileOutParam extends BaseOutParam implements OutParam, OptionalParam, Path
 
     @Deprecated
     FileOutParam separatorChar( String value ) {
-        if( NF.dsl2 ) throw new DeprecationException("Option `separatorChar is not supported any more")
+        if( NF.dsl2 ) throw new DeprecationException("Option `separatorChar is not supported anymore")
         this.separatorChar = value
         return this
     }
@@ -231,7 +230,7 @@ class FileOutParam extends BaseOutParam implements OutParam, OptionalParam, Path
 
         final dir = workDir.toString()
         if( !path.startsWith(dir) )
-            throw new IllegalFileException("File `$path` is out of the scope of process working dir: $workDir")
+            throw new IllegalFileException("File `$path` is outside the scope of the process work directory: $workDir")
 
         if( path.length()-dir.length()<2 )
             throw new IllegalFileException("Missing output file name")
@@ -245,7 +244,7 @@ class FileOutParam extends BaseOutParam implements OutParam, OptionalParam, Path
             return glob ? FilePatternSplitter.GLOB.escape(path) : path
 
         if( !path.startsWith(workDir) )
-            throw new IllegalFileException("File `$path` is out of the scope of process working dir: $workDir")
+            throw new IllegalFileException("File `$path` is outside the scope of the process work directory: $workDir")
 
         if( path.nameCount == workDir.nameCount )
             throw new IllegalFileException("Missing output file name")

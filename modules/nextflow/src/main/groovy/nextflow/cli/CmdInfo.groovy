@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +28,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.DefaultPlugins
+import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.util.MemoryUnit
 import org.yaml.snakeyaml.Yaml
@@ -73,6 +73,7 @@ class CmdInfo extends CmdBase {
             return
         }
 
+        Plugins.init()
         final manager = new AssetManager(args[0])
         if( !manager.isLocal() )
             throw new AbortOperationException("Unknown project `${args[0]}`")

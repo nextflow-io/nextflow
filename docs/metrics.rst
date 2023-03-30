@@ -79,12 +79,12 @@ The plot has three tabs showing the usage of the physical memory (RAM), the virt
 .. note::
   To better understand the memory usage plot, it is important to know that:
 
-  - the total amount of memory used by a processs is the `virtual memory (vmem)`. The ``vmem`` contains all memory areas whether they are in the physical memory (RAM), in the Swap space, on the disk or shared with other processes,
+  - the total amount of memory used by a process is the `virtual memory (vmem)`. The ``vmem`` contains all memory areas whether they are in the physical memory (RAM), in the Swap space, on the disk or shared with other processes,
   - the `resident set size (RSS)` is the amount of space of `physical memory (RAM)` held by a process,
   - the relationship is: vmem :math:`\geq` RSS + Swap,
   - the ``memory`` directive sets the RAM requested by the process.
 
-Let's illustrate how this plot behaves with one example which relies on two C programs. 
+Let's illustrate how this plot behaves with one example which relies on two C programs.
 
 The first program just allocates a variable of 1 GiB:
 
@@ -142,7 +142,7 @@ The first program just allocates a variable of 1 GiB:
 
         // Leave time for nextflow to get information
         sleep(15);
-        
+
         free(address);
         return 0;
     }
@@ -202,7 +202,7 @@ The second program allocates a variable of 1 GiB and fills it with data:
         printf("VMEM: %lu RSS: %lu\n", vmem, rss);
 
         printf("Filling memory with data...");
-        fflush(stdout);  
+        fflush(stdout);
         for (i = 0; i < size; i++) {
             *(address + i) = 123;
         }
@@ -212,7 +212,7 @@ The second program allocates a variable of 1 GiB and fills it with data:
 
         // Leave time for nextflow to get information
         sleep(15);
-        
+
         free(address);
         return 0;
     }
@@ -223,7 +223,7 @@ The first and second programs are executed in ``foo`` and ``bar`` processes resp
 
   process foo {
       memory '1.5 GB'
-  
+
       """
       memory_vmem_1GiB_ram_0Gib
       """

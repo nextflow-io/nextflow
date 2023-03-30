@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,6 +60,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'errorStrategy',
             'executor',
             'ext',
+            'fair',
             'machineType',
             'queue',
             'label',
@@ -74,6 +74,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'publishDir',
             'scratch',
             'shell',
+            'spack',
             'storeDir',
             'tag',
             'time',
@@ -87,7 +88,8 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
             'stdin',
             'stdout',
             'stageInMode',
-            'stageOutMode'
+            'stageOutMode',
+            'resourceLabels'
     ]
 
     /**
@@ -408,7 +410,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
         // -- check for conflicting settings
         if( this.scratch && this.stageInMode == 'rellink' ) {
-            log.warn("Directives `scratch` and `stageInMode=rellink` conflict each other -- Enforcing default stageInMode for process `$simpleName`")
+            log.warn("Directives `scratch` and `stageInMode=rellink` conflict with each other -- Enforcing default stageInMode for process `$simpleName`")
             this.remove('stageInMode')
         }
     }
@@ -685,6 +687,7 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      */
     ProcessConfig label(String lbl) {
         if( !lbl ) return this
+
         // -- check that label has a valid syntax
         if( !isValidLabel(lbl) )
             throw new IllegalConfigException("Not a valid process label: $lbl -- Label must consist of alphanumeric characters or '_', must start with an alphabetic character and must end with an alphanumeric character")
@@ -702,8 +705,51 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         return this
     }
 
+    /**
+     * Implements the process {@code label} directive.
+     *
+     * Note this directive  can be specified (invoked) more than one time in
+     * the process context.
+     *
+     * @param map
+     *      The map to be attached to the process.
+     * @return
+     *      The {@link ProcessConfig} instance itself.
+     */
+    ProcessConfig resourceLabels(Map<String, Object> map) {
+        if( !map )
+            return this
+
+        // -- get the current sticker, it must be a Map
+        def allLabels = (Map)configProperties.get('resourceLabels')
+        if( !allLabels ) {
+            allLabels = [:]
+        }
+        // -- merge duplicates
+        allLabels += map
+        configProperties.put('resourceLabels', allLabels)
+        return this
+    }
+
+    Map<String,Object> getResourceLabels() {
+        (configProperties.get('resourceLabels') ?: Collections.emptyMap()) as Map<String, Object>
+    }
+
     List<String> getLabels() {
         (List<String>) configProperties.get('label') ?: Collections.<String>emptyList()
+    }
+
+    boolean getFair() {
+        final value = configProperties.get('fair')
+        if( value == null )
+            return false
+        if( value instanceof Boolean )
+            return value
+
+        if( value instanceof Closure )
+            throw new IllegalArgumentException("Process directive `fair` cannot be declared in a dynamic manner with a closure")
+        else
+            throw new IllegalArgumentException("Unexpected value for directive `fair` -- offending value: $value")
     }
 
     ProcessConfig secret(String name) {
@@ -766,6 +812,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
      *      The {@link ProcessConfig} instance itself.
      */
     ProcessConfig errorStrategy( strategy ) {
+        if( strategy instanceof CharSequence && !ErrorStrategy.isValid(strategy) ) {
+            throw new IllegalArgumentException("Unknown error strategy '${strategy}' ― Available strategies are: ${ErrorStrategy.values().join(',').toLowerCase()}")
+        }
+
         configProperties.put('errorStrategy', strategy)
         return this
     }

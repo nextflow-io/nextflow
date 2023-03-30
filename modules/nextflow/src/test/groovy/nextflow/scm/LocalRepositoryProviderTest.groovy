@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +17,10 @@
 package nextflow.scm
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.Config
 import spock.lang.Shared
 import spock.lang.Specification
 /**
@@ -160,6 +161,15 @@ class LocalRepositoryProviderTest extends Specification {
         repo.commit().setSign(false).setMessage('Second commit').call()
         def ref2 = repo.branchCreate().setName('branch_2').call()
 
+        // Use this user's custom defaultBranch name if set in ~/.gitconfig
+        def defaultBranch = 'master'
+        def gitconfig = Paths.get(System.getProperty('user.home'),'.gitconfig');
+        if(gitconfig.exists()) {
+            def config = new Config()
+            config.fromText(gitconfig.text)
+            defaultBranch = config.getString('init', null, 'defaultBranch') ?: 'master'
+        }
+
         and:
         def config = new ProviderConfig('local', [path: testFolder])
         def manager = new LocalRepositoryProvider('project_hello', config)
@@ -169,7 +179,7 @@ class LocalRepositoryProviderTest extends Specification {
         then:
         branches.size() == 3
         and:
-        branches.find { it.name == 'master' }
+        branches.find { it.name == defaultBranch }
         and:
         branches.find { it.name == 'branch_1' }.commitId == ref1.getObjectId().name()
         and:

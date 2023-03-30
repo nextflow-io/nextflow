@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +17,18 @@
 package nextflow.container
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 /**
  * Models container engine configuration
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class ContainerConfig extends LinkedHashMap {
+
+    private Map<String,String> sysEnv = System.getenv()
 
     /* required by Kryo deserialization -- do not remove */
     private ContainerConfig() { }
@@ -34,12 +37,18 @@ class ContainerConfig extends LinkedHashMap {
         super(config)
     }
 
+    ContainerConfig(Map config, Map<String,String> env) {
+        super(config)
+        this.sysEnv = env
+    }
+
     boolean isEnabled() {
         get('enabled')?.toString() == 'true'
     }
 
-    boolean isLegacy() {
-        get(legacy)?.toString() == 'true'
+    ContainerConfig setEnabled(boolean value) {
+        put('enabled', value)
+        return this
     }
 
     String getEngine() {
@@ -58,5 +67,31 @@ class ContainerConfig extends LinkedHashMap {
             return result
 
         throw new IllegalArgumentException("Not a valid `envWhitelist` argument")
+    }
+
+    boolean entrypointOverride() {
+        def result = get('entrypointOverride')
+        if( result == null )
+            result = sysEnv.get('NXF_CONTAINER_ENTRYPOINT_OVERRIDE')
+        if( result != null )
+            return Boolean.parseBoolean(result.toString())
+        return false
+    }
+
+    String fusionOptions() {
+        final result = get('fusionOptions')
+        return result!=null ? result : defaultFusionOptions()
+    }
+
+    protected String defaultFusionOptions() {
+        final eng = getEngine()
+        if( !eng )
+            return null
+        if( eng=='docker' || eng=='podman' )
+            return '--rm --privileged'
+        if( eng=='singularity' || eng=='apptainer' )
+            return null
+        log.warn "Fusion file system is not supported by '$eng' container engine"
+        return null
     }
 }

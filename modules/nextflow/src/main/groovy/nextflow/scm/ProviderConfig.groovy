@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,7 +97,7 @@ class ProviderConfig {
             attr.platform = 'file'
 
         if( !attr.platform ) {
-            throw new AbortOperationException("Missing `platform` attribute for `$name` scm provider configuration -- Check file: ${getScmConfigPath().toUriString()}")
+            throw new AbortOperationException("Missing `platform` attribute for `$name` SCM provider configuration -- Check file: ${getScmConfigPath().toUriString()}")
         }
 
         if( attr.auth ) {
@@ -137,6 +136,8 @@ class ProviderConfig {
      */
     String getDomain() {
         def result = server ?: path
+        if( !result )
+            return null
         def p = result.indexOf('://')
         if( p != -1 )
             result = result.substring(p+3)
@@ -174,6 +175,7 @@ class ProviderConfig {
         return result ? result.toString() : null
     }
 
+    @Deprecated
     @PackageScope
     String getAuthObfuscated() {
         "${user ?: '-'}:${password? '*' * password.size() : '-'}"
@@ -208,6 +210,11 @@ class ProviderConfig {
         attr.endpoint ? attr.endpoint.toString().stripEnd('/') : server
     }
 
+    ProviderConfig setServer(String serverUrl) {
+        attr.server = serverUrl
+        return this
+    }
+
     ProviderConfig setUser(String user) {
         attr.user = user
         return this
@@ -231,6 +238,7 @@ class ProviderConfig {
 
     String getToken() { attr.token }
 
+
     String toString() {
         "ProviderConfig[name: $name, platform: $platform, server: $server]"
     }
@@ -249,13 +257,13 @@ class ProviderConfig {
     @PackageScope
     static List<ProviderConfig> createFromMap(Map<String,?> config) {
 
-        def providers = (Map<String,?>)config?.providers
+        final providers = (Map<String,?>)config?.providers
 
         List<ProviderConfig> result = []
         if( providers ) {
-            providers.keySet().each { String name ->
+            for( String name : providers.keySet() ) {
                 def attrs = (Map)providers.get(name)
-                result << new ProviderConfig(name, attrs)
+                result << RepositoryFactory.newProviderConfig(name, attrs)
             }
         }
 
@@ -339,6 +347,26 @@ class ProviderConfig {
 
         if( !result.find{ it.name == 'azurerepos' })
             result << new ProviderConfig('azurerepos')
+
     }
 
+    protected String resolveProjectName(String path) {
+        assert path
+        assert !path.startsWith('/')
+
+        String project = path
+        // fetch prefix from the server url
+        def prefix = new URL(server).path?.stripStart('/')
+        if( prefix && path.startsWith(prefix) ) {
+            project = path.substring(prefix.length())
+        }
+
+        if( server == 'https://dev.azure.com' ) {
+            final parts = project.tokenize('/')
+            if( parts[2]=='_git' )
+                project = "${parts[0]}/${parts[1]}"
+        }
+
+        return project.stripStart('/')
+    }
 }

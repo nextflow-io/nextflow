@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +22,19 @@ import java.nio.file.Path
 import org.eclipse.jgit.api.Git
 import spock.lang.Shared
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class UpdateModuleTest extends Specification {
+
+//    def setup() {
+//        Plugins.init()
+//    }
+//
+//    def cleanup() {
+//        Plugins.stop()
+//    }
 
     @Shared
     Path baseFolder

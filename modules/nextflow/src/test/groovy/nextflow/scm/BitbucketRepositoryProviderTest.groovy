@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +15,7 @@
  */
 
 package nextflow.scm
+
 
 import spock.lang.IgnoreIf
 import spock.lang.Requires
@@ -77,6 +77,7 @@ class BitbucketRepositoryProviderTest extends Specification {
         result.contains( new RepositoryProvider.TagInfo('v1.0', '755ba829cbc4f28dcb3c16b9dcc1c49c7ee47ff5') )
     }
 
+    @Requires( { System.getenv('NXF_BITBUCKET_ACCESS_TOKEN') } )
     def 'should list branches' () {
         given:
         def token = System.getenv('NXF_BITBUCKET_ACCESS_TOKEN')

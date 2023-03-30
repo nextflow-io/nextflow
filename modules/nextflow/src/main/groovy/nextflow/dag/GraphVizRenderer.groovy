@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +53,7 @@ class GraphvizRenderer implements DagRenderer {
         if( exitStatus == 128 ) {
             target = target.resolveSibling( "${target.baseName}.dot" )
             temp.copyTo(target)
-            log.warn "To render the execution DAG in the required format it is required to install Graphviz -- See http://www.graphviz.org for more info."
+            log.warn "Graphviz is required to render the execution DAG in the given format -- See http://www.graphviz.org for more info."
         }
         else if( exitStatus>0 ) {
             log.debug("Graphviz error -- command `$cmd` -- exit status: $exitStatus\n${process.text?.indent()}")

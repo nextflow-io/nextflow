@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  * Copyright 2018, University of Tübingen, Quantitative Biology Center (QBiC)
  * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
  *
@@ -111,7 +111,7 @@ class WebLogObserver implements TraceObserver{
         if( url =~ "^(https|http)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]" ) {
             return url
         }
-        throw new IllegalArgumentException("Only http or https are supported protocols -- The given URL was: ${url}")
+        throw new IllegalArgumentException("Only http and https are supported -- The given URL was: ${url}")
     }
 
     /**
@@ -234,14 +234,14 @@ class WebLogObserver implements TraceObserver{
     protected void logHttpResponse(){
         def statusCode = httpClient.getResponseCode()
         if (statusCode >= 200 && statusCode < 300) {
-            log.debug "Successfully send message to ${endpoint} -- received status code ${statusCode}."
+            log.debug "Successfully sent message to ${endpoint} -- received status code ${statusCode}."
         } else {
             def msg = """\
                 Unexpected HTTP response.
                 Failed to send message to ${endpoint} -- received 
                 - status code : $statusCode    
                 - response msg: ${httpClient.getResponse()}  
-                """.stripIndent()
+                """.stripIndent(true)
             log.debug msg
         }
     }

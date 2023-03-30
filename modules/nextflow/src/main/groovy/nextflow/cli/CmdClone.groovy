@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +20,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 /**
  * CLI sub-command clone
@@ -45,6 +45,8 @@ class CmdClone extends CmdBase implements HubOptions {
 
     @Override
     void run() {
+        // init plugin system
+        Plugins.init()
         // the pipeline name
         String pipeline = args[0]
         final manager = new AssetManager(pipeline, this)

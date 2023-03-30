@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,8 +40,6 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
     protected intoObj
 
     protected List<DataflowWriteChannel> outChannels = new ArrayList<>(10)
-
-    protected OutParam.Mode mode = BasicMode.standard
 
     @PackageScope
     boolean singleton
@@ -131,7 +128,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
                 }
 
                 // instantiate the new channel
-                channel = CH.create( singleton && mode==BasicMode.standard )
+                channel = CH.create( singleton )
 
                 // bind it to the script on-fly
                 if( local != '-' && binding ) {
@@ -194,17 +191,6 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         throw new IllegalStateException("Missing 'name' property in output parameter")
     }
 
-
-    BaseOutParam mode( def mode ) {
-        final msg = "Process output `mode` is not supported any more"
-        if( NF.isDsl2() )
-            throw new DeprecationException(msg)
-        this.mode = BasicMode.parseValue(mode)
-        return this
-    }
-
-    OutParam.Mode getMode() { mode }
-
     @Override
     BaseOutParam setOptions(Map<String,?> opts) {
         super.setOptions(opts)
@@ -213,11 +199,11 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
 
     BaseOutParam setEmit( value ) {
         if( isNestedParam() )
-            throw new IllegalArgumentException("Output `emit` option it not allowed in tuple components")
+            throw new IllegalArgumentException("Output `emit` option is not allowed in tuple components")
         if( !value )
             throw new IllegalArgumentException("Missing output `emit` name")
         if( !ConfigHelper.isValidIdentifier(value) ) {
-            final msg = "Output emit '$value' is not valid a name -- Make sure it starts with an alphabetic or underscore character and it does not contain any blank, dot or other special characters"
+            final msg = "Output emit '$value' is not a valid name -- Make sure it starts with an alphabetic or underscore character and it does not contain any blank, dot or other special characters"
             if( NF.strictMode )
                 throw new IllegalArgumentException(msg)
             log.warn(msg)

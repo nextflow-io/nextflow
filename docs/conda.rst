@@ -44,13 +44,18 @@ accessible from all compute nodes.
 .. warning:: The Conda environment feature is not supported by executors that use
   remote object storage as a work directory e.g. AWS Batch.
 
+Enabling Conda environment
+==========================
 
-Use Mamba to resolve packages
-=============================
+As of version ``22.08.0-edge`` the use Conda recipes specified using the :ref:`process-conda`
+directive needs to be enabled explicitly by setting the option shown below in the pipeline
+configuration file (i.e. ``nextflow.config``)::
 
-It is also possible to use `mamba <https://github.com/mamba-org/mamba>`_ to speed up the creation of conda environments. For more information on how to enable this feature please refer to :ref:`Conda <config-conda>`.
+    conda.enabled = true
 
-.. warning:: This feature is experimental and may change in a future release.
+
+Alternatively it can be specified by setting the variable ``NXF_CONDA_ENABLED=true`` in your environment
+or by using the ``-with-conda true`` command line option.
 
 
 Use Conda package names
@@ -132,6 +137,14 @@ installation directory of such environment by using the ``conda`` directive::
   }
 
 
+Use Mamba to resolve packages
+=============================
+
+It is also possible to use `mamba <https://github.com/mamba-org/mamba>`_ to speed up the creation of conda environments. For more information on how to enable this feature please refer to :ref:`Conda <config-conda>`.
+
+.. warning:: This feature is experimental and may change in a future release.
+
+
 Best practices
 --------------
 
@@ -140,7 +153,7 @@ the workflow execution.
 
 Specifying the Conda environments in a separate configuration :ref:`profile <config-profiles>` is therefore
 recommended to allow the execution via a command line option and to enhance the workflow portability. For example::
-  
+
   profiles {
     conda {
       process.conda = 'samtools'

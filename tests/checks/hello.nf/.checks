@@ -25,7 +25,7 @@ $NXF_RUN -resume | tee stdout
 echo ''
 $NXF_RUN -with-report -with-timeline -with-trace -with-dag | tee stdout
 
-[[ -s report.html ]] || false
-[[ -s timeline.html ]] || false
-[[ -s trace.txt ]] || false
-[[ -s dag.dot ]] || false
+[ -s report-*.html ] || false
+[ -s timeline-*.html ] || false
+[ -s trace-*.txt ] || false
+[ -s dag-*.dot ] || false

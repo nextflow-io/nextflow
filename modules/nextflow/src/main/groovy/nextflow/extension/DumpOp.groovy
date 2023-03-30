@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +35,7 @@ import static nextflow.util.CheckHelper.checkParams
 @CompileStatic
 class DumpOp {
 
-    static final private Map PARAMS_DUMP = [tag: String]
+    static final private Map PARAMS_DUMP = [tag: String, pretty: Boolean ]
 
     private Session session = (Global.session as Session)
 
@@ -48,10 +47,13 @@ class DumpOp {
 
     protected String tag
 
+    protected boolean pretty
+
     DumpOp(Map opts, Closure<String> renderer) {
         checkParams('dump', opts, PARAMS_DUMP)
         this.source = source
         this.tag = opts.tag
+        this.pretty = opts.pretty ?: false
         this.renderer = renderer
         this.dumpNames = session.getDumpChannels()
     }
@@ -88,7 +90,7 @@ class DumpOp {
         events.onNext = {
             def marker = 'DUMP'
             if( tag ) marker += ": $tag"
-            log.info "[$marker] " + ( renderer ? renderer.call(it) : InvokerHelper.inspect(it) )
+            log.info "[$marker] " + ( renderer ? renderer.call(it) : pretty ? DumpHelper.prettyPrint(it) : InvokerHelper.inspect(it) )
             target.bind(it)
         }
 

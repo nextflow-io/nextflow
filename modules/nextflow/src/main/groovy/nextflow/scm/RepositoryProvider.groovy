@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +16,7 @@
 
 package nextflow.scm
 
+import static nextflow.util.StringUtils.*
 
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
@@ -26,7 +26,10 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.exception.AbortOperationException
 import nextflow.exception.RateLimitExceededException
-
+import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.Ref
+import org.eclipse.jgit.transport.CredentialsProvider
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 /**
  *
  * Base class for a generic source repository provider
@@ -115,9 +118,49 @@ abstract class RepositoryProvider {
      */
     abstract String getRepositoryUrl()
 
-    List<BranchInfo> getBranches() { throw new UnsupportedOperationException("Get branches operation not support by ${this.getClass().getSimpleName()} provider") }
+    @Memoized
+    protected Collection<Ref> fetchRefs() {
+        /*
+         * fetch repos tags & branches
+         * see https://github.com/centic9/jgit-cookbook/
+         */
+        return Git.lsRemoteRepository()
+                .setRemote(getEndpointUrl())
+                .setCredentialsProvider(getGitCredentials())
+                .call()
+    }
 
-    List<TagInfo> getTags() { throw new UnsupportedOperationException("Get tags operation not support by ${this.getClass().getSimpleName()} provider") }
+    List<BranchInfo> getBranches() {
+        final PREFIX = 'refs/heads/'
+        final refs = fetchRefs()
+        final result = new ArrayList<BranchInfo>()
+        for( Ref it : refs ) {
+            if( !it.name.startsWith(PREFIX) )
+                continue
+            result.add( new BranchInfo(it.name.substring(PREFIX.size()), it.objectId.name()) )
+        }
+        return result
+    }
+
+    List<TagInfo> getTags() {
+        final PREFIX = 'refs/tags/'
+        final refs = fetchRefs()
+        final result = new ArrayList<TagInfo>()
+        for( Ref it : refs ) {
+            if( !it.name.startsWith(PREFIX) )
+                continue
+            result.add( new TagInfo(it.name.substring(PREFIX.size()), it.objectId.name()) )
+        }
+        return result
+    }
+
+    /**
+     * @return a org.eclipse.jgit.transport.CredentialsProvider object for authenticating git operations
+     * like clone, fetch, pull, and update
+     **/
+    CredentialsProvider getGitCredentials() {
+        return new UsernamePasswordCredentialsProvider(getUser(), getPassword())
+    }
 
     /**
      * Invoke the API request specified
@@ -128,7 +171,7 @@ abstract class RepositoryProvider {
     protected String invoke( String api ) {
         assert api
 
-        log.debug "Request [credentials ${config.getAuthObfuscated() ?: '-'}] -> $api"
+        log.debug "Request [credentials ${getAuthObfuscated() ?: '-'}] -> $api"
         def connection = new URL(api).openConnection() as URLConnection
         connection.setConnectTimeout(5_000)
 
@@ -140,11 +183,19 @@ abstract class RepositoryProvider {
 
         InputStream content = connection.getInputStream()
         try {
-            return content.text
+            final result = content.text
+            log.trace "Git provider HTTP request: '$api' -- Response:\n${result}"
+            return result
         }
         finally{
             content?.close()
         }
+    }
+
+    protected String getAuthObfuscated() {
+        final usr = getUser()
+        final pwd = getPassword()
+        return "${usr ? redact(usr) : '-'}:${pwd ? redact(pwd) : '-'}"
     }
 
     /**
@@ -202,7 +253,18 @@ abstract class RepositoryProvider {
                 break
 
             for( def item : list ) {
-                result.add( parse(item) )
+                final entry = parse(item)
+                if( result.contains(entry) ) {
+                    log.debug("Duplicate entry detected on request '$request'")
+                    return result
+                }
+                result.add(entry)
+            }
+
+            // prevent endless looping
+            if( page==100 ) {
+                log.warn("Too many requests '$request'")
+                break
             }
         }
         return result
@@ -249,7 +311,7 @@ abstract class RepositoryProvider {
         }
         catch( IOException e1 ) {
             validateRepo()
-            throw new AbortOperationException("Not a valid Nextflow project -- The repository `${getRepositoryUrl()}` must contain a the script `${Const.DEFAULT_MAIN_FILE_NAME}` or the file `${Const.MANIFEST_FILE_NAME}`", e1)
+            throw new AbortOperationException("Not a valid Nextflow project -- The repository `${getRepositoryUrl()}` must contain a `${Const.DEFAULT_MAIN_FILE_NAME}` script or the file `${Const.MANIFEST_FILE_NAME}`", e1)
         }
     }
 
@@ -260,40 +322,6 @@ abstract class RepositoryProvider {
         catch( IOException e ) {
             throw new AbortOperationException("Cannot find `$project` -- Make sure exists a ${name.capitalize()} repository at this address `${getRepositoryUrl()}`", e)
         }
-    }
-    /**
-     * Factory method
-     *
-     * @param provider
-     * @return
-     */
-    static RepositoryProvider create( ProviderConfig config, String project ) {
-        switch(config.platform) {
-            case 'github':
-                return new GithubRepositoryProvider(project, config)
-
-            case 'bitbucket':
-                return new BitbucketRepositoryProvider(project, config)
-
-            case 'bitbucketserver':
-                return new BitbucketServerRepositoryProvider(project, config)
-
-            case 'gitlab':
-                return new GitlabRepositoryProvider(project, config)
-
-            case 'gitea':
-                return new GiteaRepositoryProvider(project, config)
-
-            case 'azurerepos':
-                return new AzureRepositoryProvider(project, config)
-
-            case 'file':
-                // remove the 'local' prefix for the file provider
-                def localName = project.tokenize('/').last()
-                return new LocalRepositoryProvider(localName, config)
-        }
-
-        throw new AbortOperationException("Unknown project repository platform: ${config.platform}")
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,12 @@
 
 package nextflow.cloud.google
 
+import com.google.auth.oauth2.GoogleCredentials
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.ToString
+import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.AbortOperationException
 /**
@@ -28,11 +30,12 @@ import nextflow.exception.AbortOperationException
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
 class GoogleOpts {
 
-    static final String DEFAULT_LOCATION = 'us-central1'
+    static final public String DEFAULT_LOCATION = 'us-central1'
 
     static Map<String,String> env = System.getenv()
 
@@ -116,4 +119,21 @@ class GoogleOpts {
         return config
     }
 
+    @Memoized // make memoized to prevent multiple access to the creds file
+    GoogleCredentials getCredentials() {
+        return makeCreds(credsFile)
+    }
+
+    static protected GoogleCredentials makeCreds(File credsFile) {
+        GoogleCredentials result
+        if( credsFile ) {
+            log.debug "Google auth via application credentials file: $credsFile"
+            result = GoogleCredentials.fromStream(new FileInputStream(credsFile))
+        }
+        else {
+            log.debug "Google auth via application DEFAULT"
+            result = GoogleCredentials.getApplicationDefault()
+        }
+        return result.createScoped("https://www.googleapis.com/auth/cloud-platform")
+    }
 }

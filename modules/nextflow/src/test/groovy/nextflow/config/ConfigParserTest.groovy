@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +15,8 @@
  */
 
 package nextflow.config
+
+import spock.lang.Ignore
 
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
@@ -660,6 +661,66 @@ class ConfigParserTest extends Specification {
         config.params.baz == 'baz1'
         config.params.nested.baz == 'baz2'
         config.params.nested.foo.bar == 'bar2'
+    }
+
+    def 'should load parse profiles into configurations' () {
+
+        given:
+        def folder = File.createTempDir()
+        def snippet1 = new File(folder,'config1.txt').absoluteFile
+        def snippet2 = new File(folder,'config2.txt').absoluteFile
+
+        snippet1.text = '''
+            snippet = 'snippet1'
+            profiles {
+                debug{
+                    cleanup = 1
+                }
+            }
+        '''
+
+        snippet2.text = '''
+            snippet = 'snippet2'
+            profiles {
+                debug{
+                    cleanup = 2
+                }
+            }
+        '''
+
+
+        def configText = """
+        workDir = '/my/scratch'
+
+        profiles {
+
+            standard {}
+
+            slow {
+                includeConfig "$snippet1"
+            }
+
+            fast {
+                workDir = '/fast/scratch'
+                includeConfig "$snippet2"
+            }
+
+        }
+        """
+
+        when:
+        def config1 = new ConfigParser()
+                .parse(configText)
+        then:
+        config1.workDir == '/my/scratch'
+        config1.profiles.standard.size() == 0
+        config1.profiles.slow.snippet == 'snippet1'
+        config1.profiles.fast.snippet == 'snippet2'
+        config1.profiles.debug.cleanup == 2
+
+        cleanup:
+        folder.deleteDir()
+
     }
 
 

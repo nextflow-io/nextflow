@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +44,7 @@ class VersionNumberTest extends Specification {
         '0.1.2'     | '0'       | '1'       | '2'   | '0.1.2'
         '3.2.1.6.4' | '3'       | '2'       | '1'   | '3.2.1.6.4'
         '1.2.RC1'   | '1'       | '2'       | 'RC1' | '1.2.RC1'
+        '22.09.04-edge' | '22'  | '09'      | '04'  | '22.09.04-edge'
 
     }
 

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +18,7 @@ package nextflow.config
 
 import java.nio.file.Path
 
-import ch.grengine.Grengine
+import ch.artecat.grengine.Grengine
 import com.google.common.hash.Hashing
 import groovy.transform.PackageScope
 import nextflow.ast.NextflowXform
@@ -337,7 +336,7 @@ class ConfigParser {
             def result
             if (current.config.get(name)) {
                 result = current.config.get(name)
-            } else if (current.scope[name]) {
+            } else if (current.scope.get(name)) {
                 result = current.scope[name]
             } else {
                 try {
@@ -410,12 +409,12 @@ class ConfigParser {
                     assignName.call(name, dsl.plugins)
                 }
                 else {
-                    def current = withinProfile ? stack.first : stack.last
+                    def current = name=='profiles' || withinProfile ? stack.first : stack.last
                     def co
-                    if (current.config.get(name) instanceof ConfigObject) {
+                    if (current.config.containsKey(name) && current.config.get(name) instanceof ConfigObject) {
                         co = current.config.get(name)
                     }
-                    else if (current.scope.get(name) instanceof ConfigObject) {
+                    else if (current.scope.containsKey(name) && current.scope.get(name) instanceof ConfigObject) {
                         co = current.scope.get(name).clone()
                     }
                     else {
@@ -429,8 +428,10 @@ class ConfigParser {
                     stack.removeLast()
                     profileStack.removeLast()
 
-                    if (current.scope.get(name) instanceof ConfigObject) {
-                        current.scope.get(name).merge(co)
+                    if (current.scope.containsKey(name) && current.scope.get(name) instanceof ConfigObject) {
+                        if( current.scope.get(name) != co) {
+                            current.scope.get(name).merge(co)
+                        }
                     } else {
                         current.scope.put(name,co)
                     }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +15,9 @@
  */
 
 package nextflow.k8s.client
+
+import nextflow.exception.K8sOutOfCpuException
+import nextflow.exception.K8sOutOfMemoryException
 
 import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.HttpsURLConnection
@@ -230,7 +232,15 @@ class K8sClient {
         // delete all pods in a job
         if (podList.kind == "PodList") { 
             for (item in podList.items) {
-                podDelete(((item as Map).metadata as Map).name as String)
+                try {
+                   podDelete(((item as Map).metadata as Map).name as String)
+                }
+                catch(K8sResponseException err) {
+                   if( err.response.code == 404 )
+                       log.debug("Unable to delete Pod for job $name, pod already gone")
+                   else
+                       throw err
+                }
             }
         }
 
@@ -371,7 +381,16 @@ class K8sClient {
         assert jobName
         final podName = findPodNameForJob(jobName)
         if( podName ) {
-            return podState(podName)
+            try {
+                return podState(podName)
+            } 
+            /* pod might be deleted by control plane just after findPodNameForJob() call
+             * so try fallback to jobState
+             */   
+            catch (NodeTerminationException err) {
+                log.warn1("Job $jobName's Pod not found, probably cleaned by controlplane")
+                return jobStateFallback0(jobName)           
+            }
         }
         else {
             return jobStateFallback0(jobName)
@@ -386,7 +405,7 @@ class K8sClient {
             final cond = allConditions.find { cond -> cond.type == 'Complete' }
 
             if( cond?.status == 'True' ) {
-                log.warn1("Job $jobName already completed and Pod is gone.")
+                log.warn1("Job $jobName already completed and Pod is gone")
                 final dummyPodStatus = [
                         terminated: [
                                 exitcode: 0,
@@ -483,10 +502,12 @@ class K8sClient {
             def msg = "K8s pod '$podName' execution failed"
             if( status.reason ) msg += " - reason: ${status.reason}"
             if( status.message ) msg += " - message: ${status.message}"
-            final err = status.reason == 'Shutdown'
-                    ? new NodeTerminationException(msg)
-                    : new ProcessFailedException(msg)
-            throw err
+            switch ( status.reason ) {
+                case 'OutOfcpu':    throw new K8sOutOfCpuException(msg)
+                case 'OutOfmemory': throw new K8sOutOfMemoryException(msg)
+                case 'Shutdown':    throw new NodeTerminationException(msg)
+                default:            throw new ProcessFailedException(msg)
+            }
         }
 
         throw new K8sResponseException("K8s undetermined status conditions for pod $podName", resp)
@@ -573,6 +594,12 @@ class K8sClient {
     }
 
     protected void setupHttpsConn( HttpsURLConnection conn ) {
+        if (config.httpReadTimeout != null) {
+            conn.setReadTimeout(config.httpReadTimeout.toMillis() as int)
+        }
+        if (config.httpConnectTimeout != null) {
+            conn.setConnectTimeout(config.httpConnectTimeout.toMillis() as int)
+        }
         if (config.keyManagers != null || trustManagers != null) {
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(config.keyManagers, trustManagers, new SecureRandom());
@@ -595,21 +622,19 @@ class K8sClient {
      */
     protected K8sResponseApi makeRequest(String method, String path, String body=null) throws K8sResponseException {
 
-        final int maxTrials = 5
-        int trial = 0
+        final int maxRetries = config.maxErrorRetry
+        int attempt = 0
 
-        while ( trial < maxTrials ) {
-            trial++
-
+        while ( true ) {
             try {
                 return makeRequestCall( method, path, body )
-            } catch ( K8sResponseException | SocketException e ) {
+            } catch ( K8sResponseException | SocketException | SocketTimeoutException e ) {
                 if ( e instanceof K8sResponseException && e.response.code != 500 )
                     throw e
-                log.error "[K8s] API request threw socket exception: $e.message for $method $path ${body ? '\n'+prettyPrint(body).indent() : ''}"
-                if ( trial < maxTrials ) log.info( "[K8s] Try API request again, remaining trials: ${ maxTrials - trial }" )
-                else throw e
-                final long delay = (Math.pow(3, trial - 1) as long) * 250
+                if ( ++attempt > maxRetries )
+                    throw e
+                log.debug "[K8s] API request threw socket exception: $e.message for $method $path - Retrying request (attempt=$attempt)"
+                final long delay = (Math.pow(3, attempt - 1) as long) * 250
                 sleep( delay )
             }
         }

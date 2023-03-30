@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,22 +41,24 @@ class CharliecloudCacheTest extends Specification {
 
         where:
         url                         | expected
-        'docker://foo/bar'          | 'foo-bar'
-        'docker://foo/bar:tag'      | 'foo-bar-tag'
-        'shub://hello/world'        | 'hello-world'
-        'ftp://hello/world'         | 'hello-world'
-        'foo:bar'                   | 'foo-bar'
+        'docker://foo/bar'          | 'foo%bar'
+        'docker://foo/bar:tag'      | 'foo%bar+tag'
+        'shub://hello/world'        | 'hello%world'
+        'ftp://hello/world'         | 'hello%world'
+        'foo:bar'                   | 'foo+bar'
     }
 
     def 'should return the cache dir from the config file' () {
 
         given:
         def dir = Files.createTempDirectory('test')
+        and:
+        def cacheDir = dir.resolve('nxf.ch')
 
         when:
-        def cache = new CharliecloudCache([cacheDir: "$dir"] as ContainerConfig)
+        def cache = new CharliecloudCache([cacheDir: "$cacheDir"] as ContainerConfig)
         then:
-        cache.getCacheDir() == dir
+        cache.getCacheDir() == cacheDir
 
         cleanup:
         dir.deleteDir()
@@ -67,24 +68,26 @@ class CharliecloudCacheTest extends Specification {
 
         given:
         def dir = Files.createTempDirectory('test')
+        and:
+        def cacheDir = dir.resolve('nxf.ch')
 
         when:
-        def cache = new CharliecloudCache(GroovyMock(ContainerConfig), [NXF_CHARLIECLOUD_CACHEDIR: "$dir"])
+        def cache = new CharliecloudCache(GroovyMock(ContainerConfig), [NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir"])
         then:
-        cache.getCacheDir() == dir
+        cache.getCacheDir() == cacheDir
 
         cleanup:
         dir.deleteDir()
     }
-
 
     def 'should run ch-image pull command'() {
 
         given:
         def dir = Files.createTempDirectory('test')
         def IMAGE = 'busybox:latest'
-        def LOCAL = 'busybox-latest'
-        def TARGET_PATH = dir.resolve(LOCAL)
+        def LOCAL = 'img/busybox+latest'
+        def CACHE_PATH = dir.resolve('charliecloud')
+        def TARGET_PATH = CACHE_PATH.resolve(LOCAL)
         and:
         def cache = Spy(CharliecloudCache)
 
@@ -93,9 +96,9 @@ class CharliecloudCacheTest extends Specification {
         then:
         1 * cache.localImagePath(IMAGE) >> TARGET_PATH
         and:
-        1 * cache.runCommand("ch-image pull $IMAGE $TARGET_PATH > /dev/null", TARGET_PATH) >> 0
+        1 * cache.runCommand("ch-image pull -s $CACHE_PATH $IMAGE > /dev/null", TARGET_PATH) >> 0
         and:
-        TARGET_PATH.parent.exists()
+        CACHE_PATH.parent.exists()
         and:
         result == TARGET_PATH
 
@@ -103,25 +106,25 @@ class CharliecloudCacheTest extends Specification {
         dir.deleteDir()
     }
 
-
     def 'should return cached image'() {
 
         given:
         def dir = Files.createTempDirectory('test')
         def IMAGE = 'busybox:latest'
-        def LOCAL = 'busybox-latest'
-        def container = dir.resolve(LOCAL)
-        container.text = 'dummy'
+        def LOCAL = 'img/busybox+latest'
+        def CACHE_PATH = dir.resolve('charliecloud')
+        def TARGET_PATH = CACHE_PATH.resolve(LOCAL)
         and:
         def cache = Spy(CharliecloudCache)
+        TARGET_PATH.mkdirs()
 
         when:
         def result = cache.downloadCharliecloudImage(IMAGE)
         then:
-        1 * cache.localImagePath(IMAGE) >> container
+        1 * cache.localImagePath(IMAGE) >> TARGET_PATH
         0 * cache.runCommand(_) >> 0
         and:
-        result == dir.resolve(LOCAL)
+        result == TARGET_PATH
 
         cleanup:
         dir.deleteDir()
@@ -133,7 +136,7 @@ class CharliecloudCacheTest extends Specification {
 
         given:
         def IMAGE = 'busybox:latest'
-        def LOCAL = 'busybox-latest'
+        def LOCAL = 'busybox+latest'
         def dir = Paths.get('/test/path')
         def container = dir.resolve(LOCAL)
         and:

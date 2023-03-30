@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +20,7 @@ import static nextflow.Const.*
 
 import java.lang.reflect.Field
 import java.nio.file.DirectoryNotEmptyException
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
@@ -56,6 +56,7 @@ import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessException
+import nextflow.exception.PlainExceptionMessage
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.OpCall
 import nextflow.file.FileHelper
@@ -206,6 +207,11 @@ class LoggerHelper {
         if( !debugConf.contains(AWS) && !traceConf.contains(AWS)) {
             createLogger(AWS, Level.WARN)
         }
+        // -- patch jgit warn
+        final JGIT = 'org.eclipse.jgit.util.FS'
+        if( !debugConf.contains(JGIT) && !traceConf.contains(JGIT)) {
+            createLogger(JGIT, Level.ERROR)
+        }
 
         // -- debug packages specified by the user
         for( String clazz : debugConf ) {
@@ -236,7 +242,9 @@ class LoggerHelper {
 
     protected Appender createConsoleAppender() {
 
-        final Appender result = daemon && opts.isBackground() ? null : ( opts.ansiLog ? new CaptureAppender() : new ConsoleAppender())
+        final Appender<ILoggingEvent> result = daemon && opts.isBackground()
+                ? (Appender<ILoggingEvent>) null
+                : (opts.ansiLog ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
         if( result )  {
             final filter = new ConsoleLoggerFilter( packages )
             filter.setContext(loggerContext)
@@ -273,13 +281,13 @@ class LoggerHelper {
         return result
     }
 
-    protected RollingFileAppender createRollingAppender() {
+    protected RollingFileAppender<ILoggingEvent> createRollingAppender() {
 
-        RollingFileAppender result = logFileName ? new RollingFileAppender() : null
+        RollingFileAppender<ILoggingEvent> result = logFileName ? new RollingFileAppender<ILoggingEvent>() : null
         if( result ) {
             result.file = logFileName
 
-            def rollingPolicy = new  FixedWindowRollingPolicy( )
+            def rollingPolicy = new FixedWindowRollingPolicy( )
             rollingPolicy.fileNamePattern = "${logFileName}.%i"
             rollingPolicy.setContext(loggerContext)
             rollingPolicy.setParent(result)
@@ -298,9 +306,9 @@ class LoggerHelper {
         return result
     }
 
-    protected FileAppender createFileAppender() {
+    protected FileAppender<ILoggingEvent> createFileAppender() {
 
-        FileAppender result = logFileName ? new FileAppender() : null
+        FileAppender<ILoggingEvent> result = logFileName ? new FileAppender<ILoggingEvent>() : null
         if( result ) {
             result.file = logFileName
             result.encoder = createEncoder()
@@ -434,7 +442,7 @@ class LoggerHelper {
     static protected void appendFormattedMessage( StringBuilder buffer, ILoggingEvent event, Throwable fail, Session session) {
         final className = session?.script?.getClass()?.getName()
         final message = event.getFormattedMessage()
-        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || ScriptRuntimeException
+        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || fail instanceof ScriptRuntimeException
         final normalize = { String str -> str ?. replace("${className}.", '')}
         List error = fail ? findErrorLine(fail) : null
 
@@ -455,7 +463,10 @@ class LoggerHelper {
             buffer.append("No such field: ${normalize(fail.message)}")
         }
         else if( fail instanceof NoSuchFileException ) {
-            buffer.append("No such file: ${normalize(fail.message)}")
+            buffer.append("No such file or directory: ${normalize(fail.message)}")
+        }
+        else if( fail instanceof FileAlreadyExistsException ) {
+            buffer.append("File or directory already exists: $fail.message")
         }
         else if( fail instanceof ClassNotFoundException ) {
             buffer.append("Class not found: ${normalize(fail.message)}")
@@ -481,6 +492,9 @@ class LoggerHelper {
         else {
             buffer.append("Unexpected error")
         }
+        if( fail instanceof PlainExceptionMessage )
+            return
+
         buffer.append(CoreConstants.LINE_SEPARATOR)
         buffer.append(CoreConstants.LINE_SEPARATOR)
 
@@ -572,7 +586,7 @@ class LoggerHelper {
             return ExceptionUtils.getStackTrace(e).split('\n')
         }
         catch( Throwable t ) {
-            log.warn "Oops .. something wrong formatting the error stack trace | ${t.message ?: t}", e
+            log.warn "Oops.. something went wrong while formatting the error stack trace | ${t.message ?: t}", e
             return Collections.emptyList() as String[]
         }
     }

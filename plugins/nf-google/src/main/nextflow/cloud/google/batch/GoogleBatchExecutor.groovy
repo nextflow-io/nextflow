@@ -1,4 +1,5 @@
 /*
+ * Copyright 2023, Seqera Labs
  * Copyright 2022, Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,9 +23,11 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.cloud.google.batch.client.BatchClient
+import nextflow.cloud.google.batch.logging.BatchLogging
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
 import nextflow.extension.FilesEx
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
@@ -45,14 +48,21 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     private BatchClient client
     private BatchConfig config
     private Path remoteBinDir
+    private BatchLogging logging
 
     BatchClient getClient() { return client }
     BatchConfig getConfig() { return config }
     Path getRemoteBinDir() { return remoteBinDir }
+    BatchLogging getLogging() { logging }
 
     @Override
     final boolean isContainerNative() {
         return true
+    }
+
+    @Override
+    String containerConfigEngine() {
+        return 'docker'
     }
 
     @Override
@@ -68,7 +78,7 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     }
 
     protected void uploadBinDir() {
-        if( session.binDir && !config.disableBinDir ) {
+        if( session.binDir && !session.binDir.empty() && !session.disableRemoteBinDir ) {
             final cloudPath = getTempDir()
             log.info "Uploading local `bin` scripts folder to ${cloudPath.toUriString()}/bin"
             this.remoteBinDir = FilesEx.copyTo(session.binDir, cloudPath)
@@ -77,11 +87,12 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
 
     protected void createConfig() {
         this.config = BatchConfig.create(session)
-        log.debug "Google Batch config=$config"
+        log.debug "[GOOGLE BATCH] Executor config=$config"
     }
 
     protected void createClient() {
         this.client = new BatchClient(config)
+        this.logging = new BatchLogging(config)
     }
 
     @Override
@@ -101,5 +112,16 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint {
     @Override
     TaskHandler createTaskHandler(TaskRun task) {
         return new GoogleBatchTaskHandler(task, this)
+    }
+
+    @Override
+    void shutdown() {
+        client.shutdown()
+        logging.close()
+    }
+
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
     }
 }
