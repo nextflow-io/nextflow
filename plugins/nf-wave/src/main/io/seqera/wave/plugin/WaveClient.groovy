@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -402,7 +402,7 @@ class WaveClient {
         RUN micromamba install -y -n base -f /tmp/conda.yml && \\
             {{base_packages}}
             micromamba clean -a -y
-        """.stripIndent()
+        """.stripIndent(true)
         final image = config.condaOpts().mambaImage
         final basePackage =  config.condaOpts().basePackages ? "micromamba install -y -n base ${config.condaOpts().basePackages} && \\".toString() : null
         final binding = ['base_image': image, 'base_packages': basePackage]
@@ -428,7 +428,7 @@ class WaveClient {
             {{target}} \\
             {{base_packages}}
             && micromamba clean -a -y
-        """.stripIndent()
+        """.stripIndent(true)
 
         final channelsOpts = condaChannels.collect(it -> "-c $it").join(' ')
         final image = config.condaOpts().mambaImage
