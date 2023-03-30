@@ -71,6 +71,11 @@ trait ArityParam {
         }
 
         @Override
+        boolean equals(Object obj) {
+            min == obj.min && max == obj.max
+        }
+
+        @Override
         String toString() {
             min == max
                 ? min.toString()
