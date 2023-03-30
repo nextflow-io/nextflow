@@ -2282,7 +2282,7 @@ for each species specified by an input parameter::
 .. note:: The use of AWS S3 paths is supported, however it requires the installation of the `AWS CLI <https://aws.amazon.com/cli/>`_
   (i.e. ``aws``) in the target compute node.
   
-.. _process-shell:
+.. _process-directive-shell:
 
 shell
 -----
