@@ -2281,6 +2281,15 @@ for each species specified by an input parameter::
 
 .. note:: The use of AWS S3 paths is supported, however it requires the installation of the `AWS CLI <https://aws.amazon.com/cli/>`_
   (i.e. ``aws``) in the target compute node.
+  
+.. _process-shell:
+
+shell
+-----
+
+The ``shell`` directive defines the shell and options used to execute the script. By default, `bash` is executed with the options ``set -ue``. If you would like to specify a different shell executable location or options, you can do so as follows:
+
+`shell = ['/bin/bash', '-euo', 'pipefail']`
 
 
 .. _process-stageInMode:
