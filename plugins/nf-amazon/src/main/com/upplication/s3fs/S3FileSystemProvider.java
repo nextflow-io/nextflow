@@ -1,6 +1,5 @@
 /*
- * Copyright 2020, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -951,6 +950,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		client.setUploadMaxThreads(props.getProperty("upload_max_threads"));
 		client.setGlacierAutoRetrieval(props.getProperty("glacier_auto_retrieval"));
 		client.setGlacierExpirationDays(props.getProperty("glacier_expiration_days"));
+		client.setGlacierRetrievalTier(props.getProperty("glacier_retrieval_tier"));
 
 		if (uri.getHost() != null) {
 			client.setEndpoint(uri.getHost());

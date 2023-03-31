@@ -1,5 +1,11 @@
 nf-azure changelog
 ===================
+0.16.0 - 19 Mar 2023
+- Add azure batch pool virtualNetwork option (#3723) [e3917b8e]
+- Update Azure VM sizes (#3751) [1d06e9a6]
+- Increase pwd obfuscation min length [ci fast] [ba23d036]
+- Bump groovy 3.0.16 [d3ff5dcb]
+
 0.15.1 - 14 Jan 2023
 - Improve container native executor configuration [03126371]
 - Minor logging change [646776a8]

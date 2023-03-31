@@ -1,5 +1,10 @@
 nf-amazon changelog
 ===================
+1.16.0 - 19 Mar 2023
+- Remove unused classes [9fa8d75b]
+- Add support for AWS S3 Glacier Retrieval Tier (#3680) [fab6bd5e]
+- Bump groovy 3.0.16 [d3ff5dcb]
+
 1.15.0 - 21 Feb 2023
 - Improve AWS batch error logging [8f4884c1]
 - Remove deprecated buckets field [0a355ac3]

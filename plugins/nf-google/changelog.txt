@@ -1,5 +1,10 @@
 nf-google changelog
 ===================
+1.7.1 - 23 Mar 2023
+- Fix Google Batch logging exception [d7e38e9e]
+- Add error message for missing container image with Google Batch (#3747) [6419e68f]
+- Bump groovy 3.0.16 [d3ff5dcb]
+
 1.7.0 - 21 Feb 2023
 - Add Fusion support for Google Batch (#3577) [d5fbab4f]
 - Add Header provider to Google Batch client [20979929]

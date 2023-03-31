@@ -4,8 +4,7 @@
 Wave containers
 ****************
 
-`Wave <https://seqera.io/wave/>`_ is a container provisioning service integrated with Nextflow. It allows the building,
-uploading and managing of container images required by your data analysis workflows on-demand, during the pipeline execution in a fully automated manner.
+`Wave <https://seqera.io/wave/>`_ is a container provisioning service integrated with Nextflow. With Wave, you can build, upload, and manage the container images required by your data analysis workflows automatically and on-demand during pipeline execution.
 
 Getting started
 ===============
@@ -37,9 +36,11 @@ Wave can be used in any Nextflow pipeline by adding the following snippet to you
      accessToken = '<your access token>'
    }
 
-.. tip::
-  The use of the Tower access token is not mandatory, however, it's required to enable access to private repositories
-  and it allows higher service rate limits compared to anonymous users.
+.. note::
+  The use of the Tower access token is not mandatory, however, it's recommended to enable the access of private container repositories
+  and to allow the pull of public containers without being affected by service rate limits.
+  Credentials should be made available to Wave using the `credentials manager feature <https://help.tower.nf/latest/credentials/registry_credentials/>`_
+  in your Tower account.
 
 Use cases
 =========
@@ -47,10 +48,10 @@ Use cases
 Authenticate private repositories
 ---------------------------------
 
-Wave allows the use of private repositories in your Nextflow pipelines. The repository access keys need to be provided
-via the `Nextflow Tower credentials <https://help.tower.nf/latest/credentials/registry_credentials/>`_ manager feature.
+Wave allows the use of private repositories in your Nextflow pipelines. The repository access keys must be provided
+in the form of `Nextflow Tower credentials <https://help.tower.nf/latest/credentials/registry_credentials/>`_.
 
-Once the credentials have been created, you only need to specify your `Tower account access token <https://help.tower.nf/latest/api/overview/#authentication>`_
+Once the credentials have been created, simply specify your `Tower account access token <https://help.tower.nf/latest/api/overview/#authentication>`_
 in your pipeline configuration file. If the credentials were created in a Tower organization workspace, specify the workspace ID
 as well in the config file as shown below::
 
@@ -66,7 +67,7 @@ Wave can build and provision container images on-demand for your Nextflow pipeli
 
 To enable this feature, add the Dockerfile of the container to be built in the :ref:`module directory <dsl2-module-directory>`
 where the pipeline process is defined. When Wave is enabled, it automatically uses the Dockerfile to build the required container,
-upload to the registry, and uses the container to carry out the tasks defined in the module.
+upload to the registry, and use the container to carry out the tasks defined in the module.
 
 .. tip::
  Make sure the process does not declare a ``container`` directive, otherwise it will take precedence over
@@ -77,10 +78,10 @@ the module directory, add the following setting to the pipeline config file::
 
    wave.strategy = ['dockerfile','container']
 
-The above line instructs Wave to give the module Dockerfile priority over process ``container`` directives.
+This instructs Wave to prioritize the module Dockerfile over process ``container`` directives.
 
 .. warning::
- Wave currently does not support ``ADD``, ``COPY`` and other Dockerfile commands that access files in the host
+ When building containers, Wave currently does not support ``ADD``, ``COPY`` and other Dockerfile commands that access files in the host
  file system.
 
 Build Conda-based containers
@@ -88,23 +89,22 @@ Build Conda-based containers
 
 Wave allows the provisioning of containers based on the :ref:`process-conda` directive used by the processes in your
 pipeline. This is a quick alternative to building Conda packages in the local computer. Moreover, this enables the use of
-Conda packages in your pipeline when deploying it in cloud-native platforms such as AWS Batch and Kubernetes,
+Conda packages in your pipeline when deploying in cloud-native platforms such as AWS Batch and Kubernetes,
 which do not allow the (easy) use of the Conda package manager.
 
-With Wave enabled in your pipeline, you need only to define the ``conda`` requirements in
+With Wave enabled in your pipeline, simply define the ``conda`` requirements in
 the pipeline processes, provided the same process does not also specify a ``container`` directive or a Dockerfile.
 
 In the latter case, add the following setting to your pipeline configuration::
 
    wave.strategy = ['conda']
 
-The above setting instructs Wave to only use the ``conda`` directive to provision the pipeline containers, ignoring the use of
-the ``container`` directive and any Dockerfile(s).
+The above setting instructs Wave to use the ``conda`` directive to provision the pipeline containers and ignore the ``container`` directive and any Dockerfile(s).
 
 Push to a private repository
 ----------------------------
 
-Containers built by Wave are uploaded to the Wave default repository hosted on AWS ECR with name
+Containers built by Wave are uploaded to the Wave default repository hosted on AWS ECR at
 ``195996028523.dkr.ecr.eu-west-1.amazonaws.com/wave/build``. The images in this repository are automatically deleted 1 week after the date of their push.
 
 If you want to store Wave containers in your own container repository, use the following settings in
@@ -115,8 +115,18 @@ the Nextflow configuration file::
 
 The first repository is used to store the built container images. The second one is used to store the individual image layers for caching purposes.
 
-The repository access keys need to be specified using the Tower credentials manager, per the
-`Authenticate private repositories`_ section above.
+The repository access keys must be provided as Tower credentials (see
+`Authenticate private repositories`_ above).
+
+Run pipelines using Fusion file system
+--------------------------------------
+
+Wave containers allows you to run your containerised workflow the :ref:`fusion-page`.
+
+This enables the use of an object storage bucket such as AWS S3 or Google Storage as your pipeline work directory,
+simplifying and speeding up most operations on local, AWS Batch, Google Batch or Kubernetes execution.
+
+See :ref:`Fusion documentation<fusion-page>` for more details.
 
 
 Advanced settings
@@ -129,14 +139,15 @@ Name                                           Description
 ============================================== =================
 wave.enabled                                    Enable/disable the execution of Wave containers
 wave.endpoint                                   The Wave service endpoint (default: ``https://wave.seqera.io``)
-wave.build.repository                           The container repository where images built by Wave need to be uploaded (note: the corresponding credentials need to be provided in your Nextflow Tower account).
-wave.build.cacheRepository                      The container repository used to cache image layers built by the Wave service (note: the corresponding credentials need to be provided in your Nextflow Tower account).
+wave.build.repository                           The container repository where images built by Wave are uploaded (note: the corresponding credentials must be provided in your Nextflow Tower account).
+wave.build.cacheRepository                      The container repository used to cache image layers built by the Wave service (note: the corresponding credentials must be provided in your Nextflow Tower account).
 wave.conda.mambaImage                           The Mamba container image is used to build the Conda-based container. This is expected to be the `micromamba-docker <https://github.com/mamba-org/micromamba-docker>`_ image.
 wave.conda.commands                             One or more commands to be added to the Dockerfile used to build a Conda-based image.
+wave.conda.basePackages                         One or more Conda packages that should always added in the resulting container e.g. ``conda-forge::procps-ng``.
 wave.strategy                                   The strategy to be used when resolving ambiguous Wave container requirements (default: ``'container,dockerfile,conda'``)
 ============================================== =================
 
 More examples
 ---------------
 
-Check out the `Wave showcase repository <https://github.com/seqeralabs/wave-showcase>`_ for more examples how to use Wave containers.
+See the `Wave showcase repository <https://github.com/seqeralabs/wave-showcase>`_ for more Wave containers configuration examples.
