@@ -1180,6 +1180,10 @@ The following caveats apply when using temporary outputs:
 - A temporary output should not be forwarded by a downstream process using the ``includeInputs`` option. In this case, the temporary
   output will be cleaned prematurely, and any process that consumes the forwarded output channel may fail or produce incorrect output.
 
+- If a file captured by a temporary output path is also captured by a regular output path, it will still be treated as a temporary
+  file. While it is safe to declare multiple output channels in this way, if the regular output path is also published, it may lead
+  to some workflow outputs being empty.
+
 - Directories and remote paths (e.g. S3) are not currently supported.
 
 
