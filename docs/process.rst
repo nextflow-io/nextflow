@@ -1026,6 +1026,7 @@ Name                Description
 ``type``            Type of paths returned, either ``file``, ``dir`` or ``any`` (default: ``any``, or ``file`` if the specified file name pattern contains a double star (``**``))
 ``maxDepth``        Maximum number of directory levels to visit (default: no limit)
 ``includeInputs``   When ``true`` any input files matching an output file glob pattern are included.
+``temporary``       When ``true`` the file will be "emptied" once it is no longer needed by downstream tasks.
 ================== =====================
 
 The parenthesis are optional for input and output qualifiers, but when you want to set an additional option and there
@@ -1148,6 +1149,38 @@ on the actual value of the ``species`` input.
 
   To sum up, the use of output files with static names over dynamic ones is preferable whenever possible,
   because it will result in simpler and more portable code.
+
+
+Temporary output files
+----------------------
+
+.. warning::
+  This feature is experimental and may change in a future release.
+
+When ``path`` output is declared with ``temporary: true``, any file associated with this output will be automatically "emptied"
+during pipeline execution, as soon as it is no longer needed by downstream tasks. This feature is useful for deleting large
+intermediate files that can be discarded once a pipeline run is finished.
+
+The lifetime of a temporary file is determined by the processes that are downstream of the file's originating process,
+either directly or indirectly through channel operators. When all of these processes finish (i.e. all of their tasks finish),
+all temporary files produced by the original process can be deleted.
+
+"Emptying" a file means that the file contents are deleted, but the file metadata (size, last modified timestamp) is preserved,
+such that it will be cached on a resumed run.
+
+The following caveats apply when using temporary outputs:
+
+- A pipeline run with temporary outputs should not be resumed if any regular downstream outputs have also been deleted. If a
+  temporary output is cached but a downstream output is not cached (e.g. because it was deleted or the process script was modified),
+  the downstream task will fail or produce incorrect output.
+
+- Temporary outputs will not be cached when the ``cache`` directive is set to ``'deep'``, because this mode includes the file
+  contents in the cache key.
+
+- A temporary output should not be forwarded by a downstream process using the ``includeInputs`` option. In this case, the temporary
+  output will be cleaned prematurely, and any process that consumes the forwarded output channel may fail or produce incorrect output.
+
+- Directories and remote paths (e.g. S3) are not currently supported.
 
 
 .. _process-env:
