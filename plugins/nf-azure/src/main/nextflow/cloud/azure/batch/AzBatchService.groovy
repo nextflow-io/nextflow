@@ -402,6 +402,11 @@ class AzBatchService implements Closeable {
             for( Map.Entry<String,String> it : launcher.fusionEnv() ) {
                 opts += "-e $it.key=$it.value "
             }
+
+            String sasToken  = config.storage().sasToken
+            String storageAccountName  = config.storage().accountName
+            opts += "-e AZURE_STORAGE_SAS_TOKEN=$sasToken -e AZURE_STORAGE_ACCOUNT=$storageAccountName "
+
         }
         // config overall container settings
         final containerOpts = new TaskContainerSettings()
