@@ -67,8 +67,8 @@ class FusionHelperTest extends Specification {
         [engine:'docker']       | [:]               | 'image:1'     | ['echo', 'hello']     | "docker run -i --rm --privileged image:1 echo 'hello'"
         [engine:'docker']       | [FOO:'one']       | 'image:2'     | ['echo', 'hello']     | "docker run -i -e \"FOO=one\" --rm --privileged image:2 echo 'hello'"
         and:
-        [engine:'singularity']  | [:]               | 'image:1'     | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} singularity exec image:1 echo 'hello'"
-        [engine:'singularity']  | [FOO:'one']       | 'image:1'     | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=one singularity exec image:1 echo 'hello'"
+        [engine:'singularity']  | [:]               | 'image:1'     | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} singularity exec --pid image:1 echo 'hello'"
+        [engine:'singularity']  | [FOO:'one']       | 'image:1'     | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=one singularity exec --pid image:1 echo 'hello'"
 
     }
 
