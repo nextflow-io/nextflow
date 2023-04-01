@@ -243,7 +243,7 @@ configuration options.
     The pool name can only contain alphanumeric, hyphen and underscore characters.
 
 .. warning::
-   If the pool name includes a hyphen, make sure to wrap it with single quotes. For example ::
+   If the pool name includes a hyphen, make sure to wrap it with single quotes. For example::
 
 
     azure {
