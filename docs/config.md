@@ -95,37 +95,92 @@ aws {
 
 See [AWS Security Credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html) for more information.
 
-Advanced client configuration options can be set using the `client` attribute. The following properties can be used:
+Advanced client configuration options can be set using the `client` attribute. The following options are available:
 
-| Name                     | Description                                                                                                                                                                                                                                                                                                                                                                  |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| anonymous                | Allow the access of public S3 buckets without the need to provide AWS credentials. Any service that does not accept unsigned requests will return a service access error.                                                                                                                                                                                                    |
-| s3Acl                    | Allow the setting of predefined bucket permissions, also known as *canned ACL*. Permitted values are `Private`, `PublicRead`, `PublicReadWrite`, `AuthenticatedRead`, `LogDeliveryWrite`, `BucketOwnerRead`, `BucketOwnerFullControl`, and `AwsExecRead`. See [Amazon docs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl) for details. |
-| connectionTimeout        | The amount of time to wait (in milliseconds) when initially establishing a connection before timing out.                                                                                                                                                                                                                                                                     |
-| endpoint                 | The AWS S3 API entry point e.g. `s3-us-west-1.amazonaws.com`.                                                                                                                                                                                                                                                                                                                |
-| glacierAutoRetrieval     | Enable auto retrieval of S3 objects stored with Glacier class store (EXPERIMENTAL. default: `false`, requires version `22.12.0-edge` or later).                                                                                                                                                                                                                              |
-| glacierExpirationDays    | The time, in days, between when an object is restored to the bucket and when it expires (EXPERIMENTAL. default: `7`, requires version `22.12.0-edge` or later).                                                                                                                                                                                                              |
-| glacierRetrievalTier     | The retrieval tier to use when restoring objects from Glacier, one of [`Expedited`, `Standard`, `Bulk`] (EXPERIMENTAL. requires version `23.03.0-edge` or later).                                                                                                                                                                                                            |
-| maxConnections           | The maximum number of allowed open HTTP connections.                                                                                                                                                                                                                                                                                                                         |
-| maxErrorRetry            | The maximum number of retry attempts for failed retryable requests.                                                                                                                                                                                                                                                                                                          |
-| protocol                 | The protocol (i.e. HTTP or HTTPS) to use when connecting to AWS.                                                                                                                                                                                                                                                                                                             |
-| proxyHost                | The proxy host to connect through.                                                                                                                                                                                                                                                                                                                                           |
-| proxyPort                | The port on the proxy host to connect through.                                                                                                                                                                                                                                                                                                                               |
-| proxyUsername            | The user name to use when connecting through a proxy.                                                                                                                                                                                                                                                                                                                        |
-| proxyPassword            | The password to use when connecting through a proxy.                                                                                                                                                                                                                                                                                                                         |
-| s3PathStyleAccess        | Enable the use of path-based access model that is used to specify the address of an object in S3-compatible storage systems.                                                                                                                                                                                                                                                 |
-| signerOverride           | The name of the signature algorithm to use for signing requests made by the client.                                                                                                                                                                                                                                                                                          |
-| socketSendBufferSizeHint | The Size hint (in bytes) for the low level TCP send buffer.                                                                                                                                                                                                                                                                                                                  |
-| socketRecvBufferSizeHint | The Size hint (in bytes) for the low level TCP receive buffer.                                                                                                                                                                                                                                                                                                               |
-| socketTimeout            | The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out.                                                                                                                                                                                                                             |
-| storageEncryption        | The S3 server side encryption to be used when saving objects on S3, either `AES256` or `aws:kms` values are allowed.                                                                                                                                                                                                                                                         |
-| storageKmsKeyId          | The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket (requires version `22.05.0-edge` or later).                                                                                                                                                                                                                                                    |
-| userAgent                | The HTTP user agent header passed with all HTTP requests.                                                                                                                                                                                                                                                                                                                    |
-| uploadMaxThreads         | The maximum number of threads used for multipart upload.                                                                                                                                                                                                                                                                                                                     |
-| uploadChunkSize          | The size of a single part in a multipart upload (default: `100 MB`).                                                                                                                                                                                                                                                                                                         |
-| uploadStorageClass       | The S3 storage class applied to stored objects, one of \[`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`\] (default: `STANDARD`).                                                                                                                                                                                                                             |
-| uploadMaxAttempts        | The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).                                                                                                                                                                                                                                                                        |
-| uploadRetrySleep         | The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).                                                                                                                                                                                                                                                                                  |
+`aws.client.anonymous`
+: Allow the access of public S3 buckets without the need to provide AWS credentials. Any service that does not accept unsigned requests will return a service access error.
+
+`aws.client.s3Acl`
+: Allow the setting of predefined bucket permissions, also known as *canned ACL*. Permitted values are `Private`, `PublicRead`, `PublicReadWrite`, `AuthenticatedRead`, `LogDeliveryWrite`, `BucketOwnerRead`, `BucketOwnerFullControl`, and `AwsExecRead`. See [Amazon docs](https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl) for details.
+
+`aws.client.connectionTimeout`
+: The amount of time to wait (in milliseconds) when initially establishing a connection before timing out.
+
+`aws.client.endpoint`
+: The AWS S3 API entry point e.g. `s3-us-west-1.amazonaws.com`.
+
+`aws.client.glacierAutoRetrieval`
+: *EXPERIMENTAL. Requires version `22.12.0-edge` or later*
+: Enable auto retrieval of S3 objects stored with Glacier class store (default: `false`).
+
+`aws.client.glacierExpirationDays`
+: *EXPERIMENTAL. Requires version `22.12.0-edge` or later*
+: The time, in days, between when an object is restored to the bucket and when it expires (default: `7`).
+
+`aws.client.glacierRetrievalTier`
+: *EXPERIMENTAL. Requires version `23.03.0-edge` or later*
+: The retrieval tier to use when restoring objects from Glacier, one of [`Expedited`, `Standard`, `Bulk`].
+
+`aws.client.maxConnections`
+: The maximum number of allowed open HTTP connections.
+
+`aws.client.maxErrorRetry`
+: The maximum number of retry attempts for failed retryable requests.
+
+`aws.client.protocol`
+: The protocol (i.e. HTTP or HTTPS) to use when connecting to AWS.
+
+`aws.client.proxyHost`
+: The proxy host to connect through.
+
+`aws.client.proxyPort`
+: The port on the proxy host to connect through.
+
+`aws.client.proxyUsername`
+: The user name to use when connecting through a proxy.
+
+`aws.client.proxyPassword`
+: The password to use when connecting through a proxy.
+
+`aws.client.s3PathStyleAccess`
+: Enable the use of path-based access model that is used to specify the address of an object in S3-compatible storage systems.
+
+`aws.client.signerOverride`
+: The name of the signature algorithm to use for signing requests made by the client.
+
+`aws.client.socketSendBufferSizeHint`
+: The Size hint (in bytes) for the low level TCP send buffer.
+
+`aws.client.socketRecvBufferSizeHint`
+: The Size hint (in bytes) for the low level TCP receive buffer.
+
+`aws.client.socketTimeout`
+: The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out.
+
+`aws.client.storageEncryption`
+: The S3 server side encryption to be used when saving objects on S3, either `AES256` or `aws:kms` values are allowed.
+
+`aws.client.storageKmsKeyId`
+: *Requires version `22.05.0-edge` or later*
+: The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket ().
+
+`aws.client.userAgent`
+: The HTTP user agent header passed with all HTTP requests.
+
+`aws.client.uploadMaxThreads`
+: The maximum number of threads used for multipart upload.
+
+`aws.client.uploadChunkSize`
+: The size of a single part in a multipart upload (default: `100 MB`).
+
+`aws.client.uploadStorageClass`
+: The S3 storage class applied to stored objects, one of \[`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`\] (default: `STANDARD`).
+
+`aws.client.uploadMaxAttempts`
+: The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
+
+`aws.client.uploadRetrySleep`
+: The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
 
 For example:
 
@@ -142,21 +197,169 @@ aws {
 
 (config-aws-batch)=
 
-Advanced Batch configuration options can be set by using the `batch` attribute. The following properties can be used (required version `19.07.0` or later):
+Advanced Batch configuration options can be set by using the `batch` attribute. The following options are available:
 
-| Name                 | Description                                                                                                                                                                                                                        |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| cliPath              | The path where the AWS command line tool is installed in the host AMI.                                                                                                                                                             |
-| jobRole              | The AWS Job Role ARN that needs to be used to execute the Batch Job.                                                                                                                                                               |
-| logsGroup            | The name of the logs group used by Batch Jobs (default: `/aws/batch`, requires `22.09.0-edge` or later).                                                                                                                           |
-| volumes              | One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. `/host/path:/mount/path[:ro|rw]`. Multiple mounts can be specified separating them with a comma or using a list object. |
-| delayBetweenAttempts | Delay between download attempts from S3 (default `10 sec`).                                                                                                                                                                        |
-| maxParallelTransfers | Max parallel upload/download transfer operations *per job* (default: `4`).                                                                                                                                                         |
-| maxTransferAttempts  | Max number of downloads attempts from S3 (default: `1`).                                                                                                                                                                           |
-| maxSpotAttempts      | Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: `5`, requires `22.04.0` or later)                                                                                                      |
-| retryMode            | The retry mode configuration setting, to accommodate rate-limiting on [AWS services](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html) (default: `standard`)                                            |
-| schedulingPriority   | The scheduling priority for all tasks when using [fair-share scheduling for AWS Batch](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/) (default: `0`, requires `23.01.0-edge` or later)         |
-| shareIdentifier      | The share identifier for all tasks when using [fair-share scheduling for AWS Batch](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/) (requires `22.09.0-edge` or later)                          |
+`aws.batch.cliPath`
+: The path where the AWS command line tool is installed in the host AMI.
+
+`aws.batch.jobRole`
+: The AWS Job Role ARN that needs to be used to execute the Batch Job.
+
+`aws.batch.logsGroup`
+: *Requires version `22.09.0-edge` or later*
+: The name of the logs group used by Batch Jobs (default: `/aws/batch`).
+
+`aws.batch.volumes`
+: One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. `/host/path:/mount/path[:ro|rw]`. Multiple mounts can be specified separating them with a comma or using a list object.
+
+`aws.batch.delayBetweenAttempts`
+: Delay between download attempts from S3 (default: `10 sec`).
+
+`aws.batch.maxParallelTransfers`
+: Max parallel upload/download transfer operations *per job* (default: `4`).
+
+`aws.batch.maxTransferAttempts`
+: Max number of downloads attempts from S3 (default: `1`).
+
+`aws.batch.maxSpotAttempts`
+: *Requires version `22.04.0` or later*
+: Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: `5`)
+
+`aws.batch.retryMode`
+: The retry mode configuration setting, to accommodate rate-limiting on [AWS services](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html) (default: `standard`)
+
+`aws.batch.schedulingPriority`
+: *Requires `23.01.0-edge` or later*
+: The scheduling priority for all tasks when using [fair-share scheduling for AWS Batch](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/) (default: `0`)
+
+`aws.batch.shareIdentifier`
+: *Requires `22.09.0-edge` or later*
+: The share identifier for all tasks when using [fair-share scheduling for AWS Batch](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/)
+
+(config-azure)=
+
+### Scope `azure`
+
+The `azure` scope allows you to configure the interactions with {ref}`azure-page`.
+
+`azure.activeDirectory.servicePrincipalId`
+: The service principal client ID
+
+`azure.activeDirectory.servicePrincipalSecret`
+: The service principal client secret
+
+`azure.activeDirectory.tenantId`
+: The Azure tenant ID
+
+`azure.storage.accountName`
+: The blob storage account name
+
+`azure.storage.accountKey`
+: The blob storage account key
+
+`azure.storage.sasToken`
+: The blob storage shared access signature token. This can be provided as an alternative to the `accountKey` setting.
+
+`azure.storage.tokenDuration`
+: The duration of the shared access signature token created by Nextflow when the `sasToken` option is *not* specified (default: `48h`).
+
+`azure.batch.accountName`
+: The batch service account name.
+
+`azure.batch.accountKey`
+: The batch service account key.
+
+`azure.batch.endpoint`
+: The batch service endpoint e.g. `https://nfbatch1.westeurope.batch.azure.com`.
+
+`azure.batch.location`
+: The name of the batch service region, e.g. `westeurope` or `eastus2`. This is not needed when the endpoint is specified.
+
+`azure.batch.autoPoolMode`
+: Enable the automatic creation of batch pools depending on the pipeline resources demand (default: `true`).
+
+`azure.batch.allowPoolCreation`
+: Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: `false`).
+
+`azure.batch.deleteJobsOnCompletion`
+: Enable the automatic deletion of jobs created by the pipeline execution (default: `true`).
+
+`azure.batch.deletePoolsOnCompletion`
+: Enable the automatic deletion of compute node pools upon pipeline completion (default: `false`).
+
+`azure.batch.copyToolInstallMode`
+: Specify where the `azcopy` tool used by Nextflow. When `node` is specified it's copied once during the pool creation. When `task` is provider, it's installed for each task execution (default: `node`).
+
+`azure.batch.pools.<name>.publisher`
+: *Requires `nf-azure@0.11.0`*
+: Specify the publisher of virtual machine type used by the pool identified with `<name>` (default: `microsoft-azure-batch`).
+
+`azure.batch.pools.<name>.offer`
+: *Requires `nf-azure@0.11.0`*
+: Specify the offer type of the virtual machine type used by the pool identified with `<name>` (default: `centos-container`).
+
+`azure.batch.pools.<name>.sku`
+: *Requires `nf-azure@0.11.0`*
+: Specify the ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
+
+`azure.batch.pools.<name>.vmType`
+: Specify the virtual machine type used by the pool identified with `<name>`.
+
+`azure.batch.pools.<name>.vmCount`
+: Specify the number of virtual machines provisioned by the pool identified with `<name>`.
+
+`azure.batch.pools.<name>.maxVmCount`
+: Specify the max of virtual machine when using auto scale option.
+
+`azure.batch.pools.<name>.autoScale`
+: Enable autoscaling feature for the pool identified with `<name>`.
+
+`azure.batch.pools.<name>.fileShareRootPath`
+: *Requires `nf-azure@0.11.0`*
+: If mounting File Shares, this is the internal root mounting point. Must be `/mnt/resource/batch/tasks/fsmounts` for CentOS nodes or `/mnt/batch/tasks/fsmounts` for Ubuntu nodes (default is for CentOS).
+
+`azure.batch.pools.<name>.scaleFormula`
+: Specify the scale formula for the pool identified with `<name>`. See Azure Batch [scaling documentation](https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling) for details.
+
+`azure.batch.pools.<name>.scaleInterval`
+: Specify the interval at which to automatically adjust the Pool size according to the autoscale formula. The minimum and maximum value are 5 minutes and 168 hours respectively (default: `10 mins`).
+
+`azure.batch.pools.<name>.schedulePolicy`
+: Specify the scheduling policy for the pool identified with `<name>`. It can be either `spread` or `pack` (default: `spread`).
+
+`azure.batch.pools.<name>.privileged`
+: Enable the task to run with elevated access. Ignored if `runAs` is set (default: `false`).
+
+`azure.batch.pools.<name>.runAs`
+: Specify the username under which the task is run. The user must already exist on each node of the pool.
+
+`azure.batch.pools.<name>.virtualNetwork`
+: *Requires Nextflow `23.03.0-edge` or later*
+: Specify the subnet ID of a virtual network in which to create the pool.
+
+`azure.registry.server`
+: *Requires `nf-azure@0.9.8`*
+: Specify the container registry from which to pull the Docker images (default: `docker.io`).
+
+`azure.registry.userName`
+: *Requires `nf-azure@0.9.8`*
+: Specify the username to connect to a private container registry.
+
+`azure.registry.password`
+: *Requires `nf-azure@0.9.8`*
+: Specify the password to connect to a private container registry.
+
+`azure.retryPolicy.delay`
+: Delay when retrying failed API requests (default: `500ms`).
+
+`azure.retryPolicy.maxDelay`
+: Max delay when retrying failed API requests (default: `60s`).
+
+`azure.retryPolicy.jitter`
+: Jitter value when retrying failed API requests (default: `0.25`).
+
+`azure.retryPolicy.maxAttempts`
+: Max attempts when retrying failed API requests (default: `10`).
 
 (config-charliecloud)=
 
@@ -911,7 +1114,7 @@ profiles {
 ```
 
 This configuration defines three different profiles: `standard`, `cluster`, and `cloud`, that each set different process
-configuration strategies depending on the target runtime platform. The `standard` profile is used by default when no profile is specified. 
+configuration strategies depending on the target runtime platform. The `standard` profile is used by default when no profile is specified.
 
 :::{tip}
 Multiple configuration profiles can be specified by separating the profile names with a comma, for example:
