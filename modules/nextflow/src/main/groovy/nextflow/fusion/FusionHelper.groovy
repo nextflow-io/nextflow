@@ -27,6 +27,7 @@ import nextflow.container.ContainerBuilder
 import nextflow.container.ContainerConfig
 import nextflow.extension.FilesEx
 import nextflow.io.BucketParser
+
 /**
  * Helper method to handle fusion common logic
  *
