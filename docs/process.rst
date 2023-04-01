@@ -1157,34 +1157,24 @@ Temporary output files
 .. warning::
   This feature is experimental and may change in a future release.
 
-When ``path`` output is declared with ``temporary: true``, any file associated with this output will be automatically "emptied"
-during pipeline execution, as soon as it is no longer needed by downstream tasks. This feature is useful for deleting large
-intermediate files that can be discarded once a pipeline run is finished.
+When a ``path`` output is declared with ``temporary: true``, any file associated with this output will be automatically deleted
+during pipeline execution, as soon as it is no longer needed by downstream tasks. This feature is useful for cleaning up large
+intermediate files in order to free up disk storage.
 
 The lifetime of a temporary file is determined by the processes that are downstream of the file's originating process,
 either directly or indirectly through channel operators. When all of these processes finish (i.e. all of their tasks finish),
 all temporary files produced by the original process can be deleted.
 
-"Emptying" a file means that the file contents are deleted, but the file metadata (size, last modified timestamp) is preserved,
-such that it will be cached on a resumed run.
-
 The following caveats apply when using temporary outputs:
 
-- A pipeline run with temporary outputs should not be resumed if any regular downstream outputs have also been deleted. If a
-  temporary output is cached but a downstream output is not cached (e.g. because it was deleted or the process script was modified),
-  the downstream task will fail or produce incorrect output.
-
-- Temporary outputs will not be cached when the ``cache`` directive is set to ``'deep'``, because this mode includes the file
-  contents in the cache key.
+- This feature will break the resumability of your pipeline. If you try to resume a run with temporary outputs, any tasks that
+  were cleaned will have to be re-run.
 
 - A temporary output should not be forwarded by a downstream process using the ``includeInputs`` option. In this case, the temporary
-  output will be cleaned prematurely, and any process that consumes the forwarded output channel may fail or produce incorrect output.
+  output will be deleted prematurely, and any process that consumes the forwarded output channel may fail or produce incorrect output.
 
 - If a file captured by a temporary output path is also captured by a regular output path, it will still be treated as a temporary
-  file. While it is safe to declare multiple output channels in this way, if the regular output path is also published, it may lead
-  to some workflow outputs being empty.
-
-- Directories and remote paths (e.g. S3) are not currently supported.
+  file. Declare multiple output channels in this way is safe to do as long as the regular output path isn't also published.
 
 
 .. _process-env:

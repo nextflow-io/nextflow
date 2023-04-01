@@ -26,6 +26,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.dag.DAG
 import nextflow.dag.ConcreteDAG
+import nextflow.extension.FilesEx
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.script.params.FileOutParam
@@ -146,32 +147,20 @@ class TemporaryFileObserver implements TraceObserver {
             if( consumers.isEmpty() ) {
                 log.trace "All consumers of process ${producer} are complete, time to clean up temporary files"
 
-                cleanTemporaryFiles(status.paths)
+                deleteTemporaryFiles(status.paths)
                 statusMap.remove(producer)
             }
         }
     }
 
-    void cleanTemporaryFiles(Collection<Path> paths) {
+    void deleteTemporaryFiles(Collection<Path> paths) {
         for( Path path : paths ) {
             log.trace "Cleaning temporary file: ${path}"
 
-            // get original file metadata
-            final attrs = Files.readAttributes(path, BasicFileAttributes.class)
-
-            // delete file contents
-            try {
-                final file = new RandomAccessFile(path.toFile(), 'rw')
-                file.setLength(0)
-                file.setLength(attrs.size())
-                file.close()
-            }
-            catch( UnsupportedOperationException e ) {
-                log.warn "Unable to truncate file, skipping: ${path.toUriString()}"
-            }
-
-            // restore original file metadata
-            Files.setLastModifiedTime(path, attrs.lastModifiedTime())
+            if( Files.isDirectory(path) )
+                FilesEx.deleteDir(path)
+            else
+                Files.delete(path)
         }
     }
 
