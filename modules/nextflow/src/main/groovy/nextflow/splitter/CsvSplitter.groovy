@@ -185,55 +185,61 @@ class CsvSplitter extends AbstractTextSplitter {
         if( !columnsHeader )
             return tokens
 
+        if( columnTypes && columnTypes.size() != tokens.size() )
+            throw new IllegalArgumentException("The number of column types should match the number of csv columns. Provided types: ${columnTypes}")
+
         def map = [:]
-        for( int i=0; i<columnsHeader.size(); i++ ) {
-            if (typesAuto) {
-                map[columnsHeader[i]] = i < tokens.size() ? inferValueType(tokens[i]) : null
-            } else if (columnTypes) {
-                if (columnTypes.size() != tokens.size()) {
-                    throw new IllegalArgumentException("Parameter types should have the same length as number of csv columns. Provided types: ${columnTypes}")
-                } else {
-                    map[columnsHeader[i]] = i < tokens.size() ? castValueType(tokens[i], columnTypes[i]) : null
-                }
-            } else {
-                map[columnsHeader[i]] = i < tokens.size() ? tokens[i] : null
-            }
+        for( int i = 0; i < tokens.size(); i++ ) {
+            if( typesAuto )
+                map[columnsHeader[i]] = inferValueType(tokens[i])
+            else if( columnTypes )
+                map[columnsHeader[i]] = castValueType(tokens[i], columnTypes[i])
+            else
+                map[columnsHeader[i]] = tokens[i]
         }
+
+        for( int i = tokens.size(); i < columnsHeader.size(); i++ )
+            map[columnsHeader[i]] = null
 
         return map
     }
 
     /**
      * Infer a value to its variable type
+     *
+     * @param str
      * @return The value casted to its primitive type
      */
-    static protected inferValueType(String str ) {
+    static protected inferValueType(String str) {
 
-        if ( str == null || str == "" ) return null
+        if( str == null || str == "" ) return null
 
-        if ( str.toLowerCase() == 'true') return Boolean.TRUE
-        if ( str.toLowerCase() == 'false' ) return Boolean.FALSE
+        if( str.toLowerCase() == 'true') return Boolean.TRUE
+        if( str.toLowerCase() == 'false' ) return Boolean.FALSE
 
-        if ( str==~/\d+(\.\d+)?/ && str.isInteger() ) return str.toInteger()
-        if ( str==~/\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
-        if ( str==~/\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
+        if( str==~/\d+(\.\d+)?/ && str.isInteger() ) return str.toInteger()
+        if( str==~/\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
+        if( str==~/\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
 
         return str
     }
 
     /**
      * Cast a value to the provided type
+     *
+     * @param str
+     * @param type
      * @return The value casted to its primitive type
      */
-    static protected castValueType(String str, String type ) {
+    static protected castValueType(String str, String type) {
 
-        if ( type.toLowerCase() == 'boolean' ) return str.toBoolean()
-        if ( type.toLowerCase() == 'character' ) return str.toCharacter()
-        if ( type.toLowerCase() == 'short' ) return str.toShort()
-        if ( type.toLowerCase() == 'integer' ) return str.toInteger()
-        if ( type.toLowerCase() == 'long' ) return str.toLong()
-        if ( type.toLowerCase() == 'float' ) return str.toFloat()
-        if ( type.toLowerCase() == 'double' ) return str.toDouble()
+        if( type.toLowerCase() == 'boolean' ) return str.toBoolean()
+        if( type.toLowerCase() == 'character' ) return str.toCharacter()
+        if( type.toLowerCase() == 'short' ) return str.toShort()
+        if( type.toLowerCase() == 'integer' ) return str.toInteger()
+        if( type.toLowerCase() == 'long' ) return str.toLong()
+        if( type.toLowerCase() == 'float' ) return str.toFloat()
+        if( type.toLowerCase() == 'double' ) return str.toDouble()
 
         return str
     }
