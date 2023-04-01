@@ -338,8 +338,6 @@ class ScriptMeta {
     ResourcesBundle getModuleBundle() {
         if( !scriptPath )
             throw new IllegalStateException("Module scriptPath has not been defined yet")
-        if( scriptPath.getName()!='main.nf' )
-            return null
         final bundlePath = scriptPath.resolveSibling('resources')
         return ResourcesBundle.scan(bundlePath)
     }
