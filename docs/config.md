@@ -78,6 +78,43 @@ beta {
 }
 ```
 
+(config-apptainer)=
+
+### Scope `apptainer`
+
+The `apptainer` scope controls how [Apptainer](https://apptainer.org) containers are executed by Nextflow.
+
+The following settings are available:
+
+`apptainer.enabled`
+: Set this flag to `true` to enable Apptainer execution (default: `false`).
+
+`apptainer.engineOptions`
+: This attribute can be used to provide any option supported by the Apptainer engine i.e. `apptainer [OPTIONS]`.
+
+`apptainer.envWhitelist`
+: Comma separated list of environment variable names to be included in the container environment.
+
+`apptainer.runOptions`
+: This attribute can be used to provide any extra command line options supported by `apptainer exec`.
+
+`apptainer.noHttps`
+: Set this flag to `true` to pull the Apptainer image with http protocol (default: `false`).
+
+`apptainer.autoMounts`
+: When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Apptainer installation (default: `false`).
+
+`apptainer.cacheDir`
+: The directory where remote Apptainer images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+
+`apptainer.pullTimeout`
+: The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20 min`).
+
+`apptainer.registry`
+: The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+Read the {ref}`container-apptainer` page to learn more about how to use Apptainer containers with Nextflow.
+
 (config-aws)=
 
 ### Scope `aws`
@@ -95,7 +132,20 @@ aws {
 
 See [AWS Security Credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html) for more information.
 
-Advanced client configuration options can be set using the `client` attribute. The following options are available:
+Advanced client configuration options can be set using the `client` attribute. For example:
+
+```groovy
+aws {
+    client {
+        maxConnections = 20
+        connectionTimeout = 10000
+        uploadStorageClass = 'INTELLIGENT_TIERING'
+        storageEncryption = 'AES256'
+    }
+}
+```
+
+The following settings are available:
 
 `aws.client.anonymous`
 : Allow the access of public S3 buckets without the need to provide AWS credentials. Any service that does not accept unsigned requests will return a service access error.
@@ -182,22 +232,9 @@ Advanced client configuration options can be set using the `client` attribute. T
 `aws.client.uploadRetrySleep`
 : The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
 
-For example:
-
-```groovy
-aws {
-    client {
-        maxConnections = 20
-        connectionTimeout = 10000
-        uploadStorageClass = 'INTELLIGENT_TIERING'
-        storageEncryption = 'AES256'
-    }
-}
-```
-
 (config-aws-batch)=
 
-Advanced Batch configuration options can be set by using the `batch` attribute. The following options are available:
+Advanced Batch configuration options can be set by using the `batch` attribute. The following settings are available:
 
 `aws.batch.cliPath`
 : The path where the AWS command line tool is installed in the host AMI.
@@ -241,6 +278,8 @@ Advanced Batch configuration options can be set by using the `batch` attribute. 
 ### Scope `azure`
 
 The `azure` scope allows you to configure the interactions with {ref}`azure-page`.
+
+The following settings are available:
 
 `azure.activeDirectory.servicePrincipalId`
 : The service principal client ID
@@ -365,121 +404,126 @@ The `azure` scope allows you to configure the interactions with {ref}`azure-page
 
 ### Scope `charliecloud`
 
-The `charliecloud` configuration scope controls how [Charliecloud](https://hpc.github.io/charliecloud/) containers are executed by Nextflow.
+The `charliecloud` scope controls how [Charliecloud](https://hpc.github.io/charliecloud/) containers are executed by Nextflow.
 
 The following settings are available:
 
-| Name         | Description                                                                                                                                                           |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| enabled      | Turn this flag to `true` to enable Charliecloud execution (default: `false`).                                                                                         |
-| envWhitelist | Comma separated list of environment variable names to be included in the container environment.                                                                       |
-| temp         | Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created. |
-| runOptions   | This attribute can be used to provide any extra command line options supported by the `ch-run` command.                                                               |
-| cacheDir     | The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.                 |
-| pullTimeout  | The amount of time the Charliecloud pull can last, exceeding which the process is terminated (default: `20 min`).                                                     |
+`charliecloud.enabled`
+: Set this flag to `true` to enable Charliecloud execution (default: `false`).
 
-The above options can be used by prefixing them with the `charliecloud` scope or surrounding them by curly brackets, as shown below:
+`charliecloud.envWhitelist`
+: Comma separated list of environment variable names to be included in the container environment.
 
-```groovy
-process.container = 'nextflow/examples'
+`charliecloud.temp`
+: Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created.
 
-charliecloud {
-    enabled = true
-}
-```
+`charliecloud.runOptions`
+: This attribute can be used to provide any extra command line options supported by the `ch-run` command.
 
-Read {ref}`container-charliecloud` page to learn more about how to use Charliecloud containers with Nextflow.
+`charliecloud.cacheDir`
+: The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
 
-(config-cloud)=
+`charliecloud.pullTimeout`
+: The amount of time the Charliecloud pull can last, exceeding which the process is terminated (default: `20 min`).
 
-### Scope `cloud`
-
-:::{note}
-The `cloud` configuration scope is no longer used. See the platform-specific cloud executors instead.
-:::
+Read the {ref}`container-charliecloud` page to learn more about how to use Charliecloud containers with Nextflow.
 
 (config-conda)=
 
 ### Scope `conda`
 
-The `conda` scope allows for the definition of the configuration settings that control the creation of a Conda environment by the Conda package manager.
+The `conda` scope controls the creation of a Conda environment by the Conda package manager.
 
 The following settings are available:
 
-| Name          | Description                                                                                                                                                                                                                                 |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| cacheDir      | Defines the path where Conda environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.                                                                        |
-| createOptions | Defines any extra command line options supported by the `conda create` command. For details [Conda documentation](https://docs.conda.io/projects/conda/en/latest/commands/create.html).                                                     |
-| createTimeout | Defines the amount of time the Conda environment creation can last. The creation process is terminated when the timeout is exceeded (default: `20 min`).                                                                                    |
-| useMamba      | Uses the `mamba` binary instead of `conda` to create the Conda environments. For details [Mamba documentation](https://github.com/mamba-org/mamba).                                                                                         |
-| useMicromamba | uses the `micromamba` binary instead of `conda` to create the Conda environments (requires version `22.05.0-edge` or later). For details see [Micromamba documentation](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html). |
+`conda.cacheDir`
+: Defines the path where Conda environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.
+
+`conda.createOptions`
+: Defines any extra command line options supported by the `conda create` command. For details see the [Conda documentation](https://docs.conda.io/projects/conda/en/latest/commands/create.html).
+
+`conda.createTimeout`
+: Defines the amount of time the Conda environment creation can last. The creation process is terminated when the timeout is exceeded (default: `20 min`).
+
+`conda.useMamba`
+: Uses the `mamba` binary instead of `conda` to create the Conda environments. For details see the [Mamba documentation](https://github.com/mamba-org/mamba).
+
+`conda.useMicromamba`
+: *Requires version `22.05.0-edge` or later*
+: uses the `micromamba` binary instead of `conda` to create the Conda environments. For details see the [Micromamba documentation](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html).
+
+Read the {ref}`conda-page` page to learn more about how to use Conda environments with Nextflow.
 
 (config-dag)=
 
 ### Scope `dag`
 
-The `dag` scope allows you to control the layout of the execution graph diagram generated by Nextflow.
+The `dag` scope controls the layout of the execution graph diagram generated by Nextflow.
 
 The following settings are available:
 
-| Name      | Description                                                                                |
-| --------- | ------------------------------------------------------------------------------------------ |
-| enabled   | When `true` turns on the generation of the DAG file (default: `false`).                    |
-| file      | Graph file name (default: `dag-<timestamp>.dot`).                                          |
-| overwrite | When `true` overwrites any existing DAG file with the same name.                           |
+`dag.enabled`
+: When `true` turns on the generation of the DAG file (default: `false`).
 
-The above options can be used by prefixing them with the `dag` scope or surrounding them by curly brackets. For example:
+`dag.file`
+: Graph file name (default: `dag-<timestamp>.dot`).
 
-```groovy
-dag {
-    enabled = true
-    file = 'pipeline_dag.html'
-}
-```
+`dag.overwrite`
+: When `true` overwrites any existing DAG file with the same name.
 
-To learn more about the execution graph that can be generated by Nextflow read {ref}`dag-visualisation` documentation page.
+Read the {ref}`dag-visualisation` page to learn more about the execution graph that can be generated by Nextflow.
 
 (config-docker)=
 
 ### Scope `docker`
 
-The `docker` configuration scope controls how [Docker](https://www.docker.com) containers are executed by Nextflow.
+The `docker` scope controls how [Docker](https://www.docker.com) containers are executed by Nextflow.
 
 The following settings are available:
 
-| Name          | Description                                                                                                                                                                    |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| enabled       | Turn this flag to `true` to enable Docker execution (default: `false`).                                                                                                        |
-| envWhitelist  | Comma separated list of environment variable names to be included in the container environment.                                                                                |
-| legacy        | Uses command line options removed since version 1.10.x (default: `false`).                                                                                                     |
-| sudo          | Executes Docker run command as `sudo` (default: `false`).                                                                                                                      |
-| tty           | Allocates a pseudo-tty (default: `false`).                                                                                                                                     |
-| temp          | Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created.          |
-| remove        | Clean-up the container after the execution (default: `true`). For details see: <https://docs.docker.com/engine/reference/run/#clean-up---rm> .                                 |
-| runOptions    | This attribute can be used to provide any extra command line options supported by the `docker run` command. For details see: <https://docs.docker.com/engine/reference/run/> . |
-| registry      | The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.       |
-| fixOwnership  | Fixes ownership of files created by the docker container.                                                                                                                      |
-| engineOptions | This attribute can be used to provide any option supported by the Docker engine i.e. `docker [OPTIONS]`.                                                                       |
-| mountFlags    | Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`                                                                                                        |
+`docker.enabled`
+: Set this flag to `true` to enable Docker execution (default: `false`).
 
-The above options can be used by prefixing them with the `docker` scope or surrounding them by curly brackets, as shown below:
+`docker.envWhitelist`
+: Comma separated list of environment variable names to be included in the container environment.
 
-```groovy
-process.container = 'nextflow/examples'
+`docker.legacy`
+: Uses command line options removed since version 1.10.x (default: `false`).
 
-docker {
-    enabled = true
-    temp = 'auto'
-}
-```
+`docker.sudo`
+: Executes Docker run command as `sudo` (default: `false`).
 
-Read {ref}`container-docker` page to learn more about how to use Docker containers with Nextflow.
+`docker.tty`
+: Allocates a pseudo-tty (default: `false`).
+
+`docker.temp`
+: Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created.
+
+`docker.remove`
+: Clean-up the container after the execution (default: `true`). For details see: <https://docs.docker.com/engine/reference/run/#clean-up---rm> .
+
+`docker.runOptions`
+: This attribute can be used to provide any extra command line options supported by the `docker run` command. For details see: <https://docs.docker.com/engine/reference/run/> .
+
+`docker.registry`
+: The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+`docker.fixOwnership`
+: Fixes ownership of files created by the docker container.
+
+`docker.engineOptions`
+: This attribute can be used to provide any option supported by the Docker engine i.e. `docker [OPTIONS]`.
+
+`docker.mountFlags`
+: Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`
+
+Read the {ref}`container-docker` page to learn more about how to use Docker containers with Nextflow.
 
 (config-env)=
 
 ### Scope `env`
 
-The `env` scope allows the definition one or more variable that will be exported in the environment where the workflow tasks will be executed.
+The `env` scope allows the definition one or more variables that will be exported into the environment where workflow tasks are executed.
 
 Simply prefix your variable names with the `env` scope or surround them by curly brackets, as shown below:
 
@@ -505,29 +549,71 @@ The `env` scope provides environment variables to *tasks*, not Nextflow itself. 
 
 ### Scope `executor`
 
-The `executor` configuration scope allows you to set the optional executor settings, listed in the following table.
+The `executor` scope controls various executor behaviors.
 
-| Name              | Description                                                                                                                                                                                                                              |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| name              | The name of the executor to be used (default: `local`).                                                                                                                                                                                  |
-| queueSize         | The number of tasks the executor will handle in a parallel manner. Default varies for each executor (see below).                                                                                                                         |
-| submitRateLimit   | Determines the max rate of job submission per time unit, for example `'10sec'` (10 jobs per second) or `'50/2min'` (50 jobs every 2 minutes) (default: unlimited).                                                                       |
-| pollInterval      | Determines how often to check for process termination. Default varies for each executor (see below).                                                                                                                                     |
-| dumpInterval      | Determines how often to log the executor status (default: `5min`).                                                                                                                                                                       |
-| queueGlobalStatus | Determines how job status is retrieved. When `false` only the queue associated with the job execution is queried. When `true` the job status is queried globally i.e. irrespective of the submission queue (default: `false`, requires version `23.01.0-edge` or later). |
-| queueStatInterval | Determines how often to fetch the queue status from the scheduler (default: `1min`). Used only by grid executors.                                                                                                                        |
-| exitReadTimeout   | Determines how long to wait before returning an error status when a process is terminated but the `.exitcode` file does not exist or is empty (default: `270 sec`). Used only by grid executors.                                         |
-| killBatchSize     | Determines the number of jobs that can be killed in a single command execution (default: `100`).                                                                                                                                         |
-| perJobMemLimit    | Specifies Platform LSF *per-job* memory limit mode. See {ref}`lsf-executor`.                                                                                                                                                             |
-| perTaskReserve    | Specifies Platform LSF *per-task* memory reserve mode. See {ref}`lsf-executor`.                                                                                                                                                          |
-| jobName           | Determines the name of jobs submitted to the underlying cluster executor e.g. `executor.jobName = { "$task.name - $task.hash" }`. Make sure the resulting job name matches the validation constraints of the underlying batch scheduler. |
-| cpus              | The maximum number of CPUs made available by the underlying system. Used only by the `local` executor.                                                                                                                                   |
-| memory            | The maximum amount of memory made available by the underlying system. Used only by the `local` executor.                                                                                                                                 |
-| retry.delay       | Delay when retrying failed job submissions (default: `500ms`). NOTE: used only by grid executors (requires `22.03.0-edge` or later).                                                                                                     |
-| retry.maxDelay    | Max delay when retrying failed job submissions (default: `30s`). NOTE: used only by grid executors (requires `22.03.0-edge` or later).                                                                                                   |
-| retry.jitter      | Jitter value when retrying failed job submissions (default: `0.25`). NOTE: used only by grid executors (requires `22.03.0-edge` or later).                                                                                               |
-| retry.maxAttempts | Max attempts when retrying failed job submissions (default: `3`). NOTE: used only by grid executors (requires `22.03.0-edge` or later).                                                                                                  |
-| retry.reason      | Regex pattern that when verified cause a failed submit operation to be re-tried (default: `Socket timed out`). NOTE: used only by grid executors (requires `22.03.0-edge` or later).                                                     |
+The following settings are available:
+
+`executor.name`
+: The name of the executor to be used (default: `local`).
+
+`executor.queueSize`
+: The number of tasks the executor will handle in a parallel manner. Default varies for each executor (see below).
+
+`executor.submitRateLimit`
+: Determines the max rate of job submission per time unit, for example `'10sec'` (10 jobs per second) or `'50/2min'` (50 jobs every 2 minutes) (default: unlimited).
+
+`executor.pollInterval`
+: Determines how often to check for process termination. Default varies for each executor (see below).
+
+`executor.dumpInterval`
+: Determines how often to log the executor status (default: `5min`).
+
+`executor.queueGlobalStatu`
+: Determines how job status is retrieved. When `false` only the queue associated with the job execution is queried. When `true` the job status is queried globally i.e. irrespective of the submission queue (default: `false`, requires version `23.01.0-edge` or later).
+
+`executor.queueStatInterva`
+: Determines how often to fetch the queue status from the scheduler (default: `1min`). Used only by grid executors.
+
+`executor.exitReadTimeout`
+: Determines how long to wait before returning an error status when a process is terminated but the `.exitcode` file does not exist or is empty (default: `270 sec`). Used only by grid executors.
+
+`executor.killBatchSize`
+: Determines the number of jobs that can be killed in a single command execution (default: `100`).
+
+`executor.perJobMemLimit`
+: Specifies Platform LSF *per-job* memory limit mode. See {ref}`lsf-executor`.
+
+`executor.perTaskReserve`
+: Specifies Platform LSF *per-task* memory reserve mode. See {ref}`lsf-executor`.
+
+`executor.jobName`
+: Determines the name of jobs submitted to the underlying cluster executor e.g. `executor.jobName = { "$task.name - $task.hash" }`. Make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
+
+`executor.cpus`
+: The maximum number of CPUs made available by the underlying system. Used only by the `local` executor.
+
+`executor.memory`
+: The maximum amount of memory made available by the underlying system. Used only by the `local` executor.
+
+`executor.retry.delay`
+: *Requires `22.03.0-edge` or later*
+: Delay when retrying failed job submissions (default: `500ms`). Used only by grid executors.
+
+`executor.retry.maxDelay`
+: *Requires `22.03.0-edge` or later*
+: Max delay when retrying failed job submissions (default: `30s`). Used only by grid executors.
+
+`executor.retry.jitter`
+: *Requires `22.03.0-edge` or later*
+: Jitter value when retrying failed job submissions (default: `0.25`). Used only by grid executors.
+
+`executor.retry.maxAttempt`
+: *Requires `22.03.0-edge` or later*
+: Max attempts when retrying failed job submissions (default: `3`). Used only by grid executors.
+
+`executor.retry.reason`
+: *Requires `22.03.0-edge` or later*
+: Regex pattern that when verified cause a failed submit operation to be re-tried (default: `Socket timed out`). Used only by grid executors.
 
 Some executor settings have different default values depending on the executor.
 
@@ -579,56 +665,110 @@ executor.$local.memory = '32 GB'
 
 ### Scope `k8s`
 
-The `k8s` scope allows the definition of the configuration settings that control the deployment and execution of workflow applications in a Kubernetes cluster.
+The `k8s` scope controls the deployment and execution of workflow applications in a Kubernetes cluster.
 
 The following settings are available:
 
-| Name                | Description                                                                                                                                                                                       |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| autoMountHostPaths  | Automatically mounts host paths in the job pods. Only for development purpose when using a single node cluster (default: `false`).                                                                |
-| context             | Defines the Kubernetes [configuration context name](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) to use.                                      |
-| namespace           | Defines the Kubernetes namespace to use (default: `default`).                                                                                                                                     |
-| serviceAccount      | Defines the Kubernetes [service account name](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) to use.                                                        |
-| launchDir           | Defines the path where the workflow is launched and the user data is stored. This must be a path in a shared K8s persistent volume (default: `<volume-claim-mount-path>/<user-name>`.             |
-| workDir             | Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default:`<user-dir>/work`).                                                  |
-| projectDir          | Defines the path where Nextflow projects are downloaded. This must be a path in a shared K8s persistent volume (default: `<volume-claim-mount-path>/projects`).                                   |
-| pod                 | Allows the definition of one or more pod configuration options such as environment variables, config maps, secrets, etc. It allows the same settings as the {ref}`process-pod` process directive. |
-| pullPolicy          | Defines the strategy to be used to pull the container image e.g. `pullPolicy: 'Always'`.                                                                                                          |
-| runAsUser           | Defines the user ID to be used to run the containers. Shortcut for the `securityContext` option.                                                                                                  |
-| securityContext     | Defines the [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for all pods.                                                                          |
-| storageClaimName    | The name of the persistent volume claim where store workflow result data.                                                                                                                         |
-| storageMountPath    | The path location used to mount the persistent volume claim (default: `/workspace`).                                                                                                              |
-| storageSubPath      | The path in the persistent volume to be mounted (default: root).                                                                                                                                  |
-| computeResourceType | Define whether use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Pod`, requires version `22.05.0-edge` or later).                                                |
-| fetchNodeName       | If you trace the hostname, activate this option (default: `false`, requires version `22.05.0-edge` or later).                                                                                     |
-| volumeClaims        | (deprecated)                                                                                                                                                                                      |
-| maxErrorRetry       | Defines the Kubernetes API max request retries (default is set to 4)                                                                                                                              |
-| httpReadTimeout     | Defines the Kubernetes client request HTTP connection read timeout e.g. `'60s'` (requires version `22.10.0` or later).                                                                            |
-| httpConnectTimeout  | Defines the Kubernetes client request HTTP connection timeout e.g. `'60s'` (requires version `22.10.0` or later).                                                                                 |
+`k8s.autoMountHostPaths`
+: Automatically mounts host paths in the job pods. Only for development purpose when using a single node cluster (default: `false`).
 
-See the {ref}`k8s-page` documentation for more details.
+`k8s.context`
+: Defines the Kubernetes [configuration context name](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) to use.
+
+`k8s.namespace`
+: Defines the Kubernetes namespace to use (default: `default`).
+
+`k8s.serviceAccount`
+: Defines the Kubernetes [service account name](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) to use.
+
+`k8s.launchDir`
+: Defines the path where the workflow is launched and the user data is stored. This must be a path in a shared K8s persistent volume (default: `<volume-claim-mount-path>/<user-name>`).
+
+`k8s.workDir`
+: Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default:`<user-dir>/work`).
+
+`k8s.projectDir`
+: Defines the path where Nextflow projects are downloaded. This must be a path in a shared K8s persistent volume (default: `<volume-claim-mount-path>/projects`).
+
+`k8s.pod`
+: Allows the definition of one or more pod configuration options such as environment variables, config maps, secrets, etc. It allows the same settings as the {ref}`process-pod` process directive.
+
+`k8s.pullPolicy`
+: Defines the strategy to be used to pull the container image e.g. `pullPolicy: 'Always'`.
+
+`k8s.runAsUser`
+: Defines the user ID to be used to run the containers. Shortcut for the `securityContext` option.
+
+`k8s.securityContext`
+: Defines the [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for all pods.
+
+`k8s.storageClaimName`
+: The name of the persistent volume claim where store workflow result data.
+
+`k8s.storageMountPath`
+: The path location used to mount the persistent volume claim (default: `/workspace`).
+
+`k8s.storageSubPath`
+: The path in the persistent volume to be mounted (default: root).
+
+`k8s.computeResourceType`
+: *Requires version `22.05.0-edge` or later*
+: Define whether use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Pod`).
+
+`k8s.fetchNodeName`
+: *Requires version `22.05.0-edge` or later*
+: If you trace the hostname, activate this option (default: `false`).
+
+`k8s.volumeClaims`
+: (deprecated)
+
+`k8s.maxErrorRetry`
+: Defines the Kubernetes API max request retries (default is set to 4)
+
+`k8s.httpReadTimeout`
+: *Requires version `22.10.0` or later*
+: Defines the Kubernetes client request HTTP connection read timeout e.g. `'60s'`.
+
+`k8s.httpConnectTimeout`
+: *Requires version `22.10.0` or later*
+: Defines the Kubernetes client request HTTP connection timeout e.g. `'60s'`.
+
+See the {ref}`k8s-page` page for more details.
 
 (config-mail)=
 
 ### Scope `mail`
 
-The `mail` scope allows you to define the mail server configuration settings needed to send email messages.
+The `mail` scope controls the mail server used to send email notifications.
 
-| Name            | Description                                                                                 |
-| --------------- | ------------------------------------------------------------------------------------------- |
-| from            | Default email sender address.                                                               |
-| smtp.host       | Host name of the mail server.                                                               |
-| smtp.port       | Port number of the mail server.                                                             |
-| smtp.user       | User name to connect to the mail server.                                                    |
-| smtp.password   | User password to connect to the mail server.                                                |
-| smtp.proxy.host | Host name of an HTTP web proxy server that will be used for connections to the mail server. |
-| smtp.proxy.port | Port number for the HTTP web proxy server.                                                  |
-| smtp.\*         | Any SMTP configuration property supported by the Java Mail API (see link below).            |
-| debug           | When `true` enables Java Mail logging for debugging purpose.                                |
+The following settings are available:
 
-:::{note}
-Nextflow relies on the [Java Mail API](https://javaee.github.io/javamail/) to send email messages. Advanced mail configuration can be provided by using any SMTP configuration property supported by the Java Mail API. See the [table of available properties at this link](https://javaee.github.io/javamail/docs/api/com/sun/mail/smtp/package-summary.html#properties).
-:::
+`mail.from`
+: Default email sender address.
+
+`mail.smtp.host`
+: Host name of the mail server.
+
+`mail.smtp.port`
+: Port number of the mail server.
+
+`mail.smtp.user`
+: User name to connect to the mail server.
+
+`mail.smtp.password`
+: User password to connect to the mail server.
+
+`mail.smtp.proxy.hos`
+: Host name of an HTTP web proxy server that will be used for connections to the mail server.
+
+`mail.smtp.proxy.por`
+: Port number for the HTTP web proxy server.
+
+`mail.smtp.*`
+: Any SMTP configuration property supported by the [Java Mail API](https://javaee.github.io/javamail/), which Nextflow uses to send emails. See the table of available properties [here](https://javaee.github.io/javamail/docs/api/com/sun/mail/smtp/package-summary.html#properties).
+
+`mail.debug`
+: When `true` enables Java Mail logging for debugging purpose.
 
 For example, the following snippet shows how to configure Nextflow to send emails through the [AWS Simple Email Service](https://aws.amazon.com/ses/):
 
@@ -658,24 +798,51 @@ mail {
 
 ### Scope `manifest`
 
-The `manifest` configuration scope allows you to define some meta-data information needed when publishing your pipeline project on GitHub, BitBucket or GitLab, or when running your pipeline.
+The `manifest` scope allows you to define some meta-data information needed when publishing or running your pipeline.
 
 The following settings are available:
 
-| Name              | Description                                                                     |
-| ----------------- | ------------------------------------------------------------------------------- |
-| author            | Project author name (use a comma to separate multiple names).                   |
-| defaultBranch     | Git repository default branch (default: `master`).                              |
-| recurseSubmodules | Turn this flag to `true` to pull submodules recursively from the Git repository |
-| description       | Free text describing the workflow project.                                      |
-| doi               | Project related publication DOI identifier.                                     |
-| homePage          | Project home page URL.                                                          |
-| mainScript        | Project main script (default: `main.nf`).                                       |
-| name              | Project short name.                                                             |
-| nextflowVersion   | Minimum required Nextflow version.                                              |
-| version           | Project version number.                                                         |
+`manifes.author`
+: Project author name (use a comma to separate multiple names).
 
-The above options can be used by prefixing them with the `manifest` scope or surrounding them by curly brackets. For example:
+`manifes.defaultBranch`
+: Git repository default branch (default: `master`).
+
+`manifes.description`
+: Free text describing the workflow project.
+
+`manifes.doi`
+: Project related publication DOI identifier.
+
+`manifes.homePage`
+: Project home page URL.
+
+`manifes.mainScript`
+: Project main script (default: `main.nf`).
+
+`manifes.name`
+: Project short name.
+
+`manifes.nextflowVersion`
+: Minimum required Nextflow version.
+
+  This setting may be useful to ensure that a specific version is used:
+
+  ```groovy
+  nextflowVersion = '1.2.3'        // exact match
+  nextflowVersion = '1.2+'         // 1.2 or later (excluding 2 and later)
+  nextflowVersion = '>=1.2'        // 1.2 or later
+  nextflowVersion = '>=1.2, <=1.5' // any version in the 1.2 .. 1.5 range
+  nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version does not match required version.
+  ```
+
+`manifes.recurseSubmodules`
+: Set this flag to `true` to pull submodules recursively from the Git repository.
+
+`manifes.version`
+: Project version number.
+
+The above options can also be specified in a `manifest` block, for example:
 
 ```groovy
 manifest {
@@ -686,19 +853,7 @@ manifest {
 }
 ```
 
-To learn how to publish your pipeline on GitHub, BitBucket or GitLab code repositories read {ref}`sharing-page` documentation page.
-
-#### Nextflow version
-
-The `nextflowVersion` setting allows you to specify a minimum required version to run the pipeline. This may be useful to ensure that a specific version is used:
-
-```groovy
-nextflowVersion = '1.2.3'        // exact match
-nextflowVersion = '1.2+'         // 1.2 or later (excluding 2 and later)
-nextflowVersion = '>=1.2'        // 1.2 or later
-nextflowVersion = '>=1.2, <=1.5' // any version in the 1.2 .. 1.5 range
-nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version does not match required version.
-```
+Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHub, BitBucket or GitLab.
 
 (config-notification)=
 
@@ -706,13 +861,20 @@ nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current ver
 
 The `notification` scope allows you to define the automatic sending of a notification email message when the workflow execution terminates.
 
-| Name     | Description                                                                                                     |
-| -------- | --------------------------------------------------------------------------------------------------------------- |
-| enabled  | Enables the sending of a notification message when the workflow execution completes.                            |
-| to       | Recipient address for the notification email. Multiple addresses can be specified separating them with a comma. |
-| from     | Sender address for the notification email message.                                                              |
-| template | Path of a template file which provides the content of the notification message.                                 |
-| binding  | An associative array modelling the variables in the template file.                                              |
+`notification.enabled`
+: Enables the sending of a notification message when the workflow execution completes.
+
+`notification.to`
+: Recipient address for the notification email. Multiple addresses can be specified separating them with a comma.
+
+`notification.from`
+: Sender address for the notification email message.
+
+`notification.template`
+: Path of a template file which provides the content of the notification message.
+
+`notification.binding`
+: An associative array modelling the variables in the template file.
 
 The notification message is sent my using the STMP server defined in the configuration {ref}`mail scope<config-mail>`.
 
@@ -738,41 +900,43 @@ params {
 
 ### Scope `podman`
 
-The `podman` configuration scope controls how [Podman](https://podman.io/) containers are executed by Nextflow.
+The `podman` scope controls how [Podman](https://podman.io/) containers are executed by Nextflow.
 
 The following settings are available:
 
-| Name          | Description                                                                                                                                                                 |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| enabled       | Turn this flag to `true` to enable Podman execution (default: `false`).                                                                                                     |
-| envWhitelist  | Comma separated list of environment variable names to be included in the container environment.                                                                             |
-| temp          | Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created.       |
-| remove        | Clean-up the container after the execution (default: `true`).                                                                                                               |
-| runOptions    | This attribute can be used to provide any extra command line options supported by the `podman run` command.                                                                 |
-| registry      | The registry from where container images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`. |
-| engineOptions | This attribute can be used to provide any option supported by the Podman engine i.e. `podman [OPTIONS]`.                                                                    |
-| mountFlags    | Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`                                                                                                     |
+`podman.enabled`
+: Set this flag to `true` to enable Podman execution (default: `false`).
 
-The above options can be used by prefixing them with the `podman` scope or surrounding them by curly brackets, as shown below:
+`podman.envWhitelist`
+: Comma separated list of environment variable names to be included in the container environment.
 
-```groovy
-process.container = 'nextflow/examples'
+`podman.temp`
+: Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created.
 
-podman {
-    enabled = true
-    temp = 'auto'
-}
-```
+`podman.remove`
+: Clean-up the container after the execution (default: `true`).
 
-Read {ref}`container-podman` page to learn more about how to use Podman containers with Nextflow.
+`podman.runOptions`
+: This attribute can be used to provide any extra command line options supported by the `podman run` command.
+
+`podman.registry`
+: The registry from where container images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+`podman.engineOptions`
+: This attribute can be used to provide any option supported by the Podman engine i.e. `podman [OPTIONS]`.
+
+`podman.mountFlags`
+: Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`
+
+Read the {ref}`container-podman` page to learn more about how to use Podman containers with Nextflow.
 
 (config-process)=
 
 ### Scope `process`
 
-The `process` configuration scope allows you to provide the default configuration for the processes in your pipeline.
+The `process` scope allows you to specify default {ref}`directives <process-directives>` for processes in your pipeline.
 
-You can specify here any property described in the {ref}`process directive<process-directives>` and the executor sections. For examples:
+For example:
 
 ```groovy
 process {
@@ -782,7 +946,7 @@ process {
 }
 ```
 
-By using this configuration all processes in your pipeline will be executed through the SGE cluster, with the specified settings.
+By using this configuration, all processes in your pipeline will be executed through the SGE cluster, with the specified settings.
 
 (config-process-selectors)=
 
@@ -874,175 +1038,181 @@ Using the above configuration snippet, all workflow processes use 4 cpus if not 
 
 ### Scope `report`
 
-The `report` scope allows you to define configuration setting of the workflow {ref}`execution-report`.
+The `report` scope allows you to configure the workflow {ref}`execution-report`.
 
-| Name      | Description                                                                         |
-| --------- | ----------------------------------------------------------------------------------- |
-| enabled   | If `true` it create the workflow execution report.                                  |
-| file      | The path of the created execution report file (default: `report-<timestamp>.html`). |
-| overwrite | When `true` overwrites any existing report file with the same name.                 |
+The following settings are available:
+
+`report.enabled`
+: If `true` it create the workflow execution report.
+
+`report.file`
+: The path of the created execution report file (default: `report-<timestamp>.html`).
+
+`report.overwrite`
+: When `true` overwrites any existing report file with the same name.
 
 (config-sarus)=
 
 ### Scope `sarus`
 
-The ``sarus`` configuration scope controls how [Sarus](https://sarus.readthedocs.io) containers are executed by Nextflow.
+The ``sarus`` scope controls how [Sarus](https://sarus.readthedocs.io) containers are executed by Nextflow.
 
 The following settings are available:
 
-| Name         | Description                                                                                                                                                                                                     |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| enabled      | Turn this flag to `true` to enable Sarus execution (default: `false`).                                                                                                                                          |
-| envWhitelist | Comma separated list of environment variable names to be included in the container environment.                                                                                                                 |
-| tty          | Allocates a pseudo-tty (default: `false`).                                                                                                                                                                      |
-| runOptions   | This attribute can be used to provide any extra command line options supported by the `sarus run` command. For details see the [Sarus user guide](https://sarus.readthedocs.io/en/stable/user/user_guide.html). |
+`sarus.enabled`
+: Set this flag to `true` to enable Sarus execution (default: `false`).
 
-Read {ref}`container-sarus` page to learn more about how to use Sarus containers with Nextflow.
+`sarus.envWhitelist`
+: Comma separated list of environment variable names to be included in the container environment.
+
+`sarus.tty`
+: Allocates a pseudo-tty (default: `false`).
+
+`sarus.runOptions`
+: This attribute can be used to provide any extra command line options supported by the `sarus run` command. For details see the [Sarus user guide](https://sarus.readthedocs.io/en/stable/user/user_guide.html).
+
+Read the {ref}`container-sarus` page to learn more about how to use Sarus containers with Nextflow.
 
 (config-shifter)=
 
 ### Scope `shifter`
 
-The `shifter` configuration scope controls how [Shifter](https://docs.nersc.gov/programming/shifter/overview/) containers are executed by Nextflow.
+The `shifter` scope controls how [Shifter](https://docs.nersc.gov/programming/shifter/overview/) containers are executed by Nextflow.
 
 The following settings are available:
 
-| Name    | Description                                                              |
-| ------- | ------------------------------------------------------------------------ |
-| enabled | Turn this flag to `true` to enable Shifter execution (default: `false`). |
+`shifter.enabled`
+: Set this flag to `true` to enable Shifter execution (default: `false`).
 
-Read {ref}`container-shifter` page to learn more about how to use Shifter containers with Nextflow.
+Read the {ref}`container-shifter` page to learn more about how to use Shifter containers with Nextflow.
 
 (config-singularity)=
 
 ### Scope `singularity`
 
-The `singularity` configuration scope controls how [Singularity](https://sylabs.io/singularity/) containers are executed by Nextflow.
+The `singularity` scope controls how [Singularity](https://sylabs.io/singularity/) containers are executed by Nextflow.
 
 The following settings are available:
 
-| Name          | Description                                                                                                                                                                              |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| enabled       | Turn this flag to `true` to enable Singularity execution (default: `false`).                                                                                                             |
-| engineOptions | This attribute can be used to provide any option supported by the Singularity engine i.e. `singularity [OPTIONS]`.                                                                       |
-| envWhitelist  | Comma separated list of environment variable names to be included in the container environment.                                                                                          |
-| runOptions    | This attribute can be used to provide any extra command line options supported by the `singularity exec`.                                                                                |
-| noHttps       | Turn this flag to `true` to pull the Singularity image with http protocol (default: `false`).                                                                                            |
-| autoMounts    | When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Singularity installation (default: `false`). |
-| cacheDir      | The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.                                     |
-| pullTimeout   | The amount of time the Singularity pull can last, exceeding which the process is terminated (default: `20 min`).                                                                         |
-| registry      | The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.                 |
+`singularity.enabled`
+: Set this flag to `true` to enable Singularity execution (default: `false`).
 
-Read {ref}`container-singularity` page to learn more about how to use Singularity containers with Nextflow.
+`singularity.engineOptions`
+: This attribute can be used to provide any option supported by the Singularity engine i.e. `singularity [OPTIONS]`.
+
+`singularity.envWhitelist`
+: Comma separated list of environment variable names to be included in the container environment.
+
+`singularity.runOptions`
+: This attribute can be used to provide any extra command line options supported by `singularity exec`.
+
+`singularity.noHttps`
+: Set this flag to `true` to pull the Singularity image with http protocol (default: `false`).
+
+`singularity.autoMounts`
+: When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Singularity installation (default: `false`).
+
+`singularity.cacheDir`
+: The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+
+`singularity.pullTimeout`
+: The amount of time the Singularity pull can last, exceeding which the process is terminated (default: `20 min`).
+
+`singularity.registry`
+: The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+Read the {ref}`container-singularity` page to learn more about how to use Singularity containers with Nextflow.
 
 (config-spack)=
 
 ### Scope `spack`
 
-The `spack` scope allows for the definition of the configuration settings that control the creation of a Spack environment by the Spack package manager.
+The `spack` scope controls the creation of a Spack environment by the Spack package manager.
 
 The following settings are available:
 
-| Name           | Description                                                                                                                                                                 |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| cacheDir       | Defines the path where Spack environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.        |
-| noChecksum     | Disables checksum verification for source tarballs (unsafe). Useful when requesting a package version not yet encoded in the corresponding Spack recipe (default: `false`). |
-| parallelBuilds | Sets number of parallel package builds (Spack default: coincides with number of available CPU cores).                                                                       |
-| createTimeout  | Defines the amount of time the Spack environment creation can last. The creation process is terminated when the timeout is exceeded (default: `60 min`).                    |
+`spack.cacheDir`
+: Defines the path where Spack environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.
 
-Nextflow does not allow for fine-grained configuration of the Spack package manager.
-Instead, this has to be performed directly on the host Spack installation.
-For more information see the [Spack documentation](https://spack.readthedocs.io).
+`spack.noChecksum`
+: Disables checksum verification for source tarballs (unsafe). Useful when requesting a package version not yet encoded in the corresponding Spack recipe (default: `false`).
 
-(config-apptainer)=
+`spack.parallelBuilds`
+: Sets number of parallel package builds (Spack default: coincides with number of available CPU cores).
 
-### Scope `apptainer`
+`spack.createTimeout`
+: Defines the amount of time the Spack environment creation can last. The creation process is terminated when the timeout is exceeded (default: `60 min`).
 
-The `apptainer` configuration scope controls how [Apptainer](https://apptainer.org) containers are executed by Nextflow.
-
-The following settings are available:
-
-| Name          | Description      |
-| ------------- | ---------------- |
-| enabled       | Turn this flag to `true` to enable Apptainer execution (default: `false`). |
-| engineOptions | This attribute can be used to provide any option supported by the Apptainer engine i.e. `apptainer [OPTIONS]`. |
-| envWhitelist  | Comma separated list of environment variable names to be included in the container environment. |
-| runOptions    | This attribute can be used to provide any extra command line options supported by the `apptainer exec`. |
-| noHttps       | Turn this flag to `true` to pull the Apptainer image with http protocol (default: `false`). |
-| autoMounts    | When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Apptainer installation (default: `false`). |
-| cacheDir      | The directory where remote Apptainer images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes. |
-| pullTimeout   | The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20 min`). |
-| registry      | The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`. |
-| ------------- | ---------------- |
-
-Read {ref}`container-apptainer` page to learn more about how to use Apptainer containers with Nextflow.
+Nextflow does not allow for fine-grained configuration of the Spack package manager. Instead, this has to be performed directly on the host Spack installation. For more information see the [Spack documentation](https://spack.readthedocs.io).
 
 (config-timeline)=
 
 ### Scope `timeline`
 
-The `timeline` scope allows you to enable/disable the processes execution timeline report generated by Nextflow.
+The `timeline` scope controls the execution timeline report generated by Nextflow.
 
 The following settings are available:
 
-| Name      | Description                                                                         |
-| --------- | ----------------------------------------------------------------------------------- |
-| enabled   | When `true` turns on the generation of the timeline report file (default: `false`). |
-| file      | Timeline file name (default: `timeline-<timestamp>.html`).                          |
-| overwrite | When `true` overwrites any existing timeline file with the same name.               |
+`timeline.enabled`
+: When `true` enables the generation of the timeline report file (default: `false`).
+
+`timeline.file`
+: Timeline file name (default: `timeline-<timestamp>.html`).
+
+`timeline.overwrite`
+: When `true` overwrites any existing timeline file with the same name.
 
 (config-tower)=
 
 ### Scope `tower`
 
-The `tower` configuration scope controls the settings for the [Nextflow Tower](https://tower.nf) monitoring and tracing service.
+The `tower` scope controls the settings for the [Nextflow Tower](https://tower.nf) monitoring and tracing service.
 
 The following settings are available:
 
-| Name        | Description                                                                                                             |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------- |
-| enabled     | When `true` Nextflow sends the workflow tracing and execution metrics to the Nextflow Tower service (default: `false`). |
-| accessToken | The unique access token specific to your account on an instance of Tower.                                               |
-| endpoint    | The endpoint of your Tower deployment (default: `https://tower.nf`).                                                    |
-| workspaceId | The ID of the Tower workspace where the run should be added (default: the launching user personal workspace).           |
+`tower.enabled`
+: When `true` Nextflow sends the workflow tracing and execution metrics to the Nextflow Tower service (default: `false`).
 
-The above options can be used by prefixing them with the `tower` scope or surrounding them by curly
-brackets, as shown below:
+`tower.accessToken`
+: The unique access token specific to your account on an instance of Tower.
 
-```groovy
-tower {
-  enabled = true
-  accessToken = '<YOUR TOKEN>'
-  workspaceId = '<YOUR WORKSPACE ID>'
-}
-```
+  Your `accessToken` can be obtained from your Tower instance in the `Tokens page <https://tower.nf/tokens>`.
 
-:::{tip}
-Your `accessToken` can be obtained from your Tower instance in the `Tokens page <https://tower.nf/tokens>`.
-:::
+`tower.endpoint`
+: The endpoint of your Tower deployment (default: `https://tower.nf`).
 
-:::{tip}
-The Tower workspace ID can also be specified using the environment variable `TOWER_WORKSPACE_ID` (config file has priority over the environment variable).
-:::
+`tower.workspaceId`
+: The ID of the Tower workspace where the run should be added (default: the launching user personal workspace).
+
+  The Tower workspace ID can also be specified using the environment variable `TOWER_WORKSPACE_ID` (config file has priority over the environment variable).
 
 (config-trace)=
 
 ### Scope `trace`
 
-The `trace` scope allows you to control the layout of the execution trace file generated by Nextflow.
+The `trace` scope controls the layout of the execution trace file generated by Nextflow.
 
 The following settings are available:
 
-| Name      | Description                                                                                                                     |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| enabled   | When `true` turns on the generation of the execution trace report file (default: `false`).                                      |
-| fields    | Comma separated list of fields to be included in the report. The available fields are listed at {ref}`this page <trace-fields>` |
-| file      | Trace file name (default: `trace-<timestamp>.txt`).                                                                             |
-| sep       | Character used to separate values in each row (default: `\t`).                                                                  |
-| raw       | When `true` turns on raw number report generation i.e. date and time are reported as milliseconds and memory as number of bytes |
-| overwrite | When `true` overwrites any existing trace file with the same name.                                                              |
+`trace.enabled`
+: When `true` turns on the generation of the execution trace report file (default: `false`).
 
-The above options can be used by prefixing them with the `trace` scope or surrounding them by curly brackets. For example:
+`trace.fields`
+: Comma separated list of fields to be included in the report. The available fields are listed at {ref}`this page <trace-fields>`.
+
+`trace.file`
+: Trace file name (default: `trace-<timestamp>.txt`).
+
+`trace.sep`
+: Character used to separate values in each row (default: `\t`).
+
+`trace.raw`
+: When `true` turns on raw number report generation i.e. date and time are reported as milliseconds and memory as number of bytes.
+
+`trace.overwrite`
+: When `true` overwrites any existing trace file with the same name.
+
+The above options can also be specified in a `trace` block, for example:
 
 ```groovy
 trace {
@@ -1052,20 +1222,21 @@ trace {
 }
 ```
 
-To learn more about the execution report that can be generated by Nextflow read {ref}`trace-report` documentation page.
+Read the {ref}`trace-report` page to learn more about the execution report that can be generated by Nextflow.
 
 (config-weblog)=
 
 ### Scope `weblog`
 
-The `weblog` scope allows you to send detailed {ref}`trace scope<trace-fields>` information as HTTP POST request to a webserver, shipped as a JSON object.
+The `weblog` scope allows you to send detailed {ref}`trace <trace-fields>` information as HTTP POST requests to a webserver, shipped as a JSON object.
 
 Detailed information about the JSON fields can be found in the {ref}`weblog description<weblog-service>`.
 
-| Name    | Description                                                           |
-| ------- | --------------------------------------------------------------------- |
-| enabled | If `true` it will send HTTP POST requests to a given url.             |
-| url     | The url where to send HTTP POST requests (default: `http:localhost`). |
+`weblog.enabled`
+: If `true` it will send HTTP POST requests to a given url.
+
+`weblog.url`
+: The url where to send HTTP POST requests (default: `http:localhost`).
 
 (config-miscellaneous)=
 
@@ -1073,15 +1244,12 @@ Detailed information about the JSON fields can be found in the {ref}`weblog desc
 
 There are additional variables that can be defined within a configuration file that do not have a dedicated scope.
 
-These are defined alongside other scopes, but the option is assigned as typically variable.
+`cleanup`
+: If `true`, on a successful completion of a run all files in *work* directory are automatically deleted.
 
-| Name    | Description                                                                                             |
-| ------- | ------------------------------------------------------------------------------------------------------- |
-| cleanup | If `true`, on a successful completion of a run all files in *work* directory are automatically deleted. |
-
-:::{warning}
-The use of the `cleanup` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. Also, be aware that deleting all scratch files can take a lot of time, especially when using a shared file system or remote cloud storage.
-:::
+  :::{warning}
+  The use of the `cleanup` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run. Also, be aware that deleting all scratch files can take a lot of time, especially when using a shared file system or remote cloud storage.
+  :::
 
 (config-profiles)=
 
@@ -1150,42 +1318,127 @@ In the above example, the `process.cpus` attribute is not correctly applied beca
 
 The following environment variables control the configuration of the Nextflow runtime and the underlying Java virtual machine.
 
-| Name                          | Description                                                                                                                                                                                                            |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| NXF_ANSI_LOG                  | Enables/disables ANSI console output (default `true` when ANSI terminal is detected).                                                                                                                                  |
-| NXF_ANSI_SUMMARY              | Enables/disables ANSI completion summary: `true\|false` (default: print summary if execution last more than 1 minute).                                                                                                 |
-| NXF_ASSETS                    | Defines the directory where downloaded pipeline repositories are stored (default: `$NXF_HOME/assets`)                                                                                                                  |
-| NXF_CHARLIECLOUD_CACHEDIR     | Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.                                                                    |
-| NXF_CLASSPATH                 | Allows the extension of the Java runtime classpath with extra JAR files or class folders.                                                                                                                              |
-| NXF_CLOUD_DRIVER              | Defines the default cloud driver to be used if not specified in the config file or as command line option, either `aws` or `google`.                                                                                   |
-| NXF_CONDA_CACHEDIR            | Directory where Conda environments are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.                                                                            |
-| NXF_CONDA_ENABLED             | Enable the use of Conda recipes defined by using the :ref:process-conda directive. (default: `false`, requires version `22.08.0-edge` or later).                                                                       |
-| NXF_DEBUG                     | Defines scripts debugging level: `1` dump task environment variables in the task log file; `2` enables command script execution tracing; `3` enables command wrapper execution tracing.                                |
-| NXF_DEFAULT_DSL               | Defines the DSL version that should be used in not specified otherwise in the script of config file (default: `2`, requires version `22.03.0-edge` or later)                                                           |
-| NXF_DISABLE_JOBS_CANCELLATION | Disables the cancellation of child jobs on workflow execution termination (requires version `21.12.0-edge` or later).                                                                                                  |
-| NXF_ENABLE_SECRETS            | Enable Nextflow secrets features (default: `true`, requires version `21.09.0-edge` or later)                                                                                                                           |
-| NXF_ENABLE_STRICT             | Enable Nextflow *strict* execution mode (default: `false`, requires version `22.05.0-edge` or later)                                                                                                                   |
-| NXF_EXECUTOR                  | Defines the default process executor e.g. `sge`                                                                                                                                                                        |
-| NXF_GRAB                      | Provides extra runtime dependencies downloaded from a Maven repository service \[DEPRECATED\]                                                                                                                          |
-| NXF_HOME                      | Nextflow home directory (default: `$HOME/.nextflow`).                                                                                                                                                                  |
-| NXF_JAVA_HOME                 | Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the `JAVA_HOME` variable if defined.                                                                               |
-| NXF_JVM_ARGS                  | Allows the setting Java VM options. This is similar to `NXF_OPTS` however it's only applied the JVM running Nextflow and not to any java pre-launching commands (requires `21.12.1-edge` or later).                    |
-| NXF_OFFLINE                   | When `true` disables the project automatic download and update from remote repositories (default: `false`).                                                                                                            |
-| NXF_OPTS                      | Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of `-Dkey[=value]` properties.                                                                                             |
-| NXF_ORG                       | Default `organization` prefix when looking for a hosted repository (default: `nextflow-io`).                                                                                                                           |
-| NXF_PARAMS_FILE               | Defines the path location of the pipeline parameters file (requires version `20.10.0` or later).                                                                                                                       |
-| NXF_PID_FILE                  | Name of the file where the process PID is saved when Nextflow is launched in background.                                                                                                                               |
-| NXF_SCM_FILE                  | Defines the path location of the SCM config file (requires version `20.10.0` or later).                                                                                                                                |
-| NXF_SINGULARITY_CACHEDIR      | Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.                                                                     |
-| NXF_SINGULARITY_LIBRARYDIR    | Directory where remote Singularity images are retrieved. It should be a directory accessible to all compute nodes (requires: `21.09.0-edge` or later).                                                                 |
-| NXF_SPACK_CACHEDIR            | Directory where Spack environments are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.                                                                            |
-| NXF_SPACK_ENABLED             | Enable the use of Spack recipes defined by using the :ref:process-spack directive. (default: `false`, requires version `23.02.0-edge` or later).                                                                       |
-| NXF_TEMP                      | Directory where temporary files are stored                                                                                                                                                                             |
-| NXF_VER                       | Defines what version of Nextflow to use.                                                                                                                                                                               |
-| NXF_WORK                      | Directory where working files are stored (usually your *scratch* directory)                                                                                                                                            |
-| JAVA_HOME                     | Defines the path location of the Java VM installation used to run Nextflow.                                                                                                                                            |
-| JAVA_CMD                      | Defines the path location of the Java binary command used to launch Nextflow.                                                                                                                                          |
-| HTTP_PROXY                    | Defines the HTTP proxy server. As of version `21.06.0-edge`, proxy authentication is supported providing the credentials in the proxy URL e.g. `http://user:password@proxy-host.com:port`.                             |
-| HTTPS_PROXY                   | Defines the HTTPS proxy server. As of version `21.06.0-edge`, proxy authentication is supported providing the credentials in the proxy URL e.g. `https://user:password@proxy-host.com:port`.                           |
-| FTP_PROXY                     | Defines the FTP proxy server. Proxy authentication is supported providing the credentials in the proxy URL e.g. `ftp://user:password@proxy-host.com:port`. FTP proxy support requires version `21.06.0-edge` or later. |
-| NO_PROXY                      | Defines one or more host names that should not use the proxy server. Separate multiple names using a comma character.                                                                                                  |
+`NXF_ANSI_LOG`
+: Enables/disables ANSI console output (default `true` when ANSI terminal is detected).
+
+`NXF_ANSI_SUMMARY`
+: Enables/disables ANSI completion summary: `true\|false` (default: print summary if execution last more than 1 minute).
+
+`NXF_ASSETS`
+: Defines the directory where downloaded pipeline repositories are stored (default: `$NXF_HOME/assets`)
+
+`NXF_CHARLIECLOUD_CACHEDIR`
+: Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
+
+`NXF_CLASSPATH`
+: Allows the extension of the Java runtime classpath with extra JAR files or class folders.
+
+`NXF_CLOUD_DRIVER`
+: Defines the default cloud driver to be used if not specified in the config file or as command line option, either `aws` or `google`.
+
+`NXF_CONDA_CACHEDIR`
+: Directory where Conda environments are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
+
+`NXF_CONDA_ENABLED`
+: *Requires version `22.08.0-edge` or later*
+: Enable the use of Conda recipes defined by using the {ref}`process-conda` directive. (default: `false`).
+
+`NXF_DEBUG`
+: Defines scripts debugging level: `1` dump task environment variables in the task log file; `2` enables command script execution tracing; `3` enables command wrapper execution tracing.
+
+`NXF_DEFAULT_DSL`
+: *Requires version `22.03.0-edge` or later*
+: Defines the DSL version that should be used in not specified otherwise in the script of config file (default: `2`)
+
+`NXF_DISABLE_JOBS_CANCELLATION`
+: *Requires version `21.12.0-edge` or later*
+: Disables the cancellation of child jobs on workflow execution termination.
+
+`NXF_ENABLE_SECRETS`
+: *Requires version `21.09.0-edge` or later*
+: Enable Nextflow secrets features (default: `true`)
+
+`NXF_ENABLE_STRICT`
+: *Requires version `22.05.0-edge` or later*
+: Enable Nextflow *strict* execution mode (default: `false`)
+
+`NXF_EXECUTOR`
+: Defines the default process executor e.g. `sge`
+
+`NXF_GRAB`
+: *DEPRECATED*
+: Provides extra runtime dependencies downloaded from a Maven repository service
+
+`NXF_HOME`
+: Nextflow home directory (default: `$HOME/.nextflow`).
+
+`NXF_JAVA_HOME`
+: Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the `JAVA_HOME` variable if defined.
+
+`NXF_JVM_ARGS`
+: *Requires version `21.12.1-edge` or later*
+: Allows the setting Java VM options. This is similar to `NXF_OPTS` however it's only applied the JVM running Nextflow and not to any java pre-launching commands.
+
+`NXF_OFFLINE`
+: When `true` disables the project automatic download and update from remote repositories (default: `false`).
+
+`NXF_OPTS`
+: Provides extra options for the Java and Nextflow runtime. It must be a blank separated list of `-Dkey[=value]` properties.
+
+`NXF_ORG`
+: Default `organization` prefix when looking for a hosted repository (default: `nextflow-io`).
+
+`NXF_PARAMS_FILE`
+: *Requires version `20.10.0` or later*
+: Defines the path location of the pipeline parameters file .
+
+`NXF_PID_FILE`
+: Name of the file where the process PID is saved when Nextflow is launched in background.
+
+`NXF_SCM_FILE`
+: *Requires version `20.10.0` or later*
+: Defines the path location of the SCM config file .
+
+`NXF_SINGULARITY_CACHEDIR`
+: Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
+
+`NXF_SINGULARITY_LIBRARYDIR`
+: *Requires version `21.09.0-edge` or later*
+: Directory where remote Singularity images are retrieved. It should be a directory accessible to all compute nodes.
+
+`NXF_SPACK_CACHEDIR`
+: Directory where Spack environments are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
+
+`NXF_SPACK_ENABLED`
+: *Requires version `23.02.0-edge` or later*
+: Enable the use of Spack recipes defined by using the {ref}`process-spack` directive. (default: `false`).
+
+`NXF_TEMP`
+: Directory where temporary files are stored
+
+`NXF_VER`
+: Defines what version of Nextflow to use.
+
+`NXF_WORK`
+: Directory where working files are stored (usually your *scratch* directory)
+
+`JAVA_HOME`
+: Defines the path location of the Java VM installation used to run Nextflow.
+
+`JAVA_CMD`
+: Defines the path location of the Java binary command used to launch Nextflow.
+
+`HTTP_PROXY`
+: Defines the HTTP proxy server.
+: *New in version `21.06.0-edge`:* proxy authentication is supported providing the credentials in the proxy URL e.g. `http://user:password@proxy-host.com:port`.
+
+`HTTPS_PROXY`
+: Defines the HTTPS proxy server.
+: *New in version `21.06.0-edge`:* proxy authentication is supported providing the credentials in the proxy URL e.g. `https://user:password@proxy-host.com:port`.
+
+`FTP_PROXY`
+: *Requires version `21.06.0-edge` or later*
+: Defines the FTP proxy server. Proxy authentication is supported providing the credentials in the proxy URL e.g. `ftp://user:password@proxy-host.com:port`.
+
+`NO_PROXY`
+: Defines one or more host names that should not use the proxy server. Separate multiple names using a comma character.
