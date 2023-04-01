@@ -4,8 +4,12 @@ import java.util.function.Predicate
 
 import com.google.common.hash.HashCode
 import com.microsoft.azure.batch.protocol.models.CloudPool
+import nextflow.Global
+import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzPoolOpts
+import nextflow.file.FileSystemPathFactory
+import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -459,6 +463,8 @@ class AzBatchServiceTest extends Specification {
 
     def 'should create task for submit' () {
         given:
+        Global.session = Mock(Session) { getConfig()>>[:] }
+        and:
         def POOL_ID = 'my-pool'
         def SAS = '123'
         def CONFIG = [storage: [sasToken: SAS]]
@@ -521,5 +527,46 @@ class AzBatchServiceTest extends Specification {
         and:
         result.containerSettings().imageName() == 'ubuntu:latest'
         result.containerSettings().containerRunOptions() == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro -v /mnt/batch/tasks/fsmounts/file1:mountPath1:rw -v /foo:/foo '
+    }
+
+    def 'should create task for submit with fusion' () {
+        given:
+        def SAS = '1234567890' * 10
+        def AZURE = [storage: [sasToken: SAS, accountName: 'my-account']]
+        Global.session = Mock(Session) { getConfig()>>[fusion:[enabled:true], azure: AZURE] }
+        def WORKDIR = FileSystemPathFactory.parse('az://foo/work/dir')
+        and:
+        def POOL_ID = 'my-pool'
+        def exec = Mock(AzBatchExecutor) {getConfig() >> new AzConfig(AZURE) }
+        AzBatchService azure = Spy(new AzBatchService(exec))
+        and:
+        def TASK = Mock(TaskRun) {
+            getHash() >> HashCode.fromInt(1)
+            getContainer() >> 'ubuntu:latest'
+            getConfig() >> Mock(TaskConfig)
+            getWorkDir() >> WORKDIR
+            toTaskBean() >> Mock(TaskBean) {
+                getWorkDir() >> WORKDIR
+                getInputFiles() >> [:]
+            }
+        }
+        and:
+        def SPEC = new AzVmPoolSpec(poolId: POOL_ID, vmType: Mock(AzVmType), opts: new AzPoolOpts([:]))
+
+        when:
+        def result = azure.createTask(POOL_ID, 'salmon', TASK)
+        then:
+        1 * azure.getPoolSpec(POOL_ID) >> SPEC
+        1 * azure.computeSlots(TASK, SPEC) >> 1
+        1 * azure.resourceFileUrls(TASK, SAS) >> []
+        1 * azure.outputFileUrls(TASK, SAS) >> []
+        and:
+        result.id() == 'nf-01000000'
+        result.requiredSlots() == 1
+        and:
+        result.commandLine() == "/usr/bin/fusion bash /fusion/az/foo/work/dir/.command.run"
+        and:
+        result.containerSettings().imageName() == 'ubuntu:latest'
+        result.containerSettings().containerRunOptions() == '-v /etc/ssl/certs:/etc/ssl/certs:ro -v /etc/pki:/etc/pki:ro --privileged -e FUSION_WORK=/fusion/az/foo/work/dir -e FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true) -e AZURE_STORAGE_ACCOUNT=my-account -e AZURE_STORAGE_SAS_TOKEN=1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890 '
     }
 }
