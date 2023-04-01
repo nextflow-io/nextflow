@@ -528,6 +528,8 @@ When pulling Docker images, Singularity may be unable to determine the container
 
 Singularity advanced configuration settings are described in {ref}`config-singularity` section in the Nextflow configuration page.
 
+(container-apptainer)=
+
 ## Apptainer
 
 [Apptainer](https://apptainer.org) is an alternative container runtime to Docker and an open source fork of Singularity. The main advantages of Apptainer are that it can be used without root privileges and it doesn't require a separate daemon process. These, along with other features such as support for autofs mounts, makes Apptainer better suited to the requirements of HPC workloads. Apptainer is able to use existing Docker images and can pull from Docker registries.
