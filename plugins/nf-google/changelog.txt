@@ -1,5 +1,9 @@
 nf-google changelog
 ===================
+1.7.2 - 1 Apr 2023
+- Fix issue checking google batch script launcher type [39c3a517]
+- Fix NoSuchMethodError String.stripIndent with Java 11 [308eafe6]
+
 1.7.1 - 23 Mar 2023
 - Fix Google Batch logging exception [d7e38e9e]
 - Add error message for missing container image with Google Batch (#3747) [6419e68f]
