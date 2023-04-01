@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.0.0 - 1 Apr 2023
+- Add support for Fusion to Azure Batch executor (#3209) [3d3cbfa2]
+- Fix NoSuchMethodError String.stripIndent with Java 11 [308eafe6]
+
 0.16.0 - 19 Mar 2023
 - Add azure batch pool virtualNetwork option (#3723) [e3917b8e]
 - Update Azure VM sizes (#3751) [1d06e9a6]
