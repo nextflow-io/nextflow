@@ -21,12 +21,14 @@ import groovy.transform.CompileStatic
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionEnv
+import org.pf4j.Extension
 
 /**
  * Implement environment provider for Azure specific variables
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Extension
 @CompileStatic
 class AzFusionEnv implements FusionEnv {
 
@@ -36,8 +38,14 @@ class AzFusionEnv implements FusionEnv {
             return Collections.<String,String>emptyMap()
 
         final cfg = AzConfig.config.storage()
-
-        Map.of('AZURE_STORAGE_SAS_TOKEN', cfg.sasToken,
-                'AZURE_STORAGE_ACCOUNT', cfg.accountName)
+        final result = new LinkedHashMap(10)
+        if( !cfg.accountName )
+            throw new IllegalArgumentException("Missing Azure storage account name")
+        if( !cfg.sasToken )
+            throw new IllegalArgumentException("Missing Azure storage SAS token")
+        
+        result.AZURE_STORAGE_ACCOUNT = cfg.accountName
+        result.AZURE_STORAGE_SAS_TOKEN = cfg.sasToken
+        return result
     }
 }
