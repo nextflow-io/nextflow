@@ -18,9 +18,9 @@ package nextflow.container
 
 import java.nio.file.Paths
 
+import nextflow.SysEnv
 import spock.lang.Specification
 import spock.lang.Unroll
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -37,36 +37,36 @@ class ApptainerBuilderTest extends Specification {
         expect:
         new ApptainerBuilder('busybox')
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec busybox'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --pid busybox'
 
         new ApptainerBuilder('busybox')
                 .params(engineOptions: '-q -v')
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer -q -v exec busybox'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer -q -v exec --pid busybox'
 
         new ApptainerBuilder('busybox')
                 .params(runOptions: '--contain --writable')
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --contain --writable busybox'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --pid --contain --writable busybox'
 
         new ApptainerBuilder('ubuntu')
                 .addMount(path1)
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --pid ubuntu'
 
         new ApptainerBuilder('ubuntu')
                 .addMount(path1)
                 .addMount(path2)
                 .params(autoMounts: true)
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec -B /foo/data/file1 -B /bar/data/file2 -B "$PWD" ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --pid -B /foo/data/file1 -B /bar/data/file2 -B "$PWD" ubuntu'
 
         new ApptainerBuilder('ubuntu')
                 .addMount(path1)
                 .addMount(path1)
                 .params(autoMounts: true)
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec -B /foo/data/file1 -B "$PWD" ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --pid -B /foo/data/file1 -B "$PWD" ubuntu'
 
         new ApptainerBuilder('ubuntu')
                 .addMount(path1)
@@ -74,14 +74,37 @@ class ApptainerBuilderTest extends Specification {
                 .params(autoMounts: true)
                 .params(readOnlyInputs: true)
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec -B /foo/data/file1:/foo/data/file1:ro -B "$PWD" ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --pid -B /foo/data/file1:/foo/data/file1:ro -B "$PWD" ubuntu'
 
         new ApptainerBuilder('ubuntu')
                 .addMount(path3)
                 .params(autoMounts: true)
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec -B /bar/data\\ file -B "$PWD" ubuntu'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --pid -B /bar/data\\ file -B "$PWD" ubuntu'
 
+        new ApptainerBuilder('ubuntu')
+                .params(newPidNamespace: false)
+                .build()
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec ubuntu'
+
+    }
+
+    def 'should set new pid namespace' () {
+        when:
+        SysEnv.push(NXF_APPTAINER_NEW_PID_NAMESPACE: FLAG)
+
+        then:
+        new ApptainerBuilder('ubuntu')
+                .build()
+                .runCommand
+                .contains('--pid ') == OPTS
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        FLAG << ['false', 'true']
+        OPTS << [false, true]
     }
 
     def 'should return export variables' () {
@@ -94,12 +117,12 @@ class ApptainerBuilderTest extends Specification {
                 .addEnv('X=1')
                 .addEnv(ALPHA:'aaa', BETA: 'bbb')
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} APPTAINERENV_X=1 APPTAINERENV_ALPHA="aaa" APPTAINERENV_BETA="bbb" apptainer exec busybox'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} APPTAINERENV_X=1 APPTAINERENV_ALPHA="aaa" APPTAINERENV_BETA="bbb" apptainer exec --pid busybox'
 
         new ApptainerBuilder('busybox')
                 .addEnv('CUDA_VISIBLE_DEVICES')
                 .build()
-                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} ${CUDA_VISIBLE_DEVICES:+APPTAINERENV_CUDA_VISIBLE_DEVICES="$CUDA_VISIBLE_DEVICES"} apptainer exec busybox'
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} ${CUDA_VISIBLE_DEVICES:+APPTAINERENV_CUDA_VISIBLE_DEVICES="$CUDA_VISIBLE_DEVICES"} apptainer exec --pid busybox'
 
     }
 
@@ -109,17 +132,17 @@ class ApptainerBuilderTest extends Specification {
         when:
         def cmd = new ApptainerBuilder('ubuntu.img').build().getRunCommand()
         then:
-        cmd == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec ubuntu.img'
+        cmd == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --pid ubuntu.img'
 
         when:
         cmd = new ApptainerBuilder('ubuntu.img').build().getRunCommand('bwa --this --that file.fastq')
         then:
-        cmd == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec ubuntu.img bwa --this --that file.fastq'
+        cmd == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --pid ubuntu.img bwa --this --that file.fastq'
 
         when:
         cmd = new ApptainerBuilder('ubuntu.img').params(entry:'/bin/sh').build().getRunCommand('bwa --this --that file.fastq')
         then:
-        cmd == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec ubuntu.img /bin/sh -c "cd $PWD; bwa --this --that file.fastq"'
+        cmd == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --pid ubuntu.img /bin/sh -c "cd $PWD; bwa --this --that file.fastq"'
     }
 
     @Unroll
