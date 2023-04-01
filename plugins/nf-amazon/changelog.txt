@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+1.16.1 - 1 Apr 2023
+- Fix NoSuchMethodError String.stripIndent with Java 11 [308eafe6]
+
 1.16.0 - 19 Mar 2023
 - Remove unused classes [9fa8d75b]
 - Add support for AWS S3 Glacier Retrieval Tier (#3680) [fab6bd5e]
