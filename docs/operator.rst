@@ -13,7 +13,7 @@ to Nextflow, here are some suggested operators to learn for common use cases:
 
 * Filtering: `filter`_, `randomSample`_, `take`_, `unique`_
 * Reduction: `collect`_, `groupTuple`_, `reduce`_
-* Parsing text data: `splitCsv`_, `splitText`_, `splitJson`_
+* Parsing text data: `splitCsv`_, `splitJson`_, `splitText`_
 * Combining channels: `combine`_, `concat`_, `join`_, `mix`_
 * Forking channels: `branch`_, `multiMap`_
 * Maths: `count`_, `max`_, `min`_, `sum`_
@@ -1545,6 +1545,64 @@ qualityString   Quality values for the sequence
   You can also use ``countFastq`` to count the number of entries in the FASTQ file(s).
 
 
+splitJson
+---------
+
+The ``splitJson`` operator allows you to split a JSON document from a source channel
+into individual records. If the document is a JSON array, each element of the array
+will be emitted. If the document is a JSON object, each key-value pair will be
+emitted as a map with the properties ``key``  and ``value``.
+
+An example with a JSON array::
+
+    Channel.of('[1,null,["A",{}],true]')
+        .splitJson()
+        .view{"Item: ${it}"}
+
+Produces the following output::
+
+    Item: 1
+    Item: null
+    Item: [A, [:]]
+    Item: true
+
+An example with a JSON object::
+
+    Channel.of('{"A":1,"B":[1,2,3],"C":{"D":null}}')
+        .splitJson()
+        .view{"Item: ${it}"}
+
+Produces the following output::
+
+    Item: [value:1, key:A]
+    Item: [value:[1, 2, 3], key:B]
+    Item: [value:[D:null], key:C]
+
+You can optionally query a section of the JSON document to parse and split, using the ``jsonPath`` option::
+
+    Channel.of('{"A":1,"B":[2,3,{"C":{"D":null,"E":4,"F":5}}]}')
+        .splitJson(jsonPath: "B[2].C")
+        .view{"Item: ${it}"}
+
+Produces the following output::
+
+    Item: [value:null, key:D]
+    Item: [value:4, key:E]
+    Item: [value:5, key:F]
+
+Available options:
+
+=========== ============================
+Field       Description
+=========== ============================
+limit       Limits the number of retrieved lines for each file to the specified value.
+jsonPath    define the section of the JSON document that you want to extract. The expression is a set of paths separated by a dot, similar to `jsonPath <https://goessner.net/articles/JsonPath/>`_ The empty string is the document root (default). A number within brackets is the 0-based index in a json array. A word is the key in a json object. Complex keys containing a dot or a bracket are currently not supported.
+=========== ============================
+
+.. tip::
+  You can also use ``countJson`` to count the number of elements in a JSON array or object.
+
+
 splitText
 ---------
 
@@ -1601,71 +1659,6 @@ keepHeader  Parses the first line as header and prepends it to each emitted chun
 .. tip::
   You can also use ``countLines`` to count the number of lines in the text file(s).
 
-
-
-splitJson
----------
-
-The ``splitJson`` operator allows you to split a json file, emitted by a source channel
-into chunks containing `n` records, which will be emitted by the resulting channel.
-If the root element is a json-array, each item of the array  will be emitted by the resulting channel.
-If the root element is a json-object, each item of the object  will be emitted by the resulting channel as a tuple with the properties ``key``  and ``value``  .
-
-An example with a json-array as an input::
-
-    Channel
-      .from("[1,null,[\"A\",{}],true]")
-      .splitJson()
-      .view{"Item ${it}"}
-
-It will produce an output similar to the following:
-
-    Item 1
-    Item null
-    Item [A, [:]]
-    Item true
-
-An example with a json-object as an input::
-
-    Channel
-      .from("{\"A\":1,\"B\":[1,2,3],\"C\":{\"D\":null}}")
-      .splitJson()
-      .view{"Item ${it}"}
-
-
-It will produce an output similar to the following:
-
-    Item [value:1, key:A]
-    Item [value:[1, 2, 3], key:B]
-    Item [value:[D:null], key:C]
-
-
-You can define the section of the JSON document you want to parse using the parameter ``jsonPath``.
-
-    Channel
-      .from("{\"A\":1,\"B\":[2,3,{\"C\":{\"D\":null,\"E\":4,\"F\":5}}]}")
-      .splitJson(jsonPath:"B[2].C")
-      .view{"Item ${it}"}
-
-
-It will produce an output similar to the following:
-
-
-    Item [value:null, key:D]
-    Item [value:4, key:E]
-    Item [value:5, key:F]
-
-
-Available parameters:
-
-=========== ============================
-Field       Description
-=========== ============================
-limit       Limits the number of retrieved lines for each file to the specified value.
-charset     Parse the content by using the specified charset e.g. ``UTF-8``.
-decompress  When ``true``, decompress the content using the GZIP format before processing it (note: files whose name ends with ``.gz`` extension are decompressed automatically).
-jsonPath    define the section of the JSON document that you want to extract. The expression is a set of paths separated by a dot, similar to `jsonPath <https://goessner.net/articles/JsonPath/>`_ The empty string is the document root (default). A number within brackets is the 0-based index in a json array. A word is the key in a json object. Complex keys containing a dot or a bracket are currently not supported.
-=========== ============================
 
 .. _operator-subscribe:
 
