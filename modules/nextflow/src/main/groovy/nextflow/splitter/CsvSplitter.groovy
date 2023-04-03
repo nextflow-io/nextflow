@@ -187,9 +187,26 @@ class CsvSplitter extends AbstractTextSplitter {
 
         def map = [:]
         for( int i=0; i<columnsHeader.size(); i++ )
-            map[ columnsHeader[i] ] = i<tokens.size() ? tokens[i] : null
+            map[ columnsHeader[i] ] = i<tokens.size() ? inferValueType(tokens[i]) : null
 
         return map
+    }
+
+    /**
+     * Infer a value to its variable type
+     */
+    static protected inferValueType(String str ) {
+
+        if ( str == null | str == "" ) return null
+
+        if ( str.toLowerCase() == 'true') return Boolean.TRUE
+        if ( str.toLowerCase() == 'false' ) return Boolean.FALSE
+
+        if ( str==~/\d+(\.\d+)?/ && str.isInteger() ) return str.toInteger()
+        if ( str==~/\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
+        if ( str==~/\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
+
+        return str
     }
 
     protected CollectorStrategy createCollector() {
