@@ -52,6 +52,12 @@ class CsvSplitter extends AbstractTextSplitter {
     protected int skipLines = 0
 
     /**
+     * Define the types to cast each csv column or the automatic casting of types.
+     */
+    protected boolean typesAuto
+    protected List<String> columnTypes
+
+    /**
      * Set the splitter options by specifying a map of named parameters.
      * Valid parameters are:
      * <li>{@code sep}
@@ -59,6 +65,7 @@ class CsvSplitter extends AbstractTextSplitter {
      * <li>{@code header}
      * <li>{@code quote}
      * <li>{@code skip}
+     * <li>{@code types}
      *
      * @param options
      * @return The splitter instance itself
@@ -91,6 +98,16 @@ class CsvSplitter extends AbstractTextSplitter {
         if( options.skip )
             skipLines = options.skip as int
 
+        // cast variables to their type
+        if( options.types ) {
+            if( options.types == true )
+                typesAuto = true
+            else if( options.types instanceof List )
+                columnTypes = options.types as List
+            else
+                throw new IllegalArgumentException("Not a valid types parameter value: ${options.types}")
+        }
+
         return this
     }
 
@@ -107,6 +124,7 @@ class CsvSplitter extends AbstractTextSplitter {
         result.header = [ Boolean, List ]
         result.quote = String
         result.skip = Integer
+        result.types = [ Boolean, List ]
         return result
     }
 
