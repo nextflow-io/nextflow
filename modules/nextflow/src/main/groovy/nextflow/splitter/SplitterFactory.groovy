@@ -41,12 +41,10 @@ class SplitterFactory {
      */
     static SplitterStrategy create( String strategy ) {
         assert strategy
-
         String name = strategy.startsWith('split') || strategy.startsWith('count') ? strategy = strategy.substring(5) : strategy
 
         if( !name.contains('.') )
             name = "nextflow.splitter.${strategy.capitalize()}Splitter"
-
         try {
             def clazz = (Class<SplitterStrategy>) Class.forName(name)
             create(clazz, strategy.capitalize())
@@ -83,7 +81,6 @@ class SplitterFactory {
      * @return
      */
     static DataflowWriteChannel countOverChannel(DataflowReadChannel source, SplitterStrategy splitter, Map opt )  {
-
         // create a new DataflowChannel that will receive the splitter entries
         DataflowVariable result = new DataflowVariable ()
 

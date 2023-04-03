@@ -52,9 +52,10 @@ class JsonSplitter extends AbstractTextSplitter {
      * @return A map representing the valid options for the splitter. The map keys define the
      * accepted parameter names, the values the valid values for each of them.
      */
+    @Override
     protected Map<String,?> validOptions() {
         def result = super.validOptions()
-        result.remove('file')       // <-- `file` mode not support by RecFileSplitter
+	result.remove('file')       // <-- `file` mode not support by JsonSplitter (not sure about this)
         result.remove('compress')   // <-- `compress` mode not supported
         result.put("lenient",false);
         return result
