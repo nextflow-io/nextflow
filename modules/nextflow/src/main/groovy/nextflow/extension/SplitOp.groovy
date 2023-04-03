@@ -32,6 +32,7 @@ import nextflow.splitter.SplitterFactory
  * - splitCsv
  * - splitFasta
  * - splitFastq
+ * - splitJson
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
