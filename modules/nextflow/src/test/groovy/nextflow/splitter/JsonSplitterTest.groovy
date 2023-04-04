@@ -17,8 +17,8 @@ package nextflow.splitter
 
 import spock.lang.Specification
 import spock.lang.Unroll
-
 import java.nio.charset.Charset
+import com.google.gson.stream.JsonReader;
 
 /**
  *
@@ -116,6 +116,13 @@ class JsonSplitterTest extends Specification {
         	def items = new JsonSplitter().target("[not a json string").list()
         then:
       		 thrown(com.google.gson.stream.MalformedJsonException)
+    }
+    
+    private static Object parseJsonString(String str) {
+        StringReader r = new StringReader(str);
+        JsonReader jr = new JsonReader(r);
+       
+        r.close();
     }
     
 }

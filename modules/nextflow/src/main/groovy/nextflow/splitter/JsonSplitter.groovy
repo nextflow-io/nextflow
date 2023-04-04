@@ -30,7 +30,9 @@ import com.google.gson.stream.JsonToken;
 @CompileStatic
 @InheritConstructors
 class JsonSplitter extends AbstractTextSplitter {
-    /* lenient json parsing for JsonReader */
+    /**
+     * use lenient json parsing for JsonReader
+     */
     private boolean lenient  = false;
 
     /**
@@ -44,7 +46,7 @@ class JsonSplitter extends AbstractTextSplitter {
     @Override
     JsonSplitter options(Map opts) {
         super.options(opts)
-        this.lenient = opts.lenient == true
+        this.lenient = opts.lenient == true		
         return this
     }
 
@@ -65,13 +67,13 @@ class JsonSplitter extends AbstractTextSplitter {
     protected process( Reader  reader) {
         def result = null
         counter.reset() // <-- make sure to start
-
+		itemsCount = 0
         try {
             final JsonReader jsonreader = new JsonReader(reader);
             jsonreader.setLenient(this.lenient);
         
             final JsonToken token = jsonreader.peek();
-            if(token.equals(JsonToken.BEGIN_ARRAY)) {
+            if (token.equals(JsonToken.BEGIN_ARRAY)) {
             	processArray(jsonreader);
             	}
             else if(token.equals(JsonToken.BEGIN_OBJECT)) {
@@ -80,6 +82,13 @@ class JsonSplitter extends AbstractTextSplitter {
             else {
             	throw new IOException("Expected JSON to be an object or an array but got " + token);
             	}
+			/* extra content at the end ? */
+			if(jsonreader.hasNext()) {
+				final JsonToken last =  jsonreader.peek();
+				if(!token.equals(JsonToken.END_DOCUMENT)) {
+						log.warn("Extra content at the end of the json stream");
+						}
+				}
             jsonreader.close();
             }
         finally {
@@ -96,15 +105,19 @@ class JsonSplitter extends AbstractTextSplitter {
         def result = null
     	reader.beginArray();
     	while(reader.hasNext()) {
-    	final JsonToken token = reader.peek();
-    	/* end of array */
-    	if ( token.equals(JsonToken.END_ARRAY) ) {
-    		reader.endArray();
-    		break;
-    		}
- 	final Object value = fromJson( reader );
- 	result = processChunk( value )
-	}
+	    	final JsonToken token = reader.peek();
+	    	/* end of array */
+	    	if ( token.equals(JsonToken.END_ARRAY) ) {
+	    		reader.endArray();
+	    		break;
+	    		}
+		 	final Object value = fromJson( reader );
+		 	result = processChunk( value )
+			 
+			 // -- check the limit of allowed records has been reached
+			 if( limit>0 && ++itemsCount == limit )
+				 break
+			}
 	
 	 // make sure to process collected entries
 	    if ( collector && collector.hasChunk() ) {
@@ -130,7 +143,11 @@ class JsonSplitter extends AbstractTextSplitter {
     	 final Object value = fromJson(reader);
     	 map.put(key,value);
     	  // -- apply the splitting logic for the fetched record
-          result = processChunk( map )
+         result = processChunk( map )
+		 
+		 // -- check the limit of allowed records has been reached
+		 if( limit>0 && ++itemsCount == limit )
+			 break
     	 }
 
 	 // make sure to process collected entries
@@ -148,7 +165,7 @@ class JsonSplitter extends AbstractTextSplitter {
     }
     
     /** convert a json stream to an Object */
-    static private Object fromJson(JsonReader reader ) {
+    static Object fromJson(final JsonReader reader ) {
     	final JsonToken token = reader.peek();
     	switch(token) {
     		case JsonToken.NULL : {
@@ -164,23 +181,22 @@ class JsonSplitter extends AbstractTextSplitter {
     		case JsonToken.NUMBER : {
     			final String s = reader.nextString();
     			// look like an integer ?
-    			if(!(s.contains(".") || s.contains("E"))) {
+    			if(!s.contains(".")) {
     				// first try as int
 	    			try {
 	    				int v = Integer.parseInt(s);
 	    				return v;
 	    				}
 	    			catch (NumberFormatException ex) {
-	    				//ignore
-	    				}
-	    			//then try as long
-	    			try {
-	    				long v = Long.parseLong(s);
-	    				return v;
-	    				}
-	    			catch (NumberFormatException ex) {
-	    				//ignore
-	    				}
+						//otherwise try as long
+		    			try {
+		    				long v = Long.parseLong(s);
+		    				return v;
+		    				}
+		    			catch (NumberFormatException ex2) {
+		    				//ignore
+		    				}
+						}
 	    			}
 	    		// try as double
 	    		try {
