@@ -211,7 +211,7 @@ class CsvSplitter extends AbstractTextSplitter {
      */
     static protected inferValueType(String str ) {
 
-        if ( str == null | str == "" ) return null
+        if ( str == null || str == "" ) return null
 
         if ( str.toLowerCase() == 'true') return Boolean.TRUE
         if ( str.toLowerCase() == 'false' ) return Boolean.FALSE
