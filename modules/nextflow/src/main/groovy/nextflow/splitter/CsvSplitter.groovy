@@ -187,9 +187,7 @@ class CsvSplitter extends AbstractTextSplitter {
 
         def map = [:]
         for( int i=0; i<columnsHeader.size(); i++ ) {
-            log.info "column types $columnTypes", IllegalArgumentException
             if (typesAuto) {
-                log.info "if $typesAuto", IllegalArgumentException
                 map[columnsHeader[i]] = i < tokens.size() ? inferValueType(tokens[i]) : null
             } else if (columnTypes) {
                 if (columnTypes.size() != tokens.size()) {
