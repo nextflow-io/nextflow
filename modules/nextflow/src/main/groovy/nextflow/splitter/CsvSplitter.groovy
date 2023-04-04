@@ -186,14 +186,28 @@ class CsvSplitter extends AbstractTextSplitter {
             return tokens
 
         def map = [:]
-        for( int i=0; i<columnsHeader.size(); i++ )
-            map[ columnsHeader[i] ] = i<tokens.size() ? inferValueType(tokens[i]) : null
+        for( int i=0; i<columnsHeader.size(); i++ ) {
+            log.info "column types $columnTypes", IllegalArgumentException
+            if (typesAuto) {
+                log.info "if $typesAuto", IllegalArgumentException
+                map[columnsHeader[i]] = i < tokens.size() ? inferValueType(tokens[i]) : null
+            } else if (columnTypes) {
+                if (columnTypes.size() != tokens.size()) {
+                    throw new IllegalArgumentException("Parameter types should have the same length as number of csv columns. Provided types: ${columnTypes}")
+                } else {
+                    map[columnsHeader[i]] = i < tokens.size() ? castValueType(tokens[i], columnTypes[i]) : null
+                }
+            } else {
+                map[columnsHeader[i]] = i < tokens.size() ? tokens[i] : null
+            }
+        }
 
         return map
     }
 
     /**
      * Infer a value to its variable type
+     * @return The value casted to its primitive type
      */
     static protected inferValueType(String str ) {
 
@@ -205,6 +219,23 @@ class CsvSplitter extends AbstractTextSplitter {
         if ( str==~/\d+(\.\d+)?/ && str.isInteger() ) return str.toInteger()
         if ( str==~/\d+(\.\d+)?/ && str.isLong() ) return str.toLong()
         if ( str==~/\d+(\.\d+)?/ && str.isDouble() ) return str.toDouble()
+
+        return str
+    }
+
+    /**
+     * Cast a value to the provided type
+     * @return The value casted to its primitive type
+     */
+    static protected castValueType(String str, String type ) {
+
+        if ( type.toLowerCase() == 'boolean' ) return str.toBoolean()
+        if ( type.toLowerCase() == 'character' ) return str.toCharacter()
+        if ( type.toLowerCase() == 'short' ) return str.toShort()
+        if ( type.toLowerCase() == 'integer' ) return str.toInteger()
+        if ( type.toLowerCase() == 'long' ) return str.toLong()
+        if ( type.toLowerCase() == 'float' ) return str.toFloat()
+        if ( type.toLowerCase() == 'double' ) return str.toDouble()
 
         return str
     }
