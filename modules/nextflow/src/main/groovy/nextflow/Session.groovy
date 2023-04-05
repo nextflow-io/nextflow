@@ -638,18 +638,26 @@ class Session implements ISession {
     void destroy() {
         try {
             log.trace "Session > destroying"
+
             // shutdown publish dir executor
             publishPoolManager.shutdown(aborted)
+
             // invoke shutdown callbacks
             shutdown0()
-            log.trace "Session > after cleanup"
+            log.trace "Session > after shutdown callbacks"
+
             // shutdown executors
             executorFactory?.shutdown()
             executorFactory = null
+
             // shutdown executor service
             execService?.shutdown()
             execService = null
             log.trace "Session > executor shutdown"
+
+            // delete task directories if enabled and run was successful
+            if( config.cleanup && workDir && !(aborted || cancelled || error) )
+                cleanup0()
 
             // -- close db
             cache?.close()
@@ -700,6 +708,26 @@ class Session implements ISession {
 
         // -- invoke observers completion handlers
         notifyFlowComplete()
+    }
+
+    /**
+     * Delete the workflow work directory from tasks temporary files
+     */
+    final protected void cleanup0() {
+        try {
+            log.trace "Cleaning-up workdir"
+            cache.eachRecord { HashCode hash, TraceRecord record ->
+                def deleted = cache.removeTaskEntry(hash)
+                if( deleted ) {
+                    // delete folder
+                    FileHelper.deletePath(FileHelper.asPath(record.workDir))
+                }
+            }
+            log.trace "Clean workdir complete"
+        }
+        catch( Exception e ) {
+            log.warn("Failed to cleanup work dir: ${workDir.toUriString()}")
+        }
     }
 
     /**
@@ -1114,37 +1142,6 @@ class Session implements ISession {
      */
     void onError( Closure action ) {
         errorAction = action
-    }
-
-    /**
-     * Delete the workflow work directory from tasks temporary files
-     */
-    void cleanup() {
-        if( !workDir || !config.cleanup )
-            return
-
-        if( aborted || cancelled || error )
-            return
-
-        CacheDB db = null
-        try {
-            log.trace "Cleaning-up workdir"
-            db = CacheFactory.create(uniqueId, runName).openForRead()
-            db.eachRecord { HashCode hash, TraceRecord record ->
-                def deleted = db.removeTaskEntry(hash)
-                if( deleted ) {
-                    // delete folder
-                    FileHelper.deletePath(FileHelper.asPath(record.workDir))
-                }
-            }
-            log.trace "Clean workdir complete"
-        }
-        catch( Exception e ) {
-            log.warn("Failed to cleanup work dir: ${workDir.toUriString()}")
-        }
-        finally {
-            db.close()
-        }
     }
 
     @Memoized
