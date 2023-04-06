@@ -104,8 +104,7 @@ html_theme = "sphinx_rtd_theme"
 # documentation.
 html_theme_options = {
   'logo_only': True,
-  'display_version': False,
-  "analytics_id": "G-244N3GEN75"
+  'display_version': False
 }
 
 html_context = {
