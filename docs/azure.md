@@ -346,3 +346,7 @@ azure {
     }
 }
 ```
+
+## Advanced configuration
+
+Read the {ref}`Azure configuration<config-azure>` section to learn more about advanced configuration options.

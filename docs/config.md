@@ -119,33 +119,80 @@ Read the {ref}`container-apptainer` page to learn more about how to use Apptaine
 
 ### Scope `aws`
 
-The `aws` scope allows you to configure access to Amazon S3 storage. Use the attributes `accessKey` and `secretKey` to specify your bucket credentials. For example:
+The `aws` scope controls the interactions with AWS, including AWS Batch and S3. For example:
 
 ```groovy
 aws {
     accessKey = '<YOUR S3 ACCESS KEY>'
     secretKey = '<YOUR S3 SECRET KEY>'
-    region = '<AWS REGION IDENTIFIER>'
-    profile = '<AWS CONFIG PROFILE>' // optional
-}
-```
+    region = 'us-east-1'
 
-See [AWS Security Credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html) for more information.
-
-Advanced client configuration options can be set using the `client` attribute. For example:
-
-```groovy
-aws {
     client {
         maxConnections = 20
         connectionTimeout = 10000
         uploadStorageClass = 'INTELLIGENT_TIERING'
         storageEncryption = 'AES256'
     }
+    batch {
+        cliPath = '/home/ec2-user/miniconda/bin/aws'
+        maxTransferAttempts = 3
+        delayBetweenAttempts = '5 sec'
+    }
 }
 ```
 
+Read the {ref}`aws-page` and {ref}`amazons3-page` pages for more information.
+
 The following settings are available:
+
+`aws.accessKey`
+: AWS account access key
+
+`aws.profile`
+: AWS profile from `~/.aws/credentials`
+
+`aws.region`
+: AWS region (e.g. `us-east-1`)
+
+`aws.secretKey`
+: AWS account secret key
+
+`aws.batch.cliPath`
+: The path where the AWS command line tool is installed in the host AMI.
+
+`aws.batch.delayBetweenAttempts`
+: Delay between download attempts from S3 (default: `10 sec`).
+
+`aws.batch.jobRole`
+: The AWS Job Role ARN that needs to be used to execute the Batch Job.
+
+`aws.batch.logsGroup`
+: *Requires version `22.09.0-edge` or later*
+: The name of the logs group used by Batch Jobs (default: `/aws/batch`).
+
+`aws.batch.maxParallelTransfers`
+: Max parallel upload/download transfer operations *per job* (default: `4`).
+
+`aws.batch.maxSpotAttempts`
+: *Requires version `22.04.0` or later*
+: Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: `5`)
+
+`aws.batch.maxTransferAttempts`
+: Max number of downloads attempts from S3 (default: `1`).
+
+`aws.batch.retryMode`
+: The retry mode configuration setting, to accommodate rate-limiting on [AWS services](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html) (default: `standard`)
+
+`aws.batch.schedulingPriority`
+: *Requires `23.01.0-edge` or later*
+: The scheduling priority for all tasks when using [fair-share scheduling for AWS Batch](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/) (default: `0`)
+
+`aws.batch.shareIdentifier`
+: *Requires `22.09.0-edge` or later*
+: The share identifier for all tasks when using [fair-share scheduling for AWS Batch](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/)
+
+`aws.batch.volumes`
+: One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. `/host/path:/mount/path[:ro|rw]`. Multiple mounts can be specified separating them with a comma or using a list object.
 
 `aws.client.anonymous`
 : Allow the access of public S3 buckets without the need to provide AWS credentials. Any service that does not accept unsigned requests will return a service access error.
@@ -232,52 +279,13 @@ The following settings are available:
 `aws.client.uploadStorageClass`
 : The S3 storage class applied to stored objects, one of \[`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`\] (default: `STANDARD`).
 
-(config-aws-batch)=
-
-Advanced Batch configuration options can be set by using the `batch` attribute. The following settings are available:
-
-`aws.batch.cliPath`
-: The path where the AWS command line tool is installed in the host AMI.
-
-`aws.batch.delayBetweenAttempts`
-: Delay between download attempts from S3 (default: `10 sec`).
-
-`aws.batch.jobRole`
-: The AWS Job Role ARN that needs to be used to execute the Batch Job.
-
-`aws.batch.logsGroup`
-: *Requires version `22.09.0-edge` or later*
-: The name of the logs group used by Batch Jobs (default: `/aws/batch`).
-
-`aws.batch.maxParallelTransfers`
-: Max parallel upload/download transfer operations *per job* (default: `4`).
-
-`aws.batch.maxSpotAttempts`
-: *Requires version `22.04.0` or later*
-: Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: `5`)
-
-`aws.batch.maxTransferAttempts`
-: Max number of downloads attempts from S3 (default: `1`).
-
-`aws.batch.retryMode`
-: The retry mode configuration setting, to accommodate rate-limiting on [AWS services](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html) (default: `standard`)
-
-`aws.batch.schedulingPriority`
-: *Requires `23.01.0-edge` or later*
-: The scheduling priority for all tasks when using [fair-share scheduling for AWS Batch](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/) (default: `0`)
-
-`aws.batch.shareIdentifier`
-: *Requires `22.09.0-edge` or later*
-: The share identifier for all tasks when using [fair-share scheduling for AWS Batch](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/)
-
-`aws.batch.volumes`
-: One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. `/host/path:/mount/path[:ro|rw]`. Multiple mounts can be specified separating them with a comma or using a list object.
-
 (config-azure)=
 
 ### Scope `azure`
 
-The `azure` scope allows you to configure the interactions with {ref}`azure-page`.
+The `azure` scope allows you to configure the interactions with Azure, including Azure Batch and Azure Blob Storage.
+
+Read the {ref}`azure-page` page for more information.
 
 The following settings are available:
 
@@ -661,6 +669,119 @@ executor.$sge.pollInterval = '30sec'
 executor.$local.cpus = 8
 executor.$local.memory = '32 GB'
 ```
+
+(config-google)=
+
+### Scope `google`
+
+The `google` scope allows you to configure the interactions with Google Cloud, including Google Cloud Batch, Google Life Sciences, and Google Cloud Storage.
+
+Read the {ref}`google-page` page for more information.
+
+The following settings are available:
+
+`google.enableRequesterPaysBuckets`
+: When `true` uses the given Google Cloud project ID as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`).
+
+`google.location`
+: The Google Cloud location where jobs are executed (default: `us-central1`).
+
+`google.project`
+: The Google Cloud project ID to use for pipeline execution
+
+`google.region`
+: *Available only for Google Life Sciences*
+: The Google Cloud region where jobs are executed. Multiple regions can be provided as a comma-separated list. Cannot be used with the `google.zone` option. See the [Google Cloud documentation](https://cloud.google.com/compute/docs/regions-zones/) for a list of available regions and zones.
+
+`google.zone`
+: *Available only for Google Life Sciences*
+: The Google Cloud zone where jobs are executed. Multiple zones can be provided as a comma-separated list. Cannot be used with the `google.region` option. See the [Google Cloud documentation](https://cloud.google.com/compute/docs/regions-zones/) for a list of available regions and zones.
+
+`google.batch.allowedLocations`
+: *Requires version `22.12.0-edge` or later*
+: Define the set of allowed locations for VMs to be provisioned. See [Google documentation](https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy) for details (default: no restriction).
+
+`google.batch.bootDiskSize`
+: Set the size of the virtual machine boot disk, e.g `50.GB` (default: none).
+
+`google.batch.cpuPlatform`
+: Set the minimum CPU Platform, e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).
+
+`google.batch.network`
+: Set network name to attach the VM's network interface to. The value will be prefixed with `global/networks/` unless it contains a `/`, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used.
+
+`google.batch.serviceAccountEmail`
+: Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
+
+`google.batch.spot`
+: When `true` enables the usage of *spot* virtual machines or `false` otherwise (default: `false`).
+
+`google.batch.subnetwork`
+: Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL.
+
+`google.batch.usePrivateAddress`
+: When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`).
+
+`google.lifeSciences.bootDiskSize`
+: Set the size of the virtual machine boot disk e.g `50.GB` (default: none).
+
+`google.lifeSciences.copyImage`
+: The container image run to copy input and output files. It must include the `gsutil` tool (default: `google/cloud-sdk:alpine`).
+
+`google.lifeSciences.cpuPlatform`
+: Set the minimum CPU Platform e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).
+
+`google.lifeSciences.debug`
+: When `true` copies the `/google` debug directory in that task bucket directory (default: `false`).
+
+`google.lifeSciences.keepAliveOnFailure`
+: *Requires version `21.06.0-edge` or later*
+: When `true` and a task complete with an unexpected exit status the associated compute node is kept up for 1 hour. This options implies `sshDaemon=true` (default: `false`).
+
+`google.lifeSciences.network`
+: *Requires version `21.03.0-edge` or later*
+: Set network name to attach the VM's network interface to. The value will be prefixed with `global/networks/` unless it contains a `/`, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used.
+
+`google.lifeSciences.preemptible`
+: When `true` enables the usage of *preemptible* virtual machines or `false` otherwise (default: `true`).
+
+`google.lifeSciences.serviceAccountEmail`
+: *Requires version `20.05.0-edge` or later*
+: Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
+
+`google.lifeSciences.subnetwork`
+: *Requires version `21.03.0-edge` or later*
+: Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL.
+
+`google.lifeSciences.sshDaemon`
+: When `true` runs SSH daemon in the VM carrying out the job to which it's possible to connect for debugging purposes (default: `false`).
+
+`google.lifeSciences.sshImage`
+: The container image used to run the SSH daemon (default: `gcr.io/cloud-genomics-pipelines/tools`).
+
+`google.lifeSciences.usePrivateAddress`
+: *Requires version `20.03.0-edge` or later*
+: When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`).
+
+`google.storage.delayBetweenAttempts`
+: *Requires version `21.06.0-edge` or later*
+: Delay between download attempts from Google Storage (default `10 sec`).
+
+`google.storage.downloadMaxComponents`
+: *Requires version `21.06.0-edge` or later*
+: Defines the value for the option `GSUtil:sliced_object_download_max_components` used by `gsutil` for transfer input and output data (default: `8`).
+
+`google.storage.maxParallelTransfers`
+: *Requires version `21.06.0-edge` or later*
+: Max parallel upload/download transfer operations *per job* (default: `4`).
+
+`google.storage.maxTransferAttempts`
+: *Requires version `21.06.0-edge` or later*
+: Max number of downloads attempts from Google Storage (default: `1`).
+
+`google.storage.parallelThreadCount`
+: *Requires version `21.06.0-edge` or later*
+: Defines the value for the option `GSUtil:parallel_thread_count` used by `gsutil` for transfer input and output data (default: `1`).
 
 (config-k8s)=
 
