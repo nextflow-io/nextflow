@@ -655,12 +655,12 @@ class Session implements ISession {
             execService = null
             log.trace "Session > executor shutdown"
 
-            // delete task directories if enabled and run was successful
-            if( config.cleanup && workDir && !(aborted || cancelled || error) )
-                cleanup0()
-
             // -- close db
             cache?.close()
+
+            // clean work directory if enabled and run was successful
+            if( config.cleanup && workDir && !(aborted || cancelled || error) )
+                cleanup0()
 
             // -- shutdown plugins
             Plugins.stop()
@@ -711,13 +711,15 @@ class Session implements ISession {
     }
 
     /**
-     * Delete the workflow work directory from tasks temporary files
+     * Delete the work directories of completed tasks
      */
     final protected void cleanup0() {
+        CacheDB db = null
         try {
-            log.trace "Cleaning-up workdir"
-            cache.eachRecord { HashCode hash, TraceRecord record ->
-                def deleted = cache.removeTaskEntry(hash)
+            log.trace "Cleaning up workdir"
+            db = CacheFactory.create(uniqueId, runName).openForRead()
+            db.eachRecord { HashCode hash, TraceRecord record ->
+                def deleted = db.removeTaskEntry(hash)
                 if( deleted ) {
                     // delete folder
                     FileHelper.deletePath(FileHelper.asPath(record.workDir))
@@ -727,6 +729,9 @@ class Session implements ISession {
         }
         catch( Exception e ) {
             log.warn("Failed to cleanup work dir: ${workDir.toUriString()}")
+        }
+        finally {
+            db.close()
         }
     }
 
