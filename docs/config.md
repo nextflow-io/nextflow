@@ -86,6 +86,12 @@ The `apptainer` scope controls how [Apptainer](https://apptainer.org) containers
 
 The following settings are available:
 
+`apptainer.autoMounts`
+: When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Apptainer installation (default: `false`).
+
+`apptainer.cacheDir`
+: The directory where remote Apptainer images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+
 `apptainer.enabled`
 : Set this flag to `true` to enable Apptainer execution (default: `false`).
 
@@ -95,23 +101,17 @@ The following settings are available:
 `apptainer.envWhitelist`
 : Comma separated list of environment variable names to be included in the container environment.
 
-`apptainer.runOptions`
-: This attribute can be used to provide any extra command line options supported by `apptainer exec`.
-
 `apptainer.noHttps`
 : Set this flag to `true` to pull the Apptainer image with http protocol (default: `false`).
-
-`apptainer.autoMounts`
-: When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Apptainer installation (default: `false`).
-
-`apptainer.cacheDir`
-: The directory where remote Apptainer images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
 
 `apptainer.pullTimeout`
 : The amount of time the Apptainer pull can last, exceeding which the process is terminated (default: `20 min`).
 
 `apptainer.registry`
 : The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+`apptainer.runOptions`
+: This attribute can be used to provide any extra command line options supported by `apptainer exec`.
 
 Read the {ref}`container-apptainer` page to learn more about how to use Apptainer containers with Nextflow.
 
@@ -217,20 +217,20 @@ The following settings are available:
 `aws.client.userAgent`
 : The HTTP user agent header passed with all HTTP requests.
 
-`aws.client.uploadMaxThreads`
-: The maximum number of threads used for multipart upload.
-
 `aws.client.uploadChunkSize`
 : The size of a single part in a multipart upload (default: `100 MB`).
-
-`aws.client.uploadStorageClass`
-: The S3 storage class applied to stored objects, one of \[`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`\] (default: `STANDARD`).
 
 `aws.client.uploadMaxAttempts`
 : The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
 
+`aws.client.uploadMaxThreads`
+: The maximum number of threads used for multipart upload.
+
 `aws.client.uploadRetrySleep`
 : The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
+
+`aws.client.uploadStorageClass`
+: The S3 storage class applied to stored objects, one of \[`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`\] (default: `STANDARD`).
 
 (config-aws-batch)=
 
@@ -239,6 +239,9 @@ Advanced Batch configuration options can be set by using the `batch` attribute. 
 `aws.batch.cliPath`
 : The path where the AWS command line tool is installed in the host AMI.
 
+`aws.batch.delayBetweenAttempts`
+: Delay between download attempts from S3 (default: `10 sec`).
+
 `aws.batch.jobRole`
 : The AWS Job Role ARN that needs to be used to execute the Batch Job.
 
@@ -246,21 +249,15 @@ Advanced Batch configuration options can be set by using the `batch` attribute. 
 : *Requires version `22.09.0-edge` or later*
 : The name of the logs group used by Batch Jobs (default: `/aws/batch`).
 
-`aws.batch.volumes`
-: One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. `/host/path:/mount/path[:ro|rw]`. Multiple mounts can be specified separating them with a comma or using a list object.
-
-`aws.batch.delayBetweenAttempts`
-: Delay between download attempts from S3 (default: `10 sec`).
-
 `aws.batch.maxParallelTransfers`
 : Max parallel upload/download transfer operations *per job* (default: `4`).
-
-`aws.batch.maxTransferAttempts`
-: Max number of downloads attempts from S3 (default: `1`).
 
 `aws.batch.maxSpotAttempts`
 : *Requires version `22.04.0` or later*
 : Max number of execution attempts of a job interrupted by a EC2 spot reclaim event (default: `5`)
+
+`aws.batch.maxTransferAttempts`
+: Max number of downloads attempts from S3 (default: `1`).
 
 `aws.batch.retryMode`
 : The retry mode configuration setting, to accommodate rate-limiting on [AWS services](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html) (default: `standard`)
@@ -272,6 +269,9 @@ Advanced Batch configuration options can be set by using the `batch` attribute. 
 `aws.batch.shareIdentifier`
 : *Requires `22.09.0-edge` or later*
 : The share identifier for all tasks when using [fair-share scheduling for AWS Batch](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/)
+
+`aws.batch.volumes`
+: One or more container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. `/host/path:/mount/path[:ro|rw]`. Multiple mounts can be specified separating them with a comma or using a list object.
 
 (config-azure)=
 
@@ -290,35 +290,20 @@ The following settings are available:
 `azure.activeDirectory.tenantId`
 : The Azure tenant ID
 
-`azure.storage.accountName`
-: The blob storage account name
-
-`azure.storage.accountKey`
-: The blob storage account key
-
-`azure.storage.sasToken`
-: The blob storage shared access signature token. This can be provided as an alternative to the `accountKey` setting.
-
-`azure.storage.tokenDuration`
-: The duration of the shared access signature token created by Nextflow when the `sasToken` option is *not* specified (default: `48h`).
-
 `azure.batch.accountName`
 : The batch service account name.
 
 `azure.batch.accountKey`
 : The batch service account key.
 
-`azure.batch.endpoint`
-: The batch service endpoint e.g. `https://nfbatch1.westeurope.batch.azure.com`.
-
-`azure.batch.location`
-: The name of the batch service region, e.g. `westeurope` or `eastus2`. This is not needed when the endpoint is specified.
+`azure.batch.allowPoolCreation`
+: Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: `false`).
 
 `azure.batch.autoPoolMode`
 : Enable the automatic creation of batch pools depending on the pipeline resources demand (default: `true`).
 
-`azure.batch.allowPoolCreation`
-: Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: `false`).
+`azure.batch.copyToolInstallMode`
+: Specify where the `azcopy` tool used by Nextflow. When `node` is specified it's copied once during the pool creation. When `task` is provider, it's installed for each task execution (default: `node`).
 
 `azure.batch.deleteJobsOnCompletion`
 : Enable the automatic deletion of jobs created by the pipeline execution (default: `true`).
@@ -326,29 +311,11 @@ The following settings are available:
 `azure.batch.deletePoolsOnCompletion`
 : Enable the automatic deletion of compute node pools upon pipeline completion (default: `false`).
 
-`azure.batch.copyToolInstallMode`
-: Specify where the `azcopy` tool used by Nextflow. When `node` is specified it's copied once during the pool creation. When `task` is provider, it's installed for each task execution (default: `node`).
+`azure.batch.endpoint`
+: The batch service endpoint e.g. `https://nfbatch1.westeurope.batch.azure.com`.
 
-`azure.batch.pools.<name>.publisher`
-: *Requires `nf-azure@0.11.0`*
-: Specify the publisher of virtual machine type used by the pool identified with `<name>` (default: `microsoft-azure-batch`).
-
-`azure.batch.pools.<name>.offer`
-: *Requires `nf-azure@0.11.0`*
-: Specify the offer type of the virtual machine type used by the pool identified with `<name>` (default: `centos-container`).
-
-`azure.batch.pools.<name>.sku`
-: *Requires `nf-azure@0.11.0`*
-: Specify the ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
-
-`azure.batch.pools.<name>.vmType`
-: Specify the virtual machine type used by the pool identified with `<name>`.
-
-`azure.batch.pools.<name>.vmCount`
-: Specify the number of virtual machines provisioned by the pool identified with `<name>`.
-
-`azure.batch.pools.<name>.maxVmCount`
-: Specify the max of virtual machine when using auto scale option.
+`azure.batch.location`
+: The name of the batch service region, e.g. `westeurope` or `eastus2`. This is not needed when the endpoint is specified.
 
 `azure.batch.pools.<name>.autoScale`
 : Enable autoscaling feature for the pool identified with `<name>`.
@@ -356,6 +323,23 @@ The following settings are available:
 `azure.batch.pools.<name>.fileShareRootPath`
 : *Requires `nf-azure@0.11.0`*
 : If mounting File Shares, this is the internal root mounting point. Must be `/mnt/resource/batch/tasks/fsmounts` for CentOS nodes or `/mnt/batch/tasks/fsmounts` for Ubuntu nodes (default is for CentOS).
+
+`azure.batch.pools.<name>.maxVmCount`
+: Specify the max of virtual machine when using auto scale option.
+
+`azure.batch.pools.<name>.offer`
+: *Requires `nf-azure@0.11.0`*
+: Specify the offer type of the virtual machine type used by the pool identified with `<name>` (default: `centos-container`).
+
+`azure.batch.pools.<name>.privileged`
+: Enable the task to run with elevated access. Ignored if `runAs` is set (default: `false`).
+
+`azure.batch.pools.<name>.publisher`
+: *Requires `nf-azure@0.11.0`*
+: Specify the publisher of virtual machine type used by the pool identified with `<name>` (default: `microsoft-azure-batch`).
+
+`azure.batch.pools.<name>.runAs`
+: Specify the username under which the task is run. The user must already exist on each node of the pool.
 
 `azure.batch.pools.<name>.scaleFormula`
 : Specify the scale formula for the pool identified with `<name>`. See Azure Batch [scaling documentation](https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling) for details.
@@ -366,15 +350,19 @@ The following settings are available:
 `azure.batch.pools.<name>.schedulePolicy`
 : Specify the scheduling policy for the pool identified with `<name>`. It can be either `spread` or `pack` (default: `spread`).
 
-`azure.batch.pools.<name>.privileged`
-: Enable the task to run with elevated access. Ignored if `runAs` is set (default: `false`).
-
-`azure.batch.pools.<name>.runAs`
-: Specify the username under which the task is run. The user must already exist on each node of the pool.
+`azure.batch.pools.<name>.sku`
+: *Requires `nf-azure@0.11.0`*
+: Specify the ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
 
 `azure.batch.pools.<name>.virtualNetwork`
 : *Requires Nextflow `23.03.0-edge` or later*
 : Specify the subnet ID of a virtual network in which to create the pool.
+
+`azure.batch.pools.<name>.vmCount`
+: Specify the number of virtual machines provisioned by the pool identified with `<name>`.
+
+`azure.batch.pools.<name>.vmType`
+: Specify the virtual machine type used by the pool identified with `<name>`.
 
 `azure.registry.server`
 : *Requires `nf-azure@0.9.8`*
@@ -391,14 +379,26 @@ The following settings are available:
 `azure.retryPolicy.delay`
 : Delay when retrying failed API requests (default: `500ms`).
 
-`azure.retryPolicy.maxDelay`
-: Max delay when retrying failed API requests (default: `60s`).
-
 `azure.retryPolicy.jitter`
 : Jitter value when retrying failed API requests (default: `0.25`).
 
 `azure.retryPolicy.maxAttempts`
 : Max attempts when retrying failed API requests (default: `10`).
+
+`azure.retryPolicy.maxDelay`
+: Max delay when retrying failed API requests (default: `60s`).
+
+`azure.storage.accountName`
+: The blob storage account name
+
+`azure.storage.accountKey`
+: The blob storage account key
+
+`azure.storage.sasToken`
+: The blob storage shared access signature token. This can be provided as an alternative to the `accountKey` setting.
+
+`azure.storage.tokenDuration`
+: The duration of the shared access signature token created by Nextflow when the `sasToken` option is *not* specified (default: `48h`).
 
 (config-charliecloud)=
 
@@ -408,23 +408,23 @@ The `charliecloud` scope controls how [Charliecloud](https://hpc.github.io/charl
 
 The following settings are available:
 
+`charliecloud.cacheDir`
+: The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+
 `charliecloud.enabled`
 : Set this flag to `true` to enable Charliecloud execution (default: `false`).
 
 `charliecloud.envWhitelist`
 : Comma separated list of environment variable names to be included in the container environment.
 
-`charliecloud.temp`
-: Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created.
+`charliecloud.pullTimeout`
+: The amount of time the Charliecloud pull can last, exceeding which the process is terminated (default: `20 min`).
 
 `charliecloud.runOptions`
 : This attribute can be used to provide any extra command line options supported by the `ch-run` command.
 
-`charliecloud.cacheDir`
-: The directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
-
-`charliecloud.pullTimeout`
-: The amount of time the Charliecloud pull can last, exceeding which the process is terminated (default: `20 min`).
+`charliecloud.temp`
+: Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created.
 
 Read the {ref}`container-charliecloud` page to learn more about how to use Charliecloud containers with Nextflow.
 
@@ -484,38 +484,38 @@ The following settings are available:
 `docker.enabled`
 : Set this flag to `true` to enable Docker execution (default: `false`).
 
+`docker.engineOptions`
+: This attribute can be used to provide any option supported by the Docker engine i.e. `docker [OPTIONS]`.
+
 `docker.envWhitelist`
 : Comma separated list of environment variable names to be included in the container environment.
-
-`docker.legacy`
-: Uses command line options removed since version 1.10.x (default: `false`).
-
-`docker.sudo`
-: Executes Docker run command as `sudo` (default: `false`).
-
-`docker.tty`
-: Allocates a pseudo-tty (default: `false`).
-
-`docker.temp`
-: Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created.
-
-`docker.remove`
-: Clean-up the container after the execution (default: `true`). For details see: <https://docs.docker.com/engine/reference/run/#clean-up---rm> .
-
-`docker.runOptions`
-: This attribute can be used to provide any extra command line options supported by the `docker run` command. For details see: <https://docs.docker.com/engine/reference/run/> .
-
-`docker.registry`
-: The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
 
 `docker.fixOwnership`
 : Fixes ownership of files created by the docker container.
 
-`docker.engineOptions`
-: This attribute can be used to provide any option supported by the Docker engine i.e. `docker [OPTIONS]`.
+`docker.legacy`
+: Uses command line options removed since version 1.10.x (default: `false`).
 
 `docker.mountFlags`
-: Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`
+: Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`.
+
+`docker.registry`
+: The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+`docker.remove`
+: Clean-up the container after the execution (default: `true`). See the [Docker documentation](https://docs.docker.com/engine/reference/run/#clean-up---rm) for details.
+
+`docker.runOptions`
+: This attribute can be used to provide any extra command line options supported by the `docker run` command. See the [Docker documentation](https://docs.docker.com/engine/reference/run/) for details.
+
+`docker.sudo`
+: Executes Docker run command as `sudo` (default: `false`).
+
+`docker.temp`
+: Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created.
+
+`docker.tty`
+: Allocates a pseudo-tty (default: `false`).
 
 Read the {ref}`container-docker` page to learn more about how to use Docker containers with Nextflow.
 
@@ -553,32 +553,26 @@ The `executor` scope controls various executor behaviors.
 
 The following settings are available:
 
-`executor.name`
-: The name of the executor to be used (default: `local`).
-
-`executor.queueSize`
-: The number of tasks the executor will handle in a parallel manner. Default varies for each executor (see below).
-
-`executor.submitRateLimit`
-: Determines the max rate of job submission per time unit, for example `'10sec'` (10 jobs per second) or `'50/2min'` (50 jobs every 2 minutes) (default: unlimited).
-
-`executor.pollInterval`
-: Determines how often to check for process termination. Default varies for each executor (see below).
+`executor.cpus`
+: The maximum number of CPUs made available by the underlying system. Used only by the `local` executor.
 
 `executor.dumpInterval`
 : Determines how often to log the executor status (default: `5min`).
 
-`executor.queueGlobalStatu`
-: Determines how job status is retrieved. When `false` only the queue associated with the job execution is queried. When `true` the job status is queried globally i.e. irrespective of the submission queue (default: `false`, requires version `23.01.0-edge` or later).
-
-`executor.queueStatInterva`
-: Determines how often to fetch the queue status from the scheduler (default: `1min`). Used only by grid executors.
-
 `executor.exitReadTimeout`
 : Determines how long to wait before returning an error status when a process is terminated but the `.exitcode` file does not exist or is empty (default: `270 sec`). Used only by grid executors.
 
+`executor.jobName`
+: Determines the name of jobs submitted to the underlying cluster executor e.g. `executor.jobName = { "$task.name - $task.hash" }`. Make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
+
 `executor.killBatchSize`
 : Determines the number of jobs that can be killed in a single command execution (default: `100`).
+
+`executor.memory`
+: The maximum amount of memory made available by the underlying system. Used only by the `local` executor.
+
+`executor.name`
+: The name of the executor to be used (default: `local`).
 
 `executor.perJobMemLimit`
 : Specifies Platform LSF *per-job* memory limit mode. See {ref}`lsf-executor`.
@@ -586,22 +580,22 @@ The following settings are available:
 `executor.perTaskReserve`
 : Specifies Platform LSF *per-task* memory reserve mode. See {ref}`lsf-executor`.
 
-`executor.jobName`
-: Determines the name of jobs submitted to the underlying cluster executor e.g. `executor.jobName = { "$task.name - $task.hash" }`. Make sure the resulting job name matches the validation constraints of the underlying batch scheduler.
+`executor.pollInterval`
+: Determines how often to check for process termination. Default varies for each executor (see below).
 
-`executor.cpus`
-: The maximum number of CPUs made available by the underlying system. Used only by the `local` executor.
+`executor.queueGlobalStatus`
+: *Requires version `23.01.0-edge` or later*
+: Determines how job status is retrieved. When `false` only the queue associated with the job execution is queried. When `true` the job status is queried globally i.e. irrespective of the submission queue (default: `false`).
 
-`executor.memory`
-: The maximum amount of memory made available by the underlying system. Used only by the `local` executor.
+`executor.queueSize`
+: The number of tasks the executor will handle in a parallel manner. Default varies for each executor (see below).
+
+`executor.queueStatInterval`
+: Determines how often to fetch the queue status from the scheduler (default: `1min`). Used only by grid executors.
 
 `executor.retry.delay`
 : *Requires `22.03.0-edge` or later*
 : Delay when retrying failed job submissions (default: `500ms`). Used only by grid executors.
-
-`executor.retry.maxDelay`
-: *Requires `22.03.0-edge` or later*
-: Max delay when retrying failed job submissions (default: `30s`). Used only by grid executors.
 
 `executor.retry.jitter`
 : *Requires `22.03.0-edge` or later*
@@ -611,9 +605,16 @@ The following settings are available:
 : *Requires `22.03.0-edge` or later*
 : Max attempts when retrying failed job submissions (default: `3`). Used only by grid executors.
 
+`executor.retry.maxDelay`
+: *Requires `22.03.0-edge` or later*
+: Max delay when retrying failed job submissions (default: `30s`). Used only by grid executors.
+
 `executor.retry.reason`
 : *Requires `22.03.0-edge` or later*
 : Regex pattern that when verified cause a failed submit operation to be re-tried (default: `Socket timed out`). Used only by grid executors.
+
+`executor.submitRateLimit`
+: Determines the max rate of job submission per time unit, for example `'10sec'` (10 jobs per second) or `'50/2min'` (50 jobs every 2 minutes) (default: unlimited).
 
 Some executor settings have different default values depending on the executor.
 
@@ -672,26 +673,39 @@ The following settings are available:
 `k8s.autoMountHostPaths`
 : Automatically mounts host paths in the job pods. Only for development purpose when using a single node cluster (default: `false`).
 
+`k8s.computeResourceType`
+: *Requires version `22.05.0-edge` or later*
+: Define whether use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Pod`).
+
 `k8s.context`
 : Defines the Kubernetes [configuration context name](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) to use.
 
-`k8s.namespace`
-: Defines the Kubernetes namespace to use (default: `default`).
+`k8s.fetchNodeName`
+: *Requires version `22.05.0-edge` or later*
+: If you trace the hostname, activate this option (default: `false`).
 
-`k8s.serviceAccount`
-: Defines the Kubernetes [service account name](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) to use.
+`k8s.httpConnectTimeout`
+: *Requires version `22.10.0` or later*
+: Defines the Kubernetes client request HTTP connection timeout e.g. `'60s'`.
+
+`k8s.httpReadTimeout`
+: *Requires version `22.10.0` or later*
+: Defines the Kubernetes client request HTTP connection read timeout e.g. `'60s'`.
 
 `k8s.launchDir`
 : Defines the path where the workflow is launched and the user data is stored. This must be a path in a shared K8s persistent volume (default: `<volume-claim-mount-path>/<user-name>`).
 
-`k8s.workDir`
-: Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default:`<user-dir>/work`).
+`k8s.maxErrorRetry`
+: Defines the Kubernetes API max request retries (default: 4).
 
-`k8s.projectDir`
-: Defines the path where Nextflow projects are downloaded. This must be a path in a shared K8s persistent volume (default: `<volume-claim-mount-path>/projects`).
+`k8s.namespace`
+: Defines the Kubernetes namespace to use (default: `default`).
 
 `k8s.pod`
 : Allows the definition of one or more pod configuration options such as environment variables, config maps, secrets, etc. It allows the same settings as the {ref}`process-pod` process directive.
+
+`k8s.projectDir`
+: Defines the path where Nextflow projects are downloaded. This must be a path in a shared K8s persistent volume (default: `<volume-claim-mount-path>/projects`).
 
 `k8s.pullPolicy`
 : Defines the strategy to be used to pull the container image e.g. `pullPolicy: 'Always'`.
@@ -702,6 +716,9 @@ The following settings are available:
 `k8s.securityContext`
 : Defines the [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for all pods.
 
+`k8s.serviceAccount`
+: Defines the Kubernetes [service account name](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) to use.
+
 `k8s.storageClaimName`
 : The name of the persistent volume claim where store workflow result data.
 
@@ -709,29 +726,13 @@ The following settings are available:
 : The path location used to mount the persistent volume claim (default: `/workspace`).
 
 `k8s.storageSubPath`
-: The path in the persistent volume to be mounted (default: root).
-
-`k8s.computeResourceType`
-: *Requires version `22.05.0-edge` or later*
-: Define whether use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Pod`).
-
-`k8s.fetchNodeName`
-: *Requires version `22.05.0-edge` or later*
-: If you trace the hostname, activate this option (default: `false`).
+: The path in the persistent volume to be mounted (default: `/`).
 
 `k8s.volumeClaims`
-: (deprecated)
+: *DEPRECATED*
 
-`k8s.maxErrorRetry`
-: Defines the Kubernetes API max request retries (default is set to 4)
-
-`k8s.httpReadTimeout`
-: *Requires version `22.10.0` or later*
-: Defines the Kubernetes client request HTTP connection read timeout e.g. `'60s'`.
-
-`k8s.httpConnectTimeout`
-: *Requires version `22.10.0` or later*
-: Defines the Kubernetes client request HTTP connection timeout e.g. `'60s'`.
+`k8s.workDir`
+: Defines the path where the workflow temporary data is stored. This must be a path in a shared K8s persistent volume (default:`<user-dir>/work`).
 
 See the {ref}`k8s-page` page for more details.
 
@@ -742,6 +743,9 @@ See the {ref}`k8s-page` page for more details.
 The `mail` scope controls the mail server used to send email notifications.
 
 The following settings are available:
+
+`mail.debug`
+: When `true` enables Java Mail logging for debugging purpose.
 
 `mail.from`
 : Default email sender address.
@@ -758,17 +762,14 @@ The following settings are available:
 `mail.smtp.password`
 : User password to connect to the mail server.
 
-`mail.smtp.proxy.hos`
+`mail.smtp.proxy.host`
 : Host name of an HTTP web proxy server that will be used for connections to the mail server.
 
-`mail.smtp.proxy.por`
+`mail.smtp.proxy.port`
 : Port number for the HTTP web proxy server.
 
 `mail.smtp.*`
 : Any SMTP configuration property supported by the [Java Mail API](https://javaee.github.io/javamail/), which Nextflow uses to send emails. See the table of available properties [here](https://javaee.github.io/javamail/docs/api/com/sun/mail/smtp/package-summary.html#properties).
-
-`mail.debug`
-: When `true` enables Java Mail logging for debugging purpose.
 
 For example, the following snippet shows how to configure Nextflow to send emails through the [AWS Simple Email Service](https://aws.amazon.com/ses/):
 
@@ -802,44 +803,44 @@ The `manifest` scope allows you to define some meta-data information needed when
 
 The following settings are available:
 
-`manifes.author`
+`manifest.author`
 : Project author name (use a comma to separate multiple names).
 
-`manifes.defaultBranch`
+`manifest.defaultBranch`
 : Git repository default branch (default: `master`).
 
-`manifes.description`
+`manifest.description`
 : Free text describing the workflow project.
 
-`manifes.doi`
+`manifest.doi`
 : Project related publication DOI identifier.
 
-`manifes.homePage`
+`manifest.homePage`
 : Project home page URL.
 
-`manifes.mainScript`
+`manifest.mainScript`
 : Project main script (default: `main.nf`).
 
-`manifes.name`
+`manifest.name`
 : Project short name.
 
-`manifes.nextflowVersion`
+`manifest.nextflowVersion`
 : Minimum required Nextflow version.
 
   This setting may be useful to ensure that a specific version is used:
 
   ```groovy
-  nextflowVersion = '1.2.3'        // exact match
-  nextflowVersion = '1.2+'         // 1.2 or later (excluding 2 and later)
-  nextflowVersion = '>=1.2'        // 1.2 or later
-  nextflowVersion = '>=1.2, <=1.5' // any version in the 1.2 .. 1.5 range
-  nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version does not match required version.
+  manifest.nextflowVersion = '1.2.3'        // exact match
+  manifest.nextflowVersion = '1.2+'         // 1.2 or later (excluding 2 and later)
+  manifest.nextflowVersion = '>=1.2'        // 1.2 or later
+  manifest.nextflowVersion = '>=1.2, <=1.5' // any version in the 1.2 .. 1.5 range
+  manifest.nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version does not match required version.
   ```
 
-`manifes.recurseSubmodules`
+`manifest.recurseSubmodules`
 : Set this flag to `true` to pull submodules recursively from the Git repository.
 
-`manifes.version`
+`manifest.version`
 : Project version number.
 
 The above options can also be specified in a `manifest` block, for example:
@@ -861,11 +862,11 @@ Read the {ref}`sharing-page` page to learn how to publish your pipeline to GitHu
 
 The `notification` scope allows you to define the automatic sending of a notification email message when the workflow execution terminates.
 
+`notification.binding`
+: An associative array modelling the variables in the template file.
+
 `notification.enabled`
 : Enables the sending of a notification message when the workflow execution completes.
-
-`notification.to`
-: Recipient address for the notification email. Multiple addresses can be specified separating them with a comma.
 
 `notification.from`
 : Sender address for the notification email message.
@@ -873,8 +874,8 @@ The `notification` scope allows you to define the automatic sending of a notific
 `notification.template`
 : Path of a template file which provides the content of the notification message.
 
-`notification.binding`
-: An associative array modelling the variables in the template file.
+`notification.to`
+: Recipient address for the notification email. Multiple addresses can be specified separating them with a comma.
 
 The notification message is sent my using the STMP server defined in the configuration {ref}`mail scope<config-mail>`.
 
@@ -907,11 +908,17 @@ The following settings are available:
 `podman.enabled`
 : Set this flag to `true` to enable Podman execution (default: `false`).
 
+`podman.engineOptions`
+: This attribute can be used to provide any option supported by the Podman engine i.e. `podman [OPTIONS]`.
+
 `podman.envWhitelist`
 : Comma separated list of environment variable names to be included in the container environment.
 
-`podman.temp`
-: Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created.
+`podman.mountFlags`
+: Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`.
+
+`podman.registry`
+: The registry from where container images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
 
 `podman.remove`
 : Clean-up the container after the execution (default: `true`).
@@ -919,14 +926,8 @@ The following settings are available:
 `podman.runOptions`
 : This attribute can be used to provide any extra command line options supported by the `podman run` command.
 
-`podman.registry`
-: The registry from where container images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
-
-`podman.engineOptions`
-: This attribute can be used to provide any option supported by the Podman engine i.e. `podman [OPTIONS]`.
-
-`podman.mountFlags`
-: Add the specified flags to the volume mounts e.g. `mountFlags = 'ro,Z'`
+`podman.temp`
+: Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `auto` to create a temporary directory each time a container is created.
 
 Read the {ref}`container-podman` page to learn more about how to use Podman containers with Nextflow.
 
@@ -1065,11 +1066,11 @@ The following settings are available:
 `sarus.envWhitelist`
 : Comma separated list of environment variable names to be included in the container environment.
 
-`sarus.tty`
-: Allocates a pseudo-tty (default: `false`).
-
 `sarus.runOptions`
 : This attribute can be used to provide any extra command line options supported by the `sarus run` command. For details see the [Sarus user guide](https://sarus.readthedocs.io/en/stable/user/user_guide.html).
+
+`sarus.tty`
+: Allocates a pseudo-tty (default: `false`).
 
 Read the {ref}`container-sarus` page to learn more about how to use Sarus containers with Nextflow.
 
@@ -1094,6 +1095,12 @@ The `singularity` scope controls how [Singularity](https://sylabs.io/singularity
 
 The following settings are available:
 
+`singularity.autoMounts`
+: When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Singularity installation (default: `false`).
+
+`singularity.cacheDir`
+: The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+
 `singularity.enabled`
 : Set this flag to `true` to enable Singularity execution (default: `false`).
 
@@ -1103,23 +1110,17 @@ The following settings are available:
 `singularity.envWhitelist`
 : Comma separated list of environment variable names to be included in the container environment.
 
-`singularity.runOptions`
-: This attribute can be used to provide any extra command line options supported by `singularity exec`.
-
 `singularity.noHttps`
 : Set this flag to `true` to pull the Singularity image with http protocol (default: `false`).
-
-`singularity.autoMounts`
-: When `true` Nextflow automatically mounts host paths in the executed container. It requires the `user bind control` feature enabled in your Singularity installation (default: `false`).
-
-`singularity.cacheDir`
-: The directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible to all compute nodes.
 
 `singularity.pullTimeout`
 : The amount of time the Singularity pull can last, exceeding which the process is terminated (default: `20 min`).
 
 `singularity.registry`
 : The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+`singularity.runOptions`
+: This attribute can be used to provide any extra command line options supported by `singularity exec`.
 
 Read the {ref}`container-singularity` page to learn more about how to use Singularity containers with Nextflow.
 
@@ -1134,14 +1135,14 @@ The following settings are available:
 `spack.cacheDir`
 : Defines the path where Spack environments are stored. When using a compute cluster make sure to provide a shared file system path accessible from all compute nodes.
 
+`spack.createTimeout`
+: Defines the amount of time the Spack environment creation can last. The creation process is terminated when the timeout is exceeded (default: `60 min`).
+
 `spack.noChecksum`
 : Disables checksum verification for source tarballs (unsafe). Useful when requesting a package version not yet encoded in the corresponding Spack recipe (default: `false`).
 
 `spack.parallelBuilds`
 : Sets number of parallel package builds (Spack default: coincides with number of available CPU cores).
-
-`spack.createTimeout`
-: Defines the amount of time the Spack environment creation can last. The creation process is terminated when the timeout is exceeded (default: `60 min`).
 
 Nextflow does not allow for fine-grained configuration of the Spack package manager. Instead, this has to be performed directly on the host Spack installation. For more information see the [Spack documentation](https://spack.readthedocs.io).
 
@@ -1170,13 +1171,13 @@ The `tower` scope controls the settings for the [Nextflow Tower](https://tower.n
 
 The following settings are available:
 
-`tower.enabled`
-: When `true` Nextflow sends the workflow tracing and execution metrics to the Nextflow Tower service (default: `false`).
-
 `tower.accessToken`
 : The unique access token specific to your account on an instance of Tower.
 
   Your `accessToken` can be obtained from your Tower instance in the `Tokens page <https://tower.nf/tokens>`.
+
+`tower.enabled`
+: When `true` Nextflow sends the workflow tracing and execution metrics to the Nextflow Tower service (default: `false`).
 
 `tower.endpoint`
 : The endpoint of your Tower deployment (default: `https://tower.nf`).
@@ -1203,14 +1204,14 @@ The following settings are available:
 `trace.file`
 : Trace file name (default: `trace-<timestamp>.txt`).
 
-`trace.sep`
-: Character used to separate values in each row (default: `\t`).
+`trace.overwrite`
+: When `true` overwrites any existing trace file with the same name.
 
 `trace.raw`
 : When `true` turns on raw number report generation i.e. date and time are reported as milliseconds and memory as number of bytes.
 
-`trace.overwrite`
-: When `true` overwrites any existing trace file with the same name.
+`trace.sep`
+: Character used to separate values in each row (default: `\t`).
 
 The above options can also be specified in a `trace` block, for example:
 
