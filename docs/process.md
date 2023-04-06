@@ -491,7 +491,7 @@ workflow {
 }
 ```
 
-#### Multiple input files
+### Multiple input files
 
 A `path` input can also accept a collection of files instead of a single value. In this case, the input variable will be a Groovy list, and you can use it as such.
 
@@ -554,7 +554,7 @@ workflow {
 Rewriting input file names according to a named pattern is an extra feature and not at all required. The normal file input syntax introduced in the {ref}`process-input-path` section is valid for collections of multiple files as well. To handle multiple input files while preserving the original file names, use a variable identifier or the `*` wildcard.
 :::
 
-#### Dynamic input file names
+### Dynamic input file names
 
 When the input file name is specified by using the `name` option or a string literal, you can also use other input values as variables in the file name string. For example:
 
@@ -931,7 +931,7 @@ Available options:
 `type`
 : Type of paths returned, either `file`, `dir` or `any` (default: `any`, or `file` if the specified file name pattern contains a double star (`**`))
 
-#### Multiple output files
+### Multiple output files
 
 When an output file name contains a `*` or `?` wildcard character, it is interpreted as a [glob][glob] path matcher. This allows you to capture multiple files into a list and emit the list as a single value. For example:
 
@@ -974,7 +974,7 @@ Although the input files matching a glob output declaration are not included in 
 
 Read more about glob syntax at the following link [What is a glob?][what is a glob?]
 
-#### Dynamic output file names
+### Dynamic output file names
 
 When an output file name needs to be expressed dynamically, it is possible to define it using a dynamic string which references variables in the `input` block or in the script global context. For example:
 

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1435,7 +1434,12 @@ class TaskProcessor {
         final x = values.size() == 1 ? values[0] : values
         final ch = param.getOutChannel()
         if( ch != null ) {
-            ch.bind(x)
+            // create a copy of the output list of operation made by a downstream task
+            // can modify the list which is used internally by the task processor
+            // and result in a potential error. See https://github.com/nextflow-io/nextflow/issues/3768
+            final copy = x instanceof List && x instanceof Cloneable ? x.clone() : x
+            // emit the final value
+            ch.bind(copy)
         }
     }
 
@@ -1691,8 +1695,9 @@ class TaskProcessor {
     protected List<Path> getBinDirs() {
         final result = new ArrayList(10)
         // module bundle bin dir have priority, add before
-        if( moduleBundle!=null && session.enableModuleBinaries() )
-            result.addAll(moduleBundle.getBinDirs())
+        final bundle = session.enableModuleBinaries() ? getModuleBundle() : null
+        if( bundle!=null )
+            result.addAll(bundle.getBinDirs())
         // then add project bin dir
         if( executor.binDir )
             result.add(executor.binDir)

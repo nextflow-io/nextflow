@@ -335,6 +335,10 @@ The following settings are available:
 `azure.batch.pools.<name>.maxVmCount`
 : Specify the max of virtual machine when using auto scale option.
 
+`azure.batch.pools.<name>.mountOptions`
+: *Requires `nf-azure@0.11.0`*
+: Specify the mount options for mounting the file shares (default: `-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp`).
+
 `azure.batch.pools.<name>.offer`
 : *Requires `nf-azure@0.11.0`*
 : Specify the offer type of the virtual machine type used by the pool identified with `<name>` (default: `centos-container`).

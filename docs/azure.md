@@ -210,6 +210,26 @@ azure {
 
 The above example defines the configuration for two node pools. The first will provision 10 compute nodes of type `Standard_D2_v2`, the second 5 nodes of type `Standard_E2_v3`. See the {ref}`Azure configuration <config-azure>` section for the complete list of available configuration options.
 
+:::{warning}
+The pool name can only contain alphanumeric, hyphen and underscore characters.
+:::
+
+:::{warning}
+If the pool name includes a hyphen, make sure to wrap it with single quotes. For example::
+
+```groovy
+azure {
+    batch {
+        pools {
+            'foo-2' {
+                ...
+            }
+        }
+    }
+}
+```
+:::
+
 ### Requirements on pre-existing named pools
 
 When Nextflow is configured to use a pool already available in the Batch account, the target pool must satisfy the following requirements:

@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,6 +56,7 @@ import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessException
+import nextflow.exception.PlainExceptionMessage
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.OpCall
 import nextflow.file.FileHelper
@@ -492,6 +492,9 @@ class LoggerHelper {
         else {
             buffer.append("Unexpected error")
         }
+        if( fail instanceof PlainExceptionMessage )
+            return
+
         buffer.append(CoreConstants.LINE_SEPARATOR)
         buffer.append(CoreConstants.LINE_SEPARATOR)
 

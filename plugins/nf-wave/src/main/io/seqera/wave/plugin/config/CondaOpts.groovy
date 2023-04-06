@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ package io.seqera.wave.plugin.config
  */
 class CondaOpts {
 
-    final public static String DEFAULT_MAMBA_IMAGE = 'mambaorg/micromamba:1.3.1'
+    final public static String DEFAULT_MAMBA_IMAGE = 'mambaorg/micromamba:1.4.1'
 
     final String mambaImage
     final List<String> commands
