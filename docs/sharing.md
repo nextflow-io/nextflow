@@ -169,16 +169,27 @@ In the above template replace `<provider-name>` with one of the "default" server
 
 The following configuration properties are supported for each provider configuration:
 
-| Name              | Description                                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------------ |
-| user              | User name required to access private repositories on the SCM server.                                   |
-| password          | User password required to access private repositories on the SCM server.                               |
-| token             | Private API access token (used only when the specified platform is `gitlab`).                          |
-| {sup}`*` platform | SCM platform name, either: `github`, `gitlab` or `bitbucket`.                                          |
-| {sup}`*` server   | SCM server name including the protocol prefix e.g. `https://github.com`.                               |
-| {sup}`*` endpoint | SCM API `endpoint` URL e.g. `https://api.github.com` (default: the same value specified for `server`). |
+`providers.<provider>.user`
+: User name required to access private repositories on the SCM server.
 
-The attributes marked with a * are only required when defining the configuration of a private SCM server.
+`providers.<provider>.password`
+: User password required to access private repositories on the SCM server.
+
+`providers.<provider>.token`
+: *Required only for private Gitlab servers*
+: Private API access token.
+
+`providers.<provider>.platform`
+: *Required only for private SCM servers*
+: SCM platform name, either: `github`, `gitlab` or `bitbucket`.
+
+`providers.<provider>.server`
+: *Required only for private SCM servers*
+: SCM server name including the protocol prefix e.g. `https://github.com`.
+
+`providers.<provider>.endpoint`
+: *Required only for private SCM servers*
+: SCM API `endpoint` URL e.g. `https://api.github.com` (default: the same as `providers.<provider>.server`).
 
 :::{tip}
 A custom location for the SCM file can be specified using the `NXF_SCM_FILE` environment variable (requires version `20.10.0` or later).

@@ -227,41 +227,74 @@ In the preceding example, `blastp` and its `-in`, `-out`, `-db` and `-html` swit
 
 The following variables are implicitly defined in the script global execution scope:
 
-| Name         | Description                                                                                                                                                |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `baseDir`    | The directory where the main workflow script is located (deprecated in favour of `projectDir` since `20.04.0`).                                            |
-| `launchDir`  | The directory where the workflow is run (requires version `20.04.0` or later).                                                                             |
-| `moduleDir`  | The directory where a module script is located for DSL2 modules or the same as `projectDir` for a non-module script (requires version `20.04.0` or later). |
-| `nextflow`   | Dictionary like object representing nextflow runtime information (see {ref}`metadata-nextflow`).                                                           |
-| `params`     | Dictionary like object holding workflow parameters specifying in the config file or as command line options.                                                |
-| `projectDir` | The directory where the main script is located (requires version `20.04.0` or later).                                                                      |
-| `workDir`    | The directory where tasks temporary files are created.                                                                                                     |
-| `workflow`   | Dictionary like object representing workflow runtime information (see {ref}`metadata-workflow`).                                                           |
+`baseDir`
+: *Deprecated since version `20.04.0` in favour of `projectDir`*
+: The directory where the main workflow script is located.
+
+`launchDir`
+: *Requires version `20.04.0` or later*
+: The directory where the workflow is run.
+
+`moduleDir`
+: *Requires version `20.04.0` or later*
+: The directory where a module script is located for DSL2 modules or the same as `projectDir` for a non-module script.
+
+`nextflow`
+: Dictionary like object representing nextflow runtime information (see {ref}`metadata-nextflow`).
+
+`params`
+: Dictionary like object holding workflow parameters specifying in the config file or as command line options.
+
+`projectDir`
+: *Requires version `20.04.0` or later*
+: The directory where the main script is located.
+
+`workDir`
+: The directory where tasks temporary files are created.
+
+`workflow`
+: Dictionary like object representing workflow runtime information (see {ref}`metadata-workflow`).
 
 ### Configuration implicit variables
 
 The following variables are implicitly defined in the Nextflow configuration file:
 
-| Name         | Description                                                                                                     |
-| ------------ | --------------------------------------------------------------------------------------------------------------- |
-| `baseDir`    | The directory where the main workflow script is located (deprecated in favour of `projectDir` since `20.04.0`). |
-| `launchDir`  | The directory where the workflow is run (requires version `20.04.0` or later).                                  |
-| `projectDir` | The directory where the main script is located (requires version `20.04.0` or later).                           |
+`baseDir`
+: *Deprecated since `20.04.0` in favour of `projectDir`*
+: The directory where the main workflow script is located.
+
+`launchDir`
+: *Requires version `20.04.0` or later*
+: The directory where the workflow is run.
+
+`projectDir`
+: *Requires version `20.04.0` or later*
+: The directory where the main script is located.
 
 ### Process implicit variables
 
 The following variables are implicitly defined in the `task` object of each process:
 
-| Name      | Description                                                      |
-| --------- | ---------------------------------------------------------------- |
-| `attempt` | The current task attempt                                         |
-| `hash`    | * The task unique hash ID                                        |
-| `index`   | The task index (corresponds to `task_id` in the execution trace) |
-| `name`    | * The current task name                                          |
-| `process` | The current process name                                         |
-| `workDir` | * The task unique directory                                      |
+`attempt`
+: The current task attempt
 
-Variables marked with (*) are only available in an `exec:` block.
+`hash`
+: *Available only in `exec:` blocks*
+: The task unique hash ID
+
+`index`
+: The task index (corresponds to `task_id` in the execution trace)
+
+`name`
+: *Available only in `exec:` blocks*
+: The current task name
+
+`process`
+: The current process name
+
+`workDir`
+: *Available only in `exec:` blocks*
+: The task unique directory
 
 The `task` object also contains the values of all process directives for the given task, which allows you to access these settings at runtime. For examples:
 
@@ -274,7 +307,7 @@ process foo {
 }
 ```
 
-In the above snippet the `task.cpus` report the value for the {ref}`cpus directive<process-cpus>` and the `task.memory` the current value for {ref}`memory directive<process-memory>` depending on the actual setting given in the workflow configuration file.
+In the above snippet the `task.cpus` holds the value for the {ref}`cpus directive<process-cpus>` and the `task.memory` the current value for {ref}`memory directive<process-memory>` depending on the actual setting given in the workflow configuration file.
 
 See {ref}`Process directives <process-directives>` for details.
 

@@ -332,17 +332,15 @@ An input definition consists of a *qualifier* and a *name*. The input qualifier 
 
 When a process is invoked in a workflow block, it must be provided a channel for each channel in the process input block, similar to calling a function with specific arguments. The examples provided in the following sections demonstrate how a process is invoked with input channels.
 
-The available input qualifiers are listed in the following table:
+The following input qualifiers are available:
 
-| Qualifier | Semantic                                                                                     |
-| --------- | -------------------------------------------------------------------------------------------- |
-| `val`     | Access the input value by name in the process script.                                        |
-| `file`    | (DEPRECATED) Handle the input value as a file, staging it properly in the execution context. |
-| `path`    | Handle the input value as a path, staging the file properly in the execution context.        |
-| `env`     | Use the input value to set an environment variable in the process script.                    |
-| `stdin`   | Forward the input value to the process `stdin` special file.                                 |
-| `tuple`   | Handle a group of input values having any of the above qualifiers.                           |
-| `each`    | Execute the process for each element in the input collection.                                |
+- `val`: Access the input value by name in the process script.
+- `file`: (DEPRECATED) Handle the input value as a file, staging it properly in the execution context.
+- `path`: Handle the input value as a path, staging the file properly in the execution context.
+- `env`: Use the input value to set an environment variable in the process script.
+- `stdin`: Forward the input value to the process `stdin` special file.
+- `tuple`: Handle a group of input values having any of the above qualifiers.
+- `each`: Execute the process for each element in the input collection.
 
 ### Input type `val`
 
@@ -493,7 +491,7 @@ workflow {
 }
 ```
 
-### Multiple input files
+#### Multiple input files
 
 A `path` input can also accept a collection of files instead of a single value. In this case, the input variable will be a Groovy list, and you can use it as such.
 
@@ -556,7 +554,7 @@ workflow {
 Rewriting input file names according to a named pattern is an extra feature and not at all required. The normal file input syntax introduced in the {ref}`process-input-path` section is valid for collections of multiple files as well. To handle multiple input files while preserving the original file names, use a variable identifier or the `*` wildcard.
 :::
 
-### Dynamic input file names
+#### Dynamic input file names
 
 When the input file name is specified by using the `name` option or a string literal, you can also use other input values as variables in the file name string. For example:
 
@@ -820,16 +818,14 @@ An output definition consists of a *qualifier* and a *name*. Some optional attri
 
 When a process is invoked, each process output is returned as a channel. The examples provided in the following sections demonstrate how to access the output channels of a process.
 
-The available output qualifiers are listed in the following table:
+The following output qualifiers are available:
 
-| Qualifier | Semantic                                                                      |
-| --------- | ----------------------------------------------------------------------------- |
-| `val`     | Emit the variable with the specified name.                                    |
-| `file`    | (DEPRECATED) Emit a file produced by the process with the specified name.     |
-| `path`    | Emit a file produced by the process with the specified name.                  |
-| `env`     | Emit the variable defined in the process environment with the specified name. |
-| `stdout`  | Emit the `stdout` of the executed process.                                    |
-| `tuple`   | Emit multiple values.                                                         |
+- `val`: Emit the variable with the specified name.
+- `file`: (DEPRECATED) Emit a file produced by the process with the specified name.
+- `path`: Emit a file produced by the process with the specified name.
+- `env`: Emit the variable defined in the process environment with the specified name.
+- `stdout`: Emit the `stdout` of the executed process.
+- `tuple`: Emit multiple values.
 
 ### Output type `val`
 
@@ -915,18 +911,27 @@ workflow {
 
 In the above example, the `randomNum` process creates a file named `result.txt` which contains a random number. Since a `path` output with the same name is declared, that file is emitted by the corresponding output channel. A downstream process with a compatible input channel will be able to receive it.
 
-A `path` output can be defined with any of the additional options defined in the following table.
+Available options:
 
-| Name            | Description                                                                                                                                        |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `glob`          | When `true` the specified name is interpreted as a glob pattern (default: `true`)                                                                  |
-| `hidden`        | When `true` hidden files are included in the matching output files (default: `false`)                                                              |
-| `followLinks`   | When `true` target files are return in place of any matching symlink (default: `true`)                                                             |
-| `type`          | Type of paths returned, either `file`, `dir` or `any` (default: `any`, or `file` if the specified file name pattern contains a double star (`**`)) |
-| `maxDepth`      | Maximum number of directory levels to visit (default: no limit)                                                                                    |
-| `includeInputs` | When `true` any input files matching an output file glob pattern are included.                                                                     |
+`followLinks`
+: When `true` target files are return in place of any matching symlink (default: `true`)
 
-### Multiple output files
+`glob`
+: When `true` the specified name is interpreted as a glob pattern (default: `true`)
+
+`hidden`
+: When `true` hidden files are included in the matching output files (default: `false`)
+
+`includeInputs`
+: When `true` any input files matching an output file glob pattern are included.
+
+`maxDepth`
+: Maximum number of directory levels to visit (default: no limit)
+
+`type`
+: Type of paths returned, either `file`, `dir` or `any` (default: `any`, or `file` if the specified file name pattern contains a double star (`**`))
+
+#### Multiple output files
 
 When an output file name contains a `*` or `?` wildcard character, it is interpreted as a [glob][glob] path matcher. This allows you to capture multiple files into a list and emit the list as a single value. For example:
 
@@ -969,7 +974,7 @@ Although the input files matching a glob output declaration are not included in 
 
 Read more about glob syntax at the following link [What is a glob?][what is a glob?]
 
-### Dynamic output file names
+#### Dynamic output file names
 
 When an output file name needs to be expressed dynamically, it is possible to define it using a dynamic string which references variables in the `input` block or in the script global context. For example:
 
@@ -1250,14 +1255,19 @@ process noCacheThis {
 }
 ```
 
-The `cache` directive possible values are shown in the following table:
+The following values are available:
 
-| Value            | Description                                                                                                                                                                                                                       |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `false`          | Disable cache feature.                                                                                                                                                                                                            |
-| `true` (default) | Enable caching. Cache keys are created indexing input files meta-data information (name, size and last update timestamp attributes).                                                                                              |
-| `'deep'`         | Enable caching. Cache keys are created indexing input files content.                                                                                                                                                              |
-| `'lenient'`      | Enable caching. Cache keys are created indexing input files path and size attributes (this policy provides a workaround for incorrect caching invalidation observed on shared file systems due to inconsistent files timestamps). |
+`false`
+: Disable caching.
+
+`true` (default)
+: Enable caching. Cache keys are created indexing input files meta-data information (name, size and last update timestamp attributes).
+
+`'deep'`
+: Enable caching. Cache keys are created indexing input files content.
+
+`'lenient'`
+: Enable caching. Cache keys are created indexing input files path and size attributes (this policy provides a workaround for incorrect caching invalidation observed on shared file systems due to inconsistent files timestamps).
 
 (process-clusteroptions)=
 
@@ -1434,14 +1444,19 @@ As of version 22.04.0, `echo` has been deprecated and replaced by `debug`.
 
 The `errorStrategy` directive allows you to define how an error condition is managed by the process. By default when an error status is returned by the executed script, the process stops immediately. This in turn forces the entire pipeline to terminate.
 
-Table of available error strategies:
+The following error strategies are available:
 
-| Name        | Executor                                                                                                               |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `terminate` | Terminates the execution as soon as an error condition is reported. Pending jobs are killed (default)                  |
-| `finish`    | Initiates an orderly pipeline shutdown when an error condition is raised, waiting the completion of any submitted job. |
-| `ignore`    | Ignores processes execution errors.                                                                                    |
-| `retry`     | Re-submit for execution a process returning an error condition.                                                        |
+`terminate` (default)
+: Terminate the execution as soon as an error condition is reported. Pending jobs are killed.
+
+`finish`
+: Initiate an orderly pipeline shutdown when an error condition is raised, waiting for the completion of any submitted jobs.
+
+`ignore`
+: Ignore process execution errors.
+
+`retry`
+: Re-submit any process that returns an error condition.
 
 When setting the `errorStrategy` directive to `ignore` the process doesn't stop on an error condition, it just reports a message notifying you of the error event.
 
@@ -1485,27 +1500,29 @@ See also: [maxErrors](#maxerrors), [maxRetries](#maxretries) and [Dynamic comput
 
 The `executor` defines the underlying system where processes are executed. By default a process uses the executor defined globally in the `nextflow.config` file.
 
-The `executor` directive allows you to configure what executor has to be used by the process, overriding the default configuration. The following values can be used:
+The `executor` directive allows you to configure what executor has to be used by the process, overriding the default configuration.
 
-| Name                  | Executor                                                                                                                       |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `awsbatch`            | The process is executed using the [AWS Batch](https://aws.amazon.com/batch/) service.                                          |
-| `azurebatch`          | The process is executed using the [Azure Batch](https://azure.microsoft.com/en-us/services/batch/) service.                    |
-| `condor`              | The process is executed using the [HTCondor](https://research.cs.wisc.edu/htcondor/) job scheduler.                            |
-| `google-lifesciences` | The process is executed using the [Google Genomics Pipelines](https://cloud.google.com/life-sciences) service.                 |
-| `ignite`              | The process is executed using the [Apache Ignite](https://ignite.apache.org/) cluster.                                         |
-| `k8s`                 | The process is executed using the [Kubernetes](https://kubernetes.io/) cluster.                                                |
-| `local`               | The process is executed in the computer where `Nextflow` is launched.                                                          |
-| `lsf`                 | The process is executed using the [Platform LSF](http://en.wikipedia.org/wiki/Platform_LSF) job scheduler.                     |
-| `moab`                | The process is executed using the [Moab](http://www.adaptivecomputing.com/moab-hpc-basic-edition/) job scheduler.              |
-| `nqsii`               | The process is executed using the [NQSII](https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster) job scheduler. |
-| `oge`                 | Alias for the `sge` executor.                                                                                                  |
-| `pbs`                 | The process is executed using the [PBS/Torque](http://en.wikipedia.org/wiki/Portable_Batch_System) job scheduler.              |
-| `pbspro`              | The process is executed using the [PBS Pro](https://www.pbsworks.com/) job scheduler.                                          |
-| `sge`                 | The process is executed using the Sun Grid Engine / [Open Grid Engine](http://gridscheduler.sourceforge.net/).                 |
-| `slurm`               | The process is executed using the SLURM job scheduler.                                                                         |
-| `tes`                 | The process is executed using the [GA4GH TES](https://github.com/ga4gh/task-execution-schemas) service.                        |
-| `uge`                 | Alias for the `sge` executor.                                                                                                  |
+The following executors are available:
+
+| Name                  | Executor                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| `awsbatch`            | [AWS Batch](https://aws.amazon.com/batch/) service                                          |
+| `azurebatch`          | [Azure Batch](https://azure.microsoft.com/en-us/services/batch/) service                    |
+| `condor`              | [HTCondor](https://research.cs.wisc.edu/htcondor/) job scheduler                            |
+| `google-lifesciences` | [Google Genomics Pipelines](https://cloud.google.com/life-sciences) service                 |
+| `ignite`              | [Apache Ignite](https://ignite.apache.org/) cluster                                         |
+| `k8s`                 | [Kubernetes](https://kubernetes.io/) cluster                                                |
+| `local`               | The computer where `Nextflow` is launched                                                   |
+| `lsf`                 | [Platform LSF](http://en.wikipedia.org/wiki/Platform_LSF) job scheduler                     |
+| `moab`                | [Moab](http://www.adaptivecomputing.com/moab-hpc-basic-edition/) job scheduler              |
+| `nqsii`               | [NQSII](https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster) job scheduler |
+| `oge`                 | Alias for the `sge` executor                                                                |
+| `pbs`                 | [PBS/Torque](http://en.wikipedia.org/wiki/Portable_Batch_System) job scheduler              |
+| `pbspro`              | [PBS Pro](https://www.pbsworks.com/) job scheduler                                          |
+| `sge`                 | Sun Grid Engine / [Open Grid Engine](http://gridscheduler.sourceforge.net/)                 |
+| `slurm`               | [SLURM](https://en.wikipedia.org/wiki/Slurm_Workload_Manager) workload manager              |
+| `tes`                 | [GA4GH TES](https://github.com/ga4gh/task-execution-schemas) service                        |
+| `uge`                 | Alias for the `sge` executor                                                                |
 
 The following example shows how to set the process's executor:
 
@@ -1613,6 +1630,10 @@ See also: [resourceLabels](#resourcelabels)
 
 ### machineType
 
+:::{note}
+This feature requires Nextflow 19.07.0 or later.
+:::
+
 The `machineType` can be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) when running using the {ref}`Google Life Sciences <google-lifesciences-executor>` executor.
 
 This directive is optional and if specified overrides the cpus and memory directives:
@@ -1626,10 +1647,6 @@ process foo {
   """
 }
 ```
-
-:::{note}
-This feature requires Nextflow 19.07.0 or later.
-:::
 
 See also: [cpus](#cpus) and [memory](#memory).
 
@@ -1801,32 +1818,6 @@ process your_task {
 
 The above snippet defines an environment variable named `FOO` which value is `bar`.
 
-The `pod` directive allows the definition of the following options:
-
-| Name                                            | Description                                                                                                                                                                                                                                                                                                                                  |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `label: <K>, value: <V>`                        | Defines a pod label with key `K` and value `V`.                                                                                                                                                                                                                                                                                              |
-| `annotation: <K>, value: <V>`                   | Defines a pod annotation with key `K` and value `V`.                                                                                                                                                                                                                                                                                         |
-| `env: <E>, value: <V>`                          | Defines an environment variable with name `E` and whose value is given by the `V` string.                                                                                                                                                                                                                                                    |
-| `env: <E>, fieldPath: <V>`                      | Defines an environment variable with name `E` and whose value is given by the `V` [field path](https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/).                                                                                                                                       |
-| `env: <E>, config: <C/K>`                       | Defines an environment variable with name `E` and whose value is given by the entry associated to the key with name `K` in the [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) with name `C`.                                                                                                 |
-| `env: <E>, secret: <S/K>`                       | Defines an environment variable with name `E` and whose value is given by the entry associated to the key with name `K` in the [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) with name `S`.                                                                                                                            |
-| `config: <C/K>, mountPath: </absolute/path>`    | Mounts a [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) with name `C` with key `K` to the path `/absolute/path`. When the key component is omitted the path is interpreted as a directory and all the `ConfigMap` entries are exposed in that path.                                          |
-| `csi: <V>, mountPath: </absolute/path>`         | Mounts a [CSI ephemeral volume](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes) with config `V`to the path `/absolute/path` (requires `22.11.0-edge` or later).                                                                                                                                        |
-| `emptyDir: <V>, mountPath: </absolute/path>`    | Mounts an [emptyDir](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) with configuration `V` to the path `/absolute/path` (requires `22.11.0-edge` or later).                                                                                                                                                                  |
-| `secret: <S/K>, mountPath: </absolute/path>`    | Mounts a [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) with name `S` with key `K` to the path `/absolute/path`. When the key component is omitted the path is interpreted as a directory and all the `Secret` entries are exposed in that path.                                                                        |
-| `volumeClaim: <V>, mountPath: </absolute/path>` | Mounts a [Persistent volume claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) with name `V` to the specified path location. Use the optional `subPath` parameter to mount a directory inside the referenced volume instead of its root. The volume may be mounted with `readOnly: true`, but is read/write by default. |
-| `imagePullPolicy: <V>`                          | Specifies the strategy to be used to pull the container image e.g. `imagePullPolicy: 'Always'`.                                                                                                                                                                                                                                              |
-| `imagePullSecret: <V>`                          | Specifies the secret name to access a private container image registry. See [Kubernetes documentation](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod) for details.                                                                                                                             |
-| `runAsUser: <UID>`                              | Specifies the user ID to be used to run the container. Shortcut for the `securityContext` option.                                                                                                                                                                                                                                            |
-| `securityContext: <V>`                          | Specifies the pod security context. See [Kubernetes security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for details.                                                                                                                                                                               |
-| `nodeSelector: <V>`                             | Specifies which node the process will run on. See [Kubernetes nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector) for details.                                                                                                                                                              |
-| `affinity: <V>`                                 | Specifies affinity for which nodes the process should run on. See [Kubernetes affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) for details.                                                                                                                                    |
-| `automountServiceAccountToken: <V>`             | Specifies whether to [automount service account token](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) into process pods. If `V` is true, service account token is automounted into task pods (default).                                                                                                |
-| `priorityClassName: <V>`                        | Specifies the [priority class name](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) for pods.                                                                                                                                                                                                              |
-| `toleration: <V>`                               | Specifies a toleration for a node taint. See [Taints and Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) for details.                                                                                                                                                                            |
-| `privileged: <B>`                               | Whether the process task should run as a *privileged* container (default: `false`)                                                                                                                                                                                                                                                           |
-
 When defined in the Nextflow configuration file, a pod setting can be defined using the canonical associative array syntax. For example:
 
 ```groovy
@@ -1843,7 +1834,84 @@ process {
 }
 ```
 
-Some settings, including environment variables, configs, secrets, volume claims, and tolerations, can be specified multiple times for different values.
+The `pod` directive supports the following options:
+
+`affinity: <V>`
+: Specifies affinity for which nodes the process should run on. See [Kubernetes affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) for details.
+
+`annotation: <K>, value: <V>`
+: *Can be specified multiple times*
+: Defines a pod annotation with key `K` and value `V`.
+
+`automountServiceAccountToken: <V>`
+: Specifies whether to [automount service account token](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) into process pods. If `V` is true, service account token is automounted into task pods (default).
+
+`config: <C/K>, mountPath: </absolute/path>`
+: *Can be specified multiple times*
+: Mounts a [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) with name `C` with key `K` to the path `/absolute/path`. When the key component is omitted the path is interpreted as a directory and all the `ConfigMap` entries are exposed in that path.
+
+`csi: <V>, mountPath: </absolute/path>`
+: *Requires `22.11.0-edge` or later*
+: *Can be specified multiple times*
+: Mounts a [CSI ephemeral volume](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#csi-ephemeral-volumes) with config `V`to the path `/absolute/path`.
+
+`emptyDir: <V>, mountPath: </absolute/path>`
+: *Requires `22.11.0-edge` or later*
+: *Can be specified multiple times*
+: Mounts an [emptyDir](https://kubernetes.io/docs/concepts/storage/volumes/#emptydir) with configuration `V` to the path `/absolute/path`.
+
+`env: <E>, config: <C/K>`
+: *Can be specified multiple times*
+: Defines an environment variable with name `E` and whose value is given by the entry associated to the key with name `K` in the [ConfigMap](https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/) with name `C`.
+
+`env: <E>, fieldPath: <V>`
+: *Can be specified multiple times*
+: Defines an environment variable with name `E` and whose value is given by the `V` [field path](https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/).
+
+`env: <E>, secret: <S/K>`
+: *Can be specified multiple times*
+: Defines an environment variable with name `E` and whose value is given by the entry associated to the key with name `K` in the [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) with name `S`.
+
+`env: <E>, value: <V>`
+: *Can be specified multiple times*
+: Defines an environment variable with name `E` and whose value is given by the `V` string.
+
+`imagePullPolicy: <V>`
+: Specifies the strategy to be used to pull the container image e.g. `imagePullPolicy: 'Always'`.
+
+`imagePullSecret: <V>`
+: Specifies the secret name to access a private container image registry. See [Kubernetes documentation](https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod) for details.
+
+`label: <K>, value: <V>`
+: *Can be specified multiple times*
+: Defines a pod label with key `K` and value `V`.
+
+`nodeSelector: <V>`
+: Specifies which node the process will run on. See [Kubernetes nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector) for details.
+
+`priorityClassName: <V>`
+: Specifies the [priority class name](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) for pods.
+
+`privileged: <B>`
+: Whether the process task should run as a *privileged* container (default: `false`)
+
+`runAsUser: <UID>`
+: Specifies the user ID to be used to run the container. Shortcut for the `securityContext` option.
+
+`secret: <S/K>, mountPath: </absolute/path>`
+: *Can be specified multiple times*
+: Mounts a [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) with name `S` with key `K` to the path `/absolute/path`. When the key component is omitted the path is interpreted as a directory and all the `Secret` entries are exposed in that path.
+
+`securityContext: <V>`
+: Specifies the pod security context. See [Kubernetes security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) for details.
+
+`toleration: <V>`
+: *Can be specified multiple times*
+: Specifies a toleration for a node taint. See [Taints and Tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) for details.
+
+`volumeClaim: <V>, mountPath: </absolute/path>`
+: *Can be specified multiple times*
+: Mounts a [Persistent volume claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) with name `V` to the specified path location. Use the optional `subPath` parameter to mount a directory inside the referenced volume instead of its root. The volume may be mounted with `readOnly: true`, but is read/write by default.
 
 (process-publishdir)=
 
@@ -1874,36 +1942,7 @@ Only files that match the declaration in the `output` block are published, not a
 The `publishDir` directive can be specified more than once in order to publish output files to different target directories based on different rules.
 :::
 
-By default files are published to the target folder creating a *symbolic link* for each process output that links the file produced into the process working directory. This behavior can be modified using the `mode` parameter.
-
-Table of optional parameters that can be used with the `publishDir` directive:
-
-| Name         | Description                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| mode         | The file publishing method. See the following table for possible values.                                                                                                                                                                                                                                                                                                                                                                                |
-| overwrite    | When `true` any existing file in the specified folder will be overridden (default: `true` during normal pipeline execution and `false` when pipeline execution is `resumed`).                                                                                                                                                                                                                                                                           |
-| pattern      | Specifies a [glob][glob] file pattern that selects which files to publish from the overall set of output files.                                                                                                                                                                                                                                                                                                                                         |
-| path         | Specifies the directory where files need to be published. **Note**: the syntax `publishDir '/some/dir'` is a shortcut for `publishDir path: '/some/dir'`.                                                                                                                                                                                                                                                                                               |
-| saveAs       | A closure which, given the name of the file being published, returns the actual file name or a full path where the file is required to be stored. This can be used to rename or change the destination directory of the published files dynamically by using a custom strategy. Return the value `null` from the closure to *not* publish a file. This is useful when the process has multiple output files, but you want to publish only some of them. |
-| enabled      | Enable or disable the publish rule depending on the boolean value specified (default: `true`).                                                                                                                                                                                                                                                                                                                                                          |
-| failOnError  | When `true` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: `false`)                                                                                                                                                                                                                                                                                                            |
-| contentType  | Allow specifying the media content type of the published file a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types). If set to `true`, the content type is inferred from the file extension (EXPERIMENTAL. Currently only supported for S3. Default: `false`, requires version `22.10.0` or later).                                                                                                           |
-| storageClass | Allow specifying the storage class to be used for the published file (EXPERIMENTAL. Currently only supported for S3. Requires version `22.12.0-edge` or later).                                                                                                                                                                                                                                                                                         |
-| tags         | Allow the association of arbitrary tags with the published file e.g. `tags: [FOO: 'Hello world']` (EXPERIMENTAL. Currently only supported by files stored on AWS S3. Requires version `21.12.0-edge` or later).                                                                                                                                                                                                                                         |
-
-Table of publish modes:
-
-| Mode         | Description                                                                                                                                                                                              |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| symlink      | Creates an absolute symbolic link in the published directory for each process output file (default).                                                                                                     |
-| rellink      | Creates a relative symbolic link in the published directory for each process output file.                                                                                                                |
-| link         | Creates a hard link in the published directory for each process output file.                                                                                                                             |
-| copy         | Copies the output files into the published directory.                                                                                                                                                    |
-| copyNoFollow | Copies the output files into the published directory without following symlinks ie. copies the links themselves.                                                                                         |
-| move         | Moves the output files into the published directory. **Note**: this is only supposed to be used for a *terminating* process i.e. a process whose output is not consumed by any other downstream process. |
-
-:::{note}
-The `mode` value must be specified as a string literal, i.e. in quotes. Multiple parameters need to be separated by a colon character. For example:
+By default files are published to the target folder creating a *symbolic link* for each process output that links the file produced into the process working directory. This behavior can be modified using the `mode` option, for example:
 
 ```groovy
 process foo {
@@ -1917,11 +1956,55 @@ process foo {
     '''
 }
 ```
-:::
 
 :::{warning}
-Files are copied into the specified directory in an *asynchronous* manner, so they may not be immediately available in the published directory at the end of the process execution. For this reason, downstream processes should not try to access output files through the publish directory, but through channels.
+Files are copied into the specified directory in an *asynchronous* manner, so they may not be immediately available in the publish directory at the end of the process execution. For this reason, downstream processes should not try to access output files through the publish directory, but through channels.
 :::
+
+Available options:
+
+`contentType`
+: *Requires version `22.10.0` or later*
+: *EXPERIMENTAL. Currently only supported for S3*
+: Allow specifying the media content type of the published file a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types). If set to `true`, the content type is inferred from the file extension (default: `false`).
+
+`enabled`
+: Enable or disable the publish rule depending on the boolean value specified (default: `true`).
+
+`failOnError`
+: When `true` abort the execution if some file can't be published to the specified target directory or bucket for any cause (default: `false`)
+
+`mode`
+: The file publishing method. Can be one of the following values:
+
+  - `'copy'`: Copies the output files into the publish directory.
+  - `'copyNoFollow'`: Copies the output files into the publish directory without following symlinks ie. copies the links themselves.
+  - `'link'`: Creates a hard link in the publish directory for each output file.
+  - `'move'`: Moves the output files into the publish directory. **Note**: this is only supposed to be used for a *terminal* process i.e. a process whose output is not consumed by any other downstream process.
+  - `'rellink'`: Creates a relative symbolic link in the publish directory for each output file.
+  - `'symlink'`: Creates an absolute symbolic link in the publish directory for each output file (default).
+
+`overwrite`
+: When `true` any existing file in the specified folder will be overridden (default: `true` during normal pipeline execution and `false` when pipeline execution is `resumed`).
+
+`path`
+: Specifies the directory where files need to be published. **Note**: the syntax `publishDir '/some/dir'` is a shortcut for `publishDir path: '/some/dir'`.
+
+`pattern`
+: Specifies a [glob][glob] file pattern that selects which files to publish from the overall set of output files.
+
+`saveAs`
+: A closure which, given the name of the file being published, returns the actual file name or a full path where the file is required to be stored. This can be used to rename or change the destination directory of the published files dynamically by using a custom strategy. Return the value `null` from the closure to *not* publish a file. This is useful when the process has multiple output files, but you want to publish only some of them.
+
+`storageClass`
+: *Requires version `22.12.0-edge` or later*
+: *EXPERIMENTAL. Currently only supported for S3*
+: Allow specifying the storage class to be used for the published file.
+
+`tags`
+: *Requires version `21.12.0-edge` or later*
+: *EXPERIMENTAL. Currently only supported for S3*
+: Allow the association of arbitrary tags with the published file e.g. `tags: [FOO: 'Hello world']`.
 
 (process-queue)=
 
@@ -2006,33 +2089,27 @@ process simpleTask {
 
 By doing this, it tries to execute the script in the directory defined by the variable `$TMPDIR` in the execution node. If this variable does not exist, it will create a new temporary directory by using the Linux command `mktemp`.
 
-A custom environment variable, other than `$TMPDIR`, can be specified by simply using it as the scratch value, for example:
+:::{note}
+Cloud-based executors use `scratch = true` by default, since the work directory resides in object storage.
+:::
 
-```groovy
-scratch '$MY_GRID_TMP'
-```
+The following values are supported:
 
-Note, it must be wrapped by single quotation characters, otherwise the variable will be evaluated in the pipeline script context.
+`false`
+: Do not use a scratch directory.
 
-You can also provide a specific folder path as scratch value, for example:
+`true`
+: Create a scratch directory in the directory defined by the `$TMPDIR` environment variable, or `$(mktemp /tmp)` if `$TMPDIR` is not set.
 
-```groovy
-scratch '/tmp/my/path'
-```
+`'$YOUR_VAR'`
+: Create a scratch directory in the directory defined by the given environment variable, or `$(mktemp /tmp)` if that variable is not set. The value must use single quotes, otherwise the environment variable will be evaluated in the pipeline script context.
 
-By doing this, a new temporary directory will be created in the specified path each time a process is executed.
+`'/my/tmp/path'`
+: Create a scratch directory in the specified directory.
 
-Finally, when the `ram-disk` string is provided as `scratch` value, the process will be execute in the node RAM virtual disk.
-
-Summary of allowed values:
-
-| scratch    | Description                                                                                                                                          |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| false      | Do not use the scratch folder.                                                                                                                       |
-| true       | Creates a scratch folder in the directory defined by the `$TMPDIR` variable; fallback to `mktemp /tmp` if that variable do not exists.               |
-| \$YOUR_VAR | Creates a scratch folder in the directory defined by the `$YOUR_VAR` environment variable; fallback to `mktemp /tmp` if that variable do not exists. |
-| /my/tmp    | Creates a scratch folder in the specified directory.                                                                                                 |
-| ram-disk   | Creates a scratch folder in the RAM disk `/dev/shm/` (experimental).                                                                                 |
+`'ram-disk'`
+: *EXPERIMENTAL*
+: Create a scratch directory in the RAM disk `/dev/shm/`.
 
 (process-directive-shell)=
 
@@ -2078,28 +2155,42 @@ The `spack` directive also allows the specification of a Spack environment file 
 
 ### stageInMode
 
-The `stageInMode` directive defines how input files are staged-in to the process work directory. The following values are allowed:
+The `stageInMode` directive defines how input files are staged into the process work directory. The following values are allowed:
 
-| Value   | Description                                                                                                                        |
-| ------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| copy    | Input files are staged in the process work directory by creating a copy.                                                           |
-| link    | Input files are staged in the process work directory by creating an (hard) link for each of them.                                  |
-| symlink | Input files are staged in the process work directory by creating a symbolic link with an absolute path for each of them (default). |
-| rellink | Input files are staged in the process work directory by creating a symbolic link with a relative path for each of them.            |
+`'copy'`
+: Input files are staged in the process work directory by creating a copy.
+
+`'link'`
+: Input files are staged in the process work directory by creating a hard link for each of them.
+
+`'rellink'`
+: Input files are staged in the process work directory by creating a symbolic link with a relative path for each of them.
+
+`'symlink'`
+: Input files are staged in the process work directory by creating a symbolic link with an absolute path for each of them (default).
 
 (process-stageoutmode)=
 
 ### stageOutMode
 
-The `stageOutMode` directive defines how output files are staged-out from the scratch directory to the process work directory. The following values are allowed:
+The `stageOutMode` directive defines how output files are staged out from the scratch directory to the process work directory. The following values are allowed:
 
-| Value  | Description                                                                                            |
-| ------ | ------------------------------------------------------------------------------------------------------ |
-| copy   | Output files are copied from the scratch directory to the work directory.                              |
-| move   | Output files are moved from the scratch directory to the work directory.                               |
-| rsync  | Output files are copied from the scratch directory to the work directory by using the `rsync` utility. |
-| rclone | Output files are copied from the scratch directory to the work directory by using the [rclone](https://rclone.org) utility (note: it must be available in your cluster computing nodes, requires version `23.01.0-edge` or later). |
-| fcp    | Output files are copied from the scratch directory to the work directory by using the [fcp](https://github.com/Svetlitski/fcp) utility (note: it must be available in your cluster computing nodes, requires version `23.02.0-edge` or later). |
+`'copy'`
+: Output files are copied from the scratch directory to the work directory.
+
+`'fcp'`
+: *Requires version `23.02.0-edge` or later*
+: Output files are copied from the scratch directory to the work directory by using the [fcp](https://github.com/Svetlitski/fcp) utility (note: it must be available in your cluster computing nodes).
+
+`'move'`
+: Output files are moved from the scratch directory to the work directory.
+
+`'rclone'`
+: *Requires version `23.01.0-edge` or later*
+: Output files are copied from the scratch directory to the work directory by using the [rclone](https://rclone.org) utility (note: it must be available in your cluster computing nodes).
+
+`'rsync'`
+: Output files are copied from the scratch directory to the work directory by using the `rsync` utility.
 
 See also: [scratch](#scratch).
 

@@ -21,43 +21,98 @@ To shortcut access to multiple `workflow` properties, you can use the Groovy [wi
 
 The following table lists the properties that can be accessed on the `workflow` object:
 
-| Name                  | Description                                                                                                                                             |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| scriptId              | Project main script unique hash ID.                                                                                                                     |
-| scriptName            | Project main script file name.                                                                                                                          |
-| scriptFile            | Project main script file path.                                                                                                                          |
-| repository            | Project repository Git remote URL.                                                                                                                      |
-| commitId              | Git commit ID of the executed workflow repository.                                                                                                      |
-| revision              | Git branch/tag of the executed workflow repository.                                                                                                     |
-| projectDir            | Directory where the workflow project is stored in the computer.                                                                                         |
-| launchDir             | Directory where the workflow execution has been launched.                                                                                               |
-| workDir               | Workflow working directory.                                                                                                                             |
-| homeDir               | User system home directory.                                                                                                                             |
-| userName              | User system account name.                                                                                                                               |
-| configFiles           | Configuration files used for the workflow execution.                                                                                                    |
-| container             | Docker image used to run workflow tasks. When more than one image is used it returns a map object containing `[process name, image name]` pair entries. |
-| containerEngine       | Returns the name of the container engine (e.g. docker or singularity) or null if no container engine is enabled.                                        |
-| commandLine           | Command line as entered by the user to launch the workflow execution.                                                                                   |
-| profile               | Used configuration profile.                                                                                                                             |
-| runName               | Mnemonic name assigned to this execution instance.                                                                                                      |
-| sessionId             | Unique identifier (UUID) associated to current execution.                                                                                               |
-| resume                | Returns `true` whenever the current instance is resumed from a previous execution.                                                                      |
-| stubRun               | Returns `true` whenever the current instance is a stub-run execution .                                                                                  |
-| start                 | Timestamp of workflow at execution start.                                                                                                               |
-| manifest              | Entries of the workflow manifest.                                                                                                                       |
-| {sup}`✝` complete     | Timestamp of workflow when execution is completed.                                                                                                      |
-| {sup}`✝` duration     | Time elapsed to complete workflow execution.                                                                                                            |
-| {sup}`*` success      | Reports if the execution completed successfully.                                                                                                        |
-| {sup}`*` exitStatus   | Exit status of the task that caused the workflow execution to fail.                                                                                     |
-| {sup}`*` errorMessage | Error message of the task that caused the workflow execution to fail.                                                                                   |
-| {sup}`*` errorReport  | Detailed error of the task that caused the workflow execution to fail.                                                                                  |
 
-- Properties marked with a `✝` are accessible only in the workflow completion handler.
-- Properties marked with a `*` are accessible only in the workflow completion and error handlers. See the [Completion handler] section for details.
+`workflow.commandLine`
+: Command line as entered by the user to launch the workflow execution.
 
-:::{note} 
-When passing a Git tag or branch name using the `-r` option in your command, the `workflow.revision` and the associated `workflow.commitId` are populated. When passing only the Git commit ID using `-r`, no `workflow.revision` is returned. 
-:::
+`workflow.commitId`
+: Git commit ID of the executed workflow repository.
+: When providing a Git tag, branch name, or commit hash using the `-r` CLI option, the associated `workflow.commitId` is also populated.
+
+`workflow.complete`
+: *Available only in the `workflow.onComplete` handler*
+: Timestamp of workflow when execution is completed.
+
+`workflow.configFiles`
+: Configuration files used for the workflow execution.
+
+`workflow.container`
+: Docker image used to run workflow tasks. When more than one image is used it returns a map object containing `[process name, image name]` pair entries.
+
+`workflow.containerEngine`
+: Returns the name of the container engine (e.g. docker or singularity) or null if no container engine is enabled.
+
+`workflow.duration`
+: *Available only in the `workflow.onComplete` handler*
+: Time elapsed to complete workflow execution.
+
+`workflow.errorMessage`
+: *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
+: Error message of the task that caused the workflow execution to fail.
+
+`workflow.errorReport`
+: *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
+: Detailed error of the task that caused the workflow execution to fail.
+
+`workflow.exitStatus`
+: *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
+: Exit status of the task that caused the workflow execution to fail.
+
+`workflow.homeDir`
+: User system home directory.
+
+`workflow.launchDir`
+: Directory where the workflow execution has been launched.
+
+`workflow.manifest`
+: Entries of the workflow manifest.
+
+`workflow.profile`
+: Used configuration profile.
+
+`workflow.projectDir`
+: Directory where the workflow project is stored in the computer.
+
+`workflow.repository`
+: Project repository Git remote URL.
+
+`workflow.resume`
+: Returns `true` whenever the current instance is resumed from a previous execution.
+
+`workflow.revision`
+: Git branch/tag of the executed workflow repository.
+: When providing a Git tag or branch name using the `-r` CLI option, the `workflow.revision` is also populated.
+
+`workflow.runName`
+: Mnemonic name assigned to this execution instance.
+
+`workflow.scriptFile`
+: Project main script file path.
+
+`workflow.scriptId`
+: Project main script unique hash ID.
+
+`workflow.scriptName`
+: Project main script file name.
+
+`workflow.sessionId`
+: Unique identifier (UUID) associated to current execution.
+
+`workflow.start`
+: Timestamp of workflow at execution start.
+
+`workflow.stubRun`
+: Returns `true` whenever the current instance is a stub-run execution .
+
+`workflow.success`
+: *Available only in the `workflow.onComplete` and `workflow.onError` handlers*
+: Reports if the execution completed successfully.
+
+`workflow.userName`
+: User system account name.
+
+`workflow.workDir`
+: Workflow working directory.
 
 (metadata-nextflow)=
 
@@ -65,20 +120,24 @@ When passing a Git tag or branch name using the `-r` option in your command, the
 
 The implicit `nextflow` object allows you to access the metadata information of the Nextflow runtime.
 
-| Name               | Description                         |
-| ------------------ | ----------------------------------- |
-| nextflow.version   | Nextflow runtime version number.    |
-| nextflow.build     | Nextflow runtime build number.      |
-| nextflow.timestamp | Nextflow runtime compile timestamp. |
+`nextflow.build`
+: Nextflow runtime build number.
 
-The method `nextflow.version.matches` allows you to check if the Nextflow runtime satisfies the version requirement eventually needed by your workflow script. The required version string can be prefixed with the usual comparison operators eg `>`, `>=`, `=`, etc. or postfixed with the `+` operator to specify a minimal version requirement. For example:
+`nextflow.timestamp`
+: Nextflow runtime compile timestamp.
 
-```groovy
-if( !nextflow.version.matches('21.04+') ) {
-    println "This workflow requires Nextflow version 21.04 or greater -- You are running version $nextflow.version"
-    exit 1
-}
-```
+`nextflow.version`
+: Nextflow runtime version number.
+
+`nextflow.version.matches()`
+: This method allows you to check if the Nextflow runtime satisfies a version requirement for your workflow script. The version requirement string can be prefixed with the usual comparison operators eg `>`, `>=`, `=`, etc. or postfixed with the `+` operator to specify a minimum version requirement. For example:
+
+  ```groovy
+  if( !nextflow.version.matches('21.04+') ) {
+      println "This workflow requires Nextflow version 21.04 or greater -- You are running version $nextflow.version"
+      exit 1
+  }
+  ```
 
 (metadata-completion-handler)=
 

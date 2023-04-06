@@ -255,12 +255,13 @@ Channel
 [5,4,7]
 ```
 
-Available parameters:
+Available options:
 
-| Field | Description                                                                                                                                                                                                                                                                                                |
-| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| flat  | When `true` nested list structures are normalised and their items are added to the resulting list object (default: `true`).                                                                                                                                                                                |
-| sort  | When `true` the items in the resulting list are sorted by their natural ordering. It is possible to provide a custom ordering criteria by using either a {ref}`closure <script-closure>` or a [Comparator](https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html) object (default: `false`). |
+`flat`
+: When `true` nested list structures are normalised and their items are added to the resulting list object (default: `true`).
+
+`sort`
+: When `true` the items in the resulting list are sorted by their natural ordering. It is possible to provide a custom ordering criteria by using either a {ref}`closure <script-closure>` or a [Comparator](https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html) object (default: `false`).
 
 See also: [toList](#tolist) and [toSortedList](#tosortedlist) operator.
 
@@ -311,36 +312,45 @@ Hello
 When the items emitted by the source channel are files, the grouping criteria can be omitted. In this case the items content will be grouped into file(s) having the same name as the source items.
 :::
 
-The following parameters can be used with the `collectFile` operator:
+Available options:
 
-| Name         | Description                                                                                                                                                                                                                                                                                          |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cache`      | Controls the caching ability of the `collectFile` operator when using the *resume* feature. It follows the same semantic of the {ref}`process-cache` directive (default: `true`).                                                                                                                    |
-| `keepHeader` | Prepend the resulting file with the header fetched in the first collected file. The header size (ie. lines) can be specified by using the `skip` parameter (default: `false`), to determine how many lines to remove from all collected files except for the first (where no lines will be removed). |
-| `name`       | Name of the file where all received values are stored.                                                                                                                                                                                                                                               |
-| `newLine`    | Appends a `newline` character automatically after each entry (default: `false`).                                                                                                                                                                                                                     |
-| `seed`       | A value or a map of values used to initialise the files content.                                                                                                                                                                                                                                     |
-| `skip`       | Skip the first `n` lines eg. `skip: 1`.                                                                                                                                                                                                                                                              |
-| `sort`       | Defines sorting criteria of content in resulting file(s). See below for sorting options.                                                                                                                                                                                                             |
-| `storeDir`   | Folder where the resulting file(s) are be stored.                                                                                                                                                                                                                                                    |
-| `tempDir`    | Folder where temporary files, used by the collecting process, are stored.                                                                                                                                                                                                                            |
+`cache`
+: Controls the caching ability of the `collectFile` operator when using the *resume* feature. It follows the same semantic of the {ref}`process-cache` directive (default: `true`).
 
-:::{note}
-The file content is sorted in such a way that it does not depend on the order in which entries were added to it, which guarantees that it is consistent (i.e. does not change) across different executions with the same data.
-:::
+`keepHeader`
+: Prepend the resulting file with the header fetched in the first collected file. The header size (ie. lines) can be specified by using the `skip` parameter (default: `false`), to determine how many lines to remove from all collected files except for the first (where no lines will be removed).
 
-The ordering of file's content can be defined by using the `sort` parameter. The following criteria can be specified:
+`name`
+: Name of the file where all received values are stored.
 
-| Sort      | Description                                                                                                                                                                                |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `false`   | Disable content sorting. Entries are appended as they are produced.                                                                                                                        |
-| `true`    | Order the content by the entries natural ordering i.e. numerical for number, lexicographic for string, etc. See <http://docs.oracle.com/javase/tutorial/collections/interfaces/order.html> |
-| `'index'` | Order the content by the incremental index number assigned to each entry while they are collected.                                                                                         |
-| `'hash'`  | Order the content by the hash number associated to each entry (default)                                                                                                                    |
-| `'deep'`  | Similar to the previous, but the hash number is created on actual entries content e.g. when the entry is a file the hash is created on the actual file content.                            |
-| `custom`  | A custom sorting criteria can be specified by using either a {ref}`Closure <script-closure>` or a [Comparator](http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html) object. |
+`newLine`
+: Appends a `newline` character automatically after each entry (default: `false`).
 
-For example the following snippet shows how sort the content of the result file alphabetically:
+`seed`
+: A value or a map of values used to initialise the files content.
+
+`skip`
+: Skip the first `n` lines eg. `skip: 1`.
+
+`sort`
+: Defines sorting criteria of content in resulting file(s). Can be one of the following values:
+
+  - `false`: Disable content sorting. Entries are appended as they are produced.
+  - `true`: Order the content by the entry's natural ordering i.e. numerical for number, lexicographic for string, etc. See the [Java documentation](http://docs.oracle.com/javase/tutorial/collections/interfaces/order.html) for more information.
+  - `'index'`: Order the content by the incremental index number assigned to each entry while they are collected.
+  - `'hash'`: (default) Order the content by the hash number associated to each entry
+  - `'deep'`: Similar to the previous, but the hash number is created on actual entries content e.g. when the entry is a file the hash is created on the actual file content.
+  - A custom sorting criteria can be specified by using either a {ref}`Closure <script-closure>` or a [Comparator](http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html) object.
+
+  The file content is sorted in such a way that it does not depend on the order in which entries were added to it, which guarantees that it is consistent (i.e. does not change) across different executions with the same data.
+
+`storeDir`
+: Folder where the resulting file(s) are be stored.
+
+`tempDir`
+: Folder where temporary files, used by the collecting process, are stored.
+
+The following snippet shows how sort the content of the result file alphabetically:
 
 ```groovy
 Channel
@@ -807,24 +817,25 @@ Channel
 [[3], D]
 ```
 
-Available parameters:
+Available options:
 
-| Field     | Description                                                                                                                                                                                                           |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| by        | The index (zero based) of the element to be used as grouping key. A key composed by multiple elements can be defined specifying a list of indices e.g. `by: [0,2]`                                                    |
-| sort      | Defines the sorting criteria for the grouped items. See below for available sorting options.                                                                                                                          |
-| size      | The number of items the grouped list(s) has to contain. When the specified size is reached, the tuple is emitted.                                                                                                     |
-| remainder | When `false` incomplete tuples (i.e. with less than `size` grouped items) are discarded (default). When `true` incomplete tuples are emitted as the ending emission. Only valid when a `size` parameter is specified. |
+`by`
+: The index (zero based) of the element to be used as grouping key. A key composed by multiple elements can be defined specifying a list of indices e.g. `by: [0,2]`
 
-Sorting options:
+`remainder`
+: When `false` incomplete tuples (i.e. with less than `size` grouped items) are discarded (default). When `true` incomplete tuples are emitted as the ending emission. Only valid when a `size` parameter is specified.
 
-| Sort     | Description                                                                                                                                                                                                                                            |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| false    | No sorting is applied (default).                                                                                                                                                                                                                       |
-| true     | Order the grouped items by the item natural ordering i.e. numerical for number, lexicographic for string, etc. See <http://docs.oracle.com/javase/tutorial/collections/interfaces/order.html>                                                          |
-| hash     | Order the grouped items by the hash number associated to each entry.                                                                                                                                                                                   |
-| deep     | Similar to the previous, but the hash number is created on actual entries content e.g. when the item is a file, the hash is created on the actual file content.                                                                                        |
-| `custom` | A custom sorting criteria used to order the tuples element holding list of values. It can be specified by using either a {ref}`Closure <script-closure>` or a [Comparator](http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html) object. |
+`size`
+: The number of items the grouped list(s) has to contain. When the specified size is reached, the tuple is emitted.
+
+`sort`
+: Defines the sorting criteria for the grouped items. Can be one of the following values:
+
+  - `false`: No sorting is applied (default).
+  - `true`: Order the grouped items by the item's natural ordering i.e. numerical for number, lexicographic for string, etc. See the [Java documentation](http://docs.oracle.com/javase/tutorial/collections/interfaces/order.html) for more information.
+  - `hash`: Order the grouped items by the hash number associated to each entry.
+  - `deep`: Similar to the previous, but the hash number is created on actual entries content e.g. when the item is a file, the hash is created on the actual file content.
+  - A custom sorting criteria used to order the tuples element holding list of values. It can be specified by using either a {ref}`Closure <script-closure>` or a [Comparator](http://docs.oracle.com/javase/7/docs/api/java/util/Comparator.html) object.
 
 :::{tip}
 You should always specify the number of expected elements in each tuple with the `size` attribute, so that the `groupTuple` operator can stream each collected value as soon as possible. In cases where the size of each tuple may vary depending on the grouping key, you can use the built-in `groupKey` function, which allows you to create a special grouping key object with an associated size.
@@ -930,14 +941,19 @@ left.join(right, remainder: true).view()
 [P, 7, null]
 ```
 
-The following parameters can be used with the `join` operator:
+Available options:
 
-| Name            | Description                                                                                                                                                          |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| by              | The index (zero based) of the element to be used as grouping key. A key composed by multiple elements can be defined specifying a list of indices e.g. `by: [0,2]`   |
-| remainder       | When `false` incomplete tuples (i.e. with less than `size` grouped items) are discarded (default). When `true` incomplete tuples are emitted as the ending emission. |
-| failOnDuplicate | An error is reported when the same key is found more than once.                                                                                                      |
-| failOnMismatch  | An error is reported when a channel emits a value for which there isn't a corresponding element in the joining channel. This option cannot be used with `remainder`. |
+`by`
+: The index (zero based) of the element to be used as grouping key. A key composed by multiple elements can be defined specifying a list of indices e.g. `by: [0,2]`.
+
+`failOnDuplicate`
+: An error is reported when the same key is found more than once.
+
+`failOnMismatch`
+: An error is reported when a channel emits a value for which there isn't a corresponding element in the joining channel. This option cannot be used with `remainder`.
+
+`remainder`
+: When `false` incomplete tuples (i.e. with less than `size` grouped items) are discarded (default). When `true` incomplete tuples are emitted as the ending emission.
 
 (operator-last)=
 
@@ -1318,20 +1334,37 @@ Channel
     .view { row -> "${row.col1} - ${row.col2} - ${row.col3}" }
 ```
 
-Available parameters:
+Available options:
 
-| Field      | Description                                                                                                                                                     |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| by         | The number of rows in each `chunk`                                                                                                                              |
-| sep        | The character used to separate the values (default: `,`)                                                                                                        |
-| quote      | Values may be quoted by single or double quote characters.                                                                                                      |
-| header     | When `true` the first line is used as columns names. Alternatively it can be used to provide the list of columns names.                                         |
-| charset    | Parse the content by using the specified charset e.g. `UTF-8`                                                                                                   |
-| strip      | Removes leading and trailing blanks from values (default: `false`)                                                                                              |
-| skip       | Number of lines since the file beginning to ignore when parsing the CSV content.                                                                                |
-| limit      | Limits the number of retrieved records for each file to the specified value.                                                                                    |
-| decompress | When `true` decompress the content using the GZIP format before processing it (note: files whose name ends with `.gz` extension are decompressed automatically) |
-| elem       | The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)           |
+`by`
+: The number of rows in each `chunk`
+
+`charset`
+: Parse the content by using the specified charset e.g. `UTF-8`
+
+`decompress`
+: When `true` decompress the content using the GZIP format before processing it (note: files whose name ends with `.gz` extension are decompressed automatically)
+
+`elem`
+: The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
+
+`header`
+: When `true` the first line is used as columns names. Alternatively it can be used to provide the list of columns names.
+
+`limit`
+: Limits the number of retrieved records for each file to the specified value.
+
+`quote`
+: Values may be quoted by single or double quote characters.
+
+`sep`
+: The character used to separate the values (default: `,`)
+
+`skip`
+: Number of lines since the file beginning to ignore when parsing the CSV content.
+
+`strip`
+: Removes leading and trailing blanks from values (default: `false`)
 
 ## splitFasta
 
@@ -1364,31 +1397,42 @@ Channel
 
 In this example, the file `misc/sample.fa` is split into records containing the `id` and the `seqString` fields (i.e. the sequence id and the sequence data). The following `filter` operator only keeps the sequences whose ID starts with the `ENST0` prefix, finally the sequence content is printed by using the `subscribe` operator.
 
-Available parameters:
+Available options:
 
-| Field      | Description                                                                                                                                                                                                                                                                            |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| by         | Defines the number of sequences in each `chunk` (default: `1`)                                                                                                                                                                                                                         |
-| size       | Defines the size in memory units of the expected chunks eg. `1.MB`.                                                                                                                                                                                                                    |
-| limit      | Limits the number of retrieved sequences for each file to the specified value.                                                                                                                                                                                                         |
-| record     | Parse each entry in the FASTA file as record objects (see following table for accepted values)                                                                                                                                                                                         |
-| charset    | Parse the content by using the specified charset e.g. `UTF-8`                                                                                                                                                                                                                          |
-| compress   | When `true` resulting file chunks are GZIP compressed. The `.gz` suffix is automatically added to chunk file names.                                                                                                                                                                    |
-| decompress | When `true`, decompress the content using the GZIP format before processing it (note: files whose name ends with `.gz` extension are decompressed automatically)                                                                                                                       |
-| file       | When `true` saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified folder. |
-| elem       | The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)                                                                                                                                  |
+`by`
+: Defines the number of sequences in each `chunk` (default: `1`)
 
-The following fields are available when using the `record` parameter:
+`charset`
+: Parse the content by using the specified charset e.g. `UTF-8`.
 
-| Field     | Description                                                                                                                 |
-| --------- | --------------------------------------------------------------------------------------------------------------------------- |
-| id        | The FASTA sequence identifier i.e. the word following the `>` symbol up to the first `blank` or `newline` character         |
-| header    | The first line in a FASTA sequence without the `>` character                                                                |
-| desc      | The text in the FASTA header following the ID value                                                                         |
-| text      | The complete FASTA sequence including the header                                                                            |
-| seqString | The sequence data as a single line string i.e. containing no `newline` characters                                           |
-| sequence  | The sequence data as a multi-line string (always ending with a `newline` character)                                         |
-| width     | Define the length of a single line when the `sequence` field is used, after that the sequence data continues on a new line. |
+`compress`
+: When `true` resulting file chunks are GZIP compressed. The `.gz` suffix is automatically added to chunk file names.
+
+`decompress`
+: When `true`, decompress the content using the GZIP format before processing it (note: files whose name ends with `.gz` extension are decompressed automatically).
+
+`elem`
+: The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element).
+
+`file`
+: When `true` saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified folder.
+
+`limit`
+: Limits the number of retrieved sequences for each file to the specified value.
+
+`record`
+: Parse each entry in the FASTA file as record objects. The following fields are available:
+
+  - `id`: The FASTA sequence identifier i.e. the word following the `>` symbol up to the first `blank` or `newline` character
+  - `header`: The first line in a FASTA sequence without the `>` character
+  - `desc`: The text in the FASTA header following the ID value
+  - `text`: The complete FASTA sequence including the header
+  - `seqString`: The sequence data as a single line string i.e. containing no `newline` characters
+  - `sequence`: The sequence data as a multi-line string (always ending with a `newline` character)
+  - `width`: Define the length of a single line when the `sequence` field is used, after that the sequence data continues on a new line.
+
+`size`
+: Defines the size in memory units of the expected chunks eg. `1.MB`.
 
 :::{tip}
 You can also use `countFasta` to count the number of entries in the FASTA file(s).
@@ -1439,28 +1483,39 @@ The `fromFilePairs` requires the `flat: true` option in order to emit the file p
 This operator assumes that the order of the paired-end reads correspond with each other and both files contain the same number of reads.
 :::
 
-Available parameters:
+Available options:
 
-| Field      | Description                                                                                                                                                                                                                                                                            |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| by         | Defines the number of *reads* in each `chunk` (default: `1`)                                                                                                                                                                                                                           |
-| pe         | When `true` splits paired-end read files, therefore items emitted by the source channel must be tuples in which at least two elements are the read-pair files to be split.                                                                                                             |
-| limit      | Limits the number of retrieved *reads* for each file to the specified value.                                                                                                                                                                                                           |
-| record     | Parse each entry in the FASTQ file as record objects (see following table for accepted values)                                                                                                                                                                                         |
-| charset    | Parse the content by using the specified charset e.g. `UTF-8`                                                                                                                                                                                                                          |
-| compress   | When `true` resulting file chunks are GZIP compressed. The `.gz` suffix is automatically added to chunk file names.                                                                                                                                                                    |
-| decompress | When `true` decompress the content using the GZIP format before processing it (note: files whose name ends with `.gz` extension are decompressed automatically)                                                                                                                        |
-| file       | When `true` saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified folder. |
-| elem       | The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)                                                                                                                                  |
+`by`
+: Defines the number of *reads* in each `chunk` (default: `1`)
 
-The following fields are available when using the `record` parameter:
+`charset`
+: Parse the content by using the specified charset e.g. `UTF-8`
 
-| Field         | Description                              |
-| ------------- | ---------------------------------------- |
-| readHeader    | Sequence header (without the `@` prefix) |
-| readString    | The raw sequence data                    |
-| qualityHeader | Base quality header (it may be empty)    |
-| qualityString | Quality values for the sequence          |
+`compress`
+: When `true` resulting file chunks are GZIP compressed. The `.gz` suffix is automatically added to chunk file names.
+
+`decompress`
+: When `true` decompress the content using the GZIP format before processing it (note: files whose name ends with `.gz` extension are decompressed automatically)
+
+`elem`
+: The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element)
+
+`file`
+: When `true` saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in order to save the split files into the specified folder.
+
+`limit`
+: Limits the number of retrieved *reads* for each file to the specified value.
+
+`pe`
+: When `true` splits paired-end read files, therefore items emitted by the source channel must be tuples in which at least two elements are the read-pair files to be split.
+
+`record`
+: Parse each entry in the FASTQ file as record objects. The following fields are available:
+
+  - `readHeader`: Sequence header (without the `@` prefix)
+  - `readString`: The raw sequence data
+  - `qualityHeader`: Base quality header (it may be empty)
+  - `qualityString`: Quality values for the sequence
 
 :::{tip}
 You can also use `countFastq` to count the number of entries in the FASTQ file(s).
@@ -1506,18 +1561,31 @@ Channel
 Text chunks returned by the `splitText` operator are always terminated by a `\n` newline character.
 :::
 
-Available parameters:
+Available options:
 
-| Field      | Description                                                                                                                                                                                                                                                                           |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| by         | Defines the number of lines in each `chunk` (default: `1`).                                                                                                                                                                                                                           |
-| limit      | Limits the number of retrieved lines for each file to the specified value.                                                                                                                                                                                                            |
-| charset    | Parse the content by using the specified charset e.g. `UTF-8`.                                                                                                                                                                                                                        |
-| compress   | When `true` resulting file chunks are GZIP compressed. The `.gz` suffix is automatically added to chunk file names.                                                                                                                                                                   |
-| decompress | When `true`, decompress the content using the GZIP format before processing it (note: files whose name ends with `.gz` extension are decompressed automatically).                                                                                                                     |
-| file       | When `true` saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder. |
-| elem       | The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element).                                                                                                                                |
-| keepHeader | Parses the first line as header and prepends it to each emitted chunk.                                                                                                                                                                                                                |
+`by`
+: Defines the number of lines in each `chunk` (default: `1`).
+
+`charset`
+: Parse the content by using the specified charset e.g. `UTF-8`.
+
+`compress`
+: When `true` resulting file chunks are GZIP compressed. The `.gz` suffix is automatically added to chunk file names.
+
+`decompress`
+: When `true`, decompress the content using the GZIP format before processing it (note: files whose name ends with `.gz` extension are decompressed automatically).
+
+`elem`
+: The index of the element to split when the operator is applied to a channel emitting list/tuple objects (default: first file object or first element).
+
+`file`
+: When `true` saves each split to a file. Use a string instead of `true` value to create split files with a specific name (split index number is automatically added). Finally, set this attribute to an existing directory, in oder to save the split files into the specified folder.
+
+`keepHeader`
+: Parses the first line as header and prepends it to each emitted chunk.
+
+`limit`
+: Limits the number of retrieved lines for each file to the specified value.
 
 :::{tip}
 You can also use `countLines` to count the number of lines in the text file(s).
@@ -1738,12 +1806,13 @@ The above snippet prints:
 [3, D]
 ```
 
-Available parameters:
+Available options:
 
-| Field     | Description                                                                                                                                          |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| by        | The index (zero based) of the element to be transposed. Multiple elements can be defined specifying as list of indices e.g. `by: [0,2]`              |
-| remainder | When `false` incomplete tuples are discarded (default). When `true` incomplete tuples are emitted containing a `null` in place of a missing element. |
+` by`
+: The index (zero based) of the element to be transposed. Multiple elements can be defined specifying as list of indices e.g. `by: [0,2]`
+
+` remainder`
+: When `false` incomplete tuples are discarded (default). When `true` incomplete tuples are emitted containing a `null` in place of a missing element.
 
 ## unique
 

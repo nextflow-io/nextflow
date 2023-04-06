@@ -60,7 +60,7 @@ See also: {ref}`process-multiple-input-channels`.
 
 (channel-factory)=
 
-## Channel factory
+## Channel factories
 
 Channels may be created explicitly using the following channel factory methods.
 
@@ -193,6 +193,12 @@ The first line returns a channel emitting the files ending with the suffix `.fa`
 As in Linux Bash, the `*` wildcard does not catch hidden files (i.e. files whose name starts with a `.` character).
 :::
 
+Multiple paths or glob patterns can be specified using a list:
+
+```groovy
+Channel.fromPath( ['/some/path/*.fq', '/other/path/*.fastq'] )
+```
+
 In order to include hidden files, you need to start your pattern with a period character or specify the `hidden: true` option. For example:
 
 ```groovy
@@ -205,32 +211,37 @@ The first example returns all hidden files in the specified path. The second one
 
 By default a [glob][glob] pattern only looks for regular file paths that match the specified criteria, i.e. it won't return directory paths.
 
-You may use the parameter `type` specifying the value `file`, `dir` or `any` in order to define what kind of paths you want. For example:
+You can use the `type` option specifying the value `file`, `dir` or `any` in order to define what kind of paths you want. For example:
 
 ```groovy
 myFileChannel = Channel.fromPath( '/path/*b', type: 'dir' )
 myFileChannel = Channel.fromPath( '/path/a*', type: 'any' )
 ```
 
-The first example will return all *directory* paths ending with the `b` suffix, while the second will return any file and directory starting with a `a` prefix.
+The first example will return all *directory* paths ending with the `b` suffix, while the second will return any file or directory starting with a `a` prefix.
 
-| Name          | Description                                                                                                                                |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| glob          | When `true` interprets characters `*`, `?`, `[]` and `{}` as glob wildcards, otherwise handles them as normal characters (default: `true`) |
-| type          | Type of paths returned, either `file`, `dir` or `any` (default: `file`)                                                                    |
-| hidden        | When `true` includes hidden files in the resulting paths (default: `false`)                                                                |
-| maxDepth      | Maximum number of directory levels to visit (default: `no limit`)                                                                          |
-| followLinks   | When `true` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: `true`)             |
-| relative      | When `true` returned paths are relative to the top-most common directory (default: `false`)                                                |
-| checkIfExists | When `true` throws an exception of the specified path do not exist in the file system (default: `false`)                                   |
+Available options:
 
-:::{note}
-Multiple paths or glob patterns can be specified using a list:
+`checkIfExists`
+: When `true` throws an exception of the specified path do not exist in the file system (default: `false`)
 
-```groovy
-Channel.fromPath( ['/some/path/*.fq', '/other/path/*.fastq'] )
-```
-:::
+`followLinks`
+: When `true` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: `true`)
+
+`glob`
+: When `true` interprets characters `*`, `?`, `[]` and `{}` as glob wildcards, otherwise handles them as normal characters (default: `true`)
+
+`hidden`
+: When `true` includes hidden files in the resulting paths (default: `false`)
+
+`maxDepth`
+: Maximum number of directory levels to visit (default: no limit)
+
+`relative`
+: When `true` returned paths are relative to the top-most common directory (default: `false`)
+
+`type`
+: Type of paths returned, either `file`, `dir` or `any` (default: `file`)
 
 (channel-filepairs)=
 
@@ -259,6 +270,12 @@ It will produce an output similar to the following:
 The glob pattern must contain at least one `*` wildcard character.
 :::
 
+Multiple glob patterns can be specified using a list:
+
+```groovy
+Channel.fromFilePairs( ['/some/data/SRR*_{1,2}.fastq', '/other/data/QFF*_{1,2}.fastq'] )
+```
+
 Alternatively, it is possible to implement a custom file pair grouping strategy providing a closure which, given the current file as parameter, returns the grouping key. For example:
 
 ```groovy
@@ -267,25 +284,28 @@ Channel
     .view { ext, files -> "Files with the extension $ext are $files" }
 ```
 
-Table of optional parameters available:
+Available options:
 
-| Name          | Description                                                                                                                    |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| type          | Type of paths returned, either `file`, `dir` or `any` (default: `file`)                                                        |
-| hidden        | When `true` includes hidden files in the resulting paths (default: `false`)                                                    |
-| maxDepth      | Maximum number of directory levels to visit (default: `no limit`)                                                              |
-| followLinks   | When `true` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: `true`) |
-| size          | Defines the number of files each emitted item is expected to hold (default: 2). Set to `-1` for any.                           |
-| flat          | When `true` the matching files are produced as sole elements in the emitted tuples (default: `false`).                         |
-| checkIfExists | When `true` throws an exception of the specified path do not exist in the file system (default: `false`)                       |
+`checkIfExists`
+: When `true` throws an exception of the specified path do not exist in the file system (default: `false`)
 
-:::{note}
-Multiple glob patterns can be specified using a list:
+`followLinks`
+: When `true` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: `true`)
 
-```groovy
-Channel.fromFilePairs( ['/some/data/SRR*_{1,2}.fastq', '/other/data/QFF*_{1,2}.fastq'] )
-```
-:::
+`flat`
+: When `true` the matching files are produced as sole elements in the emitted tuples (default: `false`).
+
+`hidden`
+: When `true` includes hidden files in the resulting paths (default: `false`)
+
+`maxDepth`
+: Maximum number of directory levels to visit (default: no limit)
+
+`size`
+: Defines the number of files each emitted item is expected to hold (default: 2). Set to `-1` for any.
+
+`type`
+: Type of paths returned, either `file`, `dir` or `any` (default: `file`)
 
 (channel-fromsra)=
 
@@ -334,23 +354,33 @@ Channel
 Each read pair is implicitly managed and returned as a list of files.
 :::
 
-:::{tip}
 This method uses the NCBI [ESearch](https://www.ncbi.nlm.nih.gov/books/NBK25499/#chapter4.ESearch) API behind the scenes, therefore it allows the use of any query term supported by this API.
-:::
 
-Table of optional parameters available:
+To access the ESearch API, you must provide your [NCBI API keys](https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities) through one of the following ways:
 
-| Name     | Description                                                                                                            |
-| -------- | ---------------------------------------------------------------------------------------------------------------------- |
-| apiKey   | NCBI user API key.                                                                                                     |
-| cache    | Enable/disable the caching API requests (default: `true`).                                                             |
-| max      | Maximum number of entries that can be retried (default: unlimited) .                                                   |
-| protocol | Allow choosing the protocol for the resulting remote URLs. Available choices: `ftp`, `http`, `https` (default: `ftp`). |
+- The `apiKey` option:
+  ```groovy
+  Channel.fromSRA(ids, apiKey:'0123456789abcdef')
+  ```
 
-To access the NCBI search service the [NCBI API keys](https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities) should be provided either:
+- The `NCBI_API_KEY` variable in your environment:
+  ```bash
+  export NCBI_API_KEY=0123456789abcdef
+  ```
 
-- Using the `apiKey` optional parameter e.g. `Channel.fromSRA(ids, apiKey:'0123456789abcdef')`.
-- Exporting the `NCBI_API_KEY` variable in your environment e.g. `export NCBI_API_KEY=0123456789abcdef`.
+Available options:
+
+`apiKey`
+: NCBI user API key.
+
+`cache`
+: Enable/disable the caching API requests (default: `true`).
+
+`max`
+: Maximum number of entries that can be retried (default: unlimited) .
+
+`protocol`
+: Allow choosing the protocol for the resulting remote URLs. Available choices: `ftp`, `http`, `https` (default: `ftp`).
 
 (channel-of)=
 
@@ -429,11 +459,9 @@ Channel
 
 By default it watches only for new files created in the specified folder. Optionally, it is possible to provide a second argument that specifies what event(s) to watch. The supported events are:
 
-| Name     | Description                     |
-| -------- | ------------------------------- |
-| `create` | A new file is created (default) |
-| `modify` | A file is modified              |
-| `delete` | A file is deleted               |
+- `create`: A new file is created (default)
+- `modify`: A file is modified
+- `delete`: A file is deleted
 
 You can specify more than one of these events by using a comma separated string as shown below:
 
@@ -444,7 +472,7 @@ Channel
 ```
 
 :::{warning}
-The `watchPath` factory waits endlessly for files that match the specified pattern and event(s), which means that it will cause your pipeline to run forever. Consider using the `until` operator to close the channel when a certain condition is met (e.g. receiving a file named `DONE`).
+The `watchPath` factory waits endlessly for files that match the specified pattern and event(s), which means that it will cause your pipeline to run forever. Consider using the `take` or `until` operator to close the channel when a certain condition is met (e.g. after receiving 10 files, receiving a file named `DONE`).
 :::
 
 See also: [fromPath](#frompath) factory method.
