@@ -1,0 +1,18 @@
+# Dummy workflow to trigger the CI on PRs to the docs
+#
+# These PRs do not trigger the main Nextflow build + test CI
+# but that CI is required.
+# This workflow runs in that scenario and has the same name,
+# meaning that the required tests pass and the PR can be merged.
+# Ref: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks#handling-skipped-but-required-checks
+name: Nextflow CI
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - 'docs/**'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'echo "No build required"'
