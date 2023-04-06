@@ -11,6 +11,7 @@ on:
     types: [opened, reopened, synchronize]
     paths-ignore:
       - 'docs/**'
+  workflow_dispatch:
 
 jobs:
   build:
