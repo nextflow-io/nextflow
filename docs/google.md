@@ -66,7 +66,7 @@ when done, make sure to use the latest edge release running the snippet in the p
 
 ### Configuration
 
-Make sure to have defined in your environment the `GOOGLE_APPLICATION_CREDENTIALS` variable. See the section [Credentials](#credentials) for details.
+Make sure to have defined in your environment the `GOOGLE_APPLICATION_CREDENTIALS` variable. See the [Credentials](#credentials) section for details.
 
 :::{note}
 Make sure your Google account is allowed to access the Google Cloud Batch service by checking the [APIs & Services](https://console.cloud.google.com/apis/dashboard) dashboard.
@@ -74,10 +74,9 @@ Make sure your Google account is allowed to access the Google Cloud Batch servic
 
 Create or edit the file `nextflow.config` in your project root directory. The config must specify the following parameters:
 
-- Google Cloud Batch as Nextflow executor i.e. `process.executor = 'google-batch'`.
-- The Docker container image to be used to run pipeline tasks e.g. `process.container = 'biocontainers/salmon:0.8.2--1'`.
-- The Google Cloud `project` ID to run in e.g. `google.project = 'rare-lattice-222412'`.
-- The Google location e.g. `google.location = 'us-central1'`.
+- Google Cloud Batch as Nextflow executor
+- The Docker container image(s) for pipeline tasks
+- The Google Cloud project ID and location
 
 Example:
 
@@ -93,33 +92,13 @@ google {
 }
 ```
 
-:::{note}
-Make sure to specify the project ID, not the project name.
-:::
+Notes:
 
-:::{note}
-Make sure to specify a location where Google Batch is available. Refer to the [Google Batch documentation](https://cloud.google.com/batch/docs/get-started#locations) for region availability.
-:::
+- A container image must be specified to execute processes. You can use a different Docker image for each process using one or more {ref}`config-process-selectors`.
+- Make sure to specify the project ID, not the project name.
+- Make sure to specify a location where Google Batch is available. Refer to the [Google Batch documentation](https://cloud.google.com/batch/docs/get-started#locations) for region availability.
 
-:::{Note}
-A container image must be specified to deploy the process execution. You can use a different Docker image for each process using one or more {ref}`config-process-selectors`.
-:::
-
-The following configuration options are available:
-
-| Name                                | Description                                                                                                                                                                                                                                                                                                       |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `google.project`                    | The Google Project Id to use for the pipeline execution.                                                                                                                                                                                                                                                          |
-| `google.location`                   | The Google *location* where the job executions are deployed (default: `us-central1`).                                                                                                                                                                                                                             |
-| `google.enableRequesterPaysBuckets` | When `true` uses the configured Google project id as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`).     |
-| `google.batch.allowedLocations`     | Define the set of allowed locations for VMs to be provisioned. See [Google documentation](https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy) for details (default: no restriction. Requires version `22.12.0-edge` or later).                                          |
-| `google.batch.bootDiskSize`         | Set the size of the virtual machine boot disk, e.g `50.GB` (default: none).                                                                                                                                                                                                                                       |
-| `google.batch.cpuPlatform`          | Set the minimum CPU Platform, e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).                                                                                          |
-| `google.batch.spot`                 | When `true` enables the usage of *spot* virtual machines or `false` otherwise (default: `false`).                                                                                                                                                                                                                 |
-| `google.batch.usePrivateAddress`    | When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`).       |
-| `google.batch.network`              | Set network name to attach the VM's network interface to. The value will be prefixed with global/networks/ unless it contains a /, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used.                                                  |
-| `google.batch.serviceAccountEmail`  | Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.                                                                                                                                             |
-| `google.batch.subnetwork`           | Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL. |
+Read the {ref}`Google configuration<config-google>` section to learn more about advanced configuration options.
 
 ### Process definition
 
@@ -272,9 +251,9 @@ Make sure to enable the Cloud Life Sciences API beforehand. To learn how to enab
 Create a `nextflow.config` file in the project root directory. The config must specify the following parameters:
 
 - Google Life Sciences as Nextflow executor
-- The Docker container image(s) to run pipeline tasks
-- The Google Cloud `project` ID
-- The Google Cloud `region` or `zone` where the Compute Engine VMs will be started.
+- The Docker container image(s) for pipeline tasks
+- The Google Cloud project ID
+- The Google Cloud region or zone where the Compute Engine VMs will be executed.
   You need to specify one or the other, *not* both. Multiple regions or zones can be specified as a comma-separated list, e.g. `google.zone = 'us-central1-f,us-central-1-b'`.
 
 Example:
@@ -291,40 +270,12 @@ google {
 }
 ```
 
-:::{warning}
-Make sure to specify the project ID, not the project name.
-:::
+Notes:
+- A container image must be specified to execute processes. You can use a different Docker image for each process using one or more {ref}`config-process-selectors`.
+- Make sure to specify the project ID, not the project name.
+- Make sure to specify a location where Google Life Sciences is available. Refer to the [Google Cloud documentation](https://cloud.google.com/life-sciences/docs/concepts/locations) for details.
 
-:::{note}
-You can use a different Docker image for each process using one or more {ref}`config-process-selectors`.
-:::
-
-The following configuration options are available:
-
-| Name                                      | Description                                                                                                                                                                                                                                                                                                                                                 |
-| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `google.project`                          | The Google Project Id to use for the pipeline execution.                                                                                                                                                                                                                                                                                                    |
-| `google.region`                           | The Google *region* where the computation is executed in Compute Engine VMs. Multiple regions can be provided separating them by a comma. Do not specify if a zone is provided. See [available Compute Engine regions and zones](https://cloud.google.com/compute/docs/regions-zones/)                                                                    |
-| `google.zone`                             | The Google *zone* where the computation is executed in Compute Engine VMs. Multiple zones can be provided separating them by a comma. Do not specify if a region is provided. See [available Compute Engine regions and zones](https://cloud.google.com/compute/docs/regions-zones/)                                                                      |
-| `google.location`                         | The Google *location* where the job executions are deployed to Cloud Life Sciences API. See [available Cloud Life Sciences API locations](https://cloud.google.com/life-sciences/docs/concepts/locations) (default: the same as the region or the zone specified).                                                                                         |
-| `google.enableRequesterPaysBuckets`       | When `true` uses the configured Google project id as the billing project for storage access. This is required when accessing data from *requester pays enabled* buckets. See [Requester Pays on Google Cloud Storage documentation](https://cloud.google.com/storage/docs/requester-pays) (default: `false`)                                                |
-| `google.lifeSciences.bootDiskSize`        | Set the size of the virtual machine boot disk e.g `50.GB` (default: none).                                                                                                                                                                                                                                                                                  |
-| `google.lifeSciences.copyImage`           | The container image run to copy input and output files. It must include the `gsutil` tool (default: `google/cloud-sdk:alpine`).                                                                                                                                                                                                                             |
-| `google.lifeSciences.cpuPlatform`         | Set the minimum CPU Platform e.g. `'Intel Skylake'`. See [Specifying a minimum CPU Platform for VM instances](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications) (default: none).                                                                                                                                     |
-| `google.lifeSciences.debug`               | When `true` copies the `/google` debug directory in that task bucket directory (default: `false`)                                                                                                                                                                                                                                                           |
-| `google.lifeSciences.preemptible`         | When `true` enables the usage of *preemptible* virtual machines or `false` otherwise (default: `true`)                                                                                                                                                                                                                                                      |
-| `google.lifeSciences.usePrivateAddress`   | When `true` the VM will NOT be provided with a public IP address, and only contain an internal IP. If this option is enabled, the associated job can only load docker images from Google Container Registry, and the job executable cannot use external services other than Google APIs (default: `false`). Requires version `20.03.0-edge` or later.       |
-| `google.lifeSciences.network`             | Set network name to attach the VM's network interface to. The value will be prefixed with global/networks/ unless it contains a /, in which case it is assumed to be a fully specified network resource URL. If unspecified, the global default network is used. Requires version `21.03.0-edge` or later.                                                  |
-| `google.lifeSciences.serviceAccountEmail` | Define the Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used. Requires version `20.05.0-edge` or later.                                                                                                                                             |
-| `google.lifeSciences.subnetwork`          | Define the name of the subnetwork to attach the instance to must be specified here, when the specified network is configured for custom subnet creation. The value is prefixed with `regions/subnetworks/` unless it contains a `/`, in which case it is assumed to be a fully specified subnetwork resource URL. Requires version `21.03.0-edge` or later. |
-| `google.lifeSciences.sshDaemon`           | When `true` runs SSH daemon in the VM carrying out the job to which it's possible to connect for debugging purposes (default: `false`).                                                                                                                                                                                                                     |
-| `google.lifeSciences.sshImage`            | The container image used to run the SSH daemon (default: `gcr.io/cloud-genomics-pipelines/tools`).                                                                                                                                                                                                                                                          |
-| `google.lifeSciences.keepAliveOnFailure`  | When `true` and a task complete with an unexpected exit status the associated compute node is kept up for 1 hour. This options implies `sshDaemon=true` (default: `false`, requires Nextflow version `21.06.0-edge` or later).                                                                                                                              |
-| `google.storage.delayBetweenAttempts`     | Delay between download attempts from Google Storage (default `10 sec`, requires version `21.06.0-edge` or later).                                                                                                                                                                                                                                           |
-| `google.storage.maxParallelTransfers`     | Max parallel upload/download transfer operations *per job* (default: `4`, requires version `21.06.0-edge` or later).                                                                                                                                                                                                                                        |
-| `google.storage.maxTransferAttempts`      | Max number of downloads attempts from Google Storage (default: `1`, requires version `21.06.0-edge` or later).                                                                                                                                                                                                                                              |
-| `google.storage.parallelThreadCount`      | Defines the value for the option `GSUtil:parallel_thread_count` used by `gsutil` for transfer input and output data (default: `1`, requires version `21.06.0-edge` or later).                                                                                                                                                                               |
-| `google.storage.downloadMaxComponents`    | Defines the value for the option `GSUtil:sliced_object_download_max_components` used by `gsutil` for transfer input and output data (default: `8`, requires version `21.06.0-edge` or later).                                                                                                                                                               |
+Read the {ref}`Google configuration<config-google>` section to learn more about advanced configuration options.
 
 ### Process definition
 

@@ -14,9 +14,7 @@ You can provide your AWS access keys using the standard AWS variables shown belo
 
 If `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are not defined in the environment, Nextflow will attempt to retrieve credentials from your `~/.aws/credentials` or `~/.aws/config` files. The `default` profile can be overridden via the environmental variable `AWS_PROFILE` (or `AWS_DEFAULT_PROFILE`).
 
-Alternatively AWS credentials can be specified in the Nextflow configuration file.
-
-See {ref}`AWS configuration<config-aws>` for more details.
+Alternatively AWS credentials can be specified in the Nextflow configuration file. See {ref}`AWS configuration<config-aws>` for more details.
 
 :::{note}
 Credentials can also be provided by using an IAM Instance Role. The benefit of this approach is that it spares you from managing/distributing AWS keys explicitly. Read the [IAM Roles](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html) documentation and [this blog post](https://aws.amazon.com/blogs/security/granting-permission-to-launch-ec2-instances-with-iam-roles-passrole-permission/) for more details.
@@ -298,7 +296,7 @@ aws-cli/1.19.79 Python/3.8.5 Linux/4.14.231-173.361.amzn2.x86_64 botocore/1.20.7
 The `aws` tool will be placed in a directory named `bin` in the main installation folder. Modifying this directory structure after the tool is installed will cause it to not work properly.
 :::
 
-To configure Nextflow to use this installation, specify the `cliPath` option in the {ref}`AWS Batch<config-aws-batch>` configuration as shown below:
+To configure Nextflow to use this installation, specify the `aws.batch.cliPath` option in the Nextflow configuration as shown below:
 
 ```groovy
 aws.batch.cliPath = '/home/ec2-user/miniconda/bin/aws'
@@ -485,4 +483,4 @@ This [AWS page](https://aws.amazon.com/premiumsupport/knowledge-center/batch-job
 
 ## Advanced configuration
 
-Read {ref}`AWS Batch configuration<config-aws-batch>` section to learn more about advanced Batch configuration options.
+Read the {ref}`AWS configuration<config-aws>` section to learn more about advanced configuration options.
