@@ -58,7 +58,7 @@ import org.pf4j.util.FileUtils
 @CompileStatic
 class PluginUpdater extends UpdateManager {
 
-    static final Pattern META_REGEX = ~/(.+)-(\d+\.\d+\.\d+)-meta\.json/
+    static final public Pattern META_REGEX = ~/(.+)-(\d+\.\d+\.\d+\S*)-meta\.json/
 
     private CustomPluginManager pluginManager
 
