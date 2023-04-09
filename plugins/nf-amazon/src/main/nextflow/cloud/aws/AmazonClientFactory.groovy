@@ -17,6 +17,9 @@
 
 package nextflow.cloud.aws
 
+import java.nio.file.Files
+import java.nio.file.Paths
+
 import com.amazonaws.AmazonClientException
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentialsProvider
@@ -45,6 +48,7 @@ import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.exception.AbortOperationException
 /**
@@ -95,8 +99,8 @@ class AmazonClientFactory {
         this.profile = config.profile
 
         // -- check some credentials exists
-//        if( !this.accessKey && !this.profile && !fetchIamRole() )
-//            throw new AbortOperationException("Missing AWS security credentials -- Provide access/security keys pair or define an IAM instance profile (suggested)")
+        if( noCredentialsExists() )
+            throw new AbortOperationException("Missing AWS security credentials -- Provide access/security keys pair or define an IAM instance profile (suggested)")
 
         // -- get the aws default region
         this.region = region ?: config.region ?: fetchRegion()
@@ -104,6 +108,20 @@ class AmazonClientFactory {
             throw new AbortOperationException('Missing AWS region -- Make sure to define in your system environment the variable `AWS_DEFAULT_REGION`')
     }
 
+    protected boolean noCredentialsExists() {
+        if( this.accessKey && this.secretKey )
+            return false
+        if( this.profile )
+            return false
+        if( fetchIamRole() )
+            return false
+        if( SysEnv.get('AWS_ACCESS_KEY_ID') && SysEnv.get('AWS_SECRET_ACCESS_KEY') )
+            return false
+        final awsConfig = Paths.get(System.getProperty("user.home")).resolve(".aws/config")
+        if(Files.exists(awsConfig))
+            return false
+        return true
+    }
     /**
      * Retrieve the current IAM role eventually define for a EC2 instance.
      * See http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html#instance-metadata-security-credentials

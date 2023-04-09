@@ -72,8 +72,6 @@ class AwsConfig {
 
     String getRegion() { region }
 
-    String getAssumeRoleArn() { assumeRoleArn }
-
     AwsS3Config getS3Config() { s3config }
 
     AwsBatchConfig getBatchConfig() { batchConfig }

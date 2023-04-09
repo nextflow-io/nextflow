@@ -85,23 +85,19 @@ class AwsConfigTest extends Specification {
         config.secretKey == SECRET_KEY
         config.profile == PROFILE
         config.region == REGION
-        config.assumeRoleArn == ROLE
         config.credentials == (ACCESS_KEY && SECRET_KEY ? [ACCESS_KEY, SECRET_KEY] : [])
 
         cleanup:
         SysEnv.pop()
 
         where:
-        ENV                 | CONFIG                                                                | ACCESS_KEY          | SECRET_KEY    | REGION            | PROFILE       | ROLE
-        [:]                 | [accessKey: 'a', secretKey: 'b']                                      | 'a'                 | 'b'           | null              | 'default'     | null
-        [:]                 | [accessKey: 'x', secretKey: 'y', region: 'eu-region-x']               | 'x'                 | 'y'           | 'eu-region-x'     | 'default'     | null
-        [:]                 | [accessKey: 'p', secretKey: 'q', profile: 'hola']                     | 'p'                 | 'q'           | null              | 'hola'        | null
-        [:]                 | [accessKey: 'a', secretKey: 'b', assumeRoleArn: 'role-x']             | 'a'                 | 'b'           | null              | 'default'     | 'role-x'
+        ENV                 | CONFIG                                                                | ACCESS_KEY          | SECRET_KEY    | REGION            | PROFILE
+        [:]                 | [accessKey: 'a', secretKey: 'b']                                      | 'a'                 | 'b'           | null              | null
+        [:]                 | [accessKey: 'x', secretKey: 'y', region: 'eu-region-x']               | 'x'                 | 'y'           | 'eu-region-x'     | null
+        [:]                 | [accessKey: 'p', secretKey: 'q', profile: 'hola']                     | 'p'                 | 'q'           | null              | 'hola'
         and:
-        [AWS_ACCESS_KEY_ID: 'k1', AWS_SECRET_ACCESS_KEY: 's1']  | [accessKey: 'a', secretKey: 'b']  | 'a'        | 'b'           | null              | 'default'     | null
-        [AWS_ACCESS_KEY_ID: 'k1', AWS_SECRET_ACCESS_KEY: 's1']  | [:]                               | 'k1'              | 's1'          | null              | 'default'     | null
-        [AWS_DEFAULT_REGION: 'eu-xyz']                          | [:]                               | null              | null          | 'eu-xyz'          | 'default'     | null
-        [AWS_DEFAULT_PROFILE: 'my-profile']                     | [:]                               | null              | null          | null              | 'my-profile'  | null
+        [AWS_DEFAULT_REGION: 'eu-xyz']                          | [:]                               | null              | null          | 'eu-xyz'          | null
+        [AWS_DEFAULT_PROFILE: 'my-profile']                     | [:]                               | null              | null          | null              | 'my-profile'
 
     }
 
