@@ -149,8 +149,6 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
     private final S3ObjectSummaryLookup s3ObjectSummaryLookup = new S3ObjectSummaryLookup();
 
-	private Properties props;
-
 	@Override
 	public String getScheme() {
 		return "s3";
@@ -167,10 +165,6 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 				throw new FileSystemAlreadyExistsException("S3 filesystem already exists. Use getFileSystem() instead");
 
 			final AwsConfig awsConfig = new AwsConfig(env);
-			// first try to load amazon props
-			props = loadAmazonProperties();
-			// glob properties for legacy compatibility
-			props.putAll(awsConfig.getS3LegacyClientConfig());
 			//
 			final S3FileSystem result = createFileSystem(uri, awsConfig);
 			fileSystems.put(bucketName, result);
@@ -371,6 +365,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 	private S3OutputStream createUploaderOutputStream( S3Path fileToUpload ) {
 		AmazonS3Client s3 = fileToUpload.getFileSystem().getClient();
+		Properties props = fileToUpload.getFileSystem().properties();
 
 		final String storageClass = fileToUpload.getStorageClass()!=null ? fileToUpload.getStorageClass() : props.getProperty("upload_storage_class");
 		final S3MultipartOptions opts = props != null ? new S3MultipartOptions(props) : new S3MultipartOptions();
@@ -575,7 +570,8 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		}
 
 		AmazonS3Client client = s3Source.getFileSystem() .getClient();
-
+		Properties props = s3Target.getFileSystem().properties();
+		
 		final ObjectMetadata sourceObjMetadata = s3Source.getFileSystem().getClient().getObjectMetadata(s3Source.getBucket(), s3Source.getKey());
 		final S3MultipartOptions opts = props != null ? new S3MultipartOptions(props) : new S3MultipartOptions();
 		final long maxSize = opts.getMaxCopySize();
@@ -849,11 +845,12 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 	// ~~
 
-	protected S3FileSystem createFileSystem(URI uri, AwsConfig config) {
-		return createFileSystem0(uri, config);
-	}
+	protected S3FileSystem createFileSystem(URI uri, AwsConfig awsConfig) {
+		// try to load amazon props
+		Properties props = loadAmazonProperties();
+		// add properties for legacy compatibility
+		props.putAll(awsConfig.getFileSystemEnv());
 
-	protected S3FileSystem createFileSystem0(URI uri, AwsConfig awsConfig) {
 		AmazonS3Client client;
 		ClientConfiguration clientConfig = createClientConfig(props);
 
@@ -879,7 +876,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		client.setGlacierExpirationDays(props.getProperty("glacier_expiration_days"));
 		client.setGlacierRetrievalTier(props.getProperty("glacier_retrieval_tier"));
 
-		return new S3FileSystem(this, client, uri);
+		return new S3FileSystem(this, client, uri, props);
 	}
 
 	protected String getProp(Properties props, String... keys) {

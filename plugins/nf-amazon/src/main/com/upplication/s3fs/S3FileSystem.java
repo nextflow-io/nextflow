@@ -49,6 +49,7 @@ import java.nio.file.PathMatcher;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.UserPrincipalLookupService;
 import java.nio.file.spi.FileSystemProvider;
+import java.util.Properties;
 import java.util.Set;
 
 import com.amazonaws.services.s3.model.Bucket;
@@ -62,16 +63,23 @@ public class S3FileSystem extends FileSystem {
 	private final String endpoint;
 	private final String bucketName;
 
-	public S3FileSystem(S3FileSystemProvider provider, AmazonS3Client client, URI uri) {
+	private final Properties properties;
+
+	public S3FileSystem(S3FileSystemProvider provider, AmazonS3Client client, URI uri, Properties props) {
 		this.provider = provider;
 		this.client = client;
 		this.endpoint = uri.getHost();
 		this.bucketName = S3Path.bucketName(uri);
+		this.properties = props;
 	}
 
 	@Override
 	public FileSystemProvider provider() {
 		return provider;
+	}
+
+	public Properties properties() {
+		return properties;
 	}
 
 	@Override
