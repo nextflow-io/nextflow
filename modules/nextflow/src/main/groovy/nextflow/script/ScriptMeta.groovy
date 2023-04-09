@@ -153,13 +153,13 @@ class ScriptMeta {
         if( component !instanceof ProcessDef && component !instanceof FunctionDef ) {
             return
         }
-        if (functionsCount.get(component.name)) {
+        if (functionsCount.get(name)) {
             final msg = "A function with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
             if (NF.isStrictMode())
                 throw new DuplicateModuleFunctionException(msg)
             log.warn(msg)
         }
-        if (imports.get(component.name)) {
+        if (imports.get(name)) {
             final msg = "A process with name '$name' is defined more than once in module script: $scriptPath -- Make sure to not define the same function as process"
             if (NF.isStrictMode())
                 throw new DuplicateModuleFunctionException(msg)
