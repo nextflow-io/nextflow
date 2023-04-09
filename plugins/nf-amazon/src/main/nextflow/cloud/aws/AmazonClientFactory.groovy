@@ -273,10 +273,6 @@ class AmazonClientFactory {
             return new AWSStaticCredentialsProvider(creds)
         }
 
-        // -- check some credentials exists
-        if( noCredentialsExists() )
-            throw new AbortOperationException("Missing AWS security credentials -- Provide access/security keys pair or define an IAM instance profile (suggested)")
-
         if( profile ) {
             return new ProfileCredentialsProvider(profile)
         }

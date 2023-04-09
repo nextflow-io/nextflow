@@ -17,7 +17,7 @@
 
 package nextflow.cloud.aws
 
-import nextflow.SysEnv
+
 import nextflow.cloud.aws.config.AwsConfig
 import spock.lang.Specification
 /**
@@ -36,40 +36,4 @@ class AmazonClientFactoryTest extends Specification {
         factory.profile() == 'my-profile'
     }
 
-    def 'validate not creds exist/1' () {
-        when:
-        def factory1 = new AmazonClientFactory(new AwsConfig(accessKey: 'foo', secretKey: 'bar', region: 'eu-west-1'))
-        then:
-        !factory1.noCredentialsExists()
-    }
-
-    def 'validate not creds exist/2' () {
-        given:
-        SysEnv.push(AWS_ACCESS_KEY_ID:'foo', AWS_SECRET_ACCESS_KEY:'bar')
-
-        when:
-        def factory1 = new AmazonClientFactory(new AwsConfig(region: 'eu-west-1'))
-        then:
-        !factory1.noCredentialsExists()
-
-        cleanup:
-        SysEnv.pop()
-    }
-
-    def 'validate not creds exist/3' () {
-        given:
-        SysEnv.push([:])
-
-        when:
-        def factory1 = Spy(new AmazonClientFactory(new AwsConfig(region: 'eu-west-1'))) {
-            awsConfigFileExists() >> false
-            fetchIamRole() >> null
-        }
-
-        then:
-        factory1.noCredentialsExists()
-
-        cleanup:
-        SysEnv.pop()
-    }
 }
