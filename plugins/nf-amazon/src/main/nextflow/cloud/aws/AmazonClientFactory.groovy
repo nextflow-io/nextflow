@@ -97,23 +97,26 @@ class AmazonClientFactory {
         // -- the required profile, if any
         this.profile = config.profile
 
-        // -- check some credentials exists
-        if( noCredentialsExists() )
-            throw new AbortOperationException("Missing AWS security credentials -- Provide access/security keys pair or define an IAM instance profile (suggested)")
-
         // -- get the aws default region
         this.region = region ?: config.region ?: fetchRegion()
         if( !this.region )
             throw new AbortOperationException('Missing AWS region -- Make sure to define in your system environment the variable `AWS_DEFAULT_REGION`')
     }
 
+    String accessKey() { accessKey }
+
+    String secretKey() { secretKey }
+
+    String region() { region }
+
+    String profile() { profile }
+
     protected boolean noCredentialsExists() {
         if( this.accessKey && this.secretKey )
             return false
         if( SysEnv.get('AWS_ACCESS_KEY_ID') && SysEnv.get('AWS_SECRET_ACCESS_KEY') )
             return false
-        final awsConfig = Paths.get(System.getProperty("user.home")).resolve(".aws/config")
-        if(Files.exists(awsConfig))
+        if( awsConfigFileExists() )
             return false
         if( fetchIamRole() )
             return false
@@ -127,7 +130,7 @@ class AmazonClientFactory {
      *      The IAM role name associated to this instance or {@code null} if no role is defined or
      *      it's not a EC2 instance
      */
-    private String fetchIamRole() {
+    protected String fetchIamRole() {
         try {
             def stsClient = AWSSecurityTokenServiceClientBuilder.defaultClient();
             return stsClient.getCallerIdentity(new GetCallerIdentityRequest()).getArn()
@@ -136,6 +139,11 @@ class AmazonClientFactory {
             log.trace "Unable to fetch IAM credentials -- Cause: ${e.message}"
             return null
         }
+    }
+
+    protected boolean awsConfigFileExists() {
+        final awsConfig = Paths.get(System.getProperty("user.home")).resolve(".aws/config")
+        Files.exists(awsConfig)
     }
 
     /**
@@ -264,6 +272,10 @@ class AmazonClientFactory {
             final creds = new BasicAWSCredentials(accessKey, secretKey)
             return new AWSStaticCredentialsProvider(creds)
         }
+
+        // -- check some credentials exists
+        if( noCredentialsExists() )
+            throw new AbortOperationException("Missing AWS security credentials -- Provide access/security keys pair or define an IAM instance profile (suggested)")
 
         if( profile ) {
             return new ProfileCredentialsProvider(profile)

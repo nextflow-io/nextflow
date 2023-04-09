@@ -17,32 +17,59 @@
 
 package nextflow.cloud.aws
 
+import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
-import spock.lang.Ignore
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class AmazonClientFactoryTest extends Specification {
 
-    @Ignore
-    def 'should create client' () {
+    def 'should create factory' () {
         when:
-        def opts = [
-                accessKey: '<SOME KEY>',
-                secretKey: '<SOME SECRET>',
-                region: 'eu-west-1',
-                assumeRoleArn: '<SOME ROLE>'
-        ]
-        def client = new AmazonClientFactory(new AwsConfig(opts))
-        and:
-        def s3 = client.getS3Client()
-        def buckets = s3.listBuckets()
-        println buckets.name
+        def factory = new AmazonClientFactory(new AwsConfig(accessKey: 'foo', secretKey: 'bar', region:'xyz', profile:'my-profile'))
         then:
-        true
+        factory.accessKey() == 'foo'
+        factory.secretKey() == 'bar'
+        factory.region() == 'xyz'
+        factory.profile() == 'my-profile'
     }
 
+    def 'validate not creds exist/1' () {
+        when:
+        def factory1 = new AmazonClientFactory(new AwsConfig(accessKey: 'foo', secretKey: 'bar', region: 'eu-west-1'))
+        then:
+        !factory1.noCredentialsExists()
+    }
+
+    def 'validate not creds exist/2' () {
+        given:
+        SysEnv.push(AWS_ACCESS_KEY_ID:'foo', AWS_SECRET_ACCESS_KEY:'bar')
+
+        when:
+        def factory1 = new AmazonClientFactory(new AwsConfig(region: 'eu-west-1'))
+        then:
+        !factory1.noCredentialsExists()
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'validate not creds exist/3' () {
+        given:
+        SysEnv.push([:])
+
+        when:
+        def factory1 = Spy(new AmazonClientFactory(new AwsConfig(region: 'eu-west-1'))) {
+            awsConfigFileExists() >> false
+            fetchIamRole() >> null
+        }
+
+        then:
+        factory1.noCredentialsExists()
+
+        cleanup:
+        SysEnv.pop()
+    }
 }
