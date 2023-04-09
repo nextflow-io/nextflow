@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -136,6 +135,36 @@ class PodSpecBuilderTest extends Specification {
                                     image:'busybox',
                                     command:['/bin/bash', '-c', 'echo foo'],
                                     securityContext: [privileged: true]
+                                   ]
+                           ]
+                   ]
+        ]
+
+    }
+
+    def 'should create pod spec with device and capabilities' () {
+
+        when:
+        def spec = new PodSpecBuilder()
+                .withPodName('foo')
+                .withImageName('busybox')
+                .withCommand('echo foo')
+                .withDevices(['/dev/fuse'])
+                .withCapabilities(add:['SYS_ADMIN'])
+                .build()
+
+        then:
+        spec ==  [ apiVersion: 'v1',
+                   kind: 'Pod',
+                   metadata: [name:'foo', namespace:'default'],
+                   spec: [
+                           restartPolicy:'Never',
+                           containers:[
+                                   [name:'foo',
+                                    image:'busybox',
+                                    command:['/bin/bash', '-c', 'echo foo'],
+                                    devices: ['/dev/fuse'],
+                                    securityContext: [capabilities: [add:['SYS_ADMIN']]]
                                    ]
                            ]
                    ]

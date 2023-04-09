@@ -16,9 +16,6 @@
 
 package nextflow.cloud.azure.batch
 
-import com.microsoft.azure.batch.auth.BatchApplicationTokenCredentials
-import com.microsoft.azure.batch.auth.BatchCredentials
-
 import java.math.RoundingMode
 import java.nio.file.Path
 import java.time.Instant
@@ -26,6 +23,8 @@ import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
 import com.microsoft.azure.batch.BatchClient
+import com.microsoft.azure.batch.auth.BatchApplicationTokenCredentials
+import com.microsoft.azure.batch.auth.BatchCredentials
 import com.microsoft.azure.batch.auth.BatchSharedKeyCredentials
 import com.microsoft.azure.batch.protocol.models.AutoUserScope
 import com.microsoft.azure.batch.protocol.models.AutoUserSpecification
@@ -40,6 +39,7 @@ import com.microsoft.azure.batch.protocol.models.ContainerRegistry
 import com.microsoft.azure.batch.protocol.models.ElevationLevel
 import com.microsoft.azure.batch.protocol.models.ImageInformation
 import com.microsoft.azure.batch.protocol.models.MountConfiguration
+import com.microsoft.azure.batch.protocol.models.NetworkConfiguration
 import com.microsoft.azure.batch.protocol.models.OutputFile
 import com.microsoft.azure.batch.protocol.models.OutputFileBlobContainerDestination
 import com.microsoft.azure.batch.protocol.models.OutputFileDestination
@@ -65,6 +65,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Global
+import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.config.AzFileShareOpts
 import nextflow.cloud.azure.config.AzPoolOpts
@@ -72,6 +73,8 @@ import nextflow.cloud.azure.config.CopyToolInstallMode
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.fusion.FusionHelper
+import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.util.CacheHelper
@@ -392,10 +395,23 @@ class AzBatchService implements Closeable {
         // custom container settings
         if( task.config.getContainerOptions() )
             opts += "${task.config.getContainerOptions()} "
+        // fusion environment settings
+        final fusionEnabled = FusionHelper.isFusionEnabled((Session)Global.session)
+        final launcher = fusionEnabled ? FusionScriptLauncher.create(task.toTaskBean(), 'az') : null
+        if( fusionEnabled ) {
+            opts += "--privileged "
+            for( Map.Entry<String,String> it : launcher.fusionEnv() ) {
+                opts += "-e $it.key=$it.value "
+            }
+        }
         // config overall container settings
         final containerOpts = new TaskContainerSettings()
                 .withImageName(container)
                 .withContainerRunOptions(opts)
+        // submit command line
+        final String cmd = fusionEnabled
+                ? launcher.fusionSubmitCli(task).join(' ')
+                : "sh -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'"
 
         final slots = computeSlots(task, pool)
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
@@ -404,7 +420,7 @@ class AzBatchService implements Closeable {
                 .withId(taskId)
                 .withUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs))
                 .withContainerSettings(containerOpts)
-                .withCommandLine("sh -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'")
+                .withCommandLine(cmd)
                 .withResourceFiles(resourceFileUrls(task,sas))
                 .withOutputFiles(outputFileUrls(task, sas))
                 .withRequiredSlots(slots)
@@ -663,7 +679,6 @@ class AzBatchService implements Closeable {
                 .withCommandLine('bash -c "chmod +x azcopy && mkdir \$AZ_BATCH_NODE_SHARED_DIR/bin/ && cp azcopy \$AZ_BATCH_NODE_SHARED_DIR/bin/" ')
                 .withResourceFiles(resourceFiles)
 
-
         final poolParams = new PoolAddParameter()
                 .withId(spec.poolId)
                 .withVirtualMachineConfiguration(poolVmConfig(spec.opts))
@@ -673,6 +688,10 @@ class AzBatchService implements Closeable {
                 // https://docs.microsoft.com/en-us/azure/batch/batch-parallel-node-tasks
                 .withTaskSlotsPerNode(spec.vmType.numberOfCores)
                 .withStartTask(poolStartTask)
+
+        // virtual network
+        if( spec.opts.virtualNetwork )
+            poolParams.withNetworkConfiguration( new NetworkConfiguration().withSubnetId(spec.opts.virtualNetwork) )
 
         // scheduling policy
         if( spec.opts.schedulePolicy ) {
@@ -735,7 +754,7 @@ class AzBatchService implements Closeable {
             // For first interval deploy 1 node, for other intervals scale up/down as per tasks.
             $TargetDedicatedNodes = lifespan < interval ? {{vmCount}} : targetPoolSize;
             $NodeDeallocationOption = taskcompletion;
-            '''.stripIndent()
+            '''.stripIndent(true)
 
         final scaleFormula = opts.scaleFormula ?: DEFAULT_FORMULA
         final vars = new HashMap<String, String>()

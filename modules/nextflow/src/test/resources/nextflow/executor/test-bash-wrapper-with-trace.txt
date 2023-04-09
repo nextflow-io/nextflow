@@ -259,6 +259,10 @@ nxf_fs_rclone() {
   rclone copyto $1 $2/$1
 }
 
+nxf_fs_fcp() {
+  fcp $1 $2/$1
+}
+
 on_exit() {
     exit_status=${nxf_main_ret:=$?}
     printf $exit_status > {{folder}}/.exitcode
@@ -266,6 +270,7 @@ on_exit() {
     [[ "$tee1" ]] && kill $tee1 2>/dev/null
     [[ "$tee2" ]] && kill $tee2 2>/dev/null
     [[ "$ctmp" ]] && rm -rf $ctmp || true
+    sync || true
     exit $exit_status
 }
 

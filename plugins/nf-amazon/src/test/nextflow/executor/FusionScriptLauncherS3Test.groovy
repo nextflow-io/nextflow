@@ -41,10 +41,6 @@ class FusionScriptLauncherS3Test extends Specification {
         then:
         result == Path.of('/fusion/s3/bar/z.txt')
 
-
-        expect:
-        fusion.fusionBuckets() == [ 'foo', 'bar' ] as Set
-
     }
 
 
@@ -56,12 +52,13 @@ class FusionScriptLauncherS3Test extends Specification {
         and:
         def fusion = new FusionScriptLauncher(
                 scheme: 's3',
-                buckets: ['foo'] as Set,
                 remoteWorkDir: S3PathFactory.parse('s3://foo/work'))
 
         expect:
         fusion.fusionEnv() == [AWS_S3_ENDPOINT: 'http://foo.com',
-                               NXF_FUSION_WORK: '/fusion/s3/foo/work']
+                               FUSION_WORK: '/fusion/s3/foo/work',
+                               FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
+                                ]
 
         cleanup:
         SysEnv.pop()
@@ -75,13 +72,14 @@ class FusionScriptLauncherS3Test extends Specification {
         and:
         def fusion = new FusionScriptLauncher(
                 scheme: 's3',
-                buckets: ['foo'] as Set,
                 remoteWorkDir: S3PathFactory.parse('s3://foo/work'))
 
         expect:
         fusion.fusionEnv() == [AWS_ACCESS_KEY_ID: 'xxx',
                                AWS_SECRET_ACCESS_KEY: 'zzz',
-                               NXF_FUSION_WORK: '/fusion/s3/foo/work']
+                               FUSION_WORK: '/fusion/s3/foo/work',
+                               FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
+        ]
 
         cleanup:
         Global.config = null
@@ -97,14 +95,15 @@ class FusionScriptLauncherS3Test extends Specification {
         and:
         def fusion = new FusionScriptLauncher(
                 scheme: 's3',
-                buckets: ['foo'] as Set,
                 remoteWorkDir: S3PathFactory.parse('s3://foo/work'))
 
         expect:
         fusion.fusionEnv() == [AWS_ACCESS_KEY_ID: 'k1',
                                AWS_SECRET_ACCESS_KEY: 's1',
                                AWS_S3_ENDPOINT: 'http://minio.com',
-                               NXF_FUSION_WORK: '/fusion/s3/foo/work']
+                               FUSION_WORK: '/fusion/s3/foo/work',
+                               FUSION_TAGS: "[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)"
+        ]
 
         cleanup:
         Global.config = null

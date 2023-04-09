@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,29 +32,20 @@ import spock.lang.Specification
 class FusionHelperTest extends Specification {
 
     def 'should make foreign path to fusion paths' () {
-        given:
-        def buckets = new HashSet()
-
         when:
-        def result = FusionHelper.toContainerMount(XPath.get('http://foo/a/b/c.txt'), 'http', buckets)
+        def result = FusionHelper.toContainerMount(XPath.get('http://foo/a/b/c.txt'), 'http')
         then:
         result == Path.of('/fusion/http/foo/a/b/c.txt')
-        and:
-        buckets == [ 'foo' ] as Set
 
         when:
-        result = FusionHelper.toContainerMount(XPath.get('http://foo/a/x/y.txt'), 'http', buckets)
+        result = FusionHelper.toContainerMount(XPath.get('http://foo/a/x/y.txt'), 'http')
         then:
         result == Path.of('/fusion/http/foo/a/x/y.txt')
-        and:
-        buckets == [ 'foo' ] as Set
 
         when:
-        result = FusionHelper.toContainerMount(XPath.get('http://bar/z.txt'), 'http', buckets)
+        result = FusionHelper.toContainerMount(XPath.get('http://bar/z.txt'), 'http')
         then:
         result == Path.of('/fusion/http/bar/z.txt')
-        and:
-        buckets == [ 'foo', 'bar' ] as Set
 
     }
 
@@ -73,11 +64,11 @@ class FusionHelperTest extends Specification {
 
         where:
         CONFIG                  | ENV               | NAME          | CMD                   | EXPECTED
-        [engine:'docker']       | [:]               | 'image:1'     | ['echo', 'hello']     | ["sh", "-c", "docker run -i --rm --privileged image:1 echo 'hello'"]
-        [engine:'docker']       | [FOO:'one']       | 'image:2'     | ['echo', 'hello']     | ["sh", "-c", "docker run -i -e \"FOO=one\" --rm --privileged image:2 echo 'hello'"]
+        [engine:'docker']       | [:]               | 'image:1'     | ['echo', 'hello']     | "docker run -i --rm --privileged image:1 echo 'hello'"
+        [engine:'docker']       | [FOO:'one']       | 'image:2'     | ['echo', 'hello']     | "docker run -i -e \"FOO=one\" --rm --privileged image:2 echo 'hello'"
         and:
-        [engine:'singularity']  | [:]               | 'image:1'     | ['echo', 'hello']     | ["sh", "-c", "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} singularity exec image:1 echo 'hello'"]
-        [engine:'singularity']  | [FOO:'one']       | 'image:1'     | ['echo', 'hello']     | ["sh", "-c", "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=one singularity exec image:1 echo 'hello'"]
+        [engine:'singularity']  | [:]               | 'image:1'     | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} singularity exec --pid image:1 echo 'hello'"
+        [engine:'singularity']  | [FOO:'one']       | 'image:1'     | ['echo', 'hello']     | "set +u; env - PATH=\"\$PATH\" \${TMP:+SINGULARITYENV_TMP=\"\$TMP\"} \${TMPDIR:+SINGULARITYENV_TMPDIR=\"\$TMPDIR\"} SINGULARITYENV_FOO=one singularity exec --pid image:1 echo 'hello'"
 
     }
 

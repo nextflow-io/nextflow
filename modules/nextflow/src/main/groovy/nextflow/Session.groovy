@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,6 +62,7 @@ import nextflow.script.ScriptFile
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
+import nextflow.spack.SpackConfig
 import nextflow.trace.AnsiLogObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
@@ -1054,7 +1054,7 @@ class Session implements ISession {
         observers.each { trace -> trace.onFlowCreate(this) }
     }
 
-    void notifyFilePublish(Path destination, Path source) {
+    void notifyFilePublish(Path destination, Path source=null) {
         def copy = new ArrayList<TraceObserver>(observers)
         for( TraceObserver observer : copy  ) {
             try {
@@ -1151,6 +1151,12 @@ class Session implements ISession {
     CondaConfig getCondaConfig() {
         final cfg = config.conda as Map ?: Collections.emptyMap()
         return new CondaConfig(cfg, getSystemEnv())
+    }
+
+    @Memoized
+    SpackConfig getSpackConfig() {
+        final cfg = config.spack as Map ?: Collections.emptyMap()
+        return new SpackConfig(cfg, getSystemEnv())
     }
 
     /**

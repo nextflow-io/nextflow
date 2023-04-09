@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -259,7 +258,8 @@ class BashWrapperBuilderTest extends Specification {
                 workDir: folder,
                 headerScript: '#BSUB -x 1\n#BSUB -y 2',
                 beforeScript: 'echo Before',
-                condaEnv: Paths.get('/conda/env/path') ) .buildNew0()
+                condaEnv: Paths.get('/conda/env/path'),
+                spackEnv: Paths.get('/spack/env/path') ) .buildNew0()
 
         then:
         wrapper == load('test-bash-wrapper.txt', [folder: folder.toString()])
@@ -479,6 +479,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.task_env == 'export FOO="aa"\nexport BAR="bb"\n'
         binding.container_env == null
         !binding.launch_cmd.contains('nxf_container_env')
+        binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
 
     def 'should create secret env' () {
@@ -630,6 +631,25 @@ class BashWrapperBuilderTest extends Specification {
         binding.conda_activate == '''\
                 # conda environment
                 source $(conda info --json | awk '/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }')/bin/activate /some/conda/env/foo
+                '''.stripIndent()
+
+    }
+
+    def 'should create spack activate snippet' () {
+
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.spack_activate == null
+        binding.containsKey('spack_activate')
+
+        when:
+        def SPACK = Paths.get('/some/spack/env/foo')
+        binding = newBashWrapperBuilder(spackEnv: SPACK).makeBinding()
+        then:
+        binding.spack_activate == '''\
+                # spack environment
+                spack env activate -d /some/spack/env/foo
                 '''.stripIndent()
 
     }
@@ -819,7 +839,7 @@ class BashWrapperBuilderTest extends Specification {
         sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" busybox /bin/bash -ue /work/dir/.command.sh
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""
-        binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+        binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
 
     def 'should create wrapper with sarus and environment'() {
@@ -836,7 +856,7 @@ class BashWrapperBuilderTest extends Specification {
         sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" busybox /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""
-        binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+        binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
         and:
         binding.container_env == '''\
                     nxf_container_env() {
@@ -861,7 +881,7 @@ class BashWrapperBuilderTest extends Specification {
         sarus run --mount=type=bind,source=/folder\\ with\\ blanks,destination=/folder\\ with\\ blanks --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" busybox /bin/bash -ue /work/dir/.command.sh
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""
-        binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+        binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
 
     def 'should create wrapper with sarus container custom options'() {
@@ -878,7 +898,7 @@ class BashWrapperBuilderTest extends Specification {
         sarus run --mount=type=bind,source=/work/dir,destination=/work/dir -w "$PWD" --mount=type=bind,source=/foo,destination=/bar busybox /bin/bash -ue /work/dir/.command.sh
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""
-        binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+        binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
 
     def 'should create wrapper with shifter'() {
@@ -901,7 +921,7 @@ class BashWrapperBuilderTest extends Specification {
         shifter --image docker://ubuntu:latest /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"
         '''.stripIndent().rightTrim()
         binding.cleanup_cmd == ""
-        binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+        binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
 
     }
 
@@ -914,9 +934,9 @@ class BashWrapperBuilderTest extends Specification {
                 containerConfig: [enabled: true, engine: 'singularity'] as ContainerConfig ).makeBinding()
 
         then:
-        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --pid docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
-        binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+        binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
 
     def 'should create wrapper with singularity legacy entry'() {
@@ -928,9 +948,9 @@ class BashWrapperBuilderTest extends Specification {
                 containerConfig: [enabled: true, engine: 'singularity', entrypointOverride: true] as ContainerConfig ).makeBinding()
 
         then:
-        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --pid docker://ubuntu:latest /bin/bash -c "cd $PWD; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
-        binding.kill_cmd == '[[ "$pid" ]] && kill $pid 2>/dev/null'
+        binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
 
     def 'should create task and container env' () {

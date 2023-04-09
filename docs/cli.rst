@@ -842,6 +842,9 @@ the :ref:`k8s-page` section.
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-report              | report.html | Create processes execution html report.                                        |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
+| -with-spack               |             | Use the specified Spack environment package or                                 |
+|                           |             | file (must end with ``.yaml``)                                                 |
++---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-singularity         |             | Enable process execution in a Singularity container.                           |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-timeline            |timeline.html| Create processes execution timeline file.                                      |
@@ -859,6 +862,8 @@ the :ref:`k8s-page` section.
 | -without-docker           | false       | Disable process execution with Docker.                                         |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -without-podman           |             | Disable process execution in a Podman container.                               |
++---------------------------+-------------+--------------------------------------------------------------------------------+
+| -without-spack            | false       | Disable process execution with Spack.                                          |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -without-wave             |             | Disable the use of Wave containers service.                                    |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
@@ -1180,6 +1185,9 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-singularity         |             | Enable process execution in a Singularity container.                           |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
+| -with-spack               |             | Use the specified Spack environment package or                                 |
+|                           |             | file (must end with ``.yaml``)                                                 |
++---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-timeline            |timeline.html| Create processes execution timeline file.                                      |
 +---------------------------+-------------+--------------------------------------------------------------------------------+
 | -with-tower               |             | Monitor workflow execution with Seqera Tower service.                          |
@@ -1228,11 +1236,27 @@ facilitates rapid iterations, inspections of any pipeline as well as debugging.
 
     $ nextflow run nextflow-io/hello -with-tower
 
-- Invoke the nextflow pipeline execution with a custom parameters ``YAML/JSON`` file.
-  The parameters which are specified through this mechanism are merged with the resolved configuration (base configuration and profiles) and only the common fields are overwritten by the ``YAML/JSON`` file.::
+- Invoke the nextflow pipeline execution with a custom parameters ``YAML/JSON`` file.::
 
-    $ nextflow run main.nf -params-file pipeline_params.yml
+  $ nextflow run main.nf -params-file pipeline_params.yml
 
+  For example, the following params file in YAML format::
+
+    alpha: 1
+    beta: 'foo'
+
+  Or in JSON format::
+
+    {
+      "alpha": 1,
+      "beta": "foo"
+    }
+
+  Is equivalent to this command in CLI::
+
+    $ nextflow run main.nf --alpha 1 --beta foo
+
+  The parameters specified with this mechanism are merged with the resolved configuration (base configuration and profiles). The values provided via a params file overwrite those of the same name in the Nextflow configuration file.
 
 --------------------
 self-update
@@ -1271,7 +1295,7 @@ Update Nextflow. ::
 view
 --------------------
 
-View a projects script file(s).
+View a project's script file(s).
 
 **Usage**
 
@@ -1281,8 +1305,8 @@ View a projects script file(s).
 
 **Description**
 
-The ``view`` command is used to inspect the pipelines which are already stored in the global nextflow cache.
-For downloading a pipeline into the global cache ``~/.nextflow/assets``, please refer to the ``pull`` command.
+The ``view`` command is used to inspect the pipelines that are already stored in the global nextflow cache.
+For downloading a pipeline into the global cache ``~/.nextflow/assets``, refer to the ``pull`` command.
 
 **Options**
 
@@ -1321,7 +1345,7 @@ Viewing the contents of a downloaded pipeline. ::
       Channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
     }
 
-Listing the folder structure of the downloaded pipeline. ::
+List the folder structure of the downloaded pipeline. ::
 
     $ nextflow view -l nextflow-io/hello
 
@@ -1336,7 +1360,7 @@ Listing the folder structure of the downloaded pipeline. ::
     .travis.yml
     main.nf
 
-Viewing the contents of a downloaded pipeline without omitting the header. ::
+View the contents of a downloaded pipeline without omitting the header. ::
 
     $ nextflow view -q nextflow-io/hello
 
@@ -1364,9 +1388,9 @@ Viewing the contents of a downloaded pipeline without omitting the header. ::
 Pipeline parameters
 ====================
 
-Pipeline script can use an arbitrary number of parameters that can be overridden either
+Pipeline scripts can use an arbitrary number of parameters that can be overridden, either
 using the command line or the Nextflow configuration file. Any script parameter can be specified
-on the command line prefixing the parameter name with double dash characters e.g.::
+on the command line, prefixing the parameter name with double dash characters, e.g.::
 
     nextflow run <my script> --foo Hello
 
@@ -1374,11 +1398,11 @@ Then, the parameter can be accessed in the pipeline script using the ``params.fo
 
 .. note::
   When the parameter name is formatted using ``camelCase``, a second parameter
-  is created with the same value using ``kebab-case``, and the other way around.
+  is created with the same value using ``kebab-case``, and vice versa.
 
 .. warning::
   When a command line parameter includes one or more glob characters, i.e. wildcards like ``*`` or ``?``,
-  the parameter value needs to be enclosed in quotes to prevent Bash expansion and preserve
+  the parameter value must to be enclosed in quotes to prevent Bash expansion and preserve
   the glob characters. For example::
 
         nextflow run <my script> --files "*.fasta"

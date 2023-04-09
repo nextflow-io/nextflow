@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -565,7 +564,7 @@ class ConfigBuilder {
         }
 
         if( cmdRun.withoutConda && config.conda instanceof Map ) {
-            // disable docker execution
+            // disable conda execution
             log.debug "Disabling execution with Conda as requested by command-line option `-without-conda`"
             config.conda.enabled = false
         }
@@ -575,6 +574,19 @@ class ConfigBuilder {
             if( cmdRun.withConda != '-' )
                 config.process.conda = cmdRun.withConda
             config.conda.enabled = true
+        }
+
+        if( cmdRun.withoutSpack && config.spack instanceof Map ) {
+            // disable spack execution
+            log.debug "Disabling execution with Spack as requested by command-line option `-without-spack`"
+            config.spack.enabled = false
+        }
+
+        // -- apply the spack environment
+        if( cmdRun.withSpack ) {
+            if( cmdRun.withSpack != '-' )
+                config.process.spack = cmdRun.withSpack
+            config.spack.enabled = true
         }
 
         // -- sets the resume option
@@ -728,6 +740,10 @@ class ConfigBuilder {
 
         if( cmdRun.withSingularity ) {
             configContainer(config, 'singularity', cmdRun.withSingularity)
+        }
+
+        if( cmdRun.withApptainer ) {
+            configContainer(config, 'apptainer', cmdRun.withApptainer)
         }
 
         if( cmdRun.withCharliecloud ) {

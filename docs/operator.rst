@@ -5,7 +5,7 @@ Operators
 *********
 
 Nextflow **operators** are methods that allow you to manipulate channels. Every operator,
-with the exception of :ref:`operator-set`, produces one or more new channels, allowing you to
+with the exception of :ref:`operator-set` and :ref:`operator-subscribe`, produces one or more new channels, allowing you to
 chain operators to fit your needs.
 
 This page is a comprehensive reference for all Nextflow operators. However, if you are new
@@ -26,6 +26,8 @@ branch
 ------
 
 .. note:: Requires Nextflow version ``19.08.0-edge`` or later.
+
+*Returns: map of queue channels*
 
 The ``branch`` operator allows you to forward the items emitted by a source channel to one
 or more output channels, `choosing` one out of them at a time.
@@ -101,6 +103,8 @@ To create a branch criteria as variable that can be passed as an argument to mor
 
 buffer
 ------
+
+*Returns: queue channel*
 
 The ``buffer`` operator gathers the items emitted by the source channel into subsets and emits these subsets separately.
 
@@ -186,6 +190,8 @@ See also: `collate`_ operator.
 collate
 -------
 
+*Returns: queue channel*
+
 The ``collate`` operator transforms a channel in such a way that the emitted values are grouped in tuples containing `n` items. For example::
 
     Channel
@@ -237,6 +243,8 @@ See also: `buffer`_ operator.
 collect
 -------
 
+*Returns: value channel*
+
 The ``collect`` operator collects all the items emitted by a channel to a ``List`` and return
 the resulting object as a sole emission. For example::
 
@@ -273,6 +281,8 @@ See also: `toList`_ and `toSortedList`_ operator.
 
 collectFile
 -----------
+
+*Returns: queue channel*
 
 The ``collectFile`` operator allows you to gather the items emitted by a channel and save them to one or more files.
 The operator returns a new channel that emits the collected file(s).
@@ -389,6 +399,8 @@ The following example shows how use a `closure` to collect and sort all sequence
 combine
 -------
 
+*Returns: queue channel*
+
 The ``combine`` operator combines (cartesian product) the items emitted by two channels or by a channel and a ``Collection``
 object (as right operand). For example::
 
@@ -434,6 +446,8 @@ See also `join`_.
 concat
 ------
 
+*Returns: queue channel*
+
 The ``concat`` operator allows you to `concatenate` the items emitted by two or more channels to a new channel. The items emitted by the resulting channel are in the same order as specified in the operator arguments.
 
 Given `n` number of channels, the concatenation channel emits the items proceeding from the `i+1 th` channel 
@@ -463,6 +477,8 @@ It will output::
 
 count
 -----
+
+*Returns: value channel*
 
 The ``count`` operator creates a channel that emits a single item: a number that represents the total number of
 items emitted by the source channel. For example::
@@ -501,6 +517,8 @@ a literal value, a Java class, or a `boolean predicate` that needs to be satisfi
 cross
 -----
 
+*Returns: queue channel*
+
 The ``cross`` operator allows you to combine the items of two channels in such a way that
 the items of the source channel are emitted along with the items emitted by the target channel
 for which they have a matching key.
@@ -536,6 +554,8 @@ Optionally, a mapping function can be specified in order to provide a custom rul
 
 distinct
 --------
+
+*Returns: queue channel*
 
 The ``distinct`` operator allows you to remove `consecutive` duplicated items from a channel, so that each emitted item
 is different from the preceding one. For example::
@@ -577,6 +597,8 @@ For example::
 dump
 ----
 
+*Returns: queue channel or value channel, depending on the input*
+
 The ``dump`` operator prints the items emitted by the channel to which is applied only when the option
 ``-dump-channels`` is specified on the ``run`` command line, otherwise it is ignored.
 
@@ -607,6 +629,8 @@ The output can be formatted using the optional ``pretty`` boolean option. For ex
 
 filter
 ------
+
+*Returns: queue channel*
 
 The ``filter`` operator allows you to get only the items emitted by a channel that satisfy a condition and discarding
 all the others. The filtering condition can be specified by using either a :ref:`regular expression <script-regexp>`,
@@ -663,6 +687,8 @@ a channel emitting numbers so that the `odd` values are returned::
 first
 -----
 
+*Returns: value channel*
+
 The ``first`` operator creates a channel that returns the first item emitted by the source channel, or eventually
 the first item that matches an optional condition. The condition can be specified by using a :ref:`regular expression<script-regexp>`,
 a Java `class` type or any boolean `predicate`. For example::
@@ -696,6 +722,8 @@ a Java `class` type or any boolean `predicate`. For example::
 
 flatMap
 -------
+
+*Returns: queue channel*
 
 The ``flatMap`` operator applies a function of your choosing to every item emitted by a channel, and
 returns the items so obtained as a new channel. Whereas the `mapping` function returns a list of items,
@@ -744,6 +772,8 @@ Associative arrays are handled in the same way, so that each array entry is emit
 flatten
 -------
 
+*Returns: queue channel*
+
 The ``flatten`` operator transforms a channel in such a way that every item of type ``Collection`` or ``Array``
 is flattened so that each single entry is emitted separately by the resulting channel. For example::
 
@@ -764,40 +794,12 @@ is flattened so that each single entry is emitted separately by the resulting ch
 See also: `flatMap`_ operator.
 
 
-groupBy
--------
-
-.. warning::
-    This operator is deprecated. Use the `groupTuple`_ operator instead.
-
-The ``groupBy`` operator collects the values emitted by the source channel grouping them together using a `mapping`
-function that associates each item with a key. When finished, it emits an associative
-array that maps each key to the set of items identified by that key.
-
-For example::
-
-    Channel
-        .from('hello', 'ciao', 'hola', 'hi', 'bonjour')
-        .groupBy { String str -> str[0] }
-        .view()
-
-::
-
-    [ b:['bonjour'], c:['ciao'], h:['hello','hola','hi'] ]
-
-The `mapping` function is an optional parameter. When omitted, the values are grouped
-according to these rules:
-
-* Any value of type ``Map`` is associated with the value of its first entry, or ``null`` when the map itself is empty.
-* Any value of type ``Map.Entry`` is associated with the value of its ``key`` attribute.
-* Any value of type ``Collection`` or ``Array`` is associated with its first entry.
-* For any other value, the value itself is used as a key.
-
-
 .. _operator-grouptuple:
 
 groupTuple
 ----------
+
+*Returns: queue channel*
 
 The ``groupTuple`` operator collects tuples (or lists) of values emitted by the source channel grouping together the
 elements that share the same key. Finally it emits a new tuple object for each distinct key collected.
@@ -808,7 +810,15 @@ In other words, the operator transforms a sequence of tuple like *(K, V, W, ..)*
 For example::
 
     Channel
-        .of( [1,'A'], [1,'B'], [2,'C'], [3, 'B'], [1,'C'], [2, 'A'], [3, 'D'] )
+        .of(
+            [1, 'A'],
+            [1, 'B'],
+            [2, 'C'],
+            [3, 'B'],
+            [1, 'C'],
+            [2, 'A'],
+            [3, 'D']
+        )
         .groupTuple()
         .view()
 
@@ -823,7 +833,15 @@ By default the first entry in the tuple is used as grouping key. A different key
 grouping by the second value in each tuple::
 
     Channel
-        .of( [1,'A'], [1,'B'], [2,'C'], [3, 'B'], [1,'C'], [2, 'A'], [3, 'D'] )
+        .of(
+            [1, 'A'],
+            [1, 'B'],
+            [2, 'C'],
+            [3, 'B'],
+            [1, 'C'],
+            [2, 'A'],
+            [3, 'D']
+        )
         .groupTuple(by: 1)
         .view()
 
@@ -902,6 +920,8 @@ deep            Similar to the previous, but the hash number is created on actua
 ifEmpty
 -------
 
+*Returns: value channel*
+
 The ``ifEmpty`` operator creates a channel which emits a default value, specified as the operator parameter, when the channel to which
 is applied is *empty* i.e. doesn't emit any value. Otherwise it will emit the same sequence of entries as the original channel.
 
@@ -932,6 +952,8 @@ See also `tap`_.
 
 join
 ----
+
+*Returns: queue channel*
 
 The ``join`` operator creates a channel that joins together the items emitted by two channels for which exists
 a matching key. The key is defined, by default, as the first element in each item emitted.
@@ -983,6 +1005,8 @@ failOnMismatch  An error is reported when a channel emits a value for which ther
 last
 ----
 
+*Returns: value channel*
+
 The ``last`` operator creates a channel that only returns the last item emitted by the source channel. For example::
 
     Channel
@@ -999,6 +1023,8 @@ The ``last`` operator creates a channel that only returns the last item emitted 
 
 map
 ---
+
+*Returns: queue channel*
 
 The ``map`` operator applies a function of your choosing to every item emitted by a channel, and
 returns the items so obtained as a new channel. The function applied is called the `mapping` function
@@ -1023,6 +1049,8 @@ and is expressed with a :ref:`closure <script-closure>` as shown in the example 
 
 max
 ---
+
+*Returns: value channel*
 
 The ``max`` operator waits until the source channel completes, and then emits the item that has the greatest value.
 For example::
@@ -1062,6 +1090,8 @@ taking two parameters that represent two emitted items to be compared. For examp
 
 merge
 -----
+
+*Returns: queue channel*
 
 The ``merge`` operator lets you join items emitted by two (or more) channels into a new channel.
 
@@ -1105,6 +1135,8 @@ An optional closure can be provided to customise the items emitted by the result
 min
 ---
 
+*Returns: value channel*
+
 The ``min`` operator waits until the source channel completes, and then emits the item that has the lowest value.
 For example::
 
@@ -1143,6 +1175,8 @@ taking two parameters that represent two emitted items to be compared. For examp
 
 mix
 ---
+
+*Returns: queue channel*
 
 The ``mix`` operator combines the items emitted by two (or more) channels into a single channel.
 
@@ -1183,6 +1217,8 @@ multiMap
 --------
 
 .. note:: Requires Nextflow version ``19.11.0-edge`` or later.
+
+*Returns: map of queue channels*
 
 The ``multiMap`` operator allows you to forward the items emitted by a source channel to two
 or more output channels, mapping each input value as a separate element.
@@ -1249,6 +1285,8 @@ that can be passed as an argument to one or more ``multiMap`` operations, as sho
 randomSample
 ------------
 
+*Returns: queue channel*
+
 The ``randomSample`` operator allows you to create a channel emitting the specified number of items randomly taken
 from the channel to which is applied. For example::
 
@@ -1275,6 +1313,8 @@ sequence will be returned.
 
 reduce
 ------
+
+*Returns: value channel*
 
 The ``reduce`` operator applies a function of your choosing to every item emitted by a channel.
 Each time this function is invoked it takes two parameters: firstly the accumulated value and
@@ -1309,6 +1349,8 @@ Optionally you can specify an initial value for the accumulator as shown below::
 set
 ---
 
+*Returns: nothing*
+
 The ``set`` operator assigns the channel to a variable whose name is specified as a closure parameter.
 For example::
 
@@ -1324,6 +1366,8 @@ of a chain of operator transformations, thus resulting in a more fluent and read
 
 splitCsv
 --------
+
+*Returns: queue channel*
 
 The ``splitCsv`` operator allows you to parse text items emitted by a channel, that are formatted using the
 `CSV format <http://en.wikipedia.org/wiki/Comma-separated_values>`_, and split them into records or group them into
@@ -1381,6 +1425,8 @@ elem        The index of the element to split when the operator is applied to a 
 
 splitFasta
 ----------
+
+*Returns: queue channel*
 
 The ``splitFasta`` operator allows you to split the entries emitted by a channel, that are formatted using the
 `FASTA format <http://en.wikipedia.org/wiki/FASTA_format>`_. It returns a channel which emits text item
@@ -1452,6 +1498,8 @@ width       Define the length of a single line when the ``sequence`` field is us
 
 splitFastq
 ----------
+
+*Returns: queue channel*
 
 The ``splitFastq`` operator allows you to split the entries emitted by a channel, that are formatted using the
 `FASTQ format <http://en.wikipedia.org/wiki/FASTQ_format>`_. It returns a channel which emits a text chunk
@@ -1532,6 +1580,8 @@ qualityString   Quality values for the sequence
 splitText
 ---------
 
+*Returns: queue channel*
+
 The ``splitText`` operator allows you to split multi-line strings or text file items, emitted by a source channel
 into chunks containing `n` lines, which will be emitted by the resulting channel.
 
@@ -1586,10 +1636,79 @@ keepHeader  Parses the first line as header and prepends it to each emitted chun
   You can also use ``countLines`` to count the number of lines in the text file(s).
 
 
+.. _operator-subscribe:
+
+subscribe
+---------
+
+*Returns: nothing*
+
+The ``subscribe`` operator allows you to execute a user defined function each time a new value is emitted by the source channel.
+
+The emitted value is passed implicitly to the specified function. For example::
+
+    // define a channel emitting three values
+    source = Channel.of( 'alpha', 'beta', 'delta' )
+
+    // subscribe a function to the channel printing the emitted values
+    source.subscribe {  println "Got: $it"  }
+
+::
+
+    Got: alpha
+    Got: beta
+    Got: delta
+
+.. note::
+  In Groovy, the language on which Nextflow is based, the user defined function is called a **closure**.
+  Read the :ref:`script-closure` section to learn more about closures.
+
+If needed the closure parameter can be defined explicitly, using a name other than ``it`` and, optionally,
+specifying the expected value type, as shown in the following example::
+
+    Channel
+        .of( 'alpha', 'beta', 'lambda' )
+        .subscribe { String str ->
+            println "Got: ${str}; len: ${str.size()}"
+        }
+
+::
+
+    Got: alpha; len: 5
+    Got: beta; len: 4
+    Got: lambda; len: 6
+
+The ``subscribe`` operator may accept one or more of the following event handlers:
+
+* ``onNext``: function that is invoked whenever the channel emits a value.
+  Equivalent to using the ``subscribe`` with a plain closure as described in the examples above.
+
+* ``onComplete``: function that is invoked after the last value is emitted by the channel.
+
+* ``onError``: function that it is invoked when an exception is raised while handling the
+  ``onNext`` event. It will not make further calls to ``onNext`` or ``onComplete``.
+  The ``onError`` method takes as its parameter the ``Throwable`` that caused the error.
+
+For example::
+
+    Channel
+        .of( 1, 2, 3 )
+        .subscribe onNext: { println it }, onComplete: { println 'Done' }
+
+::
+
+    1
+    2
+    3
+    Done
+
+
 .. _operator-sum:
 
 sum
 ---
+
+*Returns: value channel*
 
 The ``sum`` operator creates a channel that emits the sum of all the items emitted by the channel itself.
 For example::
@@ -1619,6 +1738,8 @@ a function that, given an item, returns the value to be summed. For example::
 take
 ----
 
+*Returns: queue channel*
+
 The ``take`` operator allows you to filter only the first `n` items emitted by a channel. For example::
 
     Channel
@@ -1641,7 +1762,9 @@ See also `until`_.
 tap
 ---
 
-The ``tap`` operator combines the functions of `into`_ and `separate`_ operators in such a way that
+*Returns: queue channel*
+
+The ``tap`` operator combines the functions of ``into`` and ``separate`` operators in such a way that
 it connects two channels, copying the values from the source into the `tapped` channel. At the same
 time it splits the source channel into a newly created channel that is returned by the operator itself.
 
@@ -1696,6 +1819,8 @@ Using the closure syntax the above example can be rewritten as shown below::
 toInteger
 ---------
 
+*Returns: queue channel*
+
 The ``toInteger`` operator allows you to convert the string values emitted by a channel to ``Integer`` values. For
 example::
 
@@ -1710,6 +1835,8 @@ example::
 
 toList
 ------
+
+*Returns: value channel*
 
 The ``toList`` operator collects all the items emitted by a channel to a ``List`` object
 and emits the resulting collection as a single item. For example::
@@ -1739,6 +1866,8 @@ See also: `collect`_ operator.
 
 toSortedList
 ------------
+
+*Returns: value channel*
 
 The ``toSortedList`` operator collects all the items emitted by a channel to a ``List`` object where they are sorted
 and emits the resulting collection as a single item. For example::
@@ -1770,22 +1899,29 @@ See also: `collect`_ operator.
 transpose
 ---------
 
+*Returns: queue channel*
+
 The ``transpose`` operator transforms a channel in such a way that the emitted items are the result of a transposition
 of all tuple elements in each item. For example::
 
-    Channel.of(
-        ['a', ['p', 'q'], ['u','v']],
-        ['b', ['s', 't'], ['x','y']]
+    Channel
+        .of(
+            [1, ['A', 'B', 'C']],
+            [2, ['C', 'A']],
+            [3, ['B', 'D']]
         )
         .transpose()
         .view()
 
 The above snippet prints::
 
-    [a, p, u]
-    [a, q, v]
-    [b, s, x]
-    [b, t, y]
+    [1, A]
+    [1, B]
+    [1, C]
+    [2, C]
+    [2, A]
+    [3, B]
+    [3, D]
 
 Available parameters:
 
@@ -1801,6 +1937,8 @@ remainder   When ``false`` incomplete tuples are discarded (default). When ``tru
 
 unique
 ------
+
+*Returns: queue channel*
 
 The ``unique`` operator allows you to remove duplicate items from a channel and only emit single items with no repetition.
 
@@ -1835,6 +1973,8 @@ For example::
 until
 -----
 
+*Returns: queue channel*
+
 The ``until`` operator creates a channel that returns the items emitted by the source channel and stop when
 the condition specified is verified. For example::
 
@@ -1856,6 +1996,8 @@ See also `take`_.
 
 view
 ----
+
+*Returns: queue channel*
 
 The ``view`` operator prints the items emitted by a channel to the console standard output. For example::
 

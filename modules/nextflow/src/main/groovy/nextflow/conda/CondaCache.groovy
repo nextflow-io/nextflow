@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -178,8 +177,12 @@ class CondaCache {
 
         String content
         String name = 'env'
+        // check if it's a remote uri
+        if( isYamlUriPath(condaEnv) ) {
+            content = condaEnv
+        }
         // check if it's a YAML file
-        if( isYamlFilePath(condaEnv) ) {
+        else if( isYamlFilePath(condaEnv) ) {
             try {
                 final path = condaEnv as Path
                 content = path.text
@@ -264,6 +267,10 @@ class CondaCache {
         Paths.get(envFile).toAbsolutePath()
     }
 
+    @PackageScope boolean isYamlUriPath(String env) {
+        env.startsWith('http://') || env.startsWith('https://')
+    }
+
     @PackageScope
     Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
 
@@ -276,10 +283,10 @@ class CondaCache {
 
         def cmd
         if( isYamlFilePath(condaEnv) ) {
-            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
+            final target = isYamlUriPath(condaEnv) ? condaEnv : Escape.path(makeAbsolute(condaEnv))
+            cmd = "${binaryName} env create --prefix ${Escape.path(prefixPath)} --file ${target}"
         }
         else if( isTextFilePath(condaEnv) ) {
-
             cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} --file ${Escape.path(makeAbsolute(condaEnv))}"
         }
 
@@ -304,7 +311,7 @@ class CondaCache {
     int runCommand( String cmd ) {
         log.trace """${binaryName} create
                      command: $cmd
-                     timeout: $createTimeout""".stripIndent()
+                     timeout: $createTimeout""".stripIndent(true)
 
         final max = createTimeout.toMillis()
         final builder = new ProcessBuilder(['bash','-c',cmd])
