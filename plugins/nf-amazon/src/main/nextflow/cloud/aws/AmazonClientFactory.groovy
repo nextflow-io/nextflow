@@ -110,14 +110,12 @@ class AmazonClientFactory {
     protected boolean noCredentialsExists() {
         if( this.accessKey && this.secretKey )
             return false
-        if( this.profile )
-            return false
-        if( fetchIamRole() )
-            return false
         if( SysEnv.get('AWS_ACCESS_KEY_ID') && SysEnv.get('AWS_SECRET_ACCESS_KEY') )
             return false
         final awsConfig = Paths.get(System.getProperty("user.home")).resolve(".aws/config")
         if(Files.exists(awsConfig))
+            return false
+        if( fetchIamRole() )
             return false
         return true
     }
@@ -260,7 +258,6 @@ class AmazonClientFactory {
 
         return builder.build()
     }
-
 
     protected AWSCredentialsProvider getCredentialsProvider0() {
         if( accessKey && secretKey ) {
