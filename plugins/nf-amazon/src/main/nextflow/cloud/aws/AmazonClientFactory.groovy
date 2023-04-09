@@ -17,13 +17,16 @@
 
 package nextflow.cloud.aws
 
+import java.nio.file.Files
+import java.nio.file.Paths
+
 import com.amazonaws.AmazonClientException
 import com.amazonaws.ClientConfiguration
-import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
+import com.amazonaws.auth.profile.ProfileCredentialsProvider
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.InstanceMetadataRegionProvider
 import com.amazonaws.regions.Region
@@ -45,6 +48,7 @@ import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.exception.AbortOperationException
 /**
@@ -69,26 +73,12 @@ class AmazonClientFactory {
     private String secretKey
 
     /**
-     * The AWS IAM role to be assumed
-     */
-    private String assumeRoleArn
-
-    /**
      * The AWS region eg. {@code eu-west-1}. If it's not specified the current region is retrieved from
      * the EC2 instance metadata
      */
     private String region
 
-    /**
-     * @return The current set AWS access key
-     */
-    String getAccessKey() { accessKey }
-
-    /**
-     * @return The current set AWS secret key
-     */
-    String getSecretKey() { secretKey }
-
+    private String profile
 
     /**
      * Initialise the Amazon cloud driver with default (empty) parameters
@@ -103,10 +93,13 @@ class AmazonClientFactory {
         if( config.accessKey && config.secretKey ) {
             this.accessKey = config.accessKey
             this.secretKey = config.secretKey
-            this.assumeRoleArn = config.assumeRoleArn
         }
 
-        if( !this.accessKey && !fetchIamRole() )
+        // -- the required profile, if any
+        this.profile = config.profile
+
+        // -- check some credentials exists
+        if( noCredentialsExists() )
             throw new AbortOperationException("Missing AWS security credentials -- Provide access/security keys pair or define an IAM instance profile (suggested)")
 
         // -- get the aws default region
@@ -115,6 +108,20 @@ class AmazonClientFactory {
             throw new AbortOperationException('Missing AWS region -- Make sure to define in your system environment the variable `AWS_DEFAULT_REGION`')
     }
 
+    protected boolean noCredentialsExists() {
+        if( this.accessKey && this.secretKey )
+            return false
+        if( this.profile )
+            return false
+        if( fetchIamRole() )
+            return false
+        if( SysEnv.get('AWS_ACCESS_KEY_ID') && SysEnv.get('AWS_SECRET_ACCESS_KEY') )
+            return false
+        final awsConfig = Paths.get(System.getProperty("user.home")).resolve(".aws/config")
+        if(Files.exists(awsConfig))
+            return false
+        return true
+    }
     /**
      * Retrieve the current IAM role eventually define for a EC2 instance.
      * See http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html#instance-metadata-security-credentials
@@ -255,32 +262,18 @@ class AmazonClientFactory {
         return builder.build()
     }
 
-    protected AWSCredentials getCredentials0() {
-        if( !accessKey || !secretKey )
-            return null
-
-        return new BasicAWSCredentials(accessKey, secretKey)
-    }
 
     protected AWSCredentialsProvider getCredentialsProvider0() {
-        final creds = getCredentials0()
-        if( !creds ) {
-            return assumeRoleArn ? stsProvider() : null
+        if( accessKey && secretKey ) {
+            final creds = new BasicAWSCredentials(accessKey, secretKey)
+            return new AWSStaticCredentialsProvider(creds)
         }
-        final staticProvider = new AWSStaticCredentialsProvider(creds)
-        return assumeRoleArn ? stsProvider(staticProvider) : staticProvider
-    }
 
-    protected AWSCredentialsProvider stsProvider(AWSCredentialsProvider creds=null) {
-        final sts = AWSSecurityTokenServiceClientBuilder
-                .standard()
-                .withRegion(region)
-                .withCredentials(creds)
-                .build();
+        if( profile ) {
+            return new ProfileCredentialsProvider(profile)
+        }
 
-        return new STSAssumeRoleSessionCredentialsProvider .Builder(assumeRoleArn, 'nextflow-session')
-                .withStsClient(sts)
-                .build();
+        return new DefaultAWSCredentialsProviderChain()
     }
 
 }
