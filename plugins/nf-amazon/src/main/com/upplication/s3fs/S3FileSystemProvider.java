@@ -104,7 +104,7 @@ import com.google.common.collect.Sets;
 import com.upplication.s3fs.util.IOUtils;
 import com.upplication.s3fs.util.S3MultipartOptions;
 import com.upplication.s3fs.util.S3ObjectSummaryLookup;
-import nextflow.cloud.aws.AmazonClientFactory;
+import nextflow.cloud.aws.AwsClientFactory;
 import nextflow.cloud.aws.config.AwsConfig;
 import nextflow.extension.FilesEx;
 import nextflow.file.CopyOptions;
@@ -865,7 +865,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		}
 		else {
 			final boolean global = bucketName!=null;
-			final AmazonClientFactory factory = new AmazonClientFactory(awsConfig, Regions.US_EAST_1.getName());
+			final AwsClientFactory factory = new AwsClientFactory(awsConfig, Regions.US_EAST_1.getName());
 			client = new AmazonS3Client(factory.getS3Client(clientConfig, global));
 		}
 

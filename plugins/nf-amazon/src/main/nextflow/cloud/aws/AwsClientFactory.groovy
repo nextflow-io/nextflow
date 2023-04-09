@@ -57,7 +57,7 @@ import nextflow.exception.AbortOperationException
  */
 @Slf4j
 @CompileStatic
-class AmazonClientFactory {
+class AwsClientFactory {
 
     private AwsConfig config
 
@@ -82,11 +82,11 @@ class AmazonClientFactory {
     /**
      * Initialise the Amazon cloud driver with default (empty) parameters
      */
-    AmazonClientFactory() {
+    AwsClientFactory() {
         this(new AwsConfig(Collections.emptyMap()))
     }
 
-    AmazonClientFactory(AwsConfig config, String region=null) {
+    AwsClientFactory(AwsConfig config, String region=null) {
         this.config = config
 
         if( config.accessKey && config.secretKey ) {

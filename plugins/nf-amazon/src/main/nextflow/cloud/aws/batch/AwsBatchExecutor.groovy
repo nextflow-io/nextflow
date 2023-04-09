@@ -28,7 +28,7 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import nextflow.cloud.aws.AmazonClientFactory
+import nextflow.cloud.aws.AwsClientFactory
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.AbortOperationException
@@ -142,7 +142,7 @@ class AwsBatchExecutor extends Executor implements ExtensionPoint {
         /*
          * retrieve config and credentials and create AWS client
          */
-        final driver = new AmazonClientFactory(new AwsConfig(session.config.aws as Map))
+        final driver = new AwsClientFactory(new AwsConfig(session.config.aws as Map))
 
         /*
          * create a proxy for the aws batch client that manages the request throttling

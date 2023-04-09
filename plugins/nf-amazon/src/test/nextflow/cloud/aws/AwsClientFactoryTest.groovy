@@ -24,11 +24,11 @@ import spock.lang.Specification
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class AmazonClientFactoryTest extends Specification {
+class AwsClientFactoryTest extends Specification {
 
     def 'should create factory' () {
         when:
-        def factory = new AmazonClientFactory(new AwsConfig(accessKey: 'foo', secretKey: 'bar', region:'xyz', profile:'my-profile'))
+        def factory = new AwsClientFactory(new AwsConfig(accessKey: 'foo', secretKey: 'bar', region:'xyz', profile:'my-profile'))
         then:
         factory.accessKey() == 'foo'
         factory.secretKey() == 'bar'
