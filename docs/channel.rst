@@ -30,9 +30,9 @@ Queue channel
 A `queue channel` is a non-blocking unidirectional FIFO queue which connects two processes,
 channel factories, or operators.
 
-A queue channel is usually created using a factory method (:ref:`_channel-of`, :ref:`_channel-path`, etc)
-or chaining it with a channel operator (:ref:`operator-map`, :ref:`operator-flatmap`, etc). Queue channels
-are also created by process output declarations.
+A queue channel can be created by factory methods (`of`_, `fromPath`_, etc),
+operators (:ref:`operator-map`, :ref:`operator-flatmap`, etc), and
+processes (see :ref:`Process outputs <process-output>`).
 
 
 .. _channel-type-value:
@@ -40,16 +40,13 @@ are also created by process output declarations.
 Value channel
 -------------
 
-A `value channel` a.k.a. *singleton channel* is bound to a single value and can be read an
-unlimited number of times without consuming its content.
+A `value channel` a.k.a. *singleton channel* is bound to a single value and can be read any
+number of times without being consumed.
 
-A value channel is created using the `value`_ factory method or by operators returning
-a single value, such as :ref:`operator-first`, :ref:`operator-last`, :ref:`operator-collect`,
-:ref:`operator-count`, :ref:`operator-min`, :ref:`operator-max`, :ref:`operator-reduce`, :ref:`operator-sum`, etc.
-
-A value channel is implicitly created by a process when it is invoked with a simple value.
-Furthermore, a value channel is also implicitly created as output for a process whose
-inputs are all value channels.
+A value channel can be created with the `value`_ factory method or by any operator that produces
+a single value (:ref:`operator-first`, :ref:`operator-collect`, :ref:`operator-reduce`, etc). Additionally,
+a process will emit value channels if it is invoked with all value channels, including
+simple values which are implicitly wrapped in a value channel.
 
 For example::
 
@@ -71,7 +68,7 @@ For example::
     }
 
 In the above example, since the ``foo`` process is invoked with a simple value instead of a channel,
-the input is implicitly converted to a value channel, and the output is also provided as a value channel.
+the input is implicitly converted to a value channel, and the output is also emitted as a value channel.
 
 See also: :ref:`process-multiple-input-channels`.
 
@@ -95,7 +92,7 @@ empty
 
 The ``empty`` factory method, by definition, creates a channel that doesn't emit any value.
 
-See also: :ref:`operator-ifempty` and :ref:`operator-close` operators.
+See also: :ref:`operator-ifempty` operator.
 
 
 .. _channel-from:
