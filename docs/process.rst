@@ -915,6 +915,8 @@ It outputs::
 See also: :ref:`channel-types`.
 
 
+.. _process-output:
+
 Outputs
 =======
 
