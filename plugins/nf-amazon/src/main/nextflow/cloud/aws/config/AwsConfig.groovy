@@ -138,7 +138,7 @@ class AwsConfig {
             result.region = this.region
 
         // -- remaining client config options
-        def config = s3Legacy.getAwsClientConfig()
+        def config = getS3LegacyClientConfig()
         config = checkDefaultErrorRetry(config, SysEnv.get())
         if( config ) {
             result.putAll(config)

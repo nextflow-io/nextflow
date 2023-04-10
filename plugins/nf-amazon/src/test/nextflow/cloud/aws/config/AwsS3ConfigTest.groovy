@@ -94,4 +94,31 @@ class AwsS3ConfigTest extends Specification {
         [:]                             | [endpoint: 'http://bar']      | 'http://bar'
         [AWS_S3_ENDPOINT: 'http://foo'] | [endpoint: 'http://bar']      | 'http://bar'  // <-- config should have priority
     }
+
+    def 'should get s3 file system config' () {
+        given:
+        SysEnv.push([:])
+
+        when:
+        def config = new AwsConfig([client:[uploadMaxThreads: 5, uploadChunkSize: 1000, uploadStorageClass: 'STANDARD']])
+        def env = config.getFileSystemEnv()
+        then:
+        env.upload_storage_class == 'STANDARD'
+        env.upload_chunk_size == '1000'
+        env.upload_max_threads == '5'
+        env.max_error_retry == '5'  // <-- default to 5
+
+        when:
+        config = new AwsConfig([client:[uploadMaxThreads: 10, maxErrorRetry: 20, uploadStorageClass: 'ONEZONE_IA']])
+        env = config.getFileSystemEnv()
+
+        then:
+        env.upload_storage_class == 'ONEZONE_IA'
+        env.upload_max_threads == '10'
+        env.max_error_retry == '20'
+
+        cleanup:
+        SysEnv.pop()
+
+    }
 }
