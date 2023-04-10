@@ -16,9 +16,7 @@
 
 package nextflow.trace
 
-import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.MapConstructor
@@ -26,10 +24,9 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.dag.DAG
 import nextflow.dag.ConcreteDAG
-import nextflow.extension.FilesEx
+import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
-import nextflow.script.params.FileOutParam
 /**
  * Watch for temporary output files and "clean" them once they
  * are no longer needed.
@@ -57,31 +54,21 @@ class TemporaryFileObserver implements TraceObserver {
      * @param trace
      */
     @Override
-    void onProcessComplete(TaskHandler handler, TraceRecord trace) {
-        // find all temporary output files
+    synchronized void onProcessComplete(TaskHandler handler, TraceRecord trace) {
+        // add task directory to status map
         final task = handler.task
-        final temporaryOutputs = task
-            .getOutputsByType(FileOutParam)
-            .findAll { param, paths -> param.temporary }
-            .values()
-            .flatten()
-
-        if( temporaryOutputs.isEmpty() )
-            return
-
-        // update status tracker for the task's process
         final processName = task.processor.name
 
         if( processName !in statusMap ) {
-            log.trace "Process ${processName} has temporary output files, tracking for automatic cleanup"
+            log.trace "Tracking process `${processName}` for automatic cleanup"
 
             statusMap[processName] = new Status(
                 paths: [] as Set,
-                processBarriers: findAllConsumers(processName)
+                processBarriers: findAllConsumers(processName) ?: [processName] as Set
             )
         }
 
-        statusMap[processName].paths.addAll(temporaryOutputs)
+        statusMap[processName].paths.add(task.workDir)
     }
 
     /**
@@ -110,6 +97,10 @@ class TemporaryFileObserver implements TraceObserver {
 
                 def node = edge.to
 
+                // skip if process is terminal
+                if( !node )
+                    continue
+
                 // add process nodes to the list of consumers
                 if( node.process != null )
                     consumers.add(node.process.name)
@@ -119,7 +110,7 @@ class TemporaryFileObserver implements TraceObserver {
             }
         }
 
-        log.trace "Process ${processName} has the following consumers: ${consumers.join(', ')}"
+        log.trace "Process `${processName}` is consumed by the following processes: ${consumers.collect({ "`${it}`" }).join(', ')}"
 
         return consumers
     }
@@ -134,18 +125,20 @@ class TemporaryFileObserver implements TraceObserver {
      * @param process
      */
     @Override
-    void onProcessTerminate(TaskProcessor process) {
+    synchronized void onProcessTerminate(TaskProcessor process) {
+        log.trace "Process `${process.name}` is complete, updating barriers for upstream processes"
+
         for( def entry : statusMap ) {
             // remove barrier from each upstream process
             final producer = entry.key
             final status = entry.value
-            final consumers = status.processBarriers
+            final barriers = status.processBarriers
 
-            consumers.remove(process.name)
+            barriers.remove(process.name)
 
             // if a process has no more barriers, trigger the cleanup
-            if( consumers.isEmpty() ) {
-                log.trace "All consumers of process ${producer} are complete, time to clean up temporary files"
+            if( barriers.isEmpty() ) {
+                log.trace "All barriers for process `${producer}` are complete, time to clean up temporary files"
 
                 deleteTemporaryFiles(status.paths)
                 statusMap.remove(producer)
@@ -157,10 +150,7 @@ class TemporaryFileObserver implements TraceObserver {
         for( Path path : paths ) {
             log.trace "Cleaning temporary file: ${path}"
 
-            if( Files.isDirectory(path) )
-                FilesEx.deleteDir(path)
-            else
-                Files.delete(path)
+            FileHelper.deletePath(path)
         }
     }
 

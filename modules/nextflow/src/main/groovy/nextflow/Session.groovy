@@ -1129,7 +1129,7 @@ class Session implements ISession {
      * Delete the workflow work directory from tasks temporary files
      */
     void cleanup() {
-        if( !workDir || !config.cleanup )
+        if( !workDir || config.cleanup != true )
             return
 
         if( aborted || cancelled || error )

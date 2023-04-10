@@ -993,6 +993,27 @@ dumpHashes          If ``true``, dump task hash keys in the log file, for debugg
     The use of the ``cleanup`` option will prevent the use of the *resume* feature on subsequent executions of that pipeline run.
     Also, be aware that deleting all scratch files can take a lot of time, especially when using a shared file system or remote cloud storage.
 
+Since version ``23.10.0``, it is possible to use an "eager" cleanup strategy by setting ``cleanup = 'eager'``. This strategy
+will try to delete each task directory as soon as it is no longer needed by downstream tasks, rather than at the end of the
+workflow run. This feature can is useful for freeing up disk storage during the workflow run.
+
+The lifetime of a task is determined by the processes that are downstream of the underlying process, either directly or indirectly
+through channel operators. When all of these "consumer" processes finish (i.e. all of their tasks finish), all tasks produced by the
+upstream process can be deleted.
+
+The following caveats apply when using ``cleanup = 'eager'``:
+
+- Eager cleanup will break the resumability of your pipeline. If a workflow run fails, you will have to restart from the beginning, whereas
+  with ``cleanup = true`` the cleanup would not have happened. As a result, eager cleanup is designed to be used only when you are confident
+  that the workflow run will not fail.
+
+- Output files should not be published via symlink when using eager cleanup, because the symlinks will be invalidated when the original task
+  directory is deleted. Avoid using the following ``publishDir`` modes: ``copyNoFollow``, ``rellink``, ``symlink``.
+
+- Eager cleanup currently does not work properly with processes that forward input files with the ``includeInputs`` option. In this case,
+  the forwarded input files will be deleted prematurely, and any process that consumes the forwarded output channel may fail or produce
+  incorrect output.
+
 
 .. _config-profiles:
 

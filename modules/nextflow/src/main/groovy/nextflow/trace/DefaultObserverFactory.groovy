@@ -119,7 +119,8 @@ class DefaultObserverFactory implements TraceObserverFactory {
     }
 
     protected void createTemporaryFileObserver(Collection<TraceObserver> result) {
-        result << new TemporaryFileObserver()
+        if( session.config.cleanup == 'eager' )
+            result << new TemporaryFileObserver()
     }
 
 }

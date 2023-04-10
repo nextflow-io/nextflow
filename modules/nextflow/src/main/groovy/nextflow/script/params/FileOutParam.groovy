@@ -82,11 +82,6 @@ class FileOutParam extends BaseOutParam implements OutParam, OptionalParam, Path
 
     boolean glob = true
 
-    /**
-     * When true the file will be "cleaned" once it is no longer needed by downstream tasks.
-     */
-    boolean temporary = false
-
     private GString gstring
     private Closure<String> dynamicObj
     private String filePattern

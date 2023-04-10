@@ -1026,7 +1026,6 @@ Name                Description
 ``type``            Type of paths returned, either ``file``, ``dir`` or ``any`` (default: ``any``, or ``file`` if the specified file name pattern contains a double star (``**``))
 ``maxDepth``        Maximum number of directory levels to visit (default: no limit)
 ``includeInputs``   When ``true`` any input files matching an output file glob pattern are included.
-``temporary``       When ``true`` the file will be "emptied" once it is no longer needed by downstream tasks.
 ================== =====================
 
 The parenthesis are optional for input and output qualifiers, but when you want to set an additional option and there
@@ -1149,32 +1148,6 @@ on the actual value of the ``species`` input.
 
   To sum up, the use of output files with static names over dynamic ones is preferable whenever possible,
   because it will result in simpler and more portable code.
-
-
-Temporary output files
-----------------------
-
-.. warning::
-  This feature is experimental and may change in a future release.
-
-When a ``path`` output is declared with ``temporary: true``, any file associated with this output will be automatically deleted
-during pipeline execution, as soon as it is no longer needed by downstream tasks. This feature is useful for cleaning up large
-intermediate files in order to free up disk storage.
-
-The lifetime of a temporary file is determined by the processes that are downstream of the file's originating process,
-either directly or indirectly through channel operators. When all of these processes finish (i.e. all of their tasks finish),
-all temporary files produced by the original process can be deleted.
-
-The following caveats apply when using temporary outputs:
-
-- This feature will break the resumability of your pipeline. If you try to resume a run with temporary outputs, any tasks that
-  were cleaned will have to be re-run.
-
-- A temporary output should not be forwarded by a downstream process using the ``includeInputs`` option. In this case, the temporary
-  output will be deleted prematurely, and any process that consumes the forwarded output channel may fail or produce incorrect output.
-
-- If a file captured by a temporary output path is also captured by a regular output path, it will still be treated as a temporary
-  file. Declare multiple output channels in this way is safe to do as long as the regular output path isn't also published.
 
 
 .. _process-env:
