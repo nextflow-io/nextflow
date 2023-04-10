@@ -849,7 +849,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		// try to load amazon props
 		Properties props = loadAmazonProperties();
 		// add properties for legacy compatibility
-		props.putAll(awsConfig.getFileSystemEnv());
+		props.putAll(awsConfig.getS3LegacyProperties());
 
 		AmazonS3Client client;
 		ClientConfiguration clientConfig = createClientConfig(props);

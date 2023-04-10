@@ -125,17 +125,8 @@ class AwsConfig {
         return ini.section(profile).region
     }
 
-    Map getFileSystemEnv() {
+    Map getS3LegacyProperties() {
         final result = new LinkedHashMap(20)
-        if( accessKey && secretKey ) {
-            // S3FS expect the access - secret keys pair in lower notation
-            result.access_key = accessKey
-            result.secret_key = secretKey
-        }
-
-        // AWS region
-        if( this.region )
-            result.region = this.region
 
         // -- remaining client config options
         def config = getS3LegacyClientConfig()
@@ -144,7 +135,7 @@ class AwsConfig {
             result.putAll(config)
         }
 
-        log.debug "AWS S3 config details: ${dumpAwsConfig(result)}"
+        log.debug "AWS S3 config properties: ${dumpAwsConfig(result)}"
         return result
     }
 

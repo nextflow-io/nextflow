@@ -95,13 +95,13 @@ class AwsS3ConfigTest extends Specification {
         [AWS_S3_ENDPOINT: 'http://foo'] | [endpoint: 'http://bar']      | 'http://bar'  // <-- config should have priority
     }
 
-    def 'should get s3 file system config' () {
+    def 'should get s3 legacy properties' () {
         given:
         SysEnv.push([:])
 
         when:
         def config = new AwsConfig([client:[uploadMaxThreads: 5, uploadChunkSize: 1000, uploadStorageClass: 'STANDARD']])
-        def env = config.getFileSystemEnv()
+        def env = config.getS3LegacyProperties()
         then:
         env.upload_storage_class == 'STANDARD'
         env.upload_chunk_size == '1000'
@@ -110,7 +110,7 @@ class AwsS3ConfigTest extends Specification {
 
         when:
         config = new AwsConfig([client:[uploadMaxThreads: 10, maxErrorRetry: 20, uploadStorageClass: 'ONEZONE_IA']])
-        env = config.getFileSystemEnv()
+        env = config.getS3LegacyProperties()
 
         then:
         env.upload_storage_class == 'ONEZONE_IA'
