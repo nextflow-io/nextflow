@@ -253,7 +253,8 @@ class SessionTest extends Specification {
         result.any { it instanceof WorkflowStatsObserver }
 
         when:
-        session = [config: [cleanup: 'eager']] as Session
+        session = [:] as Session
+        session.config = [cleanup: 'eager']
         result = session.createObservers()
         then:
         result.size() == 2

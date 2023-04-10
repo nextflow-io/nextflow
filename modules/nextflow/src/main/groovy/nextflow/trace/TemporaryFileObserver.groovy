@@ -46,81 +46,75 @@ class TemporaryFileObserver implements TraceObserver {
         this.statusMap = new ConcurrentHashMap<>()
     }
 
+    @Override
+    void onFlowBegin() {
+
+        for( def processNode : dag.vertices ) {
+            // skip nodes that are not processes
+            if( !processNode.process )
+                continue
+
+            // find all downstream processes in the abstract dag
+            def processName = processNode.process.name
+            def consumers = [] as Set
+            def queue = [ processNode ]
+
+            while( !queue.isEmpty() ) {
+                // remove a node from the search queue
+                final sourceNode = queue.remove(0)
+
+                // search each outgoing edge from the source node
+                for( def edge : dag.edges ) {
+                    if( edge.from != sourceNode )
+                        continue
+
+                    def node = edge.to
+
+                    // skip if process is terminal
+                    if( !node )
+                        continue
+
+                    // add process nodes to the list of consumers
+                    if( node.process != null )
+                        consumers.add(node.process.name)
+                    // add operator nodes to the queue to keep searching
+                    else
+                        queue.add(node)
+                }
+            }
+
+            log.trace "Process `${processName}` is consumed by the following processes: ${consumers.collect({ "`${it}`" }).join(', ')}"
+
+            statusMap[processName] = new Status(
+                paths: [] as Set,
+                processBarriers: consumers ?: [processName] as Set
+            )
+        }
+    }
+
     /**
-     * When a task is completed, track any temporary output files
-     * for automatic cleanup.
+     * When a task is started, track the task directory for automatic cleanup.
      *
      * @param handler
      * @param trace
      */
     @Override
-    synchronized void onProcessComplete(TaskHandler handler, TraceRecord trace) {
+    synchronized void onProcessStart(TaskHandler handler, TraceRecord trace) {
         // add task directory to status map
         final task = handler.task
         final processName = task.processor.name
 
-        if( processName !in statusMap ) {
-            log.trace "Tracking process `${processName}` for automatic cleanup"
-
-            statusMap[processName] = new Status(
-                paths: [] as Set,
-                processBarriers: findAllConsumers(processName) ?: [processName] as Set
-            )
-        }
+        log.trace "Task completed from process `${processName}`, tracking task directory for automatic cleanup"
 
         statusMap[processName].paths.add(task.workDir)
     }
 
     /**
-     * Find all processes which are consumers of a given process.
-     *
-     * @param processName
-     */
-    Set<String> findAllConsumers(String processName) {
-
-        // find the task's process node in the abstract dag
-        final processNode = dag.vertices
-            .find { node -> node.process?.name == processName }
-
-        // find all downstream processes in the abstract dag
-        def consumers = [] as Set
-        def queue = [ processNode ]
-
-        while( !queue.isEmpty() ) {
-            // remove a node from the search queue
-            final sourceNode = queue.remove(0)
-
-            // search each outgoing edge from the source node
-            for( def edge : dag.edges ) {
-                if( edge.from != sourceNode )
-                    continue
-
-                def node = edge.to
-
-                // skip if process is terminal
-                if( !node )
-                    continue
-
-                // add process nodes to the list of consumers
-                if( node.process != null )
-                    consumers.add(node.process.name)
-                // add operator nodes to the queue to keep searching
-                else
-                    queue.add(node)
-            }
-        }
-
-        log.trace "Process `${processName}` is consumed by the following processes: ${consumers.collect({ "`${it}`" }).join(', ')}"
-
-        return consumers
-    }
-
-    /**
-     * When a process is completed, update the status of any processes
-     * that are waiting on it in order to cleanup temporary outputs.
+     * When all tasks of a process are completed, update the status of any processes
+     * that are waiting on it in order to be cleaned up.
      *
      * If, after this update is removed, a process has no more barriers,
-     * then clean all temporary files for that process.
+     * then delete all temporary files for that process.
      *
      * @param process
      */
