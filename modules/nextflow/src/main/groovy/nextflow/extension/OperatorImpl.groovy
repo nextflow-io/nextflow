@@ -1006,14 +1006,13 @@ class OperatorImpl {
      * @param holder The closure defining the new variable name
      * @return The tap resulting dataflow channel
      */
-    @Deprecated
     DataflowWriteChannel tap( final DataflowReadChannel source, final Closure holder ) {
         def tap = new TapOp(source, holder).apply()
         OpCall.current.get().outputs.addAll( tap.outputs )
         return tap.result
     }
 
-    @Deprecated
+    @DeprecatedDsl2
     DataflowWriteChannel tap( final DataflowReadChannel source, final DataflowWriteChannel target ) {
         def tap = new TapOp(source, target).apply()
         return tap.result
@@ -1186,19 +1185,16 @@ class OperatorImpl {
      * @param holder A closure defining a variable identifier
      */
 
-    DataflowWriteChannel set(DataflowReadChannel source, Closure holder) {
+    void set(DataflowReadChannel source, Closure holder) {
         set0(source, holder)
-        return source
     }
 
-    DataflowBroadcast set(DataflowBroadcast source, Closure holder) {
+    void set(DataflowBroadcast source, Closure holder) {
         set0(source, holder)
-        return source
     }
 
-    ChannelOut set(ChannelOut source, Closure holder) {
+    void set(ChannelOut source, Closure holder) {
         set0(source, holder)
-        return source
     }
 
     private void set0(source, Closure holder) {
@@ -1210,6 +1206,9 @@ class OperatorImpl {
             throw new IllegalArgumentException("Operation `set` does not allow more than one target name")
 
         NF.binding.setVariable(name[0], source)
+        // do not add this nod in the DAG because it's not a real operator
+        // since it's not transforming the channel
+        OpCall.current.get().ignoreDagNode = true
     }
 
     /**

@@ -92,17 +92,4 @@ class SetOpTest extends Dsl2Spec {
         result[1].val == 'Y'
     }
 
-
-    def 'should emit the input channel' () {
-        when:
-        def result = dsl_eval(/
-        def ch1 = Channel.value('X')
-
-        new nextflow.script.ChannelOut([ch1]) .set { foo } .set { bar }
-        return bar
-        /)
-        then:
-        result.val == 'X'
-    }
-
 }
