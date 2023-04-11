@@ -112,7 +112,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     protected GoogleBatchTaskHandler() {}
 
     protected GoogleBatchLauncherSpec spec0(BashWrapperBuilder launcher) {
-        if( launcher instanceof GoogleBatchScriptLauncher )
+        if( launcher instanceof GoogleBatchLauncherSpec )
             return launcher
         if( launcher instanceof FusionScriptLauncher )
             return new GoogleBatchFusionAdapter(this, launcher)
