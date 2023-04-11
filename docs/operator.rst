@@ -5,7 +5,7 @@ Operators
 *********
 
 Nextflow **operators** are methods that allow you to manipulate channels. Every operator,
-with the exception of :ref:`operator-subscribe`, produces one or more new channels, allowing you to
+with the exception of :ref:`operator-set` and :ref:`operator-subscribe`, produces one or more new channels, allowing you to
 chain operators to fit your needs.
 
 This page is a comprehensive reference for all Nextflow operators. However, if you are new
@@ -1362,9 +1362,6 @@ This is semantically equivalent to the following assignment::
 
 However the ``set`` operator is more idiomatic in Nextflow scripting, since it can be used at the end
 of a chain of operator transformations, thus resulting in a more fluent and readable operation.
-
-Starting in version 23.04.0, the ``set`` operator also emits the input channel, allowing you to extract
-an intermediate output channel from an operator chain.
 
 
 splitCsv
