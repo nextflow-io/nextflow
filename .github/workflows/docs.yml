@@ -1,0 +1,29 @@
+# Docs CI
+#
+# Note that the workflow / job name is important and must match that in
+# build.yml. These names are required tests and PRs cannot be merged
+# unless they are passing.
+# The build triggers are complementary, so this workflow only runs if the PR is *all* docs.
+# The build.yml workflow runs if there are *any* changes outside of the docs.
+# Ref: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks#handling-skipped-but-required-checks
+name: Nextflow CI
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - 'docs/**'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip' # caching pip dependencies
+
+      - name: Test docs build
+        run: |
+          pip install sphinx==3.5.4 sphinx_rtd_theme
+          cd docs/
+          make clean html
