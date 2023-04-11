@@ -48,6 +48,10 @@ class BashWrapperBuilderTest extends Specification {
             bean.workDir = Paths.get('/work/dir')
         if( !bean.script )
             bean.script = 'echo Hello world!'
+        if( !bean.containsKey('inputFiles') )
+            bean.inputFiles = [:]
+        if( !bean.containsKey('outputFiles') )
+            bean.outputFiles = []
         new BashWrapperBuilder(bean as TaskBean) {
             @Override
             protected String getSecretsEnv() {
@@ -378,8 +382,26 @@ class BashWrapperBuilderTest extends Specification {
                 ln -s /some/data/sample_1.fq sample_1.fq
                 ln -s /some/data/sample_2.fq sample_2.fq
                 '''.stripIndent().rightTrim()
+        binding.stage_script == binding.stage_inputs
+    }
 
+    def 'should stage many inputs with separate script' () {
 
+        given:
+        def folder = Paths.get('/work/dir')
+        def inputs = (1..1000).inject([:]) { accum, i ->
+            accum["sample_${i}.fq"] = Paths.get("/some/data/sample_${i}.fq")
+            accum
+        }
+        
+        when:
+        def binding = newBashWrapperBuilder([
+                workDir: folder,
+                targetDir: folder,
+                inputFiles: inputs ]).makeBinding()
+
+        then:
+        binding.stage_script == 'source /work/dir/.command.stage nxf_stage'
     }
 
     def 'should unstage outputs' () {
@@ -432,6 +454,35 @@ class BashWrapperBuilderTest extends Specification {
                 done
                 unset IFS
                 '''.stripIndent().rightTrim()
+    }
+
+    def 'should unstage many outputs with separate script' () {
+
+        given:
+        def folder = Paths.get('/work/dir')
+        def outputs = (1..1000).collect { i -> "sample_${i}.bam" }
+
+        when:
+        def binding = newBashWrapperBuilder([
+                workDir: folder,
+                targetDir: folder,
+                scratch: false,
+                outputFiles: outputs ]).makeBinding()
+
+        then:
+        binding.containsKey('unstage_script')
+        binding.unstage_script == null
+
+
+        when:
+        binding = newBashWrapperBuilder([
+                workDir: folder,
+                targetDir: folder,
+                scratch: true,
+                outputFiles: outputs ]).makeBinding()
+
+        then:
+        binding.unstage_script == 'source /work/dir/.command.stage nxf_unstage'
     }
 
     def 'should create env' () {
@@ -996,7 +1047,10 @@ class BashWrapperBuilderTest extends Specification {
     def 'should include fix ownership command' () {
 
         given:
-        def bean = Mock(TaskBean)
+        def bean = Mock(TaskBean) {
+            inputFiles >> [:]
+            outputFiles >> []
+        }
         def copy = Mock(ScriptFileCopyStrategy)
         bean.workDir >> Paths.get('/work/dir')
         and:

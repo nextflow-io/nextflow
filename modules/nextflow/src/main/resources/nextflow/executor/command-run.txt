@@ -121,14 +121,14 @@ nxf_launch() {
 
 nxf_stage() {
     true
-    {{stage_inputs}}
+    {{stage_script}}
 }
 
 nxf_unstage() {
     true
     {{unstage_controls}}
     [[ ${nxf_main_ret:=0} != 0 ]] && return
-    {{unstage_outputs}}
+    {{unstage_script}}
 }
 
 nxf_main() {

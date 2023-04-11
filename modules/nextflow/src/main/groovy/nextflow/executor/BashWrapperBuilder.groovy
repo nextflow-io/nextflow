@@ -107,6 +107,10 @@ class BashWrapperBuilder {
 
     private Path wrapperFile
 
+    private Path stageFile
+
+    private String stageScript
+
     private BashTemplateEngine engine = new BashTemplateEngine()
 
     BashWrapperBuilder( TaskRun task ) {
@@ -146,6 +150,10 @@ class BashWrapperBuilder {
         }
 
         return "NXF_SCRATCH=\"\$(set +u; nxf_mktemp $scratchStr)\""
+    }
+
+    protected boolean isStageFileRequired() {
+        inputFiles.size() + outputFiles.size() >= 1000
     }
 
     protected boolean shouldUnstageOutputs() {
@@ -194,6 +202,7 @@ class BashWrapperBuilder {
         startedFile = workDir.resolve(TaskRun.CMD_START)
         exitedFile = workDir.resolve(TaskRun.CMD_EXIT)
         wrapperFile = workDir.resolve(TaskRun.CMD_RUN)
+        stageFile = workDir.resolve(TaskRun.CMD_STAGE)
 
         // set true when running with through a container engine
         runWithContainer = containerEnabled && !containerNative
@@ -276,6 +285,9 @@ class BashWrapperBuilder {
          */
         final stagingScript = copyStrategy.getStageInputFilesScript(inputFiles)
         binding.stage_inputs = stagingScript ? "# stage input files\n${stagingScript}" : null
+        binding.stage_script = isStageFileRequired()
+            ? "source ${stageFile} ${getStageCommand()}"
+            : binding.stage_inputs
 
         binding.stdout_file = TaskRun.CMD_OUTFILE
         binding.stderr_file = TaskRun.CMD_ERRFILE
@@ -285,14 +297,22 @@ class BashWrapperBuilder {
         binding.launch_cmd = getLaunchCommand(interpreter,env)
         binding.stage_cmd = getStageCommand()
         binding.unstage_cmd = getUnstageCommand()
-        binding.unstage_controls = changeDir || shouldUnstageOutputs() ? getUnstageControls() : null
 
         if( changeDir || shouldUnstageOutputs() ) {
+            binding.unstage_controls = getUnstageControls()
             binding.unstage_outputs = copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)
+            binding.unstage_script = isStageFileRequired()
+                ? "source ${stageFile} ${getUnstageCommand()}"
+                : binding.unstage_outputs
         }
         else {
+            binding.unstage_controls = null
             binding.unstage_outputs = null
+            binding.unstage_script = null
         }
+
+        if( isStageFileRequired() )
+            stageScript = getStageScript(binding)
 
         binding.after_script = afterScript ? "# 'afterScript' directive\n$afterScript" : null
 
@@ -312,6 +332,11 @@ class BashWrapperBuilder {
 
     protected boolean isBash(String interpreter) {
         interpreter.tokenize(' /').contains('bash')
+    }
+
+    protected String getStageScript(Map binding) {
+        def res = BashWrapperBuilder.class.getResource('command-stage.txt')
+        engine.render(res.newReader(), binding)
     }
 
     protected String getTraceScript(Map binding) {
@@ -340,6 +365,8 @@ class BashWrapperBuilder {
         write0(targetScriptFile(), script)
         if( input != null )
             write0(targetInputFile(), input.toString())
+        if( stageScript != null )
+            write0(targetStageFile(), stageScript)
         return result
     }
 
@@ -348,6 +375,8 @@ class BashWrapperBuilder {
     protected Path targetScriptFile() { return scriptFile }
 
     protected Path targetInputFile() { return inputFile }
+
+    protected Path targetStageFile() { return stageFile }
 
     private Path write0(Path path, String data) {
         int attempt=0
