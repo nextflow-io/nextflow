@@ -22,3 +22,5 @@ nxf_unstage() {
     true
     {{unstage_outputs}}
 }
+
+$1
