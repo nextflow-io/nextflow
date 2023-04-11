@@ -4,7 +4,36 @@ This is intended to explain the Nextflow codebase at a high level for users who 
 
 The docs are organized into subpages corresponding to Nextflow packages.
 
-## Class Diagram
+## Programming Languages
+
+Nextflow is written in [Groovy](http://groovy-lang.org/), which is itself a scripting language based on [Java](https://www.java.com/). Groovy is designed to be highly interoperable with Java -- Groovy programs compile to Java bytecode, and nearly any Java program is also a valid Groovy program. However, Groovy adds several language features (e.g. closures, literal syntax for collections, optional typing, reflection) and standard libraries (e.g. JSON and XML parsing) that greatly improve the overall experience of developing for the Java virtual machine.
+
+Recommended resources for Groovy, from most reference-complete to most user-friendly, are listed below:
+
+- [Groovy documentation](http://groovy-lang.org/documentation.html)
+- [Groovy in Action](https://www.manning.com/books/groovy-in-action-second-edition)
+- [Groovy cheat sheet](http://www.cheat-sheets.org/saved-copy/rc015-groovy_online.pdf)
+
+## Software Dependencies
+
+Nextflow depends on a variety of libraries and frameworks, the most prominent of which are listed below:
+
+- [AWS SDK for Java 1.x](https://aws.amazon.com/sdk-for-java/): AWS integration
+- [Azure SDK for Java](https://learn.microsoft.com/en-us/azure/developer/java/sdk/): Azure integration
+- [Google Cloud Client Libraries for Java](https://cloud.google.com/java/docs/reference): Google Cloud integration
+- [GPars](http://gpars.org/1.2.1/guide/guide/dataflow.html): dataflow concurrency
+- [Gradle](https://gradle.org/): build automation
+- [JCommander](https://jcommander.org/): command line interface
+- [JGit](https://www.eclipse.org/jgit/): Git integration
+- [Kryo](https://github.com/EsotericSoftware/kryo): serialization
+- [LevelDB](https://mvnrepository.com/artifact/org.iq80.leveldb/leveldb): key-value store for the `.nextflow` cache
+- [Logback](https://logback.qos.ch/): application logging
+- [PF4J](https://pf4j.org/): plugin extensions
+- [Spock](https://spockframework.org/): unit testing framework
+
+Any other integrations are likely implemented via shell commands (e.g. Conda, Docker, HPC schedulers) or HTTP (e.g. Kubernetes).
+
+## Class Diagrams
 
 Each package has a class diagram, abridged and annotated for relevance and ease of use.
 
@@ -16,7 +45,9 @@ Links between classes denote one of the following relationships:
 - Composition: `A` contains `B`
 - Instantiation: `A` creates instance(s) of `B` at runtime via `A::f()`
 
-## Tips and Tricks
+## Building and Testing
+
+The only dependency that you need to build Nextflow is the Java Development Kit (JDK). In other words, if you can run Nextflow, then you can probably build it too (unless you only have the JRE).
 
 Build and test locally from a branch (useful for testing PRs):
 
