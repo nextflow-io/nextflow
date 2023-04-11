@@ -1764,21 +1764,15 @@ tap
 
 *Returns: queue channel*
 
-The ``tap`` operator combines the functions of ``into`` and ``separate`` operators in such a way that
-it connects two channels, copying the values from the source into the `tapped` channel. At the same
-time it splits the source channel into a newly created channel that is returned by the operator itself.
-
-The ``tap`` can be useful in certain scenarios where you may be required to concatenate multiple operations,
-as in the following example::
-
-    log1 = Channel.create()
-    log2 = Channel.create()
+The ``tap`` operator is like the `set`_ operator in that it assigns a source channel to a new target channel.
+but it also emits the source channel for downstream use. This operator is a useful way to extract intermediate
+output channels from a chain of operators. For example::
 
     Channel
         .of ( 'a', 'b', 'c' )
-        .tap ( log1 )
+        .tap { log1 }
         .map { it * 2 }
-        .tap ( log2 )
+        .tap { log2 }
         .map { it.toUpperCase() }
         .view { "Result: $it" }
 
@@ -1798,22 +1792,6 @@ as in the following example::
     Log 2: aa
     Log 2: bb
     Log 2: cc
-
-The ``tap`` operator also allows the target channel to be specified by using a closure. The advantage of this syntax
-is that you won't need to previously create the target channel, because it is created implicitly by the operator itself.
-
-Using the closure syntax the above example can be rewritten as shown below::
-
-    Channel
-        .of ( 'a', 'b', 'c' )
-        .tap { log1 }
-        .map { it * 2 }
-        .tap { log2 }
-        .map { it.toUpperCase() }
-        .view { "Result: $it" }
-
-    log1.view { "Log 1: $it" }
-    log2.view { "Log 2: $it" }
 
 
 toInteger

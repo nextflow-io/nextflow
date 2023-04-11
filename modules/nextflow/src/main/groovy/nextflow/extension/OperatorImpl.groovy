@@ -1012,6 +1012,7 @@ class OperatorImpl {
         return tap.result
     }
 
+    @DeprecatedDsl2
     DataflowWriteChannel tap( final DataflowReadChannel source, final DataflowWriteChannel target ) {
         def tap = new TapOp(source, target).apply()
         return tap.result
