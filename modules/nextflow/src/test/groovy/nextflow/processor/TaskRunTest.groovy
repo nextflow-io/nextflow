@@ -364,7 +364,7 @@ class TaskRunTest extends Specification {
         when:
         def result = task.getContainerFingerprint()
         then:
-        task.getContainerInfo0() >> new ContainerInfo('a','b',HASH)
+        task.containerInfo() >> new ContainerInfo('a','b',HASH)
         and:
         result == '12345'
     }
