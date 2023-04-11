@@ -17,7 +17,7 @@
 
 package nextflow.cloud.aws
 
-
+import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
 import spock.lang.Specification
 /**
@@ -27,6 +27,8 @@ import spock.lang.Specification
 class AwsClientFactoryTest extends Specification {
 
     def 'should create factory' () {
+        given:
+        SysEnv.push([:])
         when:
         def factory = new AwsClientFactory(new AwsConfig(accessKey: 'foo', secretKey: 'bar', region:'xyz', profile:'my-profile'))
         then:
@@ -34,6 +36,23 @@ class AwsClientFactoryTest extends Specification {
         factory.secretKey() == 'bar'
         factory.region() == 'xyz'
         factory.profile() == 'my-profile'
+
+        cleanup:
+        SysEnv.pop()
     }
 
+    def 'should create factory using environment' () {
+        given:
+        SysEnv.push([AWS_REGION:'eu-foo-1', AWS_PROFILE: 'profile-x'])
+        when:
+        def factory = new AwsClientFactory(new AwsConfig([:]))
+        then:
+        factory.accessKey() == null
+        factory.secretKey() == null
+        factory.region() == 'eu-foo-1'
+        factory.profile() == 'profile-x'
+
+        cleanup:
+        SysEnv.pop()
+    }
 }

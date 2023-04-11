@@ -19,11 +19,17 @@ package nextflow.cloud.aws
 import com.amazonaws.AmazonClientException
 import com.amazonaws.ClientConfiguration
 import com.amazonaws.auth.AWSCredentialsProvider
+import com.amazonaws.auth.AWSCredentialsProviderChain
 import com.amazonaws.auth.AWSStaticCredentialsProvider
 import com.amazonaws.auth.BasicAWSCredentials
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
+import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper
+import com.amazonaws.auth.EnvironmentVariableCredentialsProvider
+import com.amazonaws.auth.SystemPropertiesCredentialsProvider
+import com.amazonaws.auth.WebIdentityTokenCredentialsProvider
 import com.amazonaws.auth.profile.ProfileCredentialsProvider
+import com.amazonaws.auth.profile.ProfilesConfigFile
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
+import com.amazonaws.profile.path.AwsProfileFileLocationProvider
 import com.amazonaws.regions.InstanceMetadataRegionProvider
 import com.amazonaws.regions.Region
 import com.amazonaws.regions.RegionUtils
@@ -44,7 +50,9 @@ import com.amazonaws.services.securitytoken.model.GetCallerIdentityRequest
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
+import nextflow.cloud.aws.util.ConfigParser
 import nextflow.exception.AbortOperationException
 /**
  * Implement a factory class for AWS client objects
@@ -91,10 +99,19 @@ class AwsClientFactory {
         }
 
         // -- the required profile, if any
-        this.profile = config.profile
+        this.profile
+                = config.profile
+                ?: SysEnv.get('AWS_PROFILE')
+                ?: SysEnv.get('AWS_DEFAULT_PROFILE')
 
         // -- get the aws default region
-        this.region = region ?: config.region ?: fetchRegion()
+        this.region
+                = region
+                ?: config.region
+                ?: SysEnv.get('AWS_REGION')
+                ?: SysEnv.get('AWS_DEFAULT_REGION')
+                ?: fetchRegion()
+
         if( !this.region )
             throw new AbortOperationException('Missing AWS region -- Make sure to define in your system environment the variable `AWS_DEFAULT_REGION`')
     }
@@ -254,10 +271,37 @@ class AwsClientFactory {
         }
 
         if( profile ) {
-            return new ProfileCredentialsProvider(profile)
+            return new ProfileCredentialsProvider(configFile(), profile)
         }
 
-        return new DefaultAWSCredentialsProviderChain()
+        return new AWSCredentialsProviderChain(List.of(new EnvironmentVariableCredentialsProvider(),
+                new SystemPropertiesCredentialsProvider(),
+                WebIdentityTokenCredentialsProvider.create(),
+                new ProfileCredentialsProvider(configFile(), null),
+                new EC2ContainerCredentialsProviderWrapper()))
     }
 
+    static ProfilesConfigFile configFile() {
+        final creds = AwsProfileFileLocationProvider.DEFAULT_CREDENTIALS_LOCATION_PROVIDER.getLocation()
+        final config = AwsProfileFileLocationProvider.DEFAULT_CONFIG_LOCATION_PROVIDER.getLocation()
+        if( creds && config ) {
+            log.debug "Merging AWS crendentials file '$creds' and config file '$config'"
+            final parser = new ConfigParser()
+            parser.parseConfig(creds.text)
+            parser.parseConfig(config.text)
+            final temp = File.createTempFile('aws','config')
+            temp.deleteOnExit()
+            temp.text = parser.text()
+            return new ProfilesConfigFile(temp.absolutePath)
+        }
+        if( creds ) {
+            log.debug "Using AWS crendentials file '$creds'"
+            return new ProfilesConfigFile(creds)
+        }
+        if( config ) {
+            log.debug "Using AWS config file '$config'"
+            return new ProfilesConfigFile(config)
+        }
+        return null
+    }
 }
