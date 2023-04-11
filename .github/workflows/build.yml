@@ -4,20 +4,17 @@ name: Nextflow CI
 on:
   push:
     branches:
-      - '*'
-      - '!refs/tags/.*'
-    tags-ignore:
-      - '*'
+      - 'master'
     paths-ignore:
       - 'docs/**'
   pull_request:
     types: [opened, reopened, synchronize]
     paths-ignore:
       - 'docs/**'
+  workflow_dispatch:
 
 jobs:
   build:
-    if: "github.event == 'push' || github.repository != github.event.pull_request.head.repo.full_name"
     name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 90
