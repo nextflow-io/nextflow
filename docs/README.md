@@ -10,7 +10,8 @@ The most convenient approach is to create a Conda environment with Python 3.7 (o
 The build dependencies can be installed with `pip`:
 
 ```bash
-pip install sphinx==5.3.0 myst-parser==0.18.1 sphinx-rtd-theme==1.1.1
+cd docs
+pip install -r requirements.txt
 ```
 
 Alternatively, you can use the Dockerfile to build the docs in a container (see below).

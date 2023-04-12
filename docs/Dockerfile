@@ -8,6 +8,8 @@ RUN micromamba install --yes --name base --channel conda-forge \
       && \
     micromamba clean --all --yes
 
+COPY requirements.txt .
+
 RUN eval "$(micromamba shell hook --shell=bash)" && \
     micromamba activate && \
-    pip install sphinx==5.3.0 myst-parser==0.18.1 sphinx-rtd-theme==1.1.1
+    pip install -r requirements.txt
