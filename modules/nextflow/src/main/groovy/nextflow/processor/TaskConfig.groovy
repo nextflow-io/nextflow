@@ -377,8 +377,15 @@ class TaskConfig extends LazyMap implements Cloneable {
         return get('container')
     }
 
-    def getArch() {
-        return get('arch')
+    Arch getArch() {
+        final value = get('arch')
+        if( value instanceof String )
+            return new Arch(value)
+        if( value instanceof Map )
+            return new Arch(value)
+        if( value != null )
+            throw new IllegalArgumentException("Invalid `arch` directive value: $value [${value.getClass().getName()}]")
+        return null
     }
 
     /**
