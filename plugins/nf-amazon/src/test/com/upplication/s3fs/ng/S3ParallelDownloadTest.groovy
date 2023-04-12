@@ -17,7 +17,7 @@
 
 package com.upplication.s3fs.ng
 
-import java.nio.file.FileSystems
+
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.temporal.ChronoUnit
@@ -29,6 +29,9 @@ import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.function.ContextualSupplier
 import groovy.util.logging.Slf4j
+import nextflow.Global
+import nextflow.Session
+import nextflow.file.FileHelper
 import spock.lang.Ignore
 import spock.lang.IgnoreIf
 import spock.lang.Requires
@@ -44,25 +47,25 @@ import spock.lang.Specification
 class S3ParallelDownloadTest extends Specification {
 
     @Shared
-    AmazonS3 s3Client
+    static AmazonS3 s3Client0
 
-    def setupSpec() {
-        def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY') 
+    AmazonS3 getS3Client() { s3Client0 }
+
+    static {
+        def fs = (S3FileSystem) FileHelper.getOrCreateFileSystemFor(URI.create("s3:///"), config0())
+        s3Client0 = fs.client.getClient()
+    }
+
+    static private Map config0() {
+        def accessKey = System.getenv('AWS_S3FS_ACCESS_KEY')
         def secretKey = System.getenv('AWS_S3FS_SECRET_KEY')
-//        def region = System.getenv('AWS_REGION') ?: 'eu-west-1'
-//        log.debug "Creating AWS S3 client: region=$region; accessKey=${accessKey?.substring(0,5)}.. - secretKey=${secretKey?.substring(0,5)}.. -  "
-//        final creds = new AWSCredentials() {
-//            String getAWSAccessKeyId() { accessKey }
-//            String getAWSSecretKey() { secretKey }
-//        }
-//
-//        storageClient = AmazonS3ClientBuilder
-//                .standard()
-//                .withRegion(region)
-//                .withCredentials(new AWSStaticCredentialsProvider(creds))
-//                .build()
-        def fs = (S3FileSystem) FileSystems.newFileSystem(URI.create("s3:///"), [access_key: accessKey, secret_key: secretKey])
-        s3Client = fs.client.getClient()
+        return [aws: [access_key: accessKey, secret_key: secretKey]]
+    }
+
+    def setup() {
+        def cfg = config0()
+        Global.config = cfg
+        Global.session = Mock(Session) { getConfig()>>cfg }
     }
 
     @Ignore

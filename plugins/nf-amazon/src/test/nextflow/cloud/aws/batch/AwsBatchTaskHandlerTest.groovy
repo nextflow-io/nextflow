@@ -35,6 +35,7 @@ import com.amazonaws.services.batch.model.RetryStrategy
 import com.amazonaws.services.batch.model.SubmitJobRequest
 import com.amazonaws.services.batch.model.SubmitJobResult
 import com.amazonaws.services.batch.model.TerminateJobRequest
+import nextflow.cloud.aws.config.AwsConfig
 import nextflow.Const
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.cloud.types.CloudMachineInfo
@@ -89,7 +90,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
-        _ * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        _ * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch:[cliPath: '/bin/aws'])) }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
@@ -110,7 +111,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 0
-        _ * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', region: 'eu-west-1') }
+        _ * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws'], region: 'eu-west-1')) }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
@@ -140,7 +141,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
-        _ * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', storageEncryption: 'AES256') }
+        _ * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws'],client: [storageEncryption: 'AES256'])) }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> []
@@ -157,7 +158,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
         1 * handler.maxSpotAttempts() >> 5
-        _ * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', storageEncryption: 'AES256', debug: true, shareIdentifier: 'priority/high', schedulingPriority: 9999) }
+        _ * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws',schedulingPriority: 9999,shareIdentifier: 'priority/high'], client:[storageEncryption: 'AES256', debug: true])) }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> []
@@ -185,7 +186,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def req = handler.newSubmitRequest(task)
         then:
-        handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', region: 'eu-west-1') }
+        handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch:[cliPath: '/bin/aws'],region: 'eu-west-1')) }
         and:
         _ * handler.fusionEnabled() >> false
         1 * handler.maxSpotAttempts() >> 0
@@ -212,7 +213,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig()
-        handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch:[cliPath: '/bin/aws'])) }
         and:
         _ * handler.fusionEnabled() >> false
         1 * handler.maxSpotAttempts() >> 0
@@ -229,7 +230,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig(time: '5 sec')
-        handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch:[cliPath: '/bin/aws']))  }
         and:
         _ * handler.fusionEnabled() >> false
         1 * handler.maxSpotAttempts() >> 0
@@ -248,7 +249,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         task.getName() >> 'batch-task'
         task.getConfig() >> new TaskConfig(time: '1 hour')
-        handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch:[cliPath: '/bin/aws']))  }
         and:
         _ * handler.fusionEnabled() >> false
         1 * handler.maxSpotAttempts() >> 0
@@ -278,7 +279,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def req = handler.newSubmitRequest(task)
         then:
-        handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws', retryMode: 'adaptive', maxTransferAttempts: 10) }
+        handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws', retryMode: 'adaptive', maxTransferAttempts: 10])) }
         and:
         _ * handler.fusionEnabled() >> false
         1 * handler.getSubmitCommand() >> ['bash','-c','foo']
@@ -571,7 +572,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         result = handler.makeJobDefRequest(IMAGE)
         then:
         1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
-        1 * handler.getAwsOptions() >> new AwsOptions(cliPath: '/home/conda/bin/aws', logsGroup: '/aws/batch', region: 'us-east-1')
+        1 * handler.getAwsOptions() >> new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/home/conda/bin/aws', logsGroup: '/aws/batch'], region: 'us-east-1'))
         result.jobDefinitionName == JOB_NAME
         result.type == 'container'
         result.parameters.'nf-token' == 'af124f8899bcfc8a02037599f59a969a'
@@ -887,7 +888,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * handler.getSubmitCommand() >> ['sh','-c','hello']
         1 * handler.maxSpotAttempts() >> 5
-        1 * handler.getAwsOptions() >> { new AwsOptions(cliPath: '/bin/aws') }
+        1 * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws'])) }
         1 * handler.getJobQueue(task) >> 'queue1'
         1 * handler.getJobDefinition(task) >> 'job-def:1'
         1 * handler.getEnvironmentVars() >> [VAR_FOO, VAR_BAR]
