@@ -59,7 +59,7 @@ and accessible through the URL [https://raw.githubusercontent.com/nextflow-io/pl
 
 The repository index has the following structure: 
 
-```json
+```
 [
   {
     "id": "nf-amazon",
@@ -72,7 +72,7 @@ The repository index has the following structure:
       }
     ]
   },
-  // ...
+  :
 ]
 ```     
 
