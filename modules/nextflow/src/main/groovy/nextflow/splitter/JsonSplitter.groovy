@@ -68,15 +68,11 @@ class JsonSplitter extends AbstractTextSplitter {
      */
     @Override
     protected Map<String,?> validOptions() {
-        def result = super.validOptions()
-        result.remove('charset')
-        result.remove('compress')
-        result.remove('decompress')
-        result.remove('keepHeader')
-        result.remove('by')
-        result.remove('elem')
-        result.jsonPath = [String]
-        return result
+        def baseOptions = super.validOptions()
+        return [
+            jsonPath: String,
+            limit: baseOptions.limit
+        ]
     }
 
     @Override
@@ -85,20 +81,15 @@ class JsonSplitter extends AbstractTextSplitter {
         counter.reset() // <-- make sure to start
         itemsCount = 0
         try {
-            final jsonreader = new JsonReader(reader)
-            result = scanJsonForPath(jsonreader, "", this.jsonPath ?: "")
+            final jsonReader = new JsonReader(reader)
+            result = scanJsonForPath(jsonReader, "", this.jsonPath ?: "")
 
-            jsonreader.close()
-            if( result != null ) {
-                // make sure to process collected entries
-                if( collector && collector.hasChunk() ) {
-                    result = invokeEachClosure(closure, collector.nextChunk())
-                }
-            }
+            jsonReader.close()
+            if( result && collector?.hasChunk() )
+                result = invokeEachClosure(closure, collector.nextChunk())
         }
         catch( Exception ex ) {
-            log.warn "Error while parsing JSON: ${ex.message ?: ex}", ex
-            throw ex
+            throw new IllegalStateException("Error while parsing JSON content - cause: ${ex.message ?: ex}", ex)
         }
         finally {
             reader.closeQuietly()
@@ -128,13 +119,13 @@ class JsonSplitter extends AbstractTextSplitter {
                 return processArray(reader)
 
             // loop over the current array
-            def itemIndex = 0
+            def index = 0
             reader.beginArray()
             while( reader.peek() != JsonToken.END_ARRAY ) {
-                final ret = scanJsonForPath(reader, "${currentPath}[${itemIndex}]", expectedPath)
+                final ret = scanJsonForPath(reader, getJsonArraySubPath(currentPath, index), expectedPath)
                 if( ret != null )
                     return ret
-                itemIndex++
+                index++
             }
             reader.endArray()
         }
@@ -147,7 +138,7 @@ class JsonSplitter extends AbstractTextSplitter {
             reader.beginObject()
             while( reader.peek() != JsonToken.END_OBJECT ) {
                 final key = reader.nextName()
-                final ret = scanJsonForPath(reader, "${currentPath}${(currentPath.endsWith('.') || currentPath.isEmpty()) ? '' : '.'}${key}", expectedPath)
+                final ret = scanJsonForPath(reader, getJsonObjectSubPath(currentPath, key), expectedPath)
                 if( ret != null )
                     return ret
             }
@@ -156,12 +147,32 @@ class JsonSplitter extends AbstractTextSplitter {
 
         else {
             if( foundPath )
-                throw new IOException("Expected JSON to be an object or an array but got ${token.name()} for json-path \"${currentPath}\".")
+                throw new IllegalStateException("Expected JSON to be an object or an array but got ${token.name()} for json-path \"${currentPath}\".")
 
             reader.skipValue()
         }
 
         return null
+    }
+
+    /**
+     * Get an array index sub-path of a given JSON path.
+     *
+     * @param path
+     * @param index
+     */
+    private String getJsonArraySubPath(String path, int index) {
+        "${path}[${index}]"
+    }
+
+    /**
+     * Get an object key sub-path of a given JSON path.
+     *
+     * @param path
+     * @param key
+     */
+    private String getJsonObjectSubPath(String path, String key) {
+        "${path}${(path.endsWith('.') || path.isEmpty()) ? '' : '.'}${key}"
     }
 
     /**
@@ -205,10 +216,9 @@ class JsonSplitter extends AbstractTextSplitter {
                 break
             }
 
-            final map = [
-                (OBJECT_KEY): reader.nextName(),
-                (OBJECT_VALUE): fromJson(reader)
-            ]
+            final map = Map.of(
+                 OBJECT_KEY, reader.nextName(),
+                 OBJECT_VALUE, fromJson(reader))
 
             // -- apply the splitting logic for the fetched record
             result = processChunk( map )
