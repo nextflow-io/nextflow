@@ -43,19 +43,9 @@ class ScriptRunner {
     private Session session
 
     /**
-     * The script interpreter
-     */
-    private ScriptParser scriptParser
-
-    /**
      * The pipeline file (it may be null when it's provided as string)
      */
     private ScriptFile scriptFile
-
-    /**
-     * The script result
-     */
-    private def result
 
     /**
      * Simulate execution and exit
@@ -96,12 +86,8 @@ class ScriptRunner {
     /**
      * @return The interpreted script object
      */
-    @Deprecated BaseScript getScriptObj() { scriptParser.script }
-
-    /**
-     * @return The result produced by the script execution
-     */
-    def getResult() { result }
+    @Deprecated
+    BaseScript getScriptObj() { session.script }
 
 
     /**
@@ -118,6 +104,8 @@ class ScriptRunner {
     def execute( List<String> args = null, String entryName=null ) {
         assert scriptFile
 
+        def result
+
         // init session
         session.init(scriptFile, args)
 
@@ -127,7 +115,7 @@ class ScriptRunner {
             // parse the script
             parseScript(scriptFile, entryName)
             // run the code
-            run()
+            result = run()
             // await completion
             await()
             // shutdown session
@@ -205,12 +193,10 @@ class ScriptRunner {
     }
 
     protected void parseScript( ScriptFile scriptFile, String entryName ) {
-        scriptParser = new ScriptParser(session)
-                            .setEntryName(entryName)
-                            .parse(scriptFile.main)
-        session.script = scriptParser.script
+        session.script = new ScriptParser(session)
+                .setEntryName(entryName)
+                .parse(scriptFile.main)
     }
-
 
     /**
      * Launch the Nextflow script execution
@@ -219,13 +205,12 @@ class ScriptRunner {
      */
     protected run() {
         log.debug "> Launching execution"
-        assert scriptParser, "Missing script instance to run"
         // -- launch the script execution
-        scriptParser.runScript()
-        // -- normalise output
-        result = normalizeOutput(scriptParser.getResult())
+        def result = session.script.run()
         // -- ignite dataflow network
         session.fireDataflowNetwork(preview)
+        // -- normalize output
+        return normalizeOutput(result)
     }
 
     protected await() {
@@ -261,10 +246,6 @@ class ScriptRunner {
         def revisionId = scriptFile.commitId ?: scriptFile.scriptId
         HistoryFile.DEFAULT.write( name, session.uniqueId, revisionId, cli )
     }
-
-
-    @PackageScope
-    ScriptFile getScriptFile() { scriptFile }
 
     /**
      * Extends an {@code ArrayList} class adding a nicer index-out-of-range error message

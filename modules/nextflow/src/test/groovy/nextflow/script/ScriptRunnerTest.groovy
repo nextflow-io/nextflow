@@ -157,10 +157,10 @@ class ScriptRunnerTest extends Dsl2Spec {
 
         when:
         def runner = new MockScriptRunner().setScript(script)
-        runner.execute()
+        def result = runner.execute()
 
         then:
-        runner.result.val == 'echo 1'
+        result.val == 'echo 1'
         TaskProcessor.currentProcessor().name == 'simpleTask'
 
     }

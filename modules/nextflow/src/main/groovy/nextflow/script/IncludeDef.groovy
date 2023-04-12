@@ -147,12 +147,16 @@ class IncludeDef {
     static BaseScript loadModule0(Path path, Map params, Session session) {
         final binding = new ScriptBinding() .setParams(params)
 
-        // the execution of a library file has as side effect the registration of declared processes
-        new ScriptParser(session)
+        // parse the module script
+        final script = new ScriptParser(session)
                 .setModule(true)
                 .setBinding(binding)
-                .runScript(path)
-                .getScript()
+                .parse(path)
+
+        // execute the module script to register any definitions
+        script.run()
+
+        return script
     }
 
     @PackageScope

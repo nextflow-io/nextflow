@@ -50,7 +50,7 @@ class TestParser {
         }
 
         session.init(null,null)
-        new ScriptParser(session) .runScript(scriptText)
+        new ScriptParser(session).parse(scriptText).run()
         session.fireDataflowNetwork(false)
         return TaskProcessor.currentProcessor()
     }

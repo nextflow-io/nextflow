@@ -22,11 +22,12 @@ import java.nio.file.Paths
 import nextflow.NextflowMeta
 import nextflow.Session
 import spock.lang.Specification
+import test.Dsl2Spec
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class BaseScriptTest extends Specification {
+class BaseScriptTest extends Dsl2Spec {
 
 
     def 'should define implicit variables' () {
@@ -61,8 +62,7 @@ class BaseScriptTest extends Specification {
                 '''
 
         parser.setBinding(binding)
-        parser.runScript(script)
-
+        parser.parse(script).run()
 
         then:
         binding.result.baseDir ==PROJECT_DIR

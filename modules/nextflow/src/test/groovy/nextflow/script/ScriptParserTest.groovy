@@ -26,12 +26,12 @@ class ScriptParserTest extends Specification {
         '''
 
         when:
-        parser.setBinding(binding)
-        parser.runScript(file)
+        def script = parser.setBinding(binding).parse(file)
+        def result = script.run()
         then:
-        parser.script instanceof BaseScript
-        parser.result == 'Hello world!'
-        parser.result == binding.getVariable('bar')
+        script instanceof BaseScript
+        result == 'Hello world!'
+        result == binding.getVariable('bar')
         parser.binding.getScriptPath() == file
         parser.binding.getSession() == session
         !session.binding.hasVariable('bar')
@@ -49,12 +49,12 @@ class ScriptParserTest extends Specification {
         '''
 
         when:
-        parser.setBinding(binding)
-        parser.runScript(TEXT)
+        def script = parser.setBinding(binding).parse(TEXT)
+        def result = script.run()
         then:
-        parser.script instanceof BaseScript
-        parser.result == 'Hello world!'
-        parser.result == binding.getVariable('bar')
+        script instanceof BaseScript
+        result == 'Hello world!'
+        result == binding.getVariable('bar')
         parser.binding.getScriptPath() == null
         parser.binding.getSession() == session
         !session.binding.hasVariable('bar')
@@ -72,30 +72,15 @@ class ScriptParserTest extends Specification {
         '''
 
         when:
-        parser.runScript(TEXT)
+        def script = parser.parse(TEXT)
+        def result = script.run()
         then:
-        parser.script instanceof BaseScript
-        parser.result == 'Hello world!'
+        script instanceof BaseScript
+        result == 'Hello world!'
         parser.binding.getScriptPath() == null
         parser.binding.getSession() == session
         session.binding.getVariable('foo') == 'Hello'
         session.binding.getVariable('bar') == 'Hello world!'
-    }
-
-    def 'should normalise script name'() {
-
-        given:
-        def parser = new ScriptParser(Mock(Session))
-
-        expect:
-        parser.computeClassName(Paths.get(SCRIPT)) == EXPECTED
-
-        where:
-        SCRIPT              | EXPECTED
-        'foo.nf'            | 'Script_foo'
-        'foo-bar-baz.nf'    | 'Script_foo_bar_baz'
-        '123-fo0'           | 'Script_23_fo0'
-        '--a  b  c'         | 'Script_a_b_c'
     }
 
     def 'should normalise script text' () {
@@ -134,7 +119,7 @@ class ScriptParserTest extends Specification {
         '''
 
         when:
-        parser.runScript(file)
+        parser.parse(file)
         then:
         def e = thrown(ScriptCompilationException)
         e.message.startsWith('Script compilation error')

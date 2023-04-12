@@ -53,10 +53,6 @@ class ScriptParser {
 
     private Path scriptPath
 
-    private BaseScript script
-
-    private Object result
-
     private ScriptBinding binding
 
     private CompilerConfiguration config
@@ -99,10 +95,10 @@ class ScriptParser {
 
     ScriptBinding getBinding() { binding }
 
-    Object getResult() { result }
-
-    BaseScript getScript() { script }
-
+    /**
+     * Get the compiler configuration for the custom Groovy shell
+     * used to parse Nextflow scripts.
+     */
     CompilerConfiguration getConfig() {
         if( config )
             return config
@@ -134,26 +130,21 @@ class ScriptParser {
     /**
      * Creates a unique name for the main script class in order to avoid collision
      * with the implicit and user variables
+     *
+     * @param script
      */
-    protected String computeClassName(script) {
-        final PREFIX = 'Script_'
-
-        if( script instanceof Path ) {
-            return FileHelper.getIdentifier(script,PREFIX)
-        }
-
-        if( script instanceof CharSequence ) {
-            final hash = Hashing
-                    .murmur3_32()
-                    .newHasher()
-                    .putUnencodedChars(script.toString())
-                    .hash()
-            return PREFIX + hash.toString()
-        }
-
-        throw new IllegalArgumentException("Unknown script type: ${script?.getClass()?.getName()}")
+    protected String computeClassName(String script) {
+        final hash = Hashing
+                .murmur3_32()
+                .newHasher()
+                .putUnencodedChars(script.toString())
+                .hash()
+        return "Script_${hash.toString()}"
     }
 
+    /**
+     * Get the custom Groovy shell used to parse Nextflow scripts.
+     */
     GroovyShell getInterpreter() {
         if( !binding && session )
             binding = session.binding
@@ -163,19 +154,25 @@ class ScriptParser {
         return new GroovyShell(classLoader, binding, getConfig())
     }
 
-    ScriptParser parse(String scriptText, GroovyShell interpreter) {
+    /**
+     * Parse a Nextflow script with the given Groovy shell.
+     *
+     * @param scriptText
+     * @param interpreter
+     */
+    BaseScript parse(String scriptText, GroovyShell interpreter) {
         final String clazzName = computeClassName(scriptText)
         try {
             final parsed = interpreter.parse(scriptText, clazzName)
             if( parsed !instanceof BaseScript ){
                throw new CompilationFailedException(0, null)
             }
-            script = (BaseScript)parsed
+            final script = (BaseScript)parsed
             final meta = ScriptMeta.get(script)
             meta.setScriptPath(scriptPath)
             meta.setModule(module)
             meta.validate()
-            return this
+            return script
         }
         catch (CompilationFailedException e) {
             String type = module ? "Module" : "Script"
@@ -188,46 +185,26 @@ class ScriptParser {
         }
     }
 
+    BaseScript parse(String scriptText) {
+        // parse script
+        def script = parse(scriptText, getInterpreter())
 
-    ScriptParser parse(String scriptText) {
-        def interpreter = getInterpreter()
-        return parse(scriptText, interpreter)
+        // update script context
+        binding.setSession(session)
+        binding.setScriptPath(scriptPath)
+        binding.setEntryName(entryName)
+
+        return script
     }
 
-    ScriptParser parse(Path scriptPath) {
-        this.scriptPath = scriptPath
-        parse(scriptPath.text)
-    }
-
-    ScriptParser runScript(Path scriptPath) {
+    BaseScript parse(Path scriptPath) {
         this.scriptPath = scriptPath
         try {
-            runScript(scriptPath.text)
+            parse(scriptPath.text)
         }
         catch (IOException e) {
             throw new ScriptCompilationException("Unable to read script: '$scriptPath' -- cause: $e.message", e)
         }
-        return this
-    }
-
-    ScriptParser runScript(String scriptText) {
-        parse(scriptText)
-        runScript()
-        return this
-    }
-
-    private void setupContext() {
-        assert session
-        binding.setSession(session)
-        binding.setScriptPath(scriptPath)
-        binding.setEntryName(entryName)
-    }
-
-    ScriptParser runScript() {
-        assert script
-        setupContext()
-        result = script.run()
-        return this
     }
 
 }
