@@ -17,6 +17,6 @@ jobs:
 
       - name: Test docs build
         run: |
-          pip install sphinx sphinx_rtd_theme
+          pip install sphinx sphinx_rtd_theme myst-parser
           cd docs/
           make clean html
