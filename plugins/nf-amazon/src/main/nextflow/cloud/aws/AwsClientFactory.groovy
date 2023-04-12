@@ -284,12 +284,15 @@ class AwsClientFactory {
     static ProfilesConfigFile configFile() {
         final creds = AwsProfileFileLocationProvider.DEFAULT_CREDENTIALS_LOCATION_PROVIDER.getLocation()
         final config = AwsProfileFileLocationProvider.DEFAULT_CONFIG_LOCATION_PROVIDER.getLocation()
-        if( creds && config ) {
+        if( creds && config && SysEnv.get('NXF_DISABLE_AWS_CONFIG_MERGE')!='true' ) {
             log.debug "Merging AWS crendentials file '$creds' and config file '$config'"
             final parser = new ConfigParser()
+            // add the credentials first because it has higher priority
             parser.parseConfig(creds.text)
+            // add also the content of config file
             parser.parseConfig(config.text)
             final temp = File.createTempFile('aws','config')
+            // merge into a temporary file
             temp.deleteOnExit()
             temp.text = parser.text()
             return new ProfilesConfigFile(temp.absolutePath)

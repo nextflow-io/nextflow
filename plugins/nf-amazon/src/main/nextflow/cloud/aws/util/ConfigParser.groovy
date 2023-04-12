@@ -18,6 +18,7 @@
 package nextflow.cloud.aws.util
 
 import java.nio.file.Path
+import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import org.apache.commons.lang.text.StrBuilder
@@ -28,6 +29,8 @@ import org.apache.commons.lang.text.StrBuilder
  */
 @CompileStatic
 class ConfigParser {
+
+    final private static Pattern KEY_VALUE = ~/\s*(\w+)\s*=.*/
 
     final Map<String, List<String>> content = new LinkedHashMap<>()
 
@@ -44,7 +47,10 @@ class ConfigParser {
             }
             else if( current && line.trim() ) {
                 final block = content.computeIfAbsent(current, (String it) -> new ArrayList<>())
-                block.add(line)
+                final key = findKey(line)
+                final exists = key && block.any { findKey(it)==key }
+                if( !key || !exists )
+                    block.add(line)
             }
         }
 
@@ -72,6 +78,12 @@ class ConfigParser {
         }
         return result.toString()
     }
+
+    protected String findKey(String line) {
+        final m = KEY_VALUE.matcher(line)
+        return m.matches() ? m.group(1) : null
+    }
+
 }
 
 

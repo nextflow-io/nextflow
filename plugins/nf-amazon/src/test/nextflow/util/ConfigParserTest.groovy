@@ -19,6 +19,7 @@ package nextflow.util
 
 import nextflow.cloud.aws.util.ConfigParser
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  *
@@ -61,6 +62,36 @@ class ConfigParserTest extends Specification {
         parser.content.size() == 2
         parser.content['foo']  == ['one = 1', 'two = 2']
         parser.content['bar']  == ['alpha = 3', 'gamma = 4']
+    }
+
+    def 'should not merge overlapping keys' () {
+        given:
+        def parser = new ConfigParser()
+        def CONFIG1 = '''
+        [alpha]
+        a1=1
+        [beta]
+        b2=2
+        b3=3
+        '''.stripIndent()
+
+        def CONFIG2 = '''
+        [beta]
+        b3=30
+        b4=4
+        '''.stripIndent()
+
+
+        when:
+        parser.parseConfig(CONFIG1)
+        parser.parseConfig(CONFIG2)
+
+        then:
+        parser.content.size() == 2
+        and:
+        parser.content['alpha'] == ['a1=1']
+        parser.content['beta'] ==  ['b2=2','b3=3','b4=4']
+
     }
 
     def 'should load and merge config' () {
@@ -110,6 +141,25 @@ class ConfigParserTest extends Specification {
             [omega]
             z9
             '''.stripIndent()
+
+    }
+
+
+    @Unroll
+    def 'should match key' () {
+        given:
+        def parser = new ConfigParser()
+
+        expect:
+        parser.findKey(LINE) == EXPECTED
+
+        where:
+        LINE        | EXPECTED
+        'foo'       | null
+        'foo='      | 'foo'
+        'foo=1'     | 'foo'
+        ' foo = 1 ' | 'foo'
+        ' foo  =1 ' | 'foo'
 
     }
 }
