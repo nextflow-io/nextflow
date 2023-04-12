@@ -30,8 +30,6 @@ import java.nio.file.spi.FileSystemProvider
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
-import nextflow.Global
-import nextflow.ISession
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -311,24 +309,6 @@ class FileHelperTest extends Specification {
         new File('.').absolutePath.startsWith('/')
     }
 
-
-    def 'get env map'() {
-
-        given:
-        def sess = Global.session = Mock(ISession)
-        def env = [:]
-        env.put('AWS_ACCESS_KEY','a1')
-        env.put('AWS_SECRET_KEY','s1')
-
-        expect:
-        // properties have priority over the environment map
-        FileHelper.envFor0('s3', env).access_key == 'a1'
-        FileHelper.envFor0('s3', env).secret_key == 's1'
-
-        // any other return just the session
-        FileHelper.envFor0('dx', env).session == sess
-
-    }
 
     def 'cached path'() {
 
@@ -965,21 +945,6 @@ class FileHelperTest extends Specification {
         null        | '3s://bucket/abc'
         null        | 'abc:xyz'
         null        | '/a/bc/'
-    }
-
-    @Unroll
-    def 'should add max error retry' () {
-
-        expect:
-        FileHelper.checkDefaultErrorRetry(SOURCE, ENV) == EXPECTED
-
-        where:
-        SOURCE                          | ENV                   | EXPECTED
-        null                            | null                  | [max_error_retry: '5']
-        [foo: 1]                        | [:]                   | [max_error_retry: '5', foo: 1]
-        [foo: 1]                        | [AWS_MAX_ATTEMPTS:'3']| [max_error_retry: '3', foo: 1]
-        [max_error_retry: '2', foo: 1]  | [:]                   | [max_error_retry: '2', foo: 1]
-        [:]                             | [:]                   | [max_error_retry: '5']
     }
 
     def 'should check symlink status'() {

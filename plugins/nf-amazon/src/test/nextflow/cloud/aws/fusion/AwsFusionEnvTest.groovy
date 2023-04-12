@@ -17,6 +17,7 @@
 
 package nextflow.cloud.aws.fusion
 
+import nextflow.Global
 import nextflow.SysEnv
 import nextflow.fusion.FusionConfig
 import spock.lang.Specification
@@ -25,6 +26,10 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class AwsFusionEnvTest extends Specification {
+
+    def setup() {
+        Global.config = Collections.emptyMap()
+    }
 
     def 'should return empty env' () {
         given:

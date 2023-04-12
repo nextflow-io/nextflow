@@ -10,6 +10,7 @@ import com.amazonaws.services.s3.model.AmazonS3Exception
 import com.amazonaws.services.s3.model.ListVersionsRequest
 import com.amazonaws.services.s3.model.S3ObjectSummary
 import com.amazonaws.services.s3.model.S3VersionSummary
+import nextflow.cloud.aws.util.S3PathFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -23,8 +24,7 @@ trait AwsS3BaseSpec {
     abstract AmazonS3 getS3Client()
 
     S3Path s3path(String path) {
-        path = path.replaceAll(~'^s3://(?!/)','s3:///')
-        return (S3Path) Path.of(new URI(path))
+        return (S3Path) S3PathFactory.parse(path)
     }
 
     String createBucket(String bucketName) {

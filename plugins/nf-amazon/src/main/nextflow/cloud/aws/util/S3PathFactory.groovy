@@ -18,6 +18,9 @@ package nextflow.cloud.aws.util
 import java.nio.file.Path
 
 import com.upplication.s3fs.S3Path
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.cloud.aws.batch.AwsBatchFileCopyStrategy
 import nextflow.file.FileHelper
 import nextflow.file.FileSystemPathFactory
@@ -26,6 +29,8 @@ import nextflow.file.FileSystemPathFactory
  * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
+@CompileStatic
 class S3PathFactory extends FileSystemPathFactory {
 
     @Override
@@ -36,6 +41,11 @@ class S3PathFactory extends FileSystemPathFactory {
             return create(path)
         }
         return null
+    }
+
+    static private Map config() {
+        final result = Global.config?.get('aws') as Map
+        return result != null ? result : Collections.emptyMap()
     }
 
     @Override
@@ -71,6 +81,6 @@ class S3PathFactory extends FileSystemPathFactory {
         if( !path.startsWith('s3:///') ) throw new IllegalArgumentException("S3 path must start with s3:/// prefix -- offending value '$path'")
         // note: this URI constructor parse the path parameter and extract the `scheme` and `authority` components
         final uri = new URI(null,null, path,null,null)
-        return (S3Path)FileHelper.getOrCreateFileSystemFor(uri).provider().getPath(uri)
+        return (S3Path)FileHelper.getOrCreateFileSystemFor(uri,config()).provider().getPath(uri)
     }
 }
