@@ -1,18 +1,19 @@
 name: Nextflow CI
-# read more here
-# https://help.github.com/en/articles/workflow-syntax-for-github-actions#on
+# read more here: https://help.github.com/en/articles/workflow-syntax-for-github-actions#on
+
+# Note: We don't use the `on: path` option for docs,
+# because the Build steps are *required* tests.
+# Instead, we trigger + skip the tests if the only changes
+# are in the docs folder. GitHub treats this as passing.
+
 on:
   push:
     branches:
       - 'master'
       - 'test*'
       - 'dev*'
-    paths-ignore:
-      - 'docs/**'
   pull_request:
     types: [opened, reopened, synchronize]
-    paths-ignore:
-      - 'docs/**'
   workflow_dispatch:
 
 jobs:
@@ -35,7 +36,14 @@ jobs:
           fetch-depth: 1
           submodules: true
 
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v35
+        with:
+          files_ignore: docs
+
       - name: Setup env
+        if: steps.changed-files.outputs.any_changed == 'true'
         run: |
              rm -f $HOME/.gitconfig;
              mkdir -p "$HOME/.nextflow";
@@ -44,6 +52,7 @@ jobs:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
 
       - name: Setup Java ${{ matrix.java_version }}
+        if: steps.changed-files.outputs.any_changed == 'true'
         uses: actions/setup-java@v3
         with:
           java-version: ${{matrix.java_version}}
@@ -52,21 +61,26 @@ jobs:
           cache: gradle
 
       - name: Compile
+        if: steps.changed-files.outputs.any_changed == 'true'
         run: make assemble
 
       - name: Test
+        if: steps.changed-files.outputs.any_changed == 'true'
         run: make test
 
       - name: Publish tests report
         uses: actions/upload-artifact@v3
-        if: always()
+        if: steps.changed-files.outputs.any_changed == 'true' && always()
         with:
           name: report-unit-tests-jdk-${{ matrix.java_version }}
           path: |
             **/build/reports/tests/test
 
+    outputs:
+      any_changed: ${{ steps.changed-files.outputs.any_changed }}
+
   test:
-    if: "!contains(github.event.head_commit.message, '[ci fast]')"
+    if: ${{ !contains(github.event.head_commit.message, '[ci fast]') && needs.build.outputs.any_changed == 'true' }}
     needs: build
     runs-on: ubuntu-latest
     strategy:
@@ -80,6 +94,7 @@ jobs:
         with:
           fetch-depth: 1
           submodules: true
+
       - name: Setup env
         run: |
           rm -f $HOME/.gitconfig;
@@ -87,6 +102,7 @@ jobs:
           echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
         env:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
+
       - name: Setup Java ${{ matrix.java_version }}
         uses: actions/setup-java@v3
         with:
@@ -94,6 +110,7 @@ jobs:
           distribution: 'adopt'
           architecture: x64
           cache: gradle
+
       - name: Run tests
         run: |
           cat $HOME/.nextflow/scm
