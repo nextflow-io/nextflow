@@ -803,6 +803,8 @@ In general, multiple input channels should be used to process *combinations* of 
 
 See also: {ref}`channel-types`.
 
+(process-output)=
+
 ## Outputs
 
 The `output` block allows you to define the output channels of a process, similar to function outputs. A process may have at most one output block, and it must contain at least one output.

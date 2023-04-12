@@ -92,3 +92,22 @@ In the same way as operators, functions can be aliased:
 ```groovy
 include { reverseString as anotherReverseMethod } from 'plugin/my-plugin'
 ```
+
+## Testing custom plugins
+
+To make a plugin available to Nextflow, it needs to be included in the [plugins repository index](https://github.com/nextflow-io/plugins).
+
+However, in order to validate a plugin before it's published in the repository index, it is possible to use the environment
+variable `NXF_PLUGINS_TEST_REPOSITORY` to specify the URI of a custom index JSON file or the plugin JSON meta file.
+
+For example:
+
+```bash
+export NXF_PLUGINS_TEST_REPOSITORY="https://github.com/nextflow-io/nf-hello/releases/download/0.3.0/nf-hello-0.3.0-meta.json"
+```
+
+Then run Nextflow with the expected plugin:
+
+```bash
+nextflow rub <your script> -plugins nf-hello
+```

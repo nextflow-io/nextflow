@@ -51,7 +51,7 @@ The support for Google Batch requires Nextflow version `22.07.1-edge` or later. 
 
 ```bash
 export NXF_EDGE=1
-nextflow -self-update
+nextflow self-update
 ```
 
 If you don't have Nextflow, install it with command below:

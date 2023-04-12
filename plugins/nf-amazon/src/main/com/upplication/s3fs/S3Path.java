@@ -616,4 +616,13 @@ public class S3Path implements Path, TagAwareFile {
 			return ImmutableList.copyOf(filter(transform(parts, strip("/")), notEmpty()));
 		}
 	}
+
+	public static String bucketName(URI uri) {
+		final String path = uri.getPath();
+		if( path==null || !path.startsWith("/") )
+			throw new IllegalArgumentException("Invalid S3 path: " + uri);
+		final String[] parts = path.split("/");
+		// note the element 0 contains the slash char
+		return parts.length>1 ? parts[1] : null;
+	}
 }

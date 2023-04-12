@@ -12,9 +12,11 @@ You can provide your AWS access keys using the standard AWS variables shown belo
 - `AWS_SECRET_ACCESS_KEY`
 - `AWS_DEFAULT_REGION`
 
-If `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are not defined in the environment, Nextflow will attempt to retrieve credentials from your `~/.aws/credentials` or `~/.aws/config` files. The `default` profile can be overridden via the environmental variable `AWS_PROFILE` (or `AWS_DEFAULT_PROFILE`).
+If `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are not defined in the environment, Nextflow will attempt to
+retrieve credentials from your `~/.aws/credentials` and `~/.aws/config` files. The `default` profile can be
+overridden via the environmental variable `AWS_PROFILE` (or `AWS_DEFAULT_PROFILE`).
 
-Alternatively AWS credentials can be specified in the Nextflow configuration file. See {ref}`AWS configuration<config-aws>` for more details.
+Alternatively AWS credentials and profile can be specified in the Nextflow configuration file. See {ref}`AWS configuration<config-aws>` for more details.
 
 :::{note}
 Credentials can also be provided by using an IAM Instance Role. The benefit of this approach is that it spares you from managing/distributing AWS keys explicitly. Read the [IAM Roles](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html) documentation and [this blog post](https://aws.amazon.com/blogs/security/granting-permission-to-launch-ec2-instances-with-iam-roles-passrole-permission/) for more details.
