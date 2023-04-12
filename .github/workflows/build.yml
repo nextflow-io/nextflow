@@ -37,7 +37,7 @@ jobs:
 
       - name: Setup env
         run: |
-             rm -f $HOME/.gitconfig; 
+             rm -f $HOME/.gitconfig;
              mkdir -p "$HOME/.nextflow";
              echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
         env:
@@ -82,7 +82,7 @@ jobs:
           submodules: true
       - name: Setup env
         run: |
-          rm -f $HOME/.gitconfig; 
+          rm -f $HOME/.gitconfig;
           mkdir -p "$HOME/.nextflow";
           echo "providers.github.auth='$NXF_GITHUB_ACCESS_TOKEN'" > "$HOME/.nextflow/scm"
         env:
@@ -97,7 +97,7 @@ jobs:
       - name: Run tests
         run: |
           cat $HOME/.nextflow/scm
-          make assemble install 
+          make assemble install
           bash test-ci.sh
         env:
           TEST_JDK: ${{ matrix.java_version }}

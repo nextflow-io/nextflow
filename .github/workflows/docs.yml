@@ -6,14 +6,16 @@
 # The build triggers are complementary, so this workflow only runs if the PR is *all* docs.
 # The build.yml workflow runs if there are *any* changes outside of the docs.
 # Ref: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks#handling-skipped-but-required-checks
-name: Nextflow CI
+name: Docs CI
 on:
   pull_request:
     types: [opened, reopened, synchronize]
     paths:
       - 'docs/**'
+  workflow_dispatch:
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
@@ -23,6 +25,6 @@ jobs:
 
       - name: Test docs build
         run: |
-          pip install sphinx==3.5.4 sphinx_rtd_theme
+          pip install sphinx sphinx_rtd_theme
           cd docs/
           make clean html
