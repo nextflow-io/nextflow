@@ -1,11 +1,3 @@
-# Docs CI
-#
-# Note that the workflow / job name is important and must match that in
-# build.yml. These names are required tests and PRs cannot be merged
-# unless they are passing.
-# The build triggers are complementary, so this workflow only runs if the PR is *all* docs.
-# The build.yml workflow runs if there are *any* changes outside of the docs.
-# Ref: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks#handling-skipped-but-required-checks
 name: Docs CI
 on:
   pull_request:
@@ -14,7 +6,7 @@ on:
       - 'docs/**'
   workflow_dispatch:
 jobs:
-  build:
+  docs-build:
     name: Build
     runs-on: ubuntu-latest
     steps:
