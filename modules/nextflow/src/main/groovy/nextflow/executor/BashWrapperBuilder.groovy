@@ -153,7 +153,7 @@ class BashWrapperBuilder {
     }
 
     protected boolean isStageFileRequired() {
-        inputFiles.size() + outputFiles.size() >= 1000
+        inputFiles.size() >= 1000
     }
 
     protected boolean shouldUnstageOutputs() {
@@ -285,9 +285,13 @@ class BashWrapperBuilder {
          */
         final stagingScript = copyStrategy.getStageInputFilesScript(inputFiles)
         binding.stage_inputs = stagingScript ? "# stage input files\n${stagingScript}" : null
-        binding.stage_script = isStageFileRequired()
-            ? "source ${stageFile} ${getStageCommand()}"
-            : binding.stage_inputs
+
+        if( isStageFileRequired() ) {
+            binding.stage_script = "source ${stageFile}"
+            stageScript = getStageScript(binding)
+        }
+        else
+            binding.stage_script = binding.stage_inputs
 
         binding.stdout_file = TaskRun.CMD_OUTFILE
         binding.stderr_file = TaskRun.CMD_ERRFILE
@@ -297,22 +301,14 @@ class BashWrapperBuilder {
         binding.launch_cmd = getLaunchCommand(interpreter,env)
         binding.stage_cmd = getStageCommand()
         binding.unstage_cmd = getUnstageCommand()
+        binding.unstage_controls = changeDir || shouldUnstageOutputs() ? getUnstageControls() : null
 
         if( changeDir || shouldUnstageOutputs() ) {
-            binding.unstage_controls = getUnstageControls()
             binding.unstage_outputs = copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)
-            binding.unstage_script = isStageFileRequired()
-                ? "source ${stageFile} ${getUnstageCommand()}"
-                : binding.unstage_outputs
         }
         else {
-            binding.unstage_controls = null
             binding.unstage_outputs = null
-            binding.unstage_script = null
         }
-
-        if( isStageFileRequired() )
-            stageScript = getStageScript(binding)
 
         binding.after_script = afterScript ? "# 'afterScript' directive\n$afterScript" : null
 

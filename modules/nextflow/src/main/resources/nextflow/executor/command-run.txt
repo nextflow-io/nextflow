@@ -128,7 +128,7 @@ nxf_unstage() {
     true
     {{unstage_controls}}
     [[ ${nxf_main_ret:=0} != 0 ]] && return
-    {{unstage_script}}
+    {{unstage_outputs}}
 }
 
 nxf_main() {

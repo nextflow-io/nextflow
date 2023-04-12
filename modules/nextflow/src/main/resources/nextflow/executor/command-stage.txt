@@ -13,14 +13,5 @@
 ##  See the License for the specific language governing permissions and
 ##  limitations under the License.
 ##
-nxf_stage() {
-    true
-    {{stage_inputs}}
-}
 
-nxf_unstage() {
-    true
-    {{unstage_outputs}}
-}
-
-$1
+{{stage_inputs}}
