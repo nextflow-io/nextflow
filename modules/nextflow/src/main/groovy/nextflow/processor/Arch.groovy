@@ -69,14 +69,9 @@ class Arch {
     }
 
     Arch( String value ) {
-        this.fullArch = value
-        this.platform = getPlatform(value)
-        this.arch = getArch(value)
-        this.target = null
-        this.spackArch = getArch(value)
+        this(name: value)
     }
 
-    // TODO MARCO: test values for Map case
     Arch( Map res ) {
         if( res.name != null ) {
             this.fullArch = res.name as String
