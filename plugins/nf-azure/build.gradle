@@ -30,17 +30,24 @@ sourceSets {
 configurations {
     // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
     runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+
+    all {
+        resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+            if (details.requested.group == 'io.netty' && details.requested.name !in ['netty-tcnative-boringssl-static','netty-tcnative-classes']) {
+                details.useVersion('4.1.77.Final')
+            }
+        }
+    }
 }
 
 dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:1.7.10'
     compileOnly 'org.pf4j:pf4j:3.4.1'
-
-    api('com.azure:azure-storage-blob:12.19.0') {
+    api('com.azure:azure-storage-blob:12.20.3') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
-    api('com.microsoft.azure:azure-batch:10.0.0') {
+    api('com.microsoft.azure:azure-batch:10.1.0') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
         exclude group: 'com.google.guava', module: 'guava'
     }
@@ -50,6 +57,13 @@ dependencies {
     }
 
     compileOnly(group: 'com.nimbusds', name: 'oauth2-oidc-sdk', version: '9.43')
+
+    constraints {
+        api 'com.fasterxml.jackson.core:jackson-databind:2.12.7.1'
+        api 'com.fasterxml.woodstox:woodstox-core:6.4.0'
+        api 'com.google.code.gson:gson:2.10.1'
+        api 'net.minidev:json-smart:2.4.9'
+    }
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
