@@ -1578,10 +1578,10 @@ Produces the following output::
     Item: [value:[1, 2, 3], key:B]
     Item: [value:[D:null], key:C]
 
-You can optionally query a section of the JSON document to parse and split, using the ``jsonPath`` option::
+You can optionally query a section of the JSON document to parse and split, using the ``path`` option::
 
     Channel.of('{"A":1,"B":[2,3,{"C":{"D":null,"E":4,"F":5}}]}')
-        .splitJson(jsonPath: "B[2].C")
+        .splitJson(path: "B[2].C")
         .view{"Item: ${it}"}
 
 Produces the following output::
@@ -1596,7 +1596,7 @@ Available options:
 Field       Description
 =========== ============================
 limit       Limits the number of retrieved lines for each file to the specified value.
-jsonPath    define the section of the JSON document that you want to extract. The expression is a set of paths separated by a dot, similar to `jsonPath <https://goessner.net/articles/JsonPath/>`_ The empty string is the document root (default). A number within brackets is the 0-based index in a json array. A word is the key in a json object. Complex keys containing a dot or a bracket are currently not supported.
+path        Define the section of the JSON document that you want to extract. The expression is a set of paths separated by a dot, similar to `JSONPath <https://goessner.net/articles/JsonPath/>`_ The empty string is the document root (default). An integer in brackets is the 0-based index in a JSON array. A string preceded by a dot ``.`` is the key in a JSON object.
 =========== ============================
 
 .. tip::

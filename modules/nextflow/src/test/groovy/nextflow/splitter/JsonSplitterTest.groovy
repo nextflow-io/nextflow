@@ -130,7 +130,7 @@ class JsonSplitterTest extends Specification {
 
     def testJsonPathArray1() {
         when:
-        def items = new JsonSplitter(jsonPath: '[0].alleleRequest').target(jsonArray).list()
+        def items = new JsonSplitter(path: '[0].alleleRequest').target(jsonArray).list()
 
         then:
         items.size() == 6
@@ -141,7 +141,7 @@ class JsonSplitterTest extends Specification {
 
     def testJsonPathObject1() {
         when:
-        def items = new JsonSplitter(jsonPath: 'inserted_sequence[1]').target(jsonObject).list()
+        def items = new JsonSplitter(path: 'inserted_sequence[1]').target(jsonObject).list()
 
         then:
         items.size() == 2

@@ -38,7 +38,7 @@ class JsonSplitter extends AbstractTextSplitter {
     /**
      * json path to find a specific region of the json
      */
-    private String jsonPath
+    private String path
 
     /**
      * number of items processed so far
@@ -48,7 +48,7 @@ class JsonSplitter extends AbstractTextSplitter {
     /**
      * Set the splitter options by specifying a map of named parameters.
      * Valid parameters are:
-     * <li>{@code jsonPath}
+     * <li>{@code path}
      *
      * @param options
      * @return The splitter instance itself
@@ -56,8 +56,8 @@ class JsonSplitter extends AbstractTextSplitter {
     @Override
     JsonSplitter options(Map opts) {
         super.options(opts)
-        if (opts.jsonPath) {
-            this.jsonPath = (opts.jsonPath as String)
+        if (opts.path) {
+            this.path = (opts.path as String)
         }
         return this
     }
@@ -70,7 +70,7 @@ class JsonSplitter extends AbstractTextSplitter {
     protected Map<String,?> validOptions() {
         def baseOptions = super.validOptions()
         return [
-            jsonPath: String,
+            path: String,
             limit: baseOptions.limit
         ]
     }
@@ -82,7 +82,7 @@ class JsonSplitter extends AbstractTextSplitter {
         itemsCount = 0
         try {
             final jsonReader = new JsonReader(reader)
-            result = scanJsonForPath(jsonReader, "", this.jsonPath ?: "")
+            result = scanJsonForPath(jsonReader, "", this.path ?: "")
 
             jsonReader.close()
             if( result && collector?.hasChunk() )
