@@ -202,16 +202,19 @@ class ScriptParser {
         catch (IOException e) {
             throw new ScriptCompilationException("Unable to read script: '$scriptPath' -- cause: $e.message", e)
         }
+        return this
     }
 
     ScriptParser runScript(String scriptText) {
         parse(scriptText)
         runScript()
+        return this
     }
 
     ScriptParser runScript(Path scriptPath) {
         parse(scriptPath)
         runScript()
+        return this
     }
 
     private void setupContext() {
