@@ -1,5 +1,14 @@
 nf-azure changelog
 ===================
+0.14.3 - 13 Apr 2023
+- Bump jackson-databind:2.12.7.1
+- Bump woodstox-core:6.4.0
+- Bump gson:2.10.1
+- Bump json-smart:2.4.9
+- Bump azure-storage-blob:12.20.3
+- Bump azure-batch:10.1.0
+- Bump netty:4.1.77.Final
+
 0.14.1 - 10 Sep 2022
 - Fix Azure NPE on missing pool opts [d5c0aabd]
 - Fix shutdown/cleanup hooks invocation [f4185070
