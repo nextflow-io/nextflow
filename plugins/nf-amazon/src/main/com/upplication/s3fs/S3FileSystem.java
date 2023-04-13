@@ -59,13 +59,13 @@ import com.google.common.collect.ImmutableSet;
 public class S3FileSystem extends FileSystem {
 	
 	private final S3FileSystemProvider provider;
-	private final AmazonS3Client client;
+	private final S3Client client;
 	private final String endpoint;
 	private final String bucketName;
 
 	private final Properties properties;
 
-	public S3FileSystem(S3FileSystemProvider provider, AmazonS3Client client, URI uri, Properties props) {
+	public S3FileSystem(S3FileSystemProvider provider, S3Client client, URI uri, Properties props) {
 		this.provider = provider;
 		this.client = client;
 		this.endpoint = uri.getHost();
@@ -147,7 +147,7 @@ public class S3FileSystem extends FileSystem {
 		throw new UnsupportedOperationException();
 	}
 
-	public AmazonS3Client getClient() {
+	public S3Client getClient() {
 		return client;
 	}
 

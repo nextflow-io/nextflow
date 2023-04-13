@@ -115,9 +115,9 @@ import static com.upplication.s3fs.util.S3UploadHelper.*;
  * Client Amazon S3
  * @see com.amazonaws.services.s3.AmazonS3Client
  */
-public class AmazonS3Client {
+public class S3Client {
 
-	private static final Logger log = LoggerFactory.getLogger(AmazonS3Client.class);
+	private static final Logger log = LoggerFactory.getLogger(S3Client.class);
 	
 	private AmazonS3 client;
 
@@ -141,11 +141,11 @@ public class AmazonS3Client {
 
 	private String glacierRetrievalTier;
 
-	public AmazonS3Client(AmazonS3 client) {
+	public S3Client(AmazonS3 client) {
 		this.client = client;
 	}
 
-	public AmazonS3Client(ClientConfiguration config, AWSCredentials creds, String region) {
+	public S3Client(ClientConfiguration config, AWSCredentials creds, String region) {
 		this.client = AmazonS3ClientBuilder
 				.standard()
 				.withCredentials(new AWSStaticCredentialsProvider(creds))
