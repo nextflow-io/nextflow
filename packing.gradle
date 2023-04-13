@@ -14,7 +14,7 @@ configurations {
 dependencies {
     api project(':nextflow')
     // include Ivy at runtime in order to have Grape @Grab work correctly
-    defaultCfg "org.apache.ivy:ivy:2.3.0"
+    defaultCfg "org.apache.ivy:ivy:2.5.1"
     // default cfg = runtime + httpfs + amazon + tower client
     defaultCfg project(':nf-httpfs')
     // Capsule manages the fat jar building process
