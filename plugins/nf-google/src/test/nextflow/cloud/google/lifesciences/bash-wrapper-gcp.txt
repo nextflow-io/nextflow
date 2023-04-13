@@ -164,7 +164,9 @@ nxf_fs_fcp() {
 }
 
 on_exit() {
-    exit_status=${nxf_main_ret:=$?}
+    local last_err=$?
+    exit_status=${nxf_main_ret:=$last_err}
+    [[ $exit_status -eq 0 && $last_err -ne 0 ]] && exit_status=$last_err
     printf $exit_status > {{folder}}/.exitcode
     set +u
     [[ "$tee1" ]] && kill $tee1 2>/dev/null

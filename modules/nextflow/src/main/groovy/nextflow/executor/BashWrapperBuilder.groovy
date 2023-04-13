@@ -615,7 +615,7 @@ class BashWrapperBuilder {
 
     protected String getStageCommand() { 'nxf_stage' }
 
-    protected String getUnstageCommand() { 'nxf_unstage' }
+    protected String getUnstageCommand() { '(set -e; nxf_unstage)' }
 
     protected String getUnstageControls() {
         def result = copyFileToWorkDir(TaskRun.CMD_OUTFILE) + ' || true' + ENDL

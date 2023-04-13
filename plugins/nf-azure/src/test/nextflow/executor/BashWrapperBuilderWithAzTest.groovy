@@ -47,7 +47,7 @@ class BashWrapperBuilderWithAzTest extends Specification {
         binding.unstage_outputs == """\
                     IFS=\$'\\n'
                     for name in \$(eval "ls -1d test.bam test.bai" | sort | uniq); do
-                        nxf_az_upload \$name '${AzHelper.toHttpUrl(target)}' || true
+                        nxf_az_upload \$name '${AzHelper.toHttpUrl(target)}'
                     done
                     unset IFS
                     """.stripIndent().rightTrim()

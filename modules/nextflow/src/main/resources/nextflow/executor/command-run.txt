@@ -99,7 +99,12 @@ nxf_fs_fcp() {
 }
 
 on_exit() {
-    exit_status=${nxf_main_ret:=$?}
+    ## capture the last error
+    ## can be caused either by the task script or the unstage script
+    local last_err=$?
+    ## capture the task error first or fallback to the last error
+    exit_status=${nxf_main_ret:=$last_err}
+    [[ $exit_status -eq 0 && $last_err -ne 0 ]] && exit_status=$last_err
     printf $exit_status {{exit_file}}
     set +u
     [[ "$tee1" ]] && kill $tee1 2>/dev/null
