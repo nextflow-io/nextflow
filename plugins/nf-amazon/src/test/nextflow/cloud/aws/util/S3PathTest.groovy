@@ -1,6 +1,6 @@
 package nextflow.cloud.aws.util
 
-import com.upplication.s3fs.S3Path
+import nextflow.cloud.aws.nio.S3Path
 import nextflow.file.FileHelper
 import spock.lang.Specification
 import spock.lang.Unroll
