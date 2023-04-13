@@ -320,7 +320,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		final Optional<S3FileAttributes> attrs = readAttr1(source);
 		final boolean isDir = attrs.isPresent() && attrs.get().isDirectory();
 		final String type = isDir ? "directory": "file";
-		final AmazonS3Client s3Client = source.getFileSystem().getClient();
+		final S3Client s3Client = source.getFileSystem().getClient();
 		log.debug("S3 download {} from={} to={}", type, FilesEx.toUriString(source), localDestination);
 		if( isDir ) {
 			s3Client.downloadDirectory(source, localDestination.toFile());
@@ -354,7 +354,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		final boolean isDir = Files.isDirectory(localFile);
 		final String type = isDir ? "directory": "file";
 		log.debug("S3 upload {} from={} to={}", type, localFile, FilesEx.toUriString(target));
-		final AmazonS3Client s3Client = target.getFileSystem().getClient();
+		final S3Client s3Client = target.getFileSystem().getClient();
 		if( isDir ) {
 			s3Client.uploadDirectory(localFile.toFile(), target);
 		}
@@ -364,7 +364,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 	}
 
 	private S3OutputStream createUploaderOutputStream( S3Path fileToUpload ) {
-		AmazonS3Client s3 = fileToUpload.getFileSystem().getClient();
+		S3Client s3 = fileToUpload.getFileSystem().getClient();
 		Properties props = fileToUpload.getFileSystem().properties();
 
 		final String storageClass = fileToUpload.getStorageClass()!=null ? fileToUpload.getStorageClass() : props.getProperty("upload_storage_class");
@@ -569,7 +569,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			}
 		}
 
-		AmazonS3Client client = s3Source.getFileSystem() .getClient();
+		S3Client client = s3Source.getFileSystem() .getClient();
 		Properties props = s3Target.getFileSystem().properties();
 		
 		final ObjectMetadata sourceObjMetadata = s3Source.getFileSystem().getClient().getObjectMetadata(s3Source.getBucket(), s3Source.getKey());
@@ -623,7 +623,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		Preconditions.checkArgument(s3Path.isAbsolute(),
 				"path must be absolute: %s", s3Path);
 
-		AmazonS3Client client = s3Path.getFileSystem().getClient();
+		S3Client client = s3Path.getFileSystem().getClient();
 
 		if( modes==null || modes.length==0 ) {
 			// when no modes are given, the method is invoked
@@ -851,19 +851,19 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		// add properties for legacy compatibility
 		props.putAll(awsConfig.getS3LegacyProperties());
 
-		AmazonS3Client client;
+		S3Client client;
 		ClientConfiguration clientConfig = createClientConfig(props);
 
 		final String bucketName = S3Path.bucketName(uri);
 		final boolean anonymous = "true".equals(props.getProperty("anonymous"));
 		if( anonymous ) {
 			log.debug("Creating AWS S3 client with anonymous credentials");
-			client = new AmazonS3Client(new com.amazonaws.services.s3.AmazonS3Client(new AnonymousAWSCredentials(), clientConfig));
+			client = new S3Client(new com.amazonaws.services.s3.AmazonS3Client(new AnonymousAWSCredentials(), clientConfig));
 		}
 		else {
 			final boolean global = bucketName!=null;
 			final AwsClientFactory factory = new AwsClientFactory(awsConfig, Regions.US_EAST_1.getName());
-			client = new AmazonS3Client(factory.getS3Client(clientConfig, global));
+			client = new S3Client(factory.getS3Client(clientConfig, global));
 		}
 
 		// set the client acl
