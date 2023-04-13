@@ -50,7 +50,7 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.upplication.s3fs.AmazonS3Client;
+import com.upplication.s3fs.S3Client;
 import com.upplication.s3fs.S3Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +75,7 @@ public class S3ObjectSummaryLookup {
             return summary;
         }
 
-        final AmazonS3Client client = s3Path.getFileSystem().getClient();
+        final S3Client client = s3Path.getFileSystem().getClient();
 
         /*
          * when `key` is an empty string retrieve the object meta-data of the bucket
@@ -147,7 +147,7 @@ public class S3ObjectSummaryLookup {
     }
 
     public ObjectMetadata getS3ObjectMetadata(S3Path s3Path) {
-        AmazonS3Client client = s3Path.getFileSystem().getClient();
+        S3Client client = s3Path.getFileSystem().getClient();
         try {
             return client.getObjectMetadata(s3Path.getBucket(), s3Path.getKey());
         }
@@ -167,7 +167,7 @@ public class S3ObjectSummaryLookup {
     @Deprecated
     private S3Object getS3Object(S3Path s3Path){
 
-        AmazonS3Client client = s3Path.getFileSystem()
+        S3Client client = s3Path.getFileSystem()
                 .getClient();
 
         S3Object object = getS3Object(s3Path.getBucket(), s3Path.getKey(), client);
@@ -184,10 +184,10 @@ public class S3ObjectSummaryLookup {
      * get s3Object with S3Object#getObjectContent closed
      * @param bucket String bucket
      * @param key String key
-     * @param client AmazonS3Client client
+     * @param client S3Client client
      * @return S3Object
      */
-    private S3Object getS3Object(String bucket, String key, AmazonS3Client client){
+    private S3Object getS3Object(String bucket, String key, S3Client client){
         try {
             S3Object object = client .getObject(bucket, key);
             if (object.getObjectContent() != null){
