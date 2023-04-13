@@ -113,11 +113,16 @@ class PluginUpdater extends UpdateManager {
         // Check if it's a plugin meta file. The name must match the pattern `<plugin id>-X.Y.Z-meta.json`
         final matcher = META_REGEX.matcher(uri.tokenize('/')[-1])
         if( matcher.matches() ) {
-            final pluginId = matcher.group(1)
-            final temp = File.createTempFile('nxf-','json')
-            temp.deleteOnExit()
-            temp.text = /[{"id":"${pluginId}", "releases":[ ${new URL(uri).text} ]}]/
-            uri = 'file://' + temp.absolutePath
+            try {
+                final pluginId = matcher.group(1)
+                final temp = File.createTempFile('nxf-','json')
+                temp.deleteOnExit()
+                temp.text = /[{"id":"${pluginId}", "releases":[ ${new URL(uri).text} ]}]/
+                uri = 'file://' + temp.absolutePath
+            }
+            catch (FileNotFoundException e) {
+                throw new IllegalArgumentException("Provided repository URL does not exists or cannot be accessed: $uri")
+            }
         }
         // create the update repository instance
         final fileName = uri.tokenize('/')[-1]
