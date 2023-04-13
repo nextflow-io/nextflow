@@ -23,6 +23,7 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import nextflow.executor.res.AcceleratorResource
+import nextflow.executor.res.DiskResource
 import nextflow.util.MemoryUnit
 import groovy.util.logging.Slf4j
 
@@ -78,7 +79,7 @@ class PodSpecBuilder {
 
     String memory
 
-    String disk
+    DiskResource disk
 
     String serviceAccount
 
@@ -187,13 +188,8 @@ class PodSpecBuilder {
         return this
     }
 
-    PodSpecBuilder withDisk(String disk) {
+    PodSpecBuilder withDisk( DiskResource disk ) {
         this.disk = disk
-        return this
-    }
-
-    PodSpecBuilder withDisk(MemoryUnit disk)  {
-        this.disk = "${disk.mega}Mi".toString()
         return this
     }
 
@@ -619,9 +615,11 @@ class PodSpecBuilder {
     }
 
     @PackageScope
-    Map addDiskResources(String diskRequest, Map res) {
+    Map addDiskResources(DiskResource disk, Map res) {
         if( res == null )
             res = new LinkedHashMap(10)
+
+        final diskRequest = disk.request.toMega() + 'Mi'
 
         final req = res.requests as Map ?: new LinkedHashMap(10)
         req.'ephemeral-storage' = diskRequest

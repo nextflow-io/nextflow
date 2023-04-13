@@ -24,6 +24,7 @@ import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.executor.Executor
 import nextflow.executor.res.AcceleratorResource
+import nextflow.executor.res.DiskResource
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -90,6 +91,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         runnable.getContainer().getVolumesList() == ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
         and:
         instancePolicy.getAcceleratorsCount() == 0
+        instancePolicy.getDisksCount() == 0
         instancePolicy.getMachineType() == ''
         instancePolicy.getMinCpuPlatform() == ''
         instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
@@ -113,7 +115,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def CONTAINER_OPTS = '--this --that'
         def CPU_PLATFORM = 'Intel Skylake'
         def CPUS = 4
-        def DISK = MemoryUnit.of('50 GB')
+        def DISK = new DiskResource(request: '375 GB', type: 'local-ssd')
         def MACHINE_TYPE = 'vm-type-2'
         def MEM = MemoryUnit.of('8 GB')
         def TIMEOUT = Duration.of('1 hour')
@@ -141,7 +143,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
                 getAccelerator() >> ACCELERATOR
                 getContainerOptions() >> CONTAINER_OPTS
                 getCpus() >> CPUS
-                getDisk() >> DISK
+                getDiskResource() >> DISK
                 getMachineType() >> MACHINE_TYPE
                 getMemory() >> MEM
                 getTime() >> TIMEOUT
@@ -168,7 +170,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def instancePolicy = allocationPolicy.getInstances(0).getPolicy()
         def networkInterface = allocationPolicy.getNetwork().getNetworkInterfaces(0)
         and:
-        taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == DISK.toMega()
+        taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == BOOT_DISK.toMega()
         taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == CPUS * 1_000
         taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == MEM.toMega()
         taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == TIMEOUT.seconds
@@ -193,6 +195,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         instancePolicy.getAccelerators(0).getCount() == 1
         instancePolicy.getAccelerators(0).getType() == ACCELERATOR.type
+        instancePolicy.getDisks(0).getNewDisk().getSizeGb() == DISK.request.toGiga()
+        instancePolicy.getDisks(0).getNewDisk().getType() == DISK.type
         instancePolicy.getMachineType() == MACHINE_TYPE
         instancePolicy.getMinCpuPlatform() == CPU_PLATFORM
         instancePolicy.getProvisioningModel().toString() == 'SPOT'

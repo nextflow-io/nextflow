@@ -154,9 +154,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                     .setSeconds( task.config.getTime().toSeconds() )
             )
 
-        final disk = task.config.getDisk() ?: executor.config.bootDiskSize
-        if( disk )
-            computeResource.setBootDiskMib( disk.getMega() )
+        if( executor.config.bootDiskSize )
+            computeResource.setBootDiskMib( executor.config.bootDiskSize.getMega() )
 
         // container
         if( !task.container )
@@ -225,6 +224,28 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             instancePolicyOrTemplate.setInstallGpuDrivers(true)
         }
 
+        final disk = task.config.getDiskResource()
+        if( disk )
+            instancePolicy.addDisks(
+                AllocationPolicy.AttachedDisk.newBuilder()
+                    .setNewDisk(
+                        AllocationPolicy.Disk.newBuilder()
+                            .setType(disk.type ?: 'pd-standard')
+                            .setSizeGb(disk.request.toGiga())
+                    )
+            )
+
+        else if( fusionEnabled() )
+            instancePolicy.addDisks(
+                AllocationPolicy.AttachedDisk.newBuilder()
+                    .setNewDisk(
+                        AllocationPolicy.Disk.newBuilder()
+                            .setType('local-ssd')
+                            .setSizeGb(375)
+                    )
+                    .setDeviceName('fusion')
+            )
+
         if( executor.config.cpuPlatform )
             instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )
 
@@ -246,17 +267,6 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         if( executor.config.spot )
             instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.SPOT )
-
-        // Fusion configuration
-        if( fusionEnabled() ) {
-            instancePolicy.addDisks(AllocationPolicy.AttachedDisk.newBuilder()
-                    .setNewDisk(AllocationPolicy.Disk.newBuilder()
-                            .setType("local-ssd")
-                            .setSizeGb(375)
-                    )
-                    .setDeviceName("fusion")
-            )
-        }
 
         allocationPolicy.addInstances(
             instancePolicyOrTemplate
