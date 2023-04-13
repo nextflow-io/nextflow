@@ -23,7 +23,7 @@ import com.amazonaws.services.batch.AWSBatch
 import com.amazonaws.services.batch.model.AWSBatchException
 import com.amazonaws.services.ecs.model.AccessDeniedException
 import com.amazonaws.services.logs.model.ResourceNotFoundException
-import com.upplication.s3fs.S3Path
+import nextflow.cloud.aws.nio.S3Path
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
