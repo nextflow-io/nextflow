@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2020-2022, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,30 +12,24 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  */
-package nextflow.cloud.aws
 
-import nextflow.cloud.aws.nio.S3FileSystemProvider
-import groovy.transform.CompileStatic
-import nextflow.file.FileHelper
-import nextflow.plugin.BasePlugin
-import org.pf4j.PluginWrapper
+package nextflow.cloud.aws.nio.util;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+
 /**
- * Nextflow plugin for Amazon extensions
+ * https://stackoverflow.com/a/31809148/395921
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@CompileStatic
-class AmazonPlugin extends BasePlugin {
+public class CopyOutputStream extends ByteArrayOutputStream {
 
-    AmazonPlugin(PluginWrapper wrapper) {
-        super(wrapper)
+    //Creates InputStream without actually copying the buffer and using up mem for that.
+    public InputStream toInputStream(){
+        return new ByteArrayInputStream(buf, 0, count);
     }
-
-    @Override
-    void start() {
-        super.start()
-        FileHelper.getOrInstallProvider(S3FileSystemProvider)
-    }
-
 }

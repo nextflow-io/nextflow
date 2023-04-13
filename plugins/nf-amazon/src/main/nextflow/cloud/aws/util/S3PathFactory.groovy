@@ -17,7 +17,7 @@ package nextflow.cloud.aws.util
 
 import java.nio.file.Path
 
-import com.upplication.s3fs.S3Path
+import nextflow.cloud.aws.nio.S3Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global

@@ -1,6 +1,6 @@
 package nextflow.cloud.aws.util
 
-import com.upplication.s3fs.S3Path
+import nextflow.cloud.aws.nio.S3Path
 import spock.lang.Specification
 /**
  *
