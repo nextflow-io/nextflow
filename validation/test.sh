@@ -49,12 +49,6 @@ if [[ $TEST_MODE == 'test_integration' ]]; then
 fi
 
 
-if [[ $GITHUB_EVENT_NAME == pull_request ]]; then
-  echo "Skipping cloud integration tests on PR event"
-  exit 0
-fi
-
-
 #
 # AWS Batch tests
 #

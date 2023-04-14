@@ -9,16 +9,6 @@ X_PULL_REQUEST=${TRAVIS_PULL_REQUEST:-false}
 [[ $GITHUB_REF ]] && X_BRANCH=$(echo $GITHUB_REF | awk '{n=split($1,A,"/"); print A[n]}')
 [[ $GITHUB_EVENT_NAME == pull_request ]] && X_PULL_REQUEST=true
 
-if [[ $X_PULL_REQUEST != false ]] && [ ${TEST_JDK} -ne 19 ]; then
-  echo "Skipping integration tests on PR and JDK != 19"
-  exit 0
-fi
-
-if [[ $X_BRANCH != master && $X_BRANCH != testing ]] && [ ${TEST_JDK:=11} -ne 19 ]; then
-  echo "Integration tests are only executed on branch 'master' or 'testing' for JDK != 19"
-  exit 0
-fi
-
 export WITH_DOCKER='-with-docker'
 export NXF_PLUGINS_DIR=$PWD/build/plugins
 export NXF_CMD=$PWD/nextflow;

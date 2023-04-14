@@ -406,6 +406,7 @@ else
 
     if [[ "$JAVA_VER" =~ ^(9|10|11|12|13|14|15|16|17|18|19) ]]; then
       launcher="${cmd_base[@]}"
+      launcher+=(--enable-preview)
       launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
