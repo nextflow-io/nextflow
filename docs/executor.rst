@@ -33,6 +33,8 @@ The pipeline can be launched either in a local computer, or an EC2 instance. EC2
 Resource requests and other job characteristics can be controlled via the following process directives:
 
 * :ref:`process-accelerator`
+* :ref:`process-container`
+* :ref:`process-containerOptions`
 * :ref:`process-cpus`
 * :ref:`process-memory`
 * :ref:`process-queue`
@@ -56,6 +58,16 @@ script or the ``nextflow.config`` file.
 To enable this executor, set the property ``process.executor = 'azurebatch'`` in the ``nextflow.config`` file.
 
 The pipeline can be launched either in a local computer, or a cloud virtual machine. The cloud VM is suggested for heavy or long-running workloads. Moreover, an Azure Blob storage container must be used as the pipeline work directory.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+* :ref:`process-container`
+* :ref:`process-containerOptions`
+* :ref:`process-cpus`
+* :ref:`process-machineType`
+* :ref:`process-memory`
+* :ref:`process-queue`
+* :ref:`process-time`
 
 See the :ref:`Azure Batch <azure-batch>` page for further configuration details.
 
