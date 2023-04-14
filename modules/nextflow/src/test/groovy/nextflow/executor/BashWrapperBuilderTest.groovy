@@ -21,6 +21,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.container.ContainerConfig
 import nextflow.container.DockerBuilder
 import nextflow.container.SingularityBuilder
@@ -364,34 +365,18 @@ class BashWrapperBuilderTest extends Specification {
 
         given:
         def folder = Paths.get('/work/dir')
-        def inputs = ['sample_1.fq':Paths.get('/some/data/sample_1.fq'), 'sample_2.fq':Paths.get('/some/data/sample_2.fq'), ]
-
-        when:
-        def binding = newBashWrapperBuilder([
-                workDir: folder,
-                targetDir: folder,
-                inputFiles: inputs ]).makeBinding()
-
-        then:
-        binding.stage_inputs == '''\
+        def inputs = [
+            'sample_1.fq': Paths.get('/some/data/sample_1.fq'),
+            'sample_2.fq': Paths.get('/some/data/sample_2.fq'),
+        ]
+        def stageScript = '''\
                 # stage input files
                 rm -f sample_1.fq
                 rm -f sample_2.fq
                 ln -s /some/data/sample_1.fq sample_1.fq
                 ln -s /some/data/sample_2.fq sample_2.fq
                 '''.stripIndent().rightTrim()
-        binding.stage_script == binding.stage_inputs
-    }
 
-    def 'should stage many inputs with separate script' () {
-
-        given:
-        def folder = Paths.get('/work/dir')
-        def inputs = (1..1000).inject([:]) { accum, i ->
-            accum["sample_${i}.fq"] = Paths.get("/some/data/sample_${i}.fq")
-            accum
-        }
-        
         when:
         def binding = newBashWrapperBuilder([
                 workDir: folder,
@@ -399,7 +384,22 @@ class BashWrapperBuilderTest extends Specification {
                 inputFiles: inputs ]).makeBinding()
 
         then:
+        binding.stage_inputs == stageScript
+        binding.stage_script == stageScript
+
+        when:
+        SysEnv.push([NXF_WRAPPER_STAGE_FILE_THRESHOLD: '2'])
+        binding = newBashWrapperBuilder([
+                workDir: folder,
+                targetDir: folder,
+                inputFiles: inputs ]).makeBinding()
+
+        then:
+        binding.stage_inputs == stageScript
         binding.stage_script == 'source /work/dir/.command.stage'
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should unstage outputs' () {

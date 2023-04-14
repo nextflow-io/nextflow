@@ -48,10 +48,12 @@ import static java.nio.file.StandardOpenOption.*
 @CompileStatic
 class BashWrapperBuilder {
 
+    private static int DEFAULT_STAGE_FILE_THRESHOLD = 1000
     private static int DEFAULT_WRITE_BACK_OFF_BASE = 3
     private static int DEFAULT_WRITE_BACK_OFF_DELAY = 250
     private static int DEFAULT_WRITE_MAX_ATTEMPTS = 5
 
+    private int stageFileThreshold = SysEnv.get('NXF_WRAPPER_STAGE_FILE_THRESHOLD') as Integer ?: DEFAULT_STAGE_FILE_THRESHOLD
     private int writeBackOffBase = SysEnv.get('NXF_WRAPPER_BACK_OFF_BASE') as Integer ?: DEFAULT_WRITE_BACK_OFF_BASE
     private int writeBackOffDelay = SysEnv.get('NXF_WRAPPER_BACK_OFF_DELAY') as Integer ?: DEFAULT_WRITE_BACK_OFF_DELAY
     private int writeMaxAttempts = SysEnv.get('NXF_WRAPPER_MAX_ATTEMPTS') as Integer ?: DEFAULT_WRITE_MAX_ATTEMPTS
@@ -153,7 +155,7 @@ class BashWrapperBuilder {
     }
 
     protected boolean isStageFileRequired() {
-        inputFiles.size() >= 1000
+        inputFiles.size() >= stageFileThreshold
     }
 
     protected boolean shouldUnstageOutputs() {
@@ -288,7 +290,7 @@ class BashWrapperBuilder {
 
         if( isStageFileRequired() ) {
             binding.stage_script = "source ${stageFile}"
-            stageScript = getStageScript(binding)
+            stageScript = binding.stage_inputs
         }
         else
             binding.stage_script = binding.stage_inputs
@@ -328,11 +330,6 @@ class BashWrapperBuilder {
 
     protected boolean isBash(String interpreter) {
         interpreter.tokenize(' /').contains('bash')
-    }
-
-    protected String getStageScript(Map binding) {
-        def res = BashWrapperBuilder.class.getResource('command-stage.txt')
-        engine.render(res.newReader(), binding)
     }
 
     protected String getTraceScript(Map binding) {
