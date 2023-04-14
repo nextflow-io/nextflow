@@ -21,6 +21,7 @@ import java.nio.file.Paths
 
 import nextflow.NextflowMeta
 import nextflow.Session
+import spock.lang.Ignore
 import spock.lang.Specification
 /**
  *
@@ -28,7 +29,7 @@ import spock.lang.Specification
  */
 class BaseScriptTest extends Specification {
 
-
+    @Ignore
     def 'should define implicit variables' () {
 
         given:

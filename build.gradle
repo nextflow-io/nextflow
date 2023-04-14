@@ -60,7 +60,7 @@ allprojects {
 
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(20)
+            languageVersion = JavaLanguageVersion.of(19)
         }
     }
 
@@ -138,6 +138,7 @@ allprojects {
     if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
         tasks.withType(Test) {
             jvmArgs ([
+                    '--enable-preview',
                     '--add-opens=java.base/java.lang=ALL-UNNAMED',
                     '--add-opens=java.base/java.io=ALL-UNNAMED',
                     '--add-opens=java.base/java.nio=ALL-UNNAMED',
