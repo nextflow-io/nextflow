@@ -1,5 +1,7 @@
 package nextflow.cloud.azure.batch
 
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.function.Predicate
 
 import com.google.common.hash.HashCode
@@ -232,6 +234,23 @@ class AzBatchServiceTest extends Specification {
         then:
         formula.contains 'interval = TimeInterval_Minute * 5;'
         formula.contains '$TargetDedicatedNodes = lifespan < interval ? 3 : targetPoolSize;'
+    }
+
+    def 'should  check formula vars' () {
+        given:
+        def exec = Mock(AzBatchExecutor) { getConfig() >> new AzConfig([:]) }
+        def svc = new AzBatchService(exec)
+        and:
+        def opts = new AzPoolOpts(vmCount: 3, maxVmCount: 10, scaleInterval: Duration.of('5 min'))
+        def now = Instant.now()
+
+        when:
+        def vars = svc.poolCreationBindings(opts, now)
+        then:
+        vars == [scaleInterval: 5,
+                 maxVmCount: 10,
+                 vmCount: 3,
+                 poolCreationTime: now.truncatedTo(ChronoUnit.MICROS).toString() ]
     }
 
     def 'should guess vm' () {
