@@ -757,14 +757,19 @@ class AzBatchService implements Closeable {
             '''.stripIndent(true)
 
         final scaleFormula = opts.scaleFormula ?: DEFAULT_FORMULA
+        final vars = poolCreationBindings(opts, Instant.now())
+        final result = new MustacheTemplateEngine().render(scaleFormula, vars)
+        log.debug "Pool autoscale formula:\n$result"
+        return result
+    }
+
+    protected Map poolCreationBindings(AzPoolOpts opts, Instant time) {
         final vars = new HashMap<String, String>()
         vars.scaleInterval = opts.scaleInterval.minutes
         vars.vmCount = opts.vmCount
         vars.maxVmCount = opts.maxVmCount
-        vars.poolCreationTime = Instant.now().toString()
-        final result = new MustacheTemplateEngine().render(scaleFormula, vars)
-        log.debug "Pool autoscale formula:\n$result"
-        return result
+        vars.poolCreationTime = time.truncatedTo(ChronoUnit.MICROS).toString()
+        return vars
     }
 
     void deleteTask(AzTaskKey key) {
