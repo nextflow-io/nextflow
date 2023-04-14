@@ -51,6 +51,7 @@ import com.microsoft.azure.batch.protocol.models.PoolState
 import com.microsoft.azure.batch.protocol.models.ResourceFile
 import com.microsoft.azure.batch.protocol.models.StartTask
 import com.microsoft.azure.batch.protocol.models.TaskAddParameter
+import com.microsoft.azure.batch.protocol.models.TaskConstraints
 import com.microsoft.azure.batch.protocol.models.TaskContainerSettings
 import com.microsoft.azure.batch.protocol.models.TaskSchedulingPolicy
 import com.microsoft.azure.batch.protocol.models.UserIdentity
@@ -412,8 +413,13 @@ class AzBatchService implements Closeable {
         final String cmd = fusionEnabled
                 ? launcher.fusionSubmitCli(task).join(' ')
                 : "sh -c 'bash ${TaskRun.CMD_RUN} 2>&1 | tee ${TaskRun.CMD_LOG}'"
-
+        // cpus and memory
         final slots = computeSlots(task, pool)
+        // max wall time
+        final constraints = new TaskConstraints()
+        if( task.config.getTime() )
+            constraints.withMaxWallClockTime( new Period(task.config.getTime().toMillis()) )
+
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
 
         return new TaskAddParameter()
@@ -424,6 +430,7 @@ class AzBatchService implements Closeable {
                 .withResourceFiles(resourceFileUrls(task,sas))
                 .withOutputFiles(outputFileUrls(task, sas))
                 .withRequiredSlots(slots)
+                .withConstraints(constraints)
     }
 
     AzTaskKey runTask(String poolId, String jobId, TaskRun task) {
