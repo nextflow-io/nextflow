@@ -89,7 +89,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-123',
                                      image:'debian:latest',
-                                     args:['/bin/bash', '-ue', '-c', '/some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'] ]
+                                     args:['/bin/bash', '-ue', '-c', 'bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'] ]
                             ]
                     ]
         ]
@@ -120,7 +120,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-foo',
                                      image:'debian:latest',
-                                     command:['/bin/bash', '-ue', '-c', '/some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
+                                     command:['/bin/bash', '-ue', '-c', 'bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
                                      resources:[ requests: [cpu:1] ],
                                      env: [  [name:'NXF_OWNER', value:'501:502'] ]
                                     ]
@@ -154,7 +154,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-abc',
                                      image:'user/alpine:1.0',
-                                     command:['/bin/bash', '-ue', '-c', '/some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
+                                     command:['/bin/bash', '-ue', '-c', 'bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
                                      resources:[ requests: [cpu:4, memory:'16384Mi'], limits:[memory:'16384Mi'] ]
                                     ]
                             ]
@@ -203,7 +203,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-123',
                                      image:'debian:latest',
-                                     command:['/bin/bash', '-ue', '-c', '/some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'] ]
+                                     command:['/bin/bash', '-ue', '-c', 'bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'] ]
                             ]
                     ]
                 ]
@@ -234,7 +234,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-foo',
                                      image:'debian:latest',
-                                     command:['/bin/bash', '-ue', '-c', '/some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
+                                     command:['/bin/bash', '-ue', '-c', 'bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
                                      resources:[ requests: [cpu:1] ],
                                      env: [  [name:'NXF_OWNER', value:'501:502'] ]
                                     ]
@@ -267,7 +267,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-abc',
                                      image:'user/alpine:1.0',
-                                     command:['/bin/bash', '-ue', '-c', '/some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
+                                     command:['/bin/bash', '-ue', '-c', 'bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
                                      resources:[ requests: [cpu:4, memory:'16384Mi'], limits: [memory:'16384Mi'] ]
                                     ]
                             ]
@@ -316,7 +316,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-123',
                                      image:'debian:latest',
-                                     args:['/bin/bash', '-ue', '-c', '/some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
+                                     args:['/bin/bash', '-ue', '-c', 'bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
                                      env:[[name:'NXF_DEBUG', value:'true']] ]
                             ]
                     ]
@@ -364,7 +364,7 @@ class K8sTaskHandlerTest extends Specification {
                             containers:[
                                     [name:'nf-123',
                                      image:'debian:latest',
-                                     command:['/bin/bash', '-ue', '-c', '/some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
+                                     command:['/bin/bash', '-ue', '-c', 'bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
                                      resources:[requests:[cpu:1]]
                                     ]
                             ]
@@ -416,7 +416,7 @@ class K8sTaskHandlerTest extends Specification {
                     [
                         name: 'nf-123',
                         image: 'debian:latest',
-                        command: ['/bin/bash', '-ue', '-c', '/some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
+                        command: ['/bin/bash', '-ue', '-c', 'bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
                         env: [[name:'FOO', value:'bar']],
                         volumeMounts: [
                             [name:'vol-1', mountPath:'/etc'],
@@ -478,7 +478,7 @@ class K8sTaskHandlerTest extends Specification {
                     [
                         name: 'nf-123',
                         image: 'debian:latest',
-                        command: ['/bin/bash', '-ue', '-c', '/some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
+                        command: ['/bin/bash', '-ue', '-c', 'bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
                         volumeMounts: [
                             [name:'vol-1', mountPath:'/work'],
                             [name:'vol-2', mountPath:'/data']
@@ -521,7 +521,7 @@ class K8sTaskHandlerTest extends Specification {
                     [
                         name: 'nf-123',
                         image: 'debian:latest',
-                        command: ['/bin/bash', '-ue', '-c', '/some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
+                        command: ['/bin/bash', '-ue', '-c', 'bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log'],
                         volumeMounts: [
                             [name:'vol-3', mountPath:'/tmp'],
                             [name:'vol-4', mountPath: '/data']
@@ -616,7 +616,7 @@ class K8sTaskHandlerTest extends Specification {
                        [
                            name: 'nf-123',
                            image: 'debian:latest',
-                           command: ['/bin/bash', '-ue', '-c', '/some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log']
+                           command: ['/bin/bash', '-ue', '-c', 'bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log']
                        ]
                      ]
                   ]

@@ -149,7 +149,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
         final result = new ArrayList(BashWrapperBuilder.BASH)
         result.add('-c')
-        result.add("${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${workDir}/${TaskRun.CMD_LOG}")
+        result.add("bash ${workDir}/${TaskRun.CMD_RUN} 2>&1 | tee ${workDir}/${TaskRun.CMD_LOG}")
         return result
     }
 
@@ -466,7 +466,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             return
 
         if( !task.isSuccess() ) {
-            // do not delete failed pods for debugging purpose
+            // do not delete failed pods for debugging purposes
             return
         }
 
