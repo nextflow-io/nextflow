@@ -10,7 +10,7 @@ Requirements
 ============
 
 Nextflow can be used on any POSIX compatible system (Linux, OS X, etc).
-It requires Bash 3.2 (or later) and `Java 11 (or later, up to 19) <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_ to be installed.
+It requires Bash 3.2 (or later) and `Java 11 (or later, up to 20) <http://www.oracle.com/technetwork/java/javase/downloads/index.html>`_ to be installed.
 
 For the execution in a cluster of computers, the use of a shared file system is required to allow
 the sharing of tasks input/output files.
