@@ -267,9 +267,6 @@ on_exit() {
     exit_status=${nxf_main_ret:=$?}
     printf $exit_status > {{folder}}/.exitcode
     set +u
-    [[ "$tee1" ]] && kill $tee1 2>/dev/null
-    [[ "$tee2" ]] && kill $tee2 2>/dev/null
-    [[ "$ctmp" ]] && rm -rf $ctmp || true
     sync || true
     exit $exit_status
 }
@@ -307,17 +304,9 @@ nxf_main() {
     nxf_stage
 
     set +e
-    ctmp=$(set +u; nxf_mktemp /dev/shm 2>/dev/null || nxf_mktemp $TMPDIR)
-    local cout=$ctmp/.command.out; mkfifo $cout
-    local cerr=$ctmp/.command.err; mkfifo $cerr
-    tee .command.out < $cout &
-    tee1=$!
-    tee .command.err < $cerr >&2 &
-    tee2=$!
-    ( nxf_launch ) >$cout 2>$cerr &
+    (set -o pipefail; (nxf_launch | tee .command.out) 3>&1 1>&2 2>&3 | tee .command.err) &
     pid=$!
     wait $pid || nxf_main_ret=$?
-    wait $tee1 $tee2
     nxf_unstage
 }
 
