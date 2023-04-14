@@ -302,7 +302,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
        
         def resp
 
-        switch(req.kind) {
+        switch( req.kind ) {
            case 'Pod':
                resp = client.podCreate(req, yamlDebugPath())
                break
@@ -317,8 +317,8 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
  
         if( !resp.metadata?.name )
             throw new K8sResponseException("Missing created ${resourceType.lower()} name", resp)
-        if ( resourceType == ResourceType.MPIJob )
-            this.podName = resp.metadata.name+"-launcher"
+        if( resourceType == ResourceType.MPIJob )
+            this.podName = "${resp.metadata.name}-launcher"
         else
             this.podName = resp.metadata.name
         this.status = TaskStatus.SUBMITTED
@@ -339,9 +339,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             final delta =  now - timestamp;
             if( !state || delta >= 1_000) {
                 def newState
-                switch(resourceType) {
-		    case ResourceType.Job:
-		        newState = client.jobState(podName)
+                switch( resourceType ) {
+                    case ResourceType.Job:
+                        newState = client.jobState(podName)
                         break
                     case ResourceType.Pod:
                         newState = client.podState(podName)
@@ -349,7 +349,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                     case ResourceType.MPIJob:
                         newState = client.mpiJobState(podName)
                         break
-		}
+                }
                 if( newState ) {
                    log.trace "[K8s] Get ${resourceType.lower()}=$podName state=$newState"
                    state = newState
@@ -486,11 +486,12 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         
         if( podName ) {
             log.trace "[K8s] deleting ${resourceType.lower()} name=$podName"
-            if ( useJobResource() ) {
+            if( useJobResource() ) {
                 client.jobDelete(podName)
-                if ( resourceType == ResourceType.MPIJob )
+                if( resourceType == ResourceType.MPIJob )
                     client.mpiJobDelete(podName.minus("-launcher"))
-            } else
+            }
+            else
                 client.podDelete(podName)
         }
         else {
@@ -515,11 +516,12 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         try {
-            if ( useJobResource() ) {
+            if( useJobResource() ) {
                 client.jobDelete(podName)
-		if ( resourceType == ResourceType.MPIJob )
+                if( resourceType == ResourceType.MPIJob )
                     client.mpiJobDelete(podName.minus("-launcher"))
-            } else
+            }
+            else
                 client.podDelete(podName)
         }
         catch( Exception e ) {

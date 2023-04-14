@@ -188,8 +188,7 @@ class K8sClient {
      *  https://v1-8.docs.kubernetes.io/docs/api-reference/v1.8/#create-55
      *  https://v1-8.docs.kubernetes.io/docs/api-reference/v1.8/#job-v1-batch
      *
-     * @param spec
-     * @return
+     * @param req
      */
     K8sResponseJson jobCreate(String req) {
         assert req
@@ -198,7 +197,6 @@ class K8sClient {
         trace('POST', action, resp.text)
         return new K8sResponseJson(resp.text)
     }
-
 
     K8sResponseJson jobCreate(Map req, Path saveYamlPath=null) {
 
@@ -213,13 +211,12 @@ class K8sClient {
     }
 
     /**
-     * Create a mpijob
+     * Create an MPIJob
      *
      * See
      *  https://github.com/kubeflow/mpi-operator
      *
-     * @param spec
-     * @return
+     * @param req
      */
     K8sResponseJson mpiJobCreate(String req) {
         assert req
@@ -436,20 +433,23 @@ class K8sClient {
     }
 
     /**
-     * MPIJob is not instantly created but indirectly via operator thus its real Job might not exist yet.
+     * Get the job state of an MPIJob. Because the MPIJob is created indirectly via operator,
+     * the corresponding Job might not exist yet.
+     *
+     * @param jobName
      */
     Map mpiJobState( String jobName ) {
         for( int i = 1; i <= 5; i++ ) {
             try {
-	        return jobState(jobName) 
-	    } 
+                return jobState(jobName) 
+            } 
             catch (K8sResponseException err) {
-                if( err.response.code != 404 ) {
-	            throw err
-		} else {
-		    final long delay = (Math.pow(3, i - 1) as long) * 250
+                if( err.response.code != 404 )
+                    throw err
+                else {
+                    final long delay = (Math.pow(3, i - 1) as long) * 250
                     sleep( delay )
-		}
+                }
             }
         }
     }

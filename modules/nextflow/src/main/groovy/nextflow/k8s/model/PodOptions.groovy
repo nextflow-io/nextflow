@@ -70,11 +70,11 @@ class PodOptions {
     private Integer mpiJobWorkers
 
     private String sshAuthMountPath 
- 
+
     private String computeResourceType
 
     private Boolean waitForWorkers
-    
+
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         envVars = new HashSet<>(size)

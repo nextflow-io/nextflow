@@ -549,9 +549,8 @@ class PodSpecBuilder {
     }
 
     Map buildAsJob() {
-	if( computeResourceType == ResourceType.MPIJob.name() ) {
+        if( computeResourceType == ResourceType.MPIJob.name() )
             return buildAsMPIJob()
-        }
 
         final pod = build()
 
@@ -595,35 +594,37 @@ class PodSpecBuilder {
         final launcher = build()
 
         final result = [
-           apiVersion: 'kubeflow.org/v2beta1',
-           kind: 'MPIJob',
-           metadata: launcher.metadata,
-           spec: [
-              slotsPerWorker: 1,
-              runPolicy: [
-                cleanPodPolicy: 'All'
-              ],
-              sshAuthMountPath: this.sshAuthMountPath,
-              mpiReplicaSpecs: [
-                Launcher: [
-                  replicas: 1,
-                  template: [
-                    spec: launcher.spec
-                  ]
+            apiVersion: 'kubeflow.org/v2beta1',
+            kind: 'MPIJob',
+            metadata: launcher.metadata,
+            spec: [
+                slotsPerWorker: 1,
+                runPolicy: [
+                    cleanPodPolicy: 'All'
                 ],
-                Worker: [
-                  replicas: this.mpiJobWorkers,
-                  template: [
-                    spec: worker.spec
-                  ]
+                sshAuthMountPath: this.sshAuthMountPath,
+                mpiReplicaSpecs: [
+                    Launcher: [
+                        replicas: 1,
+                        template: [
+                            spec: launcher.spec
+                        ]
+                    ],
+                    Worker: [
+                        replicas: this.mpiJobWorkers,
+                        template: [
+                            spec: worker.spec
+                        ]
+                    ]
                 ]
-              ]
-           ]
+            ]
         ]
-	if( waitForWorkers ) {
-           final spec = result.spec as Map
-           spec.waitForWorkers = waitForWorkers
+
+        if( waitForWorkers ) {
+            final spec = result.spec as Map
+            spec.waitForWorkers = waitForWorkers
         }
+
         return result
     }
 

@@ -610,63 +610,58 @@ class K8sTaskHandlerTest extends Specification {
         1 * task.getConfig() >> config
 
         result == [
-            apiVersion: 'kubeflow.org/v2beta1', 
-            kind: 'MPIJob', 
+            apiVersion: 'kubeflow.org/v2beta1',
+            kind: 'MPIJob',
             metadata: [
-                name: 'nf-123', 
+                name: 'nf-123',
                 namespace: 'default'
-            ], 
+            ],
             spec: [
-              slotsPerWorker: 1,
-              runPolicy: [
-                cleanPodPolicy: 'All'
-              ],
-              waitForWorkers: true,
-              sshAuthMountPath: '/ssh/path',
-              mpiReplicaSpecs: [
-                Launcher: [
-                   replicas: 1, 
-                   template: [
-                     spec: [
-                       restartPolicy: 'Never', 
-                       containers: [
-                         [ 
-                             name: 'nf-123', 
-                             image: 'debian:latest', 
-                             command: ['/bin/bash', '-ue', '/some/work/dir/.command.run'], 
-                             resources: [
-                                requests: [
-                                  cpu: 1, 
-                                  memory: '2048Mi'
-                                ], 
-                                limits: [ 
-                                  memory: '2048Mi'
-                                ]
-                             ]
-                         ]
-                       ]
-                     ]
-                   ]
-                ], 
-                Worker: [
-                 replicas: 2, 
-                 template: [
-                   spec: [
-                     restartPolicy: 'Never', 
-                     containers: [ 
-                        [
-                          name: 'nf-123', 
-                          image: 'debian:latest'
+                slotsPerWorker: 1,
+                runPolicy: [
+                    cleanPodPolicy: 'All'
+                ],
+                waitForWorkers: true,
+                sshAuthMountPath: '/ssh/path',
+                mpiReplicaSpecs: [
+                    Launcher: [
+                        replicas: 1,
+                        template: [
+                            spec: [
+                                restartPolicy: 'Never',
+                                containers: [[
+                                    name: 'nf-123',
+                                    image: 'debian:latest',
+                                    command: ['/bin/bash', '-ue', '/some/work/dir/.command.run'],
+                                    resources: [
+                                        requests: [
+                                            cpu: 1,
+                                            memory: '2048Mi'
+                                        ],
+                                        limits: [
+                                            memory: '2048Mi'
+                                        ]
+                                    ]
+                                ]]
+                            ]
                         ]
-                     ]
-                   ]
-                 ]
+                    ],
+                    Worker: [
+                        replicas: 2,
+                        template: [
+                            spec: [
+                                restartPolicy: 'Never',
+                                containers: [[
+                                    name: 'nf-123',
+                                    image: 'debian:latest'
+                                ]]
+                            ]
+                        ]
+                    ]
                 ]
-              ]
             ]
         ]
     }
-
 
     def 'should check if running'  () {
         given:
