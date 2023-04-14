@@ -47,7 +47,7 @@ accessible from all compute nodes.
 Enabling Conda environment
 ==========================
 
-As of version ``22.08.0-edge`` the use Conda recipes specified using the :ref:`process-conda`
+As of version ``22.08.0-edge`` the use of Conda recipes specified using the :ref:`process-conda`
 directive needs to be enabled explicitly by setting the option shown below in the pipeline
 configuration file (i.e. ``nextflow.config``)::
 
@@ -55,7 +55,7 @@ configuration file (i.e. ``nextflow.config``)::
 
 
 Alternatively it can be specified by setting the variable ``NXF_CONDA_ENABLED=true`` in your environment
-or by using the ``-with-conda true`` command line option.
+or by using the ``-with-conda`` command line option.
 
 
 Use Conda package names
