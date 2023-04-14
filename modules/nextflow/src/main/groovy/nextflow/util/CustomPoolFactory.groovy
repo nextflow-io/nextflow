@@ -17,6 +17,7 @@
 package nextflow.util
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
 import groovyx.gpars.scheduler.Pool
 import groovyx.gpars.scheduler.ResizeablePool
 import groovyx.gpars.util.PoolFactory
@@ -27,6 +28,7 @@ import groovyx.gpars.util.PoolFactory
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class CustomPoolFactory implements PoolFactory {
 
@@ -40,7 +42,7 @@ class CustomPoolFactory implements PoolFactory {
     @Override
     synchronized Pool createPool() {
 
-        def type = property(NXF_POOL_TYPE, 'default')
+        final type = property(NXF_POOL_TYPE, 'virtual')
         switch (type) {
             case 'default':
                 int poolSize = Runtime.runtime.availableProcessors() +1
@@ -65,6 +67,10 @@ class CustomPoolFactory implements PoolFactory {
                 int cpus = Runtime.runtime.availableProcessors()
                 int size = property(NXF_MAX_THREADS, cpus+1) as int
                 return CustomThreadPool.unboundedPool(size)
+
+            case 'virtual':
+                log.debug "Creating virtual thread pool"
+                return new VirtualThreadPool()
 
             default:
                 throw new IllegalAccessException("Unknown thread pool type: `$type`")
