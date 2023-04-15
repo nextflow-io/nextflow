@@ -38,7 +38,7 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.4.1'
 
     api ('javax.xml.bind:jaxb-api:2.3.1')
-    api ('com.amazonaws:aws-java-sdk-codecommit:1.12.129')
+    api ('com.amazonaws:aws-java-sdk-codecommit:1.12.429')
         
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
