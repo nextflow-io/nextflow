@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.0.1 - 15 Apr 2023
+- Security fixes [83e8fd6a]
+- Fix Azure pool creation when using scaling formula (#3868) [84a808a5]
+
 1.0.0 - 1 Apr 2023
 - Add support for Fusion to Azure Batch executor (#3209) [3d3cbfa2]
 - Fix NoSuchMethodError String.stripIndent with Java 11 [308eafe6]
