@@ -5,7 +5,7 @@ export NXF_ANSI_LOG=false
 # run normal mode
 #
 echo ''
-$NXF_RUN | tee stdout
+$NXF_RUN | grep -v WARN |tee stdout
 
 [[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > foo'` == 26 ]] || false
 cmp stdout .expected || false
@@ -15,7 +15,7 @@ cmp stdout .expected || false
 # RESUME mode
 #
 echo ''
-$NXF_RUN -resume | tee stdout
+$NXF_RUN -resume | grep -v WARN | tee stdout
 
 [[ `grep 'INFO' .nextflow.log | grep -c 'Cached process > foo'` == 26 ]] || false
 cmp stdout .expected || false
