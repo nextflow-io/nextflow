@@ -49,7 +49,7 @@ if [[ $TEST_MODE == 'test_integration' ]]; then
 fi
 
 if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-  if [ "$(jq -r '.pull_request.head.repo.fork' $GITHUB_EVENT_PATH)" != "null" ]; then
+  if [ "$(jq -r '.pull_request.head.repo.fork' $GITHUB_EVENT_PATH)" = "true" ]; then
     echo "Skipping cloud integration tests on external PR event"
     exit 0
   fi

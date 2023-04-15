@@ -423,15 +423,13 @@ else
       launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.util.regex=ALL-UNNAMED)
       [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
+      [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]] && launcher+=(--enable-preview)
       launcher+=("${cmd_tail[@]}")
     else
       launcher="${cmd_base[@]}"
       [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
+      [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]] && launcher+=(--enable-preview)
       launcher+=("${cmd_tail[@]}")
-    fi
-
-    if [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]]; then
-        launcher+=(--enable-preview)
     fi
 
     # Don't show errors if the LAUNCH_FILE can't be created
