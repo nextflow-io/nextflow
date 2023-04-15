@@ -34,12 +34,12 @@ class Threads {
     static Thread start(Closure action) {
         return useVirtual()
                 ? Thread.startVirtualThread(action)
-                : Thread.start(action)
+                : Thread.startDaemon(action)
     }
 
     static Thread start(String name, Closure action) {
         if( !useVirtual() )
-            return Thread.start(name, action)
+            return Thread.startDaemon(name, action)
         // create a new virtual thread and change the name
         final result = Thread.startVirtualThread(action)
         result.setName(name)
