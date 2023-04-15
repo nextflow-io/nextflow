@@ -26,12 +26,12 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
-import nextflow.NF
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.DefaultPlugins
 import nextflow.plugin.Plugins
 import nextflow.scm.AssetManager
 import nextflow.util.MemoryUnit
+import nextflow.util.Threads
 import org.yaml.snakeyaml.Yaml
 /**
  * CLI sub-command INFO
@@ -218,7 +218,7 @@ class CmdInfo extends CmdBase {
             final os = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()
             result << BLANK << "Process: ${ManagementFactory.getRuntimeMXBean().getName()} " << getLocalAddress() << NEWLINE
             result << BLANK << "CPUs: ${os.availableProcessors} - Mem: ${totMem(os)} (${freeMem(os)}) - Swap: ${totSwap(os)} (${freeSwap(os)})"
-            if(NF.useVirtualThreads() )
+            if( Threads.useVirtual() )
                 result << " - Virtual threads ON"
         }
 

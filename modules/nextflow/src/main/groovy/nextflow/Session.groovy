@@ -48,6 +48,7 @@ import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
+import nextflow.util.Threads
 import nextflow.util.ThreadPoolManager
 import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
@@ -510,10 +511,10 @@ class Session implements ISession {
         // register shut-down cleanup hooks
         registerSignalHandlers()
 
-        if( NF.useVirtualThreads() )
+        if( Threads.useVirtual() )
             log.warn "The support for virtual threads is an experimental feature"
         // create tasks executor
-        execService = NF.useVirtualThreads()
+        execService = Threads.useVirtual()
                 ? Executors.newVirtualThreadPerTaskExecutor()
                 : Executors.newFixedThreadPool(poolSize)
 

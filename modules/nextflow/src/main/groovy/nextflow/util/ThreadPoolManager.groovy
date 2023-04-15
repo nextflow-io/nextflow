@@ -25,7 +25,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.ISession
-import nextflow.NF
 import nextflow.Session
 /**
  * Holder object for file transfer thread pool
@@ -79,7 +78,7 @@ class ThreadPoolManager {
             minThreads = maxThreads
         }
 
-        return executorService = NF.useVirtualThreads()
+        return executorService = Threads.useVirtual()
                 ? Executors.newThreadPerTaskExecutor(new CustomThreadFactory(name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()))
                 : legacyThreadPool()
     }
