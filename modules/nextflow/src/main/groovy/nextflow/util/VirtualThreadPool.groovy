@@ -17,8 +17,10 @@
 
 package nextflow.util
 
+import static java.util.concurrent.Executors.newThreadPerTaskExecutor
+
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
+import java.util.concurrent.ThreadFactory
 
 import groovy.transform.CompileStatic
 import groovyx.gpars.scheduler.Pool
@@ -29,8 +31,12 @@ import groovyx.gpars.scheduler.Pool
  */
 @CompileStatic
 class VirtualThreadPool implements Pool {
-    
-    private final ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor()
+
+    private final ExecutorService executor
+
+    VirtualThreadPool(ThreadFactory factory) {
+        executor = newThreadPerTaskExecutor(factory)
+    }
 
     @Override
     void resize(int poolSize) {
@@ -48,12 +54,12 @@ class VirtualThreadPool implements Pool {
     }
 
     void execute(Runnable task) {
-        pool.execute(task)
+        executor.execute(task)
     }
 
     @Override
     void shutdown() {
-        pool.shutdown()
+        executor.shutdown()
     }
 
 }

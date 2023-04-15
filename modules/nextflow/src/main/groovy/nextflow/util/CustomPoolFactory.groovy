@@ -74,7 +74,7 @@ class CustomPoolFactory implements PoolFactory {
 
             case 'virtual':
                 log.debug "Creating virtual thread pool"
-                return new VirtualThreadPool()
+                return CustomThreadPool.virtualPool()
 
             default:
                 throw new IllegalAccessException("Unknown thread pool type: `$type`")
