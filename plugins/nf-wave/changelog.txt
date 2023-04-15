@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+0.8.2 - 15 Apr 2023
+- Security fixes [83e8fd6a]
+
 0.8.1 - 1 Apr 2023
 - Bump micromamba 1.4.1 [ec1439e6]
 - Fix NoSuchMethodError String.stripIndent with Java 11 [308eafe6]
