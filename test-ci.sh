@@ -20,9 +20,6 @@ export CAPSULE_LOG=none
 export TEST_JDK
 export TEST_MODE
 
-echo "Current Java version:"
-java --version
-
 unset JAVA_TOOL_OPTIONS # this variable mess-up Capsule loader Java version parsing
 (
  $NXF_CMD info
