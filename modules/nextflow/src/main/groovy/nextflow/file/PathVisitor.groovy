@@ -32,6 +32,7 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
+import nextflow.NF
 import nextflow.Session
 import nextflow.extension.CH
 import nextflow.util.CustomThreadFactory
@@ -186,7 +187,10 @@ class PathVisitor {
     @Memoized
     @PackageScope
     static ExecutorService createExecutor(Session session) {
-        final result = Executors.newCachedThreadPool(new CustomThreadFactory('PathVisitor'))
+        final factory = new CustomThreadFactory('PathVisitor')
+        final result = NF.useVirtualThreads()
+                ? Executors.newThreadPerTaskExecutor(factory)
+                : Executors.newCachedThreadPool(factory)
         Global.onCleanup((it) -> result.shutdown())
         return result
     }

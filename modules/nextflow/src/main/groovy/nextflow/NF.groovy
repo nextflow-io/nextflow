@@ -72,4 +72,8 @@ class NF {
     static boolean isRecurseEnabled() {
         NextflowMeta.instance.preview.recursion
     }
+
+    static boolean useVirtualThreads() {
+        SysEnv.get('NXF_ENABLE_VIRTUAL_THREADS')=='true'
+    }
 }

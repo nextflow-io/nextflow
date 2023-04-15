@@ -19,11 +19,13 @@ package nextflow.util
 
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.ISession
+import nextflow.NF
 import nextflow.Session
 /**
  * Holder object for file transfer thread pool
@@ -34,6 +36,8 @@ import nextflow.Session
 @CompileStatic
 class ThreadPoolManager {
 
+    private static final AtomicInteger poolCount = new AtomicInteger()
+    
     final static public int DEFAULT_MIN_THREAD = 10
     final static public int DEFAULT_MAX_THREAD = Math.max(DEFAULT_MIN_THREAD, Runtime.runtime.availableProcessors()*3)
     final static public int DEFAULT_QUEUE_SIZE = 10_000
@@ -75,7 +79,20 @@ class ThreadPoolManager {
             minThreads = maxThreads
         }
 
-        return executorService = Executors.newVirtualThreadPerTaskExecutor()
+        return executorService = NF.useVirtualThreads()
+                ? Executors.newThreadPerTaskExecutor(new CustomThreadFactory(name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()))
+                : legacyThreadPool()
+    }
+
+    protected ExecutorService legacyThreadPool() {
+        new ThreadPoolBuilder()
+                .withName(name)
+                .withMinSize(minThreads)
+                .withMaxSize(maxThreads)
+                .withQueueSize(maxQueueSize)
+                .withKeepAliveTime(keepAlive)
+                .withAllowCoreThreadTimeout(allowThreadTimeout)
+                .build()
     }
 
     ExecutorService createAndRegisterShutdownCallback(Session session) {

@@ -406,7 +406,6 @@ else
 
     if [[ "$JAVA_VER" =~ ^(9|10|11|12|13|14|15|16|17|18|19|20) ]]; then
       launcher="${cmd_base[@]}"
-      launcher+=(--enable-preview)
       launcher+=(--add-opens=java.base/java.lang=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.io=ALL-UNNAMED)
       launcher+=(--add-opens=java.base/java.nio=ALL-UNNAMED)
@@ -429,6 +428,10 @@ else
       launcher="${cmd_base[@]}"
       [[ "$NXF_JVM_ARGS" ]] && launcher+=($NXF_JVM_ARGS)
       launcher+=("${cmd_tail[@]}")
+    fi
+
+    if [[ "$NXF_ENABLE_VIRTUAL_THREADS" == 'true' ]]; then
+        launcher+=(--enable-preview)
     fi
 
     # Don't show errors if the LAUNCH_FILE can't be created

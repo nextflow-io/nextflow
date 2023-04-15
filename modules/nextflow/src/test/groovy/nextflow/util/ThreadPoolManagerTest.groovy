@@ -17,14 +17,12 @@
 
 package nextflow.util
 
-import spock.lang.Ignore
 import spock.lang.Specification
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Ignore
 class ThreadPoolManagerTest extends Specification {
 
     def 'should create pool with defaults' () {

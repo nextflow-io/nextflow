@@ -510,8 +510,12 @@ class Session implements ISession {
         // register shut-down cleanup hooks
         registerSignalHandlers()
 
+        if( NF.useVirtualThreads() )
+            log.warn "The support for virtual threads is an experimental feature"
         // create tasks executor
-        execService = Executors.newFixedThreadPool(poolSize)
+        execService = NF.useVirtualThreads()
+                ? Executors.newVirtualThreadPerTaskExecutor()
+                : Executors.newFixedThreadPool(poolSize)
 
         // signal start to trace observers
         notifyFlowCreate()

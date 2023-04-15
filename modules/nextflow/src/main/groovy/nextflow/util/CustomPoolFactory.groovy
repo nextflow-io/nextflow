@@ -15,12 +15,15 @@
  */
 
 package nextflow.util
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import groovyx.gpars.scheduler.Pool
 import groovyx.gpars.scheduler.ResizeablePool
 import groovyx.gpars.util.PoolFactory
+import nextflow.NF
+
 /**
  * A configurable thread pool factory
  *
@@ -42,7 +45,8 @@ class CustomPoolFactory implements PoolFactory {
     @Override
     synchronized Pool createPool() {
 
-        final type = property(NXF_POOL_TYPE, 'virtual')
+        final defType = NF.useVirtualThreads() ? 'virtual' : 'default'
+        final type = property(NXF_POOL_TYPE, defType)
         switch (type) {
             case 'default':
                 int poolSize = Runtime.runtime.availableProcessors() +1
