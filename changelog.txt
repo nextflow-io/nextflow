@@ -1,5 +1,24 @@
 NEXTFLOW CHANGE-LOG
 ===================
+23.04.1 - 15 Apr 2023
+- Add support for Java 20 [ci fast] [f6933db7]
+- Fix use of remote dir with local exec statement [6ea1f68c]
+- Fix Azure pool creation when using scaling formula (#3868) [84a808a5]
+- Fix interval channel factory [ci fast] (#3848) [82ccf6ad]
+- Fix invalid warning on func import (#3807) [4678ffe3]
+- Improve plugin test detection [ci fast] [57cfb0d9]
+- Improve plugin updater err handling [ci skip] [5627c69a]
+- Security fixes [83e8fd6a]
+- Bump nf-wave@0.8.2 [d8cb763c]
+- Bump nf-tower@1.5.12 [b2354380]
+- Bump nf-google@1.7.3 [22a68cfe]
+- Bump gson:2.10.1 [83ca1e32]
+- Bump nf-ga4gh@1.0.5 [b40b5165]
+- Bump nf-codecommit@0.1.4 [98a89154]
+- Bump aws-java-sdk-s3:1.12.429 [b71ee0a3]
+- Bump nf-azure@1.0.1 [a5da54d3]
+- Bump nf-amazon@1.16.2 [c90553c9]
+
 23.04.0 - 1 Apr 2023
 - Add several names to the name generator feat:(#3790) [dfa2f6ca]
 - Add support for Fusion to Azure Batch executor (#3209) [3d3cbfa2]
