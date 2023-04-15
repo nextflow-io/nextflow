@@ -1,12 +1,12 @@
 NEXTFLOW CHANGE-LOG
 ===================
 23.04.1 - 15 Apr 2023
-- Add support for Java 20 [ci fast] [f6933db7]
+- Add support for Java 20 [f6933db7]
 - Fix use of remote dir with local exec statement [6ea1f68c]
 - Fix Azure pool creation when using scaling formula (#3868) [84a808a5]
-- Fix interval channel factory [ci fast] (#3848) [82ccf6ad]
+- Fix interval channel factory (#3848) [82ccf6ad]
 - Fix invalid warning on func import (#3807) [4678ffe3]
-- Improve plugin test detection [ci fast] [57cfb0d9]
+- Improve plugin test detection [57cfb0d9]
 - Improve plugin updater err handling [ci skip] [5627c69a]
 - Security fixes [83e8fd6a]
 - Bump nf-wave@0.8.2 [d8cb763c]
