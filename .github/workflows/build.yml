@@ -56,7 +56,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: ${{matrix.java_version}}
-          distribution: 'adopt'
+          distribution: 'temurin'
           architecture: x64
           cache: gradle
 
@@ -107,7 +107,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: ${{matrix.java_version}}
-          distribution: 'adopt'
+          distribution: 'temurin'
           architecture: x64
           cache: gradle
 
