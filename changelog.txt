@@ -1,5 +1,18 @@
 NEXTFLOW CHANGE-LOG
 ===================
+22.10.8 - 15 Apr 2023
+- Security fixes [fc2627bb]
+- Add support for testing custom plugin uri [718d4562]
+- Improve plugin updater err handling [84042082]
+- Improve plugin test detection [ci fast] [e6c60a6c]
+- Bump nf-google@1.4.6 [26b01b83]
+- Bump nf-wave@0.5.5 [2a886fe0]
+- Bump nf-ga4gh@1.0.5 [b8769f1a]
+- Bump nf-tower@1.5.7-patch0 [89d902ec]
+- Bump nf-azure@0.14.3 [9b0f4bfb]
+- Bump nf-amazon@1.11.5 [f7aaddc6]
+- Bump amazoncorretto@17.0.6 [7898cc04]
+
 22.10.7 - 18 Feb 2023
 - Fix plugin install version [895e4f34]
 - Fix unique fingerprint for wave bundle resources [7c55aa37]
