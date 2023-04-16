@@ -72,5 +72,4 @@ class NF {
     static boolean isRecurseEnabled() {
         NextflowMeta.instance.preview.recursion
     }
-
 }
