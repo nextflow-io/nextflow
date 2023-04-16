@@ -23,6 +23,8 @@ import java.util.concurrent.TimeUnit
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import jdk.internal.vm.ThreadContainer
+
 /**
  * Thread pool helpers
  *
@@ -65,6 +67,9 @@ class ThreadPoolHelper {
         if( pool instanceof ThreadPoolExecutor) {
             final p1 = ((ThreadPoolExecutor)pool)
             return p1.getTaskCount() - p1.getCompletedTaskCount()
+        }
+        else if( pool instanceof ThreadContainer ) {
+            return pool.threadCount()
         }
         return -1
     }
