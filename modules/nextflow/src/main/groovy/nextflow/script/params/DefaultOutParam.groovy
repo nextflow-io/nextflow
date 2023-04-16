@@ -16,15 +16,17 @@
 
 package nextflow.script.params
 
+
 import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.script.ProcessConfig
-
 /**
  * Model a process default output parameter
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-final class DefaultOutParam extends StdOutParam {
+final class DefaultOutParam extends BaseOutParam {
+
+    static enum Completion { DONE }
 
     DefaultOutParam(ProcessConfig config ) {
         super(config)
