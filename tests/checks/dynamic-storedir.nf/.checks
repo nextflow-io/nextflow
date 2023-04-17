@@ -4,7 +4,7 @@ set -e
 # run normal mode
 #
 echo ''
-$NXF_RUN | grep -v WARN | tee stdout
+$NXF_RUN | tee stdout
 
 [[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > foo'` == 4 ]] || false
 
@@ -31,7 +31,7 @@ rm my_*
 # run normal mode -- this time store result are used
 #
 echo ''
-$NXF_RUN | grep -v WARN | tee stdout
+$NXF_RUN | tee stdout
 
 [[ `grep 'INFO' .nextflow.log | grep -E -c '\[skipping\] Stored process > foo'` == 4 ]] || false
 
@@ -56,7 +56,7 @@ rm my_*
 # run resume mode
 #
 echo ''
-$NXF_RUN -resume | grep -v WARN | tee stdout
+$NXF_RUN -resume | tee stdout
 
 [[ `grep 'INFO' .nextflow.log | grep -E -c '\[skipping\] Stored process > foo'` == 4 ]] || false
 

@@ -511,8 +511,6 @@ class Session implements ISession {
         // register shut-down cleanup hooks
         registerSignalHandlers()
 
-        if( Threads.useVirtual() )
-            log.warn "The support for virtual threads is an experimental feature"
         // create tasks executor
         execService = Threads.useVirtual()
                 ? Executors.newVirtualThreadPerTaskExecutor()
