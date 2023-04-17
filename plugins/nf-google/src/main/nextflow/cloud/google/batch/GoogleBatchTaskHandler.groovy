@@ -32,6 +32,7 @@ import com.google.cloud.batch.v1.Runnable
 import com.google.cloud.batch.v1.ServiceAccount
 import com.google.cloud.batch.v1.TaskGroup
 import com.google.cloud.batch.v1.TaskSpec
+import com.google.cloud.batch.v1.Volume
 import com.google.protobuf.Duration
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -39,6 +40,7 @@ import groovy.util.logging.Slf4j
 import nextflow.cloud.google.batch.client.BatchClient
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.res.DiskResource
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskHandler
@@ -154,7 +156,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                     .setSeconds( task.config.getTime().toSeconds() )
             )
 
-        if( executor.config.bootDiskSize )
+        def disk = task.config.getDiskResource()
+        if( disk && !disk.type )
+            computeResource.setBootDiskMib( disk.request.getMega() )
+        else if( executor.config.bootDiskSize )
             computeResource.setBootDiskMib( executor.config.bootDiskSize.getMega() )
 
         // container
@@ -224,27 +229,26 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             instancePolicyOrTemplate.setInstallGpuDrivers(true)
         }
 
-        final disk = task.config.getDiskResource()
-        if( disk )
+        if( fusionEnabled() && !disk )
+            disk = new DiskResource(request: '375 GB', type: 'local-ssd')
+
+        if( disk?.type ) {
             instancePolicy.addDisks(
                 AllocationPolicy.AttachedDisk.newBuilder()
                     .setNewDisk(
                         AllocationPolicy.Disk.newBuilder()
-                            .setType(disk.type ?: 'pd-standard')
+                            .setType(disk.type)
                             .setSizeGb(disk.request.toGiga())
                     )
+                    .setDeviceName('scratch')
             )
 
-        else if( fusionEnabled() )
-            instancePolicy.addDisks(
-                AllocationPolicy.AttachedDisk.newBuilder()
-                    .setNewDisk(
-                        AllocationPolicy.Disk.newBuilder()
-                            .setType('local-ssd')
-                            .setSizeGb(375)
-                    )
-                    .setDeviceName('fusion')
+            taskSpec.addVolumes(
+                Volume.newBuilder()
+                    .setDeviceName('scratch')
+                    .setMountPath('/tmp')
             )
+        }
 
         if( executor.config.cpuPlatform )
             instancePolicy.setMinCpuPlatform( executor.config.cpuPlatform )

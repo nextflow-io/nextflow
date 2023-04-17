@@ -115,7 +115,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def CONTAINER_OPTS = '--this --that'
         def CPU_PLATFORM = 'Intel Skylake'
         def CPUS = 4
-        def DISK = new DiskResource(request: '375 GB', type: 'local-ssd')
+        def DISK = new DiskResource(request: '100 GB', type: 'pd-standard')
         def MACHINE_TYPE = 'vm-type-2'
         def MEM = MemoryUnit.of('8 GB')
         def TIMEOUT = Duration.of('1 hour')
@@ -174,6 +174,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == CPUS * 1_000
         taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == MEM.toMega()
         taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == TIMEOUT.seconds
+        taskGroup.getTaskSpec().getVolumes(0).getMountPath() == '/tmp'
         and:
         runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
@@ -206,6 +207,15 @@ class GoogleBatchTaskHandlerTest extends Specification {
         networkInterface.getNoExternalIpAddress() == true
         and:
         req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
+
+        when:
+        req = handler.newSubmitRequest(task, launcher)
+        then:
+        task.getConfig().getDiskResource() >> new DiskResource(request: '100 GB')
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_) >> null
+        and:
+        req.getTaskGroups(0).getTaskSpec().getComputeResource().getBootDiskMib() == 100 * 1024
     }
 
     def 'should create the trace record' () {
@@ -237,7 +247,6 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
     def 'should create submit request with fusion enabled' () {
         given:
-        def GCS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('foo').build() ).build()
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
         def CONTAINER_IMAGE = 'debian:latest'
         def exec = Mock(GoogleBatchExecutor) {
@@ -273,28 +282,17 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def allocationPolicy = req.getAllocationPolicy()
         def instancePolicy = allocationPolicy.getInstances(0).getPolicy()
         and:
-        taskGroup.getTaskSpec().getComputeResource().getBootDiskMib() == 0
         taskGroup.getTaskSpec().getComputeResource().getCpuMilli() == 2_000
-        taskGroup.getTaskSpec().getComputeResource().getMemoryMib() == 0
-        taskGroup.getTaskSpec().getMaxRunDuration().getSeconds() == 0
+        taskGroup.getTaskSpec().getVolumes(0).getMountPath() == '/tmp'
         and:
         runnable.getContainer().getCommandsList().join(' ') == '/bin/bash -o pipefail -c bash .command.run'
         runnable.getContainer().getImageUri() == CONTAINER_IMAGE
         runnable.getContainer().getOptions() == '--privileged'
-        runnable.getContainer().getVolumesList() == []
+        runnable.getContainer().getVolumesCount() == 0
         and:
         runnable.getEnvironment().getVariablesMap() == env
         and:
-        instancePolicy.getAcceleratorsCount() == 0
-        instancePolicy.getMachineType() == ''
-        instancePolicy.getMinCpuPlatform() == ''
-        instancePolicy.getProvisioningModel().toString() == 'PROVISIONING_MODEL_UNSPECIFIED'
-        and:
-        allocationPolicy.getLocation().getAllowedLocationsCount() == 0
-        allocationPolicy.getNetwork().getNetworkInterfacesCount() == 0
-        and:
-        req.getLogsPolicy().getDestination().toString() == 'CLOUD_LOGGING'
-        and:
-        taskGroup.getTaskSpec().getVolumesList().size()==0
+        instancePolicy.getDisks(0).getNewDisk().getSizeGb() == 375
+        instancePolicy.getDisks(0).getNewDisk().getType() == 'local-ssd'
     }
 }

@@ -174,6 +174,22 @@ Examples::
         """
     }
 
+As of version ``23.05.0-edge``, the ``disk`` directive can be used to set the boot disk size or provision a disk for scratch storage. If the
+disk type is specified with the ``type`` option, a new disk will be mounted to the task VM at ``/tmp`` with the requested size and type. Otherwise,
+it will set the boot disk size, overriding the ``google.batch.bootDiskSize`` config option. See the `Google Batch documentation <https://cloud.google.com/compute/docs/disks>`_
+for more information about the available disk types.
+
+Examples::
+
+    // set the boot disk size
+    disk 100.GB
+
+    // mount a persistent disk at '/tmp'
+    disk 100.GB, type: 'pd-standard'
+
+    // mount a local SSD disk at '/tmp' (should be a multiple of 375 GB)
+    disk 375.GB, type: 'local-ssd'
+
 Pipeline execution
 ------------------
 
@@ -230,10 +246,11 @@ To enable the use of Fusion file system in your pipeline, add the following snip
 The `Tower <https://cloud.tower.nf>`_ access token is optional, but it enables higher API rate limits for the
 :ref:`wave-page` service required by Fusion.
 
-.. tip::
-  When Fusion is enabled, by default, only machine types that allow to attach local SSD disks will be used. If you specify your own
-  machine type or machine series they should allow to attach local SSD disks, otherwise the job scheduling will fail.
+By default, Fusion mounts a local SSD disk to the VM at ``/tmp``, using a machine type that can attach local SSD disks. If you
+specify your own machine type or machine series, they should be able to attach local SSD disks, otherwise the task scheduling will fail.
 
+As of version ``23.05.0-edge``, you can use the ``disk`` directive to override the disk requested by Fusion. See the `Process definition`_
+section above for examples. Note that local SSD disks must be a multiple of 375 GB in size.
 
 
 Supported directives
