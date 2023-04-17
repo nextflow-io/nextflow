@@ -25,9 +25,12 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Future
+import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -40,7 +43,6 @@ import nextflow.extension.FilesEx
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.ThreadPoolManager
-
 /**
  * Move foreign (ie. remote) files to the staging work area
  *
@@ -55,6 +57,8 @@ class FilePorter {
 
     static final private int MAX_RETRIES = 3
 
+    static final private int MAX_TRANSFERS = 50
+
     static final private Duration POLL_TIMEOUT = Duration.of('2sec')
 
     final Map<FileCopy,FileTransfer> stagingTransfers = new HashMap<>()
@@ -63,14 +67,24 @@ class FilePorter {
 
     private Duration pollTimeout
 
+    private final Semaphore semaphore
+
+    final private Lock sync
+
     final int maxRetries
 
-    final Session session
+    final int maxTransfers
+
+    final private Session session
 
     FilePorter( Session session ) {
         this.session = session
         maxRetries = session.config.navigate('filePorter.maxRetries') as Integer ?: MAX_RETRIES
         pollTimeout = session.config.navigate('filePorter.pollTimeout') as Duration ?: POLL_TIMEOUT
+        maxTransfers = session.config.navigate('filePorter.maxTransfers') as Integer ?: MAX_TRANSFERS
+        log.debug "File porter settings maxRetries=$maxRetries; maxTransfers=$maxTransfers; pollTimeout=$threadPool"
+        sync = new ReentrantLock()
+        semaphore = new Semaphore(maxTransfers)
         threadPool = new ThreadPoolManager('FileTransfer')
                 .withConfig(session.config)
                 .createAndRegisterShutdownCallback(session)
@@ -95,7 +109,8 @@ class FilePorter {
     }
 
     protected FileTransfer getOrSubmit(FileCopy copy) {
-        synchronized (this) {
+        sync.lock()
+        try {
             FileTransfer transfer = stagingTransfers.get(copy)
             if( transfer == null ) {
                 transfer = createFileTransfer(copy.source, copy.target)
@@ -106,6 +121,9 @@ class FilePorter {
             transfer.refCount.incrementAndGet()
 
             return transfer
+        }
+        finally {
+            sync.unlock()
         }
     }
 
@@ -241,7 +259,7 @@ class FilePorter {
     @ToString
     @CompileStatic
     @PackageScope
-    static class FileTransfer implements Runnable {
+    class FileTransfer implements Runnable {
 
         /**
          * The source file (foreign) to be transfer
@@ -274,7 +292,13 @@ class FilePorter {
 
         @Override
         void run() throws Exception {
-            stageForeignFile(source, target)
+            semaphore.acquire()
+            try {
+                stageForeignFile(source, target)
+            }
+            finally {
+                semaphore.release()
+            }
         }
 
         /**
@@ -331,19 +355,25 @@ class FilePorter {
         }
     }
 
-    synchronized protected FileCopy getCachePathFor(Path sourcePath, Path stageDir) {
-        final dirPath = stageDir.toUriString() // <-- use a string to avoid changes in the dir to alter the hashing
-        int i=0
-        while( true ) {
-            final uniq = List.of(sourcePath, dirPath, i++)
-            final hash = CacheHelper.hasher(uniq).hash().toString()
-            final targetPath = getCacheDir0(stageDir, hash).resolve(sourcePath.getName())
-            final result = new FileCopy(sourcePath, targetPath)
-            if( stagingTransfers.containsKey(result) )
-                return result
-            final exist = targetPath.exists()
-            if( !exist || checkPathIntegrity(sourcePath, targetPath) )
-                return result
+    protected FileCopy getCachePathFor(Path sourcePath, Path stageDir) {
+        sync.lock()
+        try {
+            final dirPath = stageDir.toUriString() // <-- use a string to avoid changes in the dir to alter the hashing
+            int i=0
+            while( true ) {
+                final uniq = List.of(sourcePath, dirPath, i++)
+                final hash = CacheHelper.hasher(uniq).hash().toString()
+                final targetPath = getCacheDir0(stageDir, hash).resolve(sourcePath.getName())
+                final result = new FileCopy(sourcePath, targetPath)
+                if( stagingTransfers.containsKey(result) )
+                    return result
+                final exist = targetPath.exists()
+                if( !exist || checkPathIntegrity(sourcePath, targetPath) )
+                    return result
+            }
+        }
+        finally {
+            sync.unlock()
         }
     }
 
