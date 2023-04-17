@@ -193,7 +193,6 @@ the ``-work-dir`` command line options. For example::
 .. warning::
   The Google Storage path needs to contain at least sub-directory. Don't use only the bucket name e.g. ``gs://my-bucket``.
 
-
 Spot instances
 ---------------
 
@@ -252,6 +251,9 @@ supported:
 * :ref:`process-memory`
 * :ref:`process-time`
 
+.. note::
+    For a more hands-on source on getting started with Nextflow on Google Cloud Batch,
+    check `this blog post <https://www.nextflow.io/blog/2023/nextflow-with-gbatch.html>`_.
 
 .. _google-lifesciences:
 
