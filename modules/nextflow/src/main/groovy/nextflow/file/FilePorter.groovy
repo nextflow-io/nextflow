@@ -101,11 +101,7 @@ class FilePorter {
     }
 
     protected FileTransfer createFileTransfer(Path source, Path target) {
-        return new FileTransfer(source, target, maxRetries)
-    }
-
-    protected Future submitForExecution(FileTransfer transfer) {
-        threadPool.submit(transfer)
+        return new FileTransfer(source, target, maxRetries, semaphore)
     }
 
     protected FileTransfer getOrSubmit(FileCopy copy) {
@@ -114,7 +110,7 @@ class FilePorter {
             FileTransfer transfer = stagingTransfers.get(copy)
             if( transfer == null ) {
                 transfer = createFileTransfer(copy.source, copy.target)
-                transfer.result = submitForExecution(transfer)
+                transfer.result = threadPool.submit(transfer)
                 stagingTransfers.put(copy, transfer)
             }
             // increment the ref count
@@ -259,7 +255,7 @@ class FilePorter {
     @ToString
     @CompileStatic
     @PackageScope
-    class FileTransfer implements Runnable {
+    static class FileTransfer implements Runnable {
 
         /**
          * The source file (foreign) to be transfer
@@ -280,8 +276,10 @@ class FilePorter {
         volatile Future result
         private String message
         private int debugDelay
+        private Semaphore semaphore
 
-        FileTransfer(Path foreignPath, Path stagePath, int maxRetries=0) {
+        FileTransfer(Path foreignPath, Path stagePath, int maxRetries, Semaphore semaphore) {
+            this.semaphore = semaphore
             this.source = foreignPath
             this.target = stagePath
             this.maxRetries = maxRetries
