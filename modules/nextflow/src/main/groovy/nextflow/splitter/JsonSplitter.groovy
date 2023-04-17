@@ -25,7 +25,8 @@ import groovy.util.logging.Slf4j
 /**
  * Split a JSON document into records
  *
- * @author Pierre Lindenbaum PhD Institut-du-Thorax Nantes France.
+ * @author Pierre Lindenbaum PhD Institut-du-Thorax 44000 Nantes France.
+ * Reviewed by bentsherman and pditommaso
  */
 @Slf4j
 @CompileStatic
