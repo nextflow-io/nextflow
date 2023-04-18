@@ -583,7 +583,7 @@ public class S3Client {
 			RestoreObjectRequest request = new RestoreObjectRequest(bucketName, key);
 
 			String storageClass = client.getObjectMetadata(bucketName, key).getStorageClass();
-			if( storageClass != "INTELLIGENT_TIERING" )
+			if( storageClass!=null && !storageClass.equals("INTELLIGENT_TIERING") )
 				request.setExpirationInDays(glacierExpirationDays);
 
 			if( glacierRetrievalTier != null )
