@@ -44,6 +44,10 @@ class SplitterEx {
         new FastqSplitter().options(opts) .target(self) .count()
     }
 
+    static long countJson(Path self, Map opts=EMPTY) {
+        new JsonSplitter().options(opts) .target(self) .count()
+    }
+
     static List splitText(Path self, Map opts=EMPTY) {
         new TextSplitter().options(opts) .target(self) .list()
     }
@@ -60,4 +64,7 @@ class SplitterEx {
         new CsvSplitter().options(opts) .target(self) .list()
     }
 
+    static List splitJson(Path self, Map opts=EMPTY) {
+        new JsonSplitter().options(opts) .target(self) .list()
+    }
 }

@@ -28,10 +28,11 @@ import nextflow.splitter.FastqSplitter
 import nextflow.splitter.SplitterFactory
 /**
  * Implements splitter operators:
- * - splitText
  * - splitCsv
  * - splitFasta
  * - splitFastq
+ * - splitJson
+ * - splitText
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
