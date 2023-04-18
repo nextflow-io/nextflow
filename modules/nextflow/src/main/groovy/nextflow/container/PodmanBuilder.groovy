@@ -156,9 +156,9 @@ class PodmanBuilder extends ContainerBuilder<PodmanBuilder> {
         }
 
         if( kill )  {
-            killCommand = 'podman kill '
+            killCommand = 'podman stop '
             // if `kill` is a string it is interpreted as a the kill signal
-            if( kill instanceof String ) killCommand += "-s $kill "
+            if( kill instanceof String ) killCommand = "podman kill -s $kill "
             killCommand += name
         }
 
