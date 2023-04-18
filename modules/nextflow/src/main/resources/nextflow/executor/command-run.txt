@@ -118,7 +118,7 @@ nxf_launch() {
 
 nxf_stage() {
     true
-    {{stage_script}}
+    {{stage_inputs}}
 }
 
 nxf_unstage() {

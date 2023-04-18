@@ -385,21 +385,43 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.stage_inputs == stageScript
-        binding.stage_script == stageScript
+    }
 
-        when:
-        SysEnv.push([NXF_WRAPPER_STAGE_FILE_THRESHOLD: '2'])
-        binding = newBashWrapperBuilder([
+    def 'should stage inputs to external file' () {
+        given:
+        SysEnv.push([NXF_WRAPPER_STAGE_FILE_THRESHOLD: '100'])
+        and:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def inputs = [
+                'sample_1.fq': Paths.get('/some/data/sample_1.fq'),
+                'sample_2.fq': Paths.get('/some/data/sample_2.fq'),
+        ]
+        def stageScript = '''\
+                rm -f sample_1.fq
+                rm -f sample_2.fq
+                ln -s /some/data/sample_1.fq sample_1.fq
+                ln -s /some/data/sample_2.fq sample_2.fq
+                '''.stripIndent().rightTrim()
+        and:
+        def builder = newBashWrapperBuilder([
                 workDir: folder,
                 targetDir: folder,
-                inputFiles: inputs ]).makeBinding()
+                inputFiles: inputs ])
 
+        when:
+        def binding = builder.makeBinding()
         then:
-        binding.stage_inputs == stageScript
-        binding.stage_script == 'source /work/dir/.command.stage'
+        binding.stage_inputs == "# stage input files\nbash ${folder}/.command.stage"
+
+        when:
+        builder.build()
+        then:
+        folder.resolve('.command.stage').text == stageScript
 
         cleanup:
         SysEnv.pop()
+        folder?.deleteDir()
     }
 
     def 'should unstage outputs' () {

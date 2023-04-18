@@ -38,6 +38,8 @@ import nextflow.util.Escape
 
 import static java.nio.file.StandardOpenOption.*
 
+import nextflow.util.MemoryUnit
+
 /**
  * Builder to create the Bash script which is used to
  * wrap and launch the user task
@@ -48,12 +50,12 @@ import static java.nio.file.StandardOpenOption.*
 @CompileStatic
 class BashWrapperBuilder {
 
-    private static int DEFAULT_STAGE_FILE_THRESHOLD = 1000
+    private static MemoryUnit DEFAULT_STAGE_FILE_THRESHOLD = MemoryUnit.of('100 KB')
     private static int DEFAULT_WRITE_BACK_OFF_BASE = 3
     private static int DEFAULT_WRITE_BACK_OFF_DELAY = 250
     private static int DEFAULT_WRITE_MAX_ATTEMPTS = 5
 
-    private int stageFileThreshold = SysEnv.get('NXF_WRAPPER_STAGE_FILE_THRESHOLD') as Integer ?: DEFAULT_STAGE_FILE_THRESHOLD
+    private MemoryUnit stageFileThreshold = SysEnv.get('NXF_WRAPPER_STAGE_FILE_THRESHOLD') as MemoryUnit ?: DEFAULT_STAGE_FILE_THRESHOLD
     private int writeBackOffBase = SysEnv.get('NXF_WRAPPER_BACK_OFF_BASE') as Integer ?: DEFAULT_WRITE_BACK_OFF_BASE
     private int writeBackOffDelay = SysEnv.get('NXF_WRAPPER_BACK_OFF_DELAY') as Integer ?: DEFAULT_WRITE_BACK_OFF_DELAY
     private int writeMaxAttempts = SysEnv.get('NXF_WRAPPER_MAX_ATTEMPTS') as Integer ?: DEFAULT_WRITE_MAX_ATTEMPTS
@@ -154,10 +156,6 @@ class BashWrapperBuilder {
         return "NXF_SCRATCH=\"\$(set +u; nxf_mktemp $scratchStr)\""
     }
 
-    protected boolean isStageFileRequired() {
-        inputFiles.size() >= stageFileThreshold
-    }
-
     protected boolean shouldUnstageOutputs() {
         return targetDir && workDir!=targetDir
     }
@@ -194,7 +192,20 @@ class BashWrapperBuilder {
         }
         result.toString()
     }
-    
+
+    protected String stageCommand(String stagingScript) {
+        if( !stagingScript )
+            return null
+
+        final header = "# stage input files\n"
+        if( stagingScript.size() >= stageFileThreshold.bytes ) {
+            stageScript = stagingScript
+            return header + "bash ${stageFile}"
+        }
+        else
+            return header + stagingScript
+    }
+
     protected Map<String,String> makeBinding() {
         /*
          * initialise command files
@@ -286,14 +297,7 @@ class BashWrapperBuilder {
          * staging input files when required
          */
         final stagingScript = copyStrategy.getStageInputFilesScript(inputFiles)
-        binding.stage_inputs = stagingScript ? "# stage input files\n${stagingScript}" : null
-
-        if( isStageFileRequired() ) {
-            binding.stage_script = "source ${stageFile}"
-            stageScript = binding.stage_inputs
-        }
-        else
-            binding.stage_script = binding.stage_inputs
+        binding.stage_inputs = stageCommand(stagingScript)
 
         binding.stdout_file = TaskRun.CMD_OUTFILE
         binding.stderr_file = TaskRun.CMD_ERRFILE
