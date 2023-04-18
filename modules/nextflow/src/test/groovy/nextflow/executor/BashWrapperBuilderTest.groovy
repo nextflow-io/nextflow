@@ -699,7 +699,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
-        binding.kill_cmd == 'docker kill $NXF_BOXID'
+        binding.kill_cmd == 'docker stop $NXF_BOXID'
     }
 
     def 'should create wrapper with docker and environment' () {
@@ -713,7 +713,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
-        binding.kill_cmd == 'docker kill $NXF_BOXID'
+        binding.kill_cmd == 'docker stop $NXF_BOXID'
         and:
         binding.container_env == '''\
                     nxf_container_env() {
@@ -734,7 +734,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
-        binding.kill_cmd == 'docker kill $NXF_BOXID'
+        binding.kill_cmd == 'docker stop $NXF_BOXID'
     }
 
     def 'should create wrapper with docker and legacy entrypoint false and env' () {
@@ -748,7 +748,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.launch_cmd == 'docker run -i -v $(nxf_mktemp):/tmp -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -c "eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
-        binding.kill_cmd == 'docker kill $NXF_BOXID'
+        binding.kill_cmd == 'docker stop $NXF_BOXID'
         and:
         binding.container_env == '''\
                     nxf_container_env() {
@@ -769,7 +769,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.launch_cmd == 'sudo docker run -i -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'sudo docker rm $NXF_BOXID &>/dev/null || true\n'
-        binding.kill_cmd == 'sudo docker kill $NXF_BOXID'
+        binding.kill_cmd == 'sudo docker stop $NXF_BOXID'
     }
 
     def 'should create wrapper with docker no kill' () {
@@ -811,7 +811,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.launch_cmd == 'docker run -i -v /folder\\ with\\ blanks:/folder\\ with\\ blanks -v /work/dir:/work/dir -w "\$PWD" --name \$NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
-        binding.kill_cmd == 'docker kill $NXF_BOXID'
+        binding.kill_cmd == 'docker stop $NXF_BOXID'
     }
 
     def 'should create wrapper with docker with scratch' () {
@@ -825,7 +825,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'sudo docker run -i -v /work/dir:/work/dir -v "$PWD":"$PWD" -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
-        binding.kill_cmd == 'sudo docker kill $NXF_BOXID'
+        binding.kill_cmd == 'sudo docker stop $NXF_BOXID'
         binding.cleanup_cmd == '''\
                 (sudo -n true && sudo rm -rf "$NXF_SCRATCH" || rm -rf "$NXF_SCRATCH")&>/dev/null || true
                 sudo docker rm $NXF_BOXID &>/dev/null || true
@@ -842,7 +842,7 @@ class BashWrapperBuilderTest extends Specification {
 
         then:
         binding.launch_cmd == 'docker run -i -v /work/dir:/work/dir -w "$PWD" -v /foo:/bar --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
-        binding.kill_cmd == 'docker kill $NXF_BOXID'
+        binding.kill_cmd == 'docker stop $NXF_BOXID'
         binding.cleanup_cmd == 'docker rm $NXF_BOXID &>/dev/null || true\n'
     }
 
@@ -1109,7 +1109,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.launch_cmd == 'podman run -i -v /work/dir:/work/dir -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'podman rm $NXF_BOXID &>/dev/null || true\n'
-        binding.kill_cmd == 'podman kill $NXF_BOXID'
+        binding.kill_cmd == 'podman stop $NXF_BOXID'
     }
 
     def 'should create wrapper with podman with legacy entrypoint' () {
@@ -1122,7 +1122,7 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.launch_cmd == 'podman run -i -v /work/dir:/work/dir -w "$PWD" --entrypoint /bin/bash --name $NXF_BOXID busybox -c "/bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == 'podman rm $NXF_BOXID &>/dev/null || true\n'
-        binding.kill_cmd == 'podman kill $NXF_BOXID'
+        binding.kill_cmd == 'podman stop $NXF_BOXID'
     }
 
     def 'should create wrapper with podman and scratch' () {
@@ -1136,6 +1136,6 @@ class BashWrapperBuilderTest extends Specification {
         then:
         binding.launch_cmd == 'podman run -i -v /work/dir:/work/dir -v "$PWD":"$PWD" -w "$PWD" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\npodman rm $NXF_BOXID &>/dev/null || true\n'
-        binding.kill_cmd == 'podman kill $NXF_BOXID'
+        binding.kill_cmd == 'podman stop $NXF_BOXID'
     }
 }

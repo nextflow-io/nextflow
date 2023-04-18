@@ -18,7 +18,7 @@ package nextflow.processor
 
 import java.nio.file.Files
 
-import com.upplication.s3fs.S3Path
+import nextflow.cloud.aws.nio.S3Path
 import spock.lang.Specification
 
 import java.nio.file.FileSystems
