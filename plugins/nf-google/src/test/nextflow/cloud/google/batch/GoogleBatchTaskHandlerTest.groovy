@@ -72,7 +72,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def req = handler.newSubmitRequest(task, launcher)
         then:
         handler.fusionEnabled() >> false
-        handler.findBestMachineType(_) >> null
+        handler.findBestMachineType(_, false) >> null
 
         and:
         def taskGroup = req.getTaskGroups(0)
@@ -161,7 +161,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def req = handler.newSubmitRequest(task, launcher)
         then:
         handler.fusionEnabled() >> false
-        handler.findBestMachineType(_) >> null
+        handler.findBestMachineType(_, false) >> null
 
         and:
         def taskGroup = req.getTaskGroups(0)
@@ -213,7 +213,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         then:
         task.getConfig().getDiskResource() >> new DiskResource(request: '100 GB')
         handler.fusionEnabled() >> false
-        handler.findBestMachineType(_) >> null
+        handler.findBestMachineType(_, false) >> null
         and:
         req.getTaskGroups(0).getTaskSpec().getComputeResource().getBootDiskMib() == 100 * 1024
     }
@@ -275,7 +275,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         def req = handler.newSubmitRequest(task, launcher)
         then:
         handler.fusionEnabled() >> true
-        handler.findBestMachineType(_) >> null
+        handler.findBestMachineType(_, true) >> null
         and:
         def taskGroup = req.getTaskGroups(0)
         def runnable = taskGroup.getTaskSpec().getRunnables(0)

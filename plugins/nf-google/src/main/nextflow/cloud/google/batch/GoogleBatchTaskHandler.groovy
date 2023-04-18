@@ -256,7 +256,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( task.config.getMachineType() )
             instancePolicy.setMachineType( task.config.getMachineType() )
 
-        machineInfo = findBestMachineType(task.config)
+        machineInfo = findBestMachineType(task.config, disk?.type == 'local-ssd')
         if( machineInfo )
             instancePolicy.setMachineType(machineInfo.type)
 
@@ -414,18 +414,17 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         return result
     }
 
-    protected CloudMachineInfo findBestMachineType(TaskConfig config) {
+    protected CloudMachineInfo findBestMachineType(TaskConfig config, boolean localSSD) {
         final location = client.location
         final cpus = config.getCpus()
         final memory = config.getMemory() ? config.getMemory().toMega().toInteger() : 1024
         final spot = executor.config.spot ?: executor.config.preemptible
-        final useSSD = fusionEnabled()
         final families = config.getMachineType() ? config.getMachineType().tokenize(',') : []
         final priceModel = spot ? PriceModel.spot : PriceModel.standard
 
         try {
             return new CloudMachineInfo(
-                    type: GoogleBatchMachineTypeSelector.INSTANCE.bestMachineType(cpus, memory, location, spot, useSSD, families),
+                    type: GoogleBatchMachineTypeSelector.INSTANCE.bestMachineType(cpus, memory, location, spot, localSSD, families),
                     zone: location,
                     priceModel: priceModel
             )
