@@ -1,0 +1,8 @@
+set -e
+
+echo ''
+NXF_WRAPPER_STAGE_FILE_THRESHOLD='100' $NXF_RUN
+
+TASK_DIR=`$NXF_CMD log last -F "process == 'bar'"`
+
+[[ `cat $TASK_DIR/.command.stage | wc -l` == 19 ]] || false
