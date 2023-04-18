@@ -250,7 +250,7 @@ By default, Fusion mounts a local SSD disk to the VM at ``/tmp``, using a machin
 specify your own machine type or machine series, they should be able to attach local SSD disks, otherwise the task scheduling will fail.
 
 As of version ``23.05.0-edge``, you can use the ``disk`` directive to override the disk requested by Fusion. See the `Process definition`_
-section above for examples. Note that local SSD disks must be a multiple of 375 GB in size.
+section above for examples. Note that local SSD disks must be a multiple of 375 GB in size, otherwise the size will be increased to the next multiple of 375 GB.
 
 
 Supported directives
