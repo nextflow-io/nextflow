@@ -375,7 +375,10 @@ class BashWrapperBuilder {
         int attempt=0
         while( true ) {
             try {
-                return Files.write(path, data.getBytes(), CREATE,WRITE,TRUNCATE_EXISTING)
+                try (BufferedWriter writer=Files.newBufferedWriter(path, CREATE,WRITE,TRUNCATE_EXISTING)) {
+                    writer.write(data)
+                }
+                return path
             }
             catch (FileSystemException | SocketException | RuntimeException e) {
                 final isLocalFS = path.getFileSystem()==FileSystems.default
