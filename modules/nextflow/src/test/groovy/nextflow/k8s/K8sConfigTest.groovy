@@ -351,12 +351,12 @@ class K8sConfigTest extends Specification {
         when:
         def cfg = new K8sConfig()
         then:
-        !cfg.useJobResource()
+        cfg.getResourceType() == 'Pod'
 
         when:
         cfg = new K8sConfig(computeResourceType: 'Job')
         then:
-        cfg.useJobResource()
+        cfg.getResourceType() == 'Job'
 
     }
 

@@ -141,7 +141,7 @@ class K8sDriverLauncherTest extends Specification {
         pod.getMountConfigMaps() >> [ new PodMountConfig('cfg-2', '/mnt/path/cfg') ]
         pod.getAutomountServiceAccountToken() >> true
 
-        def k8s = Mock(K8sConfig)
+        def k8s = Spy(K8sConfig)
         k8s.getNextflowImageName() >> 'the-image'
         k8s.getLaunchDir() >> '/the/user/dir'
         k8s.getWorkDir() >> '/the/work/dir'
@@ -206,7 +206,7 @@ class K8sDriverLauncherTest extends Specification {
         k8s.getWorkDir() >> '/the/work/dir'
         k8s.getProjectDir() >> '/the/project/dir'
         k8s.getPodOptions() >> pod
-        k8s.useJobResource() >> true
+        k8s.getResourceType() >> 'Job'
 
         and:
         def driver = Spy(K8sDriverLauncher)
@@ -264,7 +264,7 @@ class K8sDriverLauncherTest extends Specification {
         pod.getMountConfigMaps() >> [ new PodMountConfig('cfg-2', '/mnt/path/cfg') ]
         pod.getAutomountServiceAccountToken() >> true
 
-        def k8s = Mock(K8sConfig)
+        def k8s = Spy(K8sConfig)
         k8s.getLaunchDir() >> '/the/user/dir'
         k8s.getWorkDir() >> '/the/work/dir'
         k8s.getProjectDir() >> '/the/project/dir'
@@ -323,7 +323,7 @@ class K8sDriverLauncherTest extends Specification {
         pod.getMountConfigMaps() >> [ new PodMountConfig('cfg-2', '/mnt/path/cfg') ]
         pod.getAutomountServiceAccountToken() >> true
 
-        def k8s = Mock(K8sConfig)
+        def k8s = Spy(K8sConfig)
         k8s.getLaunchDir() >> '/the/user/dir'
         k8s.getWorkDir() >> '/the/work/dir'
         k8s.getProjectDir() >> '/the/project/dir'
@@ -624,29 +624,28 @@ class K8sDriverLauncherTest extends Specification {
         def driver = Spy(K8sDriverLauncher)
         driver.@k8sClient = client
         driver.@runName = POD_NAME
-        driver.@k8sConfig = Mock(K8sConfig)
+        driver.@k8sConfig = Spy(K8sConfig)
 
         when:
         def status = driver.waitPodTermination()
         then:
-        1 * client.podState(POD_NAME) >> [terminated: [exitCode: 99]]
-        1 * driver.k8sConfig.useJobResource() >> [:]
+        1 * client.getState('Pod', POD_NAME) >> [terminated: [exitCode: 99]]
         then:
         status == 99
 
         when:
         status = driver.waitPodTermination()
         then:
-        1 * client.podState(POD_NAME) >> [:]
+        1 * client.getState('Pod', POD_NAME) >> [:]
         then:
-        1 * client.podState(POD_NAME) >> [terminated: [exitCode: 99]]
+        1 * client.getState('Pod', POD_NAME) >> [terminated: [exitCode: 99]]
         then:
         status == 99
 
         when:
         status = driver.waitPodTermination()
         then:
-        1 * client.podState(POD_NAME) >> [:]
+        1 * client.getState('Pod', POD_NAME) >> [:]
         1 * driver.isWaitTimedOut(_) >> true
         then:
         status == 127

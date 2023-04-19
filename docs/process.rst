@@ -1991,6 +1991,7 @@ The ``pod`` directive allows the definition of the following options:
 ``priorityClassName: <V>``                        Specifies the `priority class name <https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/>`_ for pods.
 ``toleration: <V>``                               Specifies a toleration for a node taint. See `Taints and Tolerations <https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/>`_ for details.
 ``privileged: <B>``                               Whenever the process task should run as a *privileged* container (default: ``false``)
+``resourceType: <V>``                             Specifies the resource type to be used for tasks, can be ``'Pod'`` or ``'Job'`` (default: ``'Pod'``)
 ================================================= =================================================
 
 When defined in the Nextflow configuration file, a pod setting can be defined using the canonical

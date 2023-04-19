@@ -34,7 +34,7 @@ import groovy.util.logging.Slf4j
  */
 @CompileStatic
 @Slf4j
-class PodSpecBuilder {
+class PodSpecBuilder implements ResourceSpecBuilder {
 
     static enum MetaType { LABEL, ANNOTATION }
 
@@ -51,7 +51,7 @@ class PodSpecBuilder {
 
     static @PackageScope AtomicInteger VOLUMES = new AtomicInteger()
 
-    String podName
+    String name
 
     String imageName
 
@@ -85,14 +85,6 @@ class PodSpecBuilder {
 
     boolean automountServiceAccountToken = true
 
-    Integer mpiJobWorkers = 1
-
-    String sshAuthMountPath
-
-    String computeResourceType
-
-    Boolean waitForWorkers
-
     AcceleratorResource accelerator
 
     Collection<PodMountConfig> configMaps = []
@@ -121,6 +113,8 @@ class PodSpecBuilder {
 
     int activeDeadlineSeconds
 
+    String resourceType
+
     /**
      * @return A sequential volume unique identifier
      */
@@ -128,187 +122,187 @@ class PodSpecBuilder {
         "vol-${VOLUMES.incrementAndGet()}".toString()
     }
 
-    PodSpecBuilder withPodName(String name) {
-        this.podName = name
+    ResourceSpecBuilder withName(String name) {
+        this.name = name
         return this
     }
 
-    PodSpecBuilder withImageName(String name) {
+    ResourceSpecBuilder withImageName(String name) {
         this.imageName = name
         return this
     }
 
-    PodSpecBuilder withImagePullPolicy(String policy) {
+    ResourceSpecBuilder withImagePullPolicy(String policy) {
         this.imagePullPolicy = policy
         return this
     }
 
-    PodSpecBuilder withWorkDir( String path ) {
+    ResourceSpecBuilder withWorkDir( String path ) {
         this.workDir = path
         return this
     }
 
-    PodSpecBuilder withWorkDir(Path path ) {
+    ResourceSpecBuilder withWorkDir(Path path ) {
         this.workDir = path.toString()
         return this
     }
 
-    PodSpecBuilder withNamespace(String name) {
+    ResourceSpecBuilder withNamespace(String name) {
         this.namespace = name
         return this
     }
 
-    PodSpecBuilder withServiceAccount(String name) {
+    ResourceSpecBuilder withServiceAccount(String name) {
         this.serviceAccount = name
         return this
     }
 
-    PodSpecBuilder withCommand( cmd ) {
+    ResourceSpecBuilder withCommand( cmd ) {
         if( cmd==null ) return this
         assert cmd instanceof List || cmd instanceof CharSequence, "Missing or invalid K8s command parameter: $cmd"
         this.command = cmd instanceof List ? cmd : ['/bin/bash','-c', cmd.toString()]
         return this
     }
 
-    PodSpecBuilder withArgs( args ) {
+    ResourceSpecBuilder withArgs( args ) {
         if( args==null ) return this
         assert args instanceof List || args instanceof CharSequence, "Missing or invalid K8s args parameter: $args"
         this.args = args instanceof List ? args : ['/bin/bash','-c', args.toString()]
         return this
     }
 
-    PodSpecBuilder withCpus( Integer cpus ) {
+    ResourceSpecBuilder withCpus( Integer cpus ) {
         this.cpus = cpus
         return this
     }
 
-    PodSpecBuilder withMemory(String mem) {
+    ResourceSpecBuilder withMemory(String mem) {
         this.memory = mem
         return this
     }
 
-    PodSpecBuilder withMemory(MemoryUnit mem)  {
+    ResourceSpecBuilder withMemory(MemoryUnit mem)  {
         this.memory = "${mem.mega}Mi".toString()
         return this
     }
 
-    PodSpecBuilder withDisk(String disk) {
+    ResourceSpecBuilder withDisk(String disk) {
         this.disk = disk
         return this
     }
 
-    PodSpecBuilder withDisk(MemoryUnit disk)  {
+    ResourceSpecBuilder withDisk(MemoryUnit disk)  {
         this.disk = "${disk.mega}Mi".toString()
         return this
     }
 
-    PodSpecBuilder withAccelerator(AcceleratorResource acc) {
+    ResourceSpecBuilder withAccelerator(AcceleratorResource acc) {
         this.accelerator = acc
         return this
     }
 
-    PodSpecBuilder withLabel( String name, String value ) {
+    ResourceSpecBuilder withLabel( String name, String value ) {
         this.labels.put(name, value)
         return this
     }
 
-    PodSpecBuilder withLabels(Map labels) {
+    ResourceSpecBuilder withLabels(Map labels) {
         this.labels.putAll(labels)
         return this
     }
 
-    PodSpecBuilder withAnnotation( String name, String value ) {
+    ResourceSpecBuilder withAnnotation( String name, String value ) {
         this.annotations.put(name, value)
         return this
     }
 
-    PodSpecBuilder withAnnotations(Map annotations) {
+    ResourceSpecBuilder withAnnotations(Map annotations) {
         this.annotations.putAll(annotations)
         return this
     }
 
 
-    PodSpecBuilder withEnv( PodEnv env ) {
+    ResourceSpecBuilder withEnv( PodEnv env ) {
         envVars.add(env)
         return this
     }
 
-    PodSpecBuilder withEnv( Collection envs ) {
+    ResourceSpecBuilder withEnv( Collection envs ) {
         envVars.addAll(envs)
         return this
     }
 
-    PodSpecBuilder withVolumeClaim( PodVolumeClaim claim ) {
+    ResourceSpecBuilder withVolumeClaim( PodVolumeClaim claim ) {
         volumeClaims.add(claim)
         return this
     }
 
-    PodSpecBuilder withVolumeClaims( Collection<PodVolumeClaim> claims ) {
+    ResourceSpecBuilder withVolumeClaims( Collection<PodVolumeClaim> claims ) {
         volumeClaims.addAll(claims)
         return this
     }
 
-    PodSpecBuilder withConfigMaps( Collection<PodMountConfig> configMaps ) {
+    ResourceSpecBuilder withConfigMaps( Collection<PodMountConfig> configMaps ) {
         this.configMaps.addAll(configMaps)
         return this
     }
 
-    PodSpecBuilder withConfigMap( PodMountConfig configMap ) {
+    ResourceSpecBuilder withConfigMap( PodMountConfig configMap ) {
         this.configMaps.add(configMap)
         return this
     }
 
-    PodSpecBuilder withCsiEphemerals( Collection<PodMountCsiEphemeral> csiEphemerals ) {
+    ResourceSpecBuilder withCsiEphemerals( Collection<PodMountCsiEphemeral> csiEphemerals ) {
         this.csiEphemerals.addAll(csiEphemerals)
         return this
     }
 
-    PodSpecBuilder withCsiEphemeral( PodMountCsiEphemeral csiEphemeral ) {
+    ResourceSpecBuilder withCsiEphemeral( PodMountCsiEphemeral csiEphemeral ) {
         this.csiEphemerals.add(csiEphemeral)
         return this
     }
 
-    PodSpecBuilder withEmptyDirs( Collection<PodMountEmptyDir> emptyDirs ) {
+    ResourceSpecBuilder withEmptyDirs( Collection<PodMountEmptyDir> emptyDirs ) {
         this.emptyDirs.addAll(emptyDirs)
         return this
     }
 
-    PodSpecBuilder withEmptyDir( PodMountEmptyDir emptyDir ) {
+    ResourceSpecBuilder withEmptyDir( PodMountEmptyDir emptyDir ) {
         this.emptyDirs.add(emptyDir)
         return this
     } 
 
-    PodSpecBuilder withSecrets( Collection<PodMountSecret> secrets ) {
+    ResourceSpecBuilder withSecrets( Collection<PodMountSecret> secrets ) {
         this.secrets.addAll(secrets)
         return this
     }
 
-    PodSpecBuilder withSecret( PodMountSecret secret ) {
+    ResourceSpecBuilder withSecret( PodMountSecret secret ) {
         this.secrets.add(secret)
         return this
     }
 
-    PodSpecBuilder withHostMounts( Collection<PodHostMount> mounts ) {
+    ResourceSpecBuilder withHostMounts( Collection<PodHostMount> mounts ) {
         this.hostMounts.addAll(mounts)
         return this
     }
 
-    PodSpecBuilder withHostMount( String host, String mount ) {
+    ResourceSpecBuilder withHostMount( String host, String mount ) {
         this.hostMounts.add( new PodHostMount(host, mount))
         return this
     }
 
-    PodSpecBuilder withPrivileged(boolean value) {
+    ResourceSpecBuilder withPrivileged(boolean value) {
         this.privileged = value
         return this
     }
 
-    PodSpecBuilder withActiveDeadline(int seconds) {
+    ResourceSpecBuilder withActiveDeadline(int seconds) {
         this.activeDeadlineSeconds = seconds
         return this
     }
 
-    PodSpecBuilder withPodOptions(PodOptions opts) {
+    ResourceSpecBuilder withPodOptions(PodOptions opts) {
         // -- pull policy
         if( opts.imagePullPolicy )
             imagePullPolicy = opts.imagePullPolicy
@@ -361,11 +355,8 @@ class PodSpecBuilder {
             tolerations.addAll(opts.tolerations)
         // -- privileged
         privileged = opts.privileged
-
-        sshAuthMountPath = opts.sshAuthMountPath
-        mpiJobWorkers = opts.mpiJobWorkers
-        computeResourceType = opts.computeResourceType
-        waitForWorkers = opts.waitForWorkers
+        // -- resource type
+        resourceType = opts.resourceType
 
         return this
     }
@@ -378,24 +369,43 @@ class PodSpecBuilder {
         return result
     }
 
+    @Override
     Map build() {
-        assert this.podName, 'Missing K8s podName parameter'
-        assert this.imageName, 'Missing K8s imageName parameter'
-        assert this.command || this.args, 'Missing K8s command parameter'
+        assert this.name, 'Missing K8s pod name'
+        assert this.imageName, 'Missing K8s container image'
+        assert this.command || this.args, 'Missing K8s command or args'
 
-        final restart = this.restart ?: 'Never'
+        return [
+            apiVersion: 'v1',
+            kind: 'Pod',
+            metadata: buildMetadata(),
+            spec: buildSpec()
+        ]
+    }
 
+    protected Map buildMetadata() {
         final metadata = new LinkedHashMap<String,Object>()
-        metadata.name = podName
+        metadata.name = name
         metadata.namespace = namespace ?: 'default'
 
-        final labels = this.labels ?: [:]
+        if( labels )
+            metadata.labels = sanitize(labels, MetaType.LABEL)
+
+        if( annotations )
+            metadata.annotations = sanitize(annotations, MetaType.ANNOTATION)
+
+        return metadata
+    }
+
+    protected Map buildSpec() {
+        final restart = this.restart ?: 'Never'
+
         final env = []
         for( PodEnv entry : this.envVars ) {
             env.add(entry.toSpec())
         }
 
-        final container = [ name: this.podName, image: this.imageName ]
+        final container = [ name: this.name, image: this.imageName ]
         if( this.command )
             container.command = this.command
         if( this.args )
@@ -443,23 +453,9 @@ class PodSpecBuilder {
         if( this.tolerations )
             spec.tolerations = this.tolerations
 
-        // add labels
-        if( labels )
-            metadata.labels = sanitize(labels, MetaType.LABEL)
-
-        if( annotations )
-            metadata.annotations = sanitize(annotations, MetaType.ANNOTATION)
-
         // time directive
         if ( activeDeadlineSeconds > 0)
             spec.activeDeadlineSeconds = activeDeadlineSeconds
-
-        final pod = [
-                apiVersion: 'v1',
-                kind: 'Pod',
-                metadata: metadata,
-                spec: spec
-        ]
 
         // add environment
         if( env )
@@ -545,87 +541,7 @@ class PodSpecBuilder {
         if( mounts )
             container.volumeMounts = mounts
 
-        return pod
-    }
-
-    Map buildAsJob() {
-        if( computeResourceType == ResourceType.MPIJob.name() )
-            return buildAsMPIJob()
-
-        final pod = build()
-
-        // job metadata
-        final metadata = new LinkedHashMap<String,Object>()
-        metadata.name = this.podName    //  just use the podName for simplicity, it may be renamed to just `name` or `resourceName` in the future
-        metadata.namespace = this.namespace ?: 'default'
-
-        // job spec
-        final spec = new LinkedHashMap<String,Object>()
-        spec.backoffLimit = 0
-        spec.template = [spec: pod.spec]
-
-        if( labels )
-            metadata.labels = sanitize(labels, MetaType.LABEL)
-
-        if( annotations )
-            metadata.annotations = sanitize(annotations, MetaType.ANNOTATION)
-
-        final result = [
-                apiVersion: 'batch/v1',
-                kind: 'Job',
-                metadata: metadata,
-                spec: spec ]
-
-        return result
-
-    }
-
-    @PackageScope
-    Map buildAsMPIJob() {        
-        final worker = build()
-        Map workerSpec = worker.spec as Map
-        List containers = workerSpec.containers as List
-        Map container = containers[0] as Map
-        container.remove('command')
-        container.remove('args')
-
-        withCpus(1)
-        withMemory("2048Mi")
-        final launcher = build()
-
-        final result = [
-            apiVersion: 'kubeflow.org/v2beta1',
-            kind: 'MPIJob',
-            metadata: launcher.metadata,
-            spec: [
-                slotsPerWorker: 1,
-                runPolicy: [
-                    cleanPodPolicy: 'All'
-                ],
-                sshAuthMountPath: this.sshAuthMountPath,
-                mpiReplicaSpecs: [
-                    Launcher: [
-                        replicas: 1,
-                        template: [
-                            spec: launcher.spec
-                        ]
-                    ],
-                    Worker: [
-                        replicas: this.mpiJobWorkers,
-                        template: [
-                            spec: worker.spec
-                        ]
-                    ]
-                ]
-            ]
-        ]
-
-        if( waitForWorkers ) {
-            final spec = result.spec as Map
-            spec.waitForWorkers = waitForWorkers
-        }
-
-        return result
+        return spec
     }
 
     @PackageScope

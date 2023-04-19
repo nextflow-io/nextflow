@@ -67,13 +67,9 @@ class PodOptions {
 
     private Boolean privileged
 
-    private Integer mpiJobWorkers
+    private String resourceType
 
-    private String sshAuthMountPath 
-
-    private String computeResourceType
-
-    private Boolean waitForWorkers
+    private Map mpiOptions
 
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
@@ -159,17 +155,11 @@ class PodOptions {
         else if( entry.privileged instanceof Boolean ) {
             this.privileged = entry.privileged as Boolean
         }
-        else if( entry.sshAuthMountPath ) {
-            this.sshAuthMountPath = entry.sshAuthMountPath as String
+        else if( entry.resourceType ) {
+            this.resourceType = entry.resourceType as String
         }
-        else if( entry.mpiJobWorkers ) {
-            this.mpiJobWorkers = entry.mpiJobWorkers as Integer
-        }
-        else if( entry.computeResourceType ) {
-            this.computeResourceType = entry.computeResourceType as String
-        }
-        else if( entry.waitForWorkers ) {
-            this.waitForWorkers = entry.waitForWorkers as Boolean
+        else if( entry.mpi instanceof Map ) {
+            this.mpiOptions = entry.mpiOptions as Map
         }
         else
             throw new IllegalArgumentException("Unknown pod options: $entry")
@@ -187,14 +177,6 @@ class PodOptions {
     Collection<PodMountSecret> getMountSecrets() { mountSecrets }
 
     Collection<PodVolumeClaim> getVolumeClaims() { mountClaims }
-
-    String getSshAuthMountPath() { sshAuthMountPath }
-
-    Integer getMpiJobWorkers() { mpiJobWorkers }
-
-    String getComputeResourceType() { computeResourceType }
-
-    Boolean getWaitForWorkers() { waitForWorkers }
 
     Map<String,String> getLabels() { labels }
 
@@ -242,7 +224,11 @@ class PodOptions {
     List<Map> getTolerations() { tolerations }
 
     Boolean getPrivileged() { privileged }
-    
+
+    String getResourceType() { resourceType }
+
+    Map getMpiOptions() { mpiOptions }
+
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
 
@@ -314,10 +300,11 @@ class PodOptions {
         //  privileged execution
         result.privileged = other.privileged!=null ? other.privileged : this.privileged
 
-        result.mpiJobWorkers = other.mpiJobWorkers!=0 ? other.mpiJobWorkers : this.mpiJobWorkers
-        result.sshAuthMountPath = other.sshAuthMountPath!=null ? other.sshAuthMountPath : this.sshAuthMountPath
-        result.computeResourceType = other.computeResourceType!=null ? other.computeResourceType : this.computeResourceType
-        result.waitForWorkers = other.waitForWorkers!=null? other.waitForWorkers : this.waitForWorkers
+        // resource type
+        result.resourceType = other.resourceType ?: this.resourceType
+
+        // mpi job options
+        result.mpiOptions = other.mpiOptions ?: this.mpiOptions
 
         return result
     }
