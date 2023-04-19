@@ -38,6 +38,8 @@ import nextflow.util.Escape
 
 import static java.nio.file.StandardOpenOption.*
 
+import nextflow.util.MemoryUnit
+
 /**
  * Builder to create the Bash script which is used to
  * wrap and launch the user task
@@ -48,10 +50,12 @@ import static java.nio.file.StandardOpenOption.*
 @CompileStatic
 class BashWrapperBuilder {
 
+    private static MemoryUnit DEFAULT_STAGE_FILE_THRESHOLD = MemoryUnit.of('1 MB')
     private static int DEFAULT_WRITE_BACK_OFF_BASE = 3
     private static int DEFAULT_WRITE_BACK_OFF_DELAY = 250
     private static int DEFAULT_WRITE_MAX_ATTEMPTS = 5
 
+    private MemoryUnit stageFileThreshold = SysEnv.get('NXF_WRAPPER_STAGE_FILE_THRESHOLD') as MemoryUnit ?: DEFAULT_STAGE_FILE_THRESHOLD
     private int writeBackOffBase = SysEnv.get('NXF_WRAPPER_BACK_OFF_BASE') as Integer ?: DEFAULT_WRITE_BACK_OFF_BASE
     private int writeBackOffDelay = SysEnv.get('NXF_WRAPPER_BACK_OFF_DELAY') as Integer ?: DEFAULT_WRITE_BACK_OFF_DELAY
     private int writeMaxAttempts = SysEnv.get('NXF_WRAPPER_MAX_ATTEMPTS') as Integer ?: DEFAULT_WRITE_MAX_ATTEMPTS
@@ -106,6 +110,10 @@ class BashWrapperBuilder {
     private Path exitedFile
 
     private Path wrapperFile
+
+    private Path stageFile
+
+    private String stageScript
 
     private BashTemplateEngine engine = new BashTemplateEngine()
 
@@ -184,7 +192,20 @@ class BashWrapperBuilder {
         }
         result.toString()
     }
-    
+
+    protected String stageCommand(String stagingScript) {
+        if( !stagingScript )
+            return null
+
+        final header = "# stage input files\n"
+        if( stagingScript.size() >= stageFileThreshold.bytes ) {
+            stageScript = stagingScript
+            return header + "bash ${stageFile}"
+        }
+        else
+            return header + stagingScript
+    }
+
     protected Map<String,String> makeBinding() {
         /*
          * initialise command files
@@ -194,6 +215,7 @@ class BashWrapperBuilder {
         startedFile = workDir.resolve(TaskRun.CMD_START)
         exitedFile = workDir.resolve(TaskRun.CMD_EXIT)
         wrapperFile = workDir.resolve(TaskRun.CMD_RUN)
+        stageFile = workDir.resolve(TaskRun.CMD_STAGE)
 
         // set true when running with through a container engine
         runWithContainer = containerEnabled && !containerNative
@@ -275,7 +297,7 @@ class BashWrapperBuilder {
          * staging input files when required
          */
         final stagingScript = copyStrategy.getStageInputFilesScript(inputFiles)
-        binding.stage_inputs = stagingScript ? "# stage input files\n${stagingScript}" : null
+        binding.stage_inputs = stageCommand(stagingScript)
 
         binding.stdout_file = TaskRun.CMD_OUTFILE
         binding.stderr_file = TaskRun.CMD_ERRFILE
@@ -340,6 +362,8 @@ class BashWrapperBuilder {
         write0(targetScriptFile(), script)
         if( input != null )
             write0(targetInputFile(), input.toString())
+        if( stageScript != null )
+            write0(targetStageFile(), stageScript)
         return result
     }
 
@@ -349,11 +373,16 @@ class BashWrapperBuilder {
 
     protected Path targetInputFile() { return inputFile }
 
+    protected Path targetStageFile() { return stageFile }
+
     private Path write0(Path path, String data) {
         int attempt=0
         while( true ) {
             try {
-                return Files.write(path, data.getBytes(), CREATE,WRITE,TRUNCATE_EXISTING)
+                try (BufferedWriter writer=Files.newBufferedWriter(path, CREATE,WRITE,TRUNCATE_EXISTING)) {
+                    writer.write(data)
+                }
+                return path
             }
             catch (FileSystemException | SocketException | RuntimeException e) {
                 final isLocalFS = path.getFileSystem()==FileSystems.default
