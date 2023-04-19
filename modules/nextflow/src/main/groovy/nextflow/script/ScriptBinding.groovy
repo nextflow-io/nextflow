@@ -247,14 +247,15 @@ class ScriptBinding extends WorkflowBinding {
 
         @Override
         Object get(Object key) {
-            if( !target.containsKey(key) ) {
+            String normalizedKey = normalizeToCamelCase((String) key)
+            if( !target.containsKey(normalizedKey) ) {
                 final msg = "Access to undefined parameter `$key` -- Initialise it to a default value eg. `params.$key = some_value`"
                 if( NF.isStrictMode() )
                     throw new AbortOperationException(msg)
                 log.warn1(msg, firstOnly: true)
                 return null
             }
-            return target.get(key)
+            return target.get(normalizedKey)
         }
 
         /**
@@ -283,17 +284,15 @@ class ScriptBinding extends WorkflowBinding {
             // keep track of the real name
             realNames << name
 
-            // normalize the name
-            def name2 = name.contains('-') ? hyphenToCamelCase(name) : camelCaseToHyphen(name)
+            // internally normalize the name to camelCase
+            name = normalizeToCamelCase(name)
 
-            final readOnly = name in readOnlyNames || name2 in readOnlyNames
+            final readOnly = name in readOnlyNames
 
             def result = null
             if( !readOnly ) {
                 readOnlyNames << name
-                readOnlyNames << name2
                 result = target.put(name, value)
-                target.put(name2, value)
             }
 
             return result
@@ -360,49 +359,13 @@ class ScriptBinding extends WorkflowBinding {
          * @return
          */
         @PackageScope
-        static String hyphenToCamelCase( String str ) {
+        static String normalizeToCamelCase( String str ) {
 
             if( !str ) { return str }
 
             def result = new StringBuilder()
-            str.split('-').eachWithIndex{ String entry, int i ->
+            str.split('[-_]').eachWithIndex{ String entry, int i ->
                 result << (i>0 ? StringUtils.capitalize(entry) : entry )
-            }
-
-            return result.toString()
-        }
-
-        /**
-         * Converts a camel-case string to a string where words are separated by hyphen character
-         *
-         * @param str The string to be converted
-         * @return A string where camel-case words are converted to words separated by hyphen character
-         */
-        @PackageScope
-        static String camelCaseToHyphen( String str ) {
-
-            def lower = 'a'..'z'
-            def upper = 'A'..'Z'
-
-            def result = new StringBuilder()
-            if( !str ) {
-                return str
-            }
-
-            result << str[0]
-            for( int i=1; i<str.size(); i++ ) {
-                if( str[i] in upper && str[i-1] in lower  ) {
-                    result << '-'
-                    if( i+1<str.size() && str[i+1] in lower ) {
-                        result << str[i].toLowerCase()
-                    }
-                    else {
-                        result << str[i]
-                    }
-                }
-                else {
-                    result << str[i]
-                }
             }
 
             return result.toString()

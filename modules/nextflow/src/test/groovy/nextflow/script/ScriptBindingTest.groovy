@@ -75,29 +75,30 @@ class ScriptBindingTest extends Specification {
 
     }
 
-    def 'should convert hyphen separated string to camel case' () {
+    def 'should normalize strings to camel case' () {
 
         expect:
-        ScriptBinding.ParamsMap.hyphenToCamelCase('a') == 'a'
-        ScriptBinding.ParamsMap.hyphenToCamelCase('A') == 'A'
-        ScriptBinding.ParamsMap.hyphenToCamelCase('a-b-c-') == 'aBC'
-        ScriptBinding.ParamsMap.hyphenToCamelCase('aa-bb-cc') == 'aaBbCc'
-        ScriptBinding.ParamsMap.hyphenToCamelCase('alpha-beta-delta') == 'alphaBetaDelta'
-        ScriptBinding.ParamsMap.hyphenToCamelCase('Alpha-Beta-delta') == 'AlphaBetaDelta'
-
-    }
-
-    def 'should convert camel case string to hyphen separated' () {
-
-        expect:
-        ScriptBinding.ParamsMap.camelCaseToHyphen('alphaBetaDelta') == 'alpha-beta-delta'
-        ScriptBinding.ParamsMap.camelCaseToHyphen('AlphaBetaDelta') == 'Alpha-beta-delta'
-        ScriptBinding.ParamsMap.camelCaseToHyphen('Field1') == 'Field1'
-        ScriptBinding.ParamsMap.camelCaseToHyphen('FieldUno') == 'Field-uno'
-        ScriptBinding.ParamsMap.camelCaseToHyphen('FieldUNO') == 'Field-UNO'
-        ScriptBinding.ParamsMap.camelCaseToHyphen('FieldA') == 'Field-A'
-        ScriptBinding.ParamsMap.camelCaseToHyphen('FieldAB') == 'Field-AB'
-        ScriptBinding.ParamsMap.camelCaseToHyphen('FieldAb') == 'Field-ab'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('a') == 'a'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('A') == 'A'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('a-b-c-') == 'aBC'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('a_b_c-') == 'aBC'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('aa-bb-cc') == 'aaBbCc'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('aa_bb_cc') == 'aaBbCc'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('alpha_beta_delta') == 'alphaBetaDelta'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('alpha_beta-delta') == 'alphaBetaDelta'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('alpha-beta_delta') == 'alphaBetaDelta'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('alpha-beta-delta') == 'alphaBetaDelta'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('Alpha_beta_delta') == 'AlphaBetaDelta'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('Alpha_beta-delta') == 'AlphaBetaDelta'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('Alpha-beta_delta') == 'AlphaBetaDelta'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('Alpha-Beta-delta') == 'AlphaBetaDelta'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('Field1') == 'Field1'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('Field_uno') == 'FieldUno'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('Field_UNO') == 'FieldUNO'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('Field_A') == 'FieldA'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('field-ab') == 'fieldAb'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('Field_AB') == 'FieldAB'
+        ScriptBinding.ParamsMap.normalizeToCamelCase('Field_ab') == 'FieldAb'
 
     }
 
@@ -133,7 +134,7 @@ class ScriptBindingTest extends Specification {
 
         then:
         map['field1'] == 1
-        map['field-1'] == null
+        map['field-1'] == 1
         map['field2']  == 2
         map['Field2']  == 3
 
@@ -184,7 +185,7 @@ class ScriptBindingTest extends Specification {
         when:
         def params = new ScriptBinding.ParamsMap('foo-bar':1)
         then:
-        params.size() == 2
+        params.size() == 1
         params.fooBar == 1
         params.'foo-bar' == 1
         params.all() == '--foo-bar 1'
