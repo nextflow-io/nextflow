@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -595,6 +594,7 @@ class AssetManager {
             clone
                 .setURI(cloneURL)
                 .setDirectory(localPath)
+                .setDepth(1)
                 .setCloneSubmodules(manifest.recurseSubmodules)
                 .call()
 
@@ -675,6 +675,7 @@ class AssetManager {
 
         clone.setURI(uri)
         clone.setDirectory(directory)
+        clone.setDepth(1)
         clone.setCloneSubmodules(manifest.recurseSubmodules)
         if( provider.hasCredentials() )
             clone.setCredentialsProvider( provider.getGitCredentials() )

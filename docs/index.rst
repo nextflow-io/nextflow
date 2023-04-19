@@ -25,6 +25,7 @@ Contents:
    wave
    fusion
    conda
+   spack
    aws
    amazons3
    azure

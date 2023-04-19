@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -391,11 +390,26 @@ class SessionTest extends Specification {
     }
 
     @Unroll
-    def 'should get config config' () {
+    def 'should get config for conda environments' () {
         given:
         def session =  Spy(new Session([conda: CONFIG]))
         expect:
         session.condaConfig.isEnabled() == EXPECTED
+        
+        where:
+        EXPECTED    | CONFIG            | ENV
+        false       | [:]               | [:]
+        false       | [enabled: false]  | [:]
+        true        | [enabled: true]   | [:]
+
+    }
+
+    @Unroll
+    def 'should get config for spack environments' () {
+        given:
+        def session =  Spy(new Session([spack: CONFIG]))
+        expect:
+        session.spackConfig.isEnabled() == EXPECTED
         
         where:
         EXPECTED    | CONFIG            | ENV

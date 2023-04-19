@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -423,13 +422,13 @@ class K8sConfigTest extends Specification {
     def 'should set env and sec context' () {
         given:
         def ctx = [
-                [env: 'NXF_FUSION_BUCKETS', value: 's3://nextflow-ci'],
+                [env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'],
                 [securityContext: [privileged: true]]]
 
         when:
         def cfg = new K8sConfig( pod: ctx )
         then:
-        cfg.getPodOptions().getEnvVars().first() == PodEnv.value('NXF_FUSION_BUCKETS', 's3://nextflow-ci')
+        cfg.getPodOptions().getEnvVars().first() == PodEnv.value('FUSION_BUCKETS', 's3://nextflow-ci')
         cfg.getPodOptions().getSecurityContext().toSpec() == [privileged:true]
 
     }

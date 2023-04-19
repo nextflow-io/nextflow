@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +17,13 @@
 package nextflow.executor
 import java.nio.file.Paths
 
+import nextflow.Session
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import spock.lang.Specification
+import spock.lang.Unroll
+
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -57,12 +59,22 @@ class SlurmExecutorTest extends Specification {
 
     }
 
+    @Unroll
     def testGetCommandLine() {
+        given:
+        def session = Mock(Session) {getConfig()>>[:]}
+        def exec = Spy(SlurmExecutor) { getSession()>>session }
 
         when:
-        def exec = [:] as SlurmExecutor
+        def result = exec.getSubmitCommandLine(Mock(TaskRun), Paths.get(PATH))
         then:
-        exec.getSubmitCommandLine(Mock(TaskRun), Paths.get('/some/path/job.sh')) == ['sbatch', 'job.sh']
+        exec.pipeLauncherScript() >> PIPE
+        result == EXPECTED
+
+        where:
+        PATH                    | PIPE      | EXPECTED
+        '/some/path/job.sh'     | false     | ['sbatch', 'job.sh']
+        '/some/path/job.sh'     | true      | ['sbatch']
     }
 
     def testGetHeaders() {
@@ -85,7 +97,6 @@ class SlurmExecutorTest extends Specification {
         task.config = new TaskConfig()
         then:
         executor.getHeaders(task) == '''
-                #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
                 #SBATCH --no-requeue
@@ -98,7 +109,6 @@ class SlurmExecutorTest extends Specification {
         task.config.queue = 'delta'
         then:
         executor.getHeaders(task) == '''
-                #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
                 #SBATCH --no-requeue
@@ -112,7 +122,6 @@ class SlurmExecutorTest extends Specification {
         task.config.time = '1m'
         then:
         executor.getHeaders(task) == '''
-                #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
                 #SBATCH --no-requeue
@@ -129,7 +138,6 @@ class SlurmExecutorTest extends Specification {
 
         then:
         executor.getHeaders(task) == '''
-                #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
                 #SBATCH --no-requeue
@@ -148,7 +156,6 @@ class SlurmExecutorTest extends Specification {
 
         then:
         executor.getHeaders(task) == '''
-                #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
                 #SBATCH --no-requeue
@@ -169,7 +176,6 @@ class SlurmExecutorTest extends Specification {
 
         then:
         executor.getHeaders(task) == '''
-                #SBATCH -D /work/path
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o /work/path/.command.log
                 #SBATCH --no-requeue
@@ -202,7 +208,6 @@ class SlurmExecutorTest extends Specification {
         task.config = new TaskConfig()
         then:
         executor.getHeaders(task) == '''
-                #SBATCH -D "/work/some\\ data/path"
                 #SBATCH -J nf-the_task_name
                 #SBATCH -o "/work/some\\ data/path/.command.log"
                 #SBATCH --no-requeue

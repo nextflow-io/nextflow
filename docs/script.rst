@@ -99,6 +99,17 @@ To add data to or modify a map, the syntax is similar to adding values to list::
     scores["Pete"] = 3
     scores["Cedric"] = 120
 
+You can also use the ``+`` operator to add two maps together::
+
+    new_scores = scores + ["Pete": 3, "Cedric": 120]
+
+When adding two maps, the first map is copied and then appended with the keys from the second map. Any conflicting keys
+are overwritten by the second map.
+
+.. tip::
+    Appending an "update" map is a safer way to modify maps in Nextflow, specifically when passing maps through channels.
+    This way, any references to the original map elsewhere in the pipeline won't be modified.
+
 Learn more about maps:
 
 * `Groovy Maps tutorial <http://groovy-lang.org/groovy-dev-kit.html#Collections-Maps>`_
@@ -502,6 +513,27 @@ checkIfExists   When ``true`` throws an exception of the specified path do not e
   If you are a Java geek, you might be interested to know that the ``file`` method returns a
   `Path <http://docs.oracle.com/javase/8/docs/api/java/nio/file/Path.html>`_ object, which allows
   you to use the same methods you would use in a Java program.
+
+.. warning::
+ When a file reference is created using a URL path and it's converted to a string the protocol schema is not included in the resulting string.
+
+You can check this behavior with the code below::
+
+  def ref = file('s3://some-bucket/foo.txt')
+  assert ref.toString() == '/some-bucket/foo.txt'
+  assert "$ref" == '/some-bucket/foo.txt'
+
+To have the file including the schema the method ``toUriString`` should be used instead::
+
+  assert ref.toUriString() == 's3://some-bucket/foo.txt'
+
+Also, instead of composing paths through string interpolation, the ``.resolve`` method or the ``/`` operator
+should be used instead::
+
+  def dir = file('s3://bucket/some/data/path')
+  def sample = "$dir/sample.bam"                // don't do this
+  def sample1 = dir.resolve('sample.bam')
+  def sample2 = dir / 'sample.bam'              // the operator `/` can be used to compose paths
 
 See also: :ref:`Channel.fromPath <channel-path>`.
 

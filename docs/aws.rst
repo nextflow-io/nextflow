@@ -17,10 +17,10 @@ You can provide your AWS access keys using the standard AWS variables shown belo
     * ``AWS_DEFAULT_REGION``
 
 If ``AWS_ACCESS_KEY_ID`` and ``AWS_SECRET_ACCESS_KEY`` are not defined in the environment, Nextflow will attempt to
-retrieve credentials from your ``~/.aws/credentials`` or ``~/.aws/config`` files. The ``default`` profile can be
+retrieve credentials from your ``~/.aws/credentials`` and ``~/.aws/config`` files. The ``default`` profile can be
 overridden via the environmental variable ``AWS_PROFILE`` (or ``AWS_DEFAULT_PROFILE``).
 
-Alternatively AWS credentials can be specified in the Nextflow configuration file.
+Alternatively AWS credentials and profile can be specified in the Nextflow configuration file.
 
 See :ref:`AWS configuration<config-aws>` for more details.
 

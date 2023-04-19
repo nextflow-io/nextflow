@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +15,8 @@
  */
 
 package nextflow.executor
+
+import java.nio.file.Path
 
 import nextflow.Session
 import nextflow.processor.TaskRun
@@ -114,6 +115,22 @@ class AbstractGridExecutorTest extends Specification {
         exec.sanitizeJobName(LONG) == LONG.substring(0,256)
     }
 
+    def 'should add change dir variable' () {
+        given:
+        def work = Path.of('/some/dir')
+        def exec = Spy(AbstractGridExecutor)
+        def task = Mock(TaskRun) { getWorkDir() >> work}
+        when:
+        def result = exec.getHeaderScript(task)
+        then:
+        1 * exec.getHeaders(task) >> '#$ one\n#$ two\n'
+        result == '''\
+                #$ one
+                #$ two
+                NXF_CHDIR=/some/dir
+                '''.stripIndent()
+    }
+    
     def 'should fetch queue status'() {
         given:
         def STATUS = ['123': AbstractGridExecutor.QueueStatus.RUNNING]
