@@ -301,7 +301,8 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.fixOwnership() >> false
         1 * handler.entrypointOverride() >> false
         1 * handler.getPodOptions() >> new PodOptions()
-        1 * handler.getSyntheticPodName(task) >> 'nf-123'
+        1 * handler.getK8sConfig() >> new K8sConfig()
+        1 * handler.getSyntheticName(task) >> 'nf-123'
         1 * handler.getLabels(task) >> [:]
         1 * handler.getAnnotations() >> [:]
         1 * handler.getContainerMounts() >> []

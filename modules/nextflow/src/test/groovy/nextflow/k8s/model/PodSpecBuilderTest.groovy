@@ -146,7 +146,7 @@ class PodSpecBuilderTest extends Specification {
 
         when:
         def spec = new PodSpecBuilder()
-                .withPodName('foo')
+                .withName('foo')
                 .withImageName('busybox')
                 .withCommand('echo foo')
                 .withDevices(['/dev/fuse'])
