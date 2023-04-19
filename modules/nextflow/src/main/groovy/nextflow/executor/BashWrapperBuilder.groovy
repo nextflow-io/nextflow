@@ -50,7 +50,7 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class BashWrapperBuilder {
 
-    private static MemoryUnit DEFAULT_STAGE_FILE_THRESHOLD = MemoryUnit.of('100 KB')
+    private static MemoryUnit DEFAULT_STAGE_FILE_THRESHOLD = MemoryUnit.of('1 MB')
     private static int DEFAULT_WRITE_BACK_OFF_BASE = 3
     private static int DEFAULT_WRITE_BACK_OFF_DELAY = 250
     private static int DEFAULT_WRITE_MAX_ATTEMPTS = 5
