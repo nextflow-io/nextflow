@@ -594,6 +594,7 @@ class AssetManager {
             clone
                 .setURI(cloneURL)
                 .setDirectory(localPath)
+                .setDepth(1)
                 .setCloneSubmodules(manifest.recurseSubmodules)
                 .call()
 
@@ -674,6 +675,7 @@ class AssetManager {
 
         clone.setURI(uri)
         clone.setDirectory(directory)
+        clone.setDepth(1)
         clone.setCloneSubmodules(manifest.recurseSubmodules)
         if( provider.hasCredentials() )
             clone.setCredentialsProvider( provider.getGitCredentials() )

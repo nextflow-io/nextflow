@@ -35,7 +35,7 @@ dependencies {
     api "com.beust:jcommander:1.35"
     api("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
     api('org.iq80.leveldb:leveldb:0.12')
-    api('org.eclipse.jgit:org.eclipse.jgit:6.2.0.202206071550-r')
+    api('org.eclipse.jgit:org.eclipse.jgit:6.5.0.202303070854-r')
     api ('javax.activation:activation:1.1.1')
     api ('javax.mail:mail:1.4.7')
     api ('org.yaml:snakeyaml:2.0')
