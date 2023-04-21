@@ -239,6 +239,23 @@ The above example defines the configuration for two node pools. The first will p
 the second 5 nodes of type ``Standard_E2_v3``. See the `Advanced settings`_ below for the complete list of available
 configuration options.
 
+.. warning::
+    The pool name can only contain alphanumeric, hyphen and underscore characters.
+
+.. warning::
+   If the pool name includes a hyphen, make sure to wrap it with single quotes. For example::
+
+
+    azure {
+        batch {
+            pools {
+                'foo-2' {
+                   ...
+                }
+            }
+        }
+    }
+
 Requirements on pre-existing named pools
 ----------------------------------------
 

@@ -1,7 +1,6 @@
 #!/bin/bash
 #
-#  Copyright 2020-2022, Seqera Labs
-#  Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+#  Copyright 2013-2023, Seqera Labs
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -67,7 +66,7 @@ fi
 JAVA_VER=$(echo "$JAVA_VER" | awk '/version/ {gsub(/"/, "", $3); print $3}')
 major=${BASH_REMATCH[1]}
 minor=${BASH_REMATCH[2]}
-version_check="^(1.8|9|10|11|12|13|14|15|16|17|18|19)"
+version_check="^(1.8|9|10|11|12|13|14|15|16|17|18|19|20)"
 if [[ ! $JAVA_VER =~ $version_check ]]; then
     echo "Error: cannot find Java or it's a wrong version -- please make sure that Java 8 or higher is installed"
     exit 1

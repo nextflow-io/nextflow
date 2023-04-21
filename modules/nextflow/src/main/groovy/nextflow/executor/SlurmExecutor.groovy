@@ -23,7 +23,7 @@ import groovy.util.logging.Slf4j
 import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskRun
 /**
- * Processor for SLURM resource manager (DRAFT)
+ * Processor for SLURM resource manager
  *
  * See http://computing.llnl.gov/linux/slurm/
  *
