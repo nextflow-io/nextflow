@@ -17,6 +17,7 @@
 package nextflow.script.params
 
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 
 /**
  * Implements an arity option for process inputs and outputs.
@@ -53,6 +54,7 @@ trait ArityParam {
         throw new IllegalArgumentException("Path arity should be a number (e.g. '1') or a range (e.g. '1..*')")
     }
 
+    @EqualsAndHashCode
     static class Range {
         int min
         int max
@@ -68,11 +70,6 @@ trait ArityParam {
 
         boolean isSingle() {
             max == 1
-        }
-
-        @Override
-        boolean equals(Object obj) {
-            min == obj.min && max == obj.max
         }
 
         @Override
