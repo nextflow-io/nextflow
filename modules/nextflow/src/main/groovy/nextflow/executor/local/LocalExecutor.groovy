@@ -20,8 +20,6 @@ package nextflow.executor.local
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.executor.ArrayTaskAware
-import nextflow.executor.ArrayTaskHandler
-import nextflow.executor.Executor
 import nextflow.executor.Executor
 import nextflow.executor.SupportedScriptTypes
 import nextflow.fusion.FusionHelper
@@ -64,12 +62,6 @@ class LocalExecutor extends Executor implements ArrayTaskAware {
     @Override
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
-    }
-
-    @Override
-    ArrayTaskHandler createArrayTaskHandler(List<TaskRun> array) {
-        final handlers = array.collect { task -> createTaskHandler(task) }
-        new ArrayTaskHandler(handlers)
     }
 }
 

@@ -66,7 +66,7 @@ abstract class AbstractGridExecutor extends Executor implements ArrayTaskAware {
     /*
      * Prepare and launch the task in the underlying execution platform
      */
-    TaskHandler createTaskHandler(TaskRun task) {
+    GridTaskHandler createTaskHandler(TaskRun task) {
         assert task
         assert task.workDir
 
@@ -410,9 +410,8 @@ abstract class AbstractGridExecutor extends Executor implements ArrayTaskAware {
     }
 
     @Override
-    ArrayTaskHandler createArrayTaskHandler(List<TaskRun> array) {
-        final handlers = array.collect { task -> createTaskHandler(task) }
-        new ArrayGridTaskHandler(handlers, this)
+    ArrayTaskHandler createArrayTaskHandler(List<TaskHandler> array) {
+        new ArrayGridTaskHandler(array, this)
     }
 
     String createArrayTaskWrapper(ArrayGridTaskHandler handler) {

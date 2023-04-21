@@ -35,7 +35,7 @@ class ArrayExecutorTest extends Specification {
         executor.session = session
 
         when:
-        executor.register()
+        executor.createTaskMonitor()
         then:
         session.getExecConfigProp('array', 'target', 'local') >> 'nope'
         executorFactory.getExecutor('nope', session) >> new NopeExecutor()

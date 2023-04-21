@@ -16,20 +16,22 @@
 
 package nextflow.executor
 
-import nextflow.processor.TaskRun
+import nextflow.processor.TaskHandler
 
 /**
  * Interface for executors that support array jobs.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-interface ArrayTaskAware {
+trait ArrayTaskAware {
 
     /**
      * Create a task handler for an array job.
      *
      * @param array
      */
-    ArrayTaskHandler createArrayTaskHandler( List<TaskRun> array )
+    ArrayTaskHandler createArrayTaskHandler(List<TaskHandler> array) {
+        new ArrayTaskHandler(array)
+    }
 
 }
