@@ -17,6 +17,7 @@
 package nextflow.executor
 
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -42,7 +43,9 @@ class ArrayExecutor extends Executor implements TraceObserver {
 
     private Integer arraySize
 
-    private Map<String,List<TaskRun>> queues = new ConcurrentHashMap<>()
+    private Map<String,Queue<TaskRun>> queues = new ConcurrentHashMap<>()
+
+    private Map<String,Boolean> closed = new ConcurrentHashMap<>()
 
     /**
      * Initialize the executor class
@@ -84,21 +87,39 @@ class ArrayExecutor extends Executor implements TraceObserver {
         if( session.isTerminated() )
             new IllegalStateException("Session terminated - Cannot add process to execution array: ${task}")
 
-        // add task to the corresponding process queue
         final process = task.processor.name
-        if( process !in queues )
-            queues[process] = []
 
-        final array = queues[process]
-        array << task
-
-        // schedule array job when the process queue is full
-        if( array.size() == arraySize ) {
-            log.debug "[ARRAY] Submitting array job for process '${process}'"
-
-            monitor.schedule(target.createArrayTaskHandler(array))
-            queues[process] = []
+        // submit task directly if process has already closed
+        if( closed[process] ) {
+            ((Executor)target).submit(task)
+            return
         }
+
+        // initialize process queue
+        if( process !in queues )
+            queues[process] = new ConcurrentLinkedQueue<>()
+
+        // add task to the process queue
+        final queue = queues[process]
+        queue.add(task)
+
+        // schedule array job when a batch is ready
+        if( queue.size() >= arraySize ) {
+            log.debug "[ARRAY] Submitting array job for process '${process}'"
+            submit0(queue, arraySize)
+        }
+    }
+
+    synchronized private void submit0( Queue<TaskRun> queue, int size ) {
+        def array = new ArrayList<TaskRun>()
+        def iter = queue.iterator()
+
+        for( int i : 1..size ) {
+            array << iter.next()
+            iter.remove()
+        }
+
+        monitor.schedule(target.createArrayTaskHandler(array))
     }
 
     @Override
@@ -113,12 +134,14 @@ class ArrayExecutor extends Executor implements TraceObserver {
      */
     @Override
     void onProcessClose(String process) {
-        final array = queues[process]
+        final queue = queues[process]
 
-        if( array != null && array.size() > 0 ) {
+        if( queue != null && queue.size() > 0 ) {
             log.debug "[ARRAY] Submitting remainder array job for process '${process}'"
-
-            monitor.schedule(target.createArrayTaskHandler(array))
+            submit0(queue, queue.size())
         }
+
+        closed[process] = true
     }
+
 }
