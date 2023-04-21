@@ -45,14 +45,19 @@ trait TraceObserver {
      */
     void onFlowComplete() {}
 
-    /*
+    /**
      * Invoked when the process is created.
      */
     void onProcessCreate( TaskProcessor process ){}
 
-    /*
-      * Invoked when all tak have been executed and process ends.
-      */
+    /**
+     * Invoked when all tasks for a process have been created.
+     */
+    void onProcessClose( String process ){}
+
+    /**
+     * Invoked when all tasks have been executed and process ends.
+     */
     void onProcessTerminate( TaskProcessor process ){}
 
     /**

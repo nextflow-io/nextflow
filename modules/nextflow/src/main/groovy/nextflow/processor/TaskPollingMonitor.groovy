@@ -197,7 +197,7 @@ class TaskPollingMonitor implements TaskMonitor {
         // this guarantees that in the queue are only jobs successfully submitted
         runningQueue.add(handler)
         // notify task submission
-        session.notifyTaskSubmit(handler)
+        notifyTaskSubmit(handler)
     }
 
     /**
@@ -225,7 +225,7 @@ class TaskPollingMonitor implements TaskMonitor {
         try{
             pendingQueue << handler
             taskAvail.signal()  // signal that a new task is available for execution
-            session.notifyTaskPending(handler)
+            notifyTaskPending(handler)
             log.trace "Scheduled task > $handler"
         }
         finally {
@@ -562,7 +562,7 @@ class TaskPollingMonitor implements TaskMonitor {
             }
             catch ( Throwable e ) {
                 handleException(handler, e)
-                session.notifyTaskComplete(handler)
+                notifyTaskComplete(handler)
             }
             // remove processed handler either on successful submit or failed one (managed by catch section)
             // when `canSubmit` return false the handler should be retained to be tried in a following iteration
@@ -573,7 +573,7 @@ class TaskPollingMonitor implements TaskMonitor {
     }
 
 
-    final protected void handleException( TaskHandler handler, Throwable error ) {
+    protected void handleException( TaskHandler handler, Throwable error ) {
         def fault = null
         try {
             if (evict(handler)) { 
@@ -603,7 +603,7 @@ class TaskPollingMonitor implements TaskMonitor {
         // check if it is started
         if( handler.checkIfRunning() ) {
             log.trace "Task started > $handler"
-            session.notifyTaskStart(handler)
+            notifyTaskStart(handler)
         }
 
         // check if it is terminated
@@ -619,7 +619,7 @@ class TaskPollingMonitor implements TaskMonitor {
             final fault = handler.task.processor.finalizeTask(handler.task)
 
             // notify task completion
-            session.notifyTaskComplete(handler)
+            notifyTaskComplete(handler)
 
             // abort the execution in case of task failure
             if (fault instanceof TaskFault) {
@@ -658,7 +658,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
             // notify task completion
             handler.task.aborted = true
-            session.notifyTaskComplete(handler)
+            notifyTaskComplete(handler)
         }
 
         try {
@@ -674,6 +674,22 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     protected Queue<TaskHandler> getPendingQueue() {
         return pendingQueue
+    }
+
+    protected void notifyTaskSubmit(TaskHandler handler) {
+        session.notifyTaskSubmit(handler)
+    }
+
+    protected void notifyTaskPending(TaskHandler handler) {
+        session.notifyTaskPending(handler)
+    }
+
+    protected void notifyTaskStart(TaskHandler handler) {
+        session.notifyTaskStart(handler)
+    }
+
+    protected void notifyTaskComplete(TaskHandler handler) {
+        session.notifyTaskComplete(handler)
     }
 
 }

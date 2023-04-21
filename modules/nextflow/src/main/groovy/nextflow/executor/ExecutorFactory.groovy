@@ -43,25 +43,26 @@ class ExecutorFactory {
      * Map the executor class to its 'friendly' name
      */
     final static Map<String, Class<? extends Executor>> BUILT_IN_EXECUTORS = [
-            'nope': NopeExecutor,
-            'local': LocalExecutor,
-            'flux': FluxExecutor,
-            'sge':  SgeExecutor,
-            'oge':  SgeExecutor,
-            'uge':  SgeExecutor,
-            'lsf': LsfExecutor,
-            'pbs': PbsExecutor,
-            'pbspro': PbsProExecutor,
-            'slurm': SlurmExecutor,
+            'array': ArrayExecutor,
             'bridge': BridgeExecutor,
-            'crg': CrgExecutor,
             'bsc': LsfExecutor,
             'condor': CondorExecutor,
+            'crg': CrgExecutor,
+            'flux': FluxExecutor,
+            'hq': HyperQueueExecutor,
             'k8s': K8sExecutor,
-            'nqsii': NqsiiExecutor,
+            'local': LocalExecutor,
+            'lsf': LsfExecutor,
             'moab': MoabExecutor,
+            'nope': NopeExecutor,
+            'nqsii': NqsiiExecutor,
             'oar': OarExecutor,
-            'hq': HyperQueueExecutor
+            'oge':  SgeExecutor,
+            'pbs': PbsExecutor,
+            'pbspro': PbsProExecutor,
+            'sge':  SgeExecutor,
+            'slurm': SlurmExecutor,
+            'uge':  SgeExecutor
     ]
 
     @PackageScope Map<String, Class<? extends Executor>> executorsMap
@@ -193,6 +194,17 @@ class ExecutorFactory {
             clazz = LocalExecutor.class
         }
 
+        return getExecutor0(name, clazz, session)
+    }
+
+    Executor getExecutor(String name, Session session) {
+        // -- load the executor to be used
+        def clazz = getExecutorClass(name)
+
+        return getExecutor0(name, clazz, session)
+    }
+
+    protected Executor getExecutor0(String name, Class<? extends Executor> clazz, Session session) {
         // this code is not supposed to be executed parallel
         def result = executors.get(clazz)
         if( result )

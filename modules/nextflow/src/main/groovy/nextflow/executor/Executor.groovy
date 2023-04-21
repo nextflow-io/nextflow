@@ -49,7 +49,7 @@ abstract class Executor {
     /**
      * The queue holder that keep track of all tasks for this executor.
      */
-    private TaskMonitor monitor
+    protected TaskMonitor monitor
 
     TaskMonitor getMonitor() { monitor }
 
@@ -79,7 +79,7 @@ abstract class Executor {
      *
      * @param task A {@code TaskRun} instance
      */
-    final void submit( TaskRun task ) {
+    void submit( TaskRun task ) {
         log.trace "Scheduling process: ${task}"
 
         if( session.isTerminated() ) {

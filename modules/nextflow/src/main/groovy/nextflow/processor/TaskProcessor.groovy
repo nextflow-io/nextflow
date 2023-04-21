@@ -2426,6 +2426,21 @@ class TaskProcessor {
                 log.trace "<${name}> Poison pill arrived; port: $index"
                 openPorts.set(index, 0) // mark the port as closed
                 state.update { StateObj it -> it.poison() }
+
+                // check whether all input channels are closed
+                def closed = true
+                for( int i = 0; i < openPorts.length() - 1; i++ ) {
+                    if( openPorts.get(i) != 0 ) {
+                        closed = false
+                        break
+                    }
+                }
+
+                // notify session that the process is closed
+                if( closed ) {
+                    log.trace "<${name}> All ports are closed, closing process"
+                    session.notifyProcessClose(name)
+                }
             }
 
             return message

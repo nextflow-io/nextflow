@@ -231,14 +231,14 @@ abstract class TaskHandler {
     /**
      * Increment the number of current forked processes
      */
-    final void incProcessForks() {
+    void incProcessForks() {
         task.processor.forksCount?.increment()
     }
 
     /**
      * Decrement the number of current forked processes
      */
-    final void decProcessForks() {
+    void decProcessForks() {
         task.processor.forksCount?.decrement()
     }
 

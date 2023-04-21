@@ -424,6 +424,9 @@ class Session implements ISession {
         return result
     }
 
+    void registerObserver(TraceObserver observer) {
+        observers << observer
+    }
 
     /*
      * intercepts interruption signal i.e. CTRL+C
@@ -928,6 +931,17 @@ class Session implements ISession {
             final observer = observers.get(i)
             try {
                 observer.onProcessCreate(process)
+            }
+            catch( Exception e ) {
+                log.debug(e.getMessage(), e)
+            }
+        }
+    }
+
+    void notifyProcessClose(String process) {
+        observers.each { observer ->
+            try {
+                observer.onProcessClose(process)
             }
             catch( Exception e ) {
                 log.debug(e.getMessage(), e)
