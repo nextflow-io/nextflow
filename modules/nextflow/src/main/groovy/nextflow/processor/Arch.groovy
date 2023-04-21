@@ -44,11 +44,14 @@ class Arch {
  *
  * [alternate example: 'arch linux/arm/v8', where platform = 'linux' and arch = 'arm/v8']
  */
+    // used in Nextflow
     final String dockerArch
+    final String spackArch
+
+    // defined, but currently not used
     final String platform
     final String arch
     final String target
-    final String spackArch
 
     @CompileStatic
     protected String getPlatform( String value ) {
