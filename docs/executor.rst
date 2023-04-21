@@ -14,6 +14,64 @@ In other words, you can write your pipeline script once and have it running on y
 or the cloud — simply change the executor definition in the Nextflow configuration file.
 
 
+.. _array-executor:
+
+Array
+=====
+
+.. note:: This feature requires Nextflow version ``23.05.0-edge`` or later.
+
+.. warning:: This feature is experimental and may change in a future release.
+
+Many execution platforms support "array jobs", that is, a collection of jobs with the same resource requirements and script
+parameterized by an index. An array job incurs significantly less scheduling overhead compared to submitting each task separately,
+and they are a best practice in HPC environments. Nextflow supports array jobs through the Array executor.
+
+The Array executor takes two config options: an array size (default: ``100``) and a "target" executor (default: ``'local'``).
+These options can be specified in the Nextflow configuration as follows::
+
+    process {
+        executor = 'array'
+    }
+
+    executor {
+        $array {
+            arraySize = 100
+            target = 'slurm'
+        }
+    }
+
+The target executor can be any Nextflow executor that supports array jobs, which currently includes the following:
+
+* :ref:`local-executor`
+* :ref:`slurm-executor`
+
+The Array executor submits tasks in batches to the target executor, as soon as a full batch is ready. Batches are separated
+by process. Any "leftover" tasks are submitted as a partial batch at the end. If any tasks in an array job fail and can be retried,
+they will be retried in another array job without interfering with the tasks that succeeded. Because the order in which tasks are
+executed varies across workflow runs, so too will the grouping of tasks into array jobs.
+
+Aside from the batching, tasks in an array job are executed in the same way, i.e. each task is executed in its own work directory with
+its own script. However, certain configuration properties must be the same for all tasks created by a process.
+
+The following process directives msut be the same for all tasks when using array jobs, because they are specified once for the array job:
+
+* :ref:`process-accelerator`
+* :ref:`process-clusterOptions`
+* :ref:`process-cpus`
+* :ref:`process-disk`
+* :ref:`process-machineType`
+* :ref:`process-memory`
+* :ref:`process-queue`
+* :ref:`process-resourcelabels`
+* :ref:`process-time`
+
+For cloud-based executors like AWS Batch, the following additional directives must be uniform:
+
+* :ref:`process-container`
+* :ref:`process-containerOptions`
+
+
 .. _awsbatch-executor:
 
 AWS Batch
