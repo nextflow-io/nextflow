@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.7.3 - 15 Apr 2023
+- Bump gson:2.10.1 [83ca1e32]
+
 1.7.2 - 1 Apr 2023
 - Fix issue checking google batch script launcher type [39c3a517]
 - Fix NoSuchMethodError String.stripIndent with Java 11 [308eafe6]

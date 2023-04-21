@@ -21,7 +21,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 
 /**
- *
+ * Exception thrown by the use of {@code error} command in the workflow script
+ * 
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic

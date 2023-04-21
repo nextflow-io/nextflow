@@ -13,7 +13,7 @@ to Nextflow, here are some suggested operators to learn for common use cases:
 
 * Filtering: `filter`_, `randomSample`_, `take`_, `unique`_
 * Reduction: `collect`_, `groupTuple`_, `reduce`_
-* Parsing text data: `splitCsv`_, `splitText`_
+* Parsing text data: `splitCsv`_, `splitJson`_, `splitText`_
 * Combining channels: `combine`_, `concat`_, `join`_, `mix`_
 * Forking channels: `branch`_, `multiMap`_
 * Maths: `count`_, `max`_, `min`_, `sum`_
@@ -1577,6 +1577,64 @@ qualityString   Quality values for the sequence
   You can also use ``countFastq`` to count the number of entries in the FASTQ file(s).
 
 
+splitJson
+---------
+
+The ``splitJson`` operator allows you to split a JSON document from a source channel
+into individual records. If the document is a JSON array, each element of the array
+will be emitted. If the document is a JSON object, each key-value pair will be
+emitted as a map with the properties ``key``  and ``value``.
+
+An example with a JSON array::
+
+    Channel.of('[1,null,["A",{}],true]')
+        .splitJson()
+        .view{"Item: ${it}"}
+
+Produces the following output::
+
+    Item: 1
+    Item: null
+    Item: [A, [:]]
+    Item: true
+
+An example with a JSON object::
+
+    Channel.of('{"A":1,"B":[1,2,3],"C":{"D":null}}')
+        .splitJson()
+        .view{"Item: ${it}"}
+
+Produces the following output::
+
+    Item: [value:1, key:A]
+    Item: [value:[1, 2, 3], key:B]
+    Item: [value:[D:null], key:C]
+
+You can optionally query a section of the JSON document to parse and split, using the ``path`` option::
+
+    Channel.of('{"A":1,"B":[2,3,{"C":{"D":null,"E":4,"F":5}}]}')
+        .splitJson(path: "B[2].C")
+        .view{"Item: ${it}"}
+
+Produces the following output::
+
+    Item: [value:null, key:D]
+    Item: [value:4, key:E]
+    Item: [value:5, key:F]
+
+Available options:
+
+=========== ============================
+Field       Description
+=========== ============================
+limit       Limits the number of retrieved lines for each file to the specified value.
+path        Define the section of the JSON document that you want to extract. The expression is a set of paths separated by a dot, similar to `JSONPath <https://goessner.net/articles/JsonPath/>`_ The empty string is the document root (default). An integer in brackets is the 0-based index in a JSON array. A string preceded by a dot ``.`` is the key in a JSON object.
+=========== ============================
+
+.. tip::
+  You can also use ``countJson`` to count the number of elements in a JSON array or object.
+
+
 splitText
 ---------
 
@@ -1764,21 +1822,15 @@ tap
 
 *Returns: queue channel*
 
-The ``tap`` operator combines the functions of ``into`` and ``separate`` operators in such a way that
-it connects two channels, copying the values from the source into the `tapped` channel. At the same
-time it splits the source channel into a newly created channel that is returned by the operator itself.
-
-The ``tap`` can be useful in certain scenarios where you may be required to concatenate multiple operations,
-as in the following example::
-
-    log1 = Channel.create()
-    log2 = Channel.create()
+The ``tap`` operator is like the `set`_ operator in that it assigns a source channel to a new target channel.
+but it also emits the source channel for downstream use. This operator is a useful way to extract intermediate
+output channels from a chain of operators. For example::
 
     Channel
         .of ( 'a', 'b', 'c' )
-        .tap ( log1 )
+        .tap { log1 }
         .map { it * 2 }
-        .tap ( log2 )
+        .tap { log2 }
         .map { it.toUpperCase() }
         .view { "Result: $it" }
 
@@ -1798,22 +1850,6 @@ as in the following example::
     Log 2: aa
     Log 2: bb
     Log 2: cc
-
-The ``tap`` operator also allows the target channel to be specified by using a closure. The advantage of this syntax
-is that you won't need to previously create the target channel, because it is created implicitly by the operator itself.
-
-Using the closure syntax the above example can be rewritten as shown below::
-
-    Channel
-        .of ( 'a', 'b', 'c' )
-        .tap { log1 }
-        .map { it * 2 }
-        .tap { log2 }
-        .map { it.toUpperCase() }
-        .view { "Result: $it" }
-
-    log1.view { "Log 1: $it" }
-    log2.view { "Log 2: $it" }
 
 
 toInteger

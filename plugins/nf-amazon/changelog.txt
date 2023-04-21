@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+1.16.2 - 15 Apr 2023
+- Update plugin deps [83e8fd6a]
+
 1.16.1 - 1 Apr 2023
 - Fix NoSuchMethodError String.stripIndent with Java 11 [308eafe6]
 
