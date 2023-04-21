@@ -35,14 +35,16 @@ class Arch {
  * example of notation in process: arch 'linux/x86_64', target: 'haswell'
  * example of notation in config:  arch = [name: 'linux/x86_64', target: 'haswell']
  * 
- * where fullArch = 'linux/x86_64'
+ * where dockerArch = 'linux/x86_64'
  *       platform = 'linux'
  *       arch = 'x86_64'
  *       target = 'haswell'
  * 
- *       spackArch = target ?: arch
+ *       spackArch = target ?: arch  // plus some validation for Spack syntax
+ *
+ * [alternate example: 'arch linux/arm/v8', where platform = 'linux' and arch = 'arm/v8']
  */
-    final String fullArch
+    final String dockerArch
     final String platform
     final String arch
     final String target
@@ -50,20 +52,51 @@ class Arch {
 
     @CompileStatic
     protected String getPlatform( String value ) {
-        return value.minus(~'/.*')
+        // return value.minus(~'/.*') // keeping for reference
+        def chunks = value.tokenize('/')
+        if( chunks.size() > 1 )
+            return chunks[0]
+        else
+            return null
     }
 
     @CompileStatic
     protected String getArch( String value ) {
-        return value.minus(~'.*/')
+        // return value.minus(~'.*/') // keeping for reference
+        def chunks = value.tokenize('/')
+        if( chunks.size() == 3 )
+            return chunks[1] + '/' + chunks[2]
+        else if( chunks.size() == 2 )
+            return chunks[1]
+        else
+            return chunks[0]
+    }
+
+    @CompileStatic
+    protected String validateArchToSpackArch( String value ) {
+        if( value == 'x86_64' || value == 'amd64' )
+            return 'x86_64'
+        else if( value == 'aarch64' || value == 'arm64' || value == 'arm64/v8' )
+            return 'aarch64'
+        else if( value == 'arm64/v7' )
+            return null
+        else if( value == 'arm' || value == 'arm/v7' || value == 'arm/7' || value == 'arm/v5' || value == 'arm/5' )
+            return 'arm'
+        else
+            return 'ILLEGAL_ARCH'
     }
 
     @CompileStatic
     protected String getSpackArch( Map res ) {
         if( res.target != null )
             return res.target as String
-        else if( res.name != null )
-            return getArch(res.name as String)
+        else if( res.name != null ) {
+            def spackArch = validateArchToSpackArch(getArch(res.name as String))
+            if( spackArch == 'ILLEGAL_ARCH' )
+                throw new IllegalArgumentException("Not a valid `arch` value: ${res.name}")
+            else
+                return spackArch
+        }
         else
             return null
     }
@@ -74,7 +107,7 @@ class Arch {
 
     Arch( Map res ) {
         if( res.name != null ) {
-            this.fullArch = res.name as String
+            this.dockerArch = res.name as String
             this.platform = getPlatform(res.name as String)
             this.arch = getArch(res.name as String)
         }

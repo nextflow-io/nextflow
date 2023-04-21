@@ -595,7 +595,6 @@ class TaskRun implements Cloneable {
 
         final String arch
         if( config.getArch() != null )
-            // TODO MARCO: sanity check and compliance for spackArch
             arch = config.getArch().spackArch
         else
             arch = null
