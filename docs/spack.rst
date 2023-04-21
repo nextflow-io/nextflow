@@ -83,7 +83,7 @@ activated when the process is executed.
 The usual Spack package syntax and naming conventions can be used. The version of a package can be
 specified after the package name as shown here ``bwa@0.7.15``.
 
-Spack is able to guess the local CPU microarchitetcture and optimise the build accordingly.
+Spack is able to infer the local CPU microarchitecture and optimise the build accordingly.
 If you really need to customise this option, the :ref:`process-arch` directive can be used.
 
 Read the Spack documentation for more details about `package specifications <https://spack.readthedocs.io/en/latest/basic_usage.html#specs-dependencies>`_.
