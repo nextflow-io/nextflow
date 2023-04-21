@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,6 +85,7 @@ class TapOp {
      * @param source An instance of {@link DataflowReadChannel} used to feed the operator
      * @param target An instance of {@link DataflowWriteChannel} that will receive the items emitted by the source
      */
+    @Deprecated
     TapOp( DataflowReadChannel source, DataflowWriteChannel target ) {
         assert source != null
         assert target != null

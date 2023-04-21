@@ -58,7 +58,7 @@ the implementation of a Nextflow plugin.
 Import operators from plugin
 ============================
 
-As of version `22.04.x`, Nextflow allows the inclusion of extension operators from Nextflow plugins.
+As of version ``22.04.x``, Nextflow allows the inclusion of extension operators from Nextflow plugins.
 
 For example::
 
@@ -80,7 +80,7 @@ the ``selectFromTable`` alias in the script.
 Import custom functions from plugin
 ===================================
 
-In the same way, as of version `22.09.x`, a plugin can export custom functions.
+In the same way, as of version ``22.09.x``, a plugin can export custom functions.
 
 For example, a plugin can export a util function to reverse a String::
 
@@ -101,3 +101,19 @@ In the same way as operators, functions can be aliased::
 
     include { reverseString as anotherReverseMethod } from 'plugin/my-plugin'
 
+
+Testing custom plugins 
+======================
+
+To make a plugin available to Nextflow it needs to be included in the `plugins repository index <https://github.com/nextflow-io/plugins>`_.
+
+However, in order to validate a plugin before it's published in the repository index it's possible to use the environment
+variable ``NXF_PLUGINS_TEST_REPOSITORY`` to test it specifying the URI of a custom index JSON file or of the plugin JSON meta file.
+
+For example::
+
+    export NXF_PLUGINS_TEST_REPOSITORY=https://github.com/nextflow-io/nf-hello/releases/download/0.3.0/nf-hello-0.3.0-meta.json
+
+Then run Nextflow using the expected plugin::
+
+    nextflow rub <your script> -plugins nf-hello

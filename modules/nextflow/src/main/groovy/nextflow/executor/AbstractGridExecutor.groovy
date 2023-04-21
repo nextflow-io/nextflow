@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -227,7 +226,7 @@ abstract class AbstractGridExecutor extends Executor {
                 - exit status : $ret
                 - output      :
                 """
-                .stripIndent()
+                .stripIndent(true)
         m += proc.text.indent('  ')
         log.debug(m)
     }
@@ -290,7 +289,7 @@ abstract class AbstractGridExecutor extends Executor {
                 - cmd executed: ${cmd.join(' ')}
                 - exit status : $exit
                 - output      :
-                """.stripIndent()
+                """.stripIndent(true)
                 m += result.indent('  ')
                 log.warn1(m, firstOnly: true)
                 return null

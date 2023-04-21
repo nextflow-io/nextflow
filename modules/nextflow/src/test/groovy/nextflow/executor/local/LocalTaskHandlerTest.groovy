@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package nextflow.executor.local
 
 import java.nio.file.Path
 
+import nextflow.Global
 import nextflow.container.ContainerConfig
 import nextflow.file.http.XPath
 import nextflow.processor.TaskBean
@@ -53,6 +54,7 @@ class LocalTaskHandlerTest extends Specification {
 
     def 'should create fusion process builder' () {
         given:
+        Global.config = [:]
         def WORK_DIR = XPath.get('http://some/work/dir')
         and:
         def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])

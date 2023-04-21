@@ -239,6 +239,23 @@ The above example defines the configuration for two node pools. The first will p
 the second 5 nodes of type ``Standard_E2_v3``. See the `Advanced settings`_ below for the complete list of available
 configuration options.
 
+.. warning::
+    The pool name can only contain alphanumeric, hyphen and underscore characters.
+
+.. warning::
+   If the pool name includes a hyphen, make sure to wrap it with single quotes. For example::
+
+
+    azure {
+        batch {
+            pools {
+                'foo-2' {
+                   ...
+                }
+            }
+        }
+    }
+
 Requirements on pre-existing named pools
 ----------------------------------------
 
@@ -413,11 +430,13 @@ azure.batch.pools.<name>.vmCount                Specify the number of virtual ma
 azure.batch.pools.<name>.maxVmCount             Specify the max of virtual machine when using auto scale option.
 azure.batch.pools.<name>.autoScale              Enable autoscaling feature for the pool identified with ``<name>``.
 azure.batch.pools.<name>.fileShareRootPath      If mounting File Shares, this is the internal root mounting point. Must be ``/mnt/resource/batch/tasks/fsmounts`` for CentOS nodes or ``/mnt/batch/tasks/fsmounts`` for Ubuntu nodes (default is for CentOS, requires ``nf-azure@0.11.0``).
+azure.batch.pools.<name>.mountOptions           Specify the mount options for mounting the file shares (defaults are `-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp` , requires ``nf-azure@0.11.0``).
 azure.batch.pools.<name>.scaleFormula           Specify the scale formula for the pool identified with ``<name>``. See Azure Batch `scaling documentation <https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling>`_ for details.
 azure.batch.pools.<name>.scaleInterval          Specify the interval at which to automatically adjust the Pool size according to the autoscale formula. The minimum and maximum value are 5 minutes and 168 hours respectively (default: `10 mins`).
 azure.batch.pools.<name>.schedulePolicy         Specify the scheduling policy for the pool identified with ``<name>``. It can be either ``spread`` or ``pack`` (default: ``spread``).
 azure.batch.pools.<name>.privileged             Enable the task to run with elevated access. Ignored if `runAs` is set (default: ``false``).
 azure.batch.pools.<name>.runAs                  Specify the username under which the task is run. The user must already exist on each node of the pool.
+azure.batch.pools.<name>.virtualNetwork         Specify the subnet ID of a virtual network in which to create the pool (requires version ``23.03.0-edge`` or later).
 azure.registry.server                           Specify the container registry from which to pull the Docker images (default: ``docker.io``, requires ``nf-azure@0.9.8``).
 azure.registry.userName                         Specify the username to connect to a private container registry (requires ``nf-azure@0.9.8``).
 azure.registry.password                         Specify the password to connect to a private container registry (requires ``nf-azure@0.9.8``).

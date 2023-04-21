@@ -1,6 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
- * Copyright 2013-2019, Centre for Genomic Regulation (CRG)
+ * Copyright 2013-2023, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,6 +56,7 @@ import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ProcessException
+import nextflow.exception.PlainExceptionMessage
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.OpCall
 import nextflow.file.FileHelper
@@ -168,7 +168,7 @@ class LoggerHelper {
         packages[MAIN_PACKAGE] = quiet ? Level.WARN : Level.INFO
 
         // -- add the S3 uploader by default
-        if( !containsClassName(debugConf,traceConf, 'com.upplication.s3fs') )
+        if( !containsClassName(debugConf,traceConf, 'nextflow.cloud.aws.nio') )
             debugConf << S3_UPLOADER_CLASS
         if( !containsClassName(debugConf,traceConf, 'io.seqera') )
             debugConf << 'io.seqera'
@@ -442,7 +442,7 @@ class LoggerHelper {
     static protected void appendFormattedMessage( StringBuilder buffer, ILoggingEvent event, Throwable fail, Session session) {
         final className = session?.script?.getClass()?.getName()
         final message = event.getFormattedMessage()
-        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || ScriptRuntimeException
+        final quiet = fail instanceof AbortOperationException || fail instanceof ProcessException || fail instanceof ScriptRuntimeException
         final normalize = { String str -> str ?. replace("${className}.", '')}
         List error = fail ? findErrorLine(fail) : null
 
@@ -492,6 +492,9 @@ class LoggerHelper {
         else {
             buffer.append("Unexpected error")
         }
+        if( fail instanceof PlainExceptionMessage )
+            return
+
         buffer.append(CoreConstants.LINE_SEPARATOR)
         buffer.append(CoreConstants.LINE_SEPARATOR)
 

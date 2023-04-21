@@ -906,6 +906,8 @@ It outputs::
 See also: :ref:`channel-types`.
 
 
+.. _process-output:
+
 Outputs
 =======
 
@@ -1754,8 +1756,8 @@ This can be defined in the ``nextflow.config`` file as shown below::
 fair
 ----
 
-When using the ``fair`` directive the sequence of the outputs of a process executions is guaranteed
-to match the sequence of the input values irrespective. For example::
+When using the ``fair`` directive, the sequence of the outputs of a process is guaranteed
+to match the sequence of the input values. For example::
 
     process foo {
       fair true
@@ -1774,7 +1776,7 @@ to match the sequence of the input values irrespective. For example::
        channel.of('A','B','C','D') | foo | view
     }
 
-The above example produces the following output::
+The above example produces::
 
     [1, A]
     [2, B]
