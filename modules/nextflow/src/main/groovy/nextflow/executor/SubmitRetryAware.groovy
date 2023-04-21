@@ -48,7 +48,7 @@ trait SubmitRetryAware {
         Failsafe.with(retryPolicy()).get(action)
     }
 
-    private <T> RetryPolicy<T> retryPolicy() {
+    <T> RetryPolicy<T> retryPolicy() {
 
         final delay = executor.session.getConfigAttribute('executor.retry.delay', '500ms') as Duration
         final maxDelay = executor.session.getConfigAttribute('executor.retry.maxDelay', '30s') as Duration
@@ -86,7 +86,7 @@ trait SubmitRetryAware {
     }
 
     @Memoized
-    private Predicate<? extends Throwable> retryCondition(String reasonPattern) {
+    Predicate<? extends Throwable> retryCondition(String reasonPattern) {
         new RetryPredicate(pattern: Pattern.compile(reasonPattern))
     }
 

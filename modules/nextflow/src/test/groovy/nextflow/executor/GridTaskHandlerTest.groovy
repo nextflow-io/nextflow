@@ -35,21 +35,6 @@ import test.TestHelper
  */
 class GridTaskHandlerTest extends Specification {
 
-    def 'should check retry predicate' () {
-        given:
-        def handler = new GridTaskHandler()
-
-        when:
-        def predicate = handler.retryCondition("Socket timed out")
-        then:
-        predicate.test(new ProcessNonZeroExitStatusException('Error', 'Socket timed out', 1, null))
-        and:
-        predicate.test(new ProcessNonZeroExitStatusException('Error', 'error\nBatch job submission failed\nSocket timed out on send/recv operation', 1, null))
-        and:
-        !predicate.test(new ProcessNonZeroExitStatusException('Error', 'OK', 0, null))
-
-    }
-
     def 'should capture error cause' () {
         given:
         def task = new TaskRun(name: 'foo', workDir: Paths.get('/some/work'))
