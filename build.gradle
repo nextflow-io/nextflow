@@ -206,7 +206,7 @@ task buildInfo { doLast {
             .eachDir { if(it.name.startsWith('nf-')) plugins << project(":plugins:${it.name}") }
 
     def meta = plugins .collect { "$it.name@$it.version" }
-    file('modules/nextflow/src/main/resources/META-INF/plugins-info.txt').text = meta.join('\n')
+    file('modules/nextflow/src/main/resources/META-INF/plugins-info.txt').text = meta.toSorted().join('\n')
 }}
 
 
