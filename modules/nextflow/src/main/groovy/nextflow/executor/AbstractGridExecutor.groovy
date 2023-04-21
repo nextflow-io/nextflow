@@ -21,6 +21,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
 import nextflow.processor.TaskProcessor
@@ -36,7 +37,7 @@ import org.apache.commons.lang.StringUtils
  */
 @Slf4j
 @CompileStatic
-abstract class AbstractGridExecutor extends Executor {
+abstract class AbstractGridExecutor extends Executor implements ArrayTaskAware {
 
     protected Duration queueInterval
 
@@ -65,7 +66,7 @@ abstract class AbstractGridExecutor extends Executor {
     /*
      * Prepare and launch the task in the underlying execution platform
      */
-    GridTaskHandler createTaskHandler(TaskRun task) {
+    TaskHandler createTaskHandler(TaskRun task) {
         assert task
         assert task.workDir
 
@@ -406,6 +407,44 @@ abstract class AbstractGridExecutor extends Executor {
         // because the command wrapper script should not manage the container execution.
         // Instead, it is the command wrapper script that is launched run within a container process.
         return isFusionEnabled()
+    }
+
+    @Override
+    ArrayTaskHandler createArrayTaskHandler(List<TaskRun> array) {
+        final handlers = array.collect { task -> createTaskHandler(task) }
+        new ArrayGridTaskHandler(handlers, this)
+    }
+
+    String createArrayTaskWrapper(ArrayGridTaskHandler handler) {
+        final array = handler.array
+        final task = array.first().getTask()
+
+        final arrayHeader = getArrayDirective(array.size())
+        final taskHeaders = getHeaders(task)
+        final files = array
+            .collect { h -> ((GridTaskHandler)h).wrapperFile }
+            .join(' ')
+
+        final builder = new StringBuilder()
+            << '#!/bin/bash\n'
+            << "${headerToken} ${arrayHeader}\n"
+            << taskHeaders
+            << "declare -a array=( ${files} )\n"
+            << "bash \${array[\$${arrayIndexName}]}\n"
+
+        return builder.toString()
+    }
+
+    protected String getArrayDirective(int arraySize) {
+        throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
+    }
+
+    protected String getArrayIndexName() {
+        throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
+    }
+
+    protected List<String> getArraySubmitCommandLine() {
+        throw new UnsupportedOperationException("Executor '${name}' does not support array jobs")
     }
 }
 

@@ -48,6 +48,7 @@ class SlurmExecutor extends AbstractGridExecutor {
      * @param result The {@link List} instance to which add the job directives
      * @return A {@link List} containing all directive tokens and values.
      */
+    @Override
     protected List<String> getDirectives(TaskRun task, List<String> result) {
 
         result << '-J' << getJobNameFor(task)
@@ -90,6 +91,7 @@ class SlurmExecutor extends AbstractGridExecutor {
         return result
     }
 
+    @Override
     String getHeaderToken() { '#SBATCH' }
 
     /**
@@ -197,4 +199,15 @@ class SlurmExecutor extends AbstractGridExecutor {
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
     }
+
+    @Override
+    protected String getArrayDirective(int arraySize) {
+        "--array 0-${arraySize - 1}"
+    }
+
+    @Override
+    protected String getArrayIndexName() { 'SLURM_ARRAY_TASK_ID' }
+
+    @Override
+    List<String> getArraySubmitCommandLine() { List.of('sbatch') }
 }
