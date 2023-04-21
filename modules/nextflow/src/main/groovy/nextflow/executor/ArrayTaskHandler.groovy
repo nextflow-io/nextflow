@@ -50,20 +50,32 @@ class ArrayTaskHandler extends TaskHandler {
         status = TaskStatus.SUBMITTED
     }
 
+    protected Set<TaskHandler> runningCache = [] as Set
+
     @Override
     boolean checkIfRunning() {
         for( TaskHandler handler : array )
-            if( !handler.checkIfRunning() )
+            if( handler in runningCache )
+                continue
+            else if( handler.checkIfRunning() )
+                runningCache << handler
+            else
                 return false
 
         status = TaskStatus.RUNNING
         return true
     }
 
+    protected Set<TaskHandler> completedCache = [] as Set
+
     @Override
     boolean checkIfCompleted() {
         for( TaskHandler handler : array )
-            if( !handler.checkIfCompleted() )
+            if( handler in completedCache )
+                continue
+            else if( handler.checkIfCompleted() )
+                completedCache << handler
+            else
                 return false
 
         status = TaskStatus.COMPLETED
