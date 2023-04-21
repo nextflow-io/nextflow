@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, Pawsey Supercomputing Research Centre
+ * Copyright 2023, Pawsey Supercomputing Research Centre
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,12 +36,12 @@ class Arch {
  * example of notation in config:  arch = [name: 'linux/x86_64', target: 'haswell']
  * 
  * where dockerArch = 'linux/x86_64'
+ *       spackArch = target ?: arch  // plus some validation for Spack syntax
+ * 
  *       platform = 'linux'
  *       arch = 'x86_64'
  *       target = 'haswell'
  * 
- *       spackArch = target ?: arch  // plus some validation for Spack syntax
- *
  * [alternate example: 'arch linux/arm/v8', where platform = 'linux' and arch = 'arm/v8']
  */
     // used in Nextflow
