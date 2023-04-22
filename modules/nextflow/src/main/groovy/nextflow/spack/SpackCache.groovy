@@ -343,7 +343,7 @@ class SpackCache {
 
         def spackEnvArch
 
-        spackEnvArch = arch ? spackEnv + "_" + arch : spackEnv
+        spackEnvArch = arch ? "${spackEnv}_${arch}".toString() : spackEnv
 
         if( spackEnv in spackPrefixPaths ) {
             def msg = "spack found local environment `$spackEnv`"
