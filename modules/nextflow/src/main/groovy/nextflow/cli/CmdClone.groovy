@@ -40,6 +40,9 @@ class CmdClone extends CmdBase implements HubOptions {
     @Parameter(names='-r', description = 'Revision to clone - It can be a git branch, tag or revision number')
     String revision
 
+    @Parameter(names=['-d','-deep'], description = 'Create a shallow clone of the specified depth')
+    Integer deep
+
     @Override
     final String getName() { NAME }
 
@@ -66,7 +69,7 @@ class CmdClone extends CmdBase implements HubOptions {
 
         manager.checkValidRemoteRepo()
         print "Cloning ${manager.project}${revision ? ':'+revision:''} ..."
-        manager.clone(target, revision)
+        manager.clone(target, revision, deep)
         print "\r"
         println "${manager.project} cloned to: $target"
     }
