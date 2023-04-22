@@ -22,12 +22,12 @@ import spock.lang.Specification
  *
  * @author Marco De La Pierre <marco.delapierre@gmail.com>
  */
-class ArchTest extends Specification {
+class ArchitectureTest extends Specification {
 
     def 'should define the CPU architecture' () {
 
         when:
-        def arch = new Arch(VALUE)
+        def arch = new Architecture(VALUE)
         then:
         arch.platform == PLAT
         arch.arch == ARCH

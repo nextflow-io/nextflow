@@ -29,7 +29,7 @@ import groovy.transform.ToString
 @ToString
 @EqualsAndHashCode
 @CompileStatic
-class Arch {
+class Architecture {
 
 /*
  * example of notation in process: arch 'linux/x86_64', target: 'haswell'
@@ -104,11 +104,11 @@ class Arch {
             return null
     }
 
-    Arch( String value ) {
+    Architecture( String value ) {
         this(name: value)
     }
 
-    Arch( Map res ) {
+    Architecture( Map res ) {
         if( res.name != null ) {
             this.dockerArch = res.name as String
             this.platform = getPlatform(res.name as String)

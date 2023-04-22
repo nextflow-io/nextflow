@@ -2106,7 +2106,7 @@ class TaskProcessor {
         }
 
         final spack = task.getSpackEnv()
-        final arch = task.getConfig().getArch()
+        final arch = task.getConfig().getArchitecture()
 
         if( spack ) {
             keys.add(spack)
