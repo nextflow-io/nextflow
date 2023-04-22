@@ -915,7 +915,7 @@ class AzNioTest extends Specification implements AzBaseSpec {
         TraceHelper.newFileWriter(path, false, 'Test')
         then:
         def e = thrown(AbortOperationException)
-        e.message == "Test file already exists: ${path.toUriString()}"
+        e.message == "Test file already exists: ${path.toUriString()} -- enable the 'test.overwrite' option in your config file to overwrite existing files"
 
         cleanup:
         deleteBucket(bucket1)
