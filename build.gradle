@@ -57,6 +57,7 @@ allprojects {
     apply plugin: 'idea'
     apply plugin: 'groovy'
     apply plugin: 'java-library'
+    apply plugin: 'jacoco'
 
     java {
         toolchain {
@@ -154,6 +155,25 @@ allprojects {
                     '--add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED',
                     '--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED',
             ])
+        }
+    }
+
+    /**
+     * Code coverage with JaCoCo.
+     * See: https://www.jacoco.org/; https://docs.gradle.org/current/userguide/jacoco_plugin.html
+     */
+    // Code coverage report is always generated after tests run
+    test { finalizedBy jacocoTestReport }
+    jacocoTestReport {
+        // Tests are required to run before generating the code coverage report
+        dependsOn test
+
+        // Remove closure classes from the report, as they are already covered by the enclosing class coverage stats adding only noise.
+        // See: https://stackoverflow.com/questions/39453696
+        afterEvaluate {
+            classDirectories.setFrom(files(classDirectories.files.collect { dir ->
+                fileTree(dir: dir, excludes: ['**/*$*_closure*'])
+            }))
         }
     }
 }
