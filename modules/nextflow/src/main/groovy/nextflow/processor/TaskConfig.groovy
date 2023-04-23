@@ -379,8 +379,8 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     Architecture getArchitecture() {
         final value = get('arch')
-        if( value instanceof String )
-            return new Architecture(value)
+        if( value instanceof CharSequence )
+            return new Architecture(value.toString())
         if( value instanceof Map )
             return new Architecture(value)
         if( value != null )

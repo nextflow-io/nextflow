@@ -53,7 +53,6 @@ class Architecture {
     final String arch
     final String target
 
-    @CompileStatic
     protected String getPlatform( String value ) {
         // return value.minus(~'/.*') // keeping for reference
         def chunks = value.tokenize('/')
@@ -63,7 +62,6 @@ class Architecture {
             return null
     }
 
-    @CompileStatic
     protected String getArch( String value ) {
         // return value.minus(~'.*/') // keeping for reference
         def chunks = value.tokenize('/')
@@ -75,8 +73,7 @@ class Architecture {
             return chunks[0]
     }
 
-    @CompileStatic
-    protected String validateArchToSpackArch( String value ) {
+    protected String validateArchToSpackArch( String value, String inputArch ) {
         if( value == 'x86_64' || value == 'amd64' )
             return 'x86_64'
         else if( value == 'aarch64' || value == 'arm64' || value == 'arm64/v8' )
@@ -86,20 +83,14 @@ class Architecture {
         else if( value == 'arm' || value == 'arm/v7' || value == 'arm/7' || value == 'arm/v5' || value == 'arm/5' )
             return 'arm'
         else
-            return 'ILLEGAL_ARCH'
+            throw new IllegalArgumentException("Not a valid `arch` value: ${inputArch}")
     }
 
-    @CompileStatic
     protected String getSpackArch( Map res ) {
         if( res.target != null )
             return res.target as String
-        else if( res.name != null ) {
-            def spackArch = validateArchToSpackArch(getArch(res.name as String))
-            if( spackArch == 'ILLEGAL_ARCH' )
-                throw new IllegalArgumentException("Not a valid `arch` value: ${res.name}")
-            else
-                return spackArch
-        }
+        else if( res.name != null )
+            return validateArchToSpackArch(getArch(res.name as String), res.name as String)
         else
             return null
     }
