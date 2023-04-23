@@ -377,6 +377,17 @@ class TaskConfig extends LazyMap implements Cloneable {
         return get('container')
     }
 
+    Architecture getArchitecture() {
+        final value = get('arch')
+        if( value instanceof CharSequence )
+            return new Architecture(value.toString())
+        if( value instanceof Map )
+            return new Architecture(value)
+        if( value != null )
+            throw new IllegalArgumentException("Invalid `arch` directive value: $value [${value.getClass().getName()}]")
+        return null
+    }
+
     /**
      * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values
      */

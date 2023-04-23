@@ -678,6 +678,27 @@ class ProcessConfigTest extends Specification {
         process.accelerator == [request: 1, limit:5]
     }
 
+    def 'should apply architecture config' () {
+
+        given:
+        def process = new ProcessConfig(Mock(BaseScript))
+
+        when:
+        process.arch 'linux/x86_64'
+        then:
+        process.arch == [name: 'linux/x86_64']
+
+        when:
+        process.arch 'linux/x86_64', target: 'zen3'
+        then:
+        process.arch == [name: 'linux/x86_64', target: 'zen3']
+
+        when:
+        process.arch name: 'linux/x86_64', target: 'zen3'
+        then:
+        process.arch == [name: 'linux/x86_64', target: 'zen3']
+    }
+
 
     def 'should get default config path' () {
         given:
