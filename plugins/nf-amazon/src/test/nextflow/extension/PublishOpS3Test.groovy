@@ -32,6 +32,8 @@ class PublishOpS3Test extends BaseSpec {
 
     def 'should infer task dir' () {
         given:
+        Global.config = Collections.emptyMap()
+        and:
         def BASE = '/some/work/dir' as Path
         def BUCKET_DIR = 's3://other/bucket/dir' as Path
         def sess = Mock(Session) {

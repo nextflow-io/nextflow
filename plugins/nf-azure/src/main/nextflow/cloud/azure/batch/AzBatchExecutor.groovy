@@ -27,6 +27,7 @@ import nextflow.cloud.azure.nio.AzPath
 import nextflow.exception.AbortOperationException
 import nextflow.executor.Executor
 import nextflow.extension.FilesEx
+import nextflow.fusion.FusionHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskPollingMonitor
@@ -141,5 +142,10 @@ class AzBatchExecutor extends Executor implements ExtensionPoint {
     }
 
     Path getRemoteBinDir() { return remoteBinDir }
+
+    @Override
+    boolean isFusionEnabled() {
+        return FusionHelper.isFusionEnabled(session)
+    }
 
 }

@@ -30,9 +30,9 @@ Queue channel
 A `queue channel` is a non-blocking unidirectional FIFO queue which connects two processes,
 channel factories, or operators.
 
-A queue channel is usually created using a factory method (:ref:`_channel-of`, :ref:`_channel-path`, etc)
-or chaining it with a channel operator (:ref:`operator-map`, :ref:`operator-flatmap`, etc). Queue channels
-are also created by process output declarations.
+A queue channel can be created by factory methods (`of`_, `fromPath`_, etc),
+operators (:ref:`operator-map`, :ref:`operator-flatmap`, etc), and
+processes (see :ref:`Process outputs <process-output>`).
 
 
 .. _channel-type-value:
@@ -40,16 +40,13 @@ are also created by process output declarations.
 Value channel
 -------------
 
-A `value channel` a.k.a. *singleton channel* is bound to a single value and can be read an
-unlimited number of times without consuming its content.
+A `value channel` a.k.a. *singleton channel* is bound to a single value and can be read any
+number of times without being consumed.
 
-A value channel is created using the `value`_ factory method or by operators returning
-a single value, such as :ref:`operator-first`, :ref:`operator-last`, :ref:`operator-collect`,
-:ref:`operator-count`, :ref:`operator-min`, :ref:`operator-max`, :ref:`operator-reduce`, :ref:`operator-sum`, etc.
-
-A value channel is implicitly created by a process when it is invoked with a simple value.
-Furthermore, a value channel is also implicitly created as output for a process whose
-inputs are all value channels.
+A value channel can be created with the `value`_ factory method or by any operator that produces
+a single value (:ref:`operator-first`, :ref:`operator-collect`, :ref:`operator-reduce`, etc). Additionally,
+a process will emit value channels if it is invoked with all value channels, including
+simple values which are implicitly wrapped in a value channel.
 
 For example::
 
@@ -71,7 +68,7 @@ For example::
     }
 
 In the above example, since the ``foo`` process is invoked with a simple value instead of a channel,
-the input is implicitly converted to a value channel, and the output is also provided as a value channel.
+the input is implicitly converted to a value channel, and the output is also emitted as a value channel.
 
 See also: :ref:`process-multiple-input-channels`.
 
@@ -95,7 +92,7 @@ empty
 
 The ``empty`` factory method, by definition, creates a channel that doesn't emit any value.
 
-See also: :ref:`operator-ifempty` and :ref:`operator-close` operators.
+See also: :ref:`operator-ifempty` operator.
 
 
 .. _channel-from:
@@ -458,74 +455,6 @@ You can specify more than one of these events by using a comma separated string 
     to close the channel when a certain condition is met (e.g. receiving a file named ``DONE``).
 
 See also: `fromPath`_ factory method.
-
-
-Channel methods
-===============
-
-.. _channel-subscribe:
-
-subscribe
----------
-
-The ``subscribe`` method allows you to execute a user defined function each time a new value is emitted by the source channel.
-
-The emitted value is passed implicitly to the specified function. For example::
-
-    // define a channel emitting three values
-    source = Channel.of( 'alpha', 'beta', 'delta' )
-
-    // subscribe a function to the channel printing the emitted values
-    source.subscribe {  println "Got: $it"  }
-
-::
-
-    Got: alpha
-    Got: beta
-    Got: delta
-
-.. note::
-  In Groovy, the language on which Nextflow is based, the user defined function is called a **closure**.
-  Read the :ref:`script-closure` section to learn more about closures.
-
-If needed the closure parameter can be defined explicitly, using a name other than ``it`` and, optionally,
-specifying the expected value type, as shown in the following example::
-
-    Channel
-        .of( 'alpha', 'beta', 'lambda' )
-        .subscribe { String str ->
-            println "Got: ${str}; len: ${str.size()}"
-        }
-
-::
-
-    Got: alpha; len: 5
-    Got: beta; len: 4
-    Got: lambda; len: 6
-
-The ``subscribe`` method may accept one or more of the following event handlers:
-
-* ``onNext``: function that is invoked whenever the channel emits a value.
-  Equivalent to using the ``subscribe`` with a plain closure as described in the examples above.
-
-* ``onComplete``: function that is invoked after the last value is emitted by the channel.
-
-* ``onError``: function that it is invoked when an exception is raised while handling the
-  ``onNext`` event. It will not make further calls to ``onNext`` or ``onComplete``.
-  The ``onError`` method takes as its parameter the ``Throwable`` that caused the error.
-
-For example::
-
-    Channel
-        .of( 1, 2, 3 )
-        .subscribe onNext: { println it }, onComplete: { println 'Done' }
-
-::
-
-    1
-    2
-    3
-    Done
 
 
 .. _glob: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
