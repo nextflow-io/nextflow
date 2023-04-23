@@ -1157,6 +1157,11 @@ class OperatorImpl {
         return result
     }
 
+    DataflowWriteChannel splitJson(DataflowReadChannel source, Map opts=null) {
+        final result = new SplitOp( source, 'splitJson', opts ).apply()
+        return result
+    }
+    
     DataflowWriteChannel countLines(DataflowReadChannel source, Map opts=null) {
         final splitter = new TextSplitter()
         final result = countOverChannel( source, splitter, opts )
@@ -1171,6 +1176,12 @@ class OperatorImpl {
 
     DataflowWriteChannel countFastq(DataflowReadChannel source, Map opts=null) {
         final splitter = new FastqSplitter()
+        final result = countOverChannel( source, splitter, opts )
+        return result
+    }
+
+    DataflowWriteChannel countJson(DataflowReadChannel source, Map opts=null) {
+        final splitter = new JsonSplitter()
         final result = countOverChannel( source, splitter, opts )
         return result
     }
