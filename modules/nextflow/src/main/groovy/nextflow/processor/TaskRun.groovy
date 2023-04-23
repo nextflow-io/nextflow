@@ -329,6 +329,10 @@ class TaskRun implements Cloneable {
 
     BodyDef body
 
+    Integer arrayIndex
+
+    List<TaskRun> arrayTasks
+
     TaskRun clone() {
         final taskClone = (TaskRun)super.clone()
         taskClone.context = context.clone()
@@ -347,6 +351,8 @@ class TaskRun implements Cloneable {
         copy.exitStatus = Integer.MAX_VALUE
         return copy
     }
+
+    boolean isArrayTask() { arrayIndex>0 }
 
     String lazyName() {
         if( name )

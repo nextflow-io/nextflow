@@ -32,6 +32,7 @@ import java.util.regex.Pattern
 
 import ch.artecat.grengine.Grengine
 import com.google.common.hash.HashCode
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.transform.PackageScope
@@ -74,6 +75,7 @@ import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePatternSplitter
 import nextflow.file.FilePorter
+import nextflow.processor.array.TaskArrayCollector
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -112,6 +114,7 @@ import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@CompileStatic
 class TaskProcessor {
 
     static enum RunType {
@@ -147,7 +150,7 @@ class TaskProcessor {
     /**
      * Unique task index number (run)
      */
-    final protected indexCount = new AtomicInteger()
+    final protected AtomicInteger indexCount = new AtomicInteger()
 
     /**
      * The current workflow execution session
@@ -253,6 +256,10 @@ class TaskProcessor {
 
     private Boolean isFair0
 
+    private int arrayLen0
+
+    private TaskArrayCollector arrayCollector
+
     private CompilerConfiguration compilerConfig() {
         final config = new CompilerConfiguration()
         config.addCompilationCustomizers( new ASTTransformationCustomizer(TaskTemplateVarsXform) )
@@ -307,6 +314,8 @@ class TaskProcessor {
         this.maxForks = config.maxForks ? config.maxForks as int : 0
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
+        this.arrayLen0 = config.getArray()
+        this.arrayCollector = arrayLen0>0 ? new TaskArrayCollector(arrayLen0) : null
     }
 
     /**
@@ -694,6 +703,26 @@ class TaskProcessor {
         return null
     }
 
+    protected TaskRun createTaskRun0(TaskId id, Integer index, List<TaskRun> arrayTasks) {
+        final task = new TaskRun(
+                id: id,
+                index: index,
+                processor: this,
+                type: scriptType,
+                config: config.createTaskConfig(),
+                context: new TaskContext(this),
+                arrayIndex: arrayLen0>0 ? index % arrayLen0 : null,
+                arrayTasks: arrayTasks
+        )
+
+        // setup config
+        task.config.index = task.index
+        task.config.process = task.processor.name
+        task.config.executor = task.processor.executor.name
+
+        return task
+    }
+
     /**
      * Create a new {@code TaskRun} instance, initializing the following properties :
      * <li>{@code TaskRun#id}
@@ -706,19 +735,7 @@ class TaskProcessor {
      */
 
     final protected TaskRun createTaskRun(TaskStartParams params) {
-        final task = new TaskRun(
-                id: params.id,
-                index: params.index,
-                processor: this,
-                type: scriptType,
-                config: config.createTaskConfig(),
-                context: new TaskContext(this)
-        )
-
-        // setup config
-        task.config.index = task.index
-        task.config.process = task.processor.name
-        task.config.executor = task.processor.executor.name
+        final task = createTaskRun0(params.id, params.index, null)
 
         /*
          * initialize the inputs/outputs for this task instance
@@ -741,6 +758,21 @@ class TaskProcessor {
         }
 
         return task
+    }
+
+    final protected TaskRun createTaskRun(List<TaskRun> array) {
+        createTaskRun0(
+                TaskId.next(),
+                indexCount.incrementAndGet(),
+                array )
+
+// tbd set task unique directory
+//        task.hash = hash
+//        task.workDir = folder
+//        task.config.workDir = folder
+//        task.config.hash = hash.toString()
+//        task.config.name = task.getName()
+
     }
 
     /**
@@ -1133,12 +1165,12 @@ class TaskProcessor {
         if( error.source )  {
             message << "\nWhen block:"
             error.source.stripIndent(true).eachLine {
-                message << "  $it"
+                message << "  $it".toString()
             }
         }
 
         if( task?.workDir )
-            message << "\nWork dir:\n  ${task.workDirStr}"
+            message << "\nWork dir:\n  ${task.workDirStr}".toString()
 
         return message
     }
@@ -1153,13 +1185,13 @@ class TaskProcessor {
          */
         if( task?.script ) {
             // - print the executed command
-            message << "Command executed${task.template ? " [$task.template]": ''}:\n"
+            message << "Command executed${task.template ? " [$task.template]": ''}:\n".toString()
             task.script?.stripIndent(true)?.trim()?.eachLine {
-                message << "  ${it}"
+                message << "  ${it}".toString()
             }
 
             // - the exit status
-            message << "\nCommand exit status:\n  ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}"
+            message << "\nCommand exit status:\n  ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}".toString()
 
             // - the tail of the process stdout
             message << "\nCommand output:"
@@ -1169,7 +1201,7 @@ class TaskProcessor {
                 message << "  (empty)"
             }
             for( String it : lines ) {
-                message << "  ${stripWorkDir(it, task.workDir)}"
+                message << "  ${stripWorkDir(it, task.workDir)}".toString()
             }
 
             // - the tail of the process stderr
@@ -1177,7 +1209,7 @@ class TaskProcessor {
             if( lines ) {
                 message << "\nCommand error:"
                 for( String it : lines ) {
-                    message << "  ${stripWorkDir(it, task.workDir)}"
+                    message << "  ${stripWorkDir(it, task.workDir)}".toString()
                 }
             }
             // - this is likely a task wrapper issue
@@ -1186,7 +1218,7 @@ class TaskProcessor {
                 if( lines ) {
                     message << "\nCommand wrapper:"
                     for( String it : lines ) {
-                        message << "  ${stripWorkDir(it, task.workDir)}"
+                        message << "  ${stripWorkDir(it, task.workDir)}".toString()
                     }
                 }
             }
@@ -1196,16 +1228,16 @@ class TaskProcessor {
             if( task?.source )  {
                 message << "Source block:"
                 task.source.stripIndent(true).eachLine {
-                    message << "  $it"
+                    message << "  $it".toString()
                 }
             }
 
         }
 
         if( task?.workDir )
-            message << "\nWork dir:\n  ${task.workDirStr}"
+            message << "\nWork dir:\n  ${task.workDirStr}".toString()
 
-        message << "\nTip: ${getRndTip()}"
+        message << "\nTip: ${getRndTip()}".toString()
 
         return message
     }
@@ -1342,6 +1374,7 @@ class TaskProcessor {
      * Bind the expected output files to the corresponding output channels
      * @param processor
      */
+    @CompileDynamic
     synchronized protected void bindOutputs( TaskRun task ) {
 
         // -- creates the map of all tuple values to bind
@@ -1445,6 +1478,7 @@ class TaskProcessor {
         }
     }
 
+    @CompileDynamic
     protected void collectOutputs( TaskRun task ) {
         collectOutputs( task, task.getTargetDir(), task.@stdout, task.context )
     }
@@ -1504,6 +1538,7 @@ class TaskProcessor {
     }
 
     @Memoized(maxCacheSize = 10_000)
+    @CompileDynamic
     protected Map collectOutEnvMap(Path workDir) {
         final env = workDir.resolve(TaskRun.CMD_ENV).text
         final result = new HashMap(50)
@@ -1618,7 +1653,7 @@ class TaskProcessor {
         assert namePattern
         assert workDir
 
-        List files = []
+        List<Path> files = []
         def opts = visitOptions(param, namePattern)
         // scan to find the file with that name
         try {
@@ -1719,6 +1754,7 @@ class TaskProcessor {
      * @return The map holding the shell environment variables for the task to be executed
      */
     @Memoized
+    @CompileDynamic
     Map<String,String> getProcessEnvironment() {
 
         def result = new LinkedHashMap<String,String>(20)
@@ -2069,6 +2105,7 @@ class TaskProcessor {
 
     }
 
+    @CompileDynamic
     final protected HashCode createTaskHashKey(TaskRun task) {
 
         List keys = [ session.uniqueId, name, task.source ]
@@ -2198,14 +2235,23 @@ class TaskProcessor {
      * @param script The script string to be execute, e.g. a BASH script
      * @return {@code TaskDef}
      */
+    @CompileStatic
     final protected void submitTask( TaskRun task, HashCode hash, Path folder ) {
         log.trace "[${safeTaskName(task)}] actual run folder: ${folder}"
 
         makeTaskContextStage3(task, hash, folder)
 
         // add the task to the collection of running tasks
-        executor.submit(task)
-
+        if( !task.isArrayTask() ) {
+            executor.submit(task)
+            return
+        }
+        
+        // handle task array
+        final batch = arrayCollector.batch(task)
+        if( batch ) {
+           executor.submit(createTaskRun(batch))
+        }
     }
 
     protected boolean checkWhenGuard(TaskRun task) {
@@ -2276,6 +2322,13 @@ class TaskProcessor {
 
     @PackageScope boolean isResumable() {
         isCacheable() && session.resumeMode
+    }
+
+    protected void processTerminate() {
+        List<TaskRun> batch
+        if( arrayCollector && (batch=arrayCollector.flush())) {
+            executor.submit( createTaskRun(batch) )
+        }
     }
 
     /**
@@ -2440,6 +2493,7 @@ class TaskProcessor {
         @Override
         void afterStop(final DataflowProcessor processor) {
             log.trace "<${name}> After stop"
+            processTerminate()
         }
 
         /**

@@ -93,10 +93,17 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @Override
-    void submit() {
+    Path prepareLauncher() {
         // create the wrapper script
-        buildTaskWrapper()
+        final wrapper = fusionEnabled()
+                ? fusionLauncher()
+                : new BashWrapperBuilder(task.toTaskBean())
+        // create the bash command wrapper and store in the task work dir
+        wrapper.build()
+    }
 
+    @Override
+    void submit() {
         // create the process builder to run the task in the local computer
         final builder = createLaunchProcessBuilder()
         final logFile = builder.redirectOutput().file()
@@ -122,13 +129,6 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         status = TaskStatus.SUBMITTED
     }
 
-    protected void buildTaskWrapper() {
-        final wrapper = fusionEnabled()
-                ? fusionLauncher()
-                : new BashWrapperBuilder(task.toTaskBean())
-        // create the bash command wrapper and store in the task work dir
-        wrapper.build()
-    }
 
     protected ProcessBuilder localProcessBuilder() {
         final cmd = new ArrayList<String>(BashWrapperBuilder.BASH) << wrapperFile.getName()

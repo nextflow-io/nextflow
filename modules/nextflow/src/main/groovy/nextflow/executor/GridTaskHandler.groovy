@@ -37,6 +37,7 @@ import nextflow.exception.ProcessNonZeroExitStatusException
 import nextflow.file.FileHelper
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionHelper
+import nextflow.processor.array.ArrayTaskHandler
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.trace.TraceRecord
@@ -47,7 +48,7 @@ import nextflow.util.Throttle
  * Handles a job execution in the underlying grid platform
  */
 @Slf4j
-class GridTaskHandler extends TaskHandler implements FusionAwareTask {
+class GridTaskHandler extends TaskHandler implements FusionAwareTask, TaskArrayAware {
 
     /** The target executor platform */
     final AbstractGridExecutor executor
@@ -98,10 +99,10 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         this.sanityCheckInterval = duration
     }
 
-    protected ProcessBuilder createProcessBuilder() {
+    protected ProcessBuilder createProcessBuilder(Path launcher) {
 
         // -- log the qsub command
-        final cli = executor.getSubmitCommandLine(task, wrapperFile)
+        final cli = executor.getSubmitCommandLine(task, launcher)
         log.trace "start process ${task.name} > cli: ${cli}"
 
         /*
@@ -210,7 +211,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
             : executor.createBashWrapperBuilder(task)
     }
 
-    protected String stdinLauncherScript() {
+    protected String stdinLauncherScript(Path wrapperFile) {
         return fusionEnabled() ? fusionStdinWrapper() : wrapperFile.text
     }
 
@@ -243,25 +244,17 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         return result
     }
 
-    /*
-     * {@inheritDocs}
-     */
-    @Override
-    void submit() {
+    protected Object submitJob0(Path launcher) {
         ProcessBuilder builder = null
         try {
-            // -- create the wrapper script
-            createTaskWrapper(task).build()
             // -- start the execution and notify the event to the monitor
-            builder = createProcessBuilder()
+            builder = createProcessBuilder(launcher)
             // -- forward the job launcher script to the command stdin if required
-            final stdinScript = executor.pipeLauncherScript() ? stdinLauncherScript() : null
+            final stdinScript = executor.pipeLauncherScript() ? stdinLauncherScript(launcher) : null
             // -- execute with a re-triable strategy
             final result = safeExecute( () -> processStart(builder, stdinScript) )
-            // -- save the JobId in the
-            this.jobId = executor.parseJobId(result)
-            this.status = SUBMITTED
-            log.debug "[${executor.name.toUpperCase()}] submitted process ${task.name} > jobId: $jobId; workDir: ${task.workDir}"
+            // -- parse and return the job id
+            return executor.parseJobId(result)
 
         }
         catch( Exception e ) {
@@ -280,6 +273,15 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
     }
 
+    /*
+     * {@inheritDocs}
+     */
+    @Override
+    void submit() {
+        this.jobId = submitJob0(wrapperFile)
+        this.status = SUBMITTED
+        log.debug "[${executor.name.toUpperCase()}] submitted process ${task.name} > jobId: $jobId; workDir: ${task.workDir}"
+    }
 
     private long startedMillis
 
@@ -512,5 +514,22 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         trace.put('native_id', jobId)
         return trace
     }
+
+    @Override
+    Path prepareLauncher() {
+        // -- create the wrapper script
+        createTaskWrapper(task).build()
+    }
+
+    @Override
+    String taskArrayIndexVariable() {
+        return executor.taskArrayIndexVariable()
+    }
+
+    @Override
+    void submitTaskArray(Path launcher, ArrayTaskHandler handler) {
+
+    }
+
 
 }

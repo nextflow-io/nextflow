@@ -407,5 +407,10 @@ abstract class AbstractGridExecutor extends Executor {
         // Instead, it is the command wrapper script that is launched run within a container process.
         return isFusionEnabled()
     }
+
+    String taskArrayIndexVariable() {
+        return null
+    }
+
 }
 

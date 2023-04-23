@@ -42,7 +42,7 @@ import nextflow.util.MemoryUnit
 @CompileStatic
 class TaskConfig extends LazyMap implements Cloneable {
 
-    static public final EXIT_ZERO = 0
+    static public final int EXIT_ZERO = 0
 
     private transient Map cache = new LinkedHashMap(20)
 
@@ -420,6 +420,10 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     PodOptions getPodOptions() {
         new PodOptions((List)get('pod'))
+    }
+
+    int getArray() {
+        get('array') as Integer ?: 0
     }
 
     AcceleratorResource getAccelerator() {

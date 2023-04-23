@@ -197,4 +197,9 @@ class SlurmExecutor extends AbstractGridExecutor {
     boolean isFusionEnabled() {
         return FusionHelper.isFusionEnabled(session)
     }
+
+    @Override
+    String taskArrayIndexVariable() {
+        return 'SLURM_ARRAY_TASK_ID'
+    }
 }

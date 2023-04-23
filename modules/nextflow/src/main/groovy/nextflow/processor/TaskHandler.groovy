@@ -19,6 +19,7 @@ package nextflow.processor
 import static nextflow.processor.TaskStatus.*
 
 import java.nio.file.NoSuchFileException
+import java.nio.file.Path
 
 import groovy.util.logging.Slf4j
 import nextflow.trace.TraceRecord
@@ -62,7 +63,6 @@ abstract class TaskHandler {
 
     long completeTimeMillis
 
-
     /**
      * Model the start transition from {@code #SUBMITTED} to {@code STARTED}
      */
@@ -84,6 +84,8 @@ abstract class TaskHandler {
      * Note: the underlying execution platform may schedule it in its own queue
      */
     abstract void submit()
+
+    Path prepareLauncher() { return null }
 
     /**
      * Task status attribute setter.
@@ -242,4 +244,7 @@ abstract class TaskHandler {
         task.processor.forksCount?.decrement()
     }
 
+    boolean isTaskArray() {
+        task.arrayTasks != null
+    }
 }

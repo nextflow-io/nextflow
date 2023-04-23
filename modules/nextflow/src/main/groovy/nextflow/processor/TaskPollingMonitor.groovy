@@ -191,8 +191,19 @@ class TaskPollingMonitor implements TaskMonitor {
      *      A {@link TaskHandler} instance representing the task to be submitted for execution
      */
     protected void submit(TaskHandler handler) {
-        // submit the job execution -- throws a ProcessException when submit operation fail
-        handler.submit()
+
+        if( handler.isTaskArray() )  {
+            // 1. prepare task array launcher
+            // 2. submit task array
+            // 3. update run status
+        }
+        else {
+            // prepare launcher
+            handler.prepareLauncher()
+            // submit the job execution -- throws a ProcessException when submit operation fail
+            handler.submit()
+        }
+
         // note: add the 'handler' into the polling queue *after* the submit operation,
         // this guarantees that in the queue are only jobs successfully submitted
         runningQueue.add(handler)
